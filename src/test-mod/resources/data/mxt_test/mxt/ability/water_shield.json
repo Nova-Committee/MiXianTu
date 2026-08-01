@@ -1,0 +1,7 @@
+{
+  "type": "mxt:active",
+  "slot": "secondary",
+  "costs": [{ "id": "mxt_test:spirit_power", "amount": 5 }],
+  "cooldown": 40,
+  "element_affinity": ["mxt_test:water"]
+}

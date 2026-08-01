@@ -1,0 +1,7 @@
+{
+  "default_value": 50,
+  "min": 0,
+  "max": 50,
+  "regen": 0.25,
+  "default_bar": "mxt_test:soul_power_hud"
+}

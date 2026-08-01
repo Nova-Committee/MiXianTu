@@ -1,0 +1,5 @@
+{
+  "progress_threshold": 100,
+  "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
+  "tribulation": "mxt_test:three_thunders"
+}

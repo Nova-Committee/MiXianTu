@@ -1,0 +1,8 @@
+{
+  "element": "mxt_test:water",
+  "cultivation_multiplier": 1.15,
+  "element_ability_modifier": 1.05,
+  "rarity": "uncommon",
+  "granted_abilities": ["mxt_test:water_shield"],
+  "compatibility_tags": ["mxt_test:root/water"]
+}

@@ -1,0 +1,13 @@
+{
+  "resource": "mxt_test:soul_power",
+  "context": "self_hud",
+  "anchor": "below_health",
+  "order": 1,
+  "visibility": { "type": "mxt:non_full" },
+  "renderer": {
+    "type": "mxt:text_only",
+    "format": "%current% / %maximum%",
+    "color": "#b996ff",
+    "show_maximum": true
+  }
+}

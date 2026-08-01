@@ -1,0 +1,6 @@
+{
+  "structure_template": "mxt_test:spirit_gathering",
+  "radius": 8,
+  "activation_costs": [{ "id": "mxt_test:spirit_power", "amount": 10 }],
+  "maintenance_costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }]
+}

@@ -1,0 +1,14 @@
+{
+  "resource": "mxt_test:spirit_power",
+  "context": "self_hud",
+  "anchor": "above_hotbar",
+  "order": 0,
+  "visibility": { "type": "mxt:always" },
+  "renderer": {
+    "type": "mxt:segmented_bar",
+    "segments": 10,
+    "gap": 1,
+    "full_color": "#4e9cff",
+    "empty_color": "#243047"
+  }
+}

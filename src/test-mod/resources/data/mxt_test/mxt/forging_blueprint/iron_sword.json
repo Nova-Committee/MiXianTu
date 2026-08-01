@@ -1,0 +1,25 @@
+{
+  "input": "minecraft:iron_sword",
+  "allowed_methods": ["mxt_test:heavy_strike", "mxt_test:light_strike"],
+  "meter_min": -10,
+  "meter_max": 10,
+  "target_min": 2,
+  "target_max": 4,
+  "finish_pattern": {
+    "steps": [
+      "mxt_test:heavy_strike", "mxt_test:light_strike", "mxt_test:heavy_strike",
+      "mxt_test:light_strike", "mxt_test:light_strike", "mxt_test:heavy_strike"
+    ],
+    "required_suffix_steps": 3,
+    "show_finish_pattern": true
+  },
+  "max_steps": 32,
+  "quality_by_extra_steps": [
+    { "max_extra_steps": 0, "quality": "mxt_test:excellent" },
+    { "max_extra_steps": 5, "quality": "mxt_test:normal" },
+    { "max_extra_steps": 2147483647, "quality": "mxt_test:poor" }
+  ],
+  "result": "minecraft:iron_sword",
+  "workstation_blocks": ["minecraft:anvil"],
+  "failure_settlement": { "result": "minecraft:iron_nugget", "input_return_ratio": 0.25, "material_loss_ratio": 0.75 }
+}

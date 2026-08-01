@@ -1,0 +1,18 @@
+{
+  "checked": {
+    "sounds": [
+      {
+        "name": "mxt:checked",
+        "stream": false
+      }
+    ]
+  },
+  "coins": {
+    "sounds": [
+      {
+        "name": "mxt:coins",
+        "stream": false
+      }
+    ]
+  }
+}

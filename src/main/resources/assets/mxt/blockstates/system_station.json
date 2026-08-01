@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "mxt:block/system_station"
+    }
+  }
+}

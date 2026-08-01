@@ -1,0 +1,8 @@
+{
+  "item": "mxt:diamond_coin",
+  "value": 1000,
+  "exchanges": [
+    {"cost": 1, "result": {"id": "mxt:gold_coin", "count": 10}},
+    {"cost": 10, "result": {"id": "mxt:emerald_coin"}}
+  ]
+}

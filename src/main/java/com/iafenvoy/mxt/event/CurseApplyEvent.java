@@ -1,0 +1,90 @@
+package com.iafenvoy.mxt.event;
+
+import com.iafenvoy.mxt.attachment.CurseHolderData;
+import com.iafenvoy.mxt.data.curse.CurseDefinition;
+import com.iafenvoy.mxt.runtime.curse.CurseInstance;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.resources.Identifier;
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Server-side curse application transaction events.
+ */
+public abstract class CurseApplyEvent extends Event {
+    private final CurseHolderData holder;
+    private final Identifier curse;
+    private final CurseDefinition definition;
+    private final long gameTime;
+    private final FormulaContext context;
+
+    protected CurseApplyEvent(@NotNull CurseHolderData holder, @NotNull Identifier curse, @NotNull CurseDefinition definition, long gameTime, @NotNull FormulaContext context) {
+        this.holder = holder;
+        this.curse = curse;
+        this.definition = definition;
+        this.gameTime = gameTime;
+        this.context = context;
+    }
+
+    public CurseHolderData holder() {
+        return this.holder;
+    }
+
+    public Identifier curse() {
+        return this.curse;
+    }
+
+    public CurseDefinition definition() {
+        return this.definition;
+    }
+
+    public long gameTime() {
+        return this.gameTime;
+    }
+
+    public FormulaContext context() {
+        return this.context;
+    }
+
+    public static final class Pre extends CurseApplyEvent implements ICancellableEvent {
+        private int stacks;
+        private String source;
+
+        public Pre(CurseHolderData holder, Identifier curse, CurseDefinition definition, int stacks, long gameTime, FormulaContext context, String source) {
+            super(holder, curse, definition, gameTime, context);
+            this.setStacks(stacks);
+            this.setSource(source);
+        }
+
+        public int stacks() {
+            return this.stacks;
+        }
+
+        public String source() {
+            return this.source;
+        }
+
+        public void setStacks(int stacks) {
+            if (stacks < 1) throw new IllegalArgumentException("Curse stacks must be positive");
+            this.stacks = stacks;
+        }
+
+        public void setSource(@NotNull String source) {
+            this.source = source;
+        }
+    }
+
+    public static final class Post extends CurseApplyEvent {
+        private final CurseInstance instance;
+
+        public Post(CurseHolderData holder, Identifier curse, CurseDefinition definition, long gameTime, FormulaContext context, @NotNull CurseInstance instance) {
+            super(holder, curse, definition, gameTime, context);
+            this.instance = instance;
+        }
+
+        public CurseInstance instance() {
+            return this.instance;
+        }
+    }
+}

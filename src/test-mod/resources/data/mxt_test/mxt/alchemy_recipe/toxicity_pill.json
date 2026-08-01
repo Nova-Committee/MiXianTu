@@ -1,0 +1,9 @@
+{
+  "inputs": ["minecraft:red_mushroom", "minecraft:honey_bottle"],
+  "target_temperature": 600,
+  "temperature_tolerance": 50,
+  "minimum_furnace_tier": 1,
+  "duration": 200,
+  "success_outputs": ["minecraft:honey_bottle"],
+  "failure_outputs": ["minecraft:glass_bottle"]
+}

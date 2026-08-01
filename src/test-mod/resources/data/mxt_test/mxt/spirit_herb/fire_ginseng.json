@@ -1,0 +1,8 @@
+{
+  "material_grade": "mxt_test:spirit_iron",
+  "age": 100,
+  "element_tags": ["mxt_test:fire"],
+  "material_tags": ["mxt_test:herb"],
+  "growth_rate": 0.05,
+  "drop_chance": 1
+}

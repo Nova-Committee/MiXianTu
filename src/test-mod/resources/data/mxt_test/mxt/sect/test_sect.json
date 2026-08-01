@@ -1,0 +1,18 @@
+{
+  "ranks": [
+    { "id": "outer_disciple", "priority": 0, "min_contribution": 0 },
+    {
+      "id": "inner_disciple",
+      "priority": 1,
+      "min_contribution": 100,
+      "promotion_costs": [{ "id": "mxt_test:spirit_power", "amount": 10 }]
+    }
+  ],
+  "tasks": [{ "id": "mxt_test:daily_meditation", "contribution_reward": 10, "once": false }],
+  "exchanges": [{
+    "id": "mxt_test:iron_sword",
+    "contribution_cost": 50,
+    "costs": [{ "id": "mxt_test:spirit_power", "amount": 5 }],
+    "outputs": ["minecraft:iron_sword"]
+  }]
+}

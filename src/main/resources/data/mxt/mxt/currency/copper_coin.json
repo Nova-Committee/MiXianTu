@@ -1,0 +1,7 @@
+{
+  "item": "mxt:copper_coin",
+  "value": 1,
+  "exchanges": [
+    {"cost": 10, "result": {"id": "mxt:iron_coin"}}
+  ]
+}

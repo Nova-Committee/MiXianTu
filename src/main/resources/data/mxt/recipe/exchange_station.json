@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "PEP",
+    "P P"
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "E": {
+      "tag": "c:emeralds"
+    }
+  },
+  "result": {
+    "id": "mxt:exchange_station"
+  }
+}

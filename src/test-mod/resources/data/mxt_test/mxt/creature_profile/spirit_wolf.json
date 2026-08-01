@@ -1,0 +1,6 @@
+{
+  "realm_stage": "mxt_test:foundation",
+  "intelligence": 12,
+  "spawn_conditions": [],
+  "contract_tags": ["mxt_test:contract/master_servant"]
+}

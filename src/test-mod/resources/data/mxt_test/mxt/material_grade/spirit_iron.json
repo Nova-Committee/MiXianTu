@@ -1,0 +1,7 @@
+{
+  "tier": 2,
+  "value_multiplier": 1.5,
+  "forging_modifier": 1.1,
+  "alchemy_modifier": 1,
+  "applicable_tags": ["mxt_test:material/metal"]
+}

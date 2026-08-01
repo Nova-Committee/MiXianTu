@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "mxt:block/exchange_station"
+    }
+  }
+}

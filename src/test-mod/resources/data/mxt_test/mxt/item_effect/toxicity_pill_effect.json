@@ -1,0 +1,6 @@
+{
+  "type": "pill",
+  "toxicity_gain": 25,
+  "toxicity_threshold": 100,
+  "toxicity_after_overdose": 20
+}

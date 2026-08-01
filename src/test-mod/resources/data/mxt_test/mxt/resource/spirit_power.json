@@ -1,0 +1,7 @@
+{
+  "default_value": 100,
+  "min": 0,
+  "max": "100 + level * 10",
+  "regen": 1,
+  "default_bar": "mxt_test:spirit_power_hud"
+}

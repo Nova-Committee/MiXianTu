@@ -1,0 +1,7 @@
+{
+  "item": "minecraft:honey_bottle",
+  "definition": {
+    "registry": "mxt:pill",
+    "id": "mxt_test:toxicity_pill"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "trigger_conditions": [],
+  "phases": [
+    { "duration": 100 },
+    { "duration": 100 },
+    { "duration": 100 }
+  ],
+  "difficulty_scale": "1 + level * 0.05"
+}

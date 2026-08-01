@@ -1,0 +1,8 @@
+{
+  "tick_interval": 20,
+  "environment_tags": ["mxt_test:environment/fire"],
+  "costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
+  "progress_gain": "1 + level * 0.1",
+  "aura_cost": 1,
+  "cooldown": 0
+}

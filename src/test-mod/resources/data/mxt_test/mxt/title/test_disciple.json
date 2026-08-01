@@ -1,0 +1,6 @@
+{
+  "translation_key": "title.mxt_test.test_disciple",
+  "priority": 1,
+  "exclusive_tags": ["mxt_test:title/sect"],
+  "maximum_level": 3
+}

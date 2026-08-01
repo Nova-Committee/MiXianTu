@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SSS",
+    "SLS",
+    "S S"
+  ],
+  "key": {
+    "S": {
+      "tag": "minecraft:stone_crafting_materials"
+    },
+    "L": {
+      "tag": "c:lapis"
+    }
+  },
+  "result": {
+    "id": "mxt:cheque_table"
+  }
+}

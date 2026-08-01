@@ -1,0 +1,7 @@
+{
+  "item": "mxt:netherite_coin",
+  "value": 100000,
+  "exchanges": [
+    {"cost": 1, "result": {"id": "mxt:emerald_coin", "count": 10}}
+  ]
+}

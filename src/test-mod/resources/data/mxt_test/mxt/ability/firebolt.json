@@ -1,0 +1,11 @@
+{
+  "type": "mxt:active",
+  "slot": "primary",
+  "costs": [
+    { "id": "mxt_test:spirit_power", "amount": "8 + level" },
+    { "id": "mxt_test:soul_power", "amount": 2 }
+  ],
+  "cast_time": 0,
+  "cooldown": 20,
+  "element_affinity": ["mxt_test:fire"]
+}

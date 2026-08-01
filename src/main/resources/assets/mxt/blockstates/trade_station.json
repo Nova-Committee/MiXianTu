@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "mxt:block/trade_station"
+    }
+  }
+}

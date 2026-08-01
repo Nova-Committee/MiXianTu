@@ -1,0 +1,7 @@
+{
+  "item": "minecraft:diamond_sword",
+  "definition": {
+    "registry": "mxt:weapon",
+    "id": "mxt_test:bound_sword"
+  }
+}

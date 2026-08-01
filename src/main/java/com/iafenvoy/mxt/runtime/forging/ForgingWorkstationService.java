@@ -1,0 +1,173 @@
+package com.iafenvoy.mxt.runtime.forging;
+
+import com.iafenvoy.mxt.attachment.ForgingSessionData;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition.FailureSettlement;
+import com.iafenvoy.mxt.data.forging.ForgingMethodDefinition;
+import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
+import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
+import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
+import com.iafenvoy.mxt.runtime.forging.ForgingService.Failure;
+import com.iafenvoy.mxt.runtime.forging.ForgingService.FinishResult;
+import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
+import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.forging.ForgingWorldData.StationSession;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+
+/**
+ * Authoritative station-bound forging transaction boundary.
+ */
+public final class ForgingWorkstationService {
+    private static final double MAX_DISTANCE_SQUARED = 64.0D;
+
+    private ForgingWorkstationService() {
+    }
+
+    public static boolean start(ServerPlayer player, BlockPos position, Identifier blueprintId, ForgingBlueprintDefinition blueprint) {
+        ServerLevel level = player.level();
+        if (!canUse(player, position, blueprint)) return false;
+        ForgingWorldData world = level.getData(MxtAttachments.FORGING_WORLD);
+        if (world.get(position).isPresent()) return false;
+        ItemStack held = player.getMainHandItem();
+        if (held.isEmpty() || !ItemBindingService.matches(held, blueprint.input())) return false;
+        StartResult result = ForgingService.start(blueprint);
+        if (!result.started()) return false;
+        ItemStack input = held.copyWithCount(1);
+        held.shrink(1);
+        ForgingSessionData data = new ForgingSessionData();
+        data.start(blueprintId, blueprint.plan(), result.session(), input, blueprint.result(), blueprint.qualityByExtraSteps(), blueprint.failureSettlement());
+        if (!world.put(position, player.getUUID(), data)) {
+            if (!player.getInventory().add(input)) player.drop(input, false);
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean strike(ServerPlayer player, BlockPos position, Identifier methodId, ForgingMethodDefinition method) {
+        StationSession station = stationForOwner(player, position).orElse(null);
+        if (station == null || station.session().plan().isEmpty() || station.session().session().isEmpty())
+            return false;
+        ForgingSession session = ForgingSession.restore(station.session().plan().orElseThrow(), station.session().session().orElseThrow());
+        boolean conditionsMet = method.conditions().stream().allMatch(id ->
+                MxtTypeRegistries.CULTIVATION_CONDITION.get(id)
+                        .map(reference -> reference.value().test(player, FormulaContext.EMPTY)).orElse(false));
+        StrikeResult result = ForgingService.strike(session, methodId, method,
+                player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.EMPTY, () -> conditionsMet);
+        if (!result.struck()) return false;
+        station.session().update(session);
+        return true;
+    }
+
+    public static boolean finish(ServerPlayer player, BlockPos position, Identifier blueprintId) {
+        StationSession station = stationForOwner(player, position).orElse(null);
+        if (station == null || station.session().blueprint().filter(blueprintId::equals).isEmpty() || station.session().plan().isEmpty() || station.session().session().isEmpty())
+            return false;
+        ForgingSessionData data = station.session();
+        ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
+        FinishResult result = ForgingService.finish(blueprintId, session, data::qualityFor);
+        if (!result.finished()) {
+            if (result.failure() == Failure.CANCELLED) return false;
+            settleFailure(player, position, data);
+            return true;
+        }
+        Identifier resultId = data.result().orElseThrow();
+        ItemStack output = ItemBindingService.create(resultId)
+                .or(() -> BuiltInRegistries.ITEM.getOptional(resultId).map(ItemStack::new))
+                .orElse(ItemStack.EMPTY);
+        if (output.isEmpty()) return false;
+        output.set(MxtDataComponents.FORGING_RESULT.get(), result.result());
+        if (!player.getInventory().add(output)) player.drop(output, false);
+        MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId).ifPresent(blueprint -> DomainBehaviorService.execute(
+                MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.completeBehavior(),
+                BehaviorContext.of(Kind.FORGING_COMPLETE, blueprintId, player, FormulaContext.EMPTY, true)));
+        player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
+        return true;
+    }
+
+    public static boolean cancel(ServerPlayer player, BlockPos position) {
+        StationSession station = stationForOwner(player, position).orElse(null);
+        if (station == null) return false;
+        ForgingSessionData data = station.session();
+        if (data.plan().isEmpty() || data.session().isEmpty() || data.input().isEmpty()) return false;
+        ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
+        if (!ForgingService.cancel(session)) return false;
+        data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id)).ifPresent(blueprint -> DomainBehaviorService.execute(
+                MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.failBehavior(),
+                BehaviorContext.of(Kind.FORGING_FAIL, data.blueprint().orElseThrow(), player, FormulaContext.EMPTY, false)));
+        ItemStack input = data.input().orElseThrow();
+        if (!player.getInventory().add(input)) player.drop(input, false);
+        player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
+        return true;
+    }
+
+    /**
+     * Death recovery returns every still-locked station input owned by the player, including another dimension.
+     */
+    public static int cancelAllOwnedOnDeath(ServerPlayer player) {
+        int cancelled = 0;
+        for (ServerLevel level : player.level().getServer().getAllLevels()) {
+            ForgingWorldData world = level.getData(MxtAttachments.FORGING_WORLD);
+            for (Entry<BlockPos, StationSession> entry : world.sessions().entrySet()) {
+                if (!entry.getValue().owner().equals(player.getUUID())) continue;
+                ForgingSessionData data = entry.getValue().session();
+                if (data.input().isEmpty()) continue;
+                data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id)).ifPresent(blueprint -> DomainBehaviorService.execute(
+                        MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.failBehavior(),
+                        BehaviorContext.of(Kind.FORGING_FAIL, data.blueprint().orElseThrow(), player, FormulaContext.EMPTY, false)));
+                player.spawnAtLocation(player.level(), data.input().orElseThrow());
+                world.remove(entry.getKey());
+                cancelled++;
+            }
+        }
+        return cancelled;
+    }
+
+    public static boolean canUse(ServerPlayer player, BlockPos position, ForgingBlueprintDefinition blueprint) {
+        if (player.distanceToSqr(position.getCenter()) > MAX_DISTANCE_SQUARED) return false;
+        Identifier block = BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(position).getBlock());
+        return blueprint.workstationBlocks().contains(block);
+    }
+
+    private static void settleFailure(ServerPlayer player, BlockPos position, ForgingSessionData data) {
+        FailureSettlement settlement = data.failureSettlement();
+        if (player.getRandom().nextDouble() < settlement.inputReturnRatio()) {
+            data.input().ifPresent(input -> give(player, input));
+        }
+        if (player.getRandom().nextDouble() < settlement.failureProductRatio()) {
+            settlement.result().flatMap(ItemBindingService::create)
+                    .or(() -> settlement.result().flatMap(BuiltInRegistries.ITEM::getOptional).map(ItemStack::new))
+                    .ifPresent(output -> give(player, output));
+        }
+        data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id)).ifPresent(blueprint -> DomainBehaviorService.execute(
+                MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.failBehavior(),
+                BehaviorContext.of(Kind.FORGING_FAIL, data.blueprint().orElseThrow(), player, FormulaContext.EMPTY, false)));
+        player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
+    }
+
+    private static void give(ServerPlayer player, ItemStack stack) {
+        if (!player.getInventory().add(stack)) player.drop(stack, false);
+    }
+
+    private static Optional<StationSession> stationForOwner(ServerPlayer player, BlockPos position) {
+        StationSession station = player.level().getData(MxtAttachments.FORGING_WORLD).get(position).orElse(null);
+        if (station == null || !station.owner().equals(player.getUUID())) return Optional.empty();
+        Identifier blueprintId = station.session().blueprint().orElse(null);
+        ForgingBlueprintDefinition blueprint = blueprintId == null ? null : MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        return blueprint != null && canUse(player, position, blueprint) ? Optional.of(station) : Optional.empty();
+    }
+}

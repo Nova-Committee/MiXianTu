@@ -1,0 +1,31 @@
+license="All Rights Reserved"
+
+[[mods]]
+modId="mxt_test"
+version="1.0.0-test"
+displayName="MiXianTu Test Module"
+authors="IAFEnvoy"
+description='''
+Development-only test content for MiXianTu.
+'''
+
+[[dependencies.mxt_test]]
+modId="neoforge"
+type="required"
+versionRange="[26.1.2,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.mxt_test]]
+modId="minecraft"
+type="required"
+versionRange="[26.1.2]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.mxt_test]]
+modId="mxt"
+type="required"
+versionRange="[1.0.0,)"
+ordering="AFTER"
+side="BOTH"

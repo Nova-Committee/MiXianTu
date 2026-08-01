@@ -1,0 +1,7 @@
+{
+  "item": "minecraft:apple",
+  "definition": {
+    "registry": "mxt:item",
+    "id": "mxt_test:fire_root_item"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "item_type": "artifact",
+  "spirit_capacity": 100,
+  "storage_slots": 0,
+  "flight_speed": 0,
+  "flight_costs": [],
+  "granted_abilities": ["mxt_test:artifact_guard"]
+}
