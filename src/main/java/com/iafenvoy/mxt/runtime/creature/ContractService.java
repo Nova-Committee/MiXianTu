@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.attachment.ContractData;
-import com.iafenvoy.mxt.data.creature.ContractTypeDefinition;
+import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Action;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Post;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Pre;
@@ -21,7 +21,7 @@ public final class ContractService {
     private ContractService() {
     }
 
-    public static Result bind(ContractData data, Identifier id, ContractTypeDefinition definition, UUID owner, long gameTime,
+    public static Result bind(ContractData data, Identifier id, ContractType definition, UUID owner, long gameTime,
                               BooleanSupplier ownerAllowed, BooleanSupplier creatureAllowed) {
         if (data.bound()) return Result.rejected(Failure.ALREADY_BOUND);
         if (!ownerAllowed.getAsBoolean()) return Result.rejected(Failure.OWNER_CONDITIONS);
@@ -36,7 +36,7 @@ public final class ContractService {
     /**
      * Evaluates both sides against the contract's fixed condition registry before binding.
      */
-    public static Result bind(ContractData data, Identifier id, ContractTypeDefinition definition, LivingEntity owner,
+    public static Result bind(ContractData data, Identifier id, ContractType definition, LivingEntity owner,
                               LivingEntity creature, long gameTime, FormulaContext context) {
         boolean ownerAllowed = definition.ownerConditions().stream().allMatch(condition -> condition.test(owner, context));
         boolean creatureAllowed = definition.creatureConditions().stream().allMatch(condition -> condition.test(creature, context));

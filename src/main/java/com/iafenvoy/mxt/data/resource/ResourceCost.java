@@ -14,9 +14,9 @@ import java.util.List;
 /**
  * One entry in the common costs array.
  */
-public record ResourceCost(Holder<ResourceDefinition> resource, NumberProvider amount) {
+public record ResourceCost(Holder<Resource> resource, NumberProvider amount) {
     public static final Codec<ResourceCost> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ResourceDefinition.HOLDER_CODEC.fieldOf("id").forGetter(ResourceCost::resource),
+            Resource.CODEC.fieldOf("id").forGetter(ResourceCost::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(ResourceCost::amount)
     ).apply(instance, ResourceCost::new));
     public static final Codec<List<ResourceCost>> LIST_CODEC = AutoIgnoreListCodec.create(CODEC);

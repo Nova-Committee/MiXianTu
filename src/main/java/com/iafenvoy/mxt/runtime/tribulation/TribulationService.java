@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
 import com.iafenvoy.mxt.attachment.TribulationData;
-import com.iafenvoy.mxt.data.tribulation.TribulationDefinition;
-import com.iafenvoy.mxt.data.tribulation.TribulationDefinition.Phase;
+import com.iafenvoy.mxt.data.Tribulation;
+import com.iafenvoy.mxt.data.Tribulation.Phase;
 import com.iafenvoy.mxt.event.TribulationEvent.Complete;
 import com.iafenvoy.mxt.event.TribulationEvent.PhasePost;
 import com.iafenvoy.mxt.event.TribulationEvent.PhasePre;
@@ -24,7 +24,7 @@ public final class TribulationService {
     private TribulationService() {
     }
 
-    public static StartResult start(TribulationData data, Identifier id, TribulationDefinition definition, long gameTime, FormulaContext context) {
+    public static StartResult start(TribulationData data, Identifier id, Tribulation definition, long gameTime, FormulaContext context) {
         if (data.tribulation().isPresent()) return StartResult.rejected(Failure.ALREADY_ACTIVE);
         if (definition.phases().isEmpty()) return StartResult.rejected(Failure.INVALID_FORMULA);
         long duration = duration(definition.phases().getFirst(), definition, context);
@@ -41,12 +41,12 @@ public final class TribulationService {
     /**
      * Entity-aware entry point for data-defined trigger conditions.
      */
-    public static StartResult start(LivingEntity entity, TribulationData data, Identifier id, TribulationDefinition definition, long gameTime, FormulaContext context) {
+    public static StartResult start(LivingEntity entity, TribulationData data, Identifier id, Tribulation definition, long gameTime, FormulaContext context) {
         boolean allowed = definition.triggerConditions().stream().allMatch(condition -> condition.test(entity, context));
         return allowed ? start(data, id, definition, gameTime, context) : StartResult.rejected(Failure.CONDITIONS);
     }
 
-    public static TickResult tick(TribulationData data, TribulationDefinition definition, long gameTime, FormulaContext context) {
+    public static TickResult tick(TribulationData data, Tribulation definition, long gameTime, FormulaContext context) {
         if (data.tribulation().isEmpty() || data.paused()) return TickResult.idle();
         if (gameTime < data.phaseEndsAt()) return TickResult.running(data.phase());
         int next = data.phase() + 1;
@@ -79,7 +79,7 @@ public final class TribulationService {
         return TickResult.advanced(next);
     }
 
-    private static long duration(Phase phase, TribulationDefinition definition, FormulaContext context) {
+    private static long duration(Phase phase, Tribulation definition, FormulaContext context) {
         double scale = definition.difficultyScale().evaluate(context);
         double value = phase.duration().evaluate(context) * scale * Math.max(0.0D, 1.0D + context.value("aura_tribulation_modifier"));
         return !Double.isFinite(value) || value <= 0.0D || value > Long.MAX_VALUE ? -1L : Math.max(1L, Math.round(value));

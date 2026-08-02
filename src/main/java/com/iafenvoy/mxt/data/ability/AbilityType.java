@@ -144,9 +144,9 @@ public sealed interface AbilityType permits Active, Triggered, Modifier,
         }
     }
 
-    record Composite(List<Holder<AbilityDefinition>> abilities, boolean allRequired) implements AbilityType {
+    record Composite(List<Holder<Ability>> abilities, boolean allRequired) implements AbilityType {
         public static final MapCodec<Composite> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                AutoIgnoreListCodec.create(AbilityDefinition.HOLDER_CODEC).fieldOf("abilities").forGetter(Composite::abilities),
+                AutoIgnoreListCodec.create(Ability.CODEC).fieldOf("abilities").forGetter(Composite::abilities),
                 Codec.BOOL.optionalFieldOf("all_required", true).forGetter(Composite::allRequired)
         ).apply(instance, Composite::new));
 

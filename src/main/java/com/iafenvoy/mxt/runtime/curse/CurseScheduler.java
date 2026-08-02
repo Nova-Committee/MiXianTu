@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.curse;
 
 import com.iafenvoy.mxt.attachment.CurseHolderData;
 import com.iafenvoy.mxt.attachment.CurseHolderData.State;
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -62,7 +62,7 @@ public final class CurseScheduler {
         CurseHolderData data = entity.getData(MxtAttachments.CURSE_HOLDER);
         long result = Long.MAX_VALUE;
         for (Map.Entry<Identifier, State> entry : data.instances().entrySet()) {
-            CurseDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, entry.getKey()).orElse(null);
+            Curse definition = MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, entry.getKey()).orElse(null);
             if (definition == null) {
                 data.markUnknown(entry.getKey());
                 continue;

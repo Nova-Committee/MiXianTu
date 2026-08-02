@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.cultivation.RealmStageDefinition;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -14,10 +14,10 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.Locale;
 
-public record RealmEntityCondition(Holder<RealmStageDefinition> realm,
+public record RealmEntityCondition(Holder<RealmStage> realm,
                                    Comparison comparison) implements EntityCondition {
     public static final MapCodec<RealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RealmStageDefinition.HOLDER_CODEC.fieldOf("realm").forGetter(RealmEntityCondition::realm),
+            RealmStage.CODEC.fieldOf("realm").forGetter(RealmEntityCondition::realm),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.EXACT).forGetter(RealmEntityCondition::comparison)
     ).apply(instance, RealmEntityCondition::new));
 

@@ -3,10 +3,10 @@ package com.iafenvoy.mxt.client;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
-import com.iafenvoy.mxt.data.resource.ResourceBarDefinition;
-import com.iafenvoy.mxt.data.resource.ResourceBarDefinition.Anchor;
-import com.iafenvoy.mxt.data.resource.ResourceBarDefinition.Context;
-import com.iafenvoy.mxt.data.resource.ResourceDefinition;
+import com.iafenvoy.mxt.data.resource.ResourceBar;
+import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
+import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Radial;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Segmented;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.TextOnly;
@@ -73,18 +73,18 @@ public enum ResourceBarOverlay implements GuiLayer {
     }
 
     private static List<ResolvedBar> collect(Player player) {
-        Registry<ResourceBarDefinition> bars = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE_BAR);
-        Registry<ResourceDefinition> resources = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE);
+        Registry<ResourceBar> bars = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE_BAR);
+        Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE);
         ResourceHolderData values = player.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = player.level().getGameTime();
         List<ResolvedBar> result = new ArrayList<>();
 
-        for (Reference<ResourceBarDefinition> holder : bars.listElements().toList()) {
+        for (Reference<ResourceBar> holder : bars.listElements().toList()) {
             Identifier id = holder.unwrapKey().map(ResourceKey::identifier).orElse(null);
-            ResourceBarDefinition bar = holder.value();
+            ResourceBar bar = holder.value();
             Identifier resourceId = HolderHelper.id(bar.resource());
             if (id == null || bar.context() != Context.SELF_HUD || !values.contains(resourceId)) continue;
-            ResourceDefinition resource = bar.resource().value();
+            Resource resource = bar.resource().value();
 
             double min = resource.min().evaluate(FormulaContext.EMPTY);
             double maximum = resource.max().evaluate(FormulaContext.EMPTY);
@@ -219,7 +219,7 @@ public enum ResourceBarOverlay implements GuiLayer {
     private record Position(int x, int y) {
     }
 
-    private record ResolvedBar(Identifier id, ResourceBarDefinition definition, double current, double minimum,
+    private record ResolvedBar(Identifier id, ResourceBar definition, double current, double minimum,
                                double maximum) {
         private double progress() {
             return this.maximum == this.minimum ? 1.0D : Math.max(0.0D, Math.min(1.0D, (this.current - this.minimum) / (this.maximum - this.minimum)));

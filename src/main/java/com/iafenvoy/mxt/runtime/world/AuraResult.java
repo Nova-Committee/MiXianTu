@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.data.world.AuraZoneDefinition.Rules;
+import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;

@@ -1,17 +1,18 @@
 package com.iafenvoy.mxt.testmod;
 
-import com.iafenvoy.mxt.data.alchemy.PillDefinition;
+import com.iafenvoy.mxt.data.alchemy.Pill;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.data.item.ItemDefinitionReference;
-import com.iafenvoy.mxt.data.item.ItemDefinitionRegistry;
+import com.iafenvoy.mxt.data.item.DatapackItemReference;
+import com.iafenvoy.mxt.data.item.DatapackItemRegistry;
 import com.iafenvoy.mxt.data.item.SpiritRootItemEffect;
-import com.iafenvoy.mxt.data.weapon.WeaponDefinition;
+import com.iafenvoy.mxt.data.Weapon;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.util.ItemMatcher;
 import com.google.gson.JsonParser;
+import com.iafenvoy.mxt.util.ItemMatcher.Entry;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.RegistryOps;
@@ -50,7 +51,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Realm cache did not preserve linear realm ordering");
         }
         Identifier weaponItem = Identifier.parse("mxt_test:bound_sword");
-        ItemDefinitionReference weaponReference = new ItemDefinitionReference(ItemDefinitionRegistry.WEAPON, weaponItem);
+        DatapackItemReference weaponReference = new DatapackItemReference(DatapackItemRegistry.WEAPON, weaponItem);
         ItemStack weapon = ItemBindingService.create(Items.DIAMOND_SWORD, weaponReference)
                 .orElseThrow(() -> new IllegalStateException("Item binding did not accept its declared logical item"));
         if (!Identifier.parse("mxt_test:mxt/bound_sword").equals(weapon.get(DataComponents.ITEM_MODEL))) {
@@ -61,30 +62,30 @@ public final class MxtTestMod {
                 || modifiers.compute(Attributes.ATTACK_SPEED, 0.0D, EquipmentSlot.MAINHAND) != -2.4D) {
             throw new IllegalStateException("Weapon effect did not apply its datapack combat values");
         }
-        if (ItemBindingService.effects(weapon).stream().noneMatch(effect -> effect.definition() instanceof WeaponDefinition)) {
+        if (ItemBindingService.effects(weapon).stream().noneMatch(effect -> effect.definition() instanceof Weapon)) {
             throw new IllegalStateException("Item definition did not resolve its weapon effect");
         }
         if (ItemBindingService.effects(event.getServer().registryAccess(), weapon).stream()
-                .noneMatch(effect -> effect.definition() instanceof WeaponDefinition)) {
+                .noneMatch(effect -> effect.definition() instanceof Weapon)) {
             throw new IllegalStateException("Client registry lookup did not resolve the weapon effect");
         }
         Optional<ItemStack> pill = ItemBindingService.create(Items.HONEY_BOTTLE,
-                new ItemDefinitionReference(ItemDefinitionRegistry.PILL, Identifier.parse("mxt_test:toxicity_pill")));
-        if (pill.isEmpty() || ItemBindingService.effects(pill.get()).stream().noneMatch(effect -> effect.definition() instanceof PillDefinition)) {
+                new DatapackItemReference(DatapackItemRegistry.PILL, Identifier.parse("mxt_test:toxicity_pill")));
+        if (pill.isEmpty() || ItemBindingService.effects(pill.get()).stream().noneMatch(effect -> effect.definition() instanceof Pill)) {
             throw new IllegalStateException("Item definition did not resolve its pill effect");
         }
         Optional<ItemStack> root = ItemBindingService.create(Items.APPLE,
-                new ItemDefinitionReference(ItemDefinitionRegistry.OTHER, Identifier.parse("mxt_test:fire_root_item")));
+                new DatapackItemReference(DatapackItemRegistry.OTHER, Identifier.parse("mxt_test:fire_root_item")));
         if (root.isEmpty() || ItemBindingService.effects(root.get()).stream().noneMatch(effect -> effect.definition() instanceof SpiritRootItemEffect)) {
             throw new IllegalStateException("Item definition did not resolve its spirit-root effect");
         }
-        List<ItemMatcher.Entry> matcherEntries = ItemMatcher.ENTRIES_CODEC.parse(RegistryOps.create(JsonOps.INSTANCE, event.getServer().registryAccess()), JsonParser.parseString("""
+        List<Entry> matcherEntries = ItemMatcher.ENTRIES_CODEC.parse(RegistryOps.create(JsonOps.INSTANCE, event.getServer().registryAccess()), JsonParser.parseString("""
                 ["minecraft:stick", {"registry": "mxt:weapon", "id": "mxt_test:bound_sword"}]
                 """)).getOrThrow();
         if (matcherEntries.size() != 2 || !matcherEntries.get(1).matches(weapon)) {
             throw new IllegalStateException("Mixed physical and data-driven item matcher entries did not match the weapon stack");
         }
-        if (ItemDefinitionReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"mxt_test:bound_sword\"")).result().isPresent()) {
+        if (DatapackItemReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"mxt_test:bound_sword\"")).result().isPresent()) {
             throw new IllegalStateException("Item definition references must require the category-qualified object form");
         }
         if (ResourceHolderData.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("""

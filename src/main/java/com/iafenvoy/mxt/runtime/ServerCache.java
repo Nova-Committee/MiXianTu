@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.cultivation.RealmStageDefinition;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
@@ -103,7 +103,7 @@ public final class ServerCache {
                 MiXianTu.LOGGER.error("Ignoring cyclic cultivation chain for resource {} at realm {}", resource, current);
                 return;
             }
-            RealmStageDefinition stage = MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, current).orElse(null);
+            RealmStage stage = MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, current).orElse(null);
             if (stage == null || !HolderHelper.id(stage.resource()).equals(resource)) {
                 MiXianTu.LOGGER.error("Ignoring invalid cultivation chain for resource {} at realm {}", resource, current);
                 return;

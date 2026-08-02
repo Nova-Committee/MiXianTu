@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityType.Modifier;
-import com.iafenvoy.mxt.data.common.AttributeModifierDefinition;
+import com.iafenvoy.mxt.data.AttributeModifier;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
@@ -17,18 +17,18 @@ public final class AbilityModifierService {
     private AbilityModifierService() {
     }
 
-    public static List<ResolvedModifier> resolve(AbilityHolderData holder, Function<Identifier, AbilityDefinition> definitions) {
+    public static List<ResolvedModifier> resolve(AbilityHolderData holder, Function<Identifier, Ability> definitions) {
         List<ResolvedModifier> result = new ArrayList<>();
         for (Identifier id : holder.sources().keySet()) {
-            AbilityDefinition definition = definitions.apply(id);
-            if (definition == null || !(definition.typedType() instanceof Modifier))
+            Ability definition = definitions.apply(id);
+            if (definition == null || !(definition.type() instanceof Modifier))
                 continue;
-            for (AttributeModifierDefinition modifier : definition.modifiers())
+            for (AttributeModifier modifier : definition.modifiers())
                 result.add(new ResolvedModifier(id, modifier));
         }
         return List.copyOf(result);
     }
 
-    public record ResolvedModifier(Identifier ability, AttributeModifierDefinition modifier) {
+    public record ResolvedModifier(Identifier ability, AttributeModifier modifier) {
     }
 }

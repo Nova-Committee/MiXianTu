@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.data.condition.builtin;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
-import com.iafenvoy.mxt.data.cultivation.ElementDefinition;
-import com.iafenvoy.mxt.data.cultivation.SpiritRootDefinition;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -24,15 +24,15 @@ public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
 
     @Override
     public boolean test(Entity actor, Entity target, FormulaContext context) {
-        Set<Holder<ElementDefinition>> actorElements = elements(actor.getData(MxtAttachments.SPIRIT_DATA));
-        Set<Holder<ElementDefinition>> targetElements = elements(target.getData(MxtAttachments.SPIRIT_DATA));
+        Set<Holder<Element>> actorElements = elements(actor.getData(MxtAttachments.SPIRIT_DATA));
+        Set<Holder<Element>> targetElements = elements(target.getData(MxtAttachments.SPIRIT_DATA));
         return actorElements.stream().anyMatch(element -> targetElements.stream()
                 .anyMatch(targetElement -> RegistryCodecs.matches(element.value().overcomes(), targetElement)));
     }
 
-    private static Set<Holder<ElementDefinition>> elements(SpiritData spirit) {
+    private static Set<Holder<Element>> elements(SpiritData spirit) {
         return spirit.spiritRoots().stream().flatMap(root -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, root).stream())
-                .map(SpiritRootDefinition::element).collect(Collectors.toUnmodifiableSet());
+                .map(SpiritRoot::element).collect(Collectors.toUnmodifiableSet());
     }
 
     @Override

@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.cultivation.PhysiqueDefinition;
-import com.iafenvoy.mxt.data.cultivation.SpiritRootDefinition;
+import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -21,7 +21,7 @@ public final class CultivationIdentityService {
     private CultivationIdentityService() {
     }
 
-    public static Result grantSpiritRoot(LivingEntity entity, Identifier id, SpiritRootDefinition definition) {
+    public static Result grantSpiritRoot(LivingEntity entity, Identifier id, SpiritRoot definition) {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         if (spirit.spiritRoots().contains(id)) return Result.rejected(Failure.ALREADY_HELD);
         ArrayList<Identifier> roots = new ArrayList<>(spirit.spiritRoots());
@@ -31,7 +31,7 @@ public final class CultivationIdentityService {
         return Result.changedResult();
     }
 
-    public static Result grantPhysique(LivingEntity entity, Identifier id, PhysiqueDefinition definition, FormulaContext context) {
+    public static Result grantPhysique(LivingEntity entity, Identifier id, Physique definition, FormulaContext context) {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         if (!definition.allowStacking() && spirit.physiques().contains(id))
             return Result.rejected(Failure.ALREADY_HELD);

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.title.TitleDefinition;
+import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -19,8 +19,8 @@ public final class TitleService {
     private TitleService() {
     }
 
-    public static Result grant(SpiritData spirit, Identifier id, TitleDefinition definition,
-                               Function<Identifier, TitleDefinition> lookup, BooleanSupplier unlockConditions) {
+    public static Result grant(SpiritData spirit, Identifier id, Title definition,
+                               Function<Identifier, Title> lookup, BooleanSupplier unlockConditions) {
         if (spirit.titles().contains(id)) return Result.rejected(Failure.ALREADY_GRANTED);
         if (!unlockConditions.getAsBoolean()) return Result.rejected(Failure.CONDITIONS);
         HashSet<Identifier> exclusive = new HashSet<>(definition.exclusiveTags());
@@ -36,8 +36,8 @@ public final class TitleService {
     /**
      * Evaluates every Java-owned condition declared by the title before changing ownership.
      */
-    public static Result grant(LivingEntity entity, SpiritData spirit, Identifier id, TitleDefinition definition,
-                               Function<Identifier, TitleDefinition> lookup, FormulaContext context) {
+    public static Result grant(LivingEntity entity, SpiritData spirit, Identifier id, Title definition,
+                               Function<Identifier, Title> lookup, FormulaContext context) {
         boolean allowed = definition.unlockConditions().stream().allMatch(condition -> condition.test(entity, context));
         return allowed ? grant(spirit, id, definition, lookup, () -> true) : Result.rejected(Failure.CONDITIONS);
     }

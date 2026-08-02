@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.item.ItemBindingDefinition;
-import com.iafenvoy.mxt.data.item.ItemDefinition;
-import com.iafenvoy.mxt.data.item.ItemDefinitionReference;
-import com.iafenvoy.mxt.data.item.ItemDefinitionRegistry;
+import com.iafenvoy.mxt.data.item.ItemBinding;
+import com.iafenvoy.mxt.data.item.DatapackItem;
+import com.iafenvoy.mxt.data.item.DatapackItemReference;
+import com.iafenvoy.mxt.data.item.DatapackItemRegistry;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
@@ -31,14 +31,14 @@ public final class MxtCreativeTabs {
             .displayItems((parameters, output) -> MxtItems.registeredItems().forEach(item -> output.accept(item.get())))
             .build());
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ITEM = dataDrivenTab(
-            "item", "itemGroup.mxt.item", Items.APPLE, ItemDefinitionRegistry.OTHER, false);
+            "item", "itemGroup.mxt.item", Items.APPLE, DatapackItemRegistry.OTHER, false);
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PILL = dataDrivenTab(
-            "pill", "itemGroup.mxt.pill", Items.HONEY_BOTTLE, ItemDefinitionRegistry.PILL, true);
+            "pill", "itemGroup.mxt.pill", Items.HONEY_BOTTLE, DatapackItemRegistry.PILL, true);
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WEAPON = dataDrivenTab(
-            "weapon", "itemGroup.mxt.weapon", Items.DIAMOND_SWORD, ItemDefinitionRegistry.WEAPON, true);
+            "weapon", "itemGroup.mxt.weapon", Items.DIAMOND_SWORD, DatapackItemRegistry.WEAPON, true);
 
     private static DeferredHolder<CreativeModeTab, CreativeModeTab> dataDrivenTab(String path, String title, Item icon,
-                                                                                  ItemDefinitionRegistry category, boolean bindStack) {
+                                                                                  DatapackItemRegistry category, boolean bindStack) {
         return REGISTRY.register(path, () -> CreativeModeTab.builder()
                 .title(Component.translatable(title))
                 .icon(() -> new ItemStack(icon))
@@ -49,9 +49,9 @@ public final class MxtCreativeTabs {
     }
 
     private static void addDefinition(ItemDisplayParameters parameters, Output output,
-                                      ItemDefinitionRegistry category, Reference<ItemDefinition> definition,
+                                      DatapackItemRegistry category, Reference<DatapackItem> definition,
                                       boolean bindStack) {
-        ItemDefinitionReference reference = new ItemDefinitionReference(category, definition.key().identifier());
+        DatapackItemReference reference = new DatapackItemReference(category, definition.key().identifier());
         if (bindStack) {
             ItemBindingService.create(parameters.holders(), reference).ifPresent(output::accept);
             return;
@@ -59,7 +59,7 @@ public final class MxtCreativeTabs {
         List<Item> bindings = MxtDatapackRegistries.holders(parameters.holders(), MxtDatapackRegistries.ITEM_BINDING)
                 .map(Reference::value)
                 .filter(binding -> binding.definition().equals(reference))
-                .map(ItemBindingDefinition::item)
+                .map(ItemBinding::item)
                 .distinct()
                 .toList();
         if (bindings.size() == 1) output.accept(bindings.getFirst());

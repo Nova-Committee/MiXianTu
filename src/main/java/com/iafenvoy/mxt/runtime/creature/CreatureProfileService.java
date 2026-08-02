@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.creature;
 
-import com.iafenvoy.mxt.data.creature.CreatureProfileDefinition;
+import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -29,7 +29,7 @@ public final class CreatureProfileService {
                 .min(Comparator.naturalOrder());
     }
 
-    public static boolean apply(Mob creature, Identifier id, CreatureProfileDefinition definition, FormulaContext context) {
+    public static boolean apply(Mob creature, Identifier id, CreatureProfile definition, FormulaContext context) {
         if (!definition.spawnConditions().stream().allMatch(condition -> condition.test(creature, context)))
             return false;
         AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
@@ -48,7 +48,7 @@ public final class CreatureProfileService {
         return true;
     }
 
-    public static boolean matchesType(Mob creature, CreatureProfileDefinition definition) {
+    public static boolean matchesType(Mob creature, CreatureProfile definition) {
         Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(creature.getType());
         return RegistryCodecs.matches(definition.entityTypeTags(), BuiltInRegistries.ENTITY_TYPE, Registries.ENTITY_TYPE, type);
     }

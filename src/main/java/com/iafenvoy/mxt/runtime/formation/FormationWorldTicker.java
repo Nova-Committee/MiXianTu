@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.data.formation.FormationDefinition;
+import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -33,7 +33,7 @@ public final class FormationWorldTicker {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 20L != 0L) return;
         FormationWorldData world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, Snapshot> entry : world.formations().entrySet()) {
-            Optional<FormationDefinition> definition = MxtDatapackRegistries.get(MxtDatapackRegistries.FORMATION, entry.getValue().formation());
+            Optional<Formation> definition = MxtDatapackRegistries.get(MxtDatapackRegistries.FORMATION, entry.getValue().formation());
             if (definition.isEmpty() || !VALIDATOR.matches(level, entry.getKey(), definition.get())) {
                 world.remove(entry.getKey());
                 NeoForge.EVENT_BUS.post(new Deactivate(level, entry.getKey(), entry.getValue().formation(), FormationInstance.restore(entry.getValue())));

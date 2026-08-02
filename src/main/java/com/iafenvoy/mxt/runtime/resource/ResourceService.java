@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.data.resource.ResourceDefinition;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 
@@ -12,7 +12,7 @@ public final class ResourceService {
     private ResourceService() {
     }
 
-    public static Result initialize(ResourceHolderData holder, Identifier id, ResourceDefinition definition, FormulaContext context) {
+    public static Result initialize(ResourceHolderData holder, Identifier id, Resource definition, FormulaContext context) {
         if (holder.contains(id)) return Result.unchanged(holder.get(id));
         Bounds bounds = bounds(definition, context);
         if (bounds == null) return Result.invalid();
@@ -23,7 +23,7 @@ public final class ResourceService {
         return Result.changed(clamped);
     }
 
-    public static Result change(ResourceHolderData holder, Identifier id, ResourceDefinition definition, double amount, FormulaContext context) {
+    public static Result change(ResourceHolderData holder, Identifier id, Resource definition, double amount, FormulaContext context) {
         if (!Double.isFinite(amount)) return Result.invalid();
         Result initialized = initialize(holder, id, definition, context);
         if (!initialized.valid()) return initialized;
@@ -35,14 +35,14 @@ public final class ResourceService {
         return Result.changed(value);
     }
 
-    public static Result regenerate(ResourceHolderData holder, Identifier id, ResourceDefinition definition, long elapsedTicks, FormulaContext context) {
+    public static Result regenerate(ResourceHolderData holder, Identifier id, Resource definition, long elapsedTicks, FormulaContext context) {
         if (elapsedTicks < 0L) throw new IllegalArgumentException("Elapsed ticks cannot be negative");
         double regen = definition.regen().evaluate(context);
         if (!Double.isFinite(regen)) return Result.invalid();
         return change(holder, id, definition, regen * elapsedTicks, context);
     }
 
-    private static Bounds bounds(ResourceDefinition definition, FormulaContext context) {
+    private static Bounds bounds(Resource definition, FormulaContext context) {
         double min = definition.min().evaluate(context);
         double max = definition.max().evaluate(context);
         return Double.isFinite(min) && Double.isFinite(max) && min <= max ? new Bounds(min, max) : null;

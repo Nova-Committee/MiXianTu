@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.cultivation.CultivateActionDefinition;
+import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -24,7 +24,7 @@ public final class CultivationActionEventBridge {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         Identifier actionId = spirit.cultivateAction().orElse(null);
         if (actionId == null) return;
-        CultivateActionDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATE_ACTION, actionId).orElse(null);
+        CultivateAction definition = MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATE_ACTION, actionId).orElse(null);
         if (definition == null) {
             spirit.stopCultivateAction(actionId, entity.level().getGameTime());
             return;

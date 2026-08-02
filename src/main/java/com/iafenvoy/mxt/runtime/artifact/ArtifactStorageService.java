@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.data.artifact.ArtifactStorageData;
-import com.iafenvoy.mxt.data.artifact.ItemArchetypeDefinition;
+import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -54,7 +54,7 @@ public final class ArtifactStorageService implements ISpiritStorage {
         return !viewer.level().isClientSide() && ArtifactService.isOwner(stack, viewer.getUUID()) && this.slots(stack, FormulaContexts.forEntity(viewer)) > 0;
     }
 
-    public static int configuredSlots(ItemArchetypeDefinition definition, FormulaContext context) {
+    public static int configuredSlots(ItemArchetype definition, FormulaContext context) {
         double evaluated = definition.storageSlots().evaluate(context);
         if (!Double.isFinite(evaluated)) return 0;
         return Math.clamp((int) Math.floor(evaluated), 0, MAX_SLOTS);

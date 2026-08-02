@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.SectData;
 import com.iafenvoy.mxt.attachment.SectTerritoryData;
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.sect.SectDefinition;
+import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -203,7 +203,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("mxt.command.sect.not_member"));
             return 0;
         }
-        SectDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.SECT, sect).orElse(null);
+        Sect definition = MxtDatapackRegistries.get(MxtDatapackRegistries.SECT, sect).orElse(null);
         if (definition == null) {
             source.sendFailure(Component.translatable("mxt.command.sect.unknown", sect));
             return 0;

@@ -17,7 +17,6 @@ import com.iafenvoy.mxt.runtime.behavior.DomainBehavior;
 import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.ValueModifier;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.DefaultedMappedRegistry;
@@ -41,8 +40,6 @@ public final class MxtTypeRegistries {
     public static final DefaultedRegistry<MapCodec<? extends AbilityTrigger>> ABILITY_TRIGGER_TYPE = new DefaultedMappedRegistry<>("use", ABILITY_TRIGGER_TYPE_KEY, Lifecycle.stable(), false);
     public static final ResourceKey<Registry<MapCodec<? extends NumberProvider>>> NUMBER_PROVIDER_TYPE_KEY = key("number_provider_type");
     public static final DefaultedRegistry<MapCodec<? extends NumberProvider>> NUMBER_PROVIDER_TYPE = new DefaultedMappedRegistry<>("constant", NUMBER_PROVIDER_TYPE_KEY, Lifecycle.stable(), false);
-    public static final ResourceKey<Registry<MapCodec<? extends ValueModifier>>> VALUE_MODIFIER_TYPE_KEY = key("value_modifier_type");
-    public static final DefaultedRegistry<MapCodec<? extends ValueModifier>> VALUE_MODIFIER_TYPE = new DefaultedMappedRegistry<>("add", VALUE_MODIFIER_TYPE_KEY, Lifecycle.stable(), false);
     public static final ResourceKey<Registry<MapCodec<? extends ResourceValueProvider>>> RESOURCE_VALUE_PROVIDER_TYPE_KEY = key("resource_value_provider_type");
     public static final DefaultedRegistry<MapCodec<? extends ResourceValueProvider>> RESOURCE_VALUE_PROVIDER_TYPE = new DefaultedMappedRegistry<>("current", RESOURCE_VALUE_PROVIDER_TYPE_KEY, Lifecycle.stable(), false);
     public static final ResourceKey<Registry<MapCodec<? extends EntityAction>>> ENTITY_ACTION_TYPE_KEY = key("entity_action_type");
@@ -97,7 +94,6 @@ public final class MxtTypeRegistries {
         event.register(ABILITY_COMPONENT_TYPE);
         event.register(ABILITY_TRIGGER_TYPE);
         event.register(NUMBER_PROVIDER_TYPE);
-        event.register(VALUE_MODIFIER_TYPE);
         event.register(RESOURCE_VALUE_PROVIDER_TYPE);
         event.register(ENTITY_ACTION_TYPE);
         event.register(BI_ENTITY_ACTION_TYPE);

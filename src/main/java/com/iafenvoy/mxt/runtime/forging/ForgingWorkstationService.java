@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.attachment.ForgingSessionData;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition.FailureSettlement;
-import com.iafenvoy.mxt.data.forging.ForgingMethodDefinition;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint.FailureSettlement;
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -39,7 +39,7 @@ public final class ForgingWorkstationService {
     private ForgingWorkstationService() {
     }
 
-    public static boolean start(ServerPlayer player, BlockPos position, Identifier blueprintId, ForgingBlueprintDefinition blueprint) {
+    public static boolean start(ServerPlayer player, BlockPos position, Identifier blueprintId, ForgingBlueprint blueprint) {
         ServerLevel level = player.level();
         if (!canUse(player, position, blueprint)) return false;
         ForgingWorldData world = level.getData(MxtAttachments.FORGING_WORLD);
@@ -59,7 +59,7 @@ public final class ForgingWorkstationService {
         return true;
     }
 
-    public static boolean strike(ServerPlayer player, BlockPos position, Identifier methodId, ForgingMethodDefinition method) {
+    public static boolean strike(ServerPlayer player, BlockPos position, Identifier methodId, ForgingMethod method) {
         StationSession station = stationForOwner(player, position).orElse(null);
         if (station == null || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
@@ -136,7 +136,7 @@ public final class ForgingWorkstationService {
         return cancelled;
     }
 
-    public static boolean canUse(ServerPlayer player, BlockPos position, ForgingBlueprintDefinition blueprint) {
+    public static boolean canUse(ServerPlayer player, BlockPos position, ForgingBlueprint blueprint) {
         if (player.distanceToSqr(position.getCenter()) > MAX_DISTANCE_SQUARED) return false;
         Identifier block = BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(position).getBlock());
         return RegistryCodecs.matches(blueprint.workstationBlocks(), BuiltInRegistries.BLOCK,
@@ -167,7 +167,7 @@ public final class ForgingWorkstationService {
         StationSession station = player.level().getData(MxtAttachments.FORGING_WORLD).get(position).orElse(null);
         if (station == null || !station.owner().equals(player.getUUID())) return Optional.empty();
         Identifier blueprintId = station.session().blueprint().orElse(null);
-        ForgingBlueprintDefinition blueprint = blueprintId == null ? null : MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        ForgingBlueprint blueprint = blueprintId == null ? null : MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId).orElse(null);
         return blueprint != null && canUse(player, position, blueprint) ? Optional.of(station) : Optional.empty();
     }
 }

@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 import java.util.Optional;
 
 /**
- * Shared reload-time validation for direct references into code-owned behaviour registries.
+ * Shared reload-time validation for direct references into code-owned behavior registries.
  */
 public final class BehaviorReferences {
     private BehaviorReferences() {

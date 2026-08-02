@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.curse;
 
 import com.iafenvoy.mxt.attachment.CurseHolderData;
 import com.iafenvoy.mxt.attachment.CurseHolderData.State;
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
@@ -29,7 +29,7 @@ public final class CurseService {
     private CurseService() {
     }
 
-    public static ApplyResult apply(CurseHolderData data, Identifier id, CurseDefinition definition, int stacks,
+    public static ApplyResult apply(CurseHolderData data, Identifier id, Curse definition, int stacks,
                                     long gameTime, FormulaContext context, String source) {
         return apply(data, id, definition, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
     }
@@ -37,12 +37,12 @@ public final class CurseService {
     /**
      * Variant for integrations that own a dedicated event bus.
      */
-    public static ApplyResult apply(CurseHolderData data, Identifier id, CurseDefinition definition, int stacks,
+    public static ApplyResult apply(CurseHolderData data, Identifier id, Curse definition, int stacks,
                                     long gameTime, FormulaContext context, String source, @NotNull IEventBus eventBus) {
         return apply(data, id, definition, stacks, gameTime, context, source, eventBus, Optional.empty());
     }
 
-    public static ApplyResult apply(CurseHolderData data, Identifier id, CurseDefinition definition, int stacks,
+    public static ApplyResult apply(CurseHolderData data, Identifier id, Curse definition, int stacks,
                                     long gameTime, FormulaContext context, String source, IEventBus eventBus,
                                     Optional<Long> durationOverride) {
         CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, id, definition, stacks, gameTime, context, source);
@@ -58,7 +58,7 @@ public final class CurseService {
     /**
      * Full entity-facing transaction: condition, state mutation and post-apply action.
      */
-    public static ApplyResult apply(@NotNull Entity target, Identifier id, CurseDefinition definition, int stacks,
+    public static ApplyResult apply(@NotNull Entity target, Identifier id, Curse definition, int stacks,
                                     long gameTime, FormulaContext context, String source, IEventBus eventBus) {
         if (!definition.applicationCondition().test(target, context)) {
             return ApplyResult.rejected(ApplyFailure.CONDITION);
@@ -72,12 +72,12 @@ public final class CurseService {
         return result;
     }
 
-    public static ApplyResult apply(Entity target, Identifier id, CurseDefinition definition, int stacks,
+    public static ApplyResult apply(Entity target, Identifier id, Curse definition, int stacks,
                                     long gameTime, FormulaContext context, String source) {
         return apply(target, id, definition, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
     }
 
-    public static ApplyResult applyWithDuration(Entity target, Identifier id, CurseDefinition definition, int stacks,
+    public static ApplyResult applyWithDuration(Entity target, Identifier id, Curse definition, int stacks,
                                                 long gameTime, FormulaContext context, String source,
                                                 Optional<Long> durationOverride) {
         if (!definition.applicationCondition().test(target, context)) {
@@ -135,18 +135,18 @@ public final class CurseService {
     /**
      * Runs due periodic effects and expires instances without scanning unrelated entities.
      */
-    public static int tick(Entity target, long gameTime, Function<Identifier, Optional<CurseDefinition>> definitions,
+    public static int tick(Entity target, long gameTime, Function<Identifier, Optional<Curse>> definitions,
                            FormulaContext context) {
         CurseHolderData data = target.getData(MxtAttachments.CURSE_HOLDER);
         int executed = 0;
         for (Entry<Identifier, State> entry : data.instances().entrySet()) {
-            Optional<CurseDefinition> resolved = definitions.apply(entry.getKey());
+            Optional<Curse> resolved = definitions.apply(entry.getKey());
             if (resolved.isEmpty()) {
                 data.markUnknown(entry.getKey());
                 continue;
             }
             data.markKnown(entry.getKey());
-            CurseDefinition definition = resolved.get();
+            Curse definition = resolved.get();
             if (entry.getValue().expiredAt(gameTime)) {
                 if (remove(data, entry.getKey(), Reason.EXPIRED, gameTime).isPresent()) {
                     definition.onRemove().execute(target, context);

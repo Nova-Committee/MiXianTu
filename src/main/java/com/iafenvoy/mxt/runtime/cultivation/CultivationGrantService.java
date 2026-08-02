@@ -2,14 +2,14 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechniqueDefinition;
-import com.iafenvoy.mxt.data.cultivation.PhysiqueDefinition;
-import com.iafenvoy.mxt.data.cultivation.SpiritRootDefinition;
+import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
 import net.minecraft.tags.TagKey;
@@ -33,8 +33,8 @@ public final class CultivationGrantService {
                 id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATION_TECHNIQUE, id));
     }
 
-    public static Result recalculate(SpiritData spirit, AbilityHolderData abilities, Lookup<SpiritRootDefinition> roots,
-                                     Lookup<PhysiqueDefinition> physiques, Lookup<CultivationTechniqueDefinition> techniques) {
+    public static Result recalculate(SpiritData spirit, AbilityHolderData abilities, Lookup<SpiritRoot> roots,
+                                     Lookup<Physique> physiques, Lookup<CultivationTechnique> techniques) {
         int revoked = 0;
         for (Entry<Identifier, List<Identifier>> entry : abilities.sources().entrySet()) {
             for (Identifier source : entry.getValue()) {
@@ -43,24 +43,24 @@ public final class CultivationGrantService {
         }
         int granted = 0;
         for (Identifier rootId : spirit.spiritRoots()) {
-            Optional<SpiritRootDefinition> definition = roots.get(rootId);
+            Optional<SpiritRoot> definition = roots.get(rootId);
             if (definition.isPresent())
                 granted += grantAll(abilities, definition.get().grantedAbilities(), source("spirit_root", rootId));
         }
         for (Identifier physiqueId : spirit.physiques()) {
-            Optional<PhysiqueDefinition> definition = physiques.get(physiqueId);
+            Optional<Physique> definition = physiques.get(physiqueId);
             if (definition.isPresent())
                 granted += grantAll(abilities, definition.get().grantedAbilities(), source("physique", physiqueId));
         }
         for (Identifier techniqueId : spirit.learnedTechniques()) {
-            Optional<CultivationTechniqueDefinition> definition = techniques.get(techniqueId);
+            Optional<CultivationTechnique> definition = techniques.get(techniqueId);
             if (definition.isPresent())
                 granted += grantAll(abilities, definition.get().grantedAbilities(), source("technique", techniqueId));
         }
         return new Result(granted, revoked);
     }
 
-    private static int grantAll(AbilityHolderData holder, List<Either<Holder<AbilityDefinition>, TagKey<AbilityDefinition>>> values, Identifier source) {
+    private static int grantAll(AbilityHolderData holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {
         int granted = 0;
         for (Identifier ability : RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtRegistryKeys.ABILITY))
                 .map(HolderHelper::id).distinct().toList())

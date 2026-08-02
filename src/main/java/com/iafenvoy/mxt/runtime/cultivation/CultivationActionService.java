@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.AuraChunkData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.cultivation.CultivateActionDefinition;
-import com.iafenvoy.mxt.data.resource.ResourceDefinition;
+import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceGain;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.Map.Entry;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -34,7 +35,7 @@ public final class CultivationActionService {
     private CultivationActionService() {
     }
 
-    public static Result start(SpiritData spirit, @NotNull Identifier actionId, CultivateActionDefinition definition,
+    public static Result start(SpiritData spirit, @NotNull Identifier actionId, CultivateAction definition,
                                long gameTime, BooleanSupplier conditionsMet) {
         if (spirit.cultivateAction().isPresent()) return Result.rejected(Failure.ALREADY_ACTIVE, null);
         if (spirit.isCultivateActionOnCooldown(actionId, gameTime)) return Result.rejected(Failure.COOLDOWN, null);
@@ -46,7 +47,7 @@ public final class CultivationActionService {
     /**
      * Entity-aware entry point which evaluates every data-defined start condition in the fixed condition registry.
      */
-    public static Result start(LivingEntity entity, SpiritData spirit, Identifier actionId, CultivateActionDefinition definition,
+    public static Result start(LivingEntity entity, SpiritData spirit, Identifier actionId, CultivateAction definition,
                                long gameTime, FormulaContext context) {
         boolean conditions = definition.startConditions().stream().allMatch(condition -> condition.test(entity, context));
         return start(spirit, actionId, definition, gameTime, () -> conditions);
@@ -56,7 +57,7 @@ public final class CultivationActionService {
      * Resolves one due cultivation interval. All resource and aura requirements are checked before mutation.
      */
     public static Result tick(SpiritData spirit, ResourceHolderData resources, AuraChunkData aura, Identifier actionId,
-                              CultivateActionDefinition definition, long gameTime, FormulaContext context,
+                              CultivateAction definition, long gameTime, FormulaContext context,
                               BooleanSupplier conditionsMet) {
         return tick(spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, 1.0D);
     }
@@ -65,7 +66,7 @@ public final class CultivationActionService {
      * Entity-aware tick path that applies only spirit-root and technique cultivation modifiers.
      */
     public static Result tick(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, AuraChunkData aura, Identifier actionId,
-                              CultivateActionDefinition definition, long gameTime, FormulaContext context,
+                              CultivateAction definition, long gameTime, FormulaContext context,
                               BooleanSupplier conditionsMet) {
         double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id),
                 id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATION_TECHNIQUE, id));
@@ -76,7 +77,7 @@ public final class CultivationActionService {
      * Authoritative environment-aware cultivation path.
      */
     public static Result tick(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, AuraResult aura, Identifier actionId,
-                              CultivateActionDefinition definition, long gameTime, FormulaContext context,
+                              CultivateAction definition, long gameTime, FormulaContext context,
                               BooleanSupplier conditionsMet) {
         if (aura.suppressCultivate()) return stop(spirit, actionId, definition, gameTime, Failure.ENVIRONMENT);
         double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id),
@@ -85,7 +86,7 @@ public final class CultivationActionService {
     }
 
     private static Result tick(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, AuraResult aura, Identifier actionId,
-                               CultivateActionDefinition definition, long gameTime, FormulaContext context,
+                               CultivateAction definition, long gameTime, FormulaContext context,
                                BooleanSupplier conditionsMet, double affinity) {
         if (spirit.cultivateAction().filter(actionId::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
@@ -121,7 +122,7 @@ public final class CultivationActionService {
     }
 
     private static Result tick(SpiritData spirit, ResourceHolderData resources, AuraChunkData aura, Identifier actionId,
-                               CultivateActionDefinition definition, long gameTime, FormulaContext context,
+                               CultivateAction definition, long gameTime, FormulaContext context,
                                BooleanSupplier conditionsMet, double affinity) {
         if (spirit.cultivateAction().filter(actionId::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
@@ -156,11 +157,11 @@ public final class CultivationActionService {
         return Result.progressed(gain, payment.amounts());
     }
 
-    public static Result stop(SpiritData spirit, Identifier actionId, CultivateActionDefinition definition, long gameTime) {
+    public static Result stop(SpiritData spirit, Identifier actionId, CultivateAction definition, long gameTime) {
         return stop(spirit, actionId, definition, gameTime, null);
     }
 
-    private static Result stop(SpiritData spirit, Identifier actionId, CultivateActionDefinition definition, long gameTime, Failure reason) {
+    private static Result stop(SpiritData spirit, Identifier actionId, CultivateAction definition, long gameTime, Failure reason) {
         spirit.stopCultivateAction(actionId, Math.addExact(gameTime, definition.cooldownTicks()));
         return reason == null ? Result.stoppedResult() : Result.rejected(reason, null);
     }
@@ -178,8 +179,8 @@ public final class CultivationActionService {
     }
 
     private static boolean canApplyGains(ResourceHolderData resources, Map<Identifier, Double> gains, FormulaContext context) {
-        for (Map.Entry<Identifier, Double> gain : gains.entrySet()) {
-            ResourceDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey()).orElse(null);
+        for (Entry<Identifier, Double> gain : gains.entrySet()) {
+            Resource definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey()).orElse(null);
             if (definition == null || !ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context).valid())
                 return false;
         }
@@ -187,7 +188,7 @@ public final class CultivationActionService {
     }
 
     private static void applyGains(ResourceHolderData resources, Map<Identifier, Double> gains, FormulaContext context) {
-        for (Map.Entry<Identifier, Double> gain : gains.entrySet())
+        for (Entry<Identifier, Double> gain : gains.entrySet())
             MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey())
                     .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context));
     }

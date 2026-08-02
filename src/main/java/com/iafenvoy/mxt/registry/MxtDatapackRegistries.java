@@ -1,32 +1,32 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
-import com.iafenvoy.mxt.data.alchemy.AlchemyRecipeDefinition;
-import com.iafenvoy.mxt.data.alchemy.SpiritHerbDefinition;
-import com.iafenvoy.mxt.data.artifact.ItemArchetypeDefinition;
-import com.iafenvoy.mxt.data.creature.ContractTypeDefinition;
-import com.iafenvoy.mxt.data.creature.CreatureProfileDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
+import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
+import com.iafenvoy.mxt.data.artifact.ItemArchetype;
+import com.iafenvoy.mxt.data.creature.ContractType;
+import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
-import com.iafenvoy.mxt.data.economy.CurrencyValueDefinition;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition;
-import com.iafenvoy.mxt.data.forging.ForgingMethodDefinition;
-import com.iafenvoy.mxt.data.formation.FormationDefinition;
-import com.iafenvoy.mxt.data.material.MaterialGradeDefinition;
-import com.iafenvoy.mxt.data.resource.ResourceBarDefinition;
-import com.iafenvoy.mxt.data.resource.ResourceDefinition;
-import com.iafenvoy.mxt.data.sect.SectDefinition;
-import com.iafenvoy.mxt.data.title.TitleDefinition;
-import com.iafenvoy.mxt.data.tribulation.TribulationDefinition;
-import com.iafenvoy.mxt.data.world.RealmInstanceDefinition;
-import com.iafenvoy.mxt.data.world.AuraZoneDefinition;
-import com.iafenvoy.mxt.data.world.BlockAuraDefinition;
-import com.iafenvoy.mxt.data.item.ItemBindingDefinition;
-import com.iafenvoy.mxt.data.item.ItemDefinition;
-import com.iafenvoy.mxt.data.item.ItemEffectDefinition;
-import com.iafenvoy.mxt.data.item.ItemDefinitionReference;
-import com.iafenvoy.mxt.data.item.ItemDefinitionRegistry;
+import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.economy.CurrencyValue;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.MaterialGrade;
+import com.iafenvoy.mxt.data.resource.ResourceBar;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.data.Title;
+import com.iafenvoy.mxt.data.Tribulation;
+import com.iafenvoy.mxt.data.RealmInstance;
+import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.data.aura.BlockAura;
+import com.iafenvoy.mxt.data.item.ItemBinding;
+import com.iafenvoy.mxt.data.item.DatapackItem;
+import com.iafenvoy.mxt.data.item.ItemEffect;
+import com.iafenvoy.mxt.data.item.DatapackItemReference;
+import com.iafenvoy.mxt.data.item.DatapackItemRegistry;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -51,37 +51,37 @@ import java.util.stream.Stream;
  */
 public final class MxtDatapackRegistries {
     private static final Identifier DISABLED_TAG = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "disabled");
-    public static final ResourceKey<Registry<ResourceDefinition>> RESOURCE = MxtRegistryKeys.RESOURCE;
-    public static final ResourceKey<Registry<ResourceBarDefinition>> RESOURCE_BAR = MxtRegistryKeys.RESOURCE_BAR;
-    public static final ResourceKey<Registry<RealmStageDefinition>> REALM_STAGE = MxtRegistryKeys.REALM_STAGE;
-    public static final ResourceKey<Registry<ElementDefinition>> ELEMENT = MxtRegistryKeys.ELEMENT;
-    public static final ResourceKey<Registry<SpiritRootDefinition>> SPIRIT_ROOT = MxtRegistryKeys.SPIRIT_ROOT;
-    public static final ResourceKey<Registry<PhysiqueDefinition>> PHYSIQUE = MxtRegistryKeys.PHYSIQUE;
-    public static final ResourceKey<Registry<AbilityDefinition>> ABILITY = MxtRegistryKeys.ABILITY;
-    public static final ResourceKey<Registry<CurseDefinition>> CURSE = MxtRegistryKeys.CURSE;
-    public static final ResourceKey<Registry<ForgingMethodDefinition>> FORGING_METHOD = MxtRegistryKeys.FORGING_METHOD;
-    public static final ResourceKey<Registry<ForgingBlueprintDefinition>> FORGING_BLUEPRINT = MxtRegistryKeys.FORGING_BLUEPRINT;
-    public static final ResourceKey<Registry<CultivationTechniqueDefinition>> CULTIVATION_TECHNIQUE = MxtRegistryKeys.CULTIVATION_TECHNIQUE;
-    public static final ResourceKey<Registry<CultivateActionDefinition>> CULTIVATE_ACTION = MxtRegistryKeys.CULTIVATE_ACTION;
-    public static final ResourceKey<Registry<ItemArchetypeDefinition>> ITEM_ARCHETYPE = MxtRegistryKeys.ITEM_ARCHETYPE;
-    public static final ResourceKey<Registry<SpiritHerbDefinition>> SPIRIT_HERB = MxtRegistryKeys.SPIRIT_HERB;
-    public static final ResourceKey<Registry<AlchemyRecipeDefinition>> ALCHEMY_RECIPE = MxtRegistryKeys.ALCHEMY_RECIPE;
-    public static final ResourceKey<Registry<FormationDefinition>> FORMATION = MxtRegistryKeys.FORMATION;
-    public static final ResourceKey<Registry<TribulationDefinition>> TRIBULATION = MxtRegistryKeys.TRIBULATION;
-    public static final ResourceKey<Registry<CreatureProfileDefinition>> CREATURE_PROFILE = MxtRegistryKeys.CREATURE_PROFILE;
-    public static final ResourceKey<Registry<ContractTypeDefinition>> CONTRACT_TYPE = MxtRegistryKeys.CONTRACT_TYPE;
-    public static final ResourceKey<Registry<TitleDefinition>> TITLE = MxtRegistryKeys.TITLE;
-    public static final ResourceKey<Registry<MaterialGradeDefinition>> MATERIAL_GRADE = MxtRegistryKeys.MATERIAL_GRADE;
-    public static final ResourceKey<Registry<SectDefinition>> SECT = MxtRegistryKeys.SECT;
-    public static final ResourceKey<Registry<RealmInstanceDefinition>> REALM_INSTANCE = MxtRegistryKeys.REALM_INSTANCE;
-    public static final ResourceKey<Registry<CurrencyValueDefinition>> CURRENCY = MxtRegistryKeys.CURRENCY;
-    public static final ResourceKey<Registry<ItemDefinition>> ITEM = MxtRegistryKeys.ITEM;
-    public static final ResourceKey<Registry<ItemDefinition>> PILL = MxtRegistryKeys.PILL;
-    public static final ResourceKey<Registry<ItemDefinition>> WEAPON = MxtRegistryKeys.WEAPON;
-    public static final ResourceKey<Registry<ItemEffectDefinition>> ITEM_EFFECT = MxtRegistryKeys.ITEM_EFFECT;
-    public static final ResourceKey<Registry<ItemBindingDefinition>> ITEM_BINDING = MxtRegistryKeys.ITEM_BINDING;
-    public static final ResourceKey<Registry<AuraZoneDefinition>> AURA_ZONE = MxtRegistryKeys.AURA_ZONE;
-    public static final ResourceKey<Registry<BlockAuraDefinition>> BLOCK_AURA = MxtRegistryKeys.BLOCK_AURA;
+    public static final ResourceKey<Registry<Resource>> RESOURCE = MxtRegistryKeys.RESOURCE;
+    public static final ResourceKey<Registry<ResourceBar>> RESOURCE_BAR = MxtRegistryKeys.RESOURCE_BAR;
+    public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = MxtRegistryKeys.REALM_STAGE;
+    public static final ResourceKey<Registry<Element>> ELEMENT = MxtRegistryKeys.ELEMENT;
+    public static final ResourceKey<Registry<SpiritRoot>> SPIRIT_ROOT = MxtRegistryKeys.SPIRIT_ROOT;
+    public static final ResourceKey<Registry<Physique>> PHYSIQUE = MxtRegistryKeys.PHYSIQUE;
+    public static final ResourceKey<Registry<Ability>> ABILITY = MxtRegistryKeys.ABILITY;
+    public static final ResourceKey<Registry<Curse>> CURSE = MxtRegistryKeys.CURSE;
+    public static final ResourceKey<Registry<ForgingMethod>> FORGING_METHOD = MxtRegistryKeys.FORGING_METHOD;
+    public static final ResourceKey<Registry<ForgingBlueprint>> FORGING_BLUEPRINT = MxtRegistryKeys.FORGING_BLUEPRINT;
+    public static final ResourceKey<Registry<CultivationTechnique>> CULTIVATION_TECHNIQUE = MxtRegistryKeys.CULTIVATION_TECHNIQUE;
+    public static final ResourceKey<Registry<CultivateAction>> CULTIVATE_ACTION = MxtRegistryKeys.CULTIVATE_ACTION;
+    public static final ResourceKey<Registry<ItemArchetype>> ITEM_ARCHETYPE = MxtRegistryKeys.ITEM_ARCHETYPE;
+    public static final ResourceKey<Registry<SpiritHerb>> SPIRIT_HERB = MxtRegistryKeys.SPIRIT_HERB;
+    public static final ResourceKey<Registry<AlchemyRecipe>> ALCHEMY_RECIPE = MxtRegistryKeys.ALCHEMY_RECIPE;
+    public static final ResourceKey<Registry<Formation>> FORMATION = MxtRegistryKeys.FORMATION;
+    public static final ResourceKey<Registry<Tribulation>> TRIBULATION = MxtRegistryKeys.TRIBULATION;
+    public static final ResourceKey<Registry<CreatureProfile>> CREATURE_PROFILE = MxtRegistryKeys.CREATURE_PROFILE;
+    public static final ResourceKey<Registry<ContractType>> CONTRACT_TYPE = MxtRegistryKeys.CONTRACT_TYPE;
+    public static final ResourceKey<Registry<Title>> TITLE = MxtRegistryKeys.TITLE;
+    public static final ResourceKey<Registry<MaterialGrade>> MATERIAL_GRADE = MxtRegistryKeys.MATERIAL_GRADE;
+    public static final ResourceKey<Registry<Sect>> SECT = MxtRegistryKeys.SECT;
+    public static final ResourceKey<Registry<RealmInstance>> REALM_INSTANCE = MxtRegistryKeys.REALM_INSTANCE;
+    public static final ResourceKey<Registry<CurrencyValue>> CURRENCY = MxtRegistryKeys.CURRENCY;
+    public static final ResourceKey<Registry<DatapackItem>> ITEM = MxtRegistryKeys.ITEM;
+    public static final ResourceKey<Registry<DatapackItem>> PILL = MxtRegistryKeys.PILL;
+    public static final ResourceKey<Registry<DatapackItem>> WEAPON = MxtRegistryKeys.WEAPON;
+    public static final ResourceKey<Registry<ItemEffect>> ITEM_EFFECT = MxtRegistryKeys.ITEM_EFFECT;
+    public static final ResourceKey<Registry<ItemBinding>> ITEM_BINDING = MxtRegistryKeys.ITEM_BINDING;
+    public static final ResourceKey<Registry<AuraZone>> AURA_ZONE = MxtRegistryKeys.AURA_ZONE;
+    public static final ResourceKey<Registry<BlockAura>> BLOCK_AURA = MxtRegistryKeys.BLOCK_AURA;
     private static final List<ResourceKey<? extends Registry<?>>> KEYS = List.of(
             MxtRegistryKeys.RESOURCE, MxtRegistryKeys.RESOURCE_BAR, MxtRegistryKeys.REALM_STAGE,
             MxtRegistryKeys.ELEMENT, MxtRegistryKeys.SPIRIT_ROOT, MxtRegistryKeys.PHYSIQUE,
@@ -103,38 +103,38 @@ public final class MxtDatapackRegistries {
     }
 
     public static void newDatapackRegistries(NewRegistry event) {
-        register(event, MxtRegistryKeys.RESOURCE, ResourceDefinition.CODEC);
-        register(event, MxtRegistryKeys.RESOURCE_BAR, ResourceBarDefinition.CODEC);
-        register(event, MxtRegistryKeys.REALM_STAGE, RealmStageDefinition.CODEC);
-        register(event, MxtRegistryKeys.ELEMENT, ElementDefinition.CODEC);
-        register(event, MxtRegistryKeys.SPIRIT_ROOT, SpiritRootDefinition.CODEC);
-        register(event, MxtRegistryKeys.PHYSIQUE, PhysiqueDefinition.CODEC);
-        register(event, MxtRegistryKeys.ABILITY, AbilityDefinition.CODEC);
-        register(event, MxtRegistryKeys.CURSE, CurseDefinition.CODEC);
-        register(event, MxtRegistryKeys.FORGING_METHOD, ForgingMethodDefinition.CODEC);
+        register(event, MxtRegistryKeys.RESOURCE, Resource.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.RESOURCE_BAR, ResourceBar.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.REALM_STAGE, RealmStage.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.ELEMENT, Element.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.SPIRIT_ROOT, SpiritRoot.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.PHYSIQUE, Physique.CODEC);
+        register(event, MxtRegistryKeys.ABILITY, Ability.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.CURSE, Curse.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.FORGING_METHOD, ForgingMethod.DIRECT_CODEC);
         register(event, MxtRegistryKeys.FORGING_BLUEPRINT,
-                ForgingBlueprintDefinition.codec(RegistryFixedCodec.create(MxtRegistryKeys.FORGING_METHOD)));
-        register(event, MxtRegistryKeys.CULTIVATION_TECHNIQUE, CultivationTechniqueDefinition.CODEC);
-        register(event, MxtRegistryKeys.CULTIVATE_ACTION, CultivateActionDefinition.CODEC);
-        register(event, MxtRegistryKeys.ITEM_ARCHETYPE, ItemArchetypeDefinition.CODEC);
-        register(event, MxtRegistryKeys.SPIRIT_HERB, SpiritHerbDefinition.CODEC);
-        register(event, MxtRegistryKeys.ALCHEMY_RECIPE, AlchemyRecipeDefinition.CODEC);
-        register(event, MxtRegistryKeys.FORMATION, FormationDefinition.CODEC);
-        register(event, MxtRegistryKeys.TRIBULATION, TribulationDefinition.CODEC);
-        register(event, MxtRegistryKeys.CREATURE_PROFILE, CreatureProfileDefinition.CODEC);
-        register(event, MxtRegistryKeys.CONTRACT_TYPE, ContractTypeDefinition.CODEC);
-        register(event, MxtRegistryKeys.TITLE, TitleDefinition.CODEC);
-        register(event, MxtRegistryKeys.MATERIAL_GRADE, MaterialGradeDefinition.CODEC);
-        register(event, MxtRegistryKeys.SECT, SectDefinition.CODEC);
-        register(event, MxtRegistryKeys.REALM_INSTANCE, RealmInstanceDefinition.CODEC);
-        register(event, MxtRegistryKeys.CURRENCY, CurrencyValueDefinition.CODEC);
-        register(event, MxtRegistryKeys.ITEM, ItemDefinition.CODEC);
-        register(event, MxtRegistryKeys.PILL, ItemDefinition.CODEC);
-        register(event, MxtRegistryKeys.WEAPON, ItemDefinition.CODEC);
-        register(event, MxtRegistryKeys.ITEM_EFFECT, ItemEffectDefinition.CODEC);
-        register(event, MxtRegistryKeys.ITEM_BINDING, ItemBindingDefinition.CODEC);
-        register(event, MxtRegistryKeys.AURA_ZONE, AuraZoneDefinition.CODEC);
-        register(event, MxtRegistryKeys.BLOCK_AURA, BlockAuraDefinition.CODEC);
+                ForgingBlueprint.codec(RegistryFixedCodec.create(MxtRegistryKeys.FORGING_METHOD)));
+        register(event, MxtRegistryKeys.CULTIVATION_TECHNIQUE, CultivationTechnique.CODEC);
+        register(event, MxtRegistryKeys.CULTIVATE_ACTION, CultivateAction.CODEC);
+        register(event, MxtRegistryKeys.ITEM_ARCHETYPE, ItemArchetype.CODEC);
+        register(event, MxtRegistryKeys.SPIRIT_HERB, SpiritHerb.CODEC);
+        register(event, MxtRegistryKeys.ALCHEMY_RECIPE, AlchemyRecipe.CODEC);
+        register(event, MxtRegistryKeys.FORMATION, Formation.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.CREATURE_PROFILE, CreatureProfile.CODEC);
+        register(event, MxtRegistryKeys.CONTRACT_TYPE, ContractType.CODEC);
+        register(event, MxtRegistryKeys.TITLE, Title.CODEC);
+        register(event, MxtRegistryKeys.MATERIAL_GRADE, MaterialGrade.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.SECT, Sect.CODEC);
+        register(event, MxtRegistryKeys.REALM_INSTANCE, RealmInstance.CODEC);
+        register(event, MxtRegistryKeys.CURRENCY, CurrencyValue.CODEC);
+        register(event, MxtRegistryKeys.ITEM, DatapackItem.CODEC);
+        register(event, MxtRegistryKeys.PILL, DatapackItem.CODEC);
+        register(event, MxtRegistryKeys.WEAPON, DatapackItem.CODEC);
+        register(event, MxtRegistryKeys.ITEM_EFFECT, ItemEffect.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.ITEM_BINDING, ItemBinding.CODEC);
+        register(event, MxtRegistryKeys.AURA_ZONE, AuraZone.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.BLOCK_AURA, BlockAura.CODEC);
     }
 
     public static List<ResourceKey<? extends Registry<?>>> registries() {
@@ -148,20 +148,20 @@ public final class MxtDatapackRegistries {
     /**
      * Resolves a definition from its explicit data-driven item category.
      */
-    public static Optional<ItemDefinition> get(ItemDefinitionReference reference) {
+    public static Optional<DatapackItem> get(DatapackItemReference reference) {
         return get(itemRegistry(reference.registry()), reference.id());
     }
 
     /**
      * Returns all category-qualified definitions with the supplied ID.
      */
-    public static Stream<ItemDefinitionReference> itemReferences(Identifier id) {
-        return Stream.of(ItemDefinitionRegistry.values())
+    public static Stream<DatapackItemReference> itemReferences(Identifier id) {
+        return Stream.of(DatapackItemRegistry.values())
                 .filter(category -> get(itemRegistry(category), id).isPresent())
-                .map(category -> new ItemDefinitionReference(category, id));
+                .map(category -> new DatapackItemReference(category, id));
     }
 
-    public static ResourceKey<Registry<ItemDefinition>> itemRegistry(ItemDefinitionRegistry category) {
+    public static ResourceKey<Registry<DatapackItem>> itemRegistry(DatapackItemRegistry category) {
         return switch (category) {
             case OTHER -> ITEM;
             case PILL -> PILL;
@@ -203,7 +203,7 @@ public final class MxtDatapackRegistries {
     /**
      * Resolves a category-qualified item definition from a client registry lookup.
      */
-    public static Optional<ItemDefinition> get(Provider access, ItemDefinitionReference reference) {
+    public static Optional<DatapackItem> get(Provider access, DatapackItemReference reference) {
         return get(access, itemRegistry(reference.registry()), reference.id());
     }
 

@@ -1,15 +1,15 @@
 package com.iafenvoy.mxt.event.handler;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.alchemy.PillDefinition;
-import com.iafenvoy.mxt.data.common.AttributeModifierDefinition;
+import com.iafenvoy.mxt.data.alchemy.Pill;
+import com.iafenvoy.mxt.data.AttributeModifier;
 import com.iafenvoy.mxt.data.item.SpiritRootItemEffect;
-import com.iafenvoy.mxt.data.weapon.WeaponDefinition;
+import com.iafenvoy.mxt.data.Weapon;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedEffect;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.ItemStack;
@@ -31,14 +31,14 @@ public final class DataDrivenItemTooltipEvents {
     @SubscribeEvent
     public static void appendDetails(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
-        HolderLookup.Provider registries = event.getContext().registries();
+        Provider registries = event.getContext().registries();
         boolean advanced = event.getFlags().isAdvanced();
         if (advanced) ItemBindingService.find(registries, stack).ifPresent(item -> event.getToolTip().add(
                 Component.translatable("tooltip.mxt.item.definition", item.reference().id().toString()).withStyle(ChatFormatting.DARK_GRAY)));
         for (ResolvedEffect effect : ItemBindingService.effects(registries, stack)) {
             switch (effect.definition()) {
-                case WeaponDefinition weapon -> appendWeapon(event, weapon);
-                case PillDefinition pill -> appendPill(event, pill);
+                case Weapon weapon -> appendWeapon(event, weapon);
+                case Pill pill -> appendPill(event, pill);
                 case SpiritRootItemEffect root -> appendSpiritRoot(event, root, advanced);
                 default -> appendUnknownEffect(event, effect, advanced);
             }
@@ -57,13 +57,13 @@ public final class DataDrivenItemTooltipEvents {
                 Component.translatable("tooltip.mxt.item.effect", effect.id().toString()).withStyle(ChatFormatting.DARK_GRAY));
     }
 
-    private static void appendWeapon(ItemTooltipEvent event, WeaponDefinition weapon) {
+    private static void appendWeapon(ItemTooltipEvent event, Weapon weapon) {
         event.getToolTip().add(Component.translatable("tooltip.mxt.item.weapon").withStyle(ChatFormatting.GOLD));
         event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attack_damage",
                 number(weapon.attackDamage().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
         event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attack_speed",
                 number(weapon.attackSpeed().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
-        for (AttributeModifierDefinition attribute : weapon.attributes()) {
+        for (AttributeModifier attribute : weapon.attributes()) {
             {
                 Attribute value = attribute.attribute().value();
                 double amount = attribute.value().evaluate(FormulaContext.EMPTY);
@@ -83,7 +83,7 @@ public final class DataDrivenItemTooltipEvents {
         }
     }
 
-    private static void appendPill(ItemTooltipEvent event, PillDefinition pill) {
+    private static void appendPill(ItemTooltipEvent event, Pill pill) {
         double gain = pill.toxicityGain().evaluate(FormulaContext.EMPTY);
         double threshold = pill.toxicityThreshold().evaluate(FormulaContext.EMPTY);
         event.getToolTip().add(Component.translatable("tooltip.mxt.item.pill").withStyle(ChatFormatting.LIGHT_PURPLE));

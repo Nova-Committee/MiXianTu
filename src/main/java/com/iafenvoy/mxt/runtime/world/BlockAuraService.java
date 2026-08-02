@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.data.world.BlockAuraDefinition;
+import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
+import net.minecraft.core.BlockPos.MutableBlockPos;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -26,13 +26,13 @@ public final class BlockAuraService {
     }
 
     public static void rebuild(ServerLevel level, LevelChunk chunk) {
-        List<BlockAuraDefinition> active = MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.BLOCK_AURA)
-                .map(Holder.Reference::value).toList();
+        List<BlockAura> active = MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.BLOCK_AURA)
+                .map(Reference::value).toList();
         double aura = 0.0D;
         double regen = 0.0D;
         Map<Identifier, Double> elements = new LinkedHashMap<>();
         Set<Identifier> tags = new LinkedHashSet<>();
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        MutableBlockPos pos = new MutableBlockPos();
         int minX = chunk.getPos().getMinBlockX();
         int minZ = chunk.getPos().getMinBlockZ();
         for (int x = minX; x < minX + 16; x++)
@@ -40,7 +40,7 @@ public final class BlockAuraService {
                 for (int y = level.getMinY(); y < level.getMaxY(); y++) {
                     pos.set(x, y, z);
                     Identifier id = BuiltInRegistries.BLOCK.getKey(chunk.getBlockState(pos).getBlock());
-                    for (BlockAuraDefinition definition : active) {
+                    for (BlockAura definition : active) {
                         if (!RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, Registries.BLOCK, id))
                             continue;
                         aura += definition.auraPerBlock();

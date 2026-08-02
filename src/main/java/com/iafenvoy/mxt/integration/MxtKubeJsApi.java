@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.integration;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -16,10 +16,11 @@ import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
+import com.iafenvoy.mxt.runtime.world.AuraWorldData.Area;
+import com.iafenvoy.mxt.runtime.world.AuraWorldData.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.runtime.world.AuraWorldData;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -40,18 +41,18 @@ public final class MxtKubeJsApi {
     private MxtKubeJsApi() {
     }
 
-    public static Optional<AbilityDefinition> ability(@NotNull Identifier id) {
+    public static Optional<Ability> ability(@NotNull Identifier id) {
         return MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, id);
     }
 
-    public static Optional<CurseDefinition> curse(@NotNull Identifier id) {
+    public static Optional<Curse> curse(@NotNull Identifier id) {
         return MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, id);
     }
 
     public static UseResult useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
         if (actor.level().isClientSide())
             return new UseResult(false, false, AbilityService.Failure.SERVER_ONLY, null, Map.of());
-        AbilityDefinition definition = ability(id).orElse(null);
+        Ability definition = ability(id).orElse(null);
         if (definition == null)
             return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
         return AbilityService.use(id, definition, actor, actor.getData(MxtAttachments.ABILITY_HOLDER), actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
@@ -60,7 +61,7 @@ public final class MxtKubeJsApi {
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, String source, FormulaContext context) {
         if (target.level().isClientSide())
             return new ApplyResult(null, false, ApplyFailure.SERVER_ONLY);
-        CurseDefinition definition = curse(id).orElse(null);
+        Curse definition = curse(id).orElse(null);
         if (definition == null) return new ApplyResult(null, false, ApplyFailure.CONDITION);
         return CurseService.apply(target, id, definition, stacks, target.level().getGameTime(), context, source);
     }
@@ -115,7 +116,7 @@ public final class MxtKubeJsApi {
     public static String addAuraBox(Level level, Identifier zone, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int priority) {
         if (!(level instanceof ServerLevel server) || MxtDatapackRegistries.get(MxtDatapackRegistries.AURA_ZONE, zone).isEmpty())
             throw new IllegalArgumentException("Aura areas require a loaded server aura_zone");
-        return server.getData(MxtAttachments.AURA_WORLD).add(new AuraWorldData.Area(zone, new AuraWorldData.Shape(minX, minY, minZ, maxX, maxY, maxZ), priority));
+        return server.getData(MxtAttachments.AURA_WORLD).add(new Area(zone, new Shape(minX, minY, minZ, maxX, maxY, maxZ), priority));
     }
 
     public static boolean removeAuraArea(Level level, String id) {

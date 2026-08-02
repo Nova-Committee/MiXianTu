@@ -1,6 +1,9 @@
 package com.iafenvoy.mxt.integration;
 
 import com.iafenvoy.mxt.event.AbilityUseEvent;
+import com.iafenvoy.mxt.event.AuraZoneEvent.Enter;
+import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
+import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
@@ -61,9 +64,9 @@ public final class MxtKubeJsEvents {
             NeoForge.EVENT_BUS.addListener(CurseApplyEvent.Post.class, MxtKubeJsEvents::postCurse);
             NeoForge.EVENT_BUS.addListener(Pre.class, MxtKubeJsEvents::postResource);
             NeoForge.EVENT_BUS.addListener(Post.class, MxtKubeJsEvents::postResource);
-            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Enter.class, MxtKubeJsEvents::postAura);
-            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Leave.class, MxtKubeJsEvents::postAura);
-            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Tick.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(Enter.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(Leave.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(Tick.class, MxtKubeJsEvents::postAura);
             NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Override.class, MxtKubeJsEvents::postAura);
             registered = true;
         }

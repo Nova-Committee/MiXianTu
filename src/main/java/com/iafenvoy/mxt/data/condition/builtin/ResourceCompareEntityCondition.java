@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.resource.ResourceDefinition;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -11,10 +11,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 
-public record ResourceCompareEntityCondition(Holder<ResourceDefinition> resource,
+public record ResourceCompareEntityCondition(Holder<Resource> resource,
                                              NumberProvider min) implements EntityCondition {
     public static final MapCodec<ResourceCompareEntityCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceDefinition.HOLDER_CODEC.fieldOf("resource").forGetter(ResourceCompareEntityCondition::resource), NumberProvider.CODEC.fieldOf("min").forGetter(ResourceCompareEntityCondition::min)
+            Resource.CODEC.fieldOf("resource").forGetter(ResourceCompareEntityCondition::resource), NumberProvider.CODEC.fieldOf("min").forGetter(ResourceCompareEntityCondition::min)
     ).apply(instance, ResourceCompareEntityCondition::new));
 
     @Override

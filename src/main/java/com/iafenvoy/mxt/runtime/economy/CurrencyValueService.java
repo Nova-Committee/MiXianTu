@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.data.economy.CurrencyValueDefinition;
+import com.iafenvoy.mxt.data.economy.CurrencyValue;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.ItemMatcher;
 import net.minecraft.core.Holder.Reference;
@@ -22,7 +22,7 @@ public final class CurrencyValueService {
 
     public static OptionalLong unitValue(Item item) {
         return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.CURRENCY).map(Reference::value), new ItemStack(item))
-                .map(CurrencyValueDefinition::value)
+                .map(CurrencyValue::value)
                 .map(OptionalLong::of)
                 .orElseGet(OptionalLong::empty);
     }
@@ -32,7 +32,7 @@ public final class CurrencyValueService {
      */
     public static OptionalLong unitValue(Provider access, Item item) {
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.CURRENCY).map(Reference::value), new ItemStack(item))
-                .map(CurrencyValueDefinition::value)
+                .map(CurrencyValue::value)
                 .map(OptionalLong::of)
                 .orElseGet(OptionalLong::empty);
     }

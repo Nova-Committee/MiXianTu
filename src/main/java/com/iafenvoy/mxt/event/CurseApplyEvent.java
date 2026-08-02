@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.CurseHolderData;
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.runtime.curse.CurseInstance;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
@@ -15,11 +15,11 @@ import org.jetbrains.annotations.NotNull;
 public abstract class CurseApplyEvent extends Event {
     private final CurseHolderData holder;
     private final Identifier curse;
-    private final CurseDefinition definition;
+    private final Curse definition;
     private final long gameTime;
     private final FormulaContext context;
 
-    protected CurseApplyEvent(@NotNull CurseHolderData holder, @NotNull Identifier curse, @NotNull CurseDefinition definition, long gameTime, @NotNull FormulaContext context) {
+    protected CurseApplyEvent(@NotNull CurseHolderData holder, @NotNull Identifier curse, @NotNull Curse definition, long gameTime, @NotNull FormulaContext context) {
         this.holder = holder;
         this.curse = curse;
         this.definition = definition;
@@ -35,7 +35,7 @@ public abstract class CurseApplyEvent extends Event {
         return this.curse;
     }
 
-    public CurseDefinition definition() {
+    public Curse definition() {
         return this.definition;
     }
 
@@ -51,7 +51,7 @@ public abstract class CurseApplyEvent extends Event {
         private int stacks;
         private String source;
 
-        public Pre(CurseHolderData holder, Identifier curse, CurseDefinition definition, int stacks, long gameTime, FormulaContext context, String source) {
+        public Pre(CurseHolderData holder, Identifier curse, Curse definition, int stacks, long gameTime, FormulaContext context, String source) {
             super(holder, curse, definition, gameTime, context);
             this.setStacks(stacks);
             this.setSource(source);
@@ -78,7 +78,7 @@ public abstract class CurseApplyEvent extends Event {
     public static final class Post extends CurseApplyEvent {
         private final CurseInstance instance;
 
-        public Post(CurseHolderData holder, Identifier curse, CurseDefinition definition, long gameTime, FormulaContext context, @NotNull CurseInstance instance) {
+        public Post(CurseHolderData holder, Identifier curse, Curse definition, long gameTime, FormulaContext context, @NotNull CurseInstance instance) {
             super(holder, curse, definition, gameTime, context);
             this.instance = instance;
         }

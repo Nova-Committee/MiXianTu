@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.curse;
 
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
-import com.iafenvoy.mxt.data.curse.CurseDefinition.StackingMode;
+import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.curse.Curse.StackingMode;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 
@@ -20,11 +20,11 @@ public final class CurseLedger {
         this.instances.putAll(instances);
     }
 
-    public synchronized CurseInstance apply(Identifier id, CurseDefinition definition, int requestedStacks, long gameTime, FormulaContext context, String source) {
+    public synchronized CurseInstance apply(Identifier id, Curse definition, int requestedStacks, long gameTime, FormulaContext context, String source) {
         return this.apply(id, definition, requestedStacks, gameTime, context, source, Optional.empty());
     }
 
-    public synchronized CurseInstance apply(Identifier id, CurseDefinition definition, int requestedStacks, long gameTime,
+    public synchronized CurseInstance apply(Identifier id, Curse definition, int requestedStacks, long gameTime,
                                             FormulaContext context, String source, Optional<Long> durationOverride) {
         if (requestedStacks <= 0) {
             throw new IllegalArgumentException("requestedStacks must be positive");
@@ -75,7 +75,7 @@ public final class CurseLedger {
         return Map.copyOf(this.instances);
     }
 
-    private static long expiry(CurseDefinition definition, long gameTime, FormulaContext context, Optional<Long> durationOverride) {
+    private static long expiry(Curse definition, long gameTime, FormulaContext context, Optional<Long> durationOverride) {
         double duration = durationOverride.map(Long::doubleValue).orElseGet(() -> definition.durationTicks().evaluate(context));
         if (!Double.isFinite(duration) || duration < 0.0D) {
             throw new IllegalStateException("Curse duration must be finite and non-negative");

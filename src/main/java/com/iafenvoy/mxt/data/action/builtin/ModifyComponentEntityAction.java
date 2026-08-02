@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.action.builtin;
 
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -18,10 +18,10 @@ import net.minecraft.world.entity.Entity;
 /**
  * Updates a declared ability-component state without allowing arbitrary NBT/component writes.
  */
-public record ModifyComponentEntityAction(Holder<AbilityDefinition> ability, String component,
+public record ModifyComponentEntityAction(Holder<Ability> ability, String component,
                                           NumberProvider value) implements EntityAction {
     public static final MapCodec<ModifyComponentEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            AbilityDefinition.HOLDER_CODEC.fieldOf("ability").forGetter(ModifyComponentEntityAction::ability),
+            Ability.CODEC.fieldOf("ability").forGetter(ModifyComponentEntityAction::ability),
             Codec.STRING.fieldOf("component").forGetter(ModifyComponentEntityAction::component),
             NumberProvider.CODEC.fieldOf("value").forGetter(ModifyComponentEntityAction::value)
     ).apply(instance, ModifyComponentEntityAction::new));

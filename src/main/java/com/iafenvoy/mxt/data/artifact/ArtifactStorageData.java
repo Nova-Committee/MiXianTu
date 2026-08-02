@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data.artifact;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.item.ItemStack;
 
@@ -12,10 +11,9 @@ import java.util.List;
  * Persistent server-owned contents of a storage artifact. Slot limits come from its archetype, never from this payload.
  */
 public record ArtifactStorageData(List<ItemStack> contents) {
-    public static final MapCodec<ArtifactStorageData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final Codec<ArtifactStorageData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemStack.CODEC.listOf().optionalFieldOf("contents", List.of()).forGetter(ArtifactStorageData::contents)
     ).apply(instance, ArtifactStorageData::new));
-    public static final Codec<ArtifactStorageData> CODEC = MAP_CODEC.codec();
 
     public ArtifactStorageData {
         contents = contents.stream().map(ItemStack::copy).toList();

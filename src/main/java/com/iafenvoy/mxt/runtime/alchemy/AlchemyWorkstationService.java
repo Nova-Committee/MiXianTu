@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.data.alchemy.AlchemyRecipeDefinition;
+import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Failure;
@@ -33,7 +33,7 @@ public final class AlchemyWorkstationService {
     }
 
     public static StartResult start(AlchemyWorkstationState state, Identifier recipeId,
-                                    AlchemyRecipeDefinition recipe, int furnaceTier, FormulaContext context) {
+                                    AlchemyRecipe recipe, int furnaceTier, FormulaContext context) {
         if (state.active()) return StartResult.rejected(Failure.INPUTS);
         StartResult result = AlchemySession.start(recipeId, recipe, furnaceTier, itemIds(state.inputs()), context);
         if (result.started()) state.lock(result.session());
@@ -44,7 +44,7 @@ public final class AlchemyWorkstationService {
      * Position-aware variant for concrete alchemy blocks.
      */
     public static StartResult start(Level level, BlockPos pos, AlchemyWorkstationState state, Identifier recipeId,
-                                    AlchemyRecipeDefinition recipe, int furnaceTier, FormulaContext context) {
+                                    AlchemyRecipe recipe, int furnaceTier, FormulaContext context) {
         AuraResult aura = AuraService.getPositionAura(level, pos);
         double minimum = recipe.minimumAura().evaluate(context);
         if (!Double.isFinite(minimum) || minimum < 0.0D || aura.concentration() < minimum || !CollectionHelper.containsAllFast(aura.environmentTags(), recipe.environmentTags()))
@@ -55,7 +55,7 @@ public final class AlchemyWorkstationService {
     /**
      * Restores the saved session, advances it once, and appends produced stacks exactly once.
      */
-    public static TickResult tick(AlchemyWorkstationState state, AlchemyRecipeDefinition recipe,
+    public static TickResult tick(AlchemyWorkstationState state, AlchemyRecipe recipe,
                                   double temperature, FormulaContext context) {
         Snapshot snapshot = state.session().orElse(null);
         if (snapshot == null || snapshot.complete()) return TickResult.idle();
@@ -75,7 +75,7 @@ public final class AlchemyWorkstationService {
     /**
      * Owner-aware adapter for workstation block entities that can attribute a successful batch.
      */
-    public static TickResult tick(ServerPlayer owner, AlchemyWorkstationState state, AlchemyRecipeDefinition recipe,
+    public static TickResult tick(ServerPlayer owner, AlchemyWorkstationState state, AlchemyRecipe recipe,
                                   double temperature, FormulaContext context) {
         Identifier recipeId = state.session().map(Snapshot::recipe).orElse(null);
         TickResult result = tick(state, recipe, temperature, context);

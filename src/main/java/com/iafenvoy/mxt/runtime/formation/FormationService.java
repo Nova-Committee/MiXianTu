@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.data.formation.FormationDefinition;
+import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,11 +16,11 @@ public final class FormationService {
     private FormationService() {
     }
 
-    public static ActivateResult activate(Identifier id, FormationDefinition definition, ResourceHolderData resources, FormulaContext context) {
+    public static ActivateResult activate(Identifier id, Formation definition, ResourceHolderData resources, FormulaContext context) {
         return activate(id, definition, resources, context, null);
     }
 
-    public static ActivateResult activate(Identifier id, FormationDefinition definition, ResourceHolderData resources, FormulaContext context, UUID owner) {
+    public static ActivateResult activate(Identifier id, Formation definition, ResourceHolderData resources, FormulaContext context, UUID owner) {
         double radius = definition.radius().evaluate(context);
         if (!Double.isFinite(radius) || radius <= 0.0D) return ActivateResult.rejected(Failure.INVALID_FORMULA, null);
         Result payment = ResourceTransactions.tryConsume(resources, ResourceTransactions.evaluate(definition.activationCosts(), context));
@@ -29,7 +29,7 @@ public final class FormationService {
         return ActivateResult.activated(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
     }
 
-    public static MaintainResult maintain(FormationInstance instance, FormationDefinition definition, ResourceHolderData resources, FormulaContext context) {
+    public static MaintainResult maintain(FormationInstance instance, Formation definition, ResourceHolderData resources, FormulaContext context) {
         if (!instance.active()) return MaintainResult.inactive();
         Result payment = ResourceTransactions.tryConsume(resources, ResourceTransactions.evaluate(definition.maintenanceCosts(), context));
         if (!payment.committed()) {

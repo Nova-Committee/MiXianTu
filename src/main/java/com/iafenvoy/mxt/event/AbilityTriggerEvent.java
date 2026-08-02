@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -12,11 +12,11 @@ import net.neoforged.neoforge.event.entity.EntityEvent;
  */
 public abstract class AbilityTriggerEvent extends EntityEvent {
     private final Identifier ability;
-    private final AbilityDefinition definition;
+    private final Ability definition;
     private final String trigger;
     private final FormulaContext context;
 
-    protected AbilityTriggerEvent(Entity entity, Identifier ability, AbilityDefinition definition, String trigger, FormulaContext context) {
+    protected AbilityTriggerEvent(Entity entity, Identifier ability, Ability definition, String trigger, FormulaContext context) {
         super(entity);
         this.ability = ability;
         this.definition = definition;
@@ -28,7 +28,7 @@ public abstract class AbilityTriggerEvent extends EntityEvent {
         return this.ability;
     }
 
-    public AbilityDefinition definition() {
+    public Ability definition() {
         return this.definition;
     }
 
@@ -41,13 +41,13 @@ public abstract class AbilityTriggerEvent extends EntityEvent {
     }
 
     public static final class Pre extends AbilityTriggerEvent implements ICancellableEvent {
-        public Pre(Entity entity, Identifier ability, AbilityDefinition definition, String trigger, FormulaContext context) {
+        public Pre(Entity entity, Identifier ability, Ability definition, String trigger, FormulaContext context) {
             super(entity, ability, definition, trigger, context);
         }
     }
 
     public static final class Post extends AbilityTriggerEvent {
-        public Post(Entity entity, Identifier ability, AbilityDefinition definition, String trigger, FormulaContext context) {
+        public Post(Entity entity, Identifier ability, Ability definition, String trigger, FormulaContext context) {
             super(entity, ability, definition, trigger, context);
         }
     }

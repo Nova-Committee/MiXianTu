@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
@@ -14,9 +14,9 @@ import net.minecraft.world.entity.Entity;
 /**
  * Removes one curse through the same event-aware transaction used by expiry.
  */
-public record RemoveCurseEntityAction(Holder<CurseDefinition> curse) implements EntityAction {
+public record RemoveCurseEntityAction(Holder<Curse> curse) implements EntityAction {
     public static final MapCodec<RemoveCurseEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            CurseDefinition.HOLDER_CODEC.fieldOf("curse").forGetter(RemoveCurseEntityAction::curse)
+            Curse.CODEC.fieldOf("curse").forGetter(RemoveCurseEntityAction::curse)
     ).apply(instance, RemoveCurseEntityAction::new));
 
     @Override

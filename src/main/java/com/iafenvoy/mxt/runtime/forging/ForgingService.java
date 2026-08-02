@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.artifact.ForgingResultData;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition;
-import com.iafenvoy.mxt.data.forging.ForgingMethodDefinition;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.event.ForgingEvent.Cancel;
 import com.iafenvoy.mxt.event.ForgingEvent.CompletePost;
 import com.iafenvoy.mxt.event.ForgingEvent.CompletePre;
@@ -29,7 +29,7 @@ public final class ForgingService {
     private ForgingService() {
     }
 
-    public static StartResult start(ForgingBlueprintDefinition blueprint) {
+    public static StartResult start(ForgingBlueprint blueprint) {
         if (NeoForge.EVENT_BUS.post(new Start(blueprint)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         try {
@@ -41,7 +41,7 @@ public final class ForgingService {
         }
     }
 
-    public static StrikeResult strike(ForgingSession session, Identifier methodId, ForgingMethodDefinition method,
+    public static StrikeResult strike(ForgingSession session, Identifier methodId, ForgingMethod method,
                                       ResourceHolderData resources, FormulaContext context, BooleanSupplier conditions) {
         if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failure.CONDITIONS, null);
         if (!session.canStrike(methodId)) return StrikeResult.rejected(Failure.INVALID_STRIKE, null);
@@ -61,7 +61,7 @@ public final class ForgingService {
         return StrikeResult.struck(session.value(), session.steps(), payment.amounts());
     }
 
-    public static FinishResult finish(Identifier blueprintId, ForgingBlueprintDefinition blueprint, ForgingSession session) {
+    public static FinishResult finish(Identifier blueprintId, ForgingBlueprint blueprint, ForgingSession session) {
         return finish(blueprintId, session, blueprint::qualityFor);
     }
 

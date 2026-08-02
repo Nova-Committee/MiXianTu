@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.artifact.ForgingResultData;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition;
-import com.iafenvoy.mxt.data.forging.ForgingMethodDefinition;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -18,13 +18,13 @@ import java.util.List;
  */
 public abstract class ForgingEvent extends Event {
     public static final class Start extends ForgingEvent implements ICancellableEvent {
-        private final ForgingBlueprintDefinition blueprint;
+        private final ForgingBlueprint blueprint;
 
-        public Start(ForgingBlueprintDefinition blueprint) {
+        public Start(ForgingBlueprint blueprint) {
             this.blueprint = blueprint;
         }
 
-        public ForgingBlueprintDefinition blueprint() {
+        public ForgingBlueprint blueprint() {
             return this.blueprint;
         }
     }
@@ -56,12 +56,12 @@ public abstract class ForgingEvent extends Event {
     public static final class StrikePre extends ForgingEvent implements ICancellableEvent {
         private final ForgingSession session;
         private final Identifier method;
-        private final ForgingMethodDefinition definition;
+        private final ForgingMethod definition;
         private final ResourceHolderData resources;
         private final FormulaContext context;
         private List<ResourceCost> costs;
 
-        public StrikePre(ForgingSession session, Identifier method, ForgingMethodDefinition definition, ResourceHolderData resources, FormulaContext context) {
+        public StrikePre(ForgingSession session, Identifier method, ForgingMethod definition, ResourceHolderData resources, FormulaContext context) {
             this.session = session;
             this.method = method;
             this.definition = definition;
@@ -78,7 +78,7 @@ public abstract class ForgingEvent extends Event {
             return this.method;
         }
 
-        public ForgingMethodDefinition definition() {
+        public ForgingMethod definition() {
             return this.definition;
         }
 

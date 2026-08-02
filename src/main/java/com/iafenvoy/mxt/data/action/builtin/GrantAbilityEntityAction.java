@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
@@ -13,9 +13,9 @@ import net.minecraft.world.entity.Entity;
 /**
  * Grants an ability using an explicit persistent source identity.
  */
-public record GrantAbilityEntityAction(Holder<AbilityDefinition> ability, Identifier source) implements EntityAction {
+public record GrantAbilityEntityAction(Holder<Ability> ability, Identifier source) implements EntityAction {
     public static final MapCodec<GrantAbilityEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            AbilityDefinition.HOLDER_CODEC.fieldOf("ability").forGetter(GrantAbilityEntityAction::ability),
+            Ability.CODEC.fieldOf("ability").forGetter(GrantAbilityEntityAction::ability),
             Identifier.CODEC.fieldOf("source").forGetter(GrantAbilityEntityAction::source)
     ).apply(instance, GrantAbilityEntityAction::new));
 

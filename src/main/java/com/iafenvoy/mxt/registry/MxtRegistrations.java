@@ -27,7 +27,6 @@ public final class MxtRegistrations {
         MxtAbilityComponents.REGISTRY.register(bus);
         MxtAbilityTriggers.REGISTRY.register(bus);
         MxtNumberProviders.REGISTRY.register(bus);
-        MxtValueModifiers.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
         MxtEntityActions.REGISTRY.register(bus);
         MxtEntityConditions.REGISTRY.register(bus);

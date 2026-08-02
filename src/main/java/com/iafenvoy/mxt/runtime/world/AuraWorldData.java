@@ -8,6 +8,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,8 +52,8 @@ public final class AuraWorldData {
         return this.areas.remove(id) != null;
     }
 
-    public Optional<Map.Entry<String, Area>> bestAt(BlockPos pos) {
-        return this.areas.entrySet().stream().filter(entry -> entry.getValue().contains(pos)).max(Map.Entry.comparingByValue());
+    public Optional<Entry<String, Area>> bestAt(BlockPos pos) {
+        return this.areas.entrySet().stream().filter(entry -> entry.getValue().contains(pos)).max(Entry.comparingByValue());
     }
 
     public record Area(Identifier zone, Shape shape, int priority) implements Comparable<Area> {

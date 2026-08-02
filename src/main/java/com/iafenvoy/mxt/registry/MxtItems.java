@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.item.ItemDefinition;
-import com.iafenvoy.mxt.data.item.ItemDefinitionReference;
+import com.iafenvoy.mxt.data.item.DatapackItem;
+import com.iafenvoy.mxt.data.item.DatapackItemReference;
 import com.iafenvoy.mxt.item.ChequeItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.component.DataComponents;
@@ -52,18 +52,18 @@ public final class MxtItems {
      * the physical item to that definition and conventional resource-pack model.
      */
     public static <T extends Item> DeferredItem<T> registerDataDriven(String path, Identifier binding,
-                                                                      Function<Properties, T> factory) {
-        return registerDataDriven(path, ItemDefinitionReference.other(binding), factory);
+                                                                                               Function<Properties, T> factory) {
+        return registerDataDriven(path, DatapackItemReference.other(binding), factory);
     }
 
     /**
      * Registers a code-owned physical item with a category-qualified logical item definition.
      */
-    public static <T extends Item> DeferredItem<T> registerDataDriven(String path, ItemDefinitionReference binding,
-                                                                      Function<Properties, T> factory) {
+    public static <T extends Item> DeferredItem<T> registerDataDriven(String path, DatapackItemReference binding,
+                                                                                               Function<Properties, T> factory) {
         return register(path, properties -> factory.apply(properties
                 .component(MxtDataComponents.ITEM_DEFINITION.get(), binding)
-                .component(DataComponents.ITEM_MODEL, ItemDefinition.conventionalModel(binding.id()))));
+                .component(DataComponents.ITEM_MODEL, DatapackItem.conventionalModel(binding.id()))));
     }
 
     /**

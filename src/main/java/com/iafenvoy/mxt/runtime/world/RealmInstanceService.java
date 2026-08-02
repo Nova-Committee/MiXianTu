@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.attachment.RealmInstanceData;
 import com.iafenvoy.mxt.attachment.RealmTravelData;
-import com.iafenvoy.mxt.data.world.RealmInstanceDefinition;
+import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPost;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.Exit;
@@ -37,7 +37,7 @@ public final class RealmInstanceService {
     /**
      * Enters a realm only after its target dimension is available, then retains an exact return location.
      */
-    public static Result enter(ServerPlayer player, RealmInstanceData data, Identifier id, RealmInstanceDefinition definition) {
+    public static Result enter(ServerPlayer player, RealmInstanceData data, Identifier id, RealmInstance definition) {
         if (player.getData(MxtAttachments.REALM_TRAVEL).active())
             return Result.rejected(Failure.ALREADY_TRAVELLING);
         ServerLevel destination = destination(player.level().getServer(), definition).orElse(null);
@@ -54,7 +54,7 @@ public final class RealmInstanceService {
         return membership;
     }
 
-    public static Result enter(ServerLevel level, RealmInstanceData data, Identifier id, RealmInstanceDefinition definition, UUID member, long gameTime) {
+    public static Result enter(ServerLevel level, RealmInstanceData data, Identifier id, RealmInstance definition, UUID member, long gameTime) {
         if (data.active() && data.definition().filter(id::equals).isEmpty())
             return Result.rejected(Failure.OTHER_INSTANCE);
         if (NeoForge.EVENT_BUS.post(new EnterPre(level, id, member)).isCanceled())
@@ -133,7 +133,7 @@ public final class RealmInstanceService {
         return true;
     }
 
-    private static Optional<ServerLevel> destination(MinecraftServer server, RealmInstanceDefinition definition) {
+    private static Optional<ServerLevel> destination(MinecraftServer server, RealmInstance definition) {
         return definition.dimension().map(id -> server.getLevel(ResourceKey.create(Registries.DIMENSION, id)));
     }
 

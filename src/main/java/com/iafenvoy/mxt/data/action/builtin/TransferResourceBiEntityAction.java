@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.action.builtin;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.data.resource.ResourceDefinition;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,10 +16,10 @@ import net.minecraft.world.entity.Entity;
 /**
  * Moves no more than the actor currently owns, so values never become negative.
  */
-public record TransferResourceBiEntityAction(Holder<ResourceDefinition> resource,
+public record TransferResourceBiEntityAction(Holder<Resource> resource,
                                              NumberProvider amount) implements BiEntityAction {
     public static final MapCodec<TransferResourceBiEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceDefinition.HOLDER_CODEC.fieldOf("resource").forGetter(TransferResourceBiEntityAction::resource),
+            Resource.CODEC.fieldOf("resource").forGetter(TransferResourceBiEntityAction::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(TransferResourceBiEntityAction::amount)
     ).apply(instance, TransferResourceBiEntityAction::new));
 

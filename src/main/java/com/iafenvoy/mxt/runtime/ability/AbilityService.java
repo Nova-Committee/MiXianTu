@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.ability.AbilityComponent;
 import com.iafenvoy.mxt.data.ability.AbilityComponent.Charges;
 import com.iafenvoy.mxt.data.ability.AbilityComponent.Cooldown;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityType.Channelled;
 import com.iafenvoy.mxt.data.ability.AbilityType.Composite;
 import com.iafenvoy.mxt.data.ability.AbilityType.Word;
@@ -51,7 +51,7 @@ public final class AbilityService {
     private AbilityService() {
     }
 
-    public static PrepareResult prepare(@NotNull Identifier abilityId, AbilityDefinition definition, AbilityHolderData abilities,
+    public static PrepareResult prepare(@NotNull Identifier abilityId, Ability definition, AbilityHolderData abilities,
                                         ResourceHolderData resources, long gameTime, FormulaContext context) {
         if (!abilities.has(abilityId)) return PrepareResult.rejected(Failure.NOT_GRANTED, null);
         if (abilities.isOnCooldown(abilityId, gameTime)) return PrepareResult.rejected(Failure.COOLDOWN, null);
@@ -61,7 +61,7 @@ public final class AbilityService {
             return PrepareResult.rejected(Failure.INVALID_FORMULA, null);
         }
         long channelInterval = 0L;
-        if (definition.typedType() instanceof Channelled channelled) {
+        if (definition.type() instanceof Channelled channelled) {
             double interval = channelled.tickInterval().evaluate(context);
             if (!Double.isFinite(interval) || interval <= 0.0D || interval > Long.MAX_VALUE) {
                 return PrepareResult.rejected(Failure.INVALID_FORMULA, null);
@@ -103,7 +103,7 @@ public final class AbilityService {
      * Canonical server-side path for immediate abilities. The resource transaction commits before
      * the action, preventing an action from taking effect when its declared costs cannot be paid.
      */
-    public static UseResult use(Identifier abilityId, AbilityDefinition definition, @NotNull Entity actor,
+    public static UseResult use(Identifier abilityId, Ability definition, @NotNull Entity actor,
                                 AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
                                 FormulaContext context) {
         if (actor instanceof LivingEntity living) {
@@ -119,7 +119,7 @@ public final class AbilityService {
             return UseResult.rejected(Failure.CONDITION_FAILED, null);
         }
         if (!validateWord(definition, actor, context)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
-        if (definition.typedType() instanceof Composite) {
+        if (definition.type() instanceof Composite) {
             return useComposite(abilityId, definition, actor, abilities, resources, gameTime, context, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, id));
         }
         PrepareResult prepared = prepare(abilityId, definition, abilities, resources, gameTime, context);
@@ -134,7 +134,7 @@ public final class AbilityService {
     /**
      * Completes a previously scheduled cast after the entity-tick bridge revalidates its definition.
      */
-    public static UseResult finishCast(Identifier abilityId, AbilityDefinition definition, Entity actor,
+    public static UseResult finishCast(Identifier abilityId, Ability definition, Entity actor,
                                        AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
                                        FormulaContext context) {
         if (actor instanceof LivingEntity living) {
@@ -154,7 +154,7 @@ public final class AbilityService {
         return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context);
     }
 
-    private static UseResult finishPreparedUse(PreparedUse preparedUse, AbilityDefinition definition, Entity actor,
+    private static UseResult finishPreparedUse(PreparedUse preparedUse, Ability definition, Entity actor,
                                                AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
                                                FormulaContext context) {
         Pre resourceEvent = new Pre(resources, preparedUse.costs().amounts());
@@ -163,10 +163,10 @@ public final class AbilityService {
                 preparedUse.castTimeTicks(), preparedUse.cooldownTicks(), preparedUse.channelIntervalTicks(), preparedUse.consumeCharge(), preparedUse.chargeBefore());
         CommitResult committed = commit(adjustedUse, abilities, resources, gameTime);
         if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
-        if (definition.typedType() instanceof Channelled) {
+        if (definition.type() instanceof Channelled) {
             abilities.setChannelledAbility(preparedUse.abilityId());
             abilities.setComponentState(preparedUse.abilityId(), "channel_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, adjustedUse.channelIntervalTicks()), gameTime));
-        } else if (definition.typedType() instanceof Word word) {
+        } else if (definition.type() instanceof Word word) {
             executeWord(word, actor, context);
         } else {
             definition.entityAction().execute(actor, context);
@@ -181,7 +181,7 @@ public final class AbilityService {
     /**
      * Runs at most one upkeep pulse. Call this only from the server entity tick bridge.
      */
-    public static ChannelResult tickChannel(Identifier abilityId, AbilityDefinition definition, Entity actor,
+    public static ChannelResult tickChannel(Identifier abilityId, Ability definition, Entity actor,
                                             AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
                                             FormulaContext context) {
         if (actor instanceof LivingEntity living) {
@@ -192,7 +192,7 @@ public final class AbilityService {
             }
         }
         if (abilities.channelledAbility().filter(abilityId::equals).isEmpty()) return ChannelResult.inactive();
-        if (!abilities.has(abilityId) || !(definition.typedType() instanceof Channelled(
+        if (!abilities.has(abilityId) || !(definition.type() instanceof Channelled(
                 NumberProvider tickInterval,
                 List<ResourceCost> upkeepCosts
         ))) {
@@ -245,8 +245,8 @@ public final class AbilityService {
         return true;
     }
 
-    private static boolean validateWord(AbilityDefinition definition, Entity actor, FormulaContext context) {
-        if (!(definition.typedType() instanceof Word(
+    private static boolean validateWord(Ability definition, Entity actor, FormulaContext context) {
+        if (!(definition.type() instanceof Word(
                 WordEffect effect, boolean requiresOperator,
                 NumberProvider amount1
         ))) return true;
@@ -273,20 +273,20 @@ public final class AbilityService {
     /**
      * Executes a composite as one transaction: every child must commit or all state is restored.
      */
-    public static UseResult useComposite(Identifier compositeId, AbilityDefinition composite, Entity actor,
+    public static UseResult useComposite(Identifier compositeId, Ability composite, Entity actor,
                                          AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
-                                         FormulaContext context, Function<Identifier, Optional<AbilityDefinition>> definitions) {
-        if (!(composite.typedType() instanceof Composite(
-                List<Holder<AbilityDefinition>> abilities1, boolean allRequired
+                                         FormulaContext context, Function<Identifier, Optional<Ability>> definitions) {
+        if (!(composite.type() instanceof Composite(
+                List<Holder<Ability>> abilities1, boolean allRequired
         )))
             return UseResult.rejected(Failure.INVALID_FORMULA, null);
         Snapshot abilitySnapshot = abilities.snapshot();
         Map<Identifier, Double> resourceSnapshot = resources.values();
         LinkedHashMap<Identifier, Double> paid = new LinkedHashMap<>();
         UseResult lastFailure = UseResult.rejected(Failure.NOT_GRANTED, null);
-        for (Holder<AbilityDefinition> childHolder : abilities1) {
+        for (Holder<Ability> childHolder : abilities1) {
             Identifier childId = HolderHelper.id(childHolder);
-            AbilityDefinition child = childHolder.value();
+            Ability child = childHolder.value();
             UseResult result = use(childId, child, actor, abilities, resources, gameTime, context);
             if (!result.committed() && !result.casting()) {
                 lastFailure = result;
@@ -310,7 +310,7 @@ public final class AbilityService {
         return copy;
     }
 
-    private static FormulaContext withElementAffinity(LivingEntity actor, AbilityDefinition definition, FormulaContext context) {
+    private static FormulaContext withElementAffinity(LivingEntity actor, Ability definition, FormulaContext context) {
         if (definition.elementAffinity().isEmpty()) return context;
         double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_DATA), definition.elementAffinity(), context,
                 id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id));
@@ -319,7 +319,7 @@ public final class AbilityService {
         return new FormulaContext(variables);
     }
 
-    private static <T extends AbilityComponent> Optional<T> component(AbilityDefinition definition, Class<T> type) {
+    private static <T extends AbilityComponent> Optional<T> component(Ability definition, Class<T> type) {
         return definition.components().stream().filter(type::isInstance).map(type::cast).findFirst();
     }
 

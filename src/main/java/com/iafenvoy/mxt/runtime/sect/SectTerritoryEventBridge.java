@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.sect;
 
 import com.iafenvoy.mxt.attachment.SectData;
 import com.iafenvoy.mxt.attachment.SectTerritoryData;
-import com.iafenvoy.mxt.data.sect.SectDefinition;
+import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import net.minecraft.core.BlockPos;
@@ -48,7 +48,7 @@ public final class SectTerritoryEventBridge {
         Identifier owner = territory.owner().orElse(null);
         if (owner == null) return true;
         SectData membership = player.getData(MxtAttachments.SECT);
-        SectDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.SECT, owner).orElse(null);
+        Sect definition = MxtDatapackRegistries.get(MxtDatapackRegistries.SECT, owner).orElse(null);
         return definition != null && SectService.canUseTerritory(membership, owner, definition, territory, permission);
     }
 }

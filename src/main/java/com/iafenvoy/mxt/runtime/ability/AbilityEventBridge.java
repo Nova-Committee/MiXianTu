@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.ability;
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityType.Aura;
 import com.iafenvoy.mxt.data.ability.AbilityType.Triggered;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesData;
@@ -72,7 +72,7 @@ public final class AbilityEventBridge {
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
         Identifier abilityId = abilities.channelledAbility().orElse(null);
         if (abilityId == null) return;
-        AbilityDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
+        Ability definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
         if (definition == null) {
             AbilityService.stopChannel(abilities);
             return;
@@ -167,8 +167,8 @@ public final class AbilityEventBridge {
 
     private static void tickAuras(LivingEntity actor, AbilityHolderData abilities, long gameTime) {
         for (Identifier abilityId : abilities.sources().keySet()) {
-            AbilityDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
-            if (definition == null || !(definition.typedType() instanceof Aura(
+            Ability definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
+            if (definition == null || !(definition.type() instanceof Aura(
                     NumberProvider interval1,
                     NumberProvider radius1
             )) || !definition.condition().test(actor, FormulaContext.EMPTY))
@@ -197,12 +197,12 @@ public final class AbilityEventBridge {
         }
     }
 
-    private static void dispatch(String trigger, LivingEntity entity, FormulaContext context, Predicate<AbilityDefinition> extraCondition) {
+    private static void dispatch(String trigger, LivingEntity entity, FormulaContext context, Predicate<Ability> extraCondition) {
         AbilityHolderData abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderData resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = entity.level().getGameTime();
         for (Identifier abilityId : abilities.sources().keySet()) {
-            AbilityDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
+            Ability definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
             if (definition == null || definition.trigger().filter(value -> value.event().equals(trigger)).isEmpty() || !extraCondition.test(definition))
                 continue;
             if (!passesTriggerChance(entity, definition, context)) continue;
@@ -225,8 +225,8 @@ public final class AbilityEventBridge {
     /**
      * A triggered ability's chance is evaluated by the server immediately before dispatch.
      */
-    private static boolean passesTriggerChance(LivingEntity entity, AbilityDefinition definition, FormulaContext context) {
-        if (!(definition.typedType() instanceof Triggered triggered)) return true;
+    private static boolean passesTriggerChance(LivingEntity entity, Ability definition, FormulaContext context) {
+        if (!(definition.type() instanceof Triggered triggered)) return true;
         final double chance;
         try {
             chance = triggered.chance().evaluate(context);

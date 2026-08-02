@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.attachment.ContractData;
-import com.iafenvoy.mxt.data.creature.ContractTypeDefinition;
+import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
@@ -30,7 +30,7 @@ public final class ContractEventBridge {
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof Mob pet) || pet.level().isClientSide()) return;
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
-        ContractTypeDefinition definition = contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).orElse(null);
+        ContractType definition = contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).orElse(null);
         if (!contract.bound() || definition == null) return;
         ServerPlayer owner = ((ServerLevel) pet.level()).getServer().getPlayerList().getPlayer(contract.owner().orElseThrow());
         if (owner == null || owner.level() != pet.level()) return;

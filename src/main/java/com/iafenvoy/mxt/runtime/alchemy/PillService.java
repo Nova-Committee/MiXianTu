@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.attachment.PillToxicityData;
-import com.iafenvoy.mxt.data.alchemy.PillDefinition;
+import com.iafenvoy.mxt.data.alchemy.Pill;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -14,7 +14,7 @@ public final class PillService {
     private PillService() {
     }
 
-    public static Result consume(LivingEntity entity, PillDefinition definition) {
+    public static Result consume(LivingEntity entity, Pill definition) {
         FormulaContext context = FormulaContexts.forEntity(entity);
         definition.onConsume().execute(entity, context);
         PillToxicityData toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);

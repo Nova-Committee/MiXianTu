@@ -1,0 +1,27 @@
+package com.iafenvoy.mxt.data.cultivation;
+
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.mojang.datafixers.util.Either;
+import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.tags.TagKey;
+
+import java.util.List;
+
+/**
+ * Element relations are data driven; tags classify elements but do not encode precedence.
+ */
+public record Element(String translationKey, List<Either<Holder<Element>, TagKey<Element>>> overcomes,
+                      List<Either<Holder<Element>, TagKey<Element>>> adaptedTo, List<Identifier> auraTags) {
+    public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+            Codec.STRING.optionalFieldOf("translation_key", "").forGetter(Element::translationKey),
+            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
+            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
+            Identifier.CODEC.listOf().optionalFieldOf("aura_tags", List.of()).forGetter(Element::auraTags)
+    ).apply(instance, Element::new));
+    public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.ELEMENT);
+}

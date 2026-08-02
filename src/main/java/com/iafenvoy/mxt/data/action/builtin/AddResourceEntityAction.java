@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.action.builtin;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.resource.ResourceDefinition;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -16,10 +16,10 @@ import net.minecraft.world.entity.Entity;
 /**
  * Adds a finite signed amount to a server-owned resource attachment.
  */
-public record AddResourceEntityAction(Holder<ResourceDefinition> resource,
+public record AddResourceEntityAction(Holder<Resource> resource,
                                       NumberProvider amount) implements EntityAction {
     public static final MapCodec<AddResourceEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ResourceDefinition.HOLDER_CODEC.fieldOf("resource").forGetter(AddResourceEntityAction::resource),
+            Resource.CODEC.fieldOf("resource").forGetter(AddResourceEntityAction::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(AddResourceEntityAction::amount)
     ).apply(instance, AddResourceEntityAction::new));
 

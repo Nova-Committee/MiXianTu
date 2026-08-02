@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.data.alchemy.AlchemyRecipeDefinition;
+import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Post;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Pre;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -17,12 +17,12 @@ import java.util.List;
  */
 public final class AlchemySession {
     private final Identifier recipeId;
-    private final AlchemyRecipeDefinition recipe;
+    private final AlchemyRecipe recipe;
     private long remainingTicks;
     private boolean spoiled;
     private boolean complete;
 
-    private AlchemySession(Identifier recipeId, AlchemyRecipeDefinition recipe, long remainingTicks, boolean spoiled, boolean complete) {
+    private AlchemySession(Identifier recipeId, AlchemyRecipe recipe, long remainingTicks, boolean spoiled, boolean complete) {
         this.recipeId = recipeId;
         this.recipe = recipe;
         this.remainingTicks = remainingTicks;
@@ -30,11 +30,11 @@ public final class AlchemySession {
         this.complete = complete;
     }
 
-    public static StartResult start(AlchemyRecipeDefinition recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
+    public static StartResult start(AlchemyRecipe recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
         return start(Identifier.fromNamespaceAndPath("mxt", "unknown"), recipe, furnaceTier, inputs, context);
     }
 
-    public static StartResult start(Identifier recipeId, AlchemyRecipeDefinition recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
+    public static StartResult start(Identifier recipeId, AlchemyRecipe recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
         if (NeoForge.EVENT_BUS.post(new Pre(recipeId, recipe, inputs)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         if (furnaceTier < recipe.minimumFurnaceTier()) return StartResult.rejected(Failure.FURNACE_TIER);
@@ -48,7 +48,7 @@ public final class AlchemySession {
     /**
      * Restores only the runtime state; the caller must resolve the datapack recipe by its snapshot ID.
      */
-    public static AlchemySession restore(Snapshot snapshot, AlchemyRecipeDefinition recipe) {
+    public static AlchemySession restore(Snapshot snapshot, AlchemyRecipe recipe) {
         if (snapshot.remainingTicks() < 0L)
             throw new IllegalArgumentException("Alchemy snapshot has negative remaining ticks");
         return new AlchemySession(snapshot.recipe(), recipe, snapshot.remainingTicks(), snapshot.spoiled(), snapshot.complete());

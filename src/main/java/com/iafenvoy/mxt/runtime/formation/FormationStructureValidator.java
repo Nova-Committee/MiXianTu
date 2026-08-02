@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.data.formation.FormationDefinition;
+import com.iafenvoy.mxt.data.Formation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -17,7 +17,7 @@ import java.util.List;
  */
 @FunctionalInterface
 public interface FormationStructureValidator {
-    boolean matches(ServerLevel level, BlockPos controller, FormationDefinition definition);
+    boolean matches(ServerLevel level, BlockPos controller, Formation definition);
 
     FormationStructureValidator ALWAYS = (level, controller, definition) -> true;
 

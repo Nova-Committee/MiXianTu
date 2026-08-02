@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.attachment.FlightData;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateData;
-import com.iafenvoy.mxt.data.artifact.ItemArchetypeDefinition;
+import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
@@ -19,11 +19,11 @@ public final class FlightService {
     private FlightService() {
     }
 
-    public static Result mount(ServerPlayer player, Identifier archetype, ItemArchetypeDefinition definition, FormulaContext context) {
+    public static Result mount(ServerPlayer player, Identifier archetype, ItemArchetype definition, FormulaContext context) {
         return mount(player, player.getMainHandItem(), archetype, definition, context);
     }
 
-    public static Result mount(ServerPlayer player, ItemStack artifact, Identifier archetype, ItemArchetypeDefinition definition, FormulaContext context) {
+    public static Result mount(ServerPlayer player, ItemStack artifact, Identifier archetype, ItemArchetype definition, FormulaContext context) {
         if (definition.flightSpeed().evaluate(context) <= 0.0D)
             return Result.rejected(Failure.NOT_FLYABLE);
         if (!ownsEquippedArchetype(player, artifact, archetype)) {
@@ -51,7 +51,7 @@ public final class FlightService {
                 && ArtifactService.isOwner(artifact, player.getUUID());
     }
 
-    public static Result tick(ServerPlayer player, ItemArchetypeDefinition definition, FormulaContext context) {
+    public static Result tick(ServerPlayer player, ItemArchetype definition, FormulaContext context) {
         FlightData data = player.getData(MxtAttachments.FLIGHT);
         if (!data.active()) return Result.inactive();
         if (!(player.getVehicle() instanceof FlyingSwordEntity sword) || data.vehicle().filter(sword.getUUID()::equals).isEmpty()) {

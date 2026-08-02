@@ -3,10 +3,10 @@ package com.iafenvoy.mxt.runtime.sect;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.SectData;
 import com.iafenvoy.mxt.attachment.SectTerritoryData;
-import com.iafenvoy.mxt.data.sect.SectDefinition;
-import com.iafenvoy.mxt.data.sect.SectDefinition.Exchange;
-import com.iafenvoy.mxt.data.sect.SectDefinition.Rank;
-import com.iafenvoy.mxt.data.sect.SectDefinition.Task;
+import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.data.Sect.Exchange;
+import com.iafenvoy.mxt.data.Sect.Rank;
+import com.iafenvoy.mxt.data.Sect.Task;
 import com.iafenvoy.mxt.event.SectEvent.JoinPost;
 import com.iafenvoy.mxt.event.SectEvent.JoinPre;
 import com.iafenvoy.mxt.event.SectEvent.LeavePost;
@@ -29,7 +29,7 @@ public final class SectService {
     private SectService() {
     }
 
-    public static Result join(SectData data, Identifier id, SectDefinition definition) {
+    public static Result join(SectData data, Identifier id, Sect definition) {
         if (definition.ranks().isEmpty()) return Result.rejected(Failure.DISABLED);
         if (data.member()) return Result.rejected(Failure.ALREADY_MEMBER);
         if (NeoForge.EVENT_BUS.post(new JoinPre(data, id)).isCanceled())
@@ -49,7 +49,7 @@ public final class SectService {
         return Result.changedResult();
     }
 
-    public static Result addContribution(SectData data, Identifier id, SectDefinition definition, int amount) {
+    public static Result addContribution(SectData data, Identifier id, Sect definition, int amount) {
         if (data.sect().filter(id::equals).isEmpty()) return Result.rejected(Failure.NOT_MEMBER);
         if (amount <= 0) return Result.rejected(Failure.INVALID_CONTRIBUTION);
         data.addContribution(amount);
@@ -59,7 +59,7 @@ public final class SectService {
     /**
      * Promotes to the next strictly higher configured rank after atomically paying its declared costs.
      */
-    public static Result promote(SectData data, Identifier id, SectDefinition definition, ResourceHolderData resources, FormulaContext context) {
+    public static Result promote(SectData data, Identifier id, Sect definition, ResourceHolderData resources, FormulaContext context) {
         if (data.sect().filter(id::equals).isEmpty()) return Result.rejected(Failure.NOT_MEMBER);
         Rank current = definition.ranks().stream().filter(rank -> rank.id().equals(data.rank())).findFirst().orElse(null);
         if (current == null) return Result.rejected(Failure.INVALID_RANK);
@@ -81,7 +81,7 @@ public final class SectService {
         return Result.changedResult();
     }
 
-    public static boolean hasPermission(SectData data, Identifier id, SectDefinition definition, Identifier permission) {
+    public static boolean hasPermission(SectData data, Identifier id, Sect definition, Identifier permission) {
         if (data.sect().filter(id::equals).isEmpty()) return false;
         return definition.ranks().stream().filter(rank -> rank.id().equals(data.rank())).findFirst()
                 .map(rank -> rank.permissions().contains(permission)).orElse(false);
@@ -90,7 +90,7 @@ public final class SectService {
     /**
      * Awards a declared task once, or repeatedly when its datapack definition explicitly permits it.
      */
-    public static Result completeTask(SectData data, Identifier sectId, SectDefinition definition, Identifier taskId) {
+    public static Result completeTask(SectData data, Identifier sectId, Sect definition, Identifier taskId) {
         if (data.sect().filter(sectId::equals).isEmpty()) return Result.rejected(Failure.NOT_MEMBER);
         Task task = definition.tasks().stream().filter(value -> value.id().equals(taskId)).findFirst().orElse(null);
         if (task == null) return Result.rejected(Failure.UNKNOWN_TASK);
@@ -105,7 +105,7 @@ public final class SectService {
     /**
      * Validates all costs before deducting contribution and returns concrete item IDs for a server-owned inventory insertion.
      */
-    public static ExchangeResult exchange(SectData data, Identifier sectId, SectDefinition definition, Identifier exchangeId,
+    public static ExchangeResult exchange(SectData data, Identifier sectId, Sect definition, Identifier exchangeId,
                                           ResourceHolderData resources, FormulaContext context) {
         if (data.sect().filter(sectId::equals).isEmpty()) return ExchangeResult.rejected(Failure.NOT_MEMBER);
         Exchange exchange = definition.exchanges().stream().filter(value -> value.id().equals(exchangeId)).findFirst().orElse(null);
@@ -130,7 +130,7 @@ public final class SectService {
     /**
      * Claims an unowned chunk for the member's sect after the rank permission is verified.
      */
-    public static Result claimTerritory(SectData data, Identifier sectId, SectDefinition definition, SectTerritoryData territory, Identifier permission) {
+    public static Result claimTerritory(SectData data, Identifier sectId, Sect definition, SectTerritoryData territory, Identifier permission) {
         if (!definition.territoryPermissions().contains(permission) || !hasPermission(data, sectId, definition, permission))
             return Result.rejected(Failure.PERMISSION_DENIED);
         if (territory.claimed()) return Result.rejected(Failure.TERRITORY_CLAIMED);
@@ -141,14 +141,14 @@ public final class SectService {
     /**
      * A territory permits only its owning sect and its rank's declared permission.
      */
-    public static boolean canUseTerritory(SectData data, Identifier sectId, SectDefinition definition, SectTerritoryData territory, Identifier permission) {
+    public static boolean canUseTerritory(SectData data, Identifier sectId, Sect definition, SectTerritoryData territory, Identifier permission) {
         return territory.owner().filter(sectId::equals).isPresent() && hasPermission(data, sectId, definition, permission);
     }
 
     /**
      * Releases a claimed chunk only for the owning sect and an explicitly authorised rank.
      */
-    public static Result releaseTerritory(SectData data, Identifier sectId, SectDefinition definition, SectTerritoryData territory, Identifier permission) {
+    public static Result releaseTerritory(SectData data, Identifier sectId, Sect definition, SectTerritoryData territory, Identifier permission) {
         if (territory.owner().filter(sectId::equals).isEmpty()) return Result.rejected(Failure.NOT_TERRITORY_OWNER);
         if (!definition.territoryPermissions().contains(permission) || !hasPermission(data, sectId, definition, permission))
             return Result.rejected(Failure.PERMISSION_DENIED);

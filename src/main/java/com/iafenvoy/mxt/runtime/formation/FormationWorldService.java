@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.data.formation.FormationDefinition;
+import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.event.FormationEvent.Activate;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
@@ -24,12 +24,12 @@ public final class FormationWorldService {
     private FormationWorldService() {
     }
 
-    public static Result activate(ServerLevel level, BlockPos controller, Identifier id, FormationDefinition definition,
+    public static Result activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
                                   ResourceHolderData resources, FormulaContext context) {
         return activate(level, controller, id, definition, resources, context, null);
     }
 
-    public static Result activate(ServerLevel level, BlockPos controller, Identifier id, FormationDefinition definition,
+    public static Result activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
                                   ResourceHolderData resources, FormulaContext context, UUID owner) {
         FormationWorldData world = level.getData(MxtAttachments.FORMATION_WORLD);
         if (world.get(controller).isPresent()) return Result.rejected(Failure.OCCUPIED, null);
@@ -49,7 +49,7 @@ public final class FormationWorldService {
         return Result.activated(activated.instance());
     }
 
-    public static MaintainResult maintain(ServerLevel level, BlockPos controller, FormationDefinition definition,
+    public static MaintainResult maintain(ServerLevel level, BlockPos controller, Formation definition,
                                           ResourceHolderData resources, FormulaContext context) {
         FormationWorldData world = level.getData(MxtAttachments.FORMATION_WORLD);
         FormationInstance instance = world.get(controller).map(FormationInstance::restore).orElse(null);

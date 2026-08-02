@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.curse.CurseDefinition;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -17,10 +17,10 @@ import java.util.Optional;
 /**
  * Applies a datapack curse through the authoritative curse transaction.
  */
-public record ApplyCurseEntityAction(Holder<CurseDefinition> curse, NumberProvider stacks,
+public record ApplyCurseEntityAction(Holder<Curse> curse, NumberProvider stacks,
                                      Optional<NumberProvider> durationTicks) implements EntityAction {
     public static final MapCodec<ApplyCurseEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            CurseDefinition.HOLDER_CODEC.fieldOf("curse").forGetter(ApplyCurseEntityAction::curse),
+            Curse.CODEC.fieldOf("curse").forGetter(ApplyCurseEntityAction::curse),
             NumberProvider.CODEC.optionalFieldOf("stacks", new Constant(1.0D)).forGetter(ApplyCurseEntityAction::stacks),
             NumberProvider.CODEC.optionalFieldOf("duration_ticks").forGetter(ApplyCurseEntityAction::durationTicks)
     ).apply(instance, ApplyCurseEntityAction::new));

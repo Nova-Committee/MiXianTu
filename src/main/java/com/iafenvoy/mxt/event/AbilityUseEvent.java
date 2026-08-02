@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -14,10 +14,10 @@ import java.util.Map;
  */
 public abstract class AbilityUseEvent extends EntityEvent {
     private final Identifier ability;
-    private final AbilityDefinition definition;
+    private final Ability definition;
     private final FormulaContext context;
 
-    protected AbilityUseEvent(Entity entity, Identifier ability, AbilityDefinition definition, FormulaContext context) {
+    protected AbilityUseEvent(Entity entity, Identifier ability, Ability definition, FormulaContext context) {
         super(entity);
         this.ability = ability;
         this.definition = definition;
@@ -28,7 +28,7 @@ public abstract class AbilityUseEvent extends EntityEvent {
         return this.ability;
     }
 
-    public AbilityDefinition definition() {
+    public Ability definition() {
         return this.definition;
     }
 
@@ -37,7 +37,7 @@ public abstract class AbilityUseEvent extends EntityEvent {
     }
 
     public static final class Pre extends AbilityUseEvent implements ICancellableEvent {
-        public Pre(Entity entity, Identifier ability, AbilityDefinition definition, FormulaContext context) {
+        public Pre(Entity entity, Identifier ability, Ability definition, FormulaContext context) {
             super(entity, ability, definition, context);
         }
     }
@@ -45,7 +45,7 @@ public abstract class AbilityUseEvent extends EntityEvent {
     public static final class Post extends AbilityUseEvent {
         private final Map<Identifier, Double> paidCosts;
 
-        public Post(Entity entity, Identifier ability, AbilityDefinition definition, FormulaContext context, Map<Identifier, Double> paidCosts) {
+        public Post(Entity entity, Identifier ability, Ability definition, FormulaContext context, Map<Identifier, Double> paidCosts) {
             super(entity, ability, definition, context);
             this.paidCosts = Map.copyOf(paidCosts);
         }

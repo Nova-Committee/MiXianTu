@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.util;
 
 import com.iafenvoy.mxt.util.codec.CombinedCodecs;
-import com.iafenvoy.mxt.data.item.ItemDefinitionReference;
+import com.iafenvoy.mxt.data.item.DatapackItemReference;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Registry;
@@ -44,13 +44,13 @@ public interface ItemMatcher {
         Codec<Entry> CODEC = Trio.codec(
                 BuiltInRegistries.ITEM.byNameCodec(),
                 TagKey.hashedCodec(Registries.ITEM),
-                ItemDefinitionReference.OBJECT_CODEC
+                DatapackItemReference.OBJECT_CODEC
         ).xmap(
                 value -> value.map(ItemEntry::new, TagEntry::new, DefinitionEntry::new),
                 entry -> switch (entry) {
                     case ItemEntry(Item item) -> Trio.first(item);
                     case TagEntry(TagKey<Item> tag) -> Trio.second(tag);
-                    case DefinitionEntry(ItemDefinitionReference reference) -> Trio.third(reference);
+                    case DefinitionEntry(DatapackItemReference reference) -> Trio.third(reference);
                 }
         );
 
@@ -64,7 +64,7 @@ public interface ItemMatcher {
             return new TagEntry(tag);
         }
 
-        static Entry definition(ItemDefinitionReference reference) {
+        static Entry definition(DatapackItemReference reference) {
             return new DefinitionEntry(reference);
         }
     }
@@ -83,7 +83,7 @@ public interface ItemMatcher {
         }
     }
 
-    record DefinitionEntry(ItemDefinitionReference reference) implements Entry {
+    record DefinitionEntry(DatapackItemReference reference) implements Entry {
         @Override
         public boolean matches(ItemStack stack) {
             return ItemBindingService.matches(stack, this.reference);

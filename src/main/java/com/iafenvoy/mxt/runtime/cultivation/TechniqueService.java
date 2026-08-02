@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechniqueDefinition;
+import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -21,7 +21,7 @@ public final class TechniqueService {
     private TechniqueService() {
     }
 
-    public static Result learn(SpiritData spirit, Identifier id, CultivationTechniqueDefinition definition, Lookup lookup) {
+    public static Result learn(SpiritData spirit, Identifier id, CultivationTechnique definition, Lookup lookup) {
         if (spirit.learnedTechniques().contains(id)) return Result.rejected(Failure.ALREADY_LEARNED);
         Set<Identifier> existing = new HashSet<>();
         for (Identifier known : spirit.learnedTechniques())
@@ -39,14 +39,14 @@ public final class TechniqueService {
     /**
      * Entity-aware learning entry point that evaluates every declared fixed cultivation condition.
      */
-    public static Result learn(LivingEntity entity, SpiritData spirit, Identifier id, CultivationTechniqueDefinition definition, Lookup lookup, FormulaContext context) {
+    public static Result learn(LivingEntity entity, SpiritData spirit, Identifier id, CultivationTechnique definition, Lookup lookup, FormulaContext context) {
         boolean allowed = definition.learnConditions().stream().allMatch(condition -> condition.test(entity, context));
         return allowed ? learn(spirit, id, definition, lookup) : Result.rejected(Failure.CONDITIONS);
     }
 
     @FunctionalInterface
     public interface Lookup {
-        Optional<CultivationTechniqueDefinition> get(Identifier id);
+        Optional<CultivationTechnique> get(Identifier id);
     }
 
     public enum Failure {DISABLED, ALREADY_LEARNED, CONFLICT, CONDITIONS, CANCELLED}

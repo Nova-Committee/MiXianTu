@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
 import com.iafenvoy.mxt.attachment.TribulationData;
-import com.iafenvoy.mxt.data.tribulation.TribulationDefinition;
+import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -32,6 +32,6 @@ public final class TribulationEventBridge {
     }
 
     private record Entry(Identifier id,
-                         TribulationDefinition definition) {
+                         Tribulation definition) {
     }
 }

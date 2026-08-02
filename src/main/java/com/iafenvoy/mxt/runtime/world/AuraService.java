@@ -1,24 +1,26 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.attachment.AuraChunkData;
-import com.iafenvoy.mxt.data.formation.FormationDefinition;
-import com.iafenvoy.mxt.data.world.AuraZoneDefinition;
-import com.iafenvoy.mxt.data.world.AuraZoneDefinition.CycleType;
-import com.iafenvoy.mxt.data.world.AuraZoneDefinition.Noise;
+import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
+import com.iafenvoy.mxt.data.aura.AuraZone.CycleType;
+import com.iafenvoy.mxt.data.aura.AuraZone.Fluctuation;
+import com.iafenvoy.mxt.data.aura.AuraZone.Noise;
+import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
-import com.mojang.datafixers.util.Either;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -51,12 +53,12 @@ public final class AuraService {
         double staticFactor = factor(staticResolved.definition(), level.getGameTime());
         double fluctuation = factor(resolved.definition(), level.getGameTime());
         double concentration = chunk.concentration() * staticFactor;
-        if (resolved.kind() == AuraResult.SourceKind.CUSTOM || resolved.kind() == AuraResult.SourceKind.FORMATION) {
+        if (resolved.kind() == SourceKind.CUSTOM || resolved.kind() == SourceKind.FORMATION) {
             // Overlay only the template delta. The backing chunk stock remains authoritative and is consumed normally.
             double staticBase = Math.max(0.0D, staticResolved.definition().baseAura() + perlin(pos.getX(), pos.getZ(), staticResolved.definition().noise())) * staticFactor;
             concentration = Math.max(0.0D, concentration + resolved.definition().baseAura() * fluctuation - staticBase);
         }
-        Map<Identifier, Double> elements = resolved.kind() == AuraResult.SourceKind.BIOME || resolved.kind() == AuraResult.SourceKind.DIMENSION || resolved.kind() == AuraResult.SourceKind.CHUNK
+        Map<Identifier, Double> elements = resolved.kind() == SourceKind.BIOME || resolved.kind() == SourceKind.DIMENSION || resolved.kind() == SourceKind.CHUNK
                 ? chunk.elementBias() : resolved.definition().elementAura();
         return new AuraResult(concentration, resolved.definition().regenPerTick(), elements, resolved.definition().environmentTags(),
                 resolved.definition().rules(), resolved.definition().elementFitBonus(), resolved.definition().elementConflictPenalty(), resolved.id(), resolved.kind());
@@ -75,7 +77,7 @@ public final class AuraService {
     }
 
     public static void initialize(AuraChunkData chunk, Resolved resolved, BlockPos pos) {
-        AuraZoneDefinition zone = resolved.definition();
+        AuraZone zone = resolved.definition();
         double value = Math.max(0.0D, zone.baseAura() + perlin(pos.getX(), pos.getZ(), zone.noise()));
         chunk.setConcentration(value + chunk.blockAura());
         chunk.setRegenPerTick(zone.regenPerTick() + chunk.blockRegenPerTick());
@@ -89,24 +91,24 @@ public final class AuraService {
     }
 
     private static Resolved staticZone(Level level, BlockPos pos) {
-        Registry<AuraZoneDefinition> zones = level.registryAccess().lookupOrThrow(MxtDatapackRegistries.AURA_ZONE);
+        Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtDatapackRegistries.AURA_ZONE);
         Identifier dimension = level.dimension().identifier();
         Identifier biome = level.getBiome(pos).unwrapKey().map(ResourceKey::identifier).orElse(EMPTY);
-        Resolved fallback = new Resolved(EMPTY, EMPTY_ZONE, AuraResult.SourceKind.CHUNK);
+        Resolved fallback = new Resolved(EMPTY, EMPTY_ZONE, SourceKind.CHUNK);
         Registry<Biome> biomeRegistry = level.registryAccess().lookupOrThrow(Registries.BIOME);
         Registry<LevelStem> dimensionRegistry = level.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
         Resolved biomeResult = MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.AURA_ZONE)
                 .filter(holder -> RegistryCodecs.matches(holder.value().biomes(), biomeRegistry, Registries.BIOME, biome))
-                .findFirst().map(holder -> resolved(holder, AuraResult.SourceKind.BIOME)).orElse(fallback);
+                .findFirst().map(holder -> resolved(holder, SourceKind.BIOME)).orElse(fallback);
         return MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.AURA_ZONE)
                 .filter(holder -> RegistryCodecs.matchesKey(holder.value().dimensions(), dimensionRegistry, dimension))
-                .findFirst().map(holder -> resolved(holder, AuraResult.SourceKind.DIMENSION)).orElse(biomeResult);
+                .findFirst().map(holder -> resolved(holder, SourceKind.DIMENSION)).orElse(biomeResult);
     }
 
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel server)) return Optional.empty();
         return server.getData(MxtAttachments.AURA_WORLD).bestAt(pos)
-                .flatMap(entry -> MxtDatapackRegistries.get(MxtDatapackRegistries.AURA_ZONE, entry.getValue().zone()).map(zone -> new Resolved(entry.getValue().zone(), zone, AuraResult.SourceKind.CUSTOM)));
+                .flatMap(entry -> MxtDatapackRegistries.get(MxtDatapackRegistries.AURA_ZONE, entry.getValue().zone()).map(zone -> new Resolved(entry.getValue().zone(), zone, SourceKind.CUSTOM)));
     }
 
     private static Optional<Resolved> formationZone(Level level, BlockPos pos) {
@@ -115,15 +117,15 @@ public final class AuraService {
                 .filter(entry -> entry.getKey().distSqr(pos) <= entry.getValue().radius() * entry.getValue().radius())
                 .max(Comparator.comparingDouble(entry -> -entry.getKey().distSqr(pos)))
                 .flatMap(entry -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORMATION, entry.getValue().formation())
-                        .flatMap(FormationDefinition::auraZone)
-                        .map(zone -> new Resolved(HolderHelper.id(zone), zone.value(), AuraResult.SourceKind.FORMATION)));
+                        .flatMap(Formation::auraZone)
+                        .map(zone -> new Resolved(HolderHelper.id(zone), zone.value(), SourceKind.FORMATION)));
     }
 
-    private static Resolved resolved(Holder.Reference<AuraZoneDefinition> holder, AuraResult.SourceKind kind) {
+    private static Resolved resolved(Reference<AuraZone> holder, SourceKind kind) {
         return new Resolved(holder.key().identifier(), holder.value(), kind);
     }
 
-    private static double factor(AuraZoneDefinition zone, long time) {
+    private static double factor(AuraZone zone, long time) {
         if (!zone.fluctuation().enabled() || zone.fluctuation().cycleType() == CycleType.STATIC) return 1.0D;
         long cycle = zone.fluctuation().cycleType() == CycleType.DAY ? 24_000L : 192_000L;
         return Math.max(0.0D, 1.0D + zone.fluctuation().amplitude() * Math.sin(Math.PI * 2.0D * (time + zone.fluctuation().offsetTick()) / cycle));
@@ -154,10 +156,10 @@ public final class AuraService {
         return a + delta * (b - a);
     }
 
-    public record Resolved(Identifier id, AuraZoneDefinition definition, AuraResult.SourceKind kind) {
+    public record Resolved(Identifier id, AuraZone definition, SourceKind kind) {
     }
 
-    private static final AuraZoneDefinition EMPTY_ZONE = new AuraZoneDefinition(0, 0, Map.of(), List.of(),
+    private static final AuraZone EMPTY_ZONE = new AuraZone(0, 0, Map.of(), List.of(),
             List.of(), List.of(),
-            AuraZoneDefinition.Fluctuation.NONE, AuraZoneDefinition.Rules.DEFAULT, 0, 0, AuraZoneDefinition.Noise.NONE, AuraZoneDefinition.ClientRender.DEFAULT);
+            Fluctuation.NONE, Rules.DEFAULT, 0, 0, Noise.NONE, ClientRender.DEFAULT);
 }
