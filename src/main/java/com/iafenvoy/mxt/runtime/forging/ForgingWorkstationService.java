@@ -17,15 +17,16 @@ import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorldData.StationSession;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
@@ -63,9 +64,7 @@ public final class ForgingWorkstationService {
         if (station == null || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
         ForgingSession session = ForgingSession.restore(station.session().plan().orElseThrow(), station.session().session().orElseThrow());
-        boolean conditionsMet = method.conditions().stream().allMatch(id ->
-                MxtTypeRegistries.CULTIVATION_CONDITION.get(id)
-                        .map(reference -> reference.value().test(player, FormulaContext.EMPTY)).orElse(false));
+        boolean conditionsMet = method.conditions().stream().allMatch(condition -> condition.test(player, FormulaContext.EMPTY));
         StrikeResult result = ForgingService.strike(session, methodId, method,
                 player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.EMPTY, () -> conditionsMet);
         if (!result.struck()) return false;
@@ -140,7 +139,8 @@ public final class ForgingWorkstationService {
     public static boolean canUse(ServerPlayer player, BlockPos position, ForgingBlueprintDefinition blueprint) {
         if (player.distanceToSqr(position.getCenter()) > MAX_DISTANCE_SQUARED) return false;
         Identifier block = BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(position).getBlock());
-        return blueprint.workstationBlocks().contains(block);
+        return RegistryCodecs.matches(blueprint.workstationBlocks(), BuiltInRegistries.BLOCK,
+                Registries.BLOCK, block);
     }
 
     private static void settleFailure(ServerPlayer player, BlockPos position, ForgingSessionData data) {

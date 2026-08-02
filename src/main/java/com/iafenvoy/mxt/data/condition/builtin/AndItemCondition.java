@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 public record AndItemCondition(List<ItemCondition> conditions) implements ItemCondition {
-    public static final MapCodec<AndItemCondition> CODEC = ItemCondition.SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndItemCondition::new, AndItemCondition::conditions);
+    public static final MapCodec<AndItemCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndItemCondition::new, AndItemCondition::conditions);
 
     public AndItemCondition {
         conditions = List.copyOf(conditions);

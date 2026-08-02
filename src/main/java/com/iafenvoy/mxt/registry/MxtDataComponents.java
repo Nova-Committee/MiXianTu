@@ -24,7 +24,9 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemAbilitiesData>> ITEM_ABILITIES = REGISTRY.register("item_abilities", () -> DataComponentType.<ItemAbilitiesData>builder().persistent(ItemAbilitiesData.CODEC).build());
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<CurseContainerData>> CURSE_CONTAINER = REGISTRY.register("curse_container", () -> DataComponentType.<CurseContainerData>builder().persistent(CurseContainerData.CODEC).build());
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ChequeData>> CHEQUE = REGISTRY.register("cheque", () -> DataComponentType.<ChequeData>builder().persistent(ChequeData.CODEC).build());
-    /** The {@code mxt:item} definition selected for this stack. */
+    /**
+     * The {@code mxt:item} definition selected for this stack.
+     */
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemDefinitionReference>> ITEM_DEFINITION = REGISTRY.register("item_definition", () -> DataComponentType.<ItemDefinitionReference>builder()
             .persistent(ItemDefinitionReference.CODEC)
             .networkSynchronized(ItemDefinitionReference.STREAM_CODEC)

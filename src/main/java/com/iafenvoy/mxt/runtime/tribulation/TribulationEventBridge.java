@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 
 /**

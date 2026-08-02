@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.action.builtin;
 import com.iafenvoy.mxt.attachment.AuraChunkData;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
@@ -20,6 +21,7 @@ public record ChangeAuraBlockAction(NumberProvider amount) implements BlockActio
         if (level.isClientSide()) return;
         double amount = this.amount.evaluate(context);
         if (!Double.isFinite(amount)) return;
+        AuraService.getPositionAura(level, pos);
         AuraChunkData aura = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK);
         aura.setConcentration(Math.max(0.0D, aura.concentration() + amount));
     }

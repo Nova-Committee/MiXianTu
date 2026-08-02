@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.attachment.SoulData;
-import com.iafenvoy.mxt.event.SoulEvent;
 import com.iafenvoy.mxt.event.SoulEvent.ReclaimPost;
 import com.iafenvoy.mxt.event.SoulEvent.ReclaimPre;
 import com.iafenvoy.mxt.event.SoulEvent.TransferPost;

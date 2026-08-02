@@ -2,13 +2,16 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.item.ItemBindingDefinition;
+import com.iafenvoy.mxt.data.item.ItemDefinition;
 import com.iafenvoy.mxt.data.item.ItemDefinitionReference;
 import com.iafenvoy.mxt.data.item.ItemDefinitionRegistry;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTab.ItemDisplayParameters;
+import net.minecraft.world.item.CreativeModeTab.Output;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -17,7 +20,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.List;
 
-/** Code-owned and datapack-defined item collections. */
+/**
+ * Code-owned and datapack-defined item collections.
+ */
 public final class MxtCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> REGISTRY = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MiXianTu.MOD_ID);
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
@@ -33,7 +38,7 @@ public final class MxtCreativeTabs {
             "weapon", "itemGroup.mxt.weapon", Items.DIAMOND_SWORD, ItemDefinitionRegistry.WEAPON, true);
 
     private static DeferredHolder<CreativeModeTab, CreativeModeTab> dataDrivenTab(String path, String title, Item icon,
-                                                                                     ItemDefinitionRegistry category, boolean bindStack) {
+                                                                                  ItemDefinitionRegistry category, boolean bindStack) {
         return REGISTRY.register(path, () -> CreativeModeTab.builder()
                 .title(Component.translatable(title))
                 .icon(() -> new ItemStack(icon))
@@ -43,8 +48,8 @@ public final class MxtCreativeTabs {
                 .build());
     }
 
-    private static void addDefinition(CreativeModeTab.ItemDisplayParameters parameters, CreativeModeTab.Output output,
-                                      ItemDefinitionRegistry category, Holder.Reference<com.iafenvoy.mxt.data.item.ItemDefinition> definition,
+    private static void addDefinition(ItemDisplayParameters parameters, Output output,
+                                      ItemDefinitionRegistry category, Reference<ItemDefinition> definition,
                                       boolean bindStack) {
         ItemDefinitionReference reference = new ItemDefinitionReference(category, definition.key().identifier());
         if (bindStack) {
@@ -52,7 +57,7 @@ public final class MxtCreativeTabs {
             return;
         }
         List<Item> bindings = MxtDatapackRegistries.holders(parameters.holders(), MxtDatapackRegistries.ITEM_BINDING)
-                .map(Holder.Reference::value)
+                .map(Reference::value)
                 .filter(binding -> binding.definition().equals(reference))
                 .map(ItemBindingDefinition::item)
                 .distinct()

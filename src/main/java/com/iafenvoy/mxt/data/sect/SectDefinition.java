@@ -42,7 +42,7 @@ public record SectDefinition(List<Rank> ranks, List<Task> tasks,
         public static final Codec<Rank> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.STRING.fieldOf("id").forGetter(Rank::id), Codec.INT.optionalFieldOf("priority", 0).forGetter(Rank::priority),
                 Codec.INT.optionalFieldOf("min_contribution", 0).forGetter(Rank::minContribution), Identifier.CODEC.listOf().optionalFieldOf("permissions", List.of()).forGetter(Rank::permissions),
-                ResourceCost.CODEC.listOf().optionalFieldOf("promotion_costs", List.of()).forGetter(Rank::promotionCosts)
+                ResourceCost.LIST_CODEC.optionalFieldOf("promotion_costs", List.of()).forGetter(Rank::promotionCosts)
         ).apply(instance, Rank::new));
     }
 
@@ -63,7 +63,7 @@ public record SectDefinition(List<Rank> ranks, List<Task> tasks,
                            Optional<Identifier> requiredPermission) {
         public static final Codec<Exchange> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Identifier.CODEC.fieldOf("id").forGetter(Exchange::id), Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("contribution_cost", 0).forGetter(Exchange::contributionCost),
-                ResourceCost.CODEC.listOf().optionalFieldOf("costs", List.of()).forGetter(Exchange::costs), Identifier.CODEC.listOf().fieldOf("outputs").forGetter(Exchange::outputs),
+                ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Exchange::costs), Identifier.CODEC.listOf().fieldOf("outputs").forGetter(Exchange::outputs),
                 Identifier.CODEC.optionalFieldOf("required_permission").forGetter(Exchange::requiredPermission)
         ).apply(instance, Exchange::new));
     }

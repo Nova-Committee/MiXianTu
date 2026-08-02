@@ -16,7 +16,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import org.jspecify.annotations.NonNull;
 
-/** Stonecutter-style client selector for currency exchange offers. */
+/**
+ * Stonecutter-style client selector for currency exchange offers.
+ */
 public final class ExchangeStationScreen extends AbstractContainerScreen<ExchangeStationMenu> {
     private static final Identifier BACKGROUND = Identifier.withDefaultNamespace("textures/gui/container/stonecutter.png");
     private static final Identifier SCROLLER = Identifier.withDefaultNamespace("container/stonecutter/scroller");
@@ -51,7 +53,7 @@ public final class ExchangeStationScreen extends AbstractContainerScreen<Exchang
     }
 
     @Override
-    protected void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    protected void extractTooltip(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         super.extractTooltip(graphics, mouseX, mouseY);
         if (!this.displayOffers) return;
         for (int index = this.startIndex; index < this.startIndex + 12 && index < this.menu.getNumberOfVisibleOffers(); index++) {
@@ -66,7 +68,7 @@ public final class ExchangeStationScreen extends AbstractContainerScreen<Exchang
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
         if (this.displayOffers) {
             for (int index = this.startIndex; index < this.startIndex + 12; index++) {
                 int offset = index - this.startIndex;
@@ -86,7 +88,7 @@ public final class ExchangeStationScreen extends AbstractContainerScreen<Exchang
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+    public boolean mouseDragged(@NonNull MouseButtonEvent event, double deltaX, double deltaY) {
         if (!this.scrolling || !this.isScrollBarActive()) return super.mouseDragged(event, deltaX, deltaY);
         int top = this.topPos + 14;
         this.scrollOffset = Mth.clamp(((float) event.y() - top - 7.5F) / 39.0F, 0.0F, 1.0F);
@@ -95,7 +97,7 @@ public final class ExchangeStationScreen extends AbstractContainerScreen<Exchang
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean mouseReleased(@NonNull MouseButtonEvent event) {
         this.scrolling = false;
         return super.mouseReleased(event);
     }
@@ -116,10 +118,10 @@ public final class ExchangeStationScreen extends AbstractContainerScreen<Exchang
             int offset = index - this.startIndex;
             int x = this.leftPos + 52 + offset % 4 * 16;
             int y = this.topPos + 14 + offset / 4 * 18;
-            Identifier sprite = index == this.menu.getSelectedExchange() ? SELECTED
-                    : mouseX >= x && mouseY >= y && mouseX < x + 16 && mouseY < y + 18 ? HIGHLIGHTED : RECIPE;
+            boolean inRange = mouseX >= x && mouseY >= y && mouseX < x + 16 && mouseY < y + 18;
+            Identifier sprite = index == this.menu.getSelectedExchange() ? SELECTED : inRange ? HIGHLIGHTED : RECIPE;
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y, 16, 18);
-            if (mouseX >= x && mouseY >= y && mouseX < x + 16 && mouseY < y + 18) graphics.requestCursor(CursorTypes.POINTING_HAND);
+            if (inRange) graphics.requestCursor(CursorTypes.POINTING_HAND);
         }
     }
 

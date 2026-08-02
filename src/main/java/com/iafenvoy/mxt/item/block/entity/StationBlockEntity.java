@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.item.block.entity;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu.Mode;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
@@ -29,7 +28,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 import java.util.UUID;
 
-/** Shared persistent offer state for system and player-owned trade stations. */
+/**
+ * Shared persistent offer state for system and player-owned trade stations.
+ */
 public abstract class StationBlockEntity extends BlockEntity implements MenuProvider {
     private final SimpleContainer costs = this.tracked(12);
     private final SimpleContainer rewards = this.tracked(12);
@@ -51,15 +52,35 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
         };
     }
 
-    public final SimpleContainer costs() { return this.costs; }
-    public final SimpleContainer rewards() { return this.rewards; }
-    public final SimpleContainer display() { return this.display; }
-    public final SimpleContainer stock() { return this.stock; }
+    public final SimpleContainer costs() {
+        return this.costs;
+    }
+
+    public final SimpleContainer rewards() {
+        return this.rewards;
+    }
+
+    public final SimpleContainer display() {
+        return this.display;
+    }
+
+    public final SimpleContainer stock() {
+        return this.stock;
+    }
+
     public final ItemStack displayStack() {
         return this.isSystemStation() ? this.rewards.getItem(0) : this.display.getItem(0);
     }
-    public final UUID owner() { return this.owner; }
-    public final void setOwner(UUID owner) { this.owner = owner; this.markChangedAndSync(); }
+
+    public final UUID owner() {
+        return this.owner;
+    }
+
+    public final void setOwner(UUID owner) {
+        this.owner = owner;
+        this.markChangedAndSync();
+    }
+
     public abstract boolean isSystemStation();
 
     @Override
@@ -86,7 +107,8 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
         load(this.costs, input.read("costs", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
         load(this.rewards, input.read("rewards", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
         load(this.display, input.read("display", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
-        if (this.stock != null) load(this.stock, input.read("stock", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
+        if (this.stock != null)
+            load(this.stock, input.read("stock", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
     }
 
     @Override
@@ -118,6 +140,7 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
 
     private static void load(SimpleContainer container, List<ItemStack> values) {
         container.clearContent();
-        for (int index = 0; index < Math.min(container.getContainerSize(), values.size()); index++) container.setItem(index, values.get(index));
+        for (int index = 0; index < Math.min(container.getContainerSize(), values.size()); index++)
+            container.setItem(index, values.get(index));
     }
 }

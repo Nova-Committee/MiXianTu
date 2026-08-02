@@ -20,8 +20,8 @@ public record ItemIdCondition(Item item) implements ItemCondition, ItemMatcher {
     }
 
     @Override
-    public List<ItemMatcher.Entry> entries() {
-        return List.of(ItemMatcher.Entry.item(this.item));
+    public List<Entry> entries() {
+        return List.of(Entry.item(this.item));
     }
 
     @Override

@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.data.formation.FormationDefinition;
-import com.iafenvoy.mxt.event.FormationEvent;
 import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -16,10 +15,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 

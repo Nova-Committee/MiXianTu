@@ -2,7 +2,9 @@ package com.iafenvoy.mxt.registry;
 
 import net.neoforged.bus.api.IEventBus;
 
-/** Binds every deferred registry to the mod event bus in one place. */
+/**
+ * Binds every deferred registry to the mod event bus in one place.
+ */
 public final class MxtRegistrations {
     private MxtRegistrations() {
     }

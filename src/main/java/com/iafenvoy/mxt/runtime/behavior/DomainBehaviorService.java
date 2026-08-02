@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.behavior;
 
 import com.iafenvoy.mxt.MiXianTu;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;

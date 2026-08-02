@@ -20,6 +20,8 @@ import com.iafenvoy.mxt.data.sect.SectDefinition;
 import com.iafenvoy.mxt.data.title.TitleDefinition;
 import com.iafenvoy.mxt.data.tribulation.TribulationDefinition;
 import com.iafenvoy.mxt.data.world.RealmInstanceDefinition;
+import com.iafenvoy.mxt.data.world.AuraZoneDefinition;
+import com.iafenvoy.mxt.data.world.BlockAuraDefinition;
 import com.iafenvoy.mxt.data.item.ItemBindingDefinition;
 import com.iafenvoy.mxt.data.item.ItemDefinition;
 import com.iafenvoy.mxt.data.item.ItemEffectDefinition;
@@ -28,7 +30,7 @@ import com.iafenvoy.mxt.data.item.ItemDefinitionRegistry;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
@@ -36,7 +38,6 @@ import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.TagKey;
-import net.neoforged.neoforge.registries.DataPackRegistryEvent;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent.NewRegistry;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -79,6 +80,8 @@ public final class MxtDatapackRegistries {
     public static final ResourceKey<Registry<ItemDefinition>> WEAPON = MxtRegistryKeys.WEAPON;
     public static final ResourceKey<Registry<ItemEffectDefinition>> ITEM_EFFECT = MxtRegistryKeys.ITEM_EFFECT;
     public static final ResourceKey<Registry<ItemBindingDefinition>> ITEM_BINDING = MxtRegistryKeys.ITEM_BINDING;
+    public static final ResourceKey<Registry<AuraZoneDefinition>> AURA_ZONE = MxtRegistryKeys.AURA_ZONE;
+    public static final ResourceKey<Registry<BlockAuraDefinition>> BLOCK_AURA = MxtRegistryKeys.BLOCK_AURA;
     private static final List<ResourceKey<? extends Registry<?>>> KEYS = List.of(
             MxtRegistryKeys.RESOURCE, MxtRegistryKeys.RESOURCE_BAR, MxtRegistryKeys.REALM_STAGE,
             MxtRegistryKeys.ELEMENT, MxtRegistryKeys.SPIRIT_ROOT, MxtRegistryKeys.PHYSIQUE,
@@ -91,7 +94,9 @@ public final class MxtDatapackRegistries {
             MxtRegistryKeys.REALM_INSTANCE, MxtRegistryKeys.CURRENCY, MxtRegistryKeys.ITEM,
             MxtRegistryKeys.PILL, MxtRegistryKeys.WEAPON,
             MxtRegistryKeys.ITEM_EFFECT,
-            MxtRegistryKeys.ITEM_BINDING
+            MxtRegistryKeys.ITEM_BINDING,
+            MxtRegistryKeys.AURA_ZONE,
+            MxtRegistryKeys.BLOCK_AURA
     );
 
     private MxtDatapackRegistries() {
@@ -128,6 +133,8 @@ public final class MxtDatapackRegistries {
         register(event, MxtRegistryKeys.WEAPON, ItemDefinition.CODEC);
         register(event, MxtRegistryKeys.ITEM_EFFECT, ItemEffectDefinition.CODEC);
         register(event, MxtRegistryKeys.ITEM_BINDING, ItemBindingDefinition.CODEC);
+        register(event, MxtRegistryKeys.AURA_ZONE, AuraZoneDefinition.CODEC);
+        register(event, MxtRegistryKeys.BLOCK_AURA, BlockAuraDefinition.CODEC);
     }
 
     public static List<ResourceKey<? extends Registry<?>>> registries() {
@@ -138,12 +145,16 @@ public final class MxtDatapackRegistries {
         return isDisabled(key, id) ? Optional.empty() : registry(key).getOptional(id);
     }
 
-    /** Resolves a definition from its explicit data-driven item category. */
+    /**
+     * Resolves a definition from its explicit data-driven item category.
+     */
     public static Optional<ItemDefinition> get(ItemDefinitionReference reference) {
         return get(itemRegistry(reference.registry()), reference.id());
     }
 
-    /** Returns all category-qualified definitions with the supplied ID. */
+    /**
+     * Returns all category-qualified definitions with the supplied ID.
+     */
     public static Stream<ItemDefinitionReference> itemReferences(Identifier id) {
         return Stream.of(ItemDefinitionRegistry.values())
                 .filter(category -> get(itemRegistry(category), id).isPresent())
@@ -163,28 +174,36 @@ public final class MxtDatapackRegistries {
         return registry(key).listElements().filter(holder -> !holder.is(disabled));
     }
 
-    /** Reads enabled entries from either a server or the client-synchronised registry access. */
+    /**
+     * Reads enabled entries from either a server or the client-synchronised registry access.
+     */
     public static <T> Stream<Reference<T>> holders(RegistryAccess access, ResourceKey<? extends Registry<T>> key) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return access.lookupOrThrow(key).listElements().filter(holder -> !holder.is(disabled));
     }
 
-    /** Reads enabled entries from a client-synchronised datapack registry lookup. */
-    public static <T> Stream<Reference<T>> holders(HolderLookup.Provider access, ResourceKey<? extends Registry<T>> key) {
+    /**
+     * Reads enabled entries from a client-synchronised datapack registry lookup.
+     */
+    public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return access.lookupOrThrow(key).listElements().filter(holder -> !holder.is(disabled));
     }
 
-    /** Resolves an enabled entry from a client-synchronised datapack registry lookup. */
-    public static <T> Optional<T> get(HolderLookup.Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
+    /**
+     * Resolves an enabled entry from a client-synchronised datapack registry lookup.
+     */
+    public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return access.lookupOrThrow(key).get(ResourceKey.create(key, id))
                 .filter(holder -> !holder.is(disabled))
                 .map(Holder::value);
     }
 
-    /** Resolves a category-qualified item definition from a client registry lookup. */
-    public static Optional<ItemDefinition> get(HolderLookup.Provider access, ItemDefinitionReference reference) {
+    /**
+     * Resolves a category-qualified item definition from a client registry lookup.
+     */
+    public static Optional<ItemDefinition> get(Provider access, ItemDefinitionReference reference) {
         return get(access, itemRegistry(reference.registry()), reference.id());
     }
 
@@ -193,7 +212,9 @@ public final class MxtDatapackRegistries {
         return registry(key).get(ResourceKey.create(key, id)).map(holder -> holder.is(disabled)).orElse(false);
     }
 
-    /** Checks a native datapack tag on one entry of a custom dynamic registry. */
+    /**
+     * Checks a native datapack tag on one entry of a custom dynamic registry.
+     */
     public static <T> boolean isTagged(ResourceKey<? extends Registry<T>> key, Identifier id, Identifier tagId) {
         TagKey<T> tag = TagKey.create(key, tagId);
         return registry(key).get(ResourceKey.create(key, id)).map(holder -> holder.is(tag)).orElse(false);

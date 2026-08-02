@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService.OptionalLongResult;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
-import com.iafenvoy.mxt.screen.EconomySlots;
 import com.iafenvoy.mxt.screen.EconomySlots.Input;
 import com.iafenvoy.mxt.screen.EconomySlots.Output;
 import net.minecraft.world.Container;
@@ -24,7 +23,9 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/** Menu state and all authoritative cheque conversion operations. */
+/**
+ * Menu state and all authoritative cheque conversion operations.
+ */
 public final class ChequeTableMenu extends AbstractContainerMenu {
     private final Container currency = new SimpleContainer(15);
     private final Container chequeInput = new SimpleContainer(1);
@@ -52,7 +53,8 @@ public final class ChequeTableMenu extends AbstractContainerMenu {
 
     public boolean checkIn(Player player) {
         ItemStack blank = this.chequeInput.getItem(0);
-        if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeData.EMPTY).value() != 0L) return false;
+        if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeData.EMPTY).value() != 0L)
+            return false;
         OptionalLongResult value = CurrencyPaymentService.collectCurrency(this.currency);
         if (!value.valid() || value.value() <= 0L || !this.chequeOutput.getItem(0).isEmpty()) return false;
         this.chequeOutput.setItem(0, ChequeItem.create(value.value(), player.getGameProfile().name()));

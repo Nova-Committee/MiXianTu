@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.curse;
 
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
 /**

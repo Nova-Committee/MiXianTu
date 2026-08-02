@@ -37,7 +37,9 @@ public interface ItemMatcher {
                 .max(Comparator.comparingInt(ItemMatcher::priority));
     }
 
-    /** One matcher entry: a physical item, an item tag, or a data-driven item reference. */
+    /**
+     * One matcher entry: a physical item, an item tag, or a data-driven item reference.
+     */
     sealed interface Entry permits ItemEntry, TagEntry, DefinitionEntry {
         Codec<Entry> CODEC = Trio.codec(
                 BuiltInRegistries.ITEM.byNameCodec(),

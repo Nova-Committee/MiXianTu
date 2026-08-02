@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.attachment.AuraChunkData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.cultivation.CultivateActionDefinition;
+import com.iafenvoy.mxt.data.resource.ResourceDefinition;
+import com.iafenvoy.mxt.data.resource.ResourceGain;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
@@ -11,12 +13,18 @@ import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
 import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraService;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -40,8 +48,7 @@ public final class CultivationActionService {
      */
     public static Result start(LivingEntity entity, SpiritData spirit, Identifier actionId, CultivateActionDefinition definition,
                                long gameTime, FormulaContext context) {
-        boolean conditions = definition.startConditions().stream().allMatch(id -> MxtTypeRegistries.CULTIVATION_CONDITION.get(id)
-                .map(reference -> reference.value().test(entity, context)).orElse(false));
+        boolean conditions = definition.startConditions().stream().allMatch(condition -> condition.test(entity, context));
         return start(spirit, actionId, definition, gameTime, () -> conditions);
     }
 
@@ -65,6 +72,54 @@ public final class CultivationActionService {
         return tick(spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, affinity);
     }
 
+    /**
+     * Authoritative environment-aware cultivation path.
+     */
+    public static Result tick(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, AuraResult aura, Identifier actionId,
+                              CultivateActionDefinition definition, long gameTime, FormulaContext context,
+                              BooleanSupplier conditionsMet) {
+        if (aura.suppressCultivate()) return stop(spirit, actionId, definition, gameTime, Failure.ENVIRONMENT);
+        double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id),
+                id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATION_TECHNIQUE, id));
+        return tick(entity, spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, affinity);
+    }
+
+    private static Result tick(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, AuraResult aura, Identifier actionId,
+                               CultivateActionDefinition definition, long gameTime, FormulaContext context,
+                               BooleanSupplier conditionsMet, double affinity) {
+        if (spirit.cultivateAction().filter(actionId::equals).isEmpty())
+            return Result.rejected(Failure.NOT_ACTIVE, null);
+        if (!conditionsMet.getAsBoolean()) return stop(spirit, actionId, definition, gameTime, Failure.CONDITIONS);
+        if (!CollectionHelper.containsAllFast(aura.environmentTags(), definition.environmentTags()))
+            return Result.rejected(Failure.ENVIRONMENT, null);
+        if (gameTime < spirit.nextCultivateTick()) return Result.waitingResult();
+        double gain = definition.progressGain().evaluate(context) * affinity;
+        double auraCost = definition.auraCost().evaluate(context);
+        if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(gain) || gain < 0.0D || !Double.isFinite(auraCost) || auraCost < 0.0D)
+            return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
+        Evaluation costs;
+        Map<Identifier, Double> gains;
+        try {
+            costs = ResourceTransactions.evaluate(definition.costs(), context);
+            gains = evaluateGains(definition.auraGains(), context);
+        } catch (IllegalArgumentException | IllegalStateException error) {
+            return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
+        }
+        ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
+        if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
+        if (!canApplyGains(copyOf(resources), gains, context))
+            return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
+        if (!AuraService.consume(entity.level(), entity.blockPosition(), auraCost))
+            return Result.rejected(Failure.INSUFFICIENT_AURA, null);
+        ResourceTransactions.Result payment = ResourceTransactions.tryConsume(resources, costs);
+        if (!payment.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        applyGains(resources, gains, context);
+        spirit.setCultivationProgress(spirit.cultivationProgress() + gain);
+        spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
+        DomainBehaviorService.execute(MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR, definition.gainBehavior(), BehaviorContext.of(Kind.CULTIVATION_GAIN, actionId, null, context, true));
+        return Result.progressed(gain, payment.amounts());
+    }
+
     private static Result tick(SpiritData spirit, ResourceHolderData resources, AuraChunkData aura, Identifier actionId,
                                CultivateActionDefinition definition, long gameTime, FormulaContext context,
                                BooleanSupplier conditionsMet, double affinity) {
@@ -78,17 +133,22 @@ public final class CultivationActionService {
         if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(gain) || gain < 0.0D || !Double.isFinite(auraCost) || auraCost < 0.0D)
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         Evaluation costs;
+        Map<Identifier, Double> gains;
         try {
             costs = ResourceTransactions.evaluate(definition.costs(), context);
+            gains = evaluateGains(definition.auraGains(), context);
         } catch (IllegalArgumentException | IllegalStateException error) {
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         }
         ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
         if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
+        if (!canApplyGains(copyOf(resources), gains, context))
+            return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         if (aura.concentration() < auraCost) return Result.rejected(Failure.INSUFFICIENT_AURA, null);
         ResourceTransactions.Result payment = ResourceTransactions.tryConsume(resources, costs);
         if (!payment.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         aura.setConcentration(aura.concentration() - auraCost);
+        applyGains(resources, gains, context);
         spirit.setCultivationProgress(spirit.cultivationProgress() + gain);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
         DomainBehaviorService.execute(MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR, definition.gainBehavior(), BehaviorContext.of(
@@ -109,6 +169,27 @@ public final class CultivationActionService {
         ResourceHolderData copy = new ResourceHolderData();
         source.values().forEach(copy::set);
         return copy;
+    }
+
+    private static Map<Identifier, Double> evaluateGains(List<ResourceGain> entries, FormulaContext context) {
+        Map<Identifier, Double> amounts = new LinkedHashMap<>();
+        for (ResourceGain entry : entries) amounts.merge(entry.id(), entry.evaluate(context), Double::sum);
+        return Map.copyOf(amounts);
+    }
+
+    private static boolean canApplyGains(ResourceHolderData resources, Map<Identifier, Double> gains, FormulaContext context) {
+        for (Map.Entry<Identifier, Double> gain : gains.entrySet()) {
+            ResourceDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey()).orElse(null);
+            if (definition == null || !ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context).valid())
+                return false;
+        }
+        return true;
+    }
+
+    private static void applyGains(ResourceHolderData resources, Map<Identifier, Double> gains, FormulaContext context) {
+        for (Map.Entry<Identifier, Double> gain : gains.entrySet())
+            MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey())
+                    .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context));
     }
 
     public enum Failure {DISABLED, ALREADY_ACTIVE, COOLDOWN, CONDITIONS, NOT_ACTIVE, ENVIRONMENT, INVALID_FORMULA, INSUFFICIENT_RESOURCE, INSUFFICIENT_AURA}

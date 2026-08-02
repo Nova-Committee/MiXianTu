@@ -1,0 +1,37 @@
+{
+  "base_aura": 120.0,
+  "regen_per_tick": 0.05,
+  "element_aura": {
+    "mxt_test:fire": 0.4,
+    "mxt_test:water": -0.2
+  },
+  "environment_tags": ["mxt_test:environment/fire"],
+  "biomes": "#minecraft:is_overworld",
+  "fluctuation": {
+    "enable": true,
+    "cycle_type": "day",
+    "amplitude": 0.3,
+    "offset_tick": 0
+  },
+  "rules": {
+    "cultivate_suppress": false,
+    "tribulation_modify": 0.15,
+    "spirit_plant_bonus": 0.2,
+    "alchemy_env_bonus": true,
+    "natural_spawn_herb": true
+  },
+  "element_fit_bonus": 0.25,
+  "element_conflict_penalty": 0.2,
+  "noise": {
+    "enable": true,
+    "seed": 739430,
+    "scale": 64.0,
+    "amplitude": 20.0
+  },
+  "client_render": {
+    "particle": "minecraft:glow",
+    "particle_density": 4,
+    "fog_color": "#88ffdd",
+    "render_distance": 64
+  }
+}

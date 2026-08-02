@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.cultivation.PhysiqueDefinition;
 import com.iafenvoy.mxt.data.cultivation.SpiritRootDefinition;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -36,8 +35,7 @@ public final class CultivationIdentityService {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         if (!definition.allowStacking() && spirit.physiques().contains(id))
             return Result.rejected(Failure.ALREADY_HELD);
-        boolean conditions = definition.holderConditions().stream().allMatch(condition -> MxtTypeRegistries.CULTIVATION_CONDITION.get(condition)
-                .map(reference -> reference.value().test(entity, context)).orElse(false));
+        boolean conditions = definition.holderConditions().stream().allMatch(condition -> condition.test(entity, context));
         if (!conditions) return Result.rejected(Failure.CONDITIONS);
         Set<Identifier> exclusive = new HashSet<>(definition.exclusiveTags());
         boolean conflict = spirit.physiques().stream().map(physiqueId -> MxtDatapackRegistries.get(MxtDatapackRegistries.PHYSIQUE, physiqueId)).flatMap(Optional::stream)

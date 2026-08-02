@@ -38,6 +38,8 @@
   "mxt.command.ability.cast_success": "能力施放成功：%s",
   "mxt.command.breakthrough.failed": "突破失败：%s",
   "mxt.command.breakthrough.success": "突破成功：%s",
+  "mxt.command.realm.set_success": "境界已设置为 %s",
+  "mxt.command.realm.set_failed": "无法设置为境界 %s：该境界不在当前有效修炼链中",
   "mxt.command.sect.not_member": "你不属于任何宗门。",
   "mxt.command.sect.unknown": "未知宗门：%s",
   "mxt.command.sect.territory_failed": "领地更新失败：%s",
@@ -70,5 +72,8 @@
   "tooltip.mxt.pill.toxicity": "丹毒：%s / %s",
   "tooltip.mxt.pill.toxicity_no_threshold": "丹毒：%s",
   "tooltip.mxt.item.spirit_root": "授予灵根",
-  "tooltip.mxt.item.unknown_effect": "物品效果"
+  "tooltip.mxt.item.unknown_effect": "物品效果",
+  "mxt.command.aura.query": "灵气：%s；回复：%s/刻；来源：%s（%s）；元素：%s；环境标签：%s；修炼压制：%s",
+  "block.mxt.spirit_stone_ore": "灵石矿石",
+  "mxt.command.aura.vein": "灵石矿脉：%s 块（%s）"
 }

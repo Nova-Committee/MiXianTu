@@ -11,11 +11,16 @@ import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
 import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
 import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
+import com.iafenvoy.mxt.runtime.world.AuraService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,11 +33,23 @@ public final class AlchemyWorkstationService {
     }
 
     public static StartResult start(AlchemyWorkstationState state, Identifier recipeId,
-                                                   AlchemyRecipeDefinition recipe, int furnaceTier, FormulaContext context) {
+                                    AlchemyRecipeDefinition recipe, int furnaceTier, FormulaContext context) {
         if (state.active()) return StartResult.rejected(Failure.INPUTS);
         StartResult result = AlchemySession.start(recipeId, recipe, furnaceTier, itemIds(state.inputs()), context);
         if (result.started()) state.lock(result.session());
         return result;
+    }
+
+    /**
+     * Position-aware variant for concrete alchemy blocks.
+     */
+    public static StartResult start(Level level, BlockPos pos, AlchemyWorkstationState state, Identifier recipeId,
+                                    AlchemyRecipeDefinition recipe, int furnaceTier, FormulaContext context) {
+        AuraResult aura = AuraService.getPositionAura(level, pos);
+        double minimum = recipe.minimumAura().evaluate(context);
+        if (!Double.isFinite(minimum) || minimum < 0.0D || aura.concentration() < minimum || !CollectionHelper.containsAllFast(aura.environmentTags(), recipe.environmentTags()))
+            return StartResult.rejected(Failure.ENVIRONMENT);
+        return start(state, recipeId, recipe, furnaceTier, context);
     }
 
     /**

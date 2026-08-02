@@ -6,7 +6,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 
 public record NotEntityCondition(EntityCondition condition) implements EntityCondition {
-    public static final MapCodec<NotEntityCondition> CODEC = EntityCondition.SINGLE_CODEC.fieldOf("condition").xmap(NotEntityCondition::new, NotEntityCondition::condition);
+    public static final MapCodec<NotEntityCondition> CODEC = SINGLE_CODEC.fieldOf("condition").xmap(NotEntityCondition::new, NotEntityCondition::condition);
 
     @Override
     public boolean test(Entity entity) {

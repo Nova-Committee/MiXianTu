@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin;
 
 import com.iafenvoy.mxt.data.condition.BlockCondition;
-import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
@@ -20,7 +20,7 @@ public record AuraRangeBlockCondition(NumberProvider min, NumberProvider max) im
         double min = this.min.evaluate(context);
         double max = this.max.evaluate(context);
         if (!Double.isFinite(min) || !Double.isFinite(max) || min > max) return false;
-        double aura = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).concentration();
+        double aura = AuraService.getPositionAura(level, pos).concentration();
         return aura >= min && aura <= max;
     }
 

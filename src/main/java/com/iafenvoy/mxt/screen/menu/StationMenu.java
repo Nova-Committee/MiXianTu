@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
-import com.iafenvoy.mxt.screen.EconomySlots;
 import com.iafenvoy.mxt.screen.EconomySlots.Display;
 import com.iafenvoy.mxt.screen.EconomySlots.Ghost;
 import com.iafenvoy.mxt.util.InventoryUtil;

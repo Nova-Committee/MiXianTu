@@ -18,7 +18,9 @@ public final class CuriosIntegration {
     private CuriosIntegration() {
     }
 
-    /** Returns a stable snapshot of every non-empty equipped Curios stack. */
+    /**
+     * Returns a stable snapshot of every non-empty equipped Curios stack.
+     */
     public static List<ItemStack> equipped(LivingEntity entity) {
         return CuriosApi.getCuriosInventory(entity)
                 .map(CuriosIntegration::equipped)

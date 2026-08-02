@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.registry.MxtMenus;
-import com.iafenvoy.mxt.screen.EconomySlots;
 import com.iafenvoy.mxt.screen.EconomySlots.Display;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -16,7 +15,9 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
-/** One side of a server-owned, two-player item exchange. */
+/**
+ * One side of a server-owned, two-player item exchange.
+ */
 public final class PlayerTradeMenu extends AbstractContainerMenu {
     private final Component partnerName;
     private final DataSlot partnerAccepted = DataSlot.standalone();
@@ -64,7 +65,8 @@ public final class PlayerTradeMenu extends AbstractContainerMenu {
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
         if (index < 40) {
-            if ((index & 1) != 0 || !this.moveItemStackTo(slot.getItem(), 40, this.slots.size(), true)) return ItemStack.EMPTY;
+            if ((index & 1) != 0 || !this.moveItemStackTo(slot.getItem(), 40, this.slots.size(), true))
+                return ItemStack.EMPTY;
         } else if (!this.moveItemStackTo(slot.getItem(), 0, 40, false)) {
             return ItemStack.EMPTY;
         }

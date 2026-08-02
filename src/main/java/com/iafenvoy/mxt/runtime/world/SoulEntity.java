@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.syncher.SynchedEntityData.Builder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;

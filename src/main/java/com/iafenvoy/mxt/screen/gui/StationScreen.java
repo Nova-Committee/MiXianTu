@@ -14,7 +14,9 @@ import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.NonNull;
 
-/** Shared client view for the four station menus. */
+/**
+ * Shared client view for the four station menus.
+ */
 public final class StationScreen extends AbstractContainerScreen<StationMenu> {
     private static final Identifier CUSTOMER_BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/trade_station_customer.png");
     private static final Identifier OWNER_BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/trade_station_owner.png");

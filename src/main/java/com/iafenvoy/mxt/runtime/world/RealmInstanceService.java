@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.attachment.RealmInstanceData;
 import com.iafenvoy.mxt.attachment.RealmTravelData;
 import com.iafenvoy.mxt.data.world.RealmInstanceDefinition;
-import com.iafenvoy.mxt.event.RealmInstanceEvent;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPost;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.Exit;
@@ -20,7 +19,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.Heightmap.Types;
 import net.neoforged.neoforge.common.NeoForge;
 

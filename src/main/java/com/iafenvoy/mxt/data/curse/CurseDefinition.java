@@ -6,9 +6,12 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
+import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
 import java.util.Locale;
@@ -16,10 +19,13 @@ import java.util.Locale;
 /**
  * Static definition for a named curse. Dynamic layers and expiry belong to an attachment.
  */
-public record CurseDefinition(CurseType typedType, NumberProvider durationTicks, NumberProvider tickInterval, int maxStacks,
+public record CurseDefinition(CurseType typedType, NumberProvider durationTicks, NumberProvider tickInterval,
+                              int maxStacks,
                               StackingMode stackingMode, EntityCondition applicationCondition,
                               EntityAction onApply, EntityAction onTick, EntityAction onRemove,
                               List<Identifier> cleanseTags, boolean allowForceRemove) {
+    public static final Codec<Holder<CurseDefinition>> HOLDER_CODEC = RegistryFixedCodec.create(MxtRegistryKeys.CURSE);
+
     public Identifier type() {
         return this.typedType.id();
     }
@@ -45,6 +51,6 @@ public record CurseDefinition(CurseType typedType, NumberProvider durationTicks,
         ADD_STACKS_KEEP_DURATION,
         REPLACE;
 
-        public static final Codec<StackingMode> CODEC = Codec.STRING.xmap(value -> StackingMode.valueOf(value.toUpperCase(Locale.ROOT)), value -> value.name().toLowerCase(Locale.ROOT));
+        public static final Codec<StackingMode> CODEC = Codec.STRING.xmap(value -> valueOf(value.toUpperCase(Locale.ROOT)), value -> value.name().toLowerCase(Locale.ROOT));
     }
 }

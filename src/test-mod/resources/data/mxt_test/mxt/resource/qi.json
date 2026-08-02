@@ -1,0 +1,8 @@
+{
+  "default_value": 0,
+  "min": 0,
+  "max": "100 + level * 10",
+  "regen": 0,
+  "default_bar": "mxt_test:qi_hud",
+  "first_realm": "mxt_test:foundation"
+}

@@ -6,7 +6,9 @@ import com.iafenvoy.mxt.registry.MxtItems;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-/** A physical claim for a data-driven currency value. */
+/**
+ * A physical claim for a data-driven currency value.
+ */
 public final class ChequeItem extends Item {
     public ChequeItem(Properties properties) {
         super(properties.component(MxtDataComponents.CHEQUE, ChequeData.EMPTY));

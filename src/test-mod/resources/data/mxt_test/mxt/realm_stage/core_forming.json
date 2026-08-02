@@ -1,0 +1,12 @@
+{
+  "resource": "mxt_test:qi",
+  "progress_threshold": 250,
+  "upgrade_conditions": [
+    {
+      "type": "mxt:realm",
+      "realm": "mxt_test:foundation",
+      "comparison": "at_least"
+    }
+  ],
+  "costs": [{ "id": "mxt_test:qi", "amount": 50 }]
+}

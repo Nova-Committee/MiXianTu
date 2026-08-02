@@ -2,13 +2,20 @@ package com.iafenvoy.mxt.client;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
+import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
 import com.iafenvoy.mxt.data.resource.ResourceBarDefinition;
+import com.iafenvoy.mxt.data.resource.ResourceBarDefinition.Anchor;
+import com.iafenvoy.mxt.data.resource.ResourceBarDefinition.Context;
 import com.iafenvoy.mxt.data.resource.ResourceDefinition;
-import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers;
+import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Radial;
+import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Segmented;
+import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.TextOnly;
+import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Textured;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -22,7 +29,6 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
@@ -34,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -56,7 +63,7 @@ public enum ResourceBarOverlay implements GuiLayer {
         Player player = minecraft.player;
         if (minecraft.options.hideGui || player == null || minecraft.level == null) return;
 
-        Map<ResourceBarDefinition.Anchor, Integer> offsets = new EnumMap<>(ResourceBarDefinition.Anchor.class);
+        Map<Anchor, Integer> offsets = new EnumMap<>(Anchor.class);
         for (ResolvedBar bar : collect(player)) {
             int offset = offsets.getOrDefault(bar.definition().anchor(), 0);
             Position position = position(minecraft, bar, offset);
@@ -75,16 +82,17 @@ public enum ResourceBarOverlay implements GuiLayer {
         for (Reference<ResourceBarDefinition> holder : bars.listElements().toList()) {
             Identifier id = holder.unwrapKey().map(ResourceKey::identifier).orElse(null);
             ResourceBarDefinition bar = holder.value();
-            if (id == null || bar.context() != ResourceBarDefinition.Context.SELF_HUD || !values.contains(bar.resource())) continue;
-            ResourceDefinition resource = resources.getOptional(bar.resource()).orElse(null);
-            if (resource == null) continue;
+            Identifier resourceId = HolderHelper.id(bar.resource());
+            if (id == null || bar.context() != Context.SELF_HUD || !values.contains(resourceId)) continue;
+            ResourceDefinition resource = bar.resource().value();
 
             double min = resource.min().evaluate(FormulaContext.EMPTY);
             double maximum = resource.max().evaluate(FormulaContext.EMPTY);
-            double current = values.get(bar.resource());
-            if (!Double.isFinite(min) || !Double.isFinite(maximum) || !Double.isFinite(current) || maximum < min || maximum < 0.0D) continue;
+            double current = values.get(resourceId);
+            if (!Double.isFinite(min) || !Double.isFinite(maximum) || !Double.isFinite(current) || maximum < min || maximum < 0.0D)
+                continue;
 
-            ResourceHolderData.Audit audit = values.audit(bar.resource());
+            Audit audit = values.audit(resourceId);
             long changedAt = audit.lastChangedTick();
             long ticksSinceChanged = changedAt < 0L ? Long.MAX_VALUE : Math.max(0L, gameTime - changedAt);
             ResourceBarView view = new ResourceBarView(current, maximum, ticksSinceChanged, false);
@@ -121,22 +129,26 @@ public enum ResourceBarOverlay implements GuiLayer {
     private static void renderBar(GuiGraphicsExtractor graphics, Minecraft minecraft, ResolvedBar bar, Position position) {
         ResourceBarRenderer renderer = bar.definition().renderer();
         double progress = bar.progress();
-        if (renderer instanceof BuiltinResourceBarRenderers.Textured textured) {
+        if (renderer instanceof Textured textured) {
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, textured.backgroundSprite(), position.x(), position.y(), textured.width(), textured.height());
             int filled = (int) Math.round(textured.width() * progress);
-            if (filled > 0) graphics.blitSprite(RenderPipelines.GUI_TEXTURED, textured.fillSprite(), position.x(), position.y(), filled, textured.height());
-            if (textured.showValue()) drawValue(graphics, minecraft, bar, position.x(), position.y(), textured.width(), textured.height(), 0xFFFFFFFF, true);
-        } else if (renderer instanceof BuiltinResourceBarRenderers.Segmented segmented) {
+            if (filled > 0)
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, textured.fillSprite(), position.x(), position.y(), filled, textured.height());
+            if (textured.showValue())
+                drawValue(graphics, minecraft, bar, position.x(), position.y(), textured.width(), textured.height(), 0xFFFFFFFF, true);
+        } else if (renderer instanceof Segmented segmented) {
             renderSegmented(graphics, segmented, progress, position);
-        } else if (renderer instanceof BuiltinResourceBarRenderers.Radial radial) {
+        } else if (renderer instanceof Radial radial) {
             renderRadial(graphics, radial, progress, position);
-        } else if (renderer instanceof BuiltinResourceBarRenderers.TextOnly text) {
+        } else if (renderer instanceof TextOnly(
+                String format, String color, boolean showMaximum
+        )) {
             drawValue(graphics, minecraft, bar, position.x(), position.y(), BAR_WIDTH, BAR_HEIGHT,
-                    color(text.color(), 0xFFFFFFFF), text.showMaximum(), text.format());
+                    color(color, 0xFFFFFFFF), showMaximum, format);
         }
     }
 
-    private static void renderSegmented(GuiGraphicsExtractor graphics, BuiltinResourceBarRenderers.Segmented renderer,
+    private static void renderSegmented(GuiGraphicsExtractor graphics, Segmented renderer,
                                         double progress, Position position) {
         int segmentWidth = Math.max(1, (BAR_WIDTH - (renderer.segments() - 1) * renderer.gap()) / renderer.segments());
         int filled = (int) Math.round(progress * renderer.segments());
@@ -148,7 +160,7 @@ public enum ResourceBarOverlay implements GuiLayer {
         }
     }
 
-    private static void renderRadial(GuiGraphicsExtractor graphics, BuiltinResourceBarRenderers.Radial renderer,
+    private static void renderRadial(GuiGraphicsExtractor graphics, Radial renderer,
                                      double progress, Position position) {
         int centerX = position.x() + renderer.radius();
         int centerY = position.y() + renderer.radius();
@@ -186,7 +198,7 @@ public enum ResourceBarOverlay implements GuiLayer {
     }
 
     private static String format(double value) {
-        return Math.abs(value - Math.rint(value)) < 0.0001D ? Long.toString(Math.round(value)) : String.format(java.util.Locale.ROOT, "%.1f", value);
+        return Math.abs(value - Math.rint(value)) < 0.0001D ? Long.toString(Math.round(value)) : String.format(Locale.ROOT, "%.1f", value);
     }
 
     private static int color(String value, int fallback) {
@@ -207,23 +219,24 @@ public enum ResourceBarOverlay implements GuiLayer {
     private record Position(int x, int y) {
     }
 
-    private record ResolvedBar(Identifier id, ResourceBarDefinition definition, double current, double minimum, double maximum) {
+    private record ResolvedBar(Identifier id, ResourceBarDefinition definition, double current, double minimum,
+                               double maximum) {
         private double progress() {
-            return maximum == minimum ? 1.0D : Math.max(0.0D, Math.min(1.0D, (current - minimum) / (maximum - minimum)));
+            return this.maximum == this.minimum ? 1.0D : Math.max(0.0D, Math.min(1.0D, (this.current - this.minimum) / (this.maximum - this.minimum)));
         }
 
         private int width() {
-            return switch (definition.renderer()) {
-                case BuiltinResourceBarRenderers.Textured textured -> textured.width();
-                case BuiltinResourceBarRenderers.Radial radial -> radial.radius() * 2 + radial.thickness();
+            return switch (this.definition.renderer()) {
+                case Textured textured -> textured.width();
+                case Radial radial -> radial.radius() * 2 + radial.thickness();
                 default -> BAR_WIDTH;
             };
         }
 
         private int height() {
-            return switch (definition.renderer()) {
-                case BuiltinResourceBarRenderers.Textured textured -> textured.height();
-                case BuiltinResourceBarRenderers.Radial radial -> radial.radius() * 2 + radial.thickness();
+            return switch (this.definition.renderer()) {
+                case Textured textured -> textured.height();
+                case Radial radial -> radial.radius() * 2 + radial.thickness();
                 default -> BAR_HEIGHT;
             };
         }

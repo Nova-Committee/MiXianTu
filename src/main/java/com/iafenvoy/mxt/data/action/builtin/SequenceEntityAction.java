@@ -8,7 +8,7 @@ import net.minecraft.world.entity.Entity;
 import java.util.List;
 
 public record SequenceEntityAction(List<EntityAction> actions) implements EntityAction {
-    public static final MapCodec<SequenceEntityAction> CODEC = EntityAction.SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceEntityAction::new, SequenceEntityAction::actions);
+    public static final MapCodec<SequenceEntityAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceEntityAction::new, SequenceEntityAction::actions);
 
     public SequenceEntityAction {
         actions = List.copyOf(actions);

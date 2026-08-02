@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.tribulation;
 import com.iafenvoy.mxt.attachment.TribulationData;
 import com.iafenvoy.mxt.data.tribulation.TribulationDefinition;
 import com.iafenvoy.mxt.data.tribulation.TribulationDefinition.Phase;
-import com.iafenvoy.mxt.event.TribulationEvent;
 import com.iafenvoy.mxt.event.TribulationEvent.Complete;
 import com.iafenvoy.mxt.event.TribulationEvent.PhasePost;
 import com.iafenvoy.mxt.event.TribulationEvent.PhasePre;
@@ -43,8 +42,7 @@ public final class TribulationService {
      * Entity-aware entry point for data-defined trigger conditions.
      */
     public static StartResult start(LivingEntity entity, TribulationData data, Identifier id, TribulationDefinition definition, long gameTime, FormulaContext context) {
-        boolean allowed = definition.triggerConditions().stream().allMatch(condition -> MxtTypeRegistries.CULTIVATION_CONDITION.get(condition)
-                .map(reference -> reference.value().test(entity, context)).orElse(false));
+        boolean allowed = definition.triggerConditions().stream().allMatch(condition -> condition.test(entity, context));
         return allowed ? start(data, id, definition, gameTime, context) : StartResult.rejected(Failure.CONDITIONS);
     }
 
@@ -83,7 +81,7 @@ public final class TribulationService {
 
     private static long duration(Phase phase, TribulationDefinition definition, FormulaContext context) {
         double scale = definition.difficultyScale().evaluate(context);
-        double value = phase.duration().evaluate(context) * scale;
+        double value = phase.duration().evaluate(context) * scale * Math.max(0.0D, 1.0D + context.value("aura_tribulation_modifier"));
         return !Double.isFinite(value) || value <= 0.0D || value > Long.MAX_VALUE ? -1L : Math.max(1L, Math.round(value));
     }
 

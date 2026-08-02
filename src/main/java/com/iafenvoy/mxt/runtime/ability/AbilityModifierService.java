@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
 import com.iafenvoy.mxt.data.ability.AbilityDefinition;
-import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.AbilityType.Modifier;
 import com.iafenvoy.mxt.data.common.AttributeModifierDefinition;
 import net.minecraft.resources.Identifier;

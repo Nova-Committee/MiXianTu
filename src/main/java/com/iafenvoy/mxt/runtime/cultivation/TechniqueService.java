@@ -2,10 +2,8 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechniqueDefinition;
-import com.iafenvoy.mxt.event.TechniqueLearnEvent;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -42,8 +40,7 @@ public final class TechniqueService {
      * Entity-aware learning entry point that evaluates every declared fixed cultivation condition.
      */
     public static Result learn(LivingEntity entity, SpiritData spirit, Identifier id, CultivationTechniqueDefinition definition, Lookup lookup, FormulaContext context) {
-        boolean allowed = definition.learnConditions().stream().allMatch(condition -> MxtTypeRegistries.CULTIVATION_CONDITION.get(condition)
-                .map(reference -> reference.value().test(entity, context)).orElse(false));
+        boolean allowed = definition.learnConditions().stream().allMatch(condition -> condition.test(entity, context));
         return allowed ? learn(spirit, id, definition, lookup) : Result.rejected(Failure.CONDITIONS);
     }
 

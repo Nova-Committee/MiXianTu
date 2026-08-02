@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 
 public final class LifeSpanEventBridge {

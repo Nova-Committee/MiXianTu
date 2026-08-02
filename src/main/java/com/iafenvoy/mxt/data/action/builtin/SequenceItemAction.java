@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 public record SequenceItemAction(List<ItemAction> actions) implements ItemAction {
-    public static final MapCodec<SequenceItemAction> CODEC = ItemAction.SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceItemAction::new, SequenceItemAction::actions);
+    public static final MapCodec<SequenceItemAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceItemAction::new, SequenceItemAction::actions);
 
     public SequenceItemAction {
         actions = List.copyOf(actions);

@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.ability.AbilityType.Triggered;
 import com.iafenvoy.mxt.data.ability.AbilityType.Word;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
 import com.mojang.serialization.Codec;
@@ -17,6 +18,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.List;
 import java.util.Locale;
@@ -124,7 +126,7 @@ public sealed interface AbilityType permits Active, Triggered, Modifier,
                       List<ResourceCost> upkeepCosts) implements AbilityType {
         public static final MapCodec<Channelled> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
                 NumberProvider.CODEC.optionalFieldOf("tick_interval", new Constant(1.0D)).forGetter(Channelled::tickInterval),
-                ResourceCost.CODEC.listOf().optionalFieldOf("upkeep_costs", List.of()).forGetter(Channelled::upkeepCosts)
+                ResourceCost.LIST_CODEC.optionalFieldOf("upkeep_costs", List.of()).forGetter(Channelled::upkeepCosts)
         ).apply(instance, Channelled::new));
 
         public Channelled {
@@ -142,9 +144,9 @@ public sealed interface AbilityType permits Active, Triggered, Modifier,
         }
     }
 
-    record Composite(List<Identifier> abilities, boolean allRequired) implements AbilityType {
+    record Composite(List<Holder<AbilityDefinition>> abilities, boolean allRequired) implements AbilityType {
         public static final MapCodec<Composite> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                Identifier.CODEC.listOf().fieldOf("abilities").forGetter(Composite::abilities),
+                AutoIgnoreListCodec.create(AbilityDefinition.HOLDER_CODEC).fieldOf("abilities").forGetter(Composite::abilities),
                 Codec.BOOL.optionalFieldOf("all_required", true).forGetter(Composite::allRequired)
         ).apply(instance, Composite::new));
 

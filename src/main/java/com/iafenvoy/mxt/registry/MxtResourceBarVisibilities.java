@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarVisibilities;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarVisibilities.Always;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarVisibilities.And;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarVisibilities.NonFull;

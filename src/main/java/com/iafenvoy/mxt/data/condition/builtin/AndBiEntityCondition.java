@@ -8,7 +8,7 @@ import net.minecraft.world.entity.Entity;
 import java.util.List;
 
 public record AndBiEntityCondition(List<BiEntityCondition> conditions) implements BiEntityCondition {
-    public static final MapCodec<AndBiEntityCondition> CODEC = BiEntityCondition.SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndBiEntityCondition::new, AndBiEntityCondition::conditions);
+    public static final MapCodec<AndBiEntityCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndBiEntityCondition::new, AndBiEntityCondition::conditions);
 
     public AndBiEntityCondition {
         conditions = List.copyOf(conditions);

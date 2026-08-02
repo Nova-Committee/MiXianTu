@@ -6,10 +6,12 @@ import com.iafenvoy.mxt.data.common.AttributeModifierDefinition;
 import com.iafenvoy.mxt.data.item.SpiritRootItemEffect;
 import com.iafenvoy.mxt.data.weapon.WeaponDefinition;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedEffect;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -18,7 +20,9 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
 import java.util.Locale;
 
-/** Adds readable datapack effect details to data-driven item tooltips. */
+/**
+ * Adds readable datapack effect details to data-driven item tooltips.
+ */
 @EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
 public final class DataDrivenItemTooltipEvents {
     private DataDrivenItemTooltipEvents() {
@@ -27,11 +31,11 @@ public final class DataDrivenItemTooltipEvents {
     @SubscribeEvent
     public static void appendDetails(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
-        var registries = event.getContext().registries();
+        HolderLookup.Provider registries = event.getContext().registries();
         boolean advanced = event.getFlags().isAdvanced();
         if (advanced) ItemBindingService.find(registries, stack).ifPresent(item -> event.getToolTip().add(
                 Component.translatable("tooltip.mxt.item.definition", item.reference().id().toString()).withStyle(ChatFormatting.DARK_GRAY)));
-        for (ItemBindingService.ResolvedEffect effect : ItemBindingService.effects(registries, stack)) {
+        for (ResolvedEffect effect : ItemBindingService.effects(registries, stack)) {
             switch (effect.definition()) {
                 case WeaponDefinition weapon -> appendWeapon(event, weapon);
                 case PillDefinition pill -> appendPill(event, pill);
@@ -47,7 +51,7 @@ public final class DataDrivenItemTooltipEvents {
                 Component.translatable("tooltip.mxt.item.effect", root.spiritRoot().toString()).withStyle(ChatFormatting.DARK_GRAY));
     }
 
-    private static void appendUnknownEffect(ItemTooltipEvent event, ItemBindingService.ResolvedEffect effect, boolean advanced) {
+    private static void appendUnknownEffect(ItemTooltipEvent event, ResolvedEffect effect, boolean advanced) {
         event.getToolTip().add(Component.translatable("tooltip.mxt.item.unknown_effect").withStyle(ChatFormatting.GRAY));
         if (advanced) event.getToolTip().add(
                 Component.translatable("tooltip.mxt.item.effect", effect.id().toString()).withStyle(ChatFormatting.DARK_GRAY));
@@ -60,19 +64,22 @@ public final class DataDrivenItemTooltipEvents {
         event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attack_speed",
                 number(weapon.attackSpeed().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
         for (AttributeModifierDefinition attribute : weapon.attributes()) {
-            BuiltInRegistries.ATTRIBUTE.getOptional(attribute.attribute()).ifPresent(value -> {
+            {
+                Attribute value = attribute.attribute().value();
                 double amount = attribute.value().evaluate(FormulaContext.EMPTY);
                 if (!Double.isFinite(amount) || amount == 0.0D) return;
                 Component name = Component.translatable(value.getDescriptionId());
                 switch (attribute.operation()) {
                     case ADD_VALUE -> event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attribute.add",
                             signed(amount), name).withStyle(ChatFormatting.BLUE));
-                    case ADD_MULTIPLIED_BASE -> event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attribute.multiply_base",
-                            signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
-                    case ADD_MULTIPLIED_TOTAL -> event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attribute.multiply_total",
-                            signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
+                    case ADD_MULTIPLIED_BASE ->
+                            event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attribute.multiply_base",
+                                    signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
+                    case ADD_MULTIPLIED_TOTAL ->
+                            event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attribute.multiply_total",
+                                    signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
                 }
-            });
+            }
         }
     }
 

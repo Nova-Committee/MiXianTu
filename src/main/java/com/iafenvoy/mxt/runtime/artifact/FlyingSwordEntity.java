@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.syncher.SynchedEntityData.Builder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;

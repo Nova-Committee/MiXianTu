@@ -1,0 +1,8 @@
+{
+  "resource": "mxt_test:divine_sense",
+  "context": "self_hud",
+  "anchor": "above_hotbar",
+  "order": 4,
+  "visibility": { "type": "mxt:always" },
+  "renderer": { "type": "mxt:segmented_bar", "segments": 10, "gap": 1, "full_color": "#d18cff", "empty_color": "#392440" }
+}

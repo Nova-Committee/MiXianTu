@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.integration;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.ability.AbilityDefinition;
-import com.iafenvoy.mxt.data.cultivation.RealmStageDefinition;
 import com.iafenvoy.mxt.data.curse.CurseDefinition;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -18,10 +17,16 @@ import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.world.SoulService;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.runtime.world.AuraWorldData;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -72,14 +77,12 @@ public final class MxtKubeJsApi {
         return !entity.level().isClientSide() && SoulService.reclaim(entity);
     }
 
-    public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier realm, FormulaContext context) {
+    public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier resource, FormulaContext context) {
         if (entity.level().isClientSide())
             return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
-        RealmStageDefinition definition = MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, realm).orElse(null);
-        if (definition == null)
+        if (MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, resource).isEmpty())
             return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
-        return CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA), entity.getData(MxtAttachments.RESOURCE_HOLDER), realm,
-                definition, context, () -> true);
+        return CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA), entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context, () -> true);
     }
 
     /**
@@ -103,5 +106,19 @@ public final class MxtKubeJsApi {
         } catch (IllegalArgumentException exception) {
             return new Result(false, null, Map.of());
         }
+    }
+
+    public static AuraResult aura(Level level, BlockPos position) {
+        return AuraService.getPositionAura(level, position);
+    }
+
+    public static String addAuraBox(Level level, Identifier zone, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int priority) {
+        if (!(level instanceof ServerLevel server) || MxtDatapackRegistries.get(MxtDatapackRegistries.AURA_ZONE, zone).isEmpty())
+            throw new IllegalArgumentException("Aura areas require a loaded server aura_zone");
+        return server.getData(MxtAttachments.AURA_WORLD).add(new AuraWorldData.Area(zone, new AuraWorldData.Shape(minX, minY, minZ, maxX, maxY, maxZ), priority));
+    }
+
+    public static boolean removeAuraArea(Level level, String id) {
+        return level instanceof ServerLevel server && server.getData(MxtAttachments.AURA_WORLD).remove(id);
     }
 }

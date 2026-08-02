@@ -14,7 +14,8 @@ import java.util.Optional;
  * Immutable server-side context supplied when a direct domain behaviour is invoked.
  */
 public record BehaviorContext(@NotNull Kind kind, @NotNull Identifier definition, @NotNull Optional<ServerLevel> level,
-                              @NotNull Optional<Entity> actor, @NotNull Optional<Entity> target, @NotNull Optional<BlockPos> position,
+                              @NotNull Optional<Entity> actor, @NotNull Optional<Entity> target,
+                              @NotNull Optional<BlockPos> position,
                               @Nullable FormulaContext formula, boolean success) {
     public BehaviorContext {
         formula = formula == null ? FormulaContext.EMPTY : formula;

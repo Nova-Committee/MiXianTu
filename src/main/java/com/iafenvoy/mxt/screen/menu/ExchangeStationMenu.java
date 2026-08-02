@@ -21,7 +21,9 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/** A stonecutter-style selector for one-way, data-driven currency exchanges. */
+/**
+ * A stonecutter-style selector for one-way, data-driven currency exchanges.
+ */
 public final class ExchangeStationMenu extends AbstractContainerMenu {
     private static final int INPUT_SLOT = 0;
     private static final int RESULT_SLOT = 1;
@@ -104,7 +106,7 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public boolean clickMenuButton(Player player, int buttonId) {
+    public boolean clickMenuButton(@NonNull Player player, int buttonId) {
         if (this.selectedExchange.get() == buttonId) return false;
         if (!this.isValidExchange(buttonId)) return false;
         this.selectedExchange.set(buttonId);
@@ -113,7 +115,7 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public void slotsChanged(Container changed) {
+    public void slotsChanged(@NonNull Container changed) {
         ItemStack current = this.inputSlot.getItem();
         if (!ItemStack.isSameItemSameComponents(current, this.previousInput)) {
             this.previousInput = current.copy();

@@ -98,7 +98,9 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
         }
     }
 
-    /** A no-expiry curse type for definitions that intentionally have no lifecycle. */
+    /**
+     * A no-expiry curse type for definitions that intentionally have no lifecycle.
+     */
     enum Empty implements CurseType {
         INSTANCE;
         public static final MapCodec<Empty> CODEC = MapCodec.unit(INSTANCE);

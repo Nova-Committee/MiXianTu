@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.event.handler;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.artifact.FlightEventBridge;
 import com.iafenvoy.mxt.runtime.creature.ContractEventBridge;
@@ -14,34 +13,33 @@ import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.runtime.sect.SectTerritoryEventBridge;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationEventBridge;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
+import com.iafenvoy.mxt.runtime.world.AuraZoneEventBridge;
 import com.iafenvoy.mxt.runtime.world.RealmInstanceTicker;
 import com.iafenvoy.mxt.runtime.world.RealmTravelEventBridge;
 import com.iafenvoy.mxt.runtime.world.SoulEventBridge;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
-import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent;
-import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent.Load;
 import net.neoforged.neoforge.event.level.ChunkEvent.Unload;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
-/** Game-bus forwarding for runtime domain systems. */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID)
+/**
+ * Game-bus forwarding for runtime domain systems.
+ */
+@EventBusSubscriber
 public final class MxtGameplayEvents {
     private MxtGameplayEvents() {
     }
@@ -54,13 +52,14 @@ public final class MxtGameplayEvents {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        if (event.getEntity() instanceof net.minecraft.world.entity.LivingEntity entity) ItemBindingService.refreshEquipped(entity);
+        if (event.getEntity() instanceof LivingEntity entity) ItemBindingService.refreshEquipped(entity);
         AbilityEventBridge.onEntityTick(event);
         FlightEventBridge.onEntityTick(event);
         LifeSpanEventBridge.onEntityTick(event);
         ContractEventBridge.onEntityTick(event);
         TribulationEventBridge.onEntityTick(event);
         CultivationActionEventBridge.onEntityTick(event);
+        AuraZoneEventBridge.onEntityTick(event);
     }
 
     @SubscribeEvent
@@ -73,6 +72,7 @@ public final class MxtGameplayEvents {
     public static void onLevelTick(Post event) {
         CurseEventBridge.onLevelTick(event);
         AuraChunkTicker.onLevelTick(event);
+        AuraZoneEventBridge.onLevelTick(event);
         FormationWorldTicker.onLevelTick(event);
         RealmInstanceTicker.onLevelTick(event);
     }
@@ -107,11 +107,15 @@ public final class MxtGameplayEvents {
     public static void onBlockBreak(BreakBlockEvent event) {
         AbilityEventBridge.onBlockBreak(event);
         SectTerritoryEventBridge.onBreak(event);
+        if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level)
+            AuraChunkTicker.markDirty(level, event.getPos());
     }
 
     @SubscribeEvent
     public static void onPlace(EntityPlaceEvent event) {
         SectTerritoryEventBridge.onPlace(event);
+        if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level)
+            AuraChunkTicker.markDirty(level, event.getPos());
     }
 
     @SubscribeEvent

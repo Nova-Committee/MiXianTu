@@ -4,11 +4,9 @@ import com.iafenvoy.mxt.attachment.AbilityHolderData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.AbilityDefinition;
-import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.AbilityType.Aura;
 import com.iafenvoy.mxt.data.ability.AbilityType.Triggered;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesData;
-import com.iafenvoy.mxt.event.AbilityTriggerEvent;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Post;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Pre;
 import com.iafenvoy.mxt.integration.CuriosIntegration;
@@ -29,11 +27,9 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -140,7 +136,9 @@ public final class AbilityEventBridge {
         return data.abilities();
     }
 
-    /** Curios equipment participates in the same source-counted ability model. */
+    /**
+     * Curios equipment participates in the same source-counted ability model.
+     */
     private static void syncCuriosAbilities(LivingEntity entity, AbilityHolderData holder) {
         Set<Identifier> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))

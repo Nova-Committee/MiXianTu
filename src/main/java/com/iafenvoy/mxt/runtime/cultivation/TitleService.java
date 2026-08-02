@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.title.TitleDefinition;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -39,8 +38,7 @@ public final class TitleService {
      */
     public static Result grant(LivingEntity entity, SpiritData spirit, Identifier id, TitleDefinition definition,
                                Function<Identifier, TitleDefinition> lookup, FormulaContext context) {
-        boolean allowed = definition.unlockConditions().stream().allMatch(condition -> MxtTypeRegistries.CULTIVATION_CONDITION.get(condition)
-                .map(reference -> reference.value().test(entity, context)).orElse(false));
+        boolean allowed = definition.unlockConditions().stream().allMatch(condition -> condition.test(entity, context));
         return allowed ? grant(spirit, id, definition, lookup, () -> true) : Result.rejected(Failure.CONDITIONS);
     }
 

@@ -17,6 +17,9 @@ import com.iafenvoy.mxt.runtime.sect.SectService;
 import com.iafenvoy.mxt.runtime.sect.SectService.Result;
 import com.iafenvoy.mxt.runtime.sect.SectTerritoryEventBridge;
 import com.iafenvoy.mxt.runtime.world.SoulService;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.runtime.world.SpiritStoneVein;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -28,6 +31,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import static net.minecraft.commands.Commands.argument;
@@ -49,10 +53,14 @@ public final class MxtCommand {
                                         .then(argument("value", DoubleArgumentType.doubleArg()).executes(ctx -> setResource(ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "id"), DoubleArgumentType.getDouble(ctx, "value")))))))
                 .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
+                .then(literal("aura").then(literal("query").executes(ctx -> queryAura(ctx.getSource())))
+                        .then(literal("vein").executes(ctx -> queryVein(ctx.getSource()))))
                 .then(literal("ability").then(literal("cast").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(argument("id", StringArgumentType.word()).executes(ctx -> castAbility(ctx.getSource(), StringArgumentType.getString(ctx, "id"))))))
                 .then(literal("breakthrough").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(argument("realm", StringArgumentType.word()).executes(ctx -> attemptBreakthrough(ctx.getSource(), StringArgumentType.getString(ctx, "realm")))))
+                        .then(argument("resource", StringArgumentType.word()).executes(ctx -> attemptBreakthrough(ctx.getSource(), StringArgumentType.getString(ctx, "resource")))))
+                .then(literal("realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                        .then(literal("set").then(argument("realm", StringArgumentType.word()).executes(ctx -> setRealm(ctx.getSource(), StringArgumentType.getString(ctx, "realm"))))))
                 .then(literal("sect").then(literal("claim").executes(ctx -> claimTerritory(ctx.getSource(), false)))
                         .then(literal("release").executes(ctx -> claimTerritory(ctx.getSource(), true))))
                 .then(literal("soul").then(literal("reclaim").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
@@ -121,6 +129,31 @@ public final class MxtCommand {
         return 1;
     }
 
+    private static int queryAura(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("mxt.command.requires_player"));
+            return 0;
+        }
+        AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
+        String elements = aura.elementAura().entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue()).collect(Collectors.joining(", "));
+        String tags = String.join(", ", aura.environmentTags().stream().map(Identifier::toString).toList());
+        source.sendSuccess(() -> Component.translatable("mxt.command.aura.query", aura.concentration(), aura.regenPerTick(),
+                aura.source().toString(), aura.sourceKind().name(), elements, tags, aura.suppressCultivate()), false);
+        return 1;
+    }
+
+    private static int queryVein(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("mxt.command.requires_player"));
+            return 0;
+        }
+        SpiritStoneVein.Result vein = SpiritStoneVein.inspect(player.level(), player.blockPosition());
+        source.sendSuccess(() -> Component.translatable("mxt.command.aura.vein", vein.blocks(), vein.grade().name().toLowerCase(Locale.ROOT)), false);
+        return vein.blocks();
+    }
+
     private static int castAbility(CommandSourceStack source, String rawId) {
         ServerPlayer player = source.getPlayer();
         Identifier id = parseId(source, rawId);
@@ -139,13 +172,25 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         Identifier id = parseId(source, rawId);
         if (player == null || id == null) return 0;
-        BreakthroughResult result = MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, id).map(definition -> CultivationService.attempt(player,
-                player.getData(MxtAttachments.SPIRIT_DATA), player.getData(MxtAttachments.RESOURCE_HOLDER), id, definition, FormulaContext.EMPTY, () -> true)).orElse(null);
+        BreakthroughResult result = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id).map(definition -> CultivationService.attempt(player,
+                player.getData(MxtAttachments.SPIRIT_DATA), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.EMPTY, () -> true)).orElse(null);
         if (result == null || !result.advanced()) {
             source.sendFailure(Component.translatable("mxt.command.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("mxt.command.breakthrough.success", id), true);
+        return 1;
+    }
+
+    private static int setRealm(CommandSourceStack source, String rawId) {
+        ServerPlayer player = source.getPlayer();
+        Identifier realm = parseId(source, rawId);
+        if (player == null || realm == null) return 0;
+        if (!CultivationService.setRealm(player.getData(MxtAttachments.SPIRIT_DATA), realm)) {
+            source.sendFailure(Component.translatable("mxt.command.realm.set_failed", realm));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("mxt.command.realm.set_success", realm), true);
         return 1;
     }
 

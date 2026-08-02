@@ -5,6 +5,12 @@ import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechniqueDefinition;
 import com.iafenvoy.mxt.data.cultivation.SpiritRootDefinition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.data.cultivation.ElementDefinition;
+import com.mojang.datafixers.util.Either;
+import net.minecraft.core.Holder;
+import net.minecraft.tags.TagKey;
 import net.minecraft.resources.Identifier;
 
 import java.util.Collection;
@@ -44,14 +50,37 @@ public final class CultivationAffinity {
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 
-    public static double abilityMultiplier(SpiritData spirit, Collection<Identifier> elements, FormulaContext context,
+    public static double multiplier(SpiritData spirit, AuraResult aura, FormulaContext context,
+                                    Function<Identifier, Optional<SpiritRootDefinition>> roots,
+                                    Function<Identifier, Optional<CultivationTechniqueDefinition>> techniques) {
+        double total = 0.0D;
+        int count = 0;
+        for (Identifier rootId : spirit.spiritRoots()) {
+            SpiritRootDefinition root = roots.apply(rootId).orElse(null);
+            if (root == null) continue;
+            double base = root.cultivationMultiplier().evaluate(context);
+            double element = aura.elementAura().getOrDefault(root.element(), 0.0D);
+            if (!Double.isFinite(base) || !Double.isFinite(element) || base < 0.0D) return Double.NaN;
+            double modifier = Math.max(0.0D, 1.0D + element + (element > 0.0D ? aura.elementFitBonus() : -aura.elementConflictPenalty()));
+            total += base * modifier;
+            count++;
+        }
+        double result = count == 0 ? 1.0D : total / count;
+        if (spirit.activeTechnique().isPresent()) {
+            CultivationTechniqueDefinition technique = techniques.apply(spirit.activeTechnique().orElseThrow()).orElse(null);
+            if (technique != null) result *= technique.cultivationModifier().evaluate(context);
+        }
+        return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
+    }
+
+    public static double abilityMultiplier(SpiritData spirit, Collection<Either<Holder<ElementDefinition>, TagKey<ElementDefinition>>> elements, FormulaContext context,
                                            Function<Identifier, Optional<SpiritRootDefinition>> roots) {
         if (elements.isEmpty()) return 1.0D;
         double total = 0.0D;
         int count = 0;
         for (Identifier rootId : spirit.spiritRoots()) {
             SpiritRootDefinition root = roots.apply(rootId).orElse(null);
-            if (root == null || !elements.contains(root.element())) continue;
+            if (root == null || !RegistryCodecs.matches(elements, root.element())) continue;
             double modifier = root.elementAbilityModifier().evaluate(context);
             if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
             total += modifier;

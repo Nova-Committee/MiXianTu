@@ -9,7 +9,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import java.util.List;
 
-/** Pure, item-independent combat values for a bound weapon. */
+/**
+ * Pure, item-independent combat values for a bound weapon.
+ */
 public record WeaponDefinition(NumberProvider attackDamage, NumberProvider attackSpeed,
                                List<AttributeModifierDefinition> attributes) implements ItemEffectDefinition {
     public static final MapCodec<WeaponDefinition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(

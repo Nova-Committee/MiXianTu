@@ -13,9 +13,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.NonNull;
 
-/** Client menu shell. The menu owns all currency and cheque state on the server. */
+/**
+ * Client menu shell. The menu owns all currency and cheque state on the server.
+ */
 public final class ChequeTableScreen extends AbstractContainerScreen<ChequeTableMenu> {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/cheque_table.png");
+
     public ChequeTableScreen(ChequeTableMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, 176, 166);
     }

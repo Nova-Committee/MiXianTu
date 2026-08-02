@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.condition.builtin;
 
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.util.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -14,9 +15,9 @@ import java.util.List;
  * Matches any item or item tag in one entry. The {@code items} field accepts a
  * single value or an array, and the array may freely mix item ids and tags.
  */
-public record ItemMatcherCondition(List<ItemMatcher.Entry> entries) implements ItemCondition, ItemMatcher {
+public record ItemMatcherCondition(List<Entry> entries) implements ItemCondition, ItemMatcher {
     public static final MapCodec<ItemMatcherCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            ItemMatcher.ENTRIES_CODEC.fieldOf("items").forGetter(ItemMatcherCondition::entries)
+            ENTRIES_CODEC.fieldOf("items").forGetter(ItemMatcherCondition::entries)
     ).apply(instance, ItemMatcherCondition::new));
 
     public ItemMatcherCondition {

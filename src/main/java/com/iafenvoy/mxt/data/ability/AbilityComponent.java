@@ -8,11 +8,12 @@ import com.iafenvoy.mxt.data.ability.AbilityComponent.TargetLock;
 import com.iafenvoy.mxt.data.ability.AbilityComponent.Timer;
 import com.iafenvoy.mxt.data.ability.AbilityComponent.Toggle;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.data.resource.ResourceDefinition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.function.Function;
 
@@ -90,8 +91,8 @@ public sealed interface AbilityComponent permits Cooldown, Charges,
         }
     }
 
-    record Resource(Identifier resource) implements AbilityComponent {
-        public static final MapCodec<Resource> CODEC = Identifier.CODEC.fieldOf("resource").xmap(Resource::new, Resource::resource);
+    record Resource(Holder<ResourceDefinition> resource) implements AbilityComponent {
+        public static final MapCodec<Resource> CODEC = ResourceDefinition.HOLDER_CODEC.fieldOf("resource").xmap(Resource::new, Resource::resource);
 
         @Override
         public String key() {

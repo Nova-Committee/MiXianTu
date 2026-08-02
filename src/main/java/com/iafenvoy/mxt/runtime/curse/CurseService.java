@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.attachment.CurseHolderData;
 import com.iafenvoy.mxt.attachment.CurseHolderData.State;
 import com.iafenvoy.mxt.data.curse.CurseDefinition;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
-import com.iafenvoy.mxt.event.CurseRemoveEvent;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;

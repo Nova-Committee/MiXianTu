@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.artifact.ForgingResultData;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition;
 import com.iafenvoy.mxt.data.forging.ForgingMethodDefinition;
-import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.Cancel;
 import com.iafenvoy.mxt.event.ForgingEvent.CompletePost;
 import com.iafenvoy.mxt.event.ForgingEvent.CompletePre;

@@ -3,11 +3,14 @@ package com.iafenvoy.mxt.runtime.creature;
 import com.iafenvoy.mxt.data.creature.CreatureProfileDefinition;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Mob;
 
 import java.util.Comparator;
@@ -27,8 +30,13 @@ public final class CreatureProfileService {
     }
 
     public static boolean apply(Mob creature, Identifier id, CreatureProfileDefinition definition, FormulaContext context) {
-        if (!definition.spawnConditions().stream().allMatch(condition -> MxtTypeRegistries.CREATURE_SPAWN_CONDITION.get(condition)
-                .map(reference -> reference.value().test(creature, context)).orElse(false))) return false;
+        if (!definition.spawnConditions().stream().allMatch(condition -> condition.test(creature, context)))
+            return false;
+        AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
+        if (!Double.isFinite(definition.minimumAura()) || aura.concentration() < definition.minimumAura()
+                || (!definition.preferredAuraElements().isEmpty() && aura.elementAura().entrySet().stream().noneMatch(element -> element.getValue() > 0.0D
+                && RegistryCodecs.matches(definition.preferredAuraElements(), creature.level().registryAccess().lookupOrThrow(MxtRegistryKeys.ELEMENT), MxtRegistryKeys.ELEMENT, element.getKey()))))
+            return false;
         final double intelligence;
         try {
             intelligence = definition.intelligence().evaluate(context);
@@ -41,8 +49,8 @@ public final class CreatureProfileService {
     }
 
     public static boolean matchesType(Mob creature, CreatureProfileDefinition definition) {
-        return definition.entityTypeTags().stream().map(tag -> TagKey.create(Registries.ENTITY_TYPE, tag))
-                .anyMatch(tag -> creature.getType().builtInRegistryHolder().is(tag));
+        Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(creature.getType());
+        return RegistryCodecs.matches(definition.entityTypeTags(), BuiltInRegistries.ENTITY_TYPE, Registries.ENTITY_TYPE, type);
     }
 
     public static boolean applySelected(Mob creature) {

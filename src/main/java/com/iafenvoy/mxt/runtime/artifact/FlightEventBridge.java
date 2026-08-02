@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 
 public final class FlightEventBridge {

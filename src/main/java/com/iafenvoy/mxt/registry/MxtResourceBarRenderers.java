@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Missing;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Radial;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Segmented;

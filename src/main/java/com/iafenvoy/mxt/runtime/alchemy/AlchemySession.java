@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipeDefinition;
-import com.iafenvoy.mxt.event.AlchemyCraftEvent;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Post;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Pre;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -95,7 +94,7 @@ public final class AlchemySession {
         return left.equals(right);
     }
 
-    public enum Failure {DISABLED, FURNACE_TIER, INPUTS, INVALID_FORMULA, CANCELLED}
+    public enum Failure {DISABLED, FURNACE_TIER, INPUTS, ENVIRONMENT, INVALID_FORMULA, CANCELLED}
 
     public record StartResult(AlchemySession session, Failure failure) {
         static StartResult started(AlchemySession session) {

@@ -1,5 +1,8 @@
 {
   "element.mxt_test.fire": "火灵",
   "element.mxt_test.water": "水灵",
-  "title.mxt_test.test_disciple": "试炼弟子"
+  "title.mxt_test.test_disciple": "试炼弟子",
+  "resource.mxt_test.qi": "灵气",
+  "resource.mxt_test.true_essence": "真元",
+  "resource.mxt_test.divine_sense": "神识"
 }

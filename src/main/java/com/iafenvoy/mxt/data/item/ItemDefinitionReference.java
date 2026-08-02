@@ -6,7 +6,9 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 
-/** A stable reference to one entry of a data-driven item registry. */
+/**
+ * A stable reference to one entry of a data-driven item registry.
+ */
 public record ItemDefinitionReference(ItemDefinitionRegistry registry, Identifier id) {
     public static final Codec<ItemDefinitionReference> OBJECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ItemDefinitionRegistry.CODEC.fieldOf("registry").forGetter(ItemDefinitionReference::registry),

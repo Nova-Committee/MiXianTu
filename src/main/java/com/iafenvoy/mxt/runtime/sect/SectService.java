@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.sect.SectDefinition;
 import com.iafenvoy.mxt.data.sect.SectDefinition.Exchange;
 import com.iafenvoy.mxt.data.sect.SectDefinition.Rank;
 import com.iafenvoy.mxt.data.sect.SectDefinition.Task;
-import com.iafenvoy.mxt.event.SectEvent;
 import com.iafenvoy.mxt.event.SectEvent.JoinPost;
 import com.iafenvoy.mxt.event.SectEvent.JoinPre;
 import com.iafenvoy.mxt.event.SectEvent.LeavePost;

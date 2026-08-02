@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/** Code-owned economy items. Currency denominations themselves are defined by datapacks. */
+/**
+ * Code-owned economy items. Currency denominations themselves are defined by datapacks.
+ */
 public final class MxtItems {
     public static final Items REGISTRY = DeferredRegister.createItems(MiXianTu.MOD_ID);
     private static final List<DeferredItem<? extends Item>> REGISTERED_ITEMS = new ArrayList<>();
@@ -50,19 +52,23 @@ public final class MxtItems {
      * the physical item to that definition and conventional resource-pack model.
      */
     public static <T extends Item> DeferredItem<T> registerDataDriven(String path, Identifier binding,
-                                                                       Function<Properties, T> factory) {
+                                                                      Function<Properties, T> factory) {
         return registerDataDriven(path, ItemDefinitionReference.other(binding), factory);
     }
 
-    /** Registers a code-owned physical item with a category-qualified logical item definition. */
+    /**
+     * Registers a code-owned physical item with a category-qualified logical item definition.
+     */
     public static <T extends Item> DeferredItem<T> registerDataDriven(String path, ItemDefinitionReference binding,
-                                                                       Function<Properties, T> factory) {
+                                                                      Function<Properties, T> factory) {
         return register(path, properties -> factory.apply(properties
                 .component(MxtDataComponents.ITEM_DEFINITION.get(), binding)
                 .component(DataComponents.ITEM_MODEL, ItemDefinition.conventionalModel(binding.id()))));
     }
 
-    /** Registers a block item that intentionally shares its block's display name. */
+    /**
+     * Registers a block item that intentionally shares its block's display name.
+     */
     public static DeferredItem<BlockItem> registerBlockItem(String path, Supplier<? extends Block> block) {
         return register(path, properties -> new BlockItem(block.get(), properties.useBlockDescriptionPrefix()));
     }

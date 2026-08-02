@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorldData;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldData;
+import com.iafenvoy.mxt.runtime.world.AuraWorldData;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -26,7 +27,11 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CurseHolderData>> CURSE_HOLDER = entity("curse_holder", CurseHolderData::new, CurseHolderData.MAP_CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TribulationData>> TRIBULATION = entity("tribulation", TribulationData::new, TribulationData.MAP_CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ContractData>> CONTRACT = entity("contract", ContractData::new, ContractData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkData>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkData::new).serialize(AuraChunkData.MAP_CODEC).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkData>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkData::new).serialize(AuraChunkData.MAP_CODEC).sync(ByteBufCodecs.fromCodecWithRegistries(AuraChunkData.CODEC)).build());
+    /**
+     * Persistent artificial aura areas, owned by one ServerLevel.
+     */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraWorldData>> AURA_WORLD = REGISTRY.register("aura_world", () -> AttachmentType.builder(AuraWorldData::new).serialize(AuraWorldData.MAP_CODEC).build());
     /**
      * Attached to a ServerLevel by formation world adapters; never copied onto entities.
      */

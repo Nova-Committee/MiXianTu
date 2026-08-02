@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
 public final class RealmInstanceTicker {

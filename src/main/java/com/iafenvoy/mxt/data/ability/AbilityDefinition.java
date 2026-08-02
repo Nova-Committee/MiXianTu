@@ -15,9 +15,16 @@ import com.iafenvoy.mxt.data.condition.builtin.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.data.cultivation.ElementDefinition;
+import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.tags.TagKey;
+import com.mojang.datafixers.util.Either;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +37,10 @@ public record AbilityDefinition(Identifier type, AbilityType typedType,
                                 List<AbilityComponent> components, List<AttributeModifierDefinition> modifiers,
                                 DamageCondition damageCondition,
                                 EntityCondition condition, EntityAction entityAction, BiEntityCondition targetCondition,
-                                BiEntityAction biEntityAction, List<Identifier> elementAffinity) {
+                                BiEntityAction biEntityAction,
+                                List<Either<Holder<ElementDefinition>, TagKey<ElementDefinition>>> elementAffinity) {
+    public static final Codec<Holder<AbilityDefinition>> HOLDER_CODEC = RegistryFixedCodec.create(MxtRegistryKeys.ABILITY);
+
     public AbilityDefinition(Identifier type, List<ResourceCost> costs, NumberProvider castTime, NumberProvider cooldown) {
         this(type, AbilityType.forIdentifier(type), costs, castTime, cooldown, List.of(), List.of(), AlwaysTrueDamageCondition.INSTANCE, AlwaysTrueEntityCondition.INSTANCE, NoOpEntityAction.INSTANCE, AlwaysTrueBiEntityCondition.INSTANCE, BiEntityNoOpAction.INSTANCE, List.of());
     }
@@ -51,7 +61,7 @@ public record AbilityDefinition(Identifier type, AbilityType typedType,
 
     public static final Codec<AbilityDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             AbilityType.MAP_CODEC.forGetter(AbilityDefinition::typedType),
-            ResourceCost.CODEC.listOf().optionalFieldOf("costs", List.of()).forGetter(AbilityDefinition::costs),
+            ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(AbilityDefinition::costs),
             NumberProvider.CODEC.optionalFieldOf("cast_time", new Constant(0.0D)).forGetter(AbilityDefinition::castTime),
             NumberProvider.CODEC.optionalFieldOf("cooldown", new Constant(0.0D)).forGetter(AbilityDefinition::cooldown),
             AbilityComponent.CODEC.listOf().optionalFieldOf("components", List.of()).forGetter(AbilityDefinition::components),
@@ -61,7 +71,7 @@ public record AbilityDefinition(Identifier type, AbilityType typedType,
             EntityAction.CODEC.optionalFieldOf("entity_action", NoOpEntityAction.INSTANCE).forGetter(AbilityDefinition::entityAction),
             BiEntityCondition.CODEC.optionalFieldOf("target_condition", AlwaysTrueBiEntityCondition.INSTANCE).forGetter(AbilityDefinition::targetCondition),
             BiEntityAction.CODEC.optionalFieldOf("bi_entity_action", BiEntityNoOpAction.INSTANCE).forGetter(AbilityDefinition::biEntityAction),
-            Identifier.CODEC.listOf().optionalFieldOf("element_affinity", List.of()).forGetter(AbilityDefinition::elementAffinity)
+            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("element_affinity", List.of()).forGetter(AbilityDefinition::elementAffinity)
     ).apply(instance, (typedType, costs, castTime, cooldown, components, modifiers, damageCondition, condition, entityAction, targetCondition, biEntityAction, elementAffinity) ->
             new AbilityDefinition(typedType.id(), typedType, costs, castTime, cooldown, components, modifiers, damageCondition, condition, entityAction, targetCondition, biEntityAction, elementAffinity)));
 }

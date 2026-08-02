@@ -4,6 +4,10 @@ import com.iafenvoy.mxt.registry.BehaviorReferences;
 import com.iafenvoy.mxt.registry.BehaviorReferences.Reference;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
+import com.iafenvoy.mxt.util.CollectionHelper;
+import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -11,6 +15,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,26 +32,27 @@ public record ForgingBlueprintDefinition(Identifier input,
                                          List<Holder<ForgingMethodDefinition>> allowedMethods,
                                          MeterBounds meter, FinishPattern finishPattern, int maxSteps,
                                          List<QualityThreshold> qualityByExtraSteps,
-                                         Identifier result, List<Identifier> workstationBlocks,
+                                         Identifier result,
+                                         List<Either<Holder<Block>, TagKey<Block>>> workstationBlocks,
                                          Optional<Identifier> completeBehavior, Optional<Identifier> failBehavior,
                                          FailureSettlement failureSettlement) {
     public ForgingBlueprintDefinition(Identifier input, List<Holder<ForgingMethodDefinition>> allowedMethods,
                                       MeterBounds meter, FinishPattern finishPattern, int maxSteps, List<QualityThreshold> qualityByExtraSteps,
                                       Identifier result, Optional<Identifier> completeBehavior, Optional<Identifier> failBehavior) {
         this(input, allowedMethods, meter, finishPattern, maxSteps, qualityByExtraSteps, result,
-                List.of(Identifier.fromNamespaceAndPath("minecraft", "anvil")), completeBehavior, failBehavior, FailureSettlement.destroyInput());
+                defaultWorkstationBlocks(), completeBehavior, failBehavior, FailureSettlement.destroyInput());
     }
 
     public static Codec<ForgingBlueprintDefinition> codec(Codec<Holder<ForgingMethodDefinition>> methodCodec) {
         return RecordCodecBuilder.<ForgingBlueprintDefinition>create(instance -> instance.group(
                 Identifier.CODEC.fieldOf("input").forGetter(ForgingBlueprintDefinition::input),
-                methodCodec.listOf().fieldOf("allowed_methods").forGetter(ForgingBlueprintDefinition::allowedMethods),
+                AutoIgnoreListCodec.create(methodCodec).fieldOf("allowed_methods").forGetter(ForgingBlueprintDefinition::allowedMethods),
                 MeterBounds.MAP_CODEC.forGetter(ForgingBlueprintDefinition::meter),
                 FinishPattern.MAP_CODEC.codec().optionalFieldOf("finish_pattern", FinishPattern.none()).forGetter(ForgingBlueprintDefinition::finishPattern),
                 Codec.INT.optionalFieldOf("max_steps", 64).forGetter(ForgingBlueprintDefinition::maxSteps),
                 QualityThreshold.CODEC.listOf().fieldOf("quality_by_extra_steps").forGetter(ForgingBlueprintDefinition::qualityByExtraSteps),
                 Identifier.CODEC.fieldOf("result").forGetter(ForgingBlueprintDefinition::result),
-                Identifier.CODEC.listOf().optionalFieldOf("workstation_blocks", List.of(Identifier.fromNamespaceAndPath("minecraft", "anvil"))).forGetter(ForgingBlueprintDefinition::workstationBlocks),
+                RegistryCodecs.holderOrTagList(Registries.BLOCK).optionalFieldOf("workstation_blocks", defaultWorkstationBlocks()).forGetter(ForgingBlueprintDefinition::workstationBlocks),
                 Identifier.CODEC.optionalFieldOf("on_complete_behavior").forGetter(ForgingBlueprintDefinition::completeBehavior),
                 Identifier.CODEC.optionalFieldOf("on_fail_behavior").forGetter(ForgingBlueprintDefinition::failBehavior),
                 FailureSettlement.CODEC.codec().optionalFieldOf("failure_settlement", FailureSettlement.destroyInput()).forGetter(ForgingBlueprintDefinition::failureSettlement)
@@ -59,13 +68,19 @@ public record ForgingBlueprintDefinition(Identifier input,
         }
         if (definition.maxSteps <= 0 || definition.workstationBlocks.isEmpty())
             return DataResult.error(() -> "max_steps and workstation_blocks must not be empty");
-        if (!definition.finishPattern.valid() || !definition.allowedMethods.stream().map(ForgingBlueprintDefinition::methodId).toList().containsAll(definition.finishPattern.steps()))
+        if (!definition.finishPattern.valid() || !CollectionHelper.containsAllFast(definition.allowedMethods.stream().map(ForgingBlueprintDefinition::methodId).toList(), definition.finishPattern.steps().stream().map(ForgingBlueprintDefinition::methodId).toList()))
             return DataResult.error(() -> "Invalid finish_pattern");
         if (!QualityThreshold.valid(definition.qualityByExtraSteps))
             return DataResult.error(() -> "quality_by_extra_steps must be ascending and end at Integer.MAX_VALUE");
         return BehaviorReferences.validate(definition, MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR,
                 new Reference("on_complete_behavior", definition.completeBehavior),
                 new Reference("on_fail_behavior", definition.failBehavior));
+    }
+
+    private static List<Either<Holder<Block>, TagKey<Block>>> defaultWorkstationBlocks() {
+        Identifier anvil = Identifier.fromNamespaceAndPath("minecraft", "anvil");
+        Block block = BuiltInRegistries.BLOCK.getOptional(anvil).orElseThrow();
+        return List.of(Either.left(BuiltInRegistries.BLOCK.wrapAsHolder(block)));
     }
 
     /**
@@ -75,7 +90,7 @@ public record ForgingBlueprintDefinition(Identifier input,
         Map<Identifier, Integer> deltas = new LinkedHashMap<>();
         for (Holder<ForgingMethodDefinition> method : this.allowedMethods)
             deltas.put(methodId(method), method.value().valueDelta());
-        return new ForgingPlan(this.meter.min(), this.meter.max(), this.meter.targetMin(), this.meter.targetMax(), this.finishPattern.steps(), this.finishPattern.requiredSuffixSteps(), deltas, this.maxSteps);
+        return new ForgingPlan(this.meter.min(), this.meter.max(), this.meter.targetMin(), this.meter.targetMax(), this.finishPattern.steps().stream().map(ForgingBlueprintDefinition::methodId).toList(), this.finishPattern.requiredSuffixSteps(), deltas, this.maxSteps);
     }
 
     private static Identifier methodId(Holder<ForgingMethodDefinition> method) {
@@ -101,9 +116,10 @@ public record ForgingBlueprintDefinition(Identifier input,
         }
     }
 
-    public record FinishPattern(List<Identifier> steps, int requiredSuffixSteps, boolean showFinishPattern) {
+    public record FinishPattern(List<Holder<ForgingMethodDefinition>> steps, int requiredSuffixSteps,
+                                boolean showFinishPattern) {
         public static final MapCodec<FinishPattern> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-                Identifier.CODEC.listOf().fieldOf("steps").forGetter(FinishPattern::steps),
+                AutoIgnoreListCodec.create(ForgingMethodDefinition.HOLDER_CODEC).fieldOf("steps").forGetter(FinishPattern::steps),
                 Codec.intRange(0, 6).optionalFieldOf("required_suffix_steps", 0).forGetter(FinishPattern::requiredSuffixSteps),
                 Codec.BOOL.optionalFieldOf("show_finish_pattern", true).forGetter(FinishPattern::showFinishPattern)
         ).apply(instance, FinishPattern::new));

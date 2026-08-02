@@ -9,14 +9,12 @@ import com.iafenvoy.mxt.data.ability.AbilityComponent.Charges;
 import com.iafenvoy.mxt.data.ability.AbilityComponent.Cooldown;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.AbilityDefinition;
-import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.AbilityType.Channelled;
 import com.iafenvoy.mxt.data.ability.AbilityType.Composite;
 import com.iafenvoy.mxt.data.ability.AbilityType.Word;
 import com.iafenvoy.mxt.data.ability.AbilityType.WordEffect;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.event.AbilityUseEvent;
-import com.iafenvoy.mxt.event.ResourceConsumeEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Post;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -30,6 +28,8 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.HolderHelper;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
@@ -277,22 +277,16 @@ public final class AbilityService {
                                          AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
                                          FormulaContext context, Function<Identifier, Optional<AbilityDefinition>> definitions) {
         if (!(composite.typedType() instanceof Composite(
-                List<Identifier> abilities1, boolean allRequired
+                List<Holder<AbilityDefinition>> abilities1, boolean allRequired
         )))
             return UseResult.rejected(Failure.INVALID_FORMULA, null);
         Snapshot abilitySnapshot = abilities.snapshot();
         Map<Identifier, Double> resourceSnapshot = resources.values();
         LinkedHashMap<Identifier, Double> paid = new LinkedHashMap<>();
         UseResult lastFailure = UseResult.rejected(Failure.NOT_GRANTED, null);
-        for (Identifier childId : abilities1) {
-            AbilityDefinition child = definitions.apply(childId).orElse(null);
-            if (child == null) {
-                if (allRequired) {
-                    abilities.restore(abilitySnapshot);
-                    resources.restore(resourceSnapshot);
-                    return UseResult.rejected(Failure.NOT_GRANTED, null);
-                }
-            }
+        for (Holder<AbilityDefinition> childHolder : abilities1) {
+            Identifier childId = HolderHelper.id(childHolder);
+            AbilityDefinition child = childHolder.value();
             UseResult result = use(childId, child, actor, abilities, resources, gameTime, context);
             if (!result.committed() && !result.casting()) {
                 lastFailure = result;

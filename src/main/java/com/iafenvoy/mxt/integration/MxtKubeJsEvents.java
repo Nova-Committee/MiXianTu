@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.integration;
 import com.iafenvoy.mxt.event.AbilityUseEvent;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent;
+import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Post;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
 import net.neoforged.neoforge.common.NeoForge;
@@ -18,6 +19,7 @@ public final class MxtKubeJsEvents {
     private static final List<Consumer<AbilityUseEvent>> ABILITY = new CopyOnWriteArrayList<>();
     private static final List<Consumer<CurseApplyEvent>> CURSE = new CopyOnWriteArrayList<>();
     private static final List<Consumer<ResourceConsumeEvent>> RESOURCE = new CopyOnWriteArrayList<>();
+    private static final List<Consumer<AuraZoneEvent>> AURA = new CopyOnWriteArrayList<>();
     private static volatile boolean registered;
     private static volatile Dispatcher dispatcher;
 
@@ -39,6 +41,11 @@ public final class MxtKubeJsEvents {
         RESOURCE.add(listener);
     }
 
+    public static void listenAura(Consumer<AuraZoneEvent> listener) {
+        register();
+        AURA.add(listener);
+    }
+
     public static void installDispatcher(Dispatcher value) {
         dispatcher = value;
     }
@@ -54,6 +61,10 @@ public final class MxtKubeJsEvents {
             NeoForge.EVENT_BUS.addListener(CurseApplyEvent.Post.class, MxtKubeJsEvents::postCurse);
             NeoForge.EVENT_BUS.addListener(Pre.class, MxtKubeJsEvents::postResource);
             NeoForge.EVENT_BUS.addListener(Post.class, MxtKubeJsEvents::postResource);
+            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Enter.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Leave.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Tick.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Override.class, MxtKubeJsEvents::postAura);
             registered = true;
         }
     }
@@ -76,11 +87,19 @@ public final class MxtKubeJsEvents {
         if (current != null) current.postResource(event);
     }
 
+    private static void postAura(AuraZoneEvent event) {
+        AURA.forEach(listener -> listener.accept(event));
+        Dispatcher current = dispatcher;
+        if (current != null) current.postAura(event);
+    }
+
     public interface Dispatcher {
         void postAbility(AbilityUseEvent event);
 
         void postCurse(CurseApplyEvent event);
 
         void postResource(ResourceConsumeEvent event);
+
+        void postAura(AuraZoneEvent event);
     }
 }

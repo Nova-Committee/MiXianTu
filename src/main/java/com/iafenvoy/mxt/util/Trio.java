@@ -1,5 +1,8 @@
 package com.iafenvoy.mxt.util;
 
+import com.iafenvoy.mxt.util.Trio.First;
+import com.iafenvoy.mxt.util.Trio.Second;
+import com.iafenvoy.mxt.util.Trio.Third;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
@@ -15,7 +18,7 @@ import java.util.function.Function;
  * <p>Like {@link Either}, the active branch is preserved by mapping and codec
  * operations; no nullable sentinel or parallel optional fields are needed.</p>
  */
-public sealed interface Trio<F, S, T> permits Trio.First, Trio.Second, Trio.Third {
+public sealed interface Trio<F, S, T> permits First, Second, Third {
     /**
      * Builds a three-way codec while preserving the supplied codec order.
      */

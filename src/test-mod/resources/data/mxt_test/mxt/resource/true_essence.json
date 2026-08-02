@@ -1,0 +1,7 @@
+{
+  "default_value": 0,
+  "min": 0,
+  "max": 100,
+  "regen": 0,
+  "default_bar": "mxt_test:true_essence_hud"
+}

@@ -6,10 +6,16 @@ import com.iafenvoy.mxt.data.cultivation.CultivationTechniqueDefinition;
 import com.iafenvoy.mxt.data.cultivation.PhysiqueDefinition;
 import com.iafenvoy.mxt.data.cultivation.SpiritRootDefinition;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.data.ability.AbilityDefinition;
+import com.mojang.datafixers.util.Either;
+import net.minecraft.core.Holder;
+import net.minecraft.tags.TagKey;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
@@ -54,9 +60,11 @@ public final class CultivationGrantService {
         return new Result(granted, revoked);
     }
 
-    private static int grantAll(AbilityHolderData holder, List<Identifier> values, Identifier source) {
+    private static int grantAll(AbilityHolderData holder, List<Either<Holder<AbilityDefinition>, TagKey<AbilityDefinition>>> values, Identifier source) {
         int granted = 0;
-        for (Identifier ability : values) if (holder.grant(ability, source)) granted++;
+        for (Identifier ability : RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtRegistryKeys.ABILITY))
+                .map(HolderHelper::id).distinct().toList())
+            if (holder.grant(ability, source)) granted++;
         return granted;
     }
 

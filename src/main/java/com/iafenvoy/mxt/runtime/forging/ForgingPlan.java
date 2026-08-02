@@ -83,7 +83,8 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         while (!queue.isEmpty()) {
             SearchState state = queue.removeFirst();
             int steps = distances.get(state);
-            if (state.value >= targetMin && state.value <= targetMax && suffixMatches(state.history, pattern, requiredSteps)) return steps;
+            if (state.value >= targetMin && state.value <= targetMax && suffixMatches(state.history, pattern, requiredSteps))
+                return steps;
             for (Entry<Identifier, Integer> entry : deltas.entrySet()) {
                 int nextValue = state.value + entry.getValue();
                 if (nextValue < meterMin || nextValue > meterMax) continue;
@@ -108,10 +109,12 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         if (requiredSteps == 0) return true;
         if (history.size() < requiredSteps) return false;
         for (int index = 0; index < requiredSteps; index++) {
-            if (!history.get(history.size() - requiredSteps + index).equals(pattern.get(6 - requiredSteps + index))) return false;
+            if (!history.get(history.size() - requiredSteps + index).equals(pattern.get(6 - requiredSteps + index)))
+                return false;
         }
         return true;
     }
 
-    private record SearchState(int value, List<Identifier> history) { }
+    private record SearchState(int value, List<Identifier> history) {
+    }
 }

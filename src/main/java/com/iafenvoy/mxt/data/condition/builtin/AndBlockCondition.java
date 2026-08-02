@@ -9,7 +9,7 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 public record AndBlockCondition(List<BlockCondition> conditions) implements BlockCondition {
-    public static final MapCodec<AndBlockCondition> CODEC = BlockCondition.SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndBlockCondition::new, AndBlockCondition::conditions);
+    public static final MapCodec<AndBlockCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndBlockCondition::new, AndBlockCondition::conditions);
 
     public AndBlockCondition {
         conditions = List.copyOf(conditions);

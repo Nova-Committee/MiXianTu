@@ -4,14 +4,17 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 
-/** Shared exact-item inventory operations for station transactions. */
+/**
+ * Shared exact-item inventory operations for station transactions.
+ */
 public final class InventoryUtil {
     private InventoryUtil() {
     }
 
     public static Container copy(Container source) {
         SimpleContainer copy = new SimpleContainer(source.getContainerSize());
-        for (int index = 0; index < source.getContainerSize(); index++) copy.setItem(index, source.getItem(index).copy());
+        for (int index = 0; index < source.getContainerSize(); index++)
+            copy.setItem(index, source.getItem(index).copy());
         return copy;
     }
 

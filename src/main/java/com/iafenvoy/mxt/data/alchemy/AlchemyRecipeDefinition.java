@@ -20,12 +20,13 @@ public record AlchemyRecipeDefinition(List<Identifier> inputs,
                                       NumberProvider targetTemperature,
                                       NumberProvider temperatureTolerance, int minimumFurnaceTier,
                                       NumberProvider duration,
+                                      List<Identifier> environmentTags, NumberProvider minimumAura,
                                       List<Identifier> successOutputs, List<Identifier> failureOutputs,
                                       Optional<Identifier> successBehavior, Optional<Identifier> failureBehavior) {
     public static final Codec<AlchemyRecipeDefinition> CODEC = RecordCodecBuilder.<AlchemyRecipeDefinition>create(instance -> instance.group(
             Identifier.CODEC.listOf().fieldOf("inputs").forGetter(AlchemyRecipeDefinition::inputs), NumberProvider.CODEC.fieldOf("target_temperature").forGetter(AlchemyRecipeDefinition::targetTemperature),
             NumberProvider.CODEC.optionalFieldOf("temperature_tolerance", new Constant(0.0D)).forGetter(AlchemyRecipeDefinition::temperatureTolerance), Codec.INT.optionalFieldOf("minimum_furnace_tier", 0).forGetter(AlchemyRecipeDefinition::minimumFurnaceTier),
-            NumberProvider.CODEC.fieldOf("duration").forGetter(AlchemyRecipeDefinition::duration), Identifier.CODEC.listOf().fieldOf("success_outputs").forGetter(AlchemyRecipeDefinition::successOutputs), Identifier.CODEC.listOf().optionalFieldOf("failure_outputs", List.of()).forGetter(AlchemyRecipeDefinition::failureOutputs),
+            NumberProvider.CODEC.fieldOf("duration").forGetter(AlchemyRecipeDefinition::duration), Identifier.CODEC.listOf().optionalFieldOf("environment_tags", List.of()).forGetter(AlchemyRecipeDefinition::environmentTags), NumberProvider.CODEC.optionalFieldOf("minimum_aura", new Constant(0.0D)).forGetter(AlchemyRecipeDefinition::minimumAura), Identifier.CODEC.listOf().fieldOf("success_outputs").forGetter(AlchemyRecipeDefinition::successOutputs), Identifier.CODEC.listOf().optionalFieldOf("failure_outputs", List.of()).forGetter(AlchemyRecipeDefinition::failureOutputs),
             Identifier.CODEC.optionalFieldOf("success_behavior").forGetter(AlchemyRecipeDefinition::successBehavior), Identifier.CODEC.optionalFieldOf("failure_behavior").forGetter(AlchemyRecipeDefinition::failureBehavior)
     ).apply(instance, AlchemyRecipeDefinition::new)).validate(AlchemyRecipeDefinition::validate);
 

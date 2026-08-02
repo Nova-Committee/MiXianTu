@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.runtime.ability.AbilityModifierService.ResolvedModifier;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -74,8 +73,7 @@ public final class PassiveAttributeService {
 
     private static void apply(LivingEntity entity, Entry entry, FormulaContext context) {
         AttributeModifierDefinition definition = entry.definition();
-        Holder<Attribute> attribute = BuiltInRegistries.ATTRIBUTE.get(definition.attribute()).orElse(null);
-        if (attribute == null) return;
+        Holder<Attribute> attribute = definition.attribute();
         AttributeInstance instance = entity.getAttribute(attribute);
         if (instance == null) return;
         final double amount;

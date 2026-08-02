@@ -7,7 +7,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 
-/** Changes the requesting player's state in an already-open player trade. */
+/**
+ * Changes the requesting player's state in an already-open player trade.
+ */
 public record PlayerTradeActionC2SPayload(PlayerTradeAction action) implements CustomPacketPayload {
     public static final Type<PlayerTradeActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "player_trade_action_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PlayerTradeActionC2SPayload> STREAM_CODEC = new StreamCodec<>() {

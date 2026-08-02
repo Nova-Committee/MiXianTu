@@ -99,7 +99,8 @@ public final class ForgingSession {
         history.forEach(values::add);
         if (values.size() < requiredSteps) return false;
         for (int index = 0; index < requiredSteps; index++) {
-            if (!values.get(values.size() - requiredSteps + index).equals(pattern.get(6 - requiredSteps + index))) return false;
+            if (!values.get(values.size() - requiredSteps + index).equals(pattern.get(6 - requiredSteps + index)))
+                return false;
         }
         return true;
     }

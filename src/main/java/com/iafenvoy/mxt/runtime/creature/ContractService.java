@@ -2,11 +2,9 @@ package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.attachment.ContractData;
 import com.iafenvoy.mxt.data.creature.ContractTypeDefinition;
-import com.iafenvoy.mxt.event.SpiritContractEvent;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Action;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Post;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Pre;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -40,10 +38,8 @@ public final class ContractService {
      */
     public static Result bind(ContractData data, Identifier id, ContractTypeDefinition definition, LivingEntity owner,
                               LivingEntity creature, long gameTime, FormulaContext context) {
-        boolean ownerAllowed = definition.ownerConditions().stream().allMatch(condition -> MxtTypeRegistries.CULTIVATION_CONDITION.get(condition)
-                .map(reference -> reference.value().test(owner, context)).orElse(false));
-        boolean creatureAllowed = definition.creatureConditions().stream().allMatch(condition -> MxtTypeRegistries.CULTIVATION_CONDITION.get(condition)
-                .map(reference -> reference.value().test(creature, context)).orElse(false));
+        boolean ownerAllowed = definition.ownerConditions().stream().allMatch(condition -> condition.test(owner, context));
+        boolean creatureAllowed = definition.creatureConditions().stream().allMatch(condition -> condition.test(creature, context));
         return bind(data, id, definition, owner.getUUID(), gameTime, () -> ownerAllowed, () -> creatureAllowed);
     }
 

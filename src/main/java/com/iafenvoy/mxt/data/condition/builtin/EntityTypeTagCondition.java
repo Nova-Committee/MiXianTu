@@ -8,10 +8,24 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 
-/** Matches an entity against a vanilla or datapack entity-type tag. */
+/**
+ * Matches an entity against a vanilla or datapack entity-type tag.
+ */
 public record EntityTypeTagCondition(TagKey<EntityType<?>> tag) implements EntityCondition {
     public static final MapCodec<EntityTypeTagCondition> CODEC = TagKey.hashedCodec(Registries.ENTITY_TYPE).fieldOf("tag").xmap(EntityTypeTagCondition::new, EntityTypeTagCondition::tag);
-    @Override public boolean test(Entity entity) { return entity.getType().builtInRegistryHolder().is(this.tag); }
-    @Override public boolean test(Entity entity, FormulaContext context) { return this.test(entity); }
-    @Override public MapCodec<EntityTypeTagCondition> codec() { return CODEC; }
+
+    @Override
+    public boolean test(Entity entity) {
+        return entity.getType().builtInRegistryHolder().is(this.tag);
+    }
+
+    @Override
+    public boolean test(Entity entity, FormulaContext context) {
+        return this.test(entity);
+    }
+
+    @Override
+    public MapCodec<EntityTypeTagCondition> codec() {
+        return CODEC;
+    }
 }

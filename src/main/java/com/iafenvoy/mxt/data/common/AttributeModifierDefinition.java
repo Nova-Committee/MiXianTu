@@ -4,16 +4,17 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 
 import java.util.Locale;
 
 /**
  * Datapack-safe description of an attribute modifier; application belongs to runtime state.
  */
-public record AttributeModifierDefinition(Identifier attribute, Operation operation, NumberProvider value) {
+public record AttributeModifierDefinition(Holder<Attribute> attribute, Operation operation, NumberProvider value) {
     public static final Codec<AttributeModifierDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Identifier.CODEC.fieldOf("attribute").forGetter(AttributeModifierDefinition::attribute),
+            Attribute.CODEC.fieldOf("attribute").forGetter(AttributeModifierDefinition::attribute),
             Operation.CODEC.optionalFieldOf("operation", Operation.ADD_VALUE).forGetter(AttributeModifierDefinition::operation),
             NumberProvider.CODEC.fieldOf("value").forGetter(AttributeModifierDefinition::value)
     ).apply(instance, AttributeModifierDefinition::new));

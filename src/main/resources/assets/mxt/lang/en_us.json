@@ -64,11 +64,16 @@
   "mxt.command.ability.cast_success": "Ability cast: %s",
   "mxt.command.breakthrough.failed": "Breakthrough failed: %s",
   "mxt.command.breakthrough.success": "Breakthrough succeeded: %s",
+  "mxt.command.realm.set_success": "Realm set to %s",
+  "mxt.command.realm.set_failed": "Cannot set realm to %s: it is not a valid realm in the current cultivation chain",
   "mxt.command.sect.not_member": "You are not in a sect.",
   "mxt.command.sect.unknown": "Unknown sect: %s",
   "mxt.command.sect.territory_failed": "Territory update failed: %s",
   "mxt.command.sect.territory_claimed": "Territory claimed.",
   "mxt.command.sect.territory_released": "Territory released.",
   "mxt.command.soul.no_reclaimable": "No reclaimable soul is available.",
-  "mxt.command.soul.reclaimed": "Soul reclaimed."
+  "mxt.command.soul.reclaimed": "Soul reclaimed.",
+  "mxt.command.aura.query": "Aura: %s; regeneration: %s/t; source: %s (%s); elements: %s; tags: %s; cultivation suppressed: %s",
+  "block.mxt.spirit_stone_ore": "Spirit Stone Ore",
+  "mxt.command.aura.vein": "Spirit stone vein: %s blocks (%s)"
 }

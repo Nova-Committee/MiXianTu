@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.data.artifact.ArtifactStateData;
 import com.iafenvoy.mxt.data.artifact.ForgingResultData;
-import com.iafenvoy.mxt.event.ArtifactRefineEvent;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDataComponents;

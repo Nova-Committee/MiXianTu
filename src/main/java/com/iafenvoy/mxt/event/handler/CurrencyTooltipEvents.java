@@ -11,7 +11,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
-/** Appends a client-side value line for datapack currencies and signed cheques. */
+/**
+ * Appends a client-side value line for datapack currencies and signed cheques.
+ */
 @EventBusSubscriber(Dist.CLIENT)
 public final class CurrencyTooltipEvents {
     private CurrencyTooltipEvents() {

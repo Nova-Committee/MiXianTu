@@ -1,0 +1,17 @@
+{
+  "base_aura": 100.0,
+  "regen_per_tick": 0.10,
+  "element_aura": {
+    "mxt_test:fire": 0.10,
+    "mxt_test:water": 0.10
+  },
+  "environment_tags": ["mxt_test:environment/common"],
+  "dimensions": "minecraft:overworld",
+  "noise": {
+    "enable": true,
+    "seed": 20260801,
+    "scale": 96.0,
+    "amplitude": 25.0
+  },
+  "client_render": { "particle": "minecraft:glow", "particle_density": 2, "fog_color": "#88ccff", "render_distance": 64 }
+}

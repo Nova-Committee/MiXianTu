@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition.FailureSettlement;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprintDefinition.QualityThreshold;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;

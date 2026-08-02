@@ -1,0 +1,11 @@
+{
+  "base_aura": 150.0,
+  "regen_per_tick": 0.12,
+  "element_aura": { "mxt_test:fire": 0.60, "mxt_test:water": -0.35 },
+  "environment_tags": ["mxt_test:environment/fire"],
+  "dimensions": ["minecraft:the_nether"],
+  "fluctuation": { "enable": true, "cycle_type": "day", "amplitude": 0.15 },
+  "element_fit_bonus": 0.20,
+  "element_conflict_penalty": 0.20,
+  "client_render": { "particle": "minecraft:flame", "particle_density": 4, "fog_color": "#ff6633", "render_distance": 64 }
+}

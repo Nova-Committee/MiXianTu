@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
-import com.iafenvoy.mxt.integration.MxtKubeJsEvents;
+import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.integration.MxtKubeJsEvents.Dispatcher;
 import dev.latvian.mods.kubejs.event.EventGroup;
 import dev.latvian.mods.kubejs.event.EventHandler;
@@ -15,6 +15,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.ICancellableEvent;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -28,6 +29,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     private static final EventHandler ABILITY_USE = EVENTS.server("abilityUse", () -> AbilityUseKubeEvent.class);
     private static final EventHandler CURSE_APPLY = EVENTS.server("curseApply", () -> CurseApplyKubeEvent.class);
     private static final EventHandler RESOURCE_CONSUME = EVENTS.server("resourceConsume", () -> ResourceConsumeKubeEvent.class);
+    private static final EventHandler AURA_ZONE = EVENTS.server("auraZone", () -> AuraZoneKubeEvent.class);
 
     private MxtKubeJsEventDispatcher() {
     }
@@ -47,6 +49,12 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     @Override
     public void postResource(ResourceConsumeEvent event) {
         EventResult result = RESOURCE_CONSUME.post(new ResourceConsumeKubeEvent(event));
+        if (event instanceof ICancellableEvent cancellable) result.applyCancel(cancellable);
+    }
+
+    @Override
+    public void postAura(AuraZoneEvent event) {
+        EventResult result = AURA_ZONE.post(new AuraZoneKubeEvent(event));
         if (event instanceof ICancellableEvent cancellable) result.applyCancel(cancellable);
     }
 
@@ -145,6 +153,37 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         private Pre pre() {
             if (this.event instanceof Pre pre) return pre;
             throw new IllegalStateException("Only resourceConsume pre events can change costs");
+        }
+    }
+
+    /**
+     * Unified view for auraZone enter, leave, tick, and overridable formation coverage.
+     */
+    public static final class AuraZoneKubeEvent implements KubeEvent {
+        private final AuraZoneEvent event;
+
+        AuraZoneKubeEvent(AuraZoneEvent event) {
+            this.event = event;
+        }
+
+        public String getKind() {
+            return this.event.getClass().getSimpleName().toLowerCase(Locale.ROOT);
+        }
+
+        public String getSource() {
+            return this.event.result().source().toString();
+        }
+
+        public double getConcentration() {
+            return this.event.result().concentration();
+        }
+
+        public boolean isCultivationSuppressed() {
+            return this.event.result().suppressCultivate();
+        }
+
+        public String getOverrideZone() {
+            return this.event instanceof AuraZoneEvent.Override override ? override.zone().toString() : "";
         }
     }
 }

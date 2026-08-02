@@ -36,10 +36,12 @@ public final class ServerNetworkHandler {
         if (!(context.player() instanceof ServerPlayer player)) return;
         Identifier definition = payload.definition().orElse(null);
         switch (payload.action()) {
-            case START -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, definition).ifPresent(blueprint ->
-                    ForgingWorkstationService.start(player, payload.position(), definition, blueprint));
-            case STRIKE -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_METHOD, definition).ifPresent(method ->
-                    ForgingWorkstationService.strike(player, payload.position(), definition, method));
+            case START ->
+                    MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, definition).ifPresent(blueprint ->
+                            ForgingWorkstationService.start(player, payload.position(), definition, blueprint));
+            case STRIKE ->
+                    MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_METHOD, definition).ifPresent(method ->
+                            ForgingWorkstationService.strike(player, payload.position(), definition, method));
             case FINISH -> ForgingWorkstationService.finish(player, payload.position(), definition);
             case CANCEL -> ForgingWorkstationService.cancel(player, payload.position());
         }
@@ -58,7 +60,8 @@ public final class ServerNetworkHandler {
     }
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player) || !(player.containerMenu instanceof ChequeTableMenu menu)) return;
+        if (!(context.player() instanceof ServerPlayer player) || !(player.containerMenu instanceof ChequeTableMenu menu))
+            return;
         if (payload.checkIn()) menu.checkIn(player);
         else menu.checkOut();
     }

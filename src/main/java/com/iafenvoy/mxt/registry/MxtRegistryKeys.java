@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.AbilityDefinition;
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipeDefinition;
-import com.iafenvoy.mxt.data.alchemy.PillDefinition;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerbDefinition;
 import com.iafenvoy.mxt.data.artifact.ItemArchetypeDefinition;
 import com.iafenvoy.mxt.data.creature.ContractTypeDefinition;
@@ -24,6 +23,8 @@ import com.iafenvoy.mxt.data.item.ItemBindingDefinition;
 import com.iafenvoy.mxt.data.item.ItemDefinition;
 import com.iafenvoy.mxt.data.item.ItemEffectDefinition;
 import com.iafenvoy.mxt.data.world.RealmInstanceDefinition;
+import com.iafenvoy.mxt.data.world.AuraZoneDefinition;
+import com.iafenvoy.mxt.data.world.BlockAuraDefinition;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -61,6 +62,14 @@ public final class MxtRegistryKeys {
     public static final ResourceKey<Registry<ItemDefinition>> WEAPON = create("weapon");
     public static final ResourceKey<Registry<ItemEffectDefinition>> ITEM_EFFECT = create("item_effect");
     public static final ResourceKey<Registry<ItemBindingDefinition>> ITEM_BINDING = create("item_binding");
+    /**
+     * Templates used by the world aura resolver and runtime aura areas.
+     */
+    public static final ResourceKey<Registry<AuraZoneDefinition>> AURA_ZONE = create("aura_zone");
+    /**
+     * Per-block aura emitters used by the chunk aura cache.
+     */
+    public static final ResourceKey<Registry<BlockAuraDefinition>> BLOCK_AURA = create("block_aura");
 
     private MxtRegistryKeys() {
     }

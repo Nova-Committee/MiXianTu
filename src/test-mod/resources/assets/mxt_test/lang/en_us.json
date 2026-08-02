@@ -1,5 +1,8 @@
 {
   "element.mxt_test.fire": "Fire Spirit",
   "element.mxt_test.water": "Water Spirit",
-  "title.mxt_test.test_disciple": "Trial Disciple"
+  "title.mxt_test.test_disciple": "Trial Disciple",
+  "resource.mxt_test.qi": "Qi",
+  "resource.mxt_test.true_essence": "True Essence",
+  "resource.mxt_test.divine_sense": "Divine Sense"
 }

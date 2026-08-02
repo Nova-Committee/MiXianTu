@@ -1,4 +1,6 @@
 {
+  "resource": "mxt_test:qi",
+  "next_realm": "mxt_test:core_forming",
   "progress_threshold": 100,
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
   "tribulation": "mxt_test:three_thunders"

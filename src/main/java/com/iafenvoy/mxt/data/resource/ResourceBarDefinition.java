@@ -1,25 +1,27 @@
 package com.iafenvoy.mxt.data.resource;
 
-import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarVisibilities;
+import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarVisibilities.Always;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.Locale;
 
 /**
  * A client-visible resource bar declaration. Renderer and visibility IDs select built-in typed implementations.
  */
-public record ResourceBarDefinition(Identifier resource, Context context,
+public record ResourceBarDefinition(Holder<ResourceDefinition> resource, Context context,
                                     Anchor anchor,
                                     int order, ResourceBarVisibility visibility, ResourceBarRenderer renderer,
                                     boolean replaceDefault) {
+    public static final Codec<Holder<ResourceBarDefinition>> HOLDER_CODEC = RegistryFixedCodec.create(MxtRegistryKeys.RESOURCE_BAR);
     public static final Codec<ResourceBarDefinition> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Identifier.CODEC.fieldOf("resource").forGetter(ResourceBarDefinition::resource),
+            ResourceDefinition.HOLDER_CODEC.fieldOf("resource").forGetter(ResourceBarDefinition::resource),
             Context.CODEC.optionalFieldOf("context", Context.SELF_HUD).forGetter(ResourceBarDefinition::context),
             Anchor.CODEC.fieldOf("anchor").forGetter(ResourceBarDefinition::anchor),
             Codec.INT.optionalFieldOf("order", 0).forGetter(ResourceBarDefinition::order),

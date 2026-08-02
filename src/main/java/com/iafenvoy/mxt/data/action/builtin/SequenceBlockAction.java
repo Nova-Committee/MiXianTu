@@ -9,7 +9,7 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 public record SequenceBlockAction(List<BlockAction> actions) implements BlockAction {
-    public static final MapCodec<SequenceBlockAction> CODEC = BlockAction.SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceBlockAction::new, SequenceBlockAction::actions);
+    public static final MapCodec<SequenceBlockAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceBlockAction::new, SequenceBlockAction::actions);
 
     public SequenceBlockAction {
         actions = List.copyOf(actions);

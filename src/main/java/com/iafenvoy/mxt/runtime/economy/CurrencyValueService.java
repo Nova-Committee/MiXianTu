@@ -3,9 +3,8 @@ package com.iafenvoy.mxt.runtime.economy;
 import com.iafenvoy.mxt.data.economy.CurrencyValueDefinition;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.ItemMatcher;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -28,8 +27,10 @@ public final class CurrencyValueService {
                 .orElseGet(OptionalLong::empty);
     }
 
-    /** Reads one currency value from the client-synchronised datapack registries. */
-    public static OptionalLong unitValue(HolderLookup.Provider access, Item item) {
+    /**
+     * Reads one currency value from the client-synchronised datapack registries.
+     */
+    public static OptionalLong unitValue(Provider access, Item item) {
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.CURRENCY).map(Reference::value), new ItemStack(item))
                 .map(CurrencyValueDefinition::value)
                 .map(OptionalLong::of)
@@ -43,14 +44,16 @@ public final class CurrencyValueService {
         return OptionalLong.of(unit.getAsLong() * stack.getCount());
     }
 
-    /** Returns the selected exchange choices for one currency input item. */
+    /**
+     * Returns the selected exchange choices for one currency input item.
+     */
     public static List<ExchangeOffer> exchangeOffers(ItemStack input) {
         if (input.isEmpty()) return List.of();
         return MxtDatapackRegistries.holders(MxtDatapackRegistries.CURRENCY)
                 .map(Reference::value)
-                .filter(definition -> input.is(definition.item()))
+                .filter(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)))
                 .flatMap(definition -> definition.exchanges().stream())
-                .map(exchange -> new ExchangeOffer(exchange.result().createStack(), exchange.cost()))
+                .map(exchange -> new ExchangeOffer(exchange.result(), exchange.cost()))
                 .toList();
     }
 
@@ -58,18 +61,20 @@ public final class CurrencyValueService {
         if (input.isEmpty()) return List.of();
         return MxtDatapackRegistries.holders(registryAccess, MxtDatapackRegistries.CURRENCY)
                 .map(Reference::value)
-                .filter(definition -> input.is(definition.item()))
+                .filter(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)))
                 .flatMap(definition -> definition.exchanges().stream())
-                .map(exchange -> new ExchangeOffer(exchange.result().createStack(), exchange.cost()))
+                .map(exchange -> new ExchangeOffer(exchange.result(), exchange.cost()))
                 .toList();
     }
 
-    /** Checks whether a stack can occupy the exchange input slot, even before its count is sufficient. */
+    /**
+     * Checks whether a stack can occupy the exchange input slot, even before its count is sufficient.
+     */
     public static boolean isExchangeInput(RegistryAccess registryAccess, ItemStack input) {
         if (input.isEmpty()) return false;
         return MxtDatapackRegistries.holders(registryAccess, MxtDatapackRegistries.CURRENCY)
                 .map(Reference::value)
-                .anyMatch(definition -> input.is(definition.item()) && !definition.exchanges().isEmpty());
+                .anyMatch(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)) && !definition.exchanges().isEmpty());
     }
 
     /**
@@ -85,6 +90,7 @@ public final class CurrencyValueService {
         return OptionalLong.of(total);
     }
 
+    //FIXME::Merge with CUrrencyValueDefinition.Exchange
     public record ExchangeOffer(ItemStack output, int cost) {
         public ExchangeOffer {
             output = output.copy();

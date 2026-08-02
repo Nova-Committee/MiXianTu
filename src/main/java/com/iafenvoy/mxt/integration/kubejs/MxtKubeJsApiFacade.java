@@ -1,14 +1,18 @@
 package com.iafenvoy.mxt.integration.kubejs;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.integration.MxtKubeJsApi;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.mojang.serialization.JsonOps;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
 
 import java.util.List;
 
@@ -30,8 +34,8 @@ public final class MxtKubeJsApiFacade {
         return MxtKubeJsApi.useAbility(entity, id, context);
     }
 
-    public Object tryBreakthrough(LivingEntity entity, String realm) {
-        return MxtKubeJsApi.tryBreakthrough(entity, id(realm), FormulaContexts.forEntity(entity));
+    public Object tryBreakthrough(LivingEntity entity, String resource) {
+        return MxtKubeJsApi.tryBreakthrough(entity, id(resource), FormulaContexts.forEntity(entity));
     }
 
     public boolean removeCurse(Entity entity, String curse) {
@@ -53,13 +57,26 @@ public final class MxtKubeJsApiFacade {
      */
     public Object tryConsumeResources(Entity entity, String costs) {
         try {
-            List<ResourceCost> decoded = ResourceCost.CODEC.listOf().parse(JsonOps.INSTANCE, JsonParser.parseString(costs))
+            RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, entity.level().registryAccess());
+            List<ResourceCost> decoded = ResourceCost.LIST_CODEC.parse(ops, JsonParser.parseString(costs))
                     .getOrThrow(error -> new IllegalArgumentException("Invalid resource costs: " + error));
             FormulaContext context = entity instanceof LivingEntity living ? FormulaContexts.forEntity(living) : FormulaContext.EMPTY;
             return MxtKubeJsApi.tryConsumeResources(entity, decoded, context);
         } catch (RuntimeException exception) {
             throw new IllegalArgumentException("Invalid MXT resource costs", exception);
         }
+    }
+
+    public Object getAura(Level level, BlockPos position) {
+        return MxtKubeJsApi.aura(level, position);
+    }
+
+    public String addAuraBox(Level level, String zone, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int priority) {
+        return MxtKubeJsApi.addAuraBox(level, id(zone), minX, minY, minZ, maxX, maxY, maxZ, priority);
+    }
+
+    public boolean removeAuraArea(Level level, String area) {
+        return MxtKubeJsApi.removeAuraArea(level, area);
     }
 
     private static Identifier id(String raw) {

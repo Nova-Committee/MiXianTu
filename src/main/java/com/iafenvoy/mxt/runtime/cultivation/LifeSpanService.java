@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.event.LifeSpanEndEvent;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent.Post;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;

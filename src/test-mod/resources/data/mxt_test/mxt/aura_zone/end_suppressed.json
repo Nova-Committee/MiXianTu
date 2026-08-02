@@ -1,0 +1,8 @@
+{
+  "base_aura": 8.0,
+  "regen_per_tick": 0.0,
+  "environment_tags": ["mxt_test:environment/void"],
+  "dimensions": ["minecraft:the_end"],
+  "rules": { "cultivate_suppress": true, "tribulation_modify": -0.20 },
+  "client_render": { "particle": "minecraft:portal", "particle_density": 1, "fog_color": "#6b4c8a", "render_distance": 64 }
+}

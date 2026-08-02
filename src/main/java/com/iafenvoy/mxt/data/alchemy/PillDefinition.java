@@ -17,7 +17,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  */
 public record PillDefinition(EntityAction onConsume,
                              NumberProvider toxicityGain, NumberProvider toxicityThreshold,
-                             EntityAction onOverdose, NumberProvider toxicityAfterOverdose) implements ItemEffectDefinition {
+                             EntityAction onOverdose,
+                             NumberProvider toxicityAfterOverdose) implements ItemEffectDefinition {
     public static final MapCodec<PillDefinition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityAction.CODEC.optionalFieldOf("on_consume", NoOpEntityAction.INSTANCE).forGetter(PillDefinition::onConsume),
             NumberProvider.CODEC.optionalFieldOf("toxicity_gain", new Constant(0.0D)).forGetter(PillDefinition::toxicityGain),
