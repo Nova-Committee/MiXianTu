@@ -53,6 +53,12 @@ public final class AbilityService {
 
     public static PrepareResult prepare(@NotNull Identifier abilityId, Ability definition, AbilityHolderData abilities,
                                         ResourceHolderData resources, long gameTime, FormulaContext context) {
+        return prepare(abilityId, definition, abilities, resources, gameTime, context, null);
+    }
+
+    private static PrepareResult prepare(@NotNull Identifier abilityId, Ability definition, AbilityHolderData abilities,
+                                         ResourceHolderData resources, long gameTime, FormulaContext context,
+                                         LivingEntity payer) {
         if (!abilities.has(abilityId)) return PrepareResult.rejected(Failure.NOT_GRANTED, null);
         if (abilities.isOnCooldown(abilityId, gameTime)) return PrepareResult.rejected(Failure.COOLDOWN, null);
         double castTime = definition.castTime().evaluate(context);
@@ -78,7 +84,8 @@ public final class AbilityService {
             }
             chargeBefore = available;
         }
-        Evaluation costs = ResourceTransactions.evaluate(definition.costs(), context);
+        Evaluation costs = payer == null ? ResourceTransactions.evaluate(definition.costs(), context)
+                : ResourceTransactions.evaluate(payer, definition.costs(), context);
         Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
         if (!preview.committed())
             return PrepareResult.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
@@ -122,7 +129,8 @@ public final class AbilityService {
         if (definition.type() instanceof Composite) {
             return useComposite(abilityId, definition, actor, abilities, resources, gameTime, context, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, id));
         }
-        PrepareResult prepared = prepare(abilityId, definition, abilities, resources, gameTime, context);
+        PrepareResult prepared = prepare(abilityId, definition, abilities, resources, gameTime, context,
+                actor instanceof LivingEntity living ? living : null);
         if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         if (prepared.use().castTimeTicks() > 0L) {
             abilities.setComponentState(abilityId, "cast_ends_at", AbilityComponentState.initial(Math.addExact(gameTime, prepared.use().castTimeTicks()), gameTime));
@@ -149,7 +157,8 @@ public final class AbilityService {
         abilities.setComponentState(abilityId, "cast_ends_at", AbilityComponentState.initial(Double.MAX_VALUE, gameTime));
         if (!definition.condition().test(actor, context)) return UseResult.rejected(Failure.CONDITION_FAILED, null);
         if (!validateWord(definition, actor, context)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
-        PrepareResult prepared = prepare(abilityId, definition, abilities, resources, gameTime, context);
+        PrepareResult prepared = prepare(abilityId, definition, abilities, resources, gameTime, context,
+                actor instanceof LivingEntity living ? living : null);
         if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context);
     }
@@ -210,7 +219,8 @@ public final class AbilityService {
             stopChannel(abilities);
             return ChannelResult.stopped(Failure.INVALID_FORMULA);
         }
-        Evaluation upkeep = ResourceTransactions.evaluate(upkeepCosts, context);
+        Evaluation upkeep = actor instanceof LivingEntity living ? ResourceTransactions.evaluate(living, upkeepCosts, context)
+                : ResourceTransactions.evaluate(upkeepCosts, context);
         Pre resourceEvent = new Pre(resources, upkeep.amounts());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) {
             stopChannel(abilities);

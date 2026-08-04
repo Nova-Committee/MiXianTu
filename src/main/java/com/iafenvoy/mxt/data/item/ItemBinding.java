@@ -1,18 +1,23 @@
 package com.iafenvoy.mxt.data.item;
 
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.Item;
 
+import java.util.List;
 
 /**
- * The one-way association between a physical item and a data definition.
- * The referenced definition never contains, nor discovers, its bound items.
+ * Attaches ordered entity actions to already registered physical items.
  */
-public record ItemBinding(Item item, DatapackItemReference definition) {
+public record ItemBinding(List<ItemMatcher.Entry> entries, List<EntityAction> actions) implements ItemMatcher {
     public static final Codec<ItemBinding> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").forGetter(ItemBinding::item),
-            DatapackItemReference.CODEC.fieldOf("definition").forGetter(ItemBinding::definition)
+            ItemMatcher.ENTRIES_CODEC.fieldOf("items").forGetter(ItemBinding::entries),
+            EntityAction.SINGLE_CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(ItemBinding::actions)
     ).apply(instance, ItemBinding::new));
+
+    public ItemBinding {
+        entries = List.copyOf(entries);
+        actions = List.copyOf(actions);
+    }
 }

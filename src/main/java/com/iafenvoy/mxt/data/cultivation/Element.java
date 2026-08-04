@@ -17,11 +17,11 @@ import java.util.List;
  */
 public record Element(String translationKey, List<Either<Holder<Element>, TagKey<Element>>> overcomes,
                       List<Either<Holder<Element>, TagKey<Element>>> adaptedTo, List<Identifier> auraTags) {
+    public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.ELEMENT);
     public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.optionalFieldOf("translation_key", "").forGetter(Element::translationKey),
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
             Identifier.CODEC.listOf().optionalFieldOf("aura_tags", List.of()).forGetter(Element::auraTags)
     ).apply(instance, Element::new));
-    public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.ELEMENT);
 }

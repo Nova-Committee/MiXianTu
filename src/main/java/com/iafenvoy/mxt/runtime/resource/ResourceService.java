@@ -1,9 +1,20 @@
 package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
+import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.HolderHelper;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.LivingEntity;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Applies resource definition bounds consistently for initialization, changes and passive regeneration.
@@ -42,17 +53,62 @@ public final class ResourceService {
         return change(holder, id, definition, regen * elapsedTicks, context);
     }
 
-    private static Bounds bounds(Resource definition, FormulaContext context) {
+    /**
+     * Adds resource-specific cultivation variables to a caller-provided formula context.
+     * {@code absorbed_aura} is the active realm's accumulated cultivation progress and is
+     * deliberately zero for every resource outside that realm chain.
+     */
+    public static FormulaContext formulaContext(SpiritData spirit, Identifier resource, Resource definition, FormulaContext base) {
+        Map<String, Double> values = new LinkedHashMap<>(base.variables());
+        int realmRank = realmRank(spirit, resource, definition);
+        boolean matchesResource = spirit.realmStage().isPresent() && realmRank >= 0;
+        double absorbedAura = matchesResource ? spirit.cultivationProgress() : 0.0D;
+        int resolvedRank = Math.max(0, realmRank);
+        values.put("realm", (double) resolvedRank);
+        values.put("realm_rank", (double) resolvedRank);
+        values.put("level", (double) resolvedRank);
+        values.put("absorbed_aura", absorbedAura);
+        values.put("cultivation_progress", absorbedAura);
+        return new FormulaContext(values);
+    }
+
+    /** Builds the same resource context on either logical side from an entity attachment. */
+    public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, Resource definition, FormulaContext base) {
+        return formulaContext(entity.getData(com.iafenvoy.mxt.registry.MxtAttachments.SPIRIT_DATA), resource, definition,
+                FormulaContexts.forEntity(entity, base.variables()));
+    }
+
+    public static Optional<Bounds> resolveBounds(Resource definition, FormulaContext context) {
         double min = definition.min().evaluate(context);
         double max = definition.max().evaluate(context);
-        return Double.isFinite(min) && Double.isFinite(max) && min <= max ? new Bounds(min, max) : null;
+        return Double.isFinite(min) && Double.isFinite(max) && min <= max ? Optional.of(new Bounds(min, max)) : Optional.empty();
+    }
+
+    private static Bounds bounds(Resource definition, FormulaContext context) {
+        return resolveBounds(definition, context).orElse(null);
+    }
+
+    private static int realmRank(SpiritData spirit, Identifier resource, Resource definition) {
+        Identifier current = spirit.realmStage().orElse(null);
+        if (current == null) return -1;
+        Optional<Integer> cached = ServerCache.get()
+                .filter(cache -> cache.resourceForRealm(current).filter(resource::equals).isPresent())
+                .flatMap(cache -> cache.rankForRealm(current));
+        if (cached.isPresent()) return cached.get();
+
+        Holder<RealmStage> stage = definition.firstRealm().orElse(null);
+        for (int rank = 0; stage != null && rank < 1024; rank++) {
+            if (HolderHelper.id(stage).equals(current)) return rank;
+            stage = stage.value().nextRealm().orElse(null);
+        }
+        return -1;
     }
 
     private static double clamp(double value, Bounds bounds) {
         return Math.max(bounds.min(), Math.min(bounds.max(), value));
     }
 
-    private record Bounds(double min, double max) {
+    public record Bounds(double min, double max) {
     }
 
     public record Result(boolean valid, boolean changed, double value) {

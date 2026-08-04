@@ -38,8 +38,8 @@ public final class ContractService {
      */
     public static Result bind(ContractData data, Identifier id, ContractType definition, LivingEntity owner,
                               LivingEntity creature, long gameTime, FormulaContext context) {
-        boolean ownerAllowed = definition.ownerConditions().stream().allMatch(condition -> condition.test(owner, context));
-        boolean creatureAllowed = definition.creatureConditions().stream().allMatch(condition -> condition.test(creature, context));
+        boolean ownerAllowed = definition.ownerCondition().test(owner, context);
+        boolean creatureAllowed = definition.creatureCondition().test(creature, context);
         return bind(data, id, definition, owner.getUUID(), gameTime, () -> ownerAllowed, () -> creatureAllowed);
     }
 

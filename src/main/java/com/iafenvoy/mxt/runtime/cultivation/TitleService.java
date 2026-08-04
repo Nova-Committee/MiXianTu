@@ -38,7 +38,7 @@ public final class TitleService {
      */
     public static Result grant(LivingEntity entity, SpiritData spirit, Identifier id, Title definition,
                                Function<Identifier, Title> lookup, FormulaContext context) {
-        boolean allowed = definition.unlockConditions().stream().allMatch(condition -> condition.test(entity, context));
+        boolean allowed = definition.unlockCondition().test(entity, context);
         return allowed ? grant(spirit, id, definition, lookup, () -> true) : Result.rejected(Failure.CONDITIONS);
     }
 

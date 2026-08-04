@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.data.economy.ChequeData;
+import com.iafenvoy.mxt.data.ChequeData;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import net.minecraft.world.item.Item;

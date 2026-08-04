@@ -30,7 +30,7 @@ public final class CultivationActionEventBridge {
             return;
         }
         FormulaContext context = FormulaContexts.forEntity(entity);
-        boolean mayContinue = definition.stopConditions().stream().noneMatch(condition -> condition.test(entity, context));
+        boolean mayContinue = !definition.stopCondition().test(entity, context);
         AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
         CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, actionId, definition,
                 entity.level().getGameTime(), context, () -> mayContinue);

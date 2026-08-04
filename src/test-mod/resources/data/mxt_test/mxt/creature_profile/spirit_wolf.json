@@ -2,5 +2,9 @@
   "realm_stage": "mxt_test:foundation",
   "intelligence": 12,
   "spawn_conditions": [],
-  "contract_tags": ["mxt_test:contract/master_servant"]
+  "inner_core": "minecraft:amethyst_shard",
+  "contract_tags": ["mxt_test:contract/master_servant"],
+  "entity_type_tags": ["minecraft:wolf", "#mxt_test:spirit_wolves"],
+  "preferred_aura_elements": ["mxt_test:fire", "#mxt_test:warm_elements"],
+  "minimum_aura": 10.0
 }

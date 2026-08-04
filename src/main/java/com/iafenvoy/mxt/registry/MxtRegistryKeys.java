@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.data.economy.CurrencyValue;
+import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.Formation;
@@ -20,8 +20,8 @@ import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.item.ItemBinding;
-import com.iafenvoy.mxt.data.item.DatapackItem;
-import com.iafenvoy.mxt.data.item.ItemEffect;
+import com.iafenvoy.mxt.data.item.PillBinding;
+import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
@@ -57,11 +57,9 @@ public final class MxtRegistryKeys {
     public static final ResourceKey<Registry<Sect>> SECT = create("sect");
     public static final ResourceKey<Registry<RealmInstance>> REALM_INSTANCE = create("realm_instance");
     public static final ResourceKey<Registry<CurrencyValue>> CURRENCY = create("currency");
-    public static final ResourceKey<Registry<DatapackItem>> ITEM = create("item");
-    public static final ResourceKey<Registry<DatapackItem>> PILL = create("pill");
-    public static final ResourceKey<Registry<DatapackItem>> WEAPON = create("weapon");
-    public static final ResourceKey<Registry<ItemEffect>> ITEM_EFFECT = create("item_effect");
     public static final ResourceKey<Registry<ItemBinding>> ITEM_BINDING = create("item_binding");
+    public static final ResourceKey<Registry<WeaponBinding>> WEAPON_BINDING = create("weapon_binding");
+    public static final ResourceKey<Registry<PillBinding>> PILL_BINDING = create("pill_binding");
     /**
      * Templates used by the world aura resolver and runtime aura areas.
      */

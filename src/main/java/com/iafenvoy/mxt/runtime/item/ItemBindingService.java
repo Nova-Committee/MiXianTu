@@ -1,315 +1,153 @@
 package com.iafenvoy.mxt.runtime.item;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.alchemy.Pill;
 import com.iafenvoy.mxt.data.AttributeModifier;
-import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.item.ItemBinding;
-import com.iafenvoy.mxt.data.item.DatapackItem;
-import com.iafenvoy.mxt.data.item.DatapackItemReference;
-import com.iafenvoy.mxt.data.item.ItemEffect;
-import com.iafenvoy.mxt.data.item.SpiritRootItemEffect;
-import com.iafenvoy.mxt.data.Weapon;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.data.item.PillBinding;
+import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.alchemy.PillService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.component.ItemAttributeModifiers.Builder;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Materializes {@code mxt:item} definitions through the one-way binding to
- * Minecraft's physical Item registry, then dispatches reusable item effects.
+ * Resolves datapack gameplay bindings for items already registered by Minecraft,
+ * a mod, or KubeJS. No logical item definition is stored in an ItemStack.
  */
 public final class ItemBindingService {
     private ItemBindingService() {
     }
 
-    /**
-     * Creates a stack when exactly one physical Item binding exists for this category-qualified definition.
-     */
-    public static Optional<ItemStack> create(DatapackItemReference itemDefinition) {
-        List<Item> items = MxtDatapackRegistries.holders(MxtDatapackRegistries.ITEM_BINDING)
-                .map(Reference::value)
-                .filter(binding -> binding.definition().equals(itemDefinition))
-                .map(ItemBinding::item)
-                .distinct()
-                .toList();
-        return items.size() == 1 ? create(items.getFirst(), itemDefinition) : Optional.empty();
+    public static List<EntityAction> actions(ItemStack stack) {
+        return binding(stack).map(ItemBinding::actions).orElse(List.of());
     }
 
-    /**
-     * Resolves a runtime recipe output when its ID identifies exactly one data-driven item category.
-     */
-    public static Optional<ItemStack> create(Identifier itemDefinition) {
-        List<DatapackItemReference> definitions = MxtDatapackRegistries.itemReferences(itemDefinition).toList();
-        return definitions.size() == 1 ? create(definitions.getFirst()) : Optional.empty();
+    public static List<EntityAction> actions(Provider access, ItemStack stack) {
+        return binding(access, stack).map(ItemBinding::actions).orElse(List.of());
     }
 
-    /**
-     * Creates a stack from the client-synchronised datapack registries.
-     */
-    public static Optional<ItemStack> create(Provider access, DatapackItemReference itemDefinition) {
-        List<Item> items = MxtDatapackRegistries.holders(access, MxtDatapackRegistries.ITEM_BINDING)
-                .map(Reference::value)
-                .filter(binding -> binding.definition().equals(itemDefinition))
-                .map(ItemBinding::item)
-                .distinct()
-                .toList();
-        return items.size() == 1 ? create(access, items.getFirst(), itemDefinition) : Optional.empty();
+    public static Optional<WeaponBinding> weapon(ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.WEAPON_BINDING)
+                .map(Reference::value), stack);
     }
 
-    /**
-     * Creates one stack using an explicitly chosen physical Item binding.
-     */
-    public static Optional<ItemStack> create(Item item, DatapackItemReference itemDefinition) {
-        ItemStack stack = new ItemStack(item);
-        return bind(stack, itemDefinition) ? Optional.of(stack) : Optional.empty();
+    public static Optional<WeaponBinding> weapon(Provider access, ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.WEAPON_BINDING)
+                .map(Reference::value), stack);
     }
 
-    /**
-     * Resolves a runtime recipe output using an explicitly supplied physical item.
-     */
-    public static Optional<ItemStack> create(Item item, Identifier itemDefinition) {
-        List<DatapackItemReference> definitions = MxtDatapackRegistries.itemReferences(itemDefinition).toList();
-        return definitions.size() == 1 ? create(item, definitions.getFirst()) : Optional.empty();
+    public static Optional<PillBinding> pill(ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.PILL_BINDING)
+                .map(Reference::value), stack);
     }
 
-    /**
-     * Creates one client-side display stack using an explicitly chosen physical Item binding.
-     */
-    public static Optional<ItemStack> create(Provider access, Item item, DatapackItemReference itemDefinition) {
-        ItemStack stack = new ItemStack(item);
-        return bind(access, stack, itemDefinition) ? Optional.of(stack) : Optional.empty();
+    public static Optional<PillBinding> pill(Provider access, ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.PILL_BINDING)
+                .map(Reference::value), stack);
     }
 
-    /**
-     * Binds a stack to its logical item definition after validating the physical Item bridge.
-     */
-    public static boolean bind(ItemStack stack, DatapackItemReference itemDefinition) {
-        Optional<DatapackItem> definition = MxtDatapackRegistries.get(itemDefinition);
-        if (definition.isEmpty() || !isBound(stack.getItem(), itemDefinition)) return false;
-        stack.set(MxtDataComponents.ITEM_DEFINITION, itemDefinition);
-        applyPresentation(stack, itemDefinition.id(), definition.get());
-        refreshWeapon(stack);
-        return true;
-    }
-
-    /**
-     * Resolves a runtime recipe output when its ID identifies exactly one data-driven item category.
-     */
-    public static boolean bind(ItemStack stack, Identifier itemDefinition) {
-        List<DatapackItemReference> definitions = MxtDatapackRegistries.itemReferences(itemDefinition).toList();
-        return definitions.size() == 1 && bind(stack, definitions.getFirst());
-    }
-
-    /**
-     * Binds a client-side display stack using the synced datapack registries.
-     */
-    public static boolean bind(Provider access, ItemStack stack, DatapackItemReference itemDefinition) {
-        Optional<DatapackItem> definition = MxtDatapackRegistries.get(access, itemDefinition);
-        if (definition.isEmpty() || !isBound(access, stack.getItem(), itemDefinition)) return false;
-        stack.set(MxtDataComponents.ITEM_DEFINITION, itemDefinition);
-        applyPresentation(stack, itemDefinition.id(), definition.get());
-        refreshWeapon(access, stack);
-        return true;
-    }
-
-    /**
-     * Resolves the logical item definition selected by this stack.
-     */
-    public static Optional<ResolvedItem> find(ItemStack stack) {
-        DatapackItemReference explicit = stack.get(MxtDataComponents.ITEM_DEFINITION);
-        if (explicit != null) {
-            return isBound(stack.getItem(), explicit)
-                    ? MxtDatapackRegistries.get(explicit).map(value -> new ResolvedItem(explicit, value))
-                    : Optional.empty();
-        }
-        List<DatapackItemReference> matches = MxtDatapackRegistries.holders(MxtDatapackRegistries.ITEM_BINDING)
-                .map(Reference::value)
-                .filter(binding -> binding.item() == stack.getItem())
-                .map(ItemBinding::definition)
-                .distinct()
-                .toList();
-        return matches.size() == 1
-                ? MxtDatapackRegistries.get(matches.getFirst()).map(value -> new ResolvedItem(matches.getFirst(), value))
-                : Optional.empty();
-    }
-
-    /**
-     * Resolves a stack using the client-synchronised datapack registries.
-     */
-    public static Optional<ResolvedItem> find(Provider access, ItemStack stack) {
-        DatapackItemReference explicit = stack.get(MxtDataComponents.ITEM_DEFINITION);
-        if (explicit != null) {
-            return isBound(access, stack.getItem(), explicit)
-                    ? MxtDatapackRegistries.get(access, explicit).map(value -> new ResolvedItem(explicit, value))
-                    : Optional.empty();
-        }
-        List<DatapackItemReference> matches = MxtDatapackRegistries.holders(access, MxtDatapackRegistries.ITEM_BINDING)
-                .map(Reference::value)
-                .filter(binding -> binding.item() == stack.getItem())
-                .map(ItemBinding::definition)
-                .distinct()
-                .toList();
-        return matches.size() == 1
-                ? MxtDatapackRegistries.get(access, matches.getFirst()).map(value -> new ResolvedItem(matches.getFirst(), value))
-                : Optional.empty();
-    }
-
-    /**
-     * Returns a logical item ID when bound, otherwise the physical Item registry ID.
-     */
-    public static Identifier identifier(ItemStack stack) {
-        return find(stack).map(item -> item.reference().id()).orElseGet(() -> BuiltInRegistries.ITEM.getKey(stack.getItem()));
-    }
-
-    /**
-     * Matches a logical item definition first and preserves support for unbound vanilla Item IDs.
-     */
-    public static boolean matches(ItemStack stack, Identifier id) {
-        return find(stack).map(resolved -> resolved.reference().id().equals(id))
-                .orElseGet(() -> BuiltInRegistries.ITEM.getKey(stack.getItem()).equals(id));
-    }
-
-    /**
-     * Matches an exact category-qualified logical item reference.
-     */
-    public static boolean matches(ItemStack stack, DatapackItemReference reference) {
-        return find(stack).map(resolved -> resolved.reference().equals(reference)).orElse(false);
-    }
-
-    /**
-     * Resolves all registered effects in item-definition order, skipping disabled or missing entries.
-     */
-    public static List<ResolvedEffect> effects(ItemStack stack) {
-        return find(stack).stream()
-                .flatMap(item -> item.definition().effects().stream()
-                        .map(effect -> new ResolvedEffect(HolderHelper.id(effect), effect.value())))
-                .toList();
-    }
-
-    /**
-     * Resolves item effects from the client-synchronised datapack registries.
-     */
-    public static List<ResolvedEffect> effects(Provider access, ItemStack stack) {
-        return find(access, stack).stream()
-                .flatMap(item -> item.definition().effects().stream()
-                        .map(effect -> new ResolvedEffect(HolderHelper.id(effect), effect.value())))
-                .toList();
-    }
-
-    /**
-     * Re-applies runtime-dependent weapon attributes after equipment changes or datapack reloads.
-     */
+    /** Re-applies weapon attributes after equipment changes or datapack reloads. */
     public static void refreshEquipped(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         refreshWeapon(entity.getItemBySlot(EquipmentSlot.MAINHAND));
         refreshWeapon(entity.getItemBySlot(EquipmentSlot.OFFHAND));
     }
 
-    /**
-     * Dispatches consumption effects after vanilla has finished consuming the physical stack.
-     */
+    /** Runs the active main-hand weapon's periodic effects server-side. */
+    public static void tickMainHandWeapon(LivingEntity holder) {
+        if (holder.level().isClientSide()) return;
+        FormulaContext context = FormulaContexts.forEntity(holder);
+        weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.tickAction().execute(holder, context));
+    }
+
+    /** Runs the active main-hand weapon's left-click action against the attacked entity. */
+    public static void onMainHandWeaponAttack(LivingEntity holder, Entity target) {
+        if (holder.level().isClientSide()) return;
+        FormulaContext context = FormulaContexts.forEntity(holder, java.util.Map.of(
+                "target_is_living", target instanceof LivingEntity ? 1.0D : 0.0D,
+                "target_health", target instanceof LivingEntity living ? (double) living.getHealth() : 0.0D
+        ));
+        weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.attackAction().execute(holder, target, context));
+    }
+
+    /** Runs a main-hand weapon's explicit right-click action. */
+    public static void onMainHandWeaponUse(LivingEntity holder) {
+        if (holder.level().isClientSide()) return;
+        FormulaContext context = FormulaContexts.forEntity(holder);
+        weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.useAction().execute(holder, context));
+    }
+
+    /** Dispatches generic item-binding actions and pill behaviour after vanilla consumption. */
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return;
-        for (ResolvedEffect resolved : effects(stack)) {
-            if (resolved.definition() instanceof Pill pill) {
-                PillService.consume(entity, pill);
-            } else if (resolved.definition() instanceof SpiritRootItemEffect(Holder<SpiritRoot> spiritRoot)) {
-                CultivationIdentityService.grantSpiritRoot(entity, HolderHelper.id(spiritRoot), spiritRoot.value());
-            }
-        }
+        FormulaContext context = FormulaContexts.forEntity(entity);
+        actions(stack).forEach(action -> action.execute(entity, context));
+        pill(stack).ifPresent(definition -> PillService.consume(entity, definition));
     }
 
-    private static boolean isBound(Item item, DatapackItemReference itemDefinition) {
-        return MxtDatapackRegistries.holders(MxtDatapackRegistries.ITEM_BINDING)
-                .map(Reference::value)
-                .anyMatch(binding -> binding.item() == item && binding.definition().equals(itemDefinition));
+    private static Optional<ItemBinding> binding(ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.ITEM_BINDING)
+                .map(Reference::value), stack);
     }
 
-    private static boolean isBound(Provider access, Item item, DatapackItemReference itemDefinition) {
-        return MxtDatapackRegistries.holders(access, MxtDatapackRegistries.ITEM_BINDING)
-                .map(Reference::value)
-                .anyMatch(binding -> binding.item() == item && binding.definition().equals(itemDefinition));
+    private static Optional<ItemBinding> binding(Provider access, ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.ITEM_BINDING)
+                .map(Reference::value), stack);
     }
 
     private static void refreshWeapon(ItemStack stack) {
-        List<ResolvedEffect> weapons = effects(stack).stream()
-                .filter(effect -> effect.definition() instanceof Weapon)
-                .toList();
-        if (weapons.isEmpty()) return;
-        find(stack).ifPresent(item -> applyPresentation(stack, item.reference().id(), item.definition()));
-        ItemAttributeModifiers modifiers = weaponModifiers(weapons);
-        if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {
-            stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
-        }
-    }
-
-    private static void refreshWeapon(Provider access, ItemStack stack) {
-        DatapackItemReference reference = stack.get(MxtDataComponents.ITEM_DEFINITION);
-        if (reference == null) return;
-        List<ResolvedEffect> weapons = MxtDatapackRegistries.get(access, reference).stream()
-                .flatMap(item -> item.effects().stream()
-                        .map(effect -> new ResolvedEffect(HolderHelper.id(effect), effect.value())))
-                .filter(effect -> effect.definition() instanceof Weapon)
-                .toList();
-        if (weapons.isEmpty()) return;
-        ItemAttributeModifiers modifiers = weaponModifiers(weapons);
-        if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {
-            stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
-        }
-    }
-
-    private static void applyPresentation(ItemStack stack, Identifier itemDefinition, DatapackItem definition) {
-        Identifier model = definition.modelFor(itemDefinition);
-        if (!model.equals(stack.get(DataComponents.ITEM_MODEL))) stack.set(DataComponents.ITEM_MODEL, model);
-    }
-
-    private static ItemAttributeModifiers weaponModifiers(List<ResolvedEffect> weapons) {
-        Builder builder = ItemAttributeModifiers.builder();
-        for (ResolvedEffect resolved : weapons) {
-            Weapon definition = (Weapon) resolved.definition();
-            add(builder, Attributes.ATTACK_DAMAGE, modifierId(resolved.id(), "attack_damage"), definition.attackDamage().evaluate(FormulaContext.EMPTY), Operation.ADD_VALUE);
-            add(builder, Attributes.ATTACK_SPEED, modifierId(resolved.id(), "attack_speed"), definition.attackSpeed().evaluate(FormulaContext.EMPTY), Operation.ADD_VALUE);
-            for (int index = 0; index < definition.attributes().size(); index++) {
-                AttributeModifier attribute = definition.attributes().get(index);
-                Identifier modifierId = modifierId(resolved.id(), "attribute_" + index);
-                add(builder, attribute.attribute(), modifierId, attribute.value().evaluate(FormulaContext.EMPTY), operation(attribute.operation()));
+        weapon(stack).ifPresent(weapon -> {
+            ItemAttributeModifiers modifiers = weaponModifiers(stack.getItem(), weapon);
+            if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {
+                stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
             }
+        });
+    }
+
+    private static ItemAttributeModifiers weaponModifiers(net.minecraft.world.item.Item item, WeaponBinding weapon) {
+        Builder builder = ItemAttributeModifiers.builder();
+        add(builder, Attributes.ATTACK_DAMAGE, modifierId(item, "attack_damage"),
+                weapon.attackDamage().evaluate(FormulaContext.EMPTY), Operation.ADD_VALUE);
+        add(builder, Attributes.ATTACK_SPEED, modifierId(item, "attack_speed"),
+                weapon.attackSpeed().evaluate(FormulaContext.EMPTY), Operation.ADD_VALUE);
+        for (int index = 0; index < weapon.attributes().size(); index++) {
+            AttributeModifier attribute = weapon.attributes().get(index);
+            add(builder, attribute.attribute(), modifierId(item, "attribute_" + index),
+                    attribute.value().evaluate(FormulaContext.EMPTY), operation(attribute.operation()));
         }
         return builder.build();
     }
 
-    private static void add(Builder builder, Holder<Attribute> attribute,
-                            Identifier id, double value, Operation operation) {
+    private static void add(Builder builder, Holder<Attribute> attribute, Identifier id, double value, Operation operation) {
         if (Double.isFinite(value) && value != 0.0D) {
             builder.add(attribute, new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, value, operation), EquipmentSlotGroup.MAINHAND);
         }
     }
 
-    private static Identifier modifierId(Identifier effect, String suffix) {
+    private static Identifier modifierId(net.minecraft.world.item.Item item, String suffix) {
+        Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
         return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
-                "item_effect/" + effect.getNamespace() + "/" + effect.getPath() + "/" + suffix);
+                "weapon_binding/" + itemId.getNamespace() + "/" + itemId.getPath() + "/" + suffix);
     }
 
     private static Operation operation(AttributeModifier.Operation operation) {
@@ -318,11 +156,5 @@ public final class ItemBindingService {
             case ADD_MULTIPLIED_BASE -> Operation.ADD_MULTIPLIED_BASE;
             case ADD_MULTIPLIED_TOTAL -> Operation.ADD_MULTIPLIED_TOTAL;
         };
-    }
-
-    public record ResolvedItem(DatapackItemReference reference, DatapackItem definition) {
-    }
-
-    public record ResolvedEffect(Identifier id, ItemEffect definition) {
     }
 }

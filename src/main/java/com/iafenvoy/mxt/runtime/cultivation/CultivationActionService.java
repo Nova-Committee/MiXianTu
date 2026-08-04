@@ -7,13 +7,10 @@ import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceGain;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -49,7 +46,7 @@ public final class CultivationActionService {
      */
     public static Result start(LivingEntity entity, SpiritData spirit, Identifier actionId, CultivateAction definition,
                                long gameTime, FormulaContext context) {
-        boolean conditions = definition.startConditions().stream().allMatch(condition -> condition.test(entity, context));
+        boolean conditions = definition.startCondition().test(entity, context);
         return start(spirit, actionId, definition, gameTime, () -> conditions);
     }
 
@@ -101,23 +98,24 @@ public final class CultivationActionService {
         Evaluation costs;
         Map<Identifier, Double> gains;
         try {
-            costs = ResourceTransactions.evaluate(definition.costs(), context);
+            costs = ResourceTransactions.evaluate(entity, definition.costs(), context);
             gains = evaluateGains(definition.auraGains(), context);
         } catch (IllegalArgumentException | IllegalStateException error) {
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         }
         ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
         if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
-        if (!canApplyGains(copyOf(resources), gains, context))
+        if (!canApplyGains(entity, copyOf(resources), gains, context))
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         if (!AuraService.consume(entity.level(), entity.blockPosition(), auraCost))
             return Result.rejected(Failure.INSUFFICIENT_AURA, null);
         ResourceTransactions.Result payment = ResourceTransactions.tryConsume(resources, costs);
         if (!payment.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
-        applyGains(resources, gains, context);
         spirit.setCultivationProgress(spirit.cultivationProgress() + gain);
+        applyGains(entity, resources, gains, context);
+        restoreAbsorbedResource(entity, spirit, resources, gain, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
-        DomainBehaviorService.execute(MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR, definition.gainBehavior(), BehaviorContext.of(Kind.CULTIVATION_GAIN, actionId, null, context, true));
+        definition.tickAction().execute(entity, context);
         return Result.progressed(gain, payment.amounts());
     }
 
@@ -149,11 +147,10 @@ public final class CultivationActionService {
         ResourceTransactions.Result payment = ResourceTransactions.tryConsume(resources, costs);
         if (!payment.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         aura.setConcentration(aura.concentration() - auraCost);
-        applyGains(resources, gains, context);
         spirit.setCultivationProgress(spirit.cultivationProgress() + gain);
+        applyGains(resources, gains, context);
+        restoreAbsorbedResource(spirit, resources, gain, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
-        DomainBehaviorService.execute(MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR, definition.gainBehavior(), BehaviorContext.of(
-                Kind.CULTIVATION_GAIN, actionId, null, context, true));
         return Result.progressed(gain, payment.amounts());
     }
 
@@ -187,10 +184,54 @@ public final class CultivationActionService {
         return true;
     }
 
+    private static boolean canApplyGains(LivingEntity entity, ResourceHolderData resources, Map<Identifier, Double> gains,
+                                         FormulaContext context) {
+        for (Entry<Identifier, Double> gain : gains.entrySet()) {
+            Resource definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey()).orElse(null);
+            if (definition == null || !ResourceService.change(resources, gain.getKey(), definition, gain.getValue(),
+                    ResourceService.formulaContext(entity, gain.getKey(), definition, context)).valid())
+                return false;
+        }
+        return true;
+    }
+
     private static void applyGains(ResourceHolderData resources, Map<Identifier, Double> gains, FormulaContext context) {
         for (Entry<Identifier, Double> gain : gains.entrySet())
             MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey())
                     .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context));
+    }
+
+    private static void applyGains(LivingEntity entity, ResourceHolderData resources, Map<Identifier, Double> gains,
+                                   FormulaContext context) {
+        for (Entry<Identifier, Double> gain : gains.entrySet())
+            MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey())
+                    .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(),
+                            ResourceService.formulaContext(entity, gain.getKey(), definition, context)));
+    }
+
+    /** Restores the current realm's resource from absorbed aura only when its datapack definition opts in. */
+    private static void restoreAbsorbedResource(SpiritData spirit, ResourceHolderData resources, double absorbed,
+                                                FormulaContext context) {
+        activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+                .filter(Resource::restoreOnAbsorb).map(definition -> new ActiveResource(id, definition)))
+                .ifPresent(active -> ResourceService.change(resources, active.id(), active.definition(), absorbed,
+                        ResourceService.formulaContext(spirit, active.id(), active.definition(), context)));
+    }
+
+    private static void restoreAbsorbedResource(LivingEntity entity, SpiritData spirit, ResourceHolderData resources,
+                                                double absorbed, FormulaContext context) {
+        activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+                .filter(Resource::restoreOnAbsorb).map(definition -> new ActiveResource(id, definition)))
+                .ifPresent(active -> ResourceService.change(resources, active.id(), active.definition(), absorbed,
+                        ResourceService.formulaContext(entity, active.id(), active.definition(), context)));
+    }
+
+    private static java.util.Optional<Identifier> activeResource(SpiritData spirit) {
+        return spirit.realmStage().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, id))
+                .map(realm -> HolderHelper.id(realm.resource()));
+    }
+
+    private record ActiveResource(Identifier id, Resource definition) {
     }
 
     public enum Failure {DISABLED, ALREADY_ACTIVE, COOLDOWN, CONDITIONS, NOT_ACTIVE, ENVIRONMENT, INVALID_FORMULA, INSUFFICIENT_RESOURCE, INSUFFICIENT_AURA}

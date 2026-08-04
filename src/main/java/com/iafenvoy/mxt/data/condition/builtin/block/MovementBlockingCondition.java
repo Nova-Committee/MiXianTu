@@ -1,0 +1,24 @@
+package com.iafenvoy.mxt.data.condition.builtin.block;
+
+import com.iafenvoy.mxt.data.condition.BlockCondition;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+
+public enum MovementBlockingCondition implements BlockCondition {
+    INSTANCE;
+    public static final MapCodec<MovementBlockingCondition> CODEC = MapCodec.unit(INSTANCE);
+
+    @Override
+    public boolean test(Level level, BlockPos pos, FormulaContext context) {
+        BlockState state = level.getBlockState(pos);
+        return state.blocksMotion() && !state.getCollisionShape(level, pos).isEmpty();
+    }
+
+    @Override
+    public MapCodec<MovementBlockingCondition> codec() {
+        return CODEC;
+    }
+}

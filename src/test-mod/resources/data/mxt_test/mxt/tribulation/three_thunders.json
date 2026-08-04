@@ -1,9 +1,22 @@
 {
-  "trigger_conditions": [],
   "phases": [
-    { "duration": 100 },
-    { "duration": 100 },
-    { "duration": 100 }
+    {
+      "duration": 100,
+      "start_action": { "type": "mxt:apply_effect", "effect": "minecraft:resistance", "duration_ticks": 100 },
+      "end_action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 2 }
+    },
+    {
+      "duration": 100,
+      "start_action": { "type": "mxt:apply_effect", "effect": "minecraft:glowing", "duration_ticks": 100 },
+      "end_action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 2 }
+    },
+    {
+      "duration": 100,
+      "start_action": { "type": "mxt:apply_effect", "effect": "minecraft:strength", "duration_ticks": 100 },
+      "end_action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 2 }
+    }
   ],
-  "difficulty_scale": "1 + level * 0.05"
+  "difficulty_scale": "1 + level * 0.05",
+  "success_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 10 },
+  "fail_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 }
 }

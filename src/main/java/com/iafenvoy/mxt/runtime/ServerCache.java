@@ -83,6 +83,11 @@ public final class ServerCache {
         return this.resourceByRealm.containsKey(realm);
     }
 
+    /** Returns the zero-based rank of a realm in its validated resource chain. */
+    public Optional<Integer> rankForRealm(Identifier realm) {
+        return Optional.ofNullable(this.rankByRealm.get(realm));
+    }
+
     /**
      * Returns whether two realms share a resource chain and current is no lower than required.
      */

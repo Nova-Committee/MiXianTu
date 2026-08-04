@@ -16,6 +16,7 @@ import java.util.List;
  */
 public record MaterialGrade(int tier, NumberProvider valueMultiplier, NumberProvider forgingModifier,
                             NumberProvider alchemyModifier, List<Identifier> applicableTags) {
+    public static final Codec<Holder<MaterialGrade>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.MATERIAL_GRADE);
     public static final Codec<MaterialGrade> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.fieldOf("tier").forGetter(MaterialGrade::tier),
             NumberProvider.CODEC.optionalFieldOf("value_multiplier", new Constant(1)).forGetter(MaterialGrade::valueMultiplier),
@@ -23,5 +24,4 @@ public record MaterialGrade(int tier, NumberProvider valueMultiplier, NumberProv
             NumberProvider.CODEC.optionalFieldOf("alchemy_modifier", new Constant(1)).forGetter(MaterialGrade::alchemyModifier),
             Identifier.CODEC.listOf().optionalFieldOf("applicable_tags", List.of()).forGetter(MaterialGrade::applicableTags)
     ).apply(instance, MaterialGrade::new));
-    public static final Codec<Holder<MaterialGrade>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.MATERIAL_GRADE);
 }

@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.runtime.world.RealmTravelEventBridge;
 import com.iafenvoy.mxt.runtime.world.SoulEventBridge;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.InteractionHand;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -29,6 +30,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent.Load;
 import net.neoforged.neoforge.event.level.ChunkEvent.Unload;
@@ -52,7 +54,10 @@ public final class MxtGameplayEvents {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        if (event.getEntity() instanceof LivingEntity entity) ItemBindingService.refreshEquipped(entity);
+        if (event.getEntity() instanceof LivingEntity entity) {
+            ItemBindingService.refreshEquipped(entity);
+            ItemBindingService.tickMainHandWeapon(entity);
+        }
         AbilityEventBridge.onEntityTick(event);
         FlightEventBridge.onEntityTick(event);
         LifeSpanEventBridge.onEntityTick(event);
@@ -80,6 +85,13 @@ public final class MxtGameplayEvents {
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
         AbilityEventBridge.onAttack(event);
+        ItemBindingService.onMainHandWeaponAttack(event.getEntity(), event.getTarget());
+    }
+
+    @SubscribeEvent
+    public static void onItemUse(RightClickItem event) {
+        if (event.getHand() == InteractionHand.MAIN_HAND)
+            ItemBindingService.onMainHandWeaponUse(event.getEntity());
     }
 
     @SubscribeEvent

@@ -3,7 +3,6 @@
     { "attribute": "minecraft:attack_damage", "operation": "add_value", "value": 2 }
   ],
   "granted_abilities": ["mxt_test:sword_focus"],
-  "holder_conditions": [],
   "exclusive_tags": ["mxt_test:physique/bone"],
   "rarity": "rare",
   "allow_stacking": false

@@ -6,12 +6,8 @@
     "P P"
   ],
   "key": {
-    "P": {
-      "tag": "minecraft:planks"
-    },
-    "E": {
-      "tag": "c:emeralds"
-    }
+    "P": "#minecraft:planks",
+    "E": "minecraft:emerald"
   },
   "result": {
     "id": "mxt:exchange_station"

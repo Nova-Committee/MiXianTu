@@ -1,0 +1,24 @@
+package com.iafenvoy.mxt.data.condition.builtin.bientity;
+
+import com.iafenvoy.mxt.data.condition.BiEntityCondition;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.world.entity.Entity;
+
+/**
+ * Strictly requires a non-null common scoreboard team.
+ */
+public enum SameTeamCondition implements BiEntityCondition {
+    INSTANCE;
+    public static final MapCodec<SameTeamCondition> CODEC = MapCodec.unit(INSTANCE);
+
+    @Override
+    public boolean test(Entity actor, Entity target, FormulaContext context) {
+        return actor.getTeam() != null && actor.isAlliedTo(target);
+    }
+
+    @Override
+    public MapCodec<SameTeamCondition> codec() {
+        return CODEC;
+    }
+}

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.data.economy.CurrencyValue;
+import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.ItemMatcher;
 import net.minecraft.core.Holder.Reference;
@@ -53,7 +53,7 @@ public final class CurrencyValueService {
                 .map(Reference::value)
                 .filter(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)))
                 .flatMap(definition -> definition.exchanges().stream())
-                .map(exchange -> new ExchangeOffer(exchange.result(), exchange.cost()))
+                .map(exchange -> new ExchangeOffer(exchange.result().create(), exchange.cost()))
                 .toList();
     }
 
@@ -63,7 +63,7 @@ public final class CurrencyValueService {
                 .map(Reference::value)
                 .filter(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)))
                 .flatMap(definition -> definition.exchanges().stream())
-                .map(exchange -> new ExchangeOffer(exchange.result(), exchange.cost()))
+                .map(exchange -> new ExchangeOffer(exchange.result().create(), exchange.cost()))
                 .toList();
     }
 

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +28,25 @@ public final class ResourceTransactions {
             }
             if (amounts.put(cost.id(), amount) != null) {
                 throw new IllegalArgumentException("Duplicate resource cost " + cost.id());
+            }
+        }
+        return new Evaluation(Map.copyOf(amounts));
+    }
+
+    /**
+     * Evaluates every cost with the formula context of the resource it spends.
+     * This lets a skill cost refer to that resource's realm rank and absorbed aura.
+     */
+    public static Evaluation evaluate(LivingEntity payer, List<ResourceCost> costs, FormulaContext context) {
+        LinkedHashMap<Identifier, Double> amounts = new LinkedHashMap<>();
+        for (ResourceCost cost : costs) {
+            Identifier id = cost.id();
+            double amount = cost.evaluate(ResourceService.formulaContext(payer, id, cost.resource().value(), context));
+            if (!Double.isFinite(amount) || amount <= 0.0D) {
+                throw new IllegalArgumentException("Resource cost must be finite and positive for " + id);
+            }
+            if (amounts.put(id, amount) != null) {
+                throw new IllegalArgumentException("Duplicate resource cost " + id);
             }
         }
         return new Evaluation(Map.copyOf(amounts));

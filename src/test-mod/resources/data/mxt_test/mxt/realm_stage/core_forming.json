@@ -8,5 +8,6 @@
       "comparison": "at_least"
     }
   ],
-  "costs": [{ "id": "mxt_test:qi", "amount": 50 }]
+  "costs": [{ "id": "mxt_test:qi", "amount": 50 }],
+  "success_action": { "type": "mxt:apply_effect", "effect": "minecraft:strength", "duration_ticks": 200 }
 }

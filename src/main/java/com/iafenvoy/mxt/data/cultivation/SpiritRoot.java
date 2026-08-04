@@ -22,6 +22,7 @@ public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMult
                          NumberProvider elementAbilityModifier, String rarity,
                          List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                          List<Identifier> compatibilityTags) {
+    public static final Codec<Holder<SpiritRoot>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.SPIRIT_ROOT);
     public static final Codec<SpiritRoot> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Element.CODEC.fieldOf("element").forGetter(SpiritRoot::element),
             NumberProvider.CODEC.optionalFieldOf("cultivation_multiplier", new Constant(1.0D)).forGetter(SpiritRoot::cultivationMultiplier),
@@ -30,5 +31,4 @@ public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMult
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(SpiritRoot::grantedAbilities),
             Identifier.CODEC.listOf().optionalFieldOf("compatibility_tags", List.of()).forGetter(SpiritRoot::compatibilityTags)
     ).apply(instance, SpiritRoot::new));
-    public static final Codec<Holder<SpiritRoot>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.SPIRIT_ROOT);
 }

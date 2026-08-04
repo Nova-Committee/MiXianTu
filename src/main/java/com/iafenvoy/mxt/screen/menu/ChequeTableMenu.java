@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
-import com.iafenvoy.mxt.data.economy.ChequeData;
+import com.iafenvoy.mxt.data.ChequeData;
 import com.iafenvoy.mxt.item.ChequeItem;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;

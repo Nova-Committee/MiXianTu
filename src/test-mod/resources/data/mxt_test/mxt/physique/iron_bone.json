@@ -1,4 +1,5 @@
 {
+  "holder_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "attribute_modifiers": [
     { "attribute": "minecraft:max_health", "operation": "add_value", "value": 4 }
   ],

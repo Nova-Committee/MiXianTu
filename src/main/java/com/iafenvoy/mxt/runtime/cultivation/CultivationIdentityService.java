@@ -35,7 +35,7 @@ public final class CultivationIdentityService {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         if (!definition.allowStacking() && spirit.physiques().contains(id))
             return Result.rejected(Failure.ALREADY_HELD);
-        boolean conditions = definition.holderConditions().stream().allMatch(condition -> condition.test(entity, context));
+        boolean conditions = definition.holderCondition().test(entity, context);
         if (!conditions) return Result.rejected(Failure.CONDITIONS);
         Set<Identifier> exclusive = new HashSet<>(definition.exclusiveTags());
         boolean conflict = spirit.physiques().stream().map(physiqueId -> MxtDatapackRegistries.get(MxtDatapackRegistries.PHYSIQUE, physiqueId)).flatMap(Optional::stream)

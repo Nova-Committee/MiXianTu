@@ -1,6 +1,6 @@
 {
   "grade": "uncommon",
-  "learn_conditions": [],
+  "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "exclusive_tags": ["mxt_test:technique/sword"],
   "cultivation_modifier": 1.1,
   "granted_abilities": ["mxt_test:artifact_guard"]

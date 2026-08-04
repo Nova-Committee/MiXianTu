@@ -1,11 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.item.DatapackItem;
-import com.iafenvoy.mxt.data.item.DatapackItemReference;
 import com.iafenvoy.mxt.item.ChequeItem;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
@@ -44,26 +41,6 @@ public final class MxtItems {
         DeferredItem<T> item = REGISTRY.register(path, () -> factory.apply(new Properties().setId(key)));
         REGISTERED_ITEMS.add(item);
         return item;
-    }
-
-    /**
-     * Registers one code-owned item whose default stack points at an
-     * {@code mxt:item} entry. The binding entry, not the item class, connects
-     * the physical item to that definition and conventional resource-pack model.
-     */
-    public static <T extends Item> DeferredItem<T> registerDataDriven(String path, Identifier binding,
-                                                                                               Function<Properties, T> factory) {
-        return registerDataDriven(path, DatapackItemReference.other(binding), factory);
-    }
-
-    /**
-     * Registers a code-owned physical item with a category-qualified logical item definition.
-     */
-    public static <T extends Item> DeferredItem<T> registerDataDriven(String path, DatapackItemReference binding,
-                                                                                               Function<Properties, T> factory) {
-        return register(path, properties -> factory.apply(properties
-                .component(MxtDataComponents.ITEM_DEFINITION.get(), binding)
-                .component(DataComponents.ITEM_MODEL, DatapackItem.conventionalModel(binding.id()))));
     }
 
     /**

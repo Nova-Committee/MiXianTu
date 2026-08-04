@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.curse;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.NoOpEntityAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.AlwaysTrueEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
@@ -23,6 +23,7 @@ public record Curse(CurseType typedType, NumberProvider durationTicks, NumberPro
                     StackingMode stackingMode, EntityCondition applicationCondition, EntityAction onApply,
                     EntityAction onTick, EntityAction onRemove, List<Identifier> cleanseTags,
                     boolean allowForceRemove) {
+    public static final Codec<Holder<Curse>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.CURSE);
     public static final Codec<Curse> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             CurseType.MAP_CODEC.forGetter(Curse::typedType),
             NumberProvider.CODEC.optionalFieldOf("duration_ticks", new Constant(0.0D)).forGetter(Curse::durationTicks),
@@ -30,13 +31,12 @@ public record Curse(CurseType typedType, NumberProvider durationTicks, NumberPro
             Codec.intRange(1, 256).optionalFieldOf("max_stacks", 1).forGetter(Curse::maxStacks),
             StackingMode.CODEC.optionalFieldOf("stacking_mode", StackingMode.IGNORE).forGetter(Curse::stackingMode),
             EntityCondition.CODEC.optionalFieldOf("application_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Curse::applicationCondition),
-            EntityAction.CODEC.optionalFieldOf("on_apply", NoOpEntityAction.INSTANCE).forGetter(Curse::onApply),
-            EntityAction.CODEC.optionalFieldOf("on_tick", NoOpEntityAction.INSTANCE).forGetter(Curse::onTick),
-            EntityAction.CODEC.optionalFieldOf("on_remove", NoOpEntityAction.INSTANCE).forGetter(Curse::onRemove),
+            EntityAction.CODEC.optionalFieldOf("on_apply", NoOpAction.INSTANCE).forGetter(Curse::onApply),
+            EntityAction.CODEC.optionalFieldOf("on_tick", NoOpAction.INSTANCE).forGetter(Curse::onTick),
+            EntityAction.CODEC.optionalFieldOf("on_remove", NoOpAction.INSTANCE).forGetter(Curse::onRemove),
             Identifier.CODEC.listOf().optionalFieldOf("cleanse_tags", List.of()).forGetter(Curse::cleanseTags),
             Codec.BOOL.optionalFieldOf("allow_force_remove", false).forGetter(Curse::allowForceRemove)
     ).apply(instance, Curse::new));
-    public static final Codec<Holder<Curse>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.CURSE);
 
     public Identifier type() {
         return this.typedType.id();

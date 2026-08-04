@@ -4,11 +4,10 @@ import com.iafenvoy.mxt.data.AttributeModifier;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.registry.BehaviorReferences;
-import com.iafenvoy.mxt.registry.BehaviorReferences.Reference;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -31,8 +30,9 @@ public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>>
                          NumberProvider progressThreshold, List<EntityCondition> upgradeConditions,
                          List<AttributeModifier> passiveModifiers, List<ResourceCost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
-                         Optional<Holder<Tribulation>> tribulation, Optional<Identifier> successBehavior,
-                         Optional<Identifier> failBehavior) {
+                         Optional<Holder<Tribulation>> tribulation, EntityAction successAction,
+                         EntityAction failAction) {
+    public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE);
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.<RealmStage>create(instance -> instance.group(
             Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
             RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
@@ -42,10 +42,7 @@ public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>>
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
             Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(RealmStage::tribulation),
-            Identifier.CODEC.optionalFieldOf("on_success_behavior").forGetter(RealmStage::successBehavior),
-            Identifier.CODEC.optionalFieldOf("on_fail_behavior").forGetter(RealmStage::failBehavior)
-    ).apply(instance, RealmStage::new)).validate(value -> BehaviorReferences.validate(value, MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR,
-            new Reference("on_success_behavior", value.successBehavior),
-            new Reference("on_fail_behavior", value.failBehavior)));
-    public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE);
+            EntityAction.CODEC.optionalFieldOf("success_action", NoOpAction.INSTANCE).forGetter(RealmStage::successAction),
+            EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(RealmStage::failAction)
+    ).apply(instance, RealmStage::new));
 }

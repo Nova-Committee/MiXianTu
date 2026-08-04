@@ -3,5 +3,13 @@
   "radius": 8,
   "activation_costs": [{ "id": "mxt_test:spirit_power", "amount": 10 }],
   "maintenance_costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
+  "activate_action": { "type": "mxt:change_aura", "amount": 20 },
+  "tick_action": { "type": "mxt:change_aura", "amount": 2 },
+  "deactivate_action": { "type": "mxt:change_aura", "amount": -10 },
+  "entity_tick_action": {
+    "type": "mxt:apply_effect",
+    "effect": "minecraft:regeneration",
+    "duration_ticks": 40
+  },
   "aura_zone": "mxt_test:spirit_gathering"
 }

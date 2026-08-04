@@ -4,10 +4,6 @@ import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.event.FormationEvent.Activate;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -44,8 +40,7 @@ public final class FormationWorldService {
         if (!activated.active()) return Result.rejected(Failure.ACTIVATION_FAILED, activated.failedResource());
         if (!world.put(controller, activated.instance()))
             throw new IllegalStateException("Formation controller became occupied during activation");
-        DomainBehaviorService.execute(MxtTypeRegistries.FORMATION_LIFECYCLE_BEHAVIOR, definition.activateBehavior(), BehaviorContext.at(
-                Kind.FORMATION_ACTIVATE, id, level, controller, context, true));
+        definition.activateAction().execute(level, controller, context);
         return Result.activated(activated.instance());
     }
 
@@ -56,7 +51,10 @@ public final class FormationWorldService {
         if (instance == null) return MaintainResult.missingResult();
         FormationService.MaintainResult result = FormationService.maintain(instance, definition, resources, context);
         if (instance.active()) world.replace(controller, instance);
-        else world.remove(controller);
+        else {
+            world.remove(controller);
+            definition.deactivateAction().execute(level, controller, context);
+        }
         return new MaintainResult(result.maintained(), result.deactivated(), false, result.failedResource());
     }
 

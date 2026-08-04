@@ -1,12 +1,11 @@
 package com.iafenvoy.mxt.event.handler;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.alchemy.Pill;
 import com.iafenvoy.mxt.data.AttributeModifier;
-import com.iafenvoy.mxt.data.item.SpiritRootItemEffect;
-import com.iafenvoy.mxt.data.Weapon;
+import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
+import com.iafenvoy.mxt.data.item.PillBinding;
+import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedEffect;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup.Provider;
@@ -21,7 +20,7 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import java.util.Locale;
 
 /**
- * Adds readable datapack effect details to data-driven item tooltips.
+ * Adds readable datapack binding details to existing-item tooltips.
  */
 @EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
 public final class DataDrivenItemTooltipEvents {
@@ -32,32 +31,21 @@ public final class DataDrivenItemTooltipEvents {
     public static void appendDetails(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
         Provider registries = event.getContext().registries();
-        boolean advanced = event.getFlags().isAdvanced();
-        if (advanced) ItemBindingService.find(registries, stack).ifPresent(item -> event.getToolTip().add(
-                Component.translatable("tooltip.mxt.item.definition", item.reference().id().toString()).withStyle(ChatFormatting.DARK_GRAY)));
-        for (ResolvedEffect effect : ItemBindingService.effects(registries, stack)) {
-            switch (effect.definition()) {
-                case Weapon weapon -> appendWeapon(event, weapon);
-                case Pill pill -> appendPill(event, pill);
-                case SpiritRootItemEffect root -> appendSpiritRoot(event, root, advanced);
-                default -> appendUnknownEffect(event, effect, advanced);
-            }
-        }
+        ItemBindingService.weapon(registries, stack).ifPresent(weapon -> appendWeapon(event, weapon));
+        ItemBindingService.pill(registries, stack).ifPresent(pill -> appendPill(event, pill));
+        ItemBindingService.actions(registries, stack).stream()
+                .filter(GrantSpiritRootAction.class::isInstance)
+                .map(GrantSpiritRootAction.class::cast)
+                .forEach(action -> appendSpiritRoot(event, action));
     }
 
-    private static void appendSpiritRoot(ItemTooltipEvent event, SpiritRootItemEffect root, boolean advanced) {
+    private static void appendSpiritRoot(ItemTooltipEvent event, GrantSpiritRootAction action) {
         event.getToolTip().add(Component.translatable("tooltip.mxt.item.spirit_root").withStyle(ChatFormatting.AQUA));
-        if (advanced) event.getToolTip().add(
-                Component.translatable("tooltip.mxt.item.effect", root.spiritRoot().toString()).withStyle(ChatFormatting.DARK_GRAY));
+        if (event.getFlags().isAdvanced()) event.getToolTip().add(
+                Component.literal(action.spiritRoot().toString()).withStyle(ChatFormatting.DARK_GRAY));
     }
 
-    private static void appendUnknownEffect(ItemTooltipEvent event, ResolvedEffect effect, boolean advanced) {
-        event.getToolTip().add(Component.translatable("tooltip.mxt.item.unknown_effect").withStyle(ChatFormatting.GRAY));
-        if (advanced) event.getToolTip().add(
-                Component.translatable("tooltip.mxt.item.effect", effect.id().toString()).withStyle(ChatFormatting.DARK_GRAY));
-    }
-
-    private static void appendWeapon(ItemTooltipEvent event, Weapon weapon) {
+    private static void appendWeapon(ItemTooltipEvent event, WeaponBinding weapon) {
         event.getToolTip().add(Component.translatable("tooltip.mxt.item.weapon").withStyle(ChatFormatting.GOLD));
         event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attack_damage",
                 number(weapon.attackDamage().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
@@ -83,7 +71,7 @@ public final class DataDrivenItemTooltipEvents {
         }
     }
 
-    private static void appendPill(ItemTooltipEvent event, Pill pill) {
+    private static void appendPill(ItemTooltipEvent event, PillBinding pill) {
         double gain = pill.toxicityGain().evaluate(FormulaContext.EMPTY);
         double threshold = pill.toxicityThreshold().evaluate(FormulaContext.EMPTY);
         event.getToolTip().add(Component.translatable("tooltip.mxt.item.pill").withStyle(ChatFormatting.LIGHT_PURPLE));

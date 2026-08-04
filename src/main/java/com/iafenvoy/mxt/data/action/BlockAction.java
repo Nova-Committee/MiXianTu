@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.action;
 
-import com.iafenvoy.mxt.data.action.builtin.SequenceBlockAction;
+import com.iafenvoy.mxt.data.action.builtin.block.meta.SequenceBlockAction;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;

@@ -1,6 +1,5 @@
 {
   "grade": "uncommon",
-  "learn_conditions": [],
   "exclusive_tags": ["mxt_test:technique/sword"],
   "cultivation_modifier": 1.05,
   "granted_abilities": []

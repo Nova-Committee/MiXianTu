@@ -1,5 +1,7 @@
 {
   "dimension": "minecraft:the_end",
   "duration_ticks": 12000,
-  "max_members": 4
+  "max_members": 4,
+  "enter_action": { "type": "mxt:apply_effect", "effect": "minecraft:night_vision", "duration_ticks": 12000 },
+  "exit_action": { "type": "mxt:heal", "amount": 4 }
 }

@@ -27,6 +27,7 @@ public record AuraZone(double baseAura, double regenPerTick, Map<Identifier, Dou
                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                        double elementFitBonus, double elementConflictPenalty, Noise noise, ClientRender clientRender) {
+    public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.AURA_ZONE);
     public static final Codec<AuraZone> DIRECT_CODEC = RecordCodecBuilder.<AuraZone>create(instance -> instance.group(
             Codec.DOUBLE.optionalFieldOf("base_aura", 0.0D).forGetter(AuraZone::baseAura),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraZone::regenPerTick),
@@ -41,7 +42,6 @@ public record AuraZone(double baseAura, double regenPerTick, Map<Identifier, Dou
             Noise.CODEC.optionalFieldOf("noise", Noise.NONE).forGetter(AuraZone::noise),
             ClientRender.CODEC.optionalFieldOf("client_render", ClientRender.DEFAULT).forGetter(AuraZone::clientRender)
     ).apply(instance, AuraZone::new)).validate(AuraZone::validate);
-    public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.AURA_ZONE);
 
     private static DataResult<AuraZone> validate(AuraZone value) {
         if (!finite(value.baseAura) || value.baseAura < 0.0D || !finite(value.regenPerTick)

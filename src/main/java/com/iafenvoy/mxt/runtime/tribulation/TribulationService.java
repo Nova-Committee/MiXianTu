@@ -8,10 +8,6 @@ import com.iafenvoy.mxt.event.TribulationEvent.PhasePost;
 import com.iafenvoy.mxt.event.TribulationEvent.PhasePre;
 import com.iafenvoy.mxt.event.TribulationEvent.StartPost;
 import com.iafenvoy.mxt.event.TribulationEvent.StartPre;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -24,57 +20,44 @@ public final class TribulationService {
     private TribulationService() {
     }
 
-    public static StartResult start(TribulationData data, Identifier id, Tribulation definition, long gameTime, FormulaContext context) {
+    public static StartResult start(LivingEntity entity, TribulationData data, Identifier id, Tribulation definition, long gameTime, FormulaContext context) {
         if (data.tribulation().isPresent()) return StartResult.rejected(Failure.ALREADY_ACTIVE);
         if (definition.phases().isEmpty()) return StartResult.rejected(Failure.INVALID_FORMULA);
+        if (!definition.triggerCondition().test(entity, context)) return StartResult.rejected(Failure.CONDITIONS);
         long duration = duration(definition.phases().getFirst(), definition, context);
         if (duration < 0L) return StartResult.rejected(Failure.INVALID_FORMULA);
         if (NeoForge.EVENT_BUS.post(new StartPre(data, id, definition)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         data.start(id, 0, Math.addExact(gameTime, duration));
-        DomainBehaviorService.execute(MxtTypeRegistries.TRIBULATION_STAGE_BEHAVIOR, definition.phases().getFirst().startBehavior(), BehaviorContext.of(
-                Kind.TRIBULATION_PHASE_START, id, null, context, true));
+        definition.phases().getFirst().startAction().execute(entity, context);
         NeoForge.EVENT_BUS.post(new StartPost(data, id, definition));
         return StartResult.started(0);
     }
 
-    /**
-     * Entity-aware entry point for data-defined trigger conditions.
-     */
-    public static StartResult start(LivingEntity entity, TribulationData data, Identifier id, Tribulation definition, long gameTime, FormulaContext context) {
-        boolean allowed = definition.triggerConditions().stream().allMatch(condition -> condition.test(entity, context));
-        return allowed ? start(data, id, definition, gameTime, context) : StartResult.rejected(Failure.CONDITIONS);
-    }
-
-    public static TickResult tick(TribulationData data, Tribulation definition, long gameTime, FormulaContext context) {
+    public static TickResult tick(LivingEntity entity, TribulationData data, Tribulation definition, long gameTime, FormulaContext context) {
         if (data.tribulation().isEmpty() || data.paused()) return TickResult.idle();
         if (gameTime < data.phaseEndsAt()) return TickResult.running(data.phase());
         int next = data.phase() + 1;
         Identifier id = data.tribulation().orElseThrow();
         if (next >= definition.phases().size()) {
             int previous = data.phase();
-            DomainBehaviorService.execute(MxtTypeRegistries.TRIBULATION_STAGE_BEHAVIOR, definition.phases().get(previous).endBehavior(), BehaviorContext.of(
-                    Kind.TRIBULATION_PHASE_END, id, null, context, true));
+            definition.phases().get(previous).endAction().execute(entity, context);
             data.clear();
-            DomainBehaviorService.execute(MxtTypeRegistries.TRIBULATION_STAGE_BEHAVIOR, definition.successBehavior(), BehaviorContext.of(
-                    Kind.TRIBULATION_SUCCESS, id, null, context, true));
+            definition.successAction().execute(entity, context);
             NeoForge.EVENT_BUS.post(new Complete(data, id, definition, previous));
             return TickResult.completed();
         }
         long duration = duration(definition.phases().get(next), definition, context);
         if (duration < 0L) {
             data.setPaused(true);
-            DomainBehaviorService.execute(MxtTypeRegistries.TRIBULATION_STAGE_BEHAVIOR, definition.failureBehavior(), BehaviorContext.of(
-                    Kind.TRIBULATION_FAILURE, id, null, context, false));
+            definition.failAction().execute(entity, context);
             return TickResult.paused(Failure.INVALID_FORMULA);
         }
         if (NeoForge.EVENT_BUS.post(new PhasePre(data, id, definition, next)).isCanceled())
             return TickResult.running(data.phase());
         data.start(id, next, Math.addExact(gameTime, duration));
-        DomainBehaviorService.execute(MxtTypeRegistries.TRIBULATION_STAGE_BEHAVIOR, definition.phases().get(next - 1).endBehavior(), BehaviorContext.of(
-                Kind.TRIBULATION_PHASE_END, id, null, context, true));
-        DomainBehaviorService.execute(MxtTypeRegistries.TRIBULATION_STAGE_BEHAVIOR, definition.phases().get(next).startBehavior(), BehaviorContext.of(
-                Kind.TRIBULATION_PHASE_START, id, null, context, true));
+        definition.phases().get(next - 1).endAction().execute(entity, context);
+        definition.phases().get(next).startAction().execute(entity, context);
         NeoForge.EVENT_BUS.post(new PhasePost(data, id, definition, next));
         return TickResult.advanced(next);
     }

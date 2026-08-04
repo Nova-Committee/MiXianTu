@@ -4,10 +4,6 @@ import com.iafenvoy.mxt.attachment.ContractData;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -18,7 +14,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * Generic owner-follow and recall policy for bound mobs; contract definitions remain data driven.
@@ -45,8 +40,7 @@ public final class ContractEventBridge {
         } else if (distance > 4.0D * 4.0D) {
             pet.getNavigation().moveTo(owner, 1.0D);
         }
-        DomainBehaviorService.execute(MxtTypeRegistries.CONTRACT_LIFECYCLE_BEHAVIOR, definition.followBehavior(), BehaviorContext.of(
-                Kind.CONTRACT_FOLLOW, contract.contractType().orElseThrow(), pet, FormulaContext.EMPTY, true));
+        definition.followAction().execute(pet, FormulaContext.EMPTY);
     }
 
     /**
@@ -57,10 +51,7 @@ public final class ContractEventBridge {
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
         contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).ifPresent(definition -> {
             FormulaContext context = new FormulaContext(Map.of("damage", (double) event.getInflictedDamage()));
-            DomainBehaviorService.execute(MxtTypeRegistries.CONTRACT_LIFECYCLE_BEHAVIOR, definition.combatBehavior(), new BehaviorContext(
-                    Kind.CONTRACT_COMBAT, contract.contractType().orElseThrow(),
-                    Optional.of((ServerLevel) pet.level()), Optional.of(pet), Optional.of(event.getEntity()),
-                    Optional.empty(), context, true));
+            definition.combatAction().execute(pet, event.getEntity(), context);
         });
     }
 
@@ -72,11 +63,8 @@ public final class ContractEventBridge {
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
         if (!contract.bound()) return;
         contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).ifPresent(definition -> {
-            Identifier id = contract.contractType().orElseThrow();
-            DomainBehaviorService.execute(MxtTypeRegistries.CONTRACT_LIFECYCLE_BEHAVIOR, definition.breakBehavior(),
-                    BehaviorContext.of(Kind.CONTRACT_BREAK, id, pet, FormulaContext.EMPTY, false));
-            DomainBehaviorService.execute(MxtTypeRegistries.CONTRACT_LIFECYCLE_BEHAVIOR, definition.penaltyBehavior(),
-                    BehaviorContext.of(Kind.CONTRACT_PENALTY, id, pet, FormulaContext.EMPTY, false));
+            definition.breakAction().execute(pet, FormulaContext.EMPTY);
+            definition.penaltyAction().execute(pet, FormulaContext.EMPTY);
         });
         contract.clear();
     }

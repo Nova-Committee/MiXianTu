@@ -9,11 +9,7 @@ import com.iafenvoy.mxt.event.CultivationBreakEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
@@ -73,16 +69,14 @@ public final class CultivationService {
         BreakthroughResult result = commit(spirit, resources, targetId, target, context, () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
         if (result.advanced()) {
             if (entity instanceof ServerPlayer player) MxtCriteriaTriggers.BREAKTHROUGH.get().trigger(player, targetId);
-            DomainBehaviorService.execute(MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR, target.successBehavior(), BehaviorContext.of(
-                    Kind.BREAKTHROUGH_SUCCESS, targetId, entity, context, true));
+            target.successAction().execute(entity, context);
             FormulaContext tribulationContext = context.with("aura_tribulation_modifier", AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
             target.tribulation().ifPresent(tribulation ->
                     TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), HolderHelper.id(tribulation), tribulation.value(),
                             entity.level().getGameTime(), tribulationContext));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
         } else {
-            DomainBehaviorService.execute(MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR, target.failBehavior(), BehaviorContext.of(
-                    Kind.BREAKTHROUGH_FAILURE, targetId, entity, context, false));
+            target.failAction().execute(entity, context);
         }
         return result;
     }

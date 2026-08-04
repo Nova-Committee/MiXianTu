@@ -1,4 +1,9 @@
 {
-  "owner_conditions": [],
-  "creature_conditions": []
+  "follow_action": { "type": "mxt:apply_effect", "effect": "minecraft:speed", "duration_ticks": 40 },
+  "combat_action": {
+    "type": "mxt:target_action",
+    "action": { "type": "mxt:set_on_fire", "ticks": 40 }
+  },
+  "break_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 },
+  "penalty_action": { "type": "mxt:set_on_fire", "ticks": 100 }
 }

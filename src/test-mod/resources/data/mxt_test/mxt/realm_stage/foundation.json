@@ -3,5 +3,7 @@
   "next_realm": "mxt_test:core_forming",
   "progress_threshold": 100,
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
-  "tribulation": "mxt_test:three_thunders"
+  "tribulation": "mxt_test:three_thunders",
+  "success_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 5 },
+  "fail_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 100 }
 }

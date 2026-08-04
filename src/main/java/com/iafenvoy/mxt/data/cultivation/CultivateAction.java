@@ -2,10 +2,11 @@ package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.resource.ResourceGain;
-import com.iafenvoy.mxt.registry.BehaviorReferences;
-import com.iafenvoy.mxt.registry.BehaviorReferences.Reference;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.NeverEntityCondition;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
@@ -14,18 +15,17 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * A named cultivation activity. Behaviour identifiers are resolved by the cultivation action registry.
+ * A named cultivation activity with entity conditions and an interval action.
  */
-public record CultivateAction(List<CultivationCondition> startConditions, List<CultivationCondition> stopConditions,
+public record CultivateAction(EntityCondition startCondition, EntityCondition stopCondition,
                               int tickInterval, List<Identifier> environmentTags, List<ResourceCost> costs,
                               NumberProvider progressGain, NumberProvider auraCost, List<ResourceGain> auraGains,
-                              int cooldownTicks, Optional<Identifier> gainBehavior) {
+                              int cooldownTicks, EntityAction tickAction) {
     public static final Codec<CultivateAction> CODEC = RecordCodecBuilder.<CultivateAction>create(instance -> instance.group(
-            AutoIgnoreListCodec.create(MxtTypeRegistries.CULTIVATION_CONDITION.byNameCodec()).optionalFieldOf("start_conditions", List.of()).forGetter(CultivateAction::startConditions),
-            AutoIgnoreListCodec.create(MxtTypeRegistries.CULTIVATION_CONDITION.byNameCodec()).optionalFieldOf("stop_conditions", List.of()).forGetter(CultivateAction::stopConditions),
+            EntityCondition.CODEC.optionalFieldOf("start_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(CultivateAction::startCondition),
+            EntityCondition.CODEC.optionalFieldOf("stop_condition", NeverEntityCondition.INSTANCE).forGetter(CultivateAction::stopCondition),
             Codec.intRange(1, 72_000).optionalFieldOf("tick_interval", 20).forGetter(CultivateAction::tickInterval),
             Identifier.CODEC.listOf().optionalFieldOf("environment_tags", List.of()).forGetter(CultivateAction::environmentTags),
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(CultivateAction::costs),
@@ -33,7 +33,6 @@ public record CultivateAction(List<CultivationCondition> startConditions, List<C
             NumberProvider.CODEC.optionalFieldOf("aura_cost", new Constant(0.0D)).forGetter(CultivateAction::auraCost),
             AutoIgnoreListCodec.create(ResourceGain.CODEC).optionalFieldOf("aura_gains", List.of()).forGetter(CultivateAction::auraGains),
             Codec.intRange(0, 72_000).optionalFieldOf("cooldown", 0).forGetter(CultivateAction::cooldownTicks),
-            Identifier.CODEC.optionalFieldOf("gain_behavior").forGetter(CultivateAction::gainBehavior)
-    ).apply(instance, CultivateAction::new)).validate(value -> BehaviorReferences.validate(value, MxtTypeRegistries.CULTIVATION_OUTCOME_BEHAVIOR,
-            new Reference("gain_behavior", value.gainBehavior)));
+            EntityAction.CODEC.optionalFieldOf("tick_action", NoOpAction.INSTANCE).forGetter(CultivateAction::tickAction)
+    ).apply(instance, CultivateAction::new));
 }

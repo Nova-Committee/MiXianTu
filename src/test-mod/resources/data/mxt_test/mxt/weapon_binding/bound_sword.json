@@ -1,0 +1,24 @@
+{
+  "items": ["minecraft:diamond_sword", "minecraft:netherite_sword"],
+  "attack_damage": 6,
+  "attack_speed": -2.4,
+  "attributes": [],
+  "use_action": {
+    "type": "mxt:add_resource",
+    "resource": "mxt_test:qi",
+    "amount": 5
+  },
+  "attack_action": {
+    "type": "mxt:target_action",
+    "action": {
+      "type": "mxt:apply_effect",
+      "effect": "minecraft:glowing",
+      "duration_ticks": 60
+    }
+  },
+  "tick_action": {
+    "type": "mxt:add_resource",
+    "resource": "mxt_test:qi",
+    "amount": 0.1
+  }
+}

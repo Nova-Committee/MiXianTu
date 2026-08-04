@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.data;
 
 import com.iafenvoy.mxt.data.resource.ResourceCost;
-import com.iafenvoy.mxt.registry.BehaviorReferences;
-import com.iafenvoy.mxt.registry.BehaviorReferences.Reference;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.data.action.BlockAction;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.builtin.block.meta.NoOpBlockAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -14,27 +15,25 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * A multiblock formation's static shape, resource costs, and lifecycle behaviour IDs.
+ * A multiblock formation's static shape, resource costs, and lifecycle actions.
  */
 public record Formation(Identifier structureTemplate, NumberProvider radius, List<ResourceCost> activationCosts,
-                        List<ResourceCost> maintenanceCosts, Optional<Identifier> activateBehavior,
-                        Optional<Identifier> maintainBehavior, Optional<Identifier> triggerBehavior,
-                        Optional<Holder<AuraZone>> auraZone) {
+                        List<ResourceCost> maintenanceCosts, BlockAction activateAction,
+                        BlockAction tickAction, BlockAction deactivateAction,
+                        EntityAction entityTickAction,
+                        java.util.Optional<Holder<AuraZone>> auraZone) {
+    public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.FORMATION);
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(instance -> instance.group(
             Identifier.CODEC.fieldOf("structure_template").forGetter(Formation::structureTemplate),
             NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
             ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
             ResourceCost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
-            Identifier.CODEC.optionalFieldOf("activate_behavior").forGetter(Formation::activateBehavior),
-            Identifier.CODEC.optionalFieldOf("maintain_behavior").forGetter(Formation::maintainBehavior),
-            Identifier.CODEC.optionalFieldOf("trigger_behavior").forGetter(Formation::triggerBehavior),
+            BlockAction.CODEC.optionalFieldOf("activate_action", NoOpBlockAction.INSTANCE).forGetter(Formation::activateAction),
+            BlockAction.CODEC.optionalFieldOf("tick_action", NoOpBlockAction.INSTANCE).forGetter(Formation::tickAction),
+            BlockAction.CODEC.optionalFieldOf("deactivate_action", NoOpBlockAction.INSTANCE).forGetter(Formation::deactivateAction),
+            EntityAction.CODEC.optionalFieldOf("entity_tick_action", NoOpAction.INSTANCE).forGetter(Formation::entityTickAction),
             AuraZone.CODEC.optionalFieldOf("aura_zone").forGetter(Formation::auraZone)
-    ).apply(instance, Formation::new)).validate(value -> BehaviorReferences.validate(value, MxtTypeRegistries.FORMATION_LIFECYCLE_BEHAVIOR,
-            new Reference("activate_behavior", value.activateBehavior),
-            new Reference("maintain_behavior", value.maintainBehavior),
-            new Reference("trigger_behavior", value.triggerBehavior)));
-    public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.FORMATION);
+    ).apply(instance, Formation::new));
 }

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.action;
 
-import com.iafenvoy.mxt.data.action.builtin.SequenceEntityAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.meta.SequenceAction;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
@@ -17,8 +17,8 @@ import java.util.function.Function;
 public interface EntityAction {
     Codec<EntityAction> SINGLE_CODEC = MxtTypeRegistries.ENTITY_ACTION_TYPE.byNameCodec().dispatch("type", EntityAction::codec, Function.identity());
     Codec<EntityAction> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(action -> action, SequenceEntityAction::new),
-            action -> action instanceof SequenceEntityAction(
+            value -> value.map(action -> action, SequenceAction::new),
+            action -> action instanceof SequenceAction(
                     List<EntityAction> actions
             ) ? Either.right(actions) : Either.left(action)
     );

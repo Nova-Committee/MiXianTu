@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.TickResult.Sta
 import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
 import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
 import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -88,7 +87,7 @@ public final class AlchemyWorkstationService {
     private static List<Identifier> itemIds(List<ItemStack> stacks) {
         List<Identifier> result = new ArrayList<>();
         for (ItemStack stack : stacks) {
-            Identifier id = ItemBindingService.identifier(stack);
+            Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
             for (int count = 0; count < stack.getCount(); count++) result.add(id);
         }
         return List.copyOf(result);
@@ -97,9 +96,7 @@ public final class AlchemyWorkstationService {
     private static List<ItemStack> toStacks(List<Identifier> ids) {
         List<ItemStack> result = new ArrayList<>();
         for (Identifier id : ids)
-            ItemBindingService.create(id)
-                    .or(() -> BuiltInRegistries.ITEM.getOptional(id).map(ItemStack::new))
-                    .ifPresent(result::add);
+            BuiltInRegistries.ITEM.getOptional(id).map(ItemStack::new).ifPresent(result::add);
         return List.copyOf(result);
     }
 

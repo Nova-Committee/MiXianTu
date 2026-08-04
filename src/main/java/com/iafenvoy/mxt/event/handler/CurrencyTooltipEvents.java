@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.event.handler;
 
-import com.iafenvoy.mxt.data.economy.ChequeData;
+import com.iafenvoy.mxt.data.ChequeData;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import net.minecraft.ChatFormatting;

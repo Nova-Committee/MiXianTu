@@ -1,4 +1,5 @@
 {
+  "unlock_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "translation_key": "title.mxt_test.test_disciple",
   "priority": 1,
   "exclusive_tags": ["mxt_test:title/sect"],

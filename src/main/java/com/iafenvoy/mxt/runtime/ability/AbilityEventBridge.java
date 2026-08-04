@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityType.Aura;
 import com.iafenvoy.mxt.data.ability.AbilityType.Triggered;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesData;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Post;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Pre;
 import com.iafenvoy.mxt.integration.CuriosIntegration;
@@ -18,11 +19,14 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -63,8 +67,10 @@ public final class AbilityEventBridge {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
         AbilityHolderData abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderData resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        initializeHudResources(entity, resourceHolder);
         resourceHolder.values().keySet().forEach(resource -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, resource)
-                .ifPresent(definition -> ResourceService.regenerate(resourceHolder, resource, definition, 1L, FormulaContext.EMPTY)));
+                .ifPresent(definition -> ResourceService.regenerate(resourceHolder, resource, definition, 1L,
+                        ResourceService.formulaContext(entity, resource, definition, FormulaContext.EMPTY))));
         dispatch("tick", entity, FormulaContext.EMPTY, definition -> true);
         if (entity.level().getGameTime() % 20L == 0L) PassiveAttributeService.reconcile(entity);
         if (entity.level().getGameTime() % 20L == 0L) syncCuriosAbilities(entity, abilities);
@@ -163,6 +169,23 @@ public final class AbilityEventBridge {
 
     private static FormulaContext blockContext(BlockPos pos) {
         return new FormulaContext(Map.of("block_x", (double) pos.getX(), "block_y", (double) pos.getY(), "block_z", (double) pos.getZ()));
+    }
+
+    /**
+     * HUD resources are part of the player's visible baseline state, rather than
+     * being created only after an ability happens to spend or restore them.
+     */
+    private static void initializeHudResources(LivingEntity entity, ResourceHolderData holder) {
+        if (!(entity instanceof Player)) return;
+        MxtDatapackRegistries.holders(MxtDatapackRegistries.RESOURCE)
+                .filter(resource -> resource.value().defaultBar().isPresent())
+                .forEach(resource -> initializeResource(entity, holder, resource));
+    }
+
+    private static void initializeResource(LivingEntity entity, ResourceHolderData holder, Reference<Resource> resource) {
+        resource.unwrapKey().map(ResourceKey::identifier)
+                .ifPresent(id -> ResourceService.initialize(holder, id, resource.value(),
+                        ResourceService.formulaContext(entity, id, resource.value(), FormulaContext.EMPTY)));
     }
 
     private static void tickAuras(LivingEntity actor, AbilityHolderData abilities, long gameTime) {

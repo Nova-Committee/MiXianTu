@@ -1,6 +1,5 @@
 {
   "value_delta": -1,
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 0.5 }],
-  "conditions": [],
   "display_icon": "minecraft:feather"
 }

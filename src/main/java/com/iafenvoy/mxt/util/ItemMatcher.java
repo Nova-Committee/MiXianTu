@@ -1,8 +1,6 @@
 package com.iafenvoy.mxt.util;
 
 import com.iafenvoy.mxt.util.codec.CombinedCodecs;
-import com.iafenvoy.mxt.data.item.DatapackItemReference;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -38,21 +36,15 @@ public interface ItemMatcher {
     }
 
     /**
-     * One matcher entry: a physical item, an item tag, or a data-driven item reference.
+     * One matcher entry: a physical item or an item tag.
      */
-    sealed interface Entry permits ItemEntry, TagEntry, DefinitionEntry {
-        Codec<Entry> CODEC = Trio.codec(
-                BuiltInRegistries.ITEM.byNameCodec(),
-                TagKey.hashedCodec(Registries.ITEM),
-                DatapackItemReference.OBJECT_CODEC
-        ).xmap(
-                value -> value.map(ItemEntry::new, TagEntry::new, DefinitionEntry::new),
+    sealed interface Entry permits ItemEntry, TagEntry {
+        Codec<Entry> CODEC = Codec.either(BuiltInRegistries.ITEM.byNameCodec(), TagKey.hashedCodec(Registries.ITEM)).xmap(
+                value -> value.map(ItemEntry::new, TagEntry::new),
                 entry -> switch (entry) {
-                    case ItemEntry(Item item) -> Trio.first(item);
-                    case TagEntry(TagKey<Item> tag) -> Trio.second(tag);
-                    case DefinitionEntry(DatapackItemReference reference) -> Trio.third(reference);
-                }
-        );
+                    case ItemEntry(Item item) -> com.mojang.datafixers.util.Either.left(item);
+                    case TagEntry(TagKey<Item> tag) -> com.mojang.datafixers.util.Either.right(tag);
+                });
 
         boolean matches(ItemStack stack);
 
@@ -64,9 +56,6 @@ public interface ItemMatcher {
             return new TagEntry(tag);
         }
 
-        static Entry definition(DatapackItemReference reference) {
-            return new DefinitionEntry(reference);
-        }
     }
 
     record ItemEntry(Item item) implements Entry {
@@ -83,10 +72,4 @@ public interface ItemMatcher {
         }
     }
 
-    record DefinitionEntry(DatapackItemReference reference) implements Entry {
-        @Override
-        public boolean matches(ItemStack stack) {
-            return ItemBindingService.matches(stack, this.reference);
-        }
-    }
 }

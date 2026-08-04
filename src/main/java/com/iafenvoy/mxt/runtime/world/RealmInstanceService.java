@@ -8,10 +8,6 @@ import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.Exit;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -62,8 +58,8 @@ public final class RealmInstanceService {
         if (!data.active()) data.start(id, gameTime, definition.durationTicks());
         if (!data.add(member, definition.maxMembers())) return Result.rejected(Failure.FULL);
         NeoForge.EVENT_BUS.post(new EnterPost(level, id, member));
-        DomainBehaviorService.execute(MxtTypeRegistries.REALM_LIFECYCLE_BEHAVIOR, definition.enterBehavior(), BehaviorContext.of(
-                Kind.REALM_ENTER, id, level.getServer().getPlayerList().getPlayer(member), FormulaContext.EMPTY, true));
+        Optional.ofNullable(level.getServer().getPlayerList().getPlayer(member))
+                .ifPresent(player -> definition.enterAction().execute(player, FormulaContext.EMPTY));
         return Result.entered();
     }
 
@@ -83,9 +79,8 @@ public final class RealmInstanceService {
         if (data.definition().filter(id::equals).isPresent()) {
             data.remove(player.getUUID());
             NeoForge.EVENT_BUS.post(new Exit(source, id, player.getUUID()));
-            MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id).ifPresent(definition -> DomainBehaviorService.execute(
-                    MxtTypeRegistries.REALM_LIFECYCLE_BEHAVIOR, definition.exitBehavior(), BehaviorContext.of(
-                            Kind.REALM_EXIT, id, player, FormulaContext.EMPTY, true)));
+            MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id)
+                    .ifPresent(definition -> definition.exitAction().execute(player, FormulaContext.EMPTY));
             if (data.members().isEmpty()) data.clear();
         }
         return Result.exited();
@@ -96,9 +91,9 @@ public final class RealmInstanceService {
         if (id == null || !data.members().contains(member)) return Result.rejected(Failure.NOT_MEMBER);
         data.remove(member);
         NeoForge.EVENT_BUS.post(new Exit(level, id, member));
-        MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id).ifPresent(definition -> DomainBehaviorService.execute(
-                MxtTypeRegistries.REALM_LIFECYCLE_BEHAVIOR, definition.exitBehavior(), BehaviorContext.of(
-                        Kind.REALM_EXIT, id, level.getServer().getPlayerList().getPlayer(member), FormulaContext.EMPTY, true)));
+        MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id)
+                .ifPresent(definition -> Optional.ofNullable(level.getServer().getPlayerList().getPlayer(member))
+                        .ifPresent(player -> definition.exitAction().execute(player, FormulaContext.EMPTY)));
         if (data.members().isEmpty()) data.clear();
         return Result.exited();
     }

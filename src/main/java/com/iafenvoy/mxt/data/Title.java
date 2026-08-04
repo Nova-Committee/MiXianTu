@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
-import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -12,10 +11,10 @@ import java.util.List;
 /**
  * A displayable title with conflict groups and passive bonuses.
  */
-public record Title(List<CultivationCondition> unlockConditions, String translationKey, int priority,
+public record Title(EntityCondition unlockCondition, String translationKey, int priority,
                     List<AttributeModifier> passiveModifiers, List<Identifier> exclusiveTags, int maximumLevel) {
     public static final Codec<Title> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            AutoIgnoreListCodec.create(MxtTypeRegistries.CULTIVATION_CONDITION.byNameCodec()).optionalFieldOf("unlock_conditions", List.of()).forGetter(Title::unlockConditions),
+            EntityCondition.CODEC.optionalFieldOf("unlock_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Title::unlockCondition),
             Codec.STRING.optionalFieldOf("translation_key", "").forGetter(Title::translationKey),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Title::priority),
             AttributeModifier.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(Title::passiveModifiers),

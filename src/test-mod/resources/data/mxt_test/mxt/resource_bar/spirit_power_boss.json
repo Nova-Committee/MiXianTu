@@ -1,0 +1,8 @@
+{
+  "resource": "mxt_test:spirit_power",
+  "context": "boss_overlay",
+  "anchor": "top_left_stack",
+  "order": 0,
+  "visibility": { "type": "mxt:always" },
+  "renderer": { "type": "mxt:segmented_bar", "segments": 20, "gap": 1, "full_color": "#4e9cff", "empty_color": "#243047" }
+}

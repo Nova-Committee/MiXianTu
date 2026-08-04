@@ -6,12 +6,8 @@
     "S S"
   ],
   "key": {
-    "S": {
-      "tag": "minecraft:stone_crafting_materials"
-    },
-    "L": {
-      "tag": "c:lapis"
-    }
+    "S": "#minecraft:stone_crafting_materials",
+    "L": "minecraft:lapis_lazuli"
   },
   "result": {
     "id": "mxt:cheque_table"

@@ -24,7 +24,7 @@ public final class TribulationEventBridge {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
         TribulationData data = entity.getData(MxtAttachments.TRIBULATION);
         data.tribulation().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.TRIBULATION, id).map(definition -> new Entry(id, definition))).ifPresent(entry -> {
-            TickResult result = TribulationService.tick(data, entry.definition(), entity.level().getGameTime(), FormulaContexts.forEntity(entity));
+            TickResult result = TribulationService.tick(entity, data, entry.definition(), entity.level().getGameTime(), FormulaContexts.forEntity(entity));
             if (result.state() == State.COMPLETED && entity instanceof ServerPlayer player) {
                 MxtCriteriaTriggers.TRIBULATION.get().trigger(player, entry.id());
             }

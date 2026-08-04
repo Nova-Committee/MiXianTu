@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.data.economy.CurrencyValue;
+import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.Formation;
@@ -23,10 +23,8 @@ import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.item.ItemBinding;
-import com.iafenvoy.mxt.data.item.DatapackItem;
-import com.iafenvoy.mxt.data.item.ItemEffect;
-import com.iafenvoy.mxt.data.item.DatapackItemReference;
-import com.iafenvoy.mxt.data.item.DatapackItemRegistry;
+import com.iafenvoy.mxt.data.item.PillBinding;
+import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -38,6 +36,8 @@ import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.TagKey;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent.NewRegistry;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -49,6 +49,7 @@ import java.util.stream.Stream;
  * Native Minecraft datapack registries. Reloading and client synchronisation are
  * owned by the vanilla registry system; this class never stores a registry snapshot.
  */
+@EventBusSubscriber
 public final class MxtDatapackRegistries {
     private static final Identifier DISABLED_TAG = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "disabled");
     public static final ResourceKey<Registry<Resource>> RESOURCE = MxtRegistryKeys.RESOURCE;
@@ -75,11 +76,9 @@ public final class MxtDatapackRegistries {
     public static final ResourceKey<Registry<Sect>> SECT = MxtRegistryKeys.SECT;
     public static final ResourceKey<Registry<RealmInstance>> REALM_INSTANCE = MxtRegistryKeys.REALM_INSTANCE;
     public static final ResourceKey<Registry<CurrencyValue>> CURRENCY = MxtRegistryKeys.CURRENCY;
-    public static final ResourceKey<Registry<DatapackItem>> ITEM = MxtRegistryKeys.ITEM;
-    public static final ResourceKey<Registry<DatapackItem>> PILL = MxtRegistryKeys.PILL;
-    public static final ResourceKey<Registry<DatapackItem>> WEAPON = MxtRegistryKeys.WEAPON;
-    public static final ResourceKey<Registry<ItemEffect>> ITEM_EFFECT = MxtRegistryKeys.ITEM_EFFECT;
     public static final ResourceKey<Registry<ItemBinding>> ITEM_BINDING = MxtRegistryKeys.ITEM_BINDING;
+    public static final ResourceKey<Registry<WeaponBinding>> WEAPON_BINDING = MxtRegistryKeys.WEAPON_BINDING;
+    public static final ResourceKey<Registry<PillBinding>> PILL_BINDING = MxtRegistryKeys.PILL_BINDING;
     public static final ResourceKey<Registry<AuraZone>> AURA_ZONE = MxtRegistryKeys.AURA_ZONE;
     public static final ResourceKey<Registry<BlockAura>> BLOCK_AURA = MxtRegistryKeys.BLOCK_AURA;
     private static final List<ResourceKey<? extends Registry<?>>> KEYS = List.of(
@@ -91,17 +90,13 @@ public final class MxtDatapackRegistries {
             MxtRegistryKeys.ALCHEMY_RECIPE, MxtRegistryKeys.FORMATION,
             MxtRegistryKeys.TRIBULATION, MxtRegistryKeys.CREATURE_PROFILE, MxtRegistryKeys.CONTRACT_TYPE,
             MxtRegistryKeys.TITLE, MxtRegistryKeys.MATERIAL_GRADE, MxtRegistryKeys.SECT,
-            MxtRegistryKeys.REALM_INSTANCE, MxtRegistryKeys.CURRENCY, MxtRegistryKeys.ITEM,
-            MxtRegistryKeys.PILL, MxtRegistryKeys.WEAPON,
-            MxtRegistryKeys.ITEM_EFFECT,
-            MxtRegistryKeys.ITEM_BINDING,
+            MxtRegistryKeys.REALM_INSTANCE, MxtRegistryKeys.CURRENCY,
+            MxtRegistryKeys.ITEM_BINDING, MxtRegistryKeys.WEAPON_BINDING, MxtRegistryKeys.PILL_BINDING,
             MxtRegistryKeys.AURA_ZONE,
             MxtRegistryKeys.BLOCK_AURA
     );
 
-    private MxtDatapackRegistries() {
-    }
-
+    @SubscribeEvent
     public static void newDatapackRegistries(NewRegistry event) {
         register(event, MxtRegistryKeys.RESOURCE, Resource.DIRECT_CODEC);
         register(event, MxtRegistryKeys.RESOURCE_BAR, ResourceBar.DIRECT_CODEC);
@@ -112,8 +107,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtRegistryKeys.ABILITY, Ability.DIRECT_CODEC);
         register(event, MxtRegistryKeys.CURSE, Curse.DIRECT_CODEC);
         register(event, MxtRegistryKeys.FORGING_METHOD, ForgingMethod.DIRECT_CODEC);
-        register(event, MxtRegistryKeys.FORGING_BLUEPRINT,
-                ForgingBlueprint.codec(RegistryFixedCodec.create(MxtRegistryKeys.FORGING_METHOD)));
+        register(event, MxtRegistryKeys.FORGING_BLUEPRINT, ForgingBlueprint.DIRECT_CODEC);
         register(event, MxtRegistryKeys.CULTIVATION_TECHNIQUE, CultivationTechnique.CODEC);
         register(event, MxtRegistryKeys.CULTIVATE_ACTION, CultivateAction.CODEC);
         register(event, MxtRegistryKeys.ITEM_ARCHETYPE, ItemArchetype.CODEC);
@@ -128,11 +122,9 @@ public final class MxtDatapackRegistries {
         register(event, MxtRegistryKeys.SECT, Sect.CODEC);
         register(event, MxtRegistryKeys.REALM_INSTANCE, RealmInstance.CODEC);
         register(event, MxtRegistryKeys.CURRENCY, CurrencyValue.CODEC);
-        register(event, MxtRegistryKeys.ITEM, DatapackItem.CODEC);
-        register(event, MxtRegistryKeys.PILL, DatapackItem.CODEC);
-        register(event, MxtRegistryKeys.WEAPON, DatapackItem.CODEC);
-        register(event, MxtRegistryKeys.ITEM_EFFECT, ItemEffect.DIRECT_CODEC);
         register(event, MxtRegistryKeys.ITEM_BINDING, ItemBinding.CODEC);
+        register(event, MxtRegistryKeys.WEAPON_BINDING, WeaponBinding.CODEC);
+        register(event, MxtRegistryKeys.PILL_BINDING, PillBinding.CODEC);
         register(event, MxtRegistryKeys.AURA_ZONE, AuraZone.DIRECT_CODEC);
         register(event, MxtRegistryKeys.BLOCK_AURA, BlockAura.CODEC);
     }
@@ -143,30 +135,6 @@ public final class MxtDatapackRegistries {
 
     public static <T> Optional<T> get(ResourceKey<? extends Registry<T>> key, Identifier id) {
         return isDisabled(key, id) ? Optional.empty() : registry(key).getOptional(id);
-    }
-
-    /**
-     * Resolves a definition from its explicit data-driven item category.
-     */
-    public static Optional<DatapackItem> get(DatapackItemReference reference) {
-        return get(itemRegistry(reference.registry()), reference.id());
-    }
-
-    /**
-     * Returns all category-qualified definitions with the supplied ID.
-     */
-    public static Stream<DatapackItemReference> itemReferences(Identifier id) {
-        return Stream.of(DatapackItemRegistry.values())
-                .filter(category -> get(itemRegistry(category), id).isPresent())
-                .map(category -> new DatapackItemReference(category, id));
-    }
-
-    public static ResourceKey<Registry<DatapackItem>> itemRegistry(DatapackItemRegistry category) {
-        return switch (category) {
-            case OTHER -> ITEM;
-            case PILL -> PILL;
-            case WEAPON -> WEAPON;
-        };
     }
 
     public static <T> Stream<Reference<T>> holders(ResourceKey<? extends Registry<T>> key) {
@@ -198,13 +166,6 @@ public final class MxtDatapackRegistries {
         return access.lookupOrThrow(key).get(ResourceKey.create(key, id))
                 .filter(holder -> !holder.is(disabled))
                 .map(Holder::value);
-    }
-
-    /**
-     * Resolves a category-qualified item definition from a client registry lookup.
-     */
-    public static Optional<DatapackItem> get(Provider access, DatapackItemReference reference) {
-        return get(access, itemRegistry(reference.registry()), reference.id());
     }
 
     public static <T> boolean isDisabled(ResourceKey<? extends Registry<T>> key, Identifier id) {

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.condition;
 
-import com.iafenvoy.mxt.data.condition.builtin.AndBlockCondition;
+import com.iafenvoy.mxt.data.condition.builtin.block.meta.AndBlockCondition;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;

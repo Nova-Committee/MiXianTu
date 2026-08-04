@@ -1,7 +1,9 @@
 {
-  "item": "minecraft:apple",
-  "definition": {
-    "registry": "mxt:item",
-    "id": "mxt_test:fire_root_item"
-  }
+  "items": ["minecraft:apple", "#mxt_test:spirit_herbs"],
+  "actions": [
+    {
+      "type": "mxt:grant_spirit_root",
+      "spirit_root": "mxt_test:fire_root"
+    }
+  ]
 }

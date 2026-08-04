@@ -29,6 +29,7 @@ bin/
 
 run/
 run-test-client/
+run-test-server/
 !**/src/**/run/
 **/src/generated/**/.cache/
 repo/

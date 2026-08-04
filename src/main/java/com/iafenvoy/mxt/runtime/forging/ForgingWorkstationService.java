@@ -7,15 +7,10 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.Failure;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.FinishResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorldData.StationSession;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -45,7 +40,7 @@ public final class ForgingWorkstationService {
         ForgingWorldData world = level.getData(MxtAttachments.FORGING_WORLD);
         if (world.get(position).isPresent()) return false;
         ItemStack held = player.getMainHandItem();
-        if (held.isEmpty() || !ItemBindingService.matches(held, blueprint.input())) return false;
+        if (held.isEmpty() || !BuiltInRegistries.ITEM.getKey(held.getItem()).equals(blueprint.input())) return false;
         StartResult result = ForgingService.start(blueprint);
         if (!result.started()) return false;
         ItemStack input = held.copyWithCount(1);
@@ -64,7 +59,7 @@ public final class ForgingWorkstationService {
         if (station == null || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
         ForgingSession session = ForgingSession.restore(station.session().plan().orElseThrow(), station.session().session().orElseThrow());
-        boolean conditionsMet = method.conditions().stream().allMatch(condition -> condition.test(player, FormulaContext.EMPTY));
+        boolean conditionsMet = method.condition().test(player, FormulaContext.EMPTY);
         StrikeResult result = ForgingService.strike(session, methodId, method,
                 player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.EMPTY, () -> conditionsMet);
         if (!result.struck()) return false;
@@ -85,15 +80,13 @@ public final class ForgingWorkstationService {
             return true;
         }
         Identifier resultId = data.result().orElseThrow();
-        ItemStack output = ItemBindingService.create(resultId)
-                .or(() -> BuiltInRegistries.ITEM.getOptional(resultId).map(ItemStack::new))
+        ItemStack output = BuiltInRegistries.ITEM.getOptional(resultId).map(ItemStack::new)
                 .orElse(ItemStack.EMPTY);
         if (output.isEmpty()) return false;
         output.set(MxtDataComponents.FORGING_RESULT.get(), result.result());
         if (!player.getInventory().add(output)) player.drop(output, false);
-        MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId).ifPresent(blueprint -> DomainBehaviorService.execute(
-                MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.completeBehavior(),
-                BehaviorContext.of(Kind.FORGING_COMPLETE, blueprintId, player, FormulaContext.EMPTY, true)));
+        MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId)
+                .ifPresent(blueprint -> blueprint.completeAction().execute(player, FormulaContext.EMPTY));
         player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
         return true;
     }
@@ -105,9 +98,8 @@ public final class ForgingWorkstationService {
         if (data.plan().isEmpty() || data.session().isEmpty() || data.input().isEmpty()) return false;
         ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
         if (!ForgingService.cancel(session)) return false;
-        data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id)).ifPresent(blueprint -> DomainBehaviorService.execute(
-                MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.failBehavior(),
-                BehaviorContext.of(Kind.FORGING_FAIL, data.blueprint().orElseThrow(), player, FormulaContext.EMPTY, false)));
+        data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id))
+                .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.EMPTY));
         ItemStack input = data.input().orElseThrow();
         if (!player.getInventory().add(input)) player.drop(input, false);
         player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
@@ -125,9 +117,8 @@ public final class ForgingWorkstationService {
                 if (!entry.getValue().owner().equals(player.getUUID())) continue;
                 ForgingSessionData data = entry.getValue().session();
                 if (data.input().isEmpty()) continue;
-                data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id)).ifPresent(blueprint -> DomainBehaviorService.execute(
-                        MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.failBehavior(),
-                        BehaviorContext.of(Kind.FORGING_FAIL, data.blueprint().orElseThrow(), player, FormulaContext.EMPTY, false)));
+                data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id))
+                        .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.EMPTY));
                 player.spawnAtLocation(player.level(), data.input().orElseThrow());
                 world.remove(entry.getKey());
                 cancelled++;
@@ -149,13 +140,11 @@ public final class ForgingWorkstationService {
             data.input().ifPresent(input -> give(player, input));
         }
         if (player.getRandom().nextDouble() < settlement.failureProductRatio()) {
-            settlement.result().flatMap(ItemBindingService::create)
-                    .or(() -> settlement.result().flatMap(BuiltInRegistries.ITEM::getOptional).map(ItemStack::new))
+            settlement.result().flatMap(BuiltInRegistries.ITEM::getOptional).map(ItemStack::new)
                     .ifPresent(output -> give(player, output));
         }
-        data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id)).ifPresent(blueprint -> DomainBehaviorService.execute(
-                MxtTypeRegistries.FORGING_COMPLETION_BEHAVIOR, blueprint.failBehavior(),
-                BehaviorContext.of(Kind.FORGING_FAIL, data.blueprint().orElseThrow(), player, FormulaContext.EMPTY, false)));
+        data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id))
+                .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.EMPTY));
         player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
     }
 

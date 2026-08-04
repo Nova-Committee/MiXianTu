@@ -24,11 +24,14 @@ import net.minecraft.core.DefaultedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
 
 /**
  * Java-owned registries of codecs. Datapacks may select entries but can never extend these registries.
  */
+@EventBusSubscriber
 public final class MxtTypeRegistries {
     public static final ResourceKey<Registry<MapCodec<? extends AbilityType>>> ABILITY_TYPE_KEY = key("ability_type");
     public static final DefaultedRegistry<MapCodec<? extends AbilityType>> ABILITY_TYPE = new DefaultedMappedRegistry<>("empty", ABILITY_TYPE_KEY, Lifecycle.stable(), false);
@@ -85,9 +88,7 @@ public final class MxtTypeRegistries {
     public static final ResourceKey<Registry<CultivationCondition>> CULTIVATION_CONDITION_KEY = key("cultivation_condition");
     public static final DefaultedRegistry<CultivationCondition> CULTIVATION_CONDITION = new DefaultedMappedRegistry<>("always", CULTIVATION_CONDITION_KEY, Lifecycle.stable(), false);
 
-    private MxtTypeRegistries() {
-    }
-
+    @SubscribeEvent
     public static void newRegistries(NewRegistryEvent event) {
         event.register(ABILITY_TYPE);
         event.register(CURSE_TYPE);
