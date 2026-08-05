@@ -28,11 +28,6 @@ public record RidingRecursiveCondition(Optional<BiEntityCondition> biEntityCondi
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.test(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<RidingRecursiveCondition> codec() {
         return CODEC;
     }

@@ -18,11 +18,6 @@ public record BlockActionAction(BlockAction action) implements EntityAction {
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<BlockActionAction> codec() {
         return CODEC;
     }

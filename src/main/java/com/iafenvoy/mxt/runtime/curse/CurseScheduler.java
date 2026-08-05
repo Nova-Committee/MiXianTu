@@ -6,11 +6,9 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -80,7 +78,7 @@ public final class CurseScheduler {
     }
 
     private static FormulaContext context(Entity entity) {
-        return entity instanceof LivingEntity living ? FormulaContexts.forEntity(living) : FormulaContext.EMPTY;
+        return FormulaContext.of(entity);
     }
 
     private static final class Queue {

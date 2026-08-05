@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -19,7 +20,7 @@ public record AddExperienceAction(Optional<Integer> points, Optional<Integer> le
     ).apply(instance, AddExperienceAction::new));
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         if (entity instanceof Player player) {
             this.points.ifPresent(player::giveExperiencePoints);
             this.levels.ifPresent(player::giveExperienceLevels);

@@ -17,8 +17,8 @@ public record RidingRootCondition(BiEntityCondition bientityCondition) implement
     ).apply(instance, RidingRootCondition::new));
 
     @Override
-    public boolean test(Entity entity) {
-        return this.bientityCondition.test(entity, entity.getRootVehicle(), FormulaContext.EMPTY);
+    public boolean test(Entity entity, FormulaContext context) {
+        return this.bientityCondition.test(entity, entity.getRootVehicle(), context);
     }
 
     @Override

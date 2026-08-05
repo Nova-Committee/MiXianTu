@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.util.codec;
 
 import com.mojang.datafixers.util.Pair;
-import com.mojang.datafixers.util.Unit;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.*;
 import org.slf4j.Logger;
@@ -37,10 +36,8 @@ public record AutoIgnoreListCodec<E>(Codec<E> elementCodec) implements Codec<Lis
     }
 
     private class DecoderState<T> {
-        private static final DataResult<Unit> INITIAL_RESULT = DataResult.success(Unit.INSTANCE, Lifecycle.stable());
         private final DynamicOps<T> ops;
         private final List<E> elements = new ArrayList<>();
-        private final DataResult<Unit> result = INITIAL_RESULT;
 
         private DecoderState(final DynamicOps<T> ops) {
             this.ops = ops;

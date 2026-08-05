@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
@@ -10,7 +11,7 @@ public record ExperiencePointsCondition(Comparison comparison) implements Entity
     public static final MapCodec<ExperiencePointsCondition> CODEC = Comparison.CODEC.xmap(ExperiencePointsCondition::new, ExperiencePointsCondition::comparison);
 
     @Override
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity, FormulaContext context) {
         return entity instanceof Player player && this.comparison.compare(player.totalExperience);
     }
 

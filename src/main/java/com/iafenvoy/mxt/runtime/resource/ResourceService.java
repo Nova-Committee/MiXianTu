@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -30,7 +31,7 @@ public final class ResourceService {
         double value = definition.defaultValue().evaluate(context);
         if (!Double.isFinite(value)) return Result.invalid();
         double clamped = clamp(value, bounds);
-        holder.set(id, clamped, bounds.max(), -1L, "initialize");
+        holder.set(id, clamped, bounds.min(), bounds.max(), -1L, "initialize");
         return Result.changed(clamped);
     }
 
@@ -42,7 +43,7 @@ public final class ResourceService {
         if (bounds == null) return Result.invalid();
         double value = clamp(holder.get(id) + amount, bounds);
         if (Double.compare(value, holder.get(id)) == 0) return Result.unchanged(value);
-        holder.set(id, value, bounds.max(), holder.audit(id).lastChangedTick(), "resource_change");
+        holder.set(id, value, bounds.min(), bounds.max(), holder.audit(id).lastChangedTick(), "resource_change");
         return Result.changed(value);
     }
 
@@ -69,12 +70,12 @@ public final class ResourceService {
         values.put("level", (double) resolvedRank);
         values.put("absorbed_aura", absorbedAura);
         values.put("cultivation_progress", absorbedAura);
-        return new FormulaContext(values);
+        return new FormulaContext(values, base.random());
     }
 
     /** Builds the same resource context on either logical side from an entity attachment. */
     public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, Resource definition, FormulaContext base) {
-        return formulaContext(entity.getData(com.iafenvoy.mxt.registry.MxtAttachments.SPIRIT_DATA), resource, definition,
+        return formulaContext(entity.getData(MxtAttachments.SPIRIT_DATA), resource, definition,
                 FormulaContexts.forEntity(entity, base.variables()));
     }
 

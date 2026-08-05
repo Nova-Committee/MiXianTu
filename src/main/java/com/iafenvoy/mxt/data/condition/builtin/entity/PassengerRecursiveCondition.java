@@ -20,10 +20,10 @@ public record PassengerRecursiveCondition(BiEntityCondition bientityCondition,
     ).apply(instance, PassengerRecursiveCondition::new));
 
     @Override
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity, FormulaContext context) {
         long matches = entity.getPassengers().stream()
                 .flatMap(Entity::getPassengersAndSelf)
-                .filter(passenger -> this.bientityCondition.test(passenger, entity, FormulaContext.EMPTY))
+                .filter(passenger -> this.bientityCondition.test(passenger, entity, context))
                 .count();
         return this.comparison.compare(matches);
     }

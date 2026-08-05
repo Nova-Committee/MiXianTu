@@ -15,7 +15,6 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
@@ -33,7 +32,7 @@ public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>>
                          Optional<Holder<Tribulation>> tribulation, EntityAction successAction,
                          EntityAction failAction) {
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE);
-    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.<RealmStage>create(instance -> instance.group(
+    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
             RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
             NumberProvider.CODEC.fieldOf("progress_threshold").forGetter(RealmStage::progressThreshold),

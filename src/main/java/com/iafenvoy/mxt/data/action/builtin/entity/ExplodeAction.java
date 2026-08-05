@@ -43,11 +43,6 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<ExplodeAction> codec() {
         return CODEC;
     }

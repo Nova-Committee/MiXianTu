@@ -56,6 +56,6 @@ public final class CreatureProfileService {
     public static boolean applySelected(Mob creature) {
         if (creature.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()) return false;
         Identifier id = select(creature).orElse(null);
-        return id != null && MxtDatapackRegistries.get(MxtDatapackRegistries.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.EMPTY)).orElse(false);
+        return id != null && MxtDatapackRegistries.get(MxtDatapackRegistries.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.of(creature))).orElse(false);
     }
 }

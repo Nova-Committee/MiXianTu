@@ -59,9 +59,10 @@ public final class ForgingWorkstationService {
         if (station == null || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
         ForgingSession session = ForgingSession.restore(station.session().plan().orElseThrow(), station.session().session().orElseThrow());
-        boolean conditionsMet = method.condition().test(player, FormulaContext.EMPTY);
+        FormulaContext context = FormulaContext.of(player);
+        boolean conditionsMet = method.condition().test(player, context);
         StrikeResult result = ForgingService.strike(session, methodId, method,
-                player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.EMPTY, () -> conditionsMet);
+                player.getData(MxtAttachments.RESOURCE_HOLDER), context, () -> conditionsMet);
         if (!result.struck()) return false;
         station.session().update(session);
         return true;
@@ -86,7 +87,7 @@ public final class ForgingWorkstationService {
         output.set(MxtDataComponents.FORGING_RESULT.get(), result.result());
         if (!player.getInventory().add(output)) player.drop(output, false);
         MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId)
-                .ifPresent(blueprint -> blueprint.completeAction().execute(player, FormulaContext.EMPTY));
+                .ifPresent(blueprint -> blueprint.completeAction().execute(player, FormulaContext.of(player)));
         player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
         return true;
     }
@@ -99,7 +100,7 @@ public final class ForgingWorkstationService {
         ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
         if (!ForgingService.cancel(session)) return false;
         data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id))
-                .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.EMPTY));
+                .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.of(player)));
         ItemStack input = data.input().orElseThrow();
         if (!player.getInventory().add(input)) player.drop(input, false);
         player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
@@ -118,7 +119,7 @@ public final class ForgingWorkstationService {
                 ForgingSessionData data = entry.getValue().session();
                 if (data.input().isEmpty()) continue;
                 data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id))
-                        .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.EMPTY));
+                        .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.of(player)));
                 player.spawnAtLocation(player.level(), data.input().orElseThrow());
                 world.remove(entry.getKey());
                 cancelled++;
@@ -144,7 +145,7 @@ public final class ForgingWorkstationService {
                     .ifPresent(output -> give(player, output));
         }
         data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, id))
-                .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.EMPTY));
+                .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.of(player)));
         player.level().getData(MxtAttachments.FORGING_WORLD).remove(position);
     }
 

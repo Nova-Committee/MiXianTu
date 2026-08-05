@@ -29,7 +29,7 @@ public final class ServerNetworkHandler {
             return;
         }
         MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, payload.ability()).ifPresent(definition -> AbilityService.use(payload.ability(), definition, player,
-                player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.EMPTY));
+                player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player)));
     }
 
     static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {
@@ -56,7 +56,7 @@ public final class ServerNetworkHandler {
             return;
         }
         MxtDatapackRegistries.get(MxtDatapackRegistries.ITEM_ARCHETYPE, payload.archetype()).ifPresent(definition ->
-                FlightService.mount(player, player.getMainHandItem(), payload.archetype(), definition, FormulaContext.EMPTY));
+                FlightService.mount(player, player.getMainHandItem(), payload.archetype(), definition, FormulaContext.of(player)));
     }
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {

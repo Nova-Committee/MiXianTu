@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
@@ -40,7 +39,7 @@ public final class ContractEventBridge {
         } else if (distance > 4.0D * 4.0D) {
             pet.getNavigation().moveTo(owner, 1.0D);
         }
-        definition.followAction().execute(pet, FormulaContext.EMPTY);
+        definition.followAction().execute(pet, FormulaContext.of(pet));
     }
 
     /**
@@ -50,7 +49,7 @@ public final class ContractEventBridge {
         if (event.getEntity().level().isClientSide() || !(event.getSource().getEntity() instanceof Mob pet)) return;
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
         contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).ifPresent(definition -> {
-            FormulaContext context = new FormulaContext(Map.of("damage", (double) event.getInflictedDamage()));
+            FormulaContext context = FormulaContext.of(pet, Map.of("damage", (double) event.getInflictedDamage()));
             definition.combatAction().execute(pet, event.getEntity(), context);
         });
     }
@@ -63,8 +62,9 @@ public final class ContractEventBridge {
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
         if (!contract.bound()) return;
         contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).ifPresent(definition -> {
-            definition.breakAction().execute(pet, FormulaContext.EMPTY);
-            definition.penaltyAction().execute(pet, FormulaContext.EMPTY);
+            FormulaContext context = FormulaContext.of(pet);
+            definition.breakAction().execute(pet, context);
+            definition.penaltyAction().execute(pet, context);
         });
         contract.clear();
     }

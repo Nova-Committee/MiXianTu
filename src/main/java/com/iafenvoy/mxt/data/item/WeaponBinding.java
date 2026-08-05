@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.bientity.meta.BiEntityNoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
+import com.iafenvoy.mxt.util.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
 import com.iafenvoy.mxt.util.ItemMatcher;
@@ -16,7 +17,7 @@ import java.util.List;
 /**
  * Weapon behaviour attached directly to an already registered physical item.
  */
-public record WeaponBinding(List<ItemMatcher.Entry> entries, NumberProvider attackDamage, NumberProvider attackSpeed,
+public record WeaponBinding(List<Entry> entries, NumberProvider attackDamage, NumberProvider attackSpeed,
                             List<AttributeModifier> attributes, EntityAction useAction,
                             BiEntityAction attackAction, EntityAction tickAction) implements ItemMatcher {
     public static final Codec<WeaponBinding> CODEC = RecordCodecBuilder.create(instance -> instance.group(

@@ -5,7 +5,6 @@ import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.integration.MxtKubeJsApi;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
@@ -30,12 +29,12 @@ public final class MxtKubeJsApiFacade {
 
     public Object useAbility(Entity entity, String ability) {
         Identifier id = id(ability);
-        FormulaContext context = entity instanceof LivingEntity living ? FormulaContexts.forEntity(living) : FormulaContext.EMPTY;
+        FormulaContext context = FormulaContext.of(entity);
         return MxtKubeJsApi.useAbility(entity, id, context);
     }
 
     public Object tryBreakthrough(LivingEntity entity, String resource) {
-        return MxtKubeJsApi.tryBreakthrough(entity, id(resource), FormulaContexts.forEntity(entity));
+        return MxtKubeJsApi.tryBreakthrough(entity, id(resource), FormulaContext.of(entity));
     }
 
     public boolean removeCurse(Entity entity, String curse) {
@@ -48,7 +47,7 @@ public final class MxtKubeJsApiFacade {
     public Object applyCurse(Entity entity, String curse, int stacks, String source) {
         if (stacks < 1) throw new IllegalArgumentException("Curse stacks must be positive");
         if (source == null || source.isBlank()) throw new IllegalArgumentException("Curse source must not be blank");
-        FormulaContext context = entity instanceof LivingEntity living ? FormulaContexts.forEntity(living) : FormulaContext.EMPTY;
+        FormulaContext context = FormulaContext.of(entity);
         return MxtKubeJsApi.applyCurse(entity, id(curse), stacks, source, context);
     }
 
@@ -60,7 +59,7 @@ public final class MxtKubeJsApiFacade {
             RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, entity.level().registryAccess());
             List<ResourceCost> decoded = ResourceCost.LIST_CODEC.parse(ops, JsonParser.parseString(costs))
                     .getOrThrow(error -> new IllegalArgumentException("Invalid resource costs: " + error));
-            FormulaContext context = entity instanceof LivingEntity living ? FormulaContexts.forEntity(living) : FormulaContext.EMPTY;
+            FormulaContext context = FormulaContext.of(entity);
             return MxtKubeJsApi.tryConsumeResources(entity, decoded, context);
         } catch (RuntimeException exception) {
             throw new IllegalArgumentException("Invalid MXT resource costs", exception);

@@ -23,14 +23,7 @@ public interface EntityCondition {
             ) ? Either.right(conditions) : Either.left(condition)
     );
 
-    boolean test(Entity entity);
-
-    /**
-     * Tests with the immutable use/event formula context assembled by the caller.
-     */
-    default boolean test(Entity entity, FormulaContext context) {
-        return this.test(entity);
-    }
+    boolean test(Entity entity, FormulaContext context);
 
     MapCodec<? extends EntityCondition> codec();
 }

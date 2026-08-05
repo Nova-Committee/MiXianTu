@@ -31,11 +31,6 @@ public record ModifyComponentAction(Holder<Ability> ability, String component,
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         double value = this.value.evaluate(context);
         if (!Double.isFinite(value)) return;

@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
@@ -10,7 +11,7 @@ public record FoodLevelCondition(Comparison comparison) implements EntityConditi
     public static final MapCodec<FoodLevelCondition> CODEC = Comparison.CODEC.xmap(FoodLevelCondition::new, FoodLevelCondition::comparison);
 
     @Override
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity, FormulaContext context) {
         return entity instanceof Player player && this.comparison.compare(player.getFoodData().getFoodLevel());
     }
 

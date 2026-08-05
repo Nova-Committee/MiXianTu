@@ -9,11 +9,6 @@ public record NotEntityCondition(EntityCondition condition) implements EntityCon
     public static final MapCodec<NotEntityCondition> CODEC = SINGLE_CODEC.fieldOf("condition").xmap(NotEntityCondition::new, NotEntityCondition::condition);
 
     @Override
-    public boolean test(Entity entity) {
-        return !this.condition.test(entity);
-    }
-
-    @Override
     public boolean test(Entity entity, FormulaContext context) {
         return !this.condition.test(entity, context);
     }

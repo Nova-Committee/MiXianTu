@@ -15,13 +15,8 @@ public record EntityTypeTagCondition(TagKey<EntityType<?>> tag) implements Entit
     public static final MapCodec<EntityTypeTagCondition> CODEC = TagKey.hashedCodec(Registries.ENTITY_TYPE).fieldOf("tag").xmap(EntityTypeTagCondition::new, EntityTypeTagCondition::tag);
 
     @Override
-    public boolean test(Entity entity) {
-        return entity.getType().builtInRegistryHolder().is(this.tag);
-    }
-
-    @Override
     public boolean test(Entity entity, FormulaContext context) {
-        return this.test(entity);
+        return entity.getType().builtInRegistryHolder().is(this.tag);
     }
 
     @Override

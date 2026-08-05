@@ -15,11 +15,6 @@ public record SequenceAction(List<EntityAction> actions) implements EntityAction
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.actions.forEach(action -> action.execute(entity));
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         this.actions.forEach(action -> action.execute(entity, context));
     }

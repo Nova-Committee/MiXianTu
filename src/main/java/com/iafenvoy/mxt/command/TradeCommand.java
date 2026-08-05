@@ -33,8 +33,6 @@ public final class TradeCommand {
                 target.sendSystemMessage(Component.translatable("mxt.command.trade.request", player.getDisplayName())
                         .withStyle(style -> style.withClickEvent(new RunCommand("/trade " + player.getGameProfile().name()))));
             }
-            case STARTED -> {
-            }
         }
         return result == RequestResult.TOO_FAR || result == RequestResult.SELF || result == RequestResult.BUSY ? 0 : 1;
     }

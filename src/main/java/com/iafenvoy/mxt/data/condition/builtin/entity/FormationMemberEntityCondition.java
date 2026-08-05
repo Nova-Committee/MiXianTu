@@ -14,14 +14,9 @@ public enum FormationMemberEntityCondition implements EntityCondition {
     public static final MapCodec<FormationMemberEntityCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity, FormulaContext context) {
         return entity.level().getData(MxtAttachments.FORMATION_WORLD).formations().values().stream()
                 .anyMatch(formation -> formation.active() && formation.owner().filter(entity.getUUID()::equals).isPresent());
-    }
-
-    @Override
-    public boolean test(Entity entity, FormulaContext context) {
-        return this.test(entity);
     }
 
     @Override

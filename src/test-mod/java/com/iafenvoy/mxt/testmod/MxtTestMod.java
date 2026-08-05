@@ -12,8 +12,13 @@ import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
+import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
+import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.runtime.ability.AbilityService.PrepareResult;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
+import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.formation.FormationStructureValidator;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -23,6 +28,7 @@ import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.util.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.google.gson.JsonParser;
@@ -37,6 +43,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -115,7 +122,7 @@ public final class MxtTestMod {
     }
 
     private static void verifyDatapackCoverage(ServerStartedEvent event) {
-        for (var key : MxtDatapackRegistries.registries()) {
+        for (ResourceKey<? extends Registry<?>> key : MxtDatapackRegistries.registries()) {
             Registry<?> registry = event.getServer().registryAccess().lookupOrThrow(key);
             boolean hasTestDefinition = registry.listElements()
                     .anyMatch(holder -> MOD_ID.equals(holder.key().identifier().getNamespace()));
@@ -139,7 +146,7 @@ public final class MxtTestMod {
         spirit.setRealmStage(foundation);
         spirit.setCultivationProgress(40.0D);
         FormulaContext foundationContext = ResourceService.formulaContext(spirit, qiId, qi, FormulaContext.EMPTY);
-        ResourceService.Bounds foundationBounds = ResourceService.resolveBounds(qi, foundationContext)
+        Bounds foundationBounds = ResourceService.resolveBounds(qi, foundationContext)
                 .orElseThrow(() -> new IllegalStateException("Foundation qi bounds were invalid"));
         if (!same(foundationBounds.max(), 120.0D) || !same(qi.regen().evaluate(foundationContext), 0.25D)) {
             throw new IllegalStateException("Qi maximum and regeneration did not use foundation absorbed aura");
@@ -152,14 +159,22 @@ public final class MxtTestMod {
         }
         spirit.setRealmStage(coreForming);
         FormulaContext coreContext = ResourceService.formulaContext(spirit, qiId, qi, FormulaContext.EMPTY);
-        ResourceService.Bounds coreBounds = ResourceService.resolveBounds(qi, coreContext)
+        Bounds coreBounds = ResourceService.resolveBounds(qi, coreContext)
                 .orElseThrow(() -> new IllegalStateException("Core-forming qi bounds were invalid"));
         if (!same(coreBounds.max(), 170.0D) || !same(qi.regen().evaluate(coreContext), 0.35D)) {
             throw new IllegalStateException("Qi maximum and regeneration did not use realm rank");
         }
         ResourceService.change(holder, qiId, qi, 1_000.0D, coreContext);
-        if (!same(holder.get(qiId), 170.0D) || !same(holder.audit(qiId).maxSnapshot(), 170.0D)) {
+        if (!same(holder.get(qiId), 170.0D) || !same(holder.audit(qiId).minSnapshot(), 0.0D)
+                || !same(holder.audit(qiId).maxSnapshot(), 170.0D)) {
             throw new IllegalStateException("Qi resource changes did not clamp to its dynamic maximum");
+        }
+        ResourceHolderData.Snapshot snapshot = holder.snapshot();
+        holder.set(qiId, 2.0D);
+        holder.restore(snapshot);
+        if (!same(holder.get(qiId), 170.0D) || !same(holder.audit(qiId).minSnapshot(), 0.0D)
+                || !same(holder.audit(qiId).maxSnapshot(), 170.0D)) {
+            throw new IllegalStateException("Resource rollback did not preserve server-resolved bounds");
         }
 
         Identifier meditationId = Identifier.parse("mxt_test:fire_meditation");
@@ -175,7 +190,7 @@ public final class MxtTestMod {
         if (!CultivationActionService.start(absorbingSpirit, meditationId, meditation, 0L, () -> true).started()) {
             throw new IllegalStateException("Cultivation restoration test action did not start");
         }
-        CultivationActionService.Result absorbed = CultivationActionService.tick(absorbingSpirit, absorbingResources,
+        Result absorbed = CultivationActionService.tick(absorbingSpirit, absorbingResources,
                 absorbingAura, meditationId, meditation, 0L, FormulaContext.EMPTY, () -> true);
         if (!absorbed.progressed() || !same(absorbingSpirit.cultivationProgress(), 1.0D)
                 || !same(absorbingResources.get(qiId), 3.0D) || !same(absorbingResources.get(spiritPowerId), 4.0D)) {
@@ -189,12 +204,15 @@ public final class MxtTestMod {
         Identifier firebolt = Identifier.parse("mxt_test:firebolt");
         Ability ability = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, firebolt)
                 .orElseThrow(() -> new IllegalStateException("Ability energy-cost test definition was not loaded"));
+        if (!same(ability.castTime().evaluate(FormulaContext.EMPTY), 0.0D)) {
+            throw new IllegalStateException("Inline structured number providers did not evaluate correctly");
+        }
         AbilityHolderData abilities = new AbilityHolderData();
         abilities.grant(firebolt, Identifier.fromNamespaceAndPath(MOD_ID, "test"));
         ResourceHolderData abilityResources = new ResourceHolderData();
         abilityResources.set(spiritPower, 20.0D);
         abilityResources.set(soulPower, 3.0D);
-        AbilityService.PrepareResult prepared = AbilityService.prepare(firebolt, ability, abilities, abilityResources, 0L, FormulaContext.EMPTY);
+        PrepareResult prepared = AbilityService.prepare(firebolt, ability, abilities, abilityResources, 0L, FormulaContext.EMPTY);
         if (!prepared.approved() || !AbilityService.commit(prepared.use(), abilities, abilityResources, 0L).committed()
                 || !same(abilityResources.get(spiritPower), 12.0D) || !same(abilityResources.get(soulPower), 1.0D)) {
             throw new IllegalStateException("Ability costs did not deduct their declared resource bars");
@@ -204,7 +222,7 @@ public final class MxtTestMod {
                 .orElseThrow(() -> new IllegalStateException("Formation energy-cost test definition was not loaded"));
         ResourceHolderData formationResources = new ResourceHolderData();
         formationResources.set(spiritPower, 20.0D);
-        FormationService.ActivateResult activation = FormationService.activate(Identifier.parse("mxt_test:spirit_gathering"), formation,
+        ActivateResult activation = FormationService.activate(Identifier.parse("mxt_test:spirit_gathering"), formation,
                 formationResources, FormulaContext.EMPTY);
         if (!activation.active() || !same(formationResources.get(spiritPower), 10.0D)
                 || !FormationService.maintain(activation.instance(), formation, formationResources, FormulaContext.EMPTY).maintained()
@@ -220,17 +238,17 @@ public final class MxtTestMod {
     private static void verifyClientDefinitions(ServerStartedEvent event) {
         ResourceBar target = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE_BAR, Identifier.parse("mxt_test:qi_target_override"))
                 .orElseThrow(() -> new IllegalStateException("Target resource-bar test definition was not loaded"));
-        if (target.context() != ResourceBar.Context.TARGET_OVERLAY || !target.replaceDefault()) {
+        if (target.context() != Context.TARGET_OVERLAY || !target.replaceDefault()) {
             throw new IllegalStateException("Target resource-bar replacement configuration was not retained");
         }
         ResourceBar qiHud = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE_BAR, Identifier.parse("mxt_test:qi_hud"))
                 .orElseThrow(() -> new IllegalStateException("Qi resource-bar test definition was not loaded"));
-        if (qiHud.valueDisplay() != ResourceBar.ValueDisplay.CURRENT_AND_MAXIMUM) {
+        if (qiHud.valueDisplay() != ValueDisplay.CURRENT_AND_MAXIMUM) {
             throw new IllegalStateException("Resource-bar numeric display configuration was not retained");
         }
         ResourceBar boss = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE_BAR, Identifier.parse("mxt_test:spirit_power_boss"))
                 .orElseThrow(() -> new IllegalStateException("Boss resource-bar test definition was not loaded"));
-        if (boss.context() != ResourceBar.Context.BOSS_OVERLAY) {
+        if (boss.context() != Context.BOSS_OVERLAY) {
             throw new IllegalStateException("Boss resource-bar context was not retained");
         }
         AuraZone visuals = MxtDatapackRegistries.get(MxtDatapackRegistries.AURA_ZONE, Identifier.parse("mxt_test:firelands"))

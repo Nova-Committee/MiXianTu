@@ -65,7 +65,7 @@ public final class ResourceTransactions {
         }
         evaluation.amounts.forEach((id, amount) -> {
             Audit previous = holder.audit(id);
-            holder.set(id, holder.get(id) - amount, previous.maxSnapshot(), previous.lastChangedTick(), "cost");
+            holder.set(id, holder.get(id) - amount, previous.minSnapshot(), previous.maxSnapshot(), previous.lastChangedTick(), "cost");
         });
         return Result.committed(evaluation.amounts);
     }

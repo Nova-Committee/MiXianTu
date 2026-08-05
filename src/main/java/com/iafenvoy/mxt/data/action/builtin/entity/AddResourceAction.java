@@ -26,11 +26,6 @@ public record AddResourceAction(Holder<Resource> resource,
     ).apply(instance, AddResourceAction::new));
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         double amount = this.amount.evaluate(context);
         if (!Double.isFinite(amount)) return;

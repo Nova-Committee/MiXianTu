@@ -26,9 +26,5 @@ public interface BlockCondition {
 
     boolean test(Level level, BlockPos pos, FormulaContext context);
 
-    default boolean test(Level level, BlockPos pos) {
-        return this.test(level, pos, FormulaContext.EMPTY);
-    }
-
     MapCodec<? extends BlockCondition> codec();
 }

@@ -46,7 +46,7 @@ public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
         if (entity != null)
-            MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, this.curse).ifPresent(definition -> CurseService.apply(entity, this.curse, definition, this.stacks, entity.level().getGameTime(), FormulaContext.EMPTY, "loot"));
+            MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, this.curse).ifPresent(definition -> CurseService.apply(entity, this.curse, definition, this.stacks, entity.level().getGameTime(), FormulaContext.of(entity), "loot"));
         return stack;
     }
 }

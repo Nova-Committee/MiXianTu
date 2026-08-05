@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
+import com.iafenvoy.mxt.util.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
 import com.iafenvoy.mxt.util.ItemMatcher;
@@ -13,7 +14,7 @@ import java.util.List;
 /**
  * Pill behaviour attached directly to an already registered consumable item.
  */
-public record PillBinding(List<ItemMatcher.Entry> entries, EntityAction onConsume, NumberProvider toxicityGain,
+public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberProvider toxicityGain,
                           NumberProvider toxicityThreshold, EntityAction onOverdose,
                           NumberProvider toxicityAfterOverdose) implements ItemMatcher {
     public static final Codec<PillBinding> CODEC = RecordCodecBuilder.create(instance -> instance.group(

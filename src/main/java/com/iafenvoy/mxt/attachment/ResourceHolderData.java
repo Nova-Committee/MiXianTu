@@ -9,7 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Server-authoritative current values; resource bounds and regen stay in the datapack definition.
+ * Server-authoritative current values and resolved bounds. The bound snapshots are synchronised
+ * with the attachment so clients never need to authoritatively evaluate a resource formula.
  */
 public final class ResourceHolderData {
     public static final MapCodec<ResourceHolderData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
@@ -53,14 +54,15 @@ public final class ResourceHolderData {
     }
 
     /**
-     * Records a server-side state change with the resolved definition maximum and an auditable source.
+     * Records a server-side state change with the resolved definition bounds and an auditable source.
      */
-    public void set(Identifier resource, double value, double maxSnapshot, long changedAt, String source) {
-        if (!Double.isFinite(value) || !Double.isFinite(maxSnapshot) || changedAt < -1L || source == null || source.isBlank()) {
+    public void set(Identifier resource, double value, double minSnapshot, double maxSnapshot, long changedAt, String source) {
+        if (!Double.isFinite(value) || !Double.isFinite(minSnapshot) || !Double.isFinite(maxSnapshot)
+                || minSnapshot > maxSnapshot || changedAt < -1L || source == null || source.isBlank()) {
             throw new IllegalArgumentException("Invalid resource audit state");
         }
         this.values.put(resource, value);
-        this.audit.put(resource, new Audit(maxSnapshot, changedAt, source));
+        this.audit.put(resource, new Audit(minSnapshot, maxSnapshot, changedAt, source));
     }
 
     public boolean remove(Identifier resource) {
@@ -80,26 +82,51 @@ public final class ResourceHolderData {
         return this.audit.getOrDefault(resource, Audit.initial(this.get(resource)));
     }
 
+    /** Captures values and resolved bounds together for transactional rollback. */
+    public Snapshot snapshot() {
+        return new Snapshot(this.values, this.audit);
+    }
+
+    public void restore(Snapshot snapshot) {
+        this.values.clear();
+        this.audit.clear();
+        this.values.putAll(snapshot.values());
+        this.audit.putAll(snapshot.audit());
+    }
+
+    /**
+     * Restores legacy value-only state. Prefer {@link #snapshot()} and {@link #restore(Snapshot)}
+     * for transactions so resolved client-visible bounds are preserved.
+     */
     public void restore(Map<Identifier, Double> snapshot) {
         this.values.clear();
         this.audit.clear();
         snapshot.forEach(this::set);
     }
 
-    public record Audit(double maxSnapshot, long lastChangedTick, String source) {
+    public record Snapshot(Map<Identifier, Double> values, Map<Identifier, Audit> audit) {
+        public Snapshot {
+            values = Map.copyOf(values);
+            audit = Map.copyOf(audit);
+        }
+    }
+
+    public record Audit(double minSnapshot, double maxSnapshot, long lastChangedTick, String source) {
         public static final Codec<Audit> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.fieldOf("min_snapshot").forGetter(Audit::minSnapshot),
                 Codec.DOUBLE.fieldOf("max_snapshot").forGetter(Audit::maxSnapshot),
                 Codec.LONG.fieldOf("last_changed_tick").forGetter(Audit::lastChangedTick),
                 Codec.STRING.fieldOf("source").forGetter(Audit::source)
         ).apply(instance, Audit::new));
 
         public Audit {
-            if (!Double.isFinite(maxSnapshot) || lastChangedTick < -1L || source == null || source.isBlank())
+            if (!Double.isFinite(minSnapshot) || !Double.isFinite(maxSnapshot) || minSnapshot > maxSnapshot
+                    || lastChangedTick < -1L || source == null || source.isBlank())
                 throw new IllegalArgumentException("Invalid resource audit");
         }
 
         private static Audit initial(double value) {
-            return new Audit(value, -1L, "initial");
+            return new Audit(value, value, -1L, "initial");
         }
     }
 }

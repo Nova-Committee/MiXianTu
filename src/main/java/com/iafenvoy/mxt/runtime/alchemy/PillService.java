@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.attachment.PillToxicityData;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
@@ -15,7 +14,7 @@ public final class PillService {
     }
 
     public static Result consume(LivingEntity entity, PillBinding definition) {
-        FormulaContext context = FormulaContexts.forEntity(entity);
+        FormulaContext context = FormulaContext.of(entity);
         definition.onConsume().execute(entity, context);
         PillToxicityData toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);
         double value = toxicity.add(definition.toxicityGain().evaluate(context));

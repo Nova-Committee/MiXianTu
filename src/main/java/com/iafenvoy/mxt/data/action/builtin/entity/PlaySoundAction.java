@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -26,7 +27,7 @@ public record PlaySoundAction(SoundEvent sound, Optional<SoundSource> category, 
     ).apply(instance, PlaySoundAction::new));
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), this.sound, this.category.orElse(entity.getSoundSource()), this.volume, this.pitch);
     }
 

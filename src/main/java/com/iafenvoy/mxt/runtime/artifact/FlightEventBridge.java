@@ -24,6 +24,6 @@ public final class FlightEventBridge {
             FlightService.dismount(player, Failure.NOT_OWNED);
             return;
         }
-        FlightService.tick(player, data.archetype().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.ITEM_ARCHETYPE, id)).orElseThrow(), FormulaContext.EMPTY);
+        FlightService.tick(player, data.archetype().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.ITEM_ARCHETYPE, id)).orElseThrow(), FormulaContext.of(player));
     }
 }

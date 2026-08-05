@@ -15,11 +15,6 @@ public record InBlockCondition(BlockCondition blockCondition) implements EntityC
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.test(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<InBlockCondition> codec() {
         return CODEC;
     }

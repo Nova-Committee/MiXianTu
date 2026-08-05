@@ -14,7 +14,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 public record ContractType(EntityCondition ownerCondition, EntityCondition creatureCondition,
                            EntityAction followAction, BiEntityAction combatAction,
                            EntityAction breakAction, EntityAction penaltyAction) {
-    public static final Codec<ContractType> CODEC = RecordCodecBuilder.<ContractType>create(instance -> instance.group(
+    public static final Codec<ContractType> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             EntityCondition.CODEC.optionalFieldOf("owner_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(ContractType::ownerCondition),
             EntityCondition.CODEC.optionalFieldOf("creature_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(ContractType::creatureCondition),
             EntityAction.CODEC.optionalFieldOf("follow_action", NoOpAction.INSTANCE).forGetter(ContractType::followAction),

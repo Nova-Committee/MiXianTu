@@ -42,11 +42,6 @@ public record SpawnParticlesAction(ParticleOptions particle, Optional<BiEntityCo
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<SpawnParticlesAction> codec() {
         return CODEC;
     }

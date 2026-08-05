@@ -59,7 +59,7 @@ public final class AbilityEventBridge {
     public static void onLivingDamage(LivingDamageEvent.Post event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
-        FormulaContext context = new FormulaContext(Map.of("damage", (double) event.getInflictedDamage()));
+        FormulaContext context = FormulaContext.of(entity, Map.of("damage", (double) event.getInflictedDamage()));
         dispatch("hurt", entity, context, definition -> definition.damageCondition().test(event.getSource(), event.getInflictedDamage(), context));
     }
 
@@ -71,7 +71,7 @@ public final class AbilityEventBridge {
         resourceHolder.values().keySet().forEach(resource -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, resource)
                 .ifPresent(definition -> ResourceService.regenerate(resourceHolder, resource, definition, 1L,
                         ResourceService.formulaContext(entity, resource, definition, FormulaContext.EMPTY))));
-        dispatch("tick", entity, FormulaContext.EMPTY, definition -> true);
+        dispatch("tick", entity, FormulaContext.of(entity), definition -> true);
         if (entity.level().getGameTime() % 20L == 0L) PassiveAttributeService.reconcile(entity);
         if (entity.level().getGameTime() % 20L == 0L) syncCuriosAbilities(entity, abilities);
         tickAuras(entity, abilities, entity.level().getGameTime());
@@ -84,7 +84,7 @@ public final class AbilityEventBridge {
             return;
         }
         AbilityService.tickChannel(abilityId, definition, entity, abilities, resourceHolder,
-                entity.level().getGameTime(), FormulaContext.EMPTY);
+                entity.level().getGameTime(), FormulaContext.of(entity));
     }
 
     public static void onAttack(AttackEntityEvent event) {
@@ -92,16 +92,16 @@ public final class AbilityEventBridge {
         Map<String, Double> values = new LinkedHashMap<>();
         values.put("target_is_living", event.getTarget() instanceof LivingEntity ? 1.0D : 0.0D);
         if (event.getTarget() instanceof LivingEntity target) values.put("target_health", (double) target.getHealth());
-        dispatch("attack", event.getEntity(), new FormulaContext(values), definition -> true);
+        dispatch("attack", event.getEntity(), FormulaContext.of(event.getEntity(), values), definition -> true);
     }
 
     public static void onLivingDeath(LivingDeathEvent event) {
         LivingEntity victim = event.getEntity();
         if (victim.level().isClientSide()) return;
-        FormulaContext victimContext = new FormulaContext(Map.of("victim_health", Math.max(0.0D, victim.getHealth())));
+        FormulaContext victimContext = FormulaContext.of(victim, Map.of("victim_health", Math.max(0.0D, victim.getHealth())));
         dispatch("death", victim, victimContext, definition -> true);
         if (event.getSource().getEntity() instanceof LivingEntity attacker && attacker != victim) {
-            FormulaContext attackerContext = new FormulaContext(Map.of("target_health", Math.max(0.0D, victim.getHealth())));
+            FormulaContext attackerContext = FormulaContext.of(attacker, Map.of("target_health", Math.max(0.0D, victim.getHealth())));
             dispatch("kill", attacker, attackerContext, definition -> true);
         }
     }
@@ -109,17 +109,17 @@ public final class AbilityEventBridge {
     public static void onItemUseFinish(Finish event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
-        dispatch("item_use", entity, new FormulaContext(Map.of("use_duration", (double) event.getDuration())), definition -> true);
+        dispatch("item_use", entity, FormulaContext.of(entity, Map.of("use_duration", (double) event.getDuration())), definition -> true);
     }
 
     public static void onBlockUse(RightClickBlock event) {
         if (event.getLevel().isClientSide()) return;
-        dispatch("block_use", event.getEntity(), blockContext(event.getPos()), definition -> true);
+        dispatch("block_use", event.getEntity(), blockContext(event.getEntity(), event.getPos()), definition -> true);
     }
 
     public static void onBlockBreak(BreakBlockEvent event) {
         if (event.getLevel().isClientSide()) return;
-        dispatch("block_break", event.getPlayer(), blockContext(event.getPos()), definition -> true);
+        dispatch("block_break", event.getPlayer(), blockContext(event.getPlayer(), event.getPos()), definition -> true);
     }
 
     /**
@@ -132,7 +132,7 @@ public final class AbilityEventBridge {
         Identifier source = equipmentSource(event.getSlot(), event.getTo());
         itemAbilities(event.getFrom()).forEach(ability -> holder.revoke(ability, source));
         itemAbilities(event.getTo()).forEach(ability -> holder.grant(ability, source));
-        FormulaContext context = new FormulaContext(Map.of("equipment_slot", (double) event.getSlot().ordinal()));
+        FormulaContext context = FormulaContext.of(entity, Map.of("equipment_slot", (double) event.getSlot().ordinal()));
         dispatch("equip", entity, context, definition -> true);
     }
 
@@ -164,11 +164,11 @@ public final class AbilityEventBridge {
     public static void onBreakthrough(LivingEntity entity, Identifier target, FormulaContext context) {
         Map<String, Double> values = new LinkedHashMap<>(context.variables());
         values.put("breakthrough", 1.0D);
-        dispatch("breakthrough", entity, new FormulaContext(values), definition -> true);
+        dispatch("breakthrough", entity, new FormulaContext(values, context.random()), definition -> true);
     }
 
-    private static FormulaContext blockContext(BlockPos pos) {
-        return new FormulaContext(Map.of("block_x", (double) pos.getX(), "block_y", (double) pos.getY(), "block_z", (double) pos.getZ()));
+    private static FormulaContext blockContext(Entity entity, BlockPos pos) {
+        return FormulaContext.of(entity, Map.of("block_x", (double) pos.getX(), "block_y", (double) pos.getY(), "block_z", (double) pos.getZ()));
     }
 
     /**
@@ -194,17 +194,18 @@ public final class AbilityEventBridge {
             if (definition == null || !(definition.type() instanceof Aura(
                     NumberProvider interval1,
                     NumberProvider radius1
-            )) || !definition.condition().test(actor, FormulaContext.EMPTY))
+            )) || !definition.condition().test(actor, FormulaContext.of(actor)))
                 continue;
             long dueAt = Math.round(abilities.componentState(abilityId, "aura_next_tick").map(AbilityComponentState::value).orElse((double) gameTime));
             if (gameTime < dueAt) continue;
-            double interval = interval1.evaluate(FormulaContext.EMPTY);
-            double radius = radius1.evaluate(FormulaContext.EMPTY);
+            FormulaContext actorContext = FormulaContext.of(actor);
+            double interval = interval1.evaluate(actorContext);
+            double radius = radius1.evaluate(actorContext);
             if (!Double.isFinite(interval) || interval <= 0.0D || !Double.isFinite(radius) || radius < 0.0D) continue;
             double radiusSquared = radius * radius;
             for (Entity target : actor.level().getEntities(actor, actor.getBoundingBox().inflate(radius))) {
                 double distanceSquared = actor.distanceToSqr(target);
-                FormulaContext context = new FormulaContext(Map.of("aura_radius", radius, "distance", Math.sqrt(distanceSquared)));
+                FormulaContext context = FormulaContext.of(actor, Map.of("aura_radius", radius, "distance", Math.sqrt(distanceSquared)));
                 if (distanceSquared <= radiusSquared && definition.targetCondition().test(actor, target, context))
                     definition.biEntityAction().execute(actor, target, context);
             }
@@ -216,7 +217,7 @@ public final class AbilityEventBridge {
         for (Identifier abilityId : abilities.sources().keySet()) {
             if (abilities.componentState(abilityId, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE) > gameTime)
                 continue;
-            MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).ifPresent(definition -> AbilityService.finishCast(abilityId, definition, actor, abilities, resources, gameTime, FormulaContext.EMPTY));
+            MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).ifPresent(definition -> AbilityService.finishCast(abilityId, definition, actor, abilities, resources, gameTime, FormulaContext.of(actor)));
         }
     }
 

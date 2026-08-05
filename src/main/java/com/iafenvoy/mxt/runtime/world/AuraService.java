@@ -96,13 +96,23 @@ public final class AuraService {
         Identifier biome = level.getBiome(pos).unwrapKey().map(ResourceKey::identifier).orElse(EMPTY);
         Resolved fallback = new Resolved(EMPTY, EMPTY_ZONE, SourceKind.CHUNK);
         Registry<Biome> biomeRegistry = level.registryAccess().lookupOrThrow(Registries.BIOME);
-        Registry<LevelStem> dimensionRegistry = level.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
         Resolved biomeResult = MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.AURA_ZONE)
                 .filter(holder -> RegistryCodecs.matches(holder.value().biomes(), biomeRegistry, Registries.BIOME, biome))
                 .findFirst().map(holder -> resolved(holder, SourceKind.BIOME)).orElse(fallback);
         return MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.AURA_ZONE)
-                .filter(holder -> RegistryCodecs.matchesKey(holder.value().dimensions(), dimensionRegistry, dimension))
+                .filter(holder -> matchesDimension(level, holder.value(), dimension))
                 .findFirst().map(holder -> resolved(holder, SourceKind.DIMENSION)).orElse(biomeResult);
+    }
+
+    /**
+     * Dimension stems are a writable registry that is not synced to clients. The client can
+     * still resolve direct dimension IDs from its level key, but only the server may expand a
+     * dimension tag through the LEVEL_STEM registry.
+     */
+    private static boolean matchesDimension(Level level, AuraZone zone, Identifier dimension) {
+        if (!(level instanceof ServerLevel server)) return RegistryCodecs.matchesKey(zone.dimensions(), dimension);
+        Registry<LevelStem> registry = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
+        return RegistryCodecs.matchesKey(zone.dimensions(), registry, dimension);
     }
 
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {

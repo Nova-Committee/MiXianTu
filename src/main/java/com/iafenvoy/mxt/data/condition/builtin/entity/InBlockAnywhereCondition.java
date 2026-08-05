@@ -29,11 +29,6 @@ public record InBlockAnywhereCondition(BlockCondition blockCondition,
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.test(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<InBlockAnywhereCondition> codec() {
         return CODEC;
     }

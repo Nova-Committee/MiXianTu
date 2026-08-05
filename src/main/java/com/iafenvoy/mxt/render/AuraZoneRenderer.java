@@ -15,7 +15,10 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent.ComputeFogColor;
+import net.neoforged.neoforge.client.event.ViewportEvent.RenderFog;
 
 import java.util.Optional;
 
@@ -26,7 +29,7 @@ public final class AuraZoneRenderer {
     }
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick(Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null || minecraft.level.getGameTime() % 5L != 0L) return;
         resolve(minecraft.player).ifPresent(render -> particle(render).ifPresent(options -> {
@@ -40,7 +43,7 @@ public final class AuraZoneRenderer {
     }
 
     @SubscribeEvent
-    public static void onFogColor(ViewportEvent.ComputeFogColor event) {
+    public static void onFogColor(ComputeFogColor event) {
         resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasVisualOverride).ifPresent(render -> {
             int color = color(render.fogColor());
             event.setRed(((color >>> 16) & 0xFF) / 255.0F);
@@ -50,7 +53,7 @@ public final class AuraZoneRenderer {
     }
 
     @SubscribeEvent
-    public static void onRenderFog(ViewportEvent.RenderFog event) {
+    public static void onRenderFog(RenderFog event) {
         resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasVisualOverride)
                 .ifPresent(render -> {
                     float far = Math.min(event.getFarPlaneDistance(), render.renderDistance());

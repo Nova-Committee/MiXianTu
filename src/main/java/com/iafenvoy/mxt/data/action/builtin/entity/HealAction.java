@@ -12,14 +12,6 @@ public record HealAction(NumberProvider amount) implements EntityAction {
     public static final MapCodec<HealAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(NumberProvider.CODEC.fieldOf("amount").forGetter(HealAction::amount)).apply(instance, HealAction::new));
 
     @Override
-    public void execute(Entity entity) {
-        if (entity instanceof LivingEntity living) {
-            double value = this.amount.evaluate(FormulaContext.EMPTY);
-            if (Double.isFinite(value) && value > 0.0D) living.heal((float) value);
-        }
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         if (entity instanceof LivingEntity living) {
             double value = this.amount.evaluate(context);

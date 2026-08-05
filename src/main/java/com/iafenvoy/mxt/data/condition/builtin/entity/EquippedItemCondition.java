@@ -27,11 +27,6 @@ public record EquippedItemCondition(EquipmentSlot equipmentSlot,
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.test(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<EquippedItemCondition> codec() {
         return CODEC;
     }

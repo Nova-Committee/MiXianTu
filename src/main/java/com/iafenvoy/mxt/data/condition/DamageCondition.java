@@ -25,9 +25,5 @@ public interface DamageCondition {
 
     boolean test(DamageSource source, float amount, FormulaContext context);
 
-    default boolean test(DamageSource source, float amount) {
-        return this.test(source, amount, FormulaContext.EMPTY);
-    }
-
     MapCodec<? extends DamageCondition> codec();
 }

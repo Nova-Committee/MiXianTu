@@ -38,11 +38,6 @@ public record RidingAction(Optional<EntityAction> action, Optional<BiEntityActio
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<RidingAction> codec() {
         return CODEC;
     }

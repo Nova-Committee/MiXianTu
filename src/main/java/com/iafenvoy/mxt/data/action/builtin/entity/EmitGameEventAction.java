@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
@@ -10,7 +11,7 @@ public record EmitGameEventAction(Holder<GameEvent> event) implements EntityActi
     public static final MapCodec<EmitGameEventAction> CODEC = GameEvent.CODEC.fieldOf("event").xmap(EmitGameEventAction::new, EmitGameEventAction::event);
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         entity.gameEvent(this.event);
     }
 

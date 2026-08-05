@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -17,7 +18,7 @@ public record GrantSpiritRootAction(Holder<SpiritRoot> spiritRoot) implements En
     ).apply(instance, GrantSpiritRootAction::new));
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         if (entity instanceof LivingEntity living) {
             CultivationIdentityService.grantSpiritRoot(living, HolderHelper.id(this.spiritRoot), this.spiritRoot.value());
         }

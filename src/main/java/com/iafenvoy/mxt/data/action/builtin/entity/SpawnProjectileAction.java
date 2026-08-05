@@ -24,11 +24,6 @@ public record SpawnProjectileAction(EntityType<?> entityType, NumberProvider vel
     ).apply(instance, SpawnProjectileAction::new));
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         double x = this.velocityX.evaluate(context), y = this.velocityY.evaluate(context), z = this.velocityZ.evaluate(context);
         if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z) || entity.level().isClientSide()) return;

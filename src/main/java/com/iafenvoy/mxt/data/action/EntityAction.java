@@ -23,14 +23,7 @@ public interface EntityAction {
             ) ? Either.right(actions) : Either.left(action)
     );
 
-    void execute(Entity entity);
-
-    /**
-     * Executes with the immutable use/event formula context assembled by the caller.
-     */
-    default void execute(Entity entity, FormulaContext context) {
-        this.execute(entity);
-    }
+    void execute(Entity entity, FormulaContext context);
 
     MapCodec<? extends EntityAction> codec();
 }

@@ -21,11 +21,6 @@ public record GiveItemAction(ItemStack stack, Optional<ItemAction> itemAction,
     ).apply(instance, GiveItemAction::new));
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         if (!(entity instanceof Player player)) return;
         ItemStack result = this.stack.copy();

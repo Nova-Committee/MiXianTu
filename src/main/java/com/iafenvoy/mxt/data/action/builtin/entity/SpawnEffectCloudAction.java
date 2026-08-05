@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -30,7 +31,7 @@ public record SpawnEffectCloudAction(float radius, float radiusOnUse, int waitTi
     }
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         if (!(entity.level() instanceof ServerLevel level)) return;
         AreaEffectCloud cloud = EntityType.AREA_EFFECT_CLOUD.create(level, EntitySpawnReason.TRIGGERED);
         if (cloud == null) return;

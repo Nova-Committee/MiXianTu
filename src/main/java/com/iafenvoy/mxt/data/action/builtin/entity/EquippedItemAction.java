@@ -25,11 +25,6 @@ public record EquippedItemAction(EquipmentSlot slot, ItemAction action) implemen
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<EquippedItemAction> codec() {
         return CODEC;
     }

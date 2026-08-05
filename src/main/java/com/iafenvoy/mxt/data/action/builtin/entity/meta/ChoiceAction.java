@@ -22,11 +22,6 @@ public record ChoiceAction(List<WeightedActionEntry<EntityAction>> actions) impl
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<ChoiceAction> codec() {
         return CODEC;
     }

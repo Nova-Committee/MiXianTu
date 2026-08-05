@@ -18,11 +18,6 @@ public record RidingCondition(Optional<BiEntityCondition> biEntityCondition) imp
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.test(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<RidingCondition> codec() {
         return CODEC;
     }

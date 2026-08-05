@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
@@ -11,7 +12,7 @@ public record RemoveEffectAction(MobEffect effect) implements EntityAction {
     public static final MapCodec<RemoveEffectAction> CODEC = BuiltInRegistries.MOB_EFFECT.byNameCodec().fieldOf("effect").xmap(RemoveEffectAction::new, RemoveEffectAction::effect);
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         if (entity instanceof LivingEntity living)
             living.removeEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(this.effect));
     }

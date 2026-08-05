@@ -27,11 +27,6 @@ public record RemoveCursesByTagAction(List<Identifier> tags) implements EntityAc
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         List<Identifier> matches = entity.getData(MxtAttachments.CURSE_HOLDER).instances().keySet().stream()
                 .filter(id -> this.tags.stream().anyMatch(tag -> MxtDatapackRegistries.isTagged(MxtDatapackRegistries.CURSE, id, tag)))

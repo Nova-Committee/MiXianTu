@@ -25,9 +25,5 @@ public interface BiEntityAction {
 
     void execute(Entity actor, Entity target, FormulaContext context);
 
-    default void execute(Entity actor, Entity target) {
-        this.execute(actor, target, FormulaContext.EMPTY);
-    }
-
     MapCodec<? extends BiEntityAction> codec();
 }

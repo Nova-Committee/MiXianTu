@@ -23,7 +23,7 @@ public record CultivateAction(EntityCondition startCondition, EntityCondition st
                               int tickInterval, List<Identifier> environmentTags, List<ResourceCost> costs,
                               NumberProvider progressGain, NumberProvider auraCost, List<ResourceGain> auraGains,
                               int cooldownTicks, EntityAction tickAction) {
-    public static final Codec<CultivateAction> CODEC = RecordCodecBuilder.<CultivateAction>create(instance -> instance.group(
+    public static final Codec<CultivateAction> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             EntityCondition.CODEC.optionalFieldOf("start_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(CultivateAction::startCondition),
             EntityCondition.CODEC.optionalFieldOf("stop_condition", NeverEntityCondition.INSTANCE).forGetter(CultivateAction::stopCondition),
             Codec.intRange(1, 72_000).optionalFieldOf("tick_interval", 20).forGetter(CultivateAction::tickInterval),

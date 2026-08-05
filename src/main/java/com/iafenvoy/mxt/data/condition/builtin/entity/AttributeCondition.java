@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -16,7 +17,7 @@ public record AttributeCondition(Holder<Attribute> attribute, Comparison compari
     ).apply(instance, AttributeCondition::new));
 
     @Override
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity, FormulaContext context) {
         return entity instanceof LivingEntity living && this.comparison.compare(living.getAttributeValue(this.attribute));
     }
 

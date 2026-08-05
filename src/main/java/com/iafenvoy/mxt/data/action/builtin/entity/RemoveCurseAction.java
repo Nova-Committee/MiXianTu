@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -20,7 +21,7 @@ public record RemoveCurseAction(Holder<Curse> curse) implements EntityAction {
     ).apply(instance, RemoveCurseAction::new));
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         CurseService.remove(entity.getData(MxtAttachments.CURSE_HOLDER), HolderHelper.id(this.curse), Reason.CLEANSED, entity.level().getGameTime());
     }
 

@@ -25,9 +25,5 @@ public interface BiEntityCondition {
 
     boolean test(Entity actor, Entity target, FormulaContext context);
 
-    default boolean test(Entity actor, Entity target) {
-        return this.test(actor, target, FormulaContext.EMPTY);
-    }
-
     MapCodec<? extends BiEntityCondition> codec();
 }

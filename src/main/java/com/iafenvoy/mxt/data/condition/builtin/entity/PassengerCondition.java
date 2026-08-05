@@ -24,11 +24,6 @@ public record PassengerCondition(Optional<BiEntityCondition> biEntityCondition,
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.test(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<PassengerCondition> codec() {
         return CODEC;
     }

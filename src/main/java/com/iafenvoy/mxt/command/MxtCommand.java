@@ -159,7 +159,7 @@ public final class MxtCommand {
         Identifier id = parseId(source, rawId);
         if (player == null || id == null) return 0;
         UseResult result = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, id).map(definition -> AbilityService.use(id, definition, player,
-                player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.EMPTY)).orElse(null);
+                player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player))).orElse(null);
         if (result == null || !result.committed()) {
             source.sendFailure(Component.translatable("mxt.command.ability.cast_failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
@@ -173,7 +173,7 @@ public final class MxtCommand {
         Identifier id = parseId(source, rawId);
         if (player == null || id == null) return 0;
         BreakthroughResult result = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id).map(definition -> CultivationService.attempt(player,
-                player.getData(MxtAttachments.SPIRIT_DATA), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.EMPTY, () -> true)).orElse(null);
+                player.getData(MxtAttachments.SPIRIT_DATA), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true)).orElse(null);
         if (result == null || !result.advanced()) {
             source.sendFailure(Component.translatable("mxt.command.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
             return 0;

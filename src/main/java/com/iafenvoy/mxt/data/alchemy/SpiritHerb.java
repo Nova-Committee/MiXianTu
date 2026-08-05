@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.alchemy;
 
 import com.iafenvoy.mxt.data.MaterialGrade;
 import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.util.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
 import com.mojang.serialization.Codec;
@@ -15,7 +16,7 @@ import java.util.List;
  * Metadata attached to existing items selected by {@code items}; this framework
  * never registers a dedicated herb Item for a datapack entry.
  */
-public record SpiritHerb(List<ItemMatcher.Entry> entries, Holder<MaterialGrade> materialGrade, NumberProvider age,
+public record SpiritHerb(List<Entry> entries, Holder<MaterialGrade> materialGrade, NumberProvider age,
                          List<Identifier> elementTags, List<Identifier> materialTags, NumberProvider growthRate,
                          NumberProvider dropChance) implements ItemMatcher {
     public static final Codec<SpiritHerb> CODEC = RecordCodecBuilder.create(instance -> instance.group(

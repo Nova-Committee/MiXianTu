@@ -18,11 +18,6 @@ public record KnockbackAction(NumberProvider x, NumberProvider y, NumberProvider
     ).apply(instance, KnockbackAction::new));
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         double x = this.x.evaluate(context), y = this.y.evaluate(context), z = this.z.evaluate(context);
         if (Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z)) entity.push(x, y, z);

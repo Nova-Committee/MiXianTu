@@ -13,11 +13,6 @@ public record DamageAction(NumberProvider amount) implements EntityAction {
     public static final MapCodec<DamageAction> CODEC = NumberProvider.CODEC.fieldOf("amount").xmap(DamageAction::new, DamageAction::amount);
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         double amount = this.amount.evaluate(context);
         if (Double.isFinite(amount) && amount > 0.0D) entity.hurt(entity.damageSources().generic(), (float) amount);

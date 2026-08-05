@@ -5,7 +5,31 @@
     { "id": "mxt_test:spirit_power", "amount": "8 + level" },
     { "id": "mxt_test:soul_power", "amount": 2 }
   ],
-  "cast_time": 0,
+  "cast_time": {
+    "type": "mxt:sum",
+    "summands": [
+      0,
+      {
+        "type": "mxt:uniform",
+        "min": 0,
+        "max": 0
+      },
+      {
+        "type": "mxt:binomial",
+        "n": 1,
+        "p": 0
+      },
+      {
+        "type": "mxt:weighted_list",
+        "distribution": [
+          {
+            "data": 0,
+            "weight": 1
+          }
+        ]
+      }
+    ]
+  },
   "cooldown": 20,
   "element_affinity": ["mxt_test:fire", "#mxt_test:basic"]
 }

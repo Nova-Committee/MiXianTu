@@ -24,11 +24,6 @@ public record IfElseAction(EntityCondition condition, EntityAction ifAction,
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<IfElseAction> codec() {
         return CODEC;
     }

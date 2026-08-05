@@ -26,9 +26,5 @@ public interface ItemCondition {
 
     boolean test(Entity holder, ItemStack stack, FormulaContext context);
 
-    default boolean test(Entity holder, ItemStack stack) {
-        return this.test(holder, stack, FormulaContext.EMPTY);
-    }
-
     MapCodec<? extends ItemCondition> codec();
 }

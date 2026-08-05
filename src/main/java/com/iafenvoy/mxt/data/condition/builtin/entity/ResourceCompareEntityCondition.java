@@ -18,11 +18,6 @@ public record ResourceCompareEntityCondition(Holder<Resource> resource,
     ).apply(instance, ResourceCompareEntityCondition::new));
 
     @Override
-    public boolean test(Entity entity) {
-        return entity.getData(MxtAttachments.RESOURCE_HOLDER).get(HolderHelper.id(this.resource)) >= this.min.evaluate(FormulaContext.EMPTY);
-    }
-
-    @Override
     public boolean test(Entity entity, FormulaContext context) {
         return entity.getData(MxtAttachments.RESOURCE_HOLDER).get(HolderHelper.id(this.resource)) >= this.min.evaluate(context);
     }

@@ -26,11 +26,6 @@ public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
     ).apply(instance, ApplyCurseAction::new));
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         double resolvedStacks = this.stacks.evaluate(context);
         if (!Double.isFinite(resolvedStacks) || resolvedStacks < 1.0D || resolvedStacks > 256.0D) return;

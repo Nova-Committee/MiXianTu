@@ -291,7 +291,7 @@ public final class AbilityService {
         )))
             return UseResult.rejected(Failure.INVALID_FORMULA, null);
         Snapshot abilitySnapshot = abilities.snapshot();
-        Map<Identifier, Double> resourceSnapshot = resources.values();
+        ResourceHolderData.Snapshot resourceSnapshot = resources.snapshot();
         LinkedHashMap<Identifier, Double> paid = new LinkedHashMap<>();
         UseResult lastFailure = UseResult.rejected(Failure.NOT_GRANTED, null);
         for (Holder<Ability> childHolder : abilities1) {
@@ -326,7 +326,7 @@ public final class AbilityService {
                 id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id));
         LinkedHashMap<String, Double> variables = new LinkedHashMap<>(context.variables());
         variables.put("element_modifier", modifier);
-        return new FormulaContext(variables);
+        return new FormulaContext(variables, context.random());
     }
 
     private static <T extends AbilityComponent> Optional<T> component(Ability definition, Class<T> type) {

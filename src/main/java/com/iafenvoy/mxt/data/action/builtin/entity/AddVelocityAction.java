@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Space;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -19,7 +20,7 @@ public record AddVelocityAction(float x, float y, float z, Space space, boolean 
     ).apply(instance, AddVelocityAction::new));
 
     @Override
-    public void execute(Entity entity) {
+    public void execute(Entity entity, FormulaContext context) {
         Vector3f velocity = new Vector3f(this.x, this.y, this.z);
         this.space.toGlobal(velocity, entity);
         Vec3 value = new Vec3(velocity);

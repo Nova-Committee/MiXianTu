@@ -24,11 +24,6 @@ public record ChanceAction(EntityAction action, float chance,
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<ChanceAction> codec() {
         return CODEC;
     }

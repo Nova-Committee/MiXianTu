@@ -10,11 +10,11 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.alchemy.PillService;
 import com.iafenvoy.mxt.util.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -23,11 +23,13 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.ItemAttributeModifiers.Builder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -76,14 +78,14 @@ public final class ItemBindingService {
     /** Runs the active main-hand weapon's periodic effects server-side. */
     public static void tickMainHandWeapon(LivingEntity holder) {
         if (holder.level().isClientSide()) return;
-        FormulaContext context = FormulaContexts.forEntity(holder);
+        FormulaContext context = FormulaContext.of(holder);
         weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.tickAction().execute(holder, context));
     }
 
     /** Runs the active main-hand weapon's left-click action against the attacked entity. */
     public static void onMainHandWeaponAttack(LivingEntity holder, Entity target) {
         if (holder.level().isClientSide()) return;
-        FormulaContext context = FormulaContexts.forEntity(holder, java.util.Map.of(
+        FormulaContext context = FormulaContext.of(holder, Map.of(
                 "target_is_living", target instanceof LivingEntity ? 1.0D : 0.0D,
                 "target_health", target instanceof LivingEntity living ? (double) living.getHealth() : 0.0D
         ));
@@ -93,14 +95,14 @@ public final class ItemBindingService {
     /** Runs a main-hand weapon's explicit right-click action. */
     public static void onMainHandWeaponUse(LivingEntity holder) {
         if (holder.level().isClientSide()) return;
-        FormulaContext context = FormulaContexts.forEntity(holder);
+        FormulaContext context = FormulaContext.of(holder);
         weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.useAction().execute(holder, context));
     }
 
     /** Dispatches generic item-binding actions and pill behaviour after vanilla consumption. */
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return;
-        FormulaContext context = FormulaContexts.forEntity(entity);
+        FormulaContext context = FormulaContext.of(entity);
         actions(stack).forEach(action -> action.execute(entity, context));
         pill(stack).ifPresent(definition -> PillService.consume(entity, definition));
     }
@@ -124,7 +126,7 @@ public final class ItemBindingService {
         });
     }
 
-    private static ItemAttributeModifiers weaponModifiers(net.minecraft.world.item.Item item, WeaponBinding weapon) {
+    private static ItemAttributeModifiers weaponModifiers(Item item, WeaponBinding weapon) {
         Builder builder = ItemAttributeModifiers.builder();
         add(builder, Attributes.ATTACK_DAMAGE, modifierId(item, "attack_damage"),
                 weapon.attackDamage().evaluate(FormulaContext.EMPTY), Operation.ADD_VALUE);
@@ -144,8 +146,8 @@ public final class ItemBindingService {
         }
     }
 
-    private static Identifier modifierId(net.minecraft.world.item.Item item, String suffix) {
-        Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
+    private static Identifier modifierId(Item item, String suffix) {
+        Identifier itemId = BuiltInRegistries.ITEM.getKey(item);
         return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
                 "weapon_binding/" + itemId.getNamespace() + "/" + itemId.getPath() + "/" + suffix);
     }

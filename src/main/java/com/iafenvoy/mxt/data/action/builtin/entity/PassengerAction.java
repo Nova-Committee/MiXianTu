@@ -35,11 +35,6 @@ public record PassengerAction(Optional<EntityAction> action, Optional<BiEntityAc
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<PassengerAction> codec() {
         return CODEC;
     }

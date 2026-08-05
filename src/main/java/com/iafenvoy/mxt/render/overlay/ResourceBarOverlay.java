@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Radial;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Segmented;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.TextOnly;
@@ -15,7 +15,6 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.client.DeltaTracker;
@@ -39,6 +38,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -63,7 +63,7 @@ public enum ResourceBarOverlay implements GuiLayer {
         Player player = minecraft.player;
         if (minecraft.options.hideGui || player == null || minecraft.level == null) return;
 
-        Map<LayoutKey, Integer> offsets = new java.util.HashMap<>();
+        Map<LayoutKey, Integer> offsets = new HashMap<>();
         for (ResolvedBar bar : collect(player)) {
             LayoutKey layout = new LayoutKey(bar.definition().context(), bar.definition().anchor());
             int offset = offsets.getOrDefault(layout, 0);
@@ -75,13 +75,12 @@ public enum ResourceBarOverlay implements GuiLayer {
 
     private static List<ResolvedBar> collect(Player player) {
         Registry<ResourceBar> bars = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE_BAR);
-        Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE);
         List<ResolvedBar> result = new ArrayList<>();
-        collectFor(result, bars, resources, player, Context.SELF_HUD);
+        collectFor(result, bars, player, Context.SELF_HUD);
         if (minecraft().crosshairPickEntity instanceof LivingEntity target)
-            collectFor(result, bars, resources, target, Context.TARGET_OVERLAY);
+            collectFor(result, bars, target, Context.TARGET_OVERLAY);
         if (minecraft().crosshairPickEntity instanceof LivingEntity target)
-            collectFor(result, bars, resources, target, Context.BOSS_OVERLAY);
+            collectFor(result, bars, target, Context.BOSS_OVERLAY);
         return result.stream()
                 .sorted(Comparator.comparing((ResolvedBar bar) -> bar.definition().context())
                         .thenComparingInt(bar -> bar.definition().order()).thenComparing(ResolvedBar::id))
@@ -92,8 +91,7 @@ public enum ResourceBarOverlay implements GuiLayer {
         return Minecraft.getInstance();
     }
 
-    private static void collectFor(List<ResolvedBar> result, Registry<ResourceBar> bars, Registry<Resource> resources,
-                                   LivingEntity entity, Context context) {
+    private static void collectFor(List<ResolvedBar> result, Registry<ResourceBar> bars, LivingEntity entity, Context context) {
         ResourceHolderData values = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = entity.level().getGameTime();
         List<Reference<ResourceBar>> definitions = bars.listElements().toList();
@@ -102,18 +100,13 @@ public enum ResourceBarOverlay implements GuiLayer {
             ResourceBar bar = holder.value();
             Identifier resourceId = HolderHelper.id(bar.resource());
             if (id == null || bar.context() != context || !values.contains(resourceId) || replacedByCustomBar(holder, definitions)) continue;
-            Resource resource = bar.resource().value();
-
-            FormulaContext resourceContext = ResourceService.formulaContext(entity, resourceId, resource, FormulaContext.EMPTY);
-            ResourceService.Bounds bounds = ResourceService.resolveBounds(resource, resourceContext).orElse(null);
-            if (bounds == null) continue;
-            double min = bounds.min();
-            double maximum = bounds.max();
+            Audit audit = values.audit(resourceId);
+            double min = audit.minSnapshot();
+            double maximum = audit.maxSnapshot();
             double current = values.get(resourceId);
             if (!Double.isFinite(min) || !Double.isFinite(maximum) || !Double.isFinite(current) || maximum < min || maximum < 0.0D)
                 continue;
 
-            Audit audit = values.audit(resourceId);
             long changedAt = audit.lastChangedTick();
             long ticksSinceChanged = changedAt < 0L ? Long.MAX_VALUE : Math.max(0L, gameTime - changedAt);
             ResourceBarView view = new ResourceBarView(current, maximum, ticksSinceChanged, entity != minecraft().player);
@@ -175,7 +168,7 @@ public enum ResourceBarOverlay implements GuiLayer {
             drawValue(graphics, minecraft, bar, position.x(), position.y(), BAR_WIDTH, BAR_HEIGHT,
                     color(color, 0xFFFFFFFF), showMaximum, format);
         }
-        if (!(renderer instanceof TextOnly) && bar.definition().valueDisplay() != ResourceBar.ValueDisplay.NONE)
+        if (!(renderer instanceof TextOnly) && bar.definition().valueDisplay() != ValueDisplay.NONE)
             drawValueDisplay(graphics, minecraft, bar, position.x(), position.y(), bar.width(), bar.height());
     }
 

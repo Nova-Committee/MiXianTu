@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.util;
 
 import com.iafenvoy.mxt.util.codec.CombinedCodecs;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -42,8 +43,8 @@ public interface ItemMatcher {
         Codec<Entry> CODEC = Codec.either(BuiltInRegistries.ITEM.byNameCodec(), TagKey.hashedCodec(Registries.ITEM)).xmap(
                 value -> value.map(ItemEntry::new, TagEntry::new),
                 entry -> switch (entry) {
-                    case ItemEntry(Item item) -> com.mojang.datafixers.util.Either.left(item);
-                    case TagEntry(TagKey<Item> tag) -> com.mojang.datafixers.util.Either.right(tag);
+                    case ItemEntry(Item item) -> Either.left(item);
+                    case TagEntry(TagKey<Item> tag) -> Either.right(tag);
                 });
 
         boolean matches(ItemStack stack);

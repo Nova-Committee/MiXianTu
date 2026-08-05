@@ -15,11 +15,6 @@ public record OnBlockCondition(BlockCondition condition) implements EntityCondit
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.test(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<OnBlockCondition> codec() {
         return CODEC;
     }

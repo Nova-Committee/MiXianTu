@@ -59,6 +59,14 @@ public final class RegistryCodecs {
     }
 
     /**
+     * Matches direct registry keys without resolving tags. This is used by client-side code for
+     * registries such as dimension stems, which are intentionally unavailable in client registry access.
+     */
+    public static <T> boolean matchesKey(Collection<Either<ResourceKey<T>, TagKey<T>>> values, Identifier candidate) {
+        return values.stream().anyMatch(value -> value.left().map(key -> key.identifier().equals(candidate)).orElse(false));
+    }
+
+    /**
      * Expands direct holders and tags to their current registry entries.
      */
     public static <T> Stream<Holder<T>> resolve(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry) {

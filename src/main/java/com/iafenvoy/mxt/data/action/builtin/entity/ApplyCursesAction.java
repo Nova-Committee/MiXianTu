@@ -22,11 +22,6 @@ public record ApplyCursesAction(List<ApplyCurseAction> curses) implements Entity
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         this.curses.forEach(curse -> curse.execute(entity, context));
     }

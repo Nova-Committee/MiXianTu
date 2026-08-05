@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
@@ -12,7 +13,7 @@ public record CanHaveEffectCondition(Holder<MobEffect> effect) implements Entity
     public static final MapCodec<CanHaveEffectCondition> CODEC = MobEffect.CODEC.fieldOf("effect").xmap(CanHaveEffectCondition::new, CanHaveEffectCondition::effect);
 
     @Override
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity, FormulaContext context) {
         return entity instanceof LivingEntity living && living.canBeAffected(new MobEffectInstance(this.effect));
     }
 

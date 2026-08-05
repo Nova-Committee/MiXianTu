@@ -18,11 +18,6 @@ public record SelfBiEntityAction(BiEntityAction action) implements EntityAction 
     }
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public MapCodec<SelfBiEntityAction> codec() {
         return CODEC;
     }

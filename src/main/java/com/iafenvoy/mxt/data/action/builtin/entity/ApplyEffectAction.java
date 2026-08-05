@@ -24,11 +24,6 @@ public record ApplyEffectAction(MobEffect effect, NumberProvider durationTicks,
     ).apply(instance, ApplyEffectAction::new));
 
     @Override
-    public void execute(Entity entity) {
-        this.execute(entity, FormulaContext.EMPTY);
-    }
-
-    @Override
     public void execute(Entity entity, FormulaContext context) {
         if (!(entity instanceof LivingEntity living)) return;
         double duration = this.durationTicks.evaluate(context);

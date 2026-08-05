@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ServerCache;
@@ -22,7 +23,7 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
     ).apply(instance, RealmEntityCondition::new));
 
     @Override
-    public boolean test(Entity entity) {
+    public boolean test(Entity entity, FormulaContext context) {
         Identifier required = HolderHelper.id(this.realm);
         return entity.getData(MxtAttachments.SPIRIT_DATA).realmStage().map(current -> switch (this.comparison) {
             case EXACT -> current.equals(required);

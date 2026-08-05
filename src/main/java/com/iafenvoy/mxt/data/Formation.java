@@ -15,6 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A multiblock formation's static shape, resource costs, and lifecycle actions.
@@ -23,9 +24,9 @@ public record Formation(Identifier structureTemplate, NumberProvider radius, Lis
                         List<ResourceCost> maintenanceCosts, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction,
-                        java.util.Optional<Holder<AuraZone>> auraZone) {
+                        Optional<Holder<AuraZone>> auraZone) {
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.FORMATION);
-    public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(instance -> instance.group(
+    public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Identifier.CODEC.fieldOf("structure_template").forGetter(Formation::structureTemplate),
             NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
             ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -226,7 +227,7 @@ public final class CultivationActionService {
                         ResourceService.formulaContext(entity, active.id(), active.definition(), context)));
     }
 
-    private static java.util.Optional<Identifier> activeResource(SpiritData spirit) {
+    private static Optional<Identifier> activeResource(SpiritData spirit) {
         return spirit.realmStage().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, id))
                 .map(realm -> HolderHelper.id(realm.resource()));
     }

@@ -15,11 +15,6 @@ public record AndEntityCondition(List<EntityCondition> conditions) implements En
     }
 
     @Override
-    public boolean test(Entity entity) {
-        return this.conditions.stream().allMatch(condition -> condition.test(entity));
-    }
-
-    @Override
     public boolean test(Entity entity, FormulaContext context) {
         return this.conditions.stream().allMatch(condition -> condition.test(entity, context));
     }

@@ -26,9 +26,5 @@ public interface BlockAction {
 
     void execute(Level level, BlockPos pos, FormulaContext context);
 
-    default void execute(Level level, BlockPos pos) {
-        this.execute(level, pos, FormulaContext.EMPTY);
-    }
-
     MapCodec<? extends BlockAction> codec();
 }

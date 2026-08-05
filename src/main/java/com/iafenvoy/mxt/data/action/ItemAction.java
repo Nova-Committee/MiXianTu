@@ -26,9 +26,5 @@ public interface ItemAction {
 
     void execute(Entity holder, ItemStack stack, FormulaContext context);
 
-    default void execute(Entity holder, ItemStack stack) {
-        this.execute(holder, stack, FormulaContext.EMPTY);
-    }
-
     MapCodec<? extends ItemAction> codec();
 }

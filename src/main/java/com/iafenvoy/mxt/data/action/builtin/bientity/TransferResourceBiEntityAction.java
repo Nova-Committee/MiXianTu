@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -36,7 +37,7 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
                 ? ResourceService.formulaContext(living, id, this.resource.value(), context)
                 : context;
         if (!ResourceService.change(to, id, this.resource.value(), 0.0D, targetContext).valid()) return;
-        ResourceService.Bounds bounds = ResourceService.resolveBounds(this.resource.value(), targetContext).orElse(null);
+        Bounds bounds = ResourceService.resolveBounds(this.resource.value(), targetContext).orElse(null);
         if (bounds == null) return;
         double moved = Math.min(Math.min(from.get(id), requested), Math.max(0.0D, bounds.max() - to.get(id)));
         if (moved <= 0.0D) return;

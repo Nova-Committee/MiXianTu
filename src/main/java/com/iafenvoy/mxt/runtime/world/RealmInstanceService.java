@@ -59,7 +59,7 @@ public final class RealmInstanceService {
         if (!data.add(member, definition.maxMembers())) return Result.rejected(Failure.FULL);
         NeoForge.EVENT_BUS.post(new EnterPost(level, id, member));
         Optional.ofNullable(level.getServer().getPlayerList().getPlayer(member))
-                .ifPresent(player -> definition.enterAction().execute(player, FormulaContext.EMPTY));
+                .ifPresent(player -> definition.enterAction().execute(player, FormulaContext.of(player)));
         return Result.entered();
     }
 
@@ -80,7 +80,7 @@ public final class RealmInstanceService {
             data.remove(player.getUUID());
             NeoForge.EVENT_BUS.post(new Exit(source, id, player.getUUID()));
             MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id)
-                    .ifPresent(definition -> definition.exitAction().execute(player, FormulaContext.EMPTY));
+                    .ifPresent(definition -> definition.exitAction().execute(player, FormulaContext.of(player)));
             if (data.members().isEmpty()) data.clear();
         }
         return Result.exited();
@@ -93,7 +93,7 @@ public final class RealmInstanceService {
         NeoForge.EVENT_BUS.post(new Exit(level, id, member));
         MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id)
                 .ifPresent(definition -> Optional.ofNullable(level.getServer().getPlayerList().getPlayer(member))
-                        .ifPresent(player -> definition.exitAction().execute(player, FormulaContext.EMPTY)));
+                        .ifPresent(player -> definition.exitAction().execute(player, FormulaContext.of(player))));
         if (data.members().isEmpty()) data.clear();
         return Result.exited();
     }
