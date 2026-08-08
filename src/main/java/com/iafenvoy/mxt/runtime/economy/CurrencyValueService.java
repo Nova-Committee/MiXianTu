@@ -98,7 +98,7 @@ public final class CurrencyValueService {
 
         @Override
         public ItemStack output() {
-            return this.output.copy();
+            return this.output;
         }
     }
 

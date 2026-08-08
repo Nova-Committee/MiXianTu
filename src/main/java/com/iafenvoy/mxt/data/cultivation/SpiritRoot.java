@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;

@@ -7,11 +7,12 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Optional;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -23,9 +24,11 @@ public final class CultivationIdentityService {
 
     public static Result grantSpiritRoot(LivingEntity entity, Identifier id, SpiritRoot definition) {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
-        if (spirit.spiritRoots().contains(id)) return Result.rejected(Failure.ALREADY_HELD);
-        ArrayList<Identifier> roots = new ArrayList<>(spirit.spiritRoots());
-        roots.add(id);
+        Holder<SpiritRoot> root = MxtDatapackRegistries.holder(MxtDatapackRegistries.SPIRIT_ROOT, id).orElse(null);
+        if (root == null) return Result.rejected(Failure.DISABLED);
+        if (spirit.spiritRoots().contains(root)) return Result.rejected(Failure.ALREADY_HELD);
+        List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
+        roots.add(root);
         spirit.setSpiritRoots(roots);
         CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return Result.changedResult();
@@ -33,16 +36,18 @@ public final class CultivationIdentityService {
 
     public static Result grantPhysique(LivingEntity entity, Identifier id, Physique definition, FormulaContext context) {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
-        if (!definition.allowStacking() && spirit.physiques().contains(id))
+        Holder<Physique> physique = MxtDatapackRegistries.holder(MxtDatapackRegistries.PHYSIQUE, id).orElse(null);
+        if (physique == null) return Result.rejected(Failure.DISABLED);
+        if (!definition.allowStacking() && spirit.physiques().contains(physique))
             return Result.rejected(Failure.ALREADY_HELD);
         boolean conditions = definition.holderCondition().test(entity, context);
         if (!conditions) return Result.rejected(Failure.CONDITIONS);
         Set<Identifier> exclusive = new HashSet<>(definition.exclusiveTags());
-        boolean conflict = spirit.physiques().stream().map(physiqueId -> MxtDatapackRegistries.get(MxtDatapackRegistries.PHYSIQUE, physiqueId)).flatMap(Optional::stream)
+        boolean conflict = spirit.physiques().stream().map(Holder::value)
                 .anyMatch(existing -> existing.exclusiveTags().stream().anyMatch(exclusive::contains));
         if (conflict) return Result.rejected(Failure.EXCLUSIVE_CONFLICT);
-        ArrayList<Identifier> physiques = new ArrayList<>(spirit.physiques());
-        physiques.add(id);
+        List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
+        physiques.add(physique);
         spirit.setPhysiques(physiques);
         CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return Result.changedResult();
@@ -50,8 +55,10 @@ public final class CultivationIdentityService {
 
     public static boolean removeSpiritRoot(LivingEntity entity, Identifier id) {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
-        ArrayList<Identifier> roots = new ArrayList<>(spirit.spiritRoots());
-        if (!roots.remove(id)) return false;
+        Holder<SpiritRoot> root = MxtDatapackRegistries.holder(MxtDatapackRegistries.SPIRIT_ROOT, id).orElse(null);
+        if (root == null) return false;
+        List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
+        if (!roots.remove(root)) return false;
         spirit.setSpiritRoots(roots);
         CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return true;
@@ -59,8 +66,10 @@ public final class CultivationIdentityService {
 
     public static boolean removePhysique(LivingEntity entity, Identifier id) {
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
-        ArrayList<Identifier> physiques = new ArrayList<>(spirit.physiques());
-        if (!physiques.remove(id)) return false;
+        Holder<Physique> physique = MxtDatapackRegistries.holder(MxtDatapackRegistries.PHYSIQUE, id).orElse(null);
+        if (physique == null) return false;
+        List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
+        if (!physiques.remove(physique)) return false;
         spirit.setPhysiques(physiques);
         CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return true;

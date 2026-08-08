@@ -1,8 +1,17 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.Title;
+import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.aura.ItemAura;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.*;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import it.unimi.dsi.fastutil.objects.*;
+import net.minecraft.core.Holder;
 
 import java.util.*;
 
@@ -10,101 +19,92 @@ import java.util.*;
  * Persistent cultivation identity. Spirit roots and physiques intentionally use separate collections.
  */
 public final class SpiritData {
-    private static final MapCodec<SpiritData> PAYLOAD_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SpiritData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.DOUBLE.optionalFieldOf("cultivation_progress", 0.0D).forGetter(SpiritData::cultivationProgress),
-            Identifier.CODEC.optionalFieldOf("realm_stage").forGetter(SpiritData::realmStage),
-            Identifier.CODEC.listOf().optionalFieldOf("spirit_roots", List.of()).forGetter(SpiritData::spiritRoots),
-            Identifier.CODEC.listOf().optionalFieldOf("physiques", List.of()).forGetter(SpiritData::physiques),
-            Identifier.CODEC.optionalFieldOf("active_technique").forGetter(SpiritData::activeTechnique),
-            Identifier.CODEC.listOf().optionalFieldOf("learned_techniques", List.of()).forGetter(SpiritData::learnedTechniques),
-            Identifier.CODEC.listOf().optionalFieldOf("titles", List.of()).forGetter(SpiritData::titles),
-            Identifier.CODEC.optionalFieldOf("cultivate_action").forGetter(SpiritData::cultivateAction),
+            RealmStage.CODEC.optionalFieldOf("realm_stage").forGetter(SpiritData::realmStage),
+            CollectionCodecs.list(SpiritRoot.CODEC).optionalFieldOf("spirit_roots", List.of()).forGetter(SpiritData::spiritRoots),
+            CollectionCodecs.list(Physique.CODEC).optionalFieldOf("physiques", List.of()).forGetter(SpiritData::physiques),
+            CultivationTechnique.CODEC.optionalFieldOf("active_technique").forGetter(SpiritData::activeTechnique),
+            CollectionCodecs.list(CultivationTechnique.CODEC).optionalFieldOf("learned_techniques", List.of()).forGetter(SpiritData::learnedTechniques),
+            CollectionCodecs.list(Title.CODEC).optionalFieldOf("titles", List.of()).forGetter(SpiritData::titles),
+            CultivateAction.CODEC.optionalFieldOf("cultivate_action").forGetter(SpiritData::cultivateAction),
             Codec.LONG.optionalFieldOf("cultivate_started_at", 0L).forGetter(SpiritData::cultivateStartedAt),
             Codec.LONG.optionalFieldOf("next_cultivate_tick", 0L).forGetter(SpiritData::nextCultivateTick),
-            Codec.unboundedMap(Identifier.CODEC, Codec.LONG).optionalFieldOf("cultivate_cooldowns", Map.of()).forGetter(SpiritData::cultivateCooldowns),
+            CollectionCodecs.longMap(CultivateAction.CODEC).optionalFieldOf("cultivate_cooldowns", Object2LongMaps.emptyMap()).forGetter(SpiritData::cultivateCooldowns),
             Codec.LONG.optionalFieldOf("lifespan_remaining", -1L).forGetter(SpiritData::lifespanRemaining),
-            Codec.DOUBLE.optionalFieldOf("karma", 0.0D).forGetter(SpiritData::karma),
-            Codec.DOUBLE.optionalFieldOf("heart_demon", 0.0D).forGetter(SpiritData::heartDemon),
-            Codec.DOUBLE.optionalFieldOf("soul_strength", 0.0D).forGetter(SpiritData::soulStrength),
-            Codec.DOUBLE.optionalFieldOf("soul_sense_range", 0.0D).forGetter(SpiritData::soulSenseRange)
+            SoulState.CODEC.optionalFieldOf("soul", SoulState.EMPTY).forGetter(SpiritData::soulState),
+            ItemAuraState.CODEC.optionalFieldOf("item_aura_state", ItemAuraState.EMPTY).forGetter(SpiritData::itemAuraState)
     ).apply(instance, SpiritData::new));
-    public static final MapCodec<SpiritData> MAP_CODEC = PAYLOAD_CODEC;
-    public static final Codec<SpiritData> CODEC = MAP_CODEC.codec();
-
     private double cultivationProgress;
-    private Optional<Identifier> realmStage;
-    private final List<Identifier> spiritRoots;
-    private final List<Identifier> physiques;
-    private Optional<Identifier> activeTechnique;
-    private final List<Identifier> learnedTechniques;
-    private final List<Identifier> titles;
-    private Optional<Identifier> cultivateAction;
+    private Optional<Holder<RealmStage>> realmStage;
+    private final List<Holder<SpiritRoot>> spiritRoots;
+    private final List<Holder<Physique>> physiques;
+    private Optional<Holder<CultivationTechnique>> activeTechnique;
+    private final List<Holder<CultivationTechnique>> learnedTechniques;
+    private final List<Holder<Title>> titles;
+    private Optional<Holder<CultivateAction>> cultivateAction;
     private long cultivateStartedAt;
     private long nextCultivateTick;
-    private final Map<Identifier, Long> cultivateCooldowns;
+    private final Object2LongMap<Holder<CultivateAction>> cultivateCooldowns;
     private long lifespanRemaining;
-    private double karma;
-    private double heartDemon;
-    private double soulStrength;
-    private double soulSenseRange;
+    private SoulState soulState;
+    private ItemAuraState itemAuraState;
 
     public SpiritData() {
-        this(0.0D, Optional.empty(), List.of(), List.of(), Optional.empty(), List.of(), List.of(), Optional.empty(), 0L, 0L, Map.of(), -1L, 0.0D, 0.0D, 0.0D, 0.0D);
+        this(0.0D, Optional.empty(), List.of(), List.of(), Optional.empty(), List.of(), List.of(), Optional.empty(), 0L, 0L, Map.of(), -1L, SoulState.EMPTY, ItemAuraState.EMPTY);
     }
 
-    private SpiritData(double cultivationProgress, Optional<Identifier> realmStage, List<Identifier> spiritRoots, List<Identifier> physiques, Optional<Identifier> activeTechnique,
-                       List<Identifier> learnedTechniques, List<Identifier> titles, Optional<Identifier> cultivateAction, long cultivateStartedAt, long nextCultivateTick,
-                       Map<Identifier, Long> cultivateCooldowns, long lifespanRemaining, double karma, double heartDemon,
-                       double soulStrength, double soulSenseRange) {
+    private SpiritData(double cultivationProgress, Optional<Holder<RealmStage>> realmStage, List<Holder<SpiritRoot>> spiritRoots, List<Holder<Physique>> physiques, Optional<Holder<CultivationTechnique>> activeTechnique,
+                       List<Holder<CultivationTechnique>> learnedTechniques, List<Holder<Title>> titles, Optional<Holder<CultivateAction>> cultivateAction, long cultivateStartedAt, long nextCultivateTick,
+                       Map<Holder<CultivateAction>, Long> cultivateCooldowns, long lifespanRemaining, SoulState soulState,
+                       ItemAuraState itemAuraState) {
         this.cultivationProgress = cultivationProgress;
         this.realmStage = realmStage;
-        this.spiritRoots = new ArrayList<>(spiritRoots);
-        this.physiques = new ArrayList<>(physiques);
+        this.spiritRoots = new LinkedList<>(spiritRoots);
+        this.physiques = new LinkedList<>(physiques);
         this.activeTechnique = activeTechnique;
-        this.learnedTechniques = new ArrayList<>(learnedTechniques);
-        this.titles = new ArrayList<>(titles);
+        this.learnedTechniques = new LinkedList<>(learnedTechniques);
+        this.titles = new LinkedList<>(titles);
         this.cultivateAction = cultivateAction;
         this.cultivateStartedAt = cultivateStartedAt;
         this.nextCultivateTick = nextCultivateTick;
-        this.cultivateCooldowns = new LinkedHashMap<>(cultivateCooldowns);
-        if (lifespanRemaining < -1L || !Double.isFinite(karma) || !Double.isFinite(heartDemon) || !Double.isFinite(soulStrength) || !Double.isFinite(soulSenseRange))
+        this.cultivateCooldowns = new Object2LongOpenHashMap<>(cultivateCooldowns);
+        if (lifespanRemaining < -1L)
             throw new IllegalArgumentException("Invalid spirit state");
         this.lifespanRemaining = lifespanRemaining;
-        this.karma = karma;
-        this.heartDemon = heartDemon;
-        this.soulStrength = soulStrength;
-        this.soulSenseRange = soulSenseRange;
+        this.soulState = soulState;
+        this.itemAuraState = itemAuraState;
     }
 
     public double cultivationProgress() {
         return this.cultivationProgress;
     }
 
-    public Optional<Identifier> realmStage() {
+    public Optional<Holder<RealmStage>> realmStage() {
         return this.realmStage;
     }
 
-    public List<Identifier> spiritRoots() {
-        return List.copyOf(this.spiritRoots);
+    public List<Holder<SpiritRoot>> spiritRoots() {
+        return this.spiritRoots;
     }
 
-    public List<Identifier> physiques() {
-        return List.copyOf(this.physiques);
+    public List<Holder<Physique>> physiques() {
+        return this.physiques;
     }
 
-    public Optional<Identifier> activeTechnique() {
+    public Optional<Holder<CultivationTechnique>> activeTechnique() {
         return this.activeTechnique;
     }
 
-    public List<Identifier> learnedTechniques() {
-        return List.copyOf(this.learnedTechniques);
+    public List<Holder<CultivationTechnique>> learnedTechniques() {
+        return this.learnedTechniques;
     }
 
-    public List<Identifier> titles() {
-        return List.copyOf(this.titles);
+    public List<Holder<Title>> titles() {
+        return this.titles;
     }
 
-    public Optional<Identifier> cultivateAction() {
+    public Optional<Holder<CultivateAction>> cultivateAction() {
         return this.cultivateAction;
     }
 
@@ -116,28 +116,48 @@ public final class SpiritData {
         return this.nextCultivateTick;
     }
 
-    public Map<Identifier, Long> cultivateCooldowns() {
-        return Map.copyOf(this.cultivateCooldowns);
+    public Object2LongMap<Holder<CultivateAction>> cultivateCooldowns() {
+        return this.cultivateCooldowns;
     }
 
     public long lifespanRemaining() {
         return this.lifespanRemaining;
     }
 
+    private SoulState soulState() {
+        return this.soulState;
+    }
+
     public double karma() {
-        return this.karma;
+        return this.soulState.karma();
     }
 
     public double heartDemon() {
-        return this.heartDemon;
+        return this.soulState.heartDemon();
     }
 
     public double soulStrength() {
-        return this.soulStrength;
+        return this.soulState.soulStrength();
     }
 
     public double soulSenseRange() {
-        return this.soulSenseRange;
+        return this.soulState.soulSenseRange();
+    }
+
+    public Optional<Holder<ItemAura>> itemAura() {
+        return this.itemAuraState.aura();
+    }
+
+    public double itemAuraRemaining() {
+        return this.itemAuraState.remaining();
+    }
+
+    public double itemAuraMaximum() {
+        return this.itemAuraState.maximum();
+    }
+
+    public ItemAuraState itemAuraState() {
+        return this.itemAuraState;
     }
 
     public void setLifespanRemaining(long value) {
@@ -147,23 +167,23 @@ public final class SpiritData {
 
     public void setKarma(double value) {
         if (!Double.isFinite(value)) throw new IllegalArgumentException("Karma must be finite");
-        this.karma = value;
+        this.soulState = new SoulState(value, this.heartDemon(), this.soulStrength(), this.soulSenseRange());
     }
 
     public void setHeartDemon(double value) {
         if (!Double.isFinite(value)) throw new IllegalArgumentException("Heart demon must be finite");
-        this.heartDemon = value;
+        this.soulState = new SoulState(this.karma(), value, this.soulStrength(), this.soulSenseRange());
     }
 
     public void setSoulStrength(double value) {
         if (!Double.isFinite(value)) throw new IllegalArgumentException("Soul strength must be finite");
-        this.soulStrength = value;
+        this.soulState = new SoulState(this.karma(), this.heartDemon(), value, this.soulSenseRange());
     }
 
     public void setSoulSenseRange(double value) {
         if (!Double.isFinite(value) || value < 0.0D)
             throw new IllegalArgumentException("Soul sense range must be non-negative");
-        this.soulSenseRange = value;
+        this.soulState = new SoulState(this.karma(), this.heartDemon(), this.soulStrength(), value);
     }
 
     public void setCultivationProgress(double value) {
@@ -172,35 +192,47 @@ public final class SpiritData {
         this.cultivationProgress = value;
     }
 
-    public void setRealmStage(Identifier value) {
+    public void chargeItemAura(Holder<ItemAura> holder, double amount) {
+        if (!Double.isFinite(amount) || amount <= 0.0D)
+            throw new IllegalArgumentException("Item aura amount must be positive");
+        this.itemAuraState = new ItemAuraState(Optional.of(holder), amount, amount);
+    }
+
+    public void setItemAuraRemaining(double value) {
+        if (!Double.isFinite(value) || value < 0.0D || value > this.itemAuraMaximum())
+            throw new IllegalArgumentException("Invalid item aura remaining amount");
+        this.itemAuraState = new ItemAuraState(this.itemAura(), value, this.itemAuraMaximum());
+    }
+
+    public void setRealmStage(Holder<RealmStage> value) {
         this.realmStage = Optional.ofNullable(value);
     }
 
-    public void setSpiritRoots(List<Identifier> values) {
+    public void setSpiritRoots(List<Holder<SpiritRoot>> values) {
         this.spiritRoots.clear();
-        this.spiritRoots.addAll(List.copyOf(values));
+        this.spiritRoots.addAll(values);
     }
 
-    public void setPhysiques(List<Identifier> values) {
+    public void setPhysiques(List<Holder<Physique>> values) {
         this.physiques.clear();
-        this.physiques.addAll(List.copyOf(values));
+        this.physiques.addAll(values);
     }
 
-    public void setActiveTechnique(Identifier value) {
+    public void setActiveTechnique(Holder<CultivationTechnique> value) {
         this.activeTechnique = Optional.ofNullable(value);
     }
 
-    public void setLearnedTechniques(List<Identifier> values) {
+    public void setLearnedTechniques(List<Holder<CultivationTechnique>> values) {
         this.learnedTechniques.clear();
-        this.learnedTechniques.addAll(List.copyOf(values));
+        this.learnedTechniques.addAll(values);
     }
 
-    public void setTitles(List<Identifier> values) {
+    public void setTitles(List<Holder<Title>> values) {
         this.titles.clear();
-        this.titles.addAll(List.copyOf(values));
+        this.titles.addAll(values);
     }
 
-    public void startCultivateAction(Identifier action, long gameTime, long nextTick) {
+    public void startCultivateAction(Holder<CultivateAction> action, long gameTime, long nextTick) {
         this.cultivateAction = Optional.of(action);
         this.cultivateStartedAt = gameTime;
         this.nextCultivateTick = nextTick;
@@ -210,12 +242,52 @@ public final class SpiritData {
         this.nextCultivateTick = gameTime;
     }
 
-    public void stopCultivateAction(Identifier action, long cooldownUntil) {
-        if (this.cultivateAction.filter(action::equals).isPresent()) this.cultivateAction = Optional.empty();
-        if (cooldownUntil > 0L) this.cultivateCooldowns.put(action, cooldownUntil);
+    public void stopCultivateAction(Holder<CultivateAction> action, long cooldownUntil) {
+        if (this.cultivateAction.filter(action::equals).isPresent())
+            this.cultivateAction = Optional.empty();
+        if (cooldownUntil > 0L)
+            this.cultivateCooldowns.put(action, cooldownUntil);
     }
 
-    public boolean isCultivateActionOnCooldown(Identifier action, long gameTime) {
+    public boolean isCultivateActionOnCooldown(Holder<CultivateAction> action, long gameTime) {
         return this.cultivateCooldowns.getOrDefault(action, 0L) > gameTime;
+    }
+
+    private record SoulState(double karma, double heartDemon, double soulStrength, double soulSenseRange) {
+        private static final SoulState EMPTY = new SoulState(0.0D, 0.0D, 0.0D, 0.0D);
+        private static final Codec<SoulState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.optionalFieldOf("karma", 0.0D).forGetter(SoulState::karma),
+                Codec.DOUBLE.optionalFieldOf("heart_demon", 0.0D).forGetter(SoulState::heartDemon),
+                Codec.DOUBLE.optionalFieldOf("strength", 0.0D).forGetter(SoulState::soulStrength),
+                Codec.DOUBLE.optionalFieldOf("sense_range", 0.0D).forGetter(SoulState::soulSenseRange)
+        ).apply(instance, SoulState::new));
+
+        private SoulState {
+            if (!Double.isFinite(karma) || !Double.isFinite(heartDemon) || !Double.isFinite(soulStrength)
+                    || !Double.isFinite(soulSenseRange) || soulSenseRange < 0.0D)
+                throw new IllegalArgumentException("Invalid soul state");
+        }
+    }
+
+    public record ItemAuraState(Optional<Holder<ItemAura>> aura, double remaining, double maximum) {
+        private static final ItemAuraState EMPTY = new ItemAuraState(Optional.empty(), 0.0D, 0.0D);
+        private static final Codec<ItemAuraState> CODEC = RecordCodecBuilder.<ItemAuraState>create(instance -> instance.group(
+                ItemAura.CODEC.optionalFieldOf("aura").forGetter(ItemAuraState::aura),
+                Codec.DOUBLE.optionalFieldOf("remaining", 0.0D).forGetter(ItemAuraState::remaining),
+                Codec.DOUBLE.optionalFieldOf("maximum", 0.0D).forGetter(ItemAuraState::maximum)
+        ).apply(instance, ItemAuraState::new)).validate(ItemAuraState::validate);
+
+        public ItemAuraState {
+            if (!Double.isFinite(remaining) || remaining < 0.0D || !Double.isFinite(maximum) || maximum < 0.0D || remaining > maximum)
+                throw new IllegalArgumentException("Invalid item aura state");
+            if (aura.isPresent() != (maximum > 0.0D))
+                throw new IllegalArgumentException("Item aura holder must match its maximum amount");
+        }
+
+        private static DataResult<ItemAuraState> validate(ItemAuraState state) {
+            return state.remaining <= state.maximum
+                    ? DataResult.success(state)
+                    : DataResult.error(() -> "Item aura remaining cannot exceed maximum");
+        }
     }
 }

@@ -11,10 +11,6 @@ import java.util.List;
 public record SequenceBlockAction(List<BlockAction> actions) implements BlockAction {
     public static final MapCodec<SequenceBlockAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceBlockAction::new, SequenceBlockAction::actions);
 
-    public SequenceBlockAction {
-        actions = List.copyOf(actions);
-    }
-
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {
         this.actions.forEach(action -> action.execute(level, pos, context));

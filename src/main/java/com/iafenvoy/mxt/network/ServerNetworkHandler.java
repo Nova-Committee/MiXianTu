@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -25,10 +26,11 @@ public final class ServerNetworkHandler {
     static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         if (payload.cancel()) {
-            AbilityService.cancelCast(payload.ability(), player.getData(MxtAttachments.ABILITY_HOLDER), player.level().getGameTime());
+            MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, payload.ability()).ifPresent(ability ->
+                    AbilityService.cancelCast(ability, player.getData(MxtAttachments.ABILITY_HOLDER), player.level().getGameTime()));
             return;
         }
-        MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, payload.ability()).ifPresent(definition -> AbilityService.use(payload.ability(), definition, player,
+        MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, payload.ability()).ifPresent(ability -> AbilityService.use(ability, ability.value(), player,
                 player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player)));
     }
 
@@ -50,13 +52,13 @@ public final class ServerNetworkHandler {
     static void onFlightToggle(FlightToggleC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         if (!payload.enabled()) {
-            if (player.getData(MxtAttachments.FLIGHT).archetype().filter(payload.archetype()::equals).isPresent()) {
+            if (player.getData(MxtAttachments.FLIGHT).archetype().map(HolderHelper::id).filter(payload.archetype()::equals).isPresent()) {
                 FlightService.dismount(player, Failure.STOPPED);
             }
             return;
         }
-        MxtDatapackRegistries.get(MxtDatapackRegistries.ITEM_ARCHETYPE, payload.archetype()).ifPresent(definition ->
-                FlightService.mount(player, player.getMainHandItem(), payload.archetype(), definition, FormulaContext.of(player)));
+        MxtDatapackRegistries.holder(MxtDatapackRegistries.ITEM_ARCHETYPE, payload.archetype()).ifPresent(archetype ->
+                FlightService.mount(player, player.getMainHandItem(), archetype, FormulaContext.of(player)));
     }
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {

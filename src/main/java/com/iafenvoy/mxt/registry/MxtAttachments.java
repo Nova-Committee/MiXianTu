@@ -21,13 +21,13 @@ import java.util.function.Supplier;
  */
 public final class MxtAttachments {
     public static final DeferredRegister<AttachmentType<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, MiXianTu.MOD_ID);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritData>> SPIRIT_DATA = entity("spirit_data", SpiritData::new, SpiritData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ResourceHolderData>> RESOURCE_HOLDER = entity("resource_holder", ResourceHolderData::new, ResourceHolderData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AbilityHolderData>> ABILITY_HOLDER = entity("ability_holder", AbilityHolderData::new, AbilityHolderData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<CurseHolderData>> CURSE_HOLDER = entity("curse_holder", CurseHolderData::new, CurseHolderData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TribulationData>> TRIBULATION = entity("tribulation", TribulationData::new, TribulationData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ContractData>> CONTRACT = entity("contract", ContractData::new, ContractData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkData>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkData::new).serialize(AuraChunkData.MAP_CODEC).sync(ByteBufCodecs.fromCodecWithRegistries(AuraChunkData.CODEC)).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritData>> SPIRIT_DATA = entity("spirit_data", SpiritData::new, SpiritData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ResourceHolderData>> RESOURCE_HOLDER = entity("resource_holder", ResourceHolderData::new, ResourceHolderData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AbilityHolderData>> ABILITY_HOLDER = entity("ability_holder", AbilityHolderData::new, AbilityHolderData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<CurseHolderData>> CURSE_HOLDER = entity("curse_holder", CurseHolderData::new, CurseHolderData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TribulationData>> TRIBULATION = entity("tribulation", TribulationData::new, TribulationData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ContractData>> CONTRACT = entity("contract", ContractData::new, ContractData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkData>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkData::new).serialize(AuraChunkData.CODEC).sync(ByteBufCodecs.fromCodecWithRegistries(AuraChunkData.CODEC.codec())).build());
     /**
      * Persistent artificial aura areas, owned by one ServerLevel.
      */
@@ -37,15 +37,15 @@ public final class MxtAttachments {
      */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FormationWorldData>> FORMATION_WORLD = REGISTRY.register("formation_world", () -> AttachmentType.builder(FormationWorldData::new).serialize(FormationWorldData.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ForgingWorldData>> FORGING_WORLD = REGISTRY.register("forging_world", () -> AttachmentType.builder(ForgingWorldData::new).serialize(ForgingWorldData.MAP_CODEC).build());
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ForgingSessionData>> FORGING_SESSION = entityWithoutDeathCopy("forging_session", ForgingSessionData::new, ForgingSessionData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<FlightData>> FLIGHT = entityWithoutDeathCopy("flight", FlightData::new, FlightData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SectData>> SECT = entity("sect", SectData::new, SectData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SectTerritoryData>> SECT_TERRITORY = REGISTRY.register("sect_territory", () -> AttachmentType.builder(SectTerritoryData::new).serialize(SectTerritoryData.MAP_CODEC).build());
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmInstanceData>> REALM_INSTANCE = REGISTRY.register("realm_instance", () -> AttachmentType.builder(RealmInstanceData::new).serialize(RealmInstanceData.MAP_CODEC).build());
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmTravelData>> REALM_TRAVEL = entity("realm_travel", RealmTravelData::new, RealmTravelData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulData>> SOUL = entity("soul", SoulData::new, SoulData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<CreatureSpiritData>> CREATURE_SPIRIT = entity("creature_spirit", CreatureSpiritData::new, CreatureSpiritData.MAP_CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillToxicityData>> PILL_TOXICITY = entity("pill_toxicity", PillToxicityData::new, PillToxicityData.MAP_CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ForgingSessionData>> FORGING_SESSION = entityWithoutDeathCopy("forging_session", ForgingSessionData::new, ForgingSessionData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<FlightData>> FLIGHT = entityWithoutDeathCopy("flight", FlightData::new, FlightData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SectData>> SECT = entity("sect", SectData::new, SectData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SectTerritoryData>> SECT_TERRITORY = REGISTRY.register("sect_territory", () -> AttachmentType.builder(SectTerritoryData::new).serialize(SectTerritoryData.CODEC).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmInstanceData>> REALM_INSTANCE = REGISTRY.register("realm_instance", () -> AttachmentType.builder(RealmInstanceData::new).serialize(RealmInstanceData.CODEC).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmTravelData>> REALM_TRAVEL = entity("realm_travel", RealmTravelData::new, RealmTravelData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulData>> SOUL = entity("soul", SoulData::new, SoulData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<CreatureSpiritData>> CREATURE_SPIRIT = entity("creature_spirit", CreatureSpiritData::new, CreatureSpiritData.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillToxicityData>> PILL_TOXICITY = entity("pill_toxicity", PillToxicityData::new, PillToxicityData.CODEC);
 
     private MxtAttachments() {
     }

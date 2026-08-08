@@ -13,10 +13,6 @@ import java.util.List;
 public record AndDamageCondition(List<DamageCondition> conditions) implements DamageCondition {
     public static final MapCodec<AndDamageCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndDamageCondition::new, AndDamageCondition::conditions);
 
-    public AndDamageCondition {
-        conditions = List.copyOf(conditions);
-    }
-
     @Override
     public boolean test(DamageSource source, float amount, FormulaContext context) {
         return this.conditions.stream().allMatch(condition -> condition.test(source, amount, context));

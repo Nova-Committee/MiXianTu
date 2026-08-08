@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
@@ -14,7 +15,6 @@ import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.MaterialGrade;
-import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.Title;
@@ -22,6 +22,7 @@ import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
+import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.item.ItemBinding;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
@@ -52,7 +53,7 @@ import java.util.stream.Stream;
 public final class MxtDatapackRegistries {
     private static final Identifier DISABLED_TAG = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "disabled");
     public static final ResourceKey<Registry<Resource>> RESOURCE = MxtRegistryKeys.RESOURCE;
-    public static final ResourceKey<Registry<ResourceBar>> RESOURCE_BAR = MxtRegistryKeys.RESOURCE_BAR;
+    public static final ResourceKey<Registry<Badge>> BADGE = MxtRegistryKeys.BADGE;
     public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = MxtRegistryKeys.REALM_STAGE;
     public static final ResourceKey<Registry<Element>> ELEMENT = MxtRegistryKeys.ELEMENT;
     public static final ResourceKey<Registry<SpiritRoot>> SPIRIT_ROOT = MxtRegistryKeys.SPIRIT_ROOT;
@@ -80,8 +81,9 @@ public final class MxtDatapackRegistries {
     public static final ResourceKey<Registry<PillBinding>> PILL_BINDING = MxtRegistryKeys.PILL_BINDING;
     public static final ResourceKey<Registry<AuraZone>> AURA_ZONE = MxtRegistryKeys.AURA_ZONE;
     public static final ResourceKey<Registry<BlockAura>> BLOCK_AURA = MxtRegistryKeys.BLOCK_AURA;
+    public static final ResourceKey<Registry<ItemAura>> ITEM_AURA = MxtRegistryKeys.ITEM_AURA;
     private static final List<ResourceKey<? extends Registry<?>>> KEYS = List.of(
-            MxtRegistryKeys.RESOURCE, MxtRegistryKeys.RESOURCE_BAR, MxtRegistryKeys.REALM_STAGE,
+            MxtRegistryKeys.RESOURCE, MxtRegistryKeys.BADGE, MxtRegistryKeys.REALM_STAGE,
             MxtRegistryKeys.ELEMENT, MxtRegistryKeys.SPIRIT_ROOT, MxtRegistryKeys.PHYSIQUE,
             MxtRegistryKeys.ABILITY, MxtRegistryKeys.CURSE, MxtRegistryKeys.FORGING_METHOD,
             MxtRegistryKeys.FORGING_BLUEPRINT, MxtRegistryKeys.CULTIVATION_TECHNIQUE,
@@ -92,31 +94,31 @@ public final class MxtDatapackRegistries {
             MxtRegistryKeys.REALM_INSTANCE, MxtRegistryKeys.CURRENCY,
             MxtRegistryKeys.ITEM_BINDING, MxtRegistryKeys.WEAPON_BINDING, MxtRegistryKeys.PILL_BINDING,
             MxtRegistryKeys.AURA_ZONE,
-            MxtRegistryKeys.BLOCK_AURA
+            MxtRegistryKeys.BLOCK_AURA, MxtRegistryKeys.ITEM_AURA
     );
 
     @SubscribeEvent
     public static void newDatapackRegistries(NewRegistry event) {
         register(event, MxtRegistryKeys.RESOURCE, Resource.DIRECT_CODEC);
-        register(event, MxtRegistryKeys.RESOURCE_BAR, ResourceBar.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.BADGE, Badge.DIRECT_CODEC);
         register(event, MxtRegistryKeys.REALM_STAGE, RealmStage.DIRECT_CODEC);
         register(event, MxtRegistryKeys.ELEMENT, Element.DIRECT_CODEC);
         register(event, MxtRegistryKeys.SPIRIT_ROOT, SpiritRoot.DIRECT_CODEC);
-        register(event, MxtRegistryKeys.PHYSIQUE, Physique.CODEC);
+        register(event, MxtRegistryKeys.PHYSIQUE, Physique.DIRECT_CODEC);
         register(event, MxtRegistryKeys.ABILITY, Ability.DIRECT_CODEC);
         register(event, MxtRegistryKeys.CURSE, Curse.DIRECT_CODEC);
         register(event, MxtRegistryKeys.FORGING_METHOD, ForgingMethod.DIRECT_CODEC);
         register(event, MxtRegistryKeys.FORGING_BLUEPRINT, ForgingBlueprint.DIRECT_CODEC);
-        register(event, MxtRegistryKeys.CULTIVATION_TECHNIQUE, CultivationTechnique.CODEC);
-        register(event, MxtRegistryKeys.CULTIVATE_ACTION, CultivateAction.CODEC);
-        register(event, MxtRegistryKeys.ITEM_ARCHETYPE, ItemArchetype.CODEC);
+        register(event, MxtRegistryKeys.CULTIVATION_TECHNIQUE, CultivationTechnique.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.CULTIVATE_ACTION, CultivateAction.DIRECT_CODEC);
+        register(event, MxtRegistryKeys.ITEM_ARCHETYPE, ItemArchetype.DIRECT_CODEC);
         register(event, MxtRegistryKeys.SPIRIT_HERB, SpiritHerb.CODEC);
         register(event, MxtRegistryKeys.ALCHEMY_RECIPE, AlchemyRecipe.CODEC);
         register(event, MxtRegistryKeys.FORMATION, Formation.DIRECT_CODEC);
         register(event, MxtRegistryKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
         register(event, MxtRegistryKeys.CREATURE_PROFILE, CreatureProfile.CODEC);
         register(event, MxtRegistryKeys.CONTRACT_TYPE, ContractType.CODEC);
-        register(event, MxtRegistryKeys.TITLE, Title.CODEC);
+        register(event, MxtRegistryKeys.TITLE, Title.DIRECT_CODEC);
         register(event, MxtRegistryKeys.MATERIAL_GRADE, MaterialGrade.DIRECT_CODEC);
         register(event, MxtRegistryKeys.SECT, Sect.CODEC);
         register(event, MxtRegistryKeys.REALM_INSTANCE, RealmInstance.CODEC);
@@ -126,6 +128,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtRegistryKeys.PILL_BINDING, PillBinding.CODEC);
         register(event, MxtRegistryKeys.AURA_ZONE, AuraZone.DIRECT_CODEC);
         register(event, MxtRegistryKeys.BLOCK_AURA, BlockAura.CODEC);
+        register(event, MxtRegistryKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
     }
 
     public static List<ResourceKey<? extends Registry<?>>> registries() {
@@ -134,6 +137,22 @@ public final class MxtDatapackRegistries {
 
     public static <T> Optional<T> get(ResourceKey<? extends Registry<T>> key, Identifier id) {
         return isDisabled(key, id) ? Optional.empty() : registry(key).getOptional(id);
+    }
+
+    /**
+     * Returns a directly held enabled datapack value without a second registry lookup.
+     */
+    public static <T> Optional<T> get(ResourceKey<? extends Registry<T>> key, Holder<T> holder) {
+        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
+        return holder.is(disabled) ? Optional.empty() : Optional.of(holder.value());
+    }
+
+    /**
+     * Resolves an enabled registry entry while retaining its stable holder reference.
+     */
+    public static <T> Optional<Reference<T>> holder(ResourceKey<? extends Registry<T>> key, Identifier id) {
+        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
+        return registry(key).get(ResourceKey.create(key, id)).filter(holder -> !holder.is(disabled));
     }
 
     public static <T> Stream<Reference<T>> holders(ResourceKey<? extends Registry<T>> key) {
@@ -167,9 +186,17 @@ public final class MxtDatapackRegistries {
                 .map(Holder::value);
     }
 
+    public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Holder<T> holder) {
+        return holder.is(TagKey.create(key, DISABLED_TAG)) ? Optional.empty() : Optional.of(holder.value());
+    }
+
     public static <T> boolean isDisabled(ResourceKey<? extends Registry<T>> key, Identifier id) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return registry(key).get(ResourceKey.create(key, id)).map(holder -> holder.is(disabled)).orElse(false);
+    }
+
+    public static <T> boolean isDisabled(ResourceKey<? extends Registry<T>> key, Holder<T> holder) {
+        return holder.is(TagKey.create(key, DISABLED_TAG));
     }
 
     /**
@@ -178,6 +205,10 @@ public final class MxtDatapackRegistries {
     public static <T> boolean isTagged(ResourceKey<? extends Registry<T>> key, Identifier id, Identifier tagId) {
         TagKey<T> tag = TagKey.create(key, tagId);
         return registry(key).get(ResourceKey.create(key, id)).map(holder -> holder.is(tag)).orElse(false);
+    }
+
+    public static <T> boolean isTagged(ResourceKey<? extends Registry<T>> key, Holder<T> holder, Identifier tagId) {
+        return holder.is(TagKey.create(key, tagId));
     }
 
     public static int size(ResourceKey<? extends Registry<?>> key) {

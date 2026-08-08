@@ -1,8 +1,24 @@
 {
+  "badge.mxt_test.tooltip": "Test tooltip badge",
+  "badge.mxt_test.keybind": "Test keybind badge",
+  "badge.mxt_test.recipe.prefix": "Recipe: ",
+  "badge.mxt_test.recipe.suffix": "",
   "element.mxt_test.fire": "Fire Spirit",
   "element.mxt_test.water": "Water Spirit",
   "title.mxt_test.test_disciple": "Trial Disciple",
   "resource.mxt_test.qi": "Qi",
   "resource.mxt_test.true_essence": "True Essence",
-  "resource.mxt_test.divine_sense": "Divine Sense"
+  "resource.mxt_test.divine_sense": "Divine Sense",
+  "item.mxt_test.qingxiao_spirit_crystal": "Qingxiao Spirit Crystal",
+  "title.mxt_test.qingxiao_outer_disciple": "Qingxiao Outer Disciple",
+  "command.mxt_test.kit.success": "Qingxiao trial kit granted. Hold a Qingxiao Spirit Crystal, then run /mxt_test cultivate.",
+  "command.mxt_test.kit.realm_failed": "Could not initialize the Qingxiao realm. Use this command on a fresh test character.",
+  "command.mxt_test.cultivate.success": "Qingxiao breathing has begun. The crystal is consumed as hidden aura fuel.",
+  "command.mxt_test.cultivate.failed": "Could not begin Qingxiao breathing: %s",
+  "command.mxt_test.task.success": "Qingxiao sect task completed. Current contribution: %s",
+  "command.mxt_test.task.failed": "Could not complete Qingxiao sect task: %s",
+  "command.mxt_test.guide.1": "Qingxiao Trial: 1. Run /mxt_test kit to receive the identity, resources, and tools.",
+  "command.mxt_test.guide.2": "2. Hold a Qingxiao Spirit Crystal and run /mxt_test cultivate. Then use /mxt breakthrough mxt_test:qi to test advancement.",
+  "command.mxt_test.guide.3": "3. Use the formation plate on a gold block, bind a wolf with the contract scroll, and enter the End trial using the realm token.",
+  "command.mxt_test.guide.4": "4. Use /mxt ability cast mxt_test:qingxiao_firebolt, /mxt_test task, and /mxt sect claim to test abilities, sects, and territory."
 }

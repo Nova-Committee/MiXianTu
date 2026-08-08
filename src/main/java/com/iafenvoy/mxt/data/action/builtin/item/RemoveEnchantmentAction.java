@@ -8,6 +8,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -24,13 +25,9 @@ public record RemoveEnchantmentAction(List<Holder<Enchantment>> enchantment, Opt
             Codec.BOOL.optionalFieldOf("reset_repair_cost", false).forGetter(RemoveEnchantmentAction::resetRepairCost)
     ).apply(instance, RemoveEnchantmentAction::new));
 
-    public RemoveEnchantmentAction {
-        enchantment = List.copyOf(enchantment);
-    }
-
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {
-        Mutable enchantments = new Mutable(stack.getEnchantments());
+        Mutable enchantments = new Mutable(stack.getAllEnchantments(holder.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
         for (Holder<Enchantment> entry : this.enchantment)
             if (this.level.isEmpty() || enchantments.getLevel(entry) == this.level.get()) enchantments.set(entry, 0);
         stack.set(DataComponents.ENCHANTMENTS, enchantments.toImmutable());

@@ -2,5 +2,5 @@
   "translation_key": "element.mxt_test.water",
   "overcomes": ["mxt_test:fire"],
   "adapted_to": ["mxt_test:water"],
-  "aura_tags": ["mxt_test:environment/water"]
+  "aura_kinds": ["mxt_test:aura_kind/water"]
 }

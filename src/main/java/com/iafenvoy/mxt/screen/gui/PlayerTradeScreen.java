@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.network.payload.PlayerTradeAction;
 import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload;
+import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload.PlayerTradeAction;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;

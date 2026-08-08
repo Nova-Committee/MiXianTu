@@ -12,10 +12,6 @@ import java.util.List;
 public record ChoiceAction(List<WeightedActionEntry<BlockAction>> actions) implements BlockAction {
     public static final MapCodec<ChoiceAction> CODEC = WeightedActionEntry.codec(BlockAction.CODEC).listOf().fieldOf("actions").xmap(ChoiceAction::new, ChoiceAction::actions);
 
-    public ChoiceAction {
-        actions = List.copyOf(actions);
-    }
-
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {
         WeightedActionEntry<BlockAction> entry = WeightedActionEntry.select(this.actions, level.getRandom());

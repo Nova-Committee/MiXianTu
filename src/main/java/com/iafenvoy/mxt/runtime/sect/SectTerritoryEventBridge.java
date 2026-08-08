@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.runtime.sect;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.SectData;
 import com.iafenvoy.mxt.attachment.SectTerritoryData;
-import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -17,10 +18,10 @@ import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
  * Enforces a data-driven sect territory policy at the authoritative block event boundary.
  */
 public final class SectTerritoryEventBridge {
-    public static final Identifier BREAK = Identifier.fromNamespaceAndPath("mxt", "territory_break");
-    public static final Identifier PLACE = Identifier.fromNamespaceAndPath("mxt", "territory_place");
-    public static final Identifier USE = Identifier.fromNamespaceAndPath("mxt", "territory_use");
-    public static final Identifier CLAIM = Identifier.fromNamespaceAndPath("mxt", "territory_claim");
+    public static final Identifier BREAK = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "territory_break");
+    public static final Identifier PLACE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "territory_place");
+    public static final Identifier USE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "territory_use");
+    public static final Identifier CLAIM = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "territory_claim");
 
     private SectTerritoryEventBridge() {
     }
@@ -45,10 +46,11 @@ public final class SectTerritoryEventBridge {
      */
     public static boolean permitted(ServerPlayer player, ServerLevel level, BlockPos pos, Identifier permission) {
         SectTerritoryData territory = level.getChunkAt(pos).getData(MxtAttachments.SECT_TERRITORY);
-        Identifier owner = territory.owner().orElse(null);
+        Identifier owner = territory.owner().map(HolderHelper::id).orElse(null);
         if (owner == null) return true;
         SectData membership = player.getData(MxtAttachments.SECT);
-        Sect definition = MxtDatapackRegistries.get(MxtDatapackRegistries.SECT, owner).orElse(null);
-        return definition != null && SectService.canUseTerritory(membership, owner, definition, territory, permission);
+        return MxtDatapackRegistries.holder(MxtDatapackRegistries.SECT, owner)
+                .map(sect -> SectService.canUseTerritory(membership, sect, territory, permission))
+                .orElse(false);
     }
 }

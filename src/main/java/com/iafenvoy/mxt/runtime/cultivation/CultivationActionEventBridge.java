@@ -5,9 +5,9 @@ import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
@@ -22,17 +22,14 @@ public final class CultivationActionEventBridge {
     public static void onEntityTick(Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
         SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
-        Identifier actionId = spirit.cultivateAction().orElse(null);
-        if (actionId == null) return;
-        CultivateAction definition = MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATE_ACTION, actionId).orElse(null);
-        if (definition == null) {
-            spirit.stopCultivateAction(actionId, entity.level().getGameTime());
-            return;
-        }
+        Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
+        if (action == null) return;
+        Identifier actionId = action.unwrapKey().orElseThrow().identifier();
+        CultivateAction definition = action.value();
         FormulaContext context = FormulaContexts.forEntity(entity);
         boolean mayContinue = !definition.stopCondition().test(entity, context);
         AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, actionId, definition,
+        CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
                 entity.level().getGameTime(), context, () -> mayContinue);
     }
 }

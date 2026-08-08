@@ -1,9 +1,11 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.mojang.serialization.Codec;
+import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.Optional;
 
@@ -11,25 +13,19 @@ import java.util.Optional;
  * Per-chunk sect ownership. Permissions remain defined by the owner's datapack rank policy.
  */
 public final class SectTerritoryData {
-    public static final MapCodec<SectTerritoryData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Identifier.CODEC.optionalFieldOf("owner").forGetter(SectTerritoryData::owner)
-    ).apply(instance, SectTerritoryData::decode));
-    public static final Codec<SectTerritoryData> CODEC = MAP_CODEC.codec();
-
-    private Identifier owner;
+    public static final MapCodec<SectTerritoryData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            RegistryFixedCodec.create(MxtDatapackRegistries.SECT).optionalFieldOf("owner").forGetter(SectTerritoryData::owner)
+    ).apply(instance, SectTerritoryData::new));
+    private Holder<Sect> owner;
 
     public SectTerritoryData() {
     }
 
-    private SectTerritoryData(Optional<Identifier> owner) {
+    private SectTerritoryData(Optional<Holder<Sect>> owner) {
         this.owner = owner.orElse(null);
     }
 
-    private static SectTerritoryData decode(Optional<Identifier> owner) {
-        return new SectTerritoryData(owner);
-    }
-
-    public Optional<Identifier> owner() {
+    public Optional<Holder<Sect>> owner() {
         return Optional.ofNullable(this.owner);
     }
 
@@ -37,7 +33,7 @@ public final class SectTerritoryData {
         return this.owner != null;
     }
 
-    public void claim(Identifier sect) {
+    public void claim(Holder<Sect> sect) {
         this.owner = sect;
     }
 

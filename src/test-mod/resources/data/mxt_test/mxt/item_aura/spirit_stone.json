@@ -1,0 +1,14 @@
+{
+  "items": "mxt:spirit_stone",
+  "total_aura": 100,
+  "consume_speed": 1,
+  "result_stack": {
+    "id": "mxt:medium_spirit_stone",
+    "count": 1
+  },
+  "exhausted_action": {
+    "type": "mxt:apply_effect",
+    "effect": "minecraft:fire_resistance",
+    "duration_ticks": 40
+  }
+}

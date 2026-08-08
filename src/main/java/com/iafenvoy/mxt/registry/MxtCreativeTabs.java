@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.ItemMatcher;
-import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -19,7 +19,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import java.util.List;
 import java.util.stream.Stream;
 
-/** Code-owned items and physical items selected by datapack bindings. */
+/**
+ * Code-owned items and physical items selected by datapack bindings.
+ */
 public final class MxtCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> REGISTRY = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MiXianTu.MOD_ID);
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
@@ -37,7 +39,7 @@ public final class MxtCreativeTabs {
             .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtDatapackRegistries.WEAPON_BINDING).forEach(output::accept)).build());
 
     private static <T extends ItemMatcher> Stream<Item> matchingItems(Provider holders, ResourceKey<Registry<T>> registry) {
-        List<T> bindings = MxtDatapackRegistries.holders(holders, registry).map(Holder.Reference::value).toList();
+        List<T> bindings = MxtDatapackRegistries.holders(holders, registry).map(Reference::value).toList();
         return BuiltInRegistries.ITEM.stream().filter(item -> bindings.stream()
                 .anyMatch(binding -> binding.entries().stream().anyMatch(entry -> entry.matches(new ItemStack(item)))));
     }

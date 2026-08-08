@@ -7,11 +7,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jspecify.annotations.NonNull;
-import org.jspecify.annotations.Nullable;
 
 public final class SystemStationBlock extends EconomyWorkstationBlock implements EntityBlock {
     public SystemStationBlock(Properties properties) {
@@ -19,7 +17,7 @@ public final class SystemStationBlock extends EconomyWorkstationBlock implements
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(@NonNull BlockPos pos, @NonNull BlockState state) {
+    public @NonNull BlockEntity newBlockEntity(@NonNull BlockPos pos, @NonNull BlockState state) {
         return new SystemStationBlockEntity(pos, state);
     }
 

@@ -8,10 +8,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * Persistent accumulated pill toxicity for one living entity.
  */
 public final class PillToxicityData {
-    public static final MapCodec<PillToxicityData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<PillToxicityData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.DOUBLE.optionalFieldOf("toxicity", 0.0D).forGetter(PillToxicityData::toxicity)
-    ).apply(instance, PillToxicityData::decode));
-    public static final Codec<PillToxicityData> CODEC = MAP_CODEC.codec();
+    ).apply(instance, PillToxicityData::new));
     private double toxicity;
 
     public PillToxicityData() {
@@ -20,10 +19,6 @@ public final class PillToxicityData {
 
     private PillToxicityData(double toxicity) {
         this.set(toxicity);
-    }
-
-    private static PillToxicityData decode(double toxicity) {
-        return new PillToxicityData(toxicity);
     }
 
     public double toxicity() {

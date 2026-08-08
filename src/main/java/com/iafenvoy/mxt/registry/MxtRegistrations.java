@@ -27,6 +27,8 @@ public final class MxtRegistrations {
         MxtAbilityComponents.REGISTRY.register(bus);
         MxtAbilityTriggers.REGISTRY.register(bus);
         MxtNumberProviders.REGISTRY.register(bus);
+        MxtFormulaFunctions.REGISTRY.register(bus);
+        MxtFormulaVariables.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
         MxtEntityActions.REGISTRY.register(bus);
         MxtEntityConditions.REGISTRY.register(bus);
@@ -39,6 +41,7 @@ public final class MxtRegistrations {
         MxtDamageConditions.REGISTRY.register(bus);
         MxtResourceBarRenderers.REGISTRY.register(bus);
         MxtResourceBarVisibilities.REGISTRY.register(bus);
+        MxtBadges.REGISTRY.register(bus);
         MxtDomainBehaviors.FORGING.register(bus);
         MxtDomainBehaviors.FORMATION.register(bus);
         MxtDomainBehaviors.TRIBULATION.register(bus);

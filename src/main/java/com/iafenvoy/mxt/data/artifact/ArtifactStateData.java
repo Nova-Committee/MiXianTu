@@ -16,16 +16,12 @@ public record ArtifactStateData(Optional<String> ownerUuid, Optional<Identifier>
             Identifier.CODEC.optionalFieldOf("archetype").forGetter(ArtifactStateData::archetype),
             Codec.DOUBLE.optionalFieldOf("nourishment", 0.0D).forGetter(ArtifactStateData::nourishment),
             Codec.DOUBLE.optionalFieldOf("spirit_energy", 0.0D).forGetter(ArtifactStateData::spiritEnergy)
-    ).apply(instance, ArtifactStateData::decode));
+    ).apply(instance, ArtifactStateData::new));
 
     public ArtifactStateData {
         if (!Double.isFinite(nourishment) || nourishment < 0.0D || !Double.isFinite(spiritEnergy) || spiritEnergy < 0.0D) {
             throw new IllegalArgumentException("Artifact state values must be finite and non-negative");
         }
-    }
-
-    private static ArtifactStateData decode(Optional<String> ownerUuid, Optional<Identifier> archetype, double nourishment, double spiritEnergy) {
-        return new ArtifactStateData(ownerUuid, archetype, nourishment, spiritEnergy);
     }
 
     public static ArtifactStateData empty() {

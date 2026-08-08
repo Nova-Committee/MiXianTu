@@ -1,0 +1,6 @@
+{
+  "type": "mxt:keybind",
+  "sprite": "mxt:textures/gui/badge/active.png",
+  "text": "badge.mxt_test.keybind",
+  "key": "key.mxt.primary_active"
+}

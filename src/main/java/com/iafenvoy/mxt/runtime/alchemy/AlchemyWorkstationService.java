@@ -22,6 +22,7 @@ import net.minecraft.core.BlockPos;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -46,7 +47,7 @@ public final class AlchemyWorkstationService {
                                     AlchemyRecipe recipe, int furnaceTier, FormulaContext context) {
         AuraResult aura = AuraService.getPositionAura(level, pos);
         double minimum = recipe.minimumAura().evaluate(context);
-        if (!Double.isFinite(minimum) || minimum < 0.0D || aura.concentration() < minimum || !CollectionHelper.containsAllFast(aura.environmentTags(), recipe.environmentTags()))
+        if (!Double.isFinite(minimum) || minimum < 0.0D || aura.concentration() < minimum || !CollectionHelper.containsAllFast(aura.auraKinds(), recipe.auraKinds()))
             return StartResult.rejected(Failure.ENVIRONMENT);
         return start(state, recipeId, recipe, furnaceTier, context);
     }
@@ -90,17 +91,21 @@ public final class AlchemyWorkstationService {
             Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
             for (int count = 0; count < stack.getCount(); count++) result.add(id);
         }
-        return List.copyOf(result);
+        return result;
     }
 
     private static List<ItemStack> toStacks(List<Identifier> ids) {
         List<ItemStack> result = new ArrayList<>();
         for (Identifier id : ids)
             BuiltInRegistries.ITEM.getOptional(id).map(ItemStack::new).ifPresent(result::add);
-        return List.copyOf(result);
+        return result;
     }
 
     public record TickResult(State state, long remainingTicks, boolean spoiled, List<ItemStack> outputs) {
+        public TickResult {
+            outputs = new LinkedList<>(outputs);
+        }
+
         static TickResult idle() {
             return new TickResult(State.IDLE, 0L, false, List.of());
         }
@@ -110,7 +115,7 @@ public final class AlchemyWorkstationService {
         }
 
         static TickResult finished(List<ItemStack> outputs, boolean spoiled) {
-            return new TickResult(State.FINISHED, 0L, spoiled, List.copyOf(outputs));
+            return new TickResult(State.FINISHED, 0L, spoiled, outputs);
         }
 
         static TickResult invalidOutput(boolean spoiled) {

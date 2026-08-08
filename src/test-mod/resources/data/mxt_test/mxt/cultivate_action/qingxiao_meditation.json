@@ -1,0 +1,9 @@
+{
+  "tick_interval": 20,
+  "aura_kinds": ["mxt_test:aura_kind/common"],
+  "absorb_amount": "2 + level * 0.05",
+  "aura_cost": 0,
+  "aura_gains": [{ "id": "mxt_test:qi", "amount": "1 + level * 0.05" }],
+  "cooldown": 0,
+  "tick_action": { "type": "mxt:apply_effect", "effect": "minecraft:night_vision", "duration_ticks": 40 }
+}

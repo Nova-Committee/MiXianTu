@@ -5,13 +5,14 @@ import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Locale;
@@ -38,8 +39,13 @@ public record Curse(CurseType typedType, NumberProvider durationTicks, NumberPro
             Codec.BOOL.optionalFieldOf("allow_force_remove", false).forGetter(Curse::allowForceRemove)
     ).apply(instance, Curse::new));
 
-    public Identifier type() {
-        return this.typedType.id();
+    /**
+     * Curse actions can apply or remove curses, including the defining curse itself.
+     */
+    @Override
+    public @NonNull String toString() {
+        return "Curse[type=" + this.typedType.id() + ", maxStacks=" + this.maxStacks
+                + ", stackingMode=" + this.stackingMode + ", cleanseTags=" + this.cleanseTags + "]";
     }
 
     public enum StackingMode {

@@ -16,7 +16,7 @@ public record EntityTypeTagCondition(TagKey<EntityType<?>> tag) implements Entit
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {
-        return entity.getType().builtInRegistryHolder().is(this.tag);
+        return entity.is(this.tag);
     }
 
     @Override

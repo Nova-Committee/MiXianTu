@@ -10,6 +10,8 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
@@ -20,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * Attachment bridge for the common curse transaction model. Callers supply a resolved definition for each operation.
@@ -29,28 +30,30 @@ public final class CurseService {
     private CurseService() {
     }
 
-    public static ApplyResult apply(CurseHolderData data, Identifier id, Curse definition, int stacks,
+    public static ApplyResult apply(CurseHolderData data, Holder<Curse> curse, int stacks,
                                     long gameTime, FormulaContext context, String source) {
-        return apply(data, id, definition, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
+        return apply(data, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
     }
 
     /**
      * Variant for integrations that own a dedicated event bus.
      */
-    public static ApplyResult apply(CurseHolderData data, Identifier id, Curse definition, int stacks,
+    public static ApplyResult apply(CurseHolderData data, Holder<Curse> curse, int stacks,
                                     long gameTime, FormulaContext context, String source, @NotNull IEventBus eventBus) {
-        return apply(data, id, definition, stacks, gameTime, context, source, eventBus, Optional.empty());
+        return apply(data, curse, stacks, gameTime, context, source, eventBus, Optional.empty());
     }
 
-    public static ApplyResult apply(CurseHolderData data, Identifier id, Curse definition, int stacks,
+    public static ApplyResult apply(CurseHolderData data, Holder<Curse> curse, int stacks,
                                     long gameTime, FormulaContext context, String source, IEventBus eventBus,
                                     Optional<Long> durationOverride) {
+        Curse definition = curse.value();
+        Identifier id = HolderHelper.id(curse);
         CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, id, definition, stacks, gameTime, context, source);
         if (eventBus.post(event).isCanceled()) return ApplyResult.cancelledResult();
         CurseLedger ledger = read(data);
-        CurseInstance result = ledger.apply(id, definition, event.stacks(), gameTime, context, event.source(), durationOverride);
+        CurseInstance result = ledger.apply(curse, event.stacks(), gameTime, context, event.source(), durationOverride);
         write(data, ledger);
-        data.markKnown(id);
+        data.markKnown(curse);
         eventBus.post(new CurseApplyEvent.Post(data, id, definition, gameTime, context, result));
         return ApplyResult.applied(result);
     }
@@ -58,13 +61,14 @@ public final class CurseService {
     /**
      * Full entity-facing transaction: condition, state mutation and post-apply action.
      */
-    public static ApplyResult apply(@NotNull Entity target, Identifier id, Curse definition, int stacks,
+    public static ApplyResult apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
                                     long gameTime, FormulaContext context, String source, IEventBus eventBus) {
+        Curse definition = curse.value();
         if (!definition.applicationCondition().test(target, context)) {
             return ApplyResult.rejected(ApplyFailure.CONDITION);
         }
-        ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), id,
-                definition, stacks, gameTime, context, source, eventBus);
+        ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse,
+                stacks, gameTime, context, source, eventBus);
         if (result.applied()) {
             definition.onApply().execute(target, context);
             CurseScheduler.reschedule(target);
@@ -72,44 +76,41 @@ public final class CurseService {
         return result;
     }
 
-    public static ApplyResult apply(Entity target, Identifier id, Curse definition, int stacks,
+    public static ApplyResult apply(Entity target, Holder<Curse> curse, int stacks,
                                     long gameTime, FormulaContext context, String source) {
-        return apply(target, id, definition, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
+        return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
     }
 
-    public static ApplyResult applyWithDuration(Entity target, Identifier id, Curse definition, int stacks,
+    public static ApplyResult applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
                                                 long gameTime, FormulaContext context, String source,
                                                 Optional<Long> durationOverride) {
-        if (!definition.applicationCondition().test(target, context)) {
+        if (!curse.value().applicationCondition().test(target, context)) {
             return ApplyResult.rejected(ApplyFailure.CONDITION);
         }
-        ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), id,
-                definition, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
+        ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse,
+                stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
         if (result.applied()) {
-            definition.onApply().execute(target, context);
+            curse.value().onApply().execute(target, context);
             CurseScheduler.reschedule(target);
         }
         return result;
     }
 
-    public static Optional<CurseInstance> remove(CurseHolderData data, Identifier id) {
-        return remove(data, id, Reason.EXPLICIT, -1L, NeoForge.EVENT_BUS);
-    }
-
-    public static Optional<CurseInstance> remove(CurseHolderData data, Identifier id, Reason reason, long gameTime) {
-        return remove(data, id, reason, gameTime, NeoForge.EVENT_BUS);
+    public static Optional<CurseInstance> remove(CurseHolderData data, Holder<Curse> curse, Reason reason, long gameTime) {
+        return remove(data, curse, reason, gameTime, NeoForge.EVENT_BUS);
     }
 
     /**
      * Variant for integrations that own a dedicated event bus.
      */
-    public static Optional<CurseInstance> remove(CurseHolderData data, Identifier id, Reason reason, long gameTime, @NotNull IEventBus eventBus) {
-        State state = data.instances().get(id);
+    public static Optional<CurseInstance> remove(CurseHolderData data, Holder<Curse> curse, Reason reason, long gameTime, @NotNull IEventBus eventBus) {
+        Identifier id = HolderHelper.id(curse);
+        State state = data.instances().get(curse);
         if (state == null || eventBus.post(new Pre(data, id, state, reason, gameTime)).isCanceled()) {
             return Optional.empty();
         }
         CurseLedger ledger = read(data);
-        Optional<CurseInstance> result = ledger.remove(id);
+        Optional<CurseInstance> result = ledger.remove(curse);
         write(data, ledger);
         result.ifPresent(removed -> eventBus.post(new Post(data, id, state, reason, gameTime)));
         return result;
@@ -118,8 +119,8 @@ public final class CurseService {
     /**
      * Removes a curse and refreshes the entity's due schedule after the transaction commits.
      */
-    public static Optional<CurseInstance> remove(Entity target, Identifier id, Reason reason, long gameTime) {
-        Optional<CurseInstance> result = remove(target.getData(MxtAttachments.CURSE_HOLDER), id, reason, gameTime, NeoForge.EVENT_BUS);
+    public static Optional<CurseInstance> remove(Entity target, Holder<Curse> curse, Reason reason, long gameTime) {
+        Optional<CurseInstance> result = remove(target.getData(MxtAttachments.CURSE_HOLDER), curse, reason, gameTime, NeoForge.EVENT_BUS);
         if (result.isPresent()) CurseScheduler.reschedule(target);
         return result;
     }
@@ -135,18 +136,13 @@ public final class CurseService {
     /**
      * Runs due periodic effects and expires instances without scanning unrelated entities.
      */
-    public static int tick(Entity target, long gameTime, Function<Identifier, Optional<Curse>> definitions,
+    public static int tick(Entity target, long gameTime,
                            FormulaContext context) {
         CurseHolderData data = target.getData(MxtAttachments.CURSE_HOLDER);
         int executed = 0;
-        for (Entry<Identifier, State> entry : data.instances().entrySet()) {
-            Optional<Curse> resolved = definitions.apply(entry.getKey());
-            if (resolved.isEmpty()) {
-                data.markUnknown(entry.getKey());
-                continue;
-            }
+        for (Entry<Holder<Curse>, State> entry : data.instances().entrySet()) {
             data.markKnown(entry.getKey());
-            Curse definition = resolved.get();
+            Curse definition = entry.getKey().value();
             if (entry.getValue().expiredAt(gameTime)) {
                 if (remove(data, entry.getKey(), Reason.EXPIRED, gameTime).isPresent()) {
                     definition.onRemove().execute(target, context);
@@ -184,14 +180,14 @@ public final class CurseService {
     public enum ApplyFailure {CONDITION, CANCELLED, SERVER_ONLY}
 
     private static CurseLedger read(CurseHolderData data) {
-        Map<Identifier, CurseInstance> instances = new LinkedHashMap<>();
-        data.instances().forEach((id, state) -> instances.put(id, new CurseInstance(id, state.stacks(), state.appliedAt(), state.expiresAt(), state.source())));
+        Map<Holder<Curse>, CurseInstance> instances = new LinkedHashMap<>();
+        data.instances().forEach((curse, state) -> instances.put(curse, new CurseInstance(curse, state.stacks(), state.appliedAt(), state.expiresAt(), state.source())));
         return new CurseLedger(instances);
     }
 
     private static void write(CurseHolderData data, CurseLedger ledger) {
-        Map<Identifier, State> instances = new LinkedHashMap<>();
-        ledger.snapshot().forEach((id, state) -> instances.put(id, new State(state.stacks(), state.appliedAt(), state.expiresAt(), state.source())));
+        Map<Holder<Curse>, State> instances = new LinkedHashMap<>();
+        ledger.snapshot().forEach((curse, state) -> instances.put(curse, new State(state.stacks(), state.appliedAt(), state.expiresAt(), state.source())));
         data.replace(instances);
     }
 }

@@ -5,7 +5,7 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.*;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public record AutoIgnoreListCodec<E>(Codec<E> elementCodec) implements Codec<List<E>> {
@@ -37,7 +37,7 @@ public record AutoIgnoreListCodec<E>(Codec<E> elementCodec) implements Codec<Lis
 
     private class DecoderState<T> {
         private final DynamicOps<T> ops;
-        private final List<E> elements = new ArrayList<>();
+        private final List<E> elements = new LinkedList<>();
 
         private DecoderState(final DynamicOps<T> ops) {
             this.ops = ops;

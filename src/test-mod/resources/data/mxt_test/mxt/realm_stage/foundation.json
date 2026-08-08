@@ -4,6 +4,13 @@
   "progress_threshold": 100,
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
   "tribulation": "mxt_test:three_thunders",
+  "breakthrough_particle": {
+    "particle": { "type": "minecraft:end_rod" },
+    "count": 20,
+    "speed": 0.03,
+    "spread": [0.6, 1.0, 0.6],
+    "offset_y": 0.8
+  },
   "success_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 5 },
   "fail_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 100 }
 }

@@ -26,10 +26,6 @@ public record SpawnEffectCloudAction(float radius, float radiusOnUse, int waitTi
             MobEffectInstance.CODEC.listOf().optionalFieldOf("effects", List.of()).forGetter(SpawnEffectCloudAction::effects)
     ).apply(instance, SpawnEffectCloudAction::new));
 
-    public SpawnEffectCloudAction {
-        effects = List.copyOf(effects);
-    }
-
     @Override
     public void execute(Entity entity, FormulaContext context) {
         if (!(entity.level() instanceof ServerLevel level)) return;

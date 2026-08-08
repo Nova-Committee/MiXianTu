@@ -36,6 +36,6 @@ public final class CuriosIntegration {
                 if (!stack.isEmpty()) result.add(stack.copy());
             }
         }
-        return List.copyOf(result);
+        return result;
     }
 }

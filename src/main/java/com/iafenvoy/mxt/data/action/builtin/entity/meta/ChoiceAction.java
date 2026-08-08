@@ -11,10 +11,6 @@ import java.util.List;
 public record ChoiceAction(List<WeightedActionEntry<EntityAction>> actions) implements EntityAction {
     public static final MapCodec<ChoiceAction> CODEC = WeightedActionEntry.codec(EntityAction.CODEC).listOf().fieldOf("actions").xmap(ChoiceAction::new, ChoiceAction::actions);
 
-    public ChoiceAction {
-        actions = List.copyOf(actions);
-    }
-
     @Override
     public void execute(Entity entity, FormulaContext context) {
         WeightedActionEntry<EntityAction> entry = WeightedActionEntry.select(this.actions, entity.getRandom());

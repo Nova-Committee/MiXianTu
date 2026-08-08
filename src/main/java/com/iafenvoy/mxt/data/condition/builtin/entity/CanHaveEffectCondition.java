@@ -8,13 +8,14 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.neoforge.common.CommonHooks;
 
 public record CanHaveEffectCondition(Holder<MobEffect> effect) implements EntityCondition {
     public static final MapCodec<CanHaveEffectCondition> CODEC = MobEffect.CODEC.fieldOf("effect").xmap(CanHaveEffectCondition::new, CanHaveEffectCondition::effect);
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {
-        return entity instanceof LivingEntity living && living.canBeAffected(new MobEffectInstance(this.effect));
+        return entity instanceof LivingEntity living && CommonHooks.canMobEffectBeApplied(living, new MobEffectInstance(this.effect), null);
     }
 
     @Override

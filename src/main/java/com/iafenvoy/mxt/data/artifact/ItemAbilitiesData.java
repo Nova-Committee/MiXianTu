@@ -13,4 +13,5 @@ public record ItemAbilitiesData(List<Identifier> abilities) {
     public static final Codec<ItemAbilitiesData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Identifier.CODEC.listOf().optionalFieldOf("abilities", List.of()).forGetter(ItemAbilitiesData::abilities)
     ).apply(instance, ItemAbilitiesData::new));
+
 }

@@ -1,19 +1,20 @@
 package com.iafenvoy.mxt.loot;
 
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
-public record HasCurseLootCondition(EntityTarget target, Identifier curse) implements LootItemCondition {
+public record HasCurseLootCondition(EntityTarget target, Holder<Curse> curse) implements LootItemCondition {
     public static final MapCodec<HasCurseLootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasCurseLootCondition::target),
-            Identifier.CODEC.fieldOf("curse").forGetter(HasCurseLootCondition::curse)
+            Curse.CODEC.fieldOf("curse").forGetter(HasCurseLootCondition::curse)
     ).apply(instance, HasCurseLootCondition::new));
 
     @Override

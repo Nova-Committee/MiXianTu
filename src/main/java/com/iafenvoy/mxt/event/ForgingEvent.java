@@ -11,6 +11,7 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -67,7 +68,7 @@ public abstract class ForgingEvent extends Event {
             this.definition = definition;
             this.resources = resources;
             this.context = context;
-            this.costs = List.copyOf(definition.costs());
+            this.costs = new LinkedList<>(definition.costs());
         }
 
         public ForgingSession session() {
@@ -95,7 +96,7 @@ public abstract class ForgingEvent extends Event {
         }
 
         public void setCosts(List<ResourceCost> costs) {
-            this.costs = List.copyOf(costs);
+            this.costs = new LinkedList<>(costs);
         }
     }
 

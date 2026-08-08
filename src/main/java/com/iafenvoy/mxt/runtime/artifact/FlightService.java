@@ -7,8 +7,9 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -19,11 +20,12 @@ public final class FlightService {
     private FlightService() {
     }
 
-    public static Result mount(ServerPlayer player, Identifier archetype, ItemArchetype definition, FormulaContext context) {
-        return mount(player, player.getMainHandItem(), archetype, definition, context);
+    public static Result mount(ServerPlayer player, Holder<ItemArchetype> archetype, FormulaContext context) {
+        return mount(player, player.getMainHandItem(), archetype, context);
     }
 
-    public static Result mount(ServerPlayer player, ItemStack artifact, Identifier archetype, ItemArchetype definition, FormulaContext context) {
+    public static Result mount(ServerPlayer player, ItemStack artifact, Holder<ItemArchetype> archetype, FormulaContext context) {
+        ItemArchetype definition = archetype.value();
         if (definition.flightSpeed().evaluate(context) <= 0.0D)
             return Result.rejected(Failure.NOT_FLYABLE);
         if (!ownsEquippedArchetype(player, artifact, archetype)) {
@@ -45,9 +47,9 @@ public final class FlightService {
         return Result.mounted();
     }
 
-    public static boolean ownsEquippedArchetype(ServerPlayer player, ItemStack artifact, Identifier archetype) {
+    public static boolean ownsEquippedArchetype(ServerPlayer player, ItemStack artifact, Holder<ItemArchetype> archetype) {
         ArtifactStateData state = artifact.get(MxtDataComponents.ARTIFACT_STATE);
-        return !artifact.isEmpty() && state != null && state.archetype().filter(archetype::equals).isPresent()
+        return !artifact.isEmpty() && state != null && state.archetype().filter(HolderHelper.id(archetype)::equals).isPresent()
                 && ArtifactService.isOwner(artifact, player.getUUID());
     }
 

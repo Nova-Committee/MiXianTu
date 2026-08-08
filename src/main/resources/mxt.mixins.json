@@ -2,7 +2,9 @@
   "required": true,
   "package": "com.iafenvoy.mxt.mixin",
   "compatibilityLevel": "JAVA_25",
-  "mixins": [],
+  "mixins": [
+    "MinecraftServerRuntimeAccessor"
+  ],
   "injectors": {
     "defaultRequire": 1
   },

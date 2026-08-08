@@ -1,0 +1,7 @@
+{
+  "items": "mxt_test:qingxiao_spirit_crystal",
+  "total_aura": 180,
+  "consume_speed": 1,
+  "result_stack": { "id": "mxt:impurity", "count": 1 },
+  "exhausted_action": { "type": "mxt:apply_effect", "effect": "minecraft:regeneration", "duration_ticks": 100 }
+}

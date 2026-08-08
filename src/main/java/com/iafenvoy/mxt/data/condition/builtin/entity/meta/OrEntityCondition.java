@@ -10,10 +10,6 @@ import java.util.List;
 public record OrEntityCondition(List<EntityCondition> conditions) implements EntityCondition {
     public static final MapCodec<OrEntityCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(OrEntityCondition::new, OrEntityCondition::conditions);
 
-    public OrEntityCondition {
-        conditions = List.copyOf(conditions);
-    }
-
     @Override
     public boolean test(Entity entity, FormulaContext context) {
         return this.conditions.stream().anyMatch(condition -> condition.test(entity, context));

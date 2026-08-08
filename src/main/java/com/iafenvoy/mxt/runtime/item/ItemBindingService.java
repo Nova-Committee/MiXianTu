@@ -68,21 +68,27 @@ public final class ItemBindingService {
                 .map(Reference::value), stack);
     }
 
-    /** Re-applies weapon attributes after equipment changes or datapack reloads. */
+    /**
+     * Re-applies weapon attributes after equipment changes or datapack reloads.
+     */
     public static void refreshEquipped(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         refreshWeapon(entity.getItemBySlot(EquipmentSlot.MAINHAND));
         refreshWeapon(entity.getItemBySlot(EquipmentSlot.OFFHAND));
     }
 
-    /** Runs the active main-hand weapon's periodic effects server-side. */
+    /**
+     * Runs the active main-hand weapon's periodic effects server-side.
+     */
     public static void tickMainHandWeapon(LivingEntity holder) {
         if (holder.level().isClientSide()) return;
         FormulaContext context = FormulaContext.of(holder);
         weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.tickAction().execute(holder, context));
     }
 
-    /** Runs the active main-hand weapon's left-click action against the attacked entity. */
+    /**
+     * Runs the active main-hand weapon's left-click action against the attacked entity.
+     */
     public static void onMainHandWeaponAttack(LivingEntity holder, Entity target) {
         if (holder.level().isClientSide()) return;
         FormulaContext context = FormulaContext.of(holder, Map.of(
@@ -92,14 +98,18 @@ public final class ItemBindingService {
         weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.attackAction().execute(holder, target, context));
     }
 
-    /** Runs a main-hand weapon's explicit right-click action. */
+    /**
+     * Runs a main-hand weapon's explicit right-click action.
+     */
     public static void onMainHandWeaponUse(LivingEntity holder) {
         if (holder.level().isClientSide()) return;
         FormulaContext context = FormulaContext.of(holder);
         weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.useAction().execute(holder, context));
     }
 
-    /** Dispatches generic item-binding actions and pill behaviour after vanilla consumption. */
+    /**
+     * Dispatches generic item-binding actions and pill behaviour after vanilla consumption.
+     */
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return;
         FormulaContext context = FormulaContext.of(entity);

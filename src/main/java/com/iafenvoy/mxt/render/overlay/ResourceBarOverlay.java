@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.render.overlay;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
@@ -11,12 +12,11 @@ import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Radial;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Segmented;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.TextOnly;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Textured;
+import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Origins;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -53,7 +53,7 @@ public enum ResourceBarOverlay implements GuiLayer {
 
     private static final int BAR_WIDTH = 71;
     private static final int BAR_HEIGHT = 8;
-    private static final int BAR_GAP = 2;
+    private static final int BAR_GAP = 0;
     private static final int DEFAULT_FILL = 0xFF4E9CFF;
     private static final int DEFAULT_EMPTY = 0xFF243047;
 
@@ -74,16 +74,17 @@ public enum ResourceBarOverlay implements GuiLayer {
     }
 
     private static List<ResolvedBar> collect(Player player) {
-        Registry<ResourceBar> bars = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE_BAR);
+        Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE);
         List<ResolvedBar> result = new ArrayList<>();
-        collectFor(result, bars, player, Context.SELF_HUD);
+        collectFor(result, resources, player, Context.SELF_HUD);
         if (minecraft().crosshairPickEntity instanceof LivingEntity target)
-            collectFor(result, bars, target, Context.TARGET_OVERLAY);
+            collectFor(result, resources, target, Context.TARGET_OVERLAY);
         if (minecraft().crosshairPickEntity instanceof LivingEntity target)
-            collectFor(result, bars, target, Context.BOSS_OVERLAY);
+            collectFor(result, resources, target, Context.BOSS_OVERLAY);
         return result.stream()
                 .sorted(Comparator.comparing((ResolvedBar bar) -> bar.definition().context())
-                        .thenComparingInt(bar -> bar.definition().order()).thenComparing(ResolvedBar::id))
+                        .thenComparingInt(bar -> bar.definition().order()).thenComparing(ResolvedBar::resourceId)
+                        .thenComparingInt(ResolvedBar::index))
                 .toList();
     }
 
@@ -91,67 +92,82 @@ public enum ResourceBarOverlay implements GuiLayer {
         return Minecraft.getInstance();
     }
 
-    private static void collectFor(List<ResolvedBar> result, Registry<ResourceBar> bars, LivingEntity entity, Context context) {
+    /**
+     * Height occupied by visible self-HUD resource bars in one of the two shared columns.
+     */
+    public static int reservedSelfHudHeight(Player player, Anchor anchor) {
+        return collect(player).stream()
+                .filter(bar -> bar.definition().context() == Context.SELF_HUD && bar.definition().anchor() == anchor)
+                .mapToInt(bar -> bar.height() + BAR_GAP)
+                .sum();
+    }
+
+    private static void collectFor(List<ResolvedBar> result, Registry<Resource> resources, LivingEntity entity, Context context) {
         ResourceHolderData values = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = entity.level().getGameTime();
-        List<Reference<ResourceBar>> definitions = bars.listElements().toList();
-        for (Reference<ResourceBar> holder : definitions) {
-            Identifier id = holder.unwrapKey().map(ResourceKey::identifier).orElse(null);
-            ResourceBar bar = holder.value();
-            Identifier resourceId = HolderHelper.id(bar.resource());
-            if (id == null || bar.context() != context || !values.contains(resourceId) || replacedByCustomBar(holder, definitions)) continue;
-            Audit audit = values.audit(resourceId);
-            double min = audit.minSnapshot();
-            double maximum = audit.maxSnapshot();
-            double current = values.get(resourceId);
-            if (!Double.isFinite(min) || !Double.isFinite(maximum) || !Double.isFinite(current) || maximum < min || maximum < 0.0D)
-                continue;
+        for (Reference<Resource> resource : resources.listElements().toList()) {
+            Identifier id = resource.unwrapKey().map(ResourceKey::identifier).orElse(null);
+            if (id == null || !values.contains(resource)) continue;
+            List<ResourceBar> definitions = resource.value().bars();
+            for (int index = 0; index < definitions.size(); index++) {
+                ResourceBar bar = definitions.get(index);
+                if (bar.context() != context || replacedByCustomBar(bar, definitions)) continue;
+                Audit audit = values.audit(resource);
+                double min = audit.minSnapshot();
+                double maximum = audit.maxSnapshot();
+                double current = values.get(resource);
+                if (!Double.isFinite(min) || !Double.isFinite(maximum) || !Double.isFinite(current) || maximum < min || maximum < 0.0D)
+                    continue;
 
-            long changedAt = audit.lastChangedTick();
-            long ticksSinceChanged = changedAt < 0L ? Long.MAX_VALUE : Math.max(0L, gameTime - changedAt);
-            ResourceBarView view = new ResourceBarView(current, maximum, ticksSinceChanged, entity != minecraft().player);
-            if (!bar.visibility().visible(view)) continue;
-            result.add(new ResolvedBar(id, bar, current, min, maximum));
+                long changedAt = audit.lastChangedTick();
+                long ticksSinceChanged = changedAt < 0L ? Long.MAX_VALUE : Math.max(0L, gameTime - changedAt);
+                ResourceBarView view = new ResourceBarView(current, maximum, ticksSinceChanged, entity != minecraft().player);
+                if (!bar.visibility().visible(view)) continue;
+                result.add(new ResolvedBar(id, index, bar, current, min, maximum));
+            }
         }
     }
 
-    /** A replacement declaration wins over any ordinary bar for the same resource and display context. */
-    private static boolean replacedByCustomBar(Reference<ResourceBar> candidate, List<Reference<ResourceBar>> definitions) {
-        ResourceBar value = candidate.value();
-        return !value.replaceDefault() && definitions.stream().anyMatch(other -> other != candidate
-                && other.value().replaceDefault() && other.value().context() == value.context()
-                && other.value().resource().equals(value.resource()));
+    /**
+     * A replacement declaration wins over any ordinary bar for the same resource and display context.
+     */
+    private static boolean replacedByCustomBar(ResourceBar candidate, List<ResourceBar> definitions) {
+        return !candidate.replaceDefault() && definitions.stream().anyMatch(other -> other != candidate
+                && other.replaceDefault() && other.context() == candidate.context());
     }
 
     private static Position position(Minecraft minecraft, ResolvedBar bar, int offset) {
         int width = minecraft.getWindow().getGuiScaledWidth();
         int height = minecraft.getWindow().getGuiScaledHeight();
-        int barWidth = bar.width();
-        int barHeight = bar.height();
-        int hotbarY = height - 47;
+        if (bar.definition().context() == Context.TARGET_OVERLAY)
+            return overlayColumnPosition(width, 16 + offset, bar.width(), bar.definition().anchor());
+        if (bar.definition().context() == Context.BOSS_OVERLAY)
+            return overlayColumnPosition(width, 48 + offset, bar.width(), bar.definition().anchor());
+
+        // Match Origins' placement above the hotbar, including the vanilla HUD adjustments.
+        int y = height - 47;
         Player player = minecraft.player;
         if (player != null) {
             if (player.getVehicle() instanceof LivingEntity vehicle)
-                hotbarY -= 8 * (int) (vehicle.getMaxHealth() / 20.0F);
+                y -= 8 * (int) (vehicle.getMaxHealth() / 20.0F);
             if (player.isEyeInFluid(FluidTags.WATER) || player.getAirSupply() < player.getMaxAirSupply())
-                hotbarY -= 8;
+                y -= 8;
         }
-        if (bar.definition().context() == Context.TARGET_OVERLAY)
-            return new Position(width / 2 - barWidth / 2, 16 + offset);
-        if (bar.definition().context() == Context.BOSS_OVERLAY)
-            return new Position(width / 2 - barWidth / 2, 48 + offset);
-        return switch (bar.definition().anchor()) {
-            case ABOVE_HOTBAR -> new Position(width / 2 + 20, hotbarY - offset);
-            case BELOW_HEALTH -> new Position(width / 2 - 91, height - 49 - offset);
-            case TOP_LEFT_STACK -> new Position(4, 4 + offset);
-            case TOP_RIGHT_STACK -> new Position(width - barWidth - 4, 4 + offset);
-        };
+        int x = bar.definition().anchor() == Anchor.LEFT ? width / 2 - 20 - bar.width() : width / 2 + 20;
+        return new Position(x, y - offset);
+    }
+
+    private static Position overlayColumnPosition(int width, int y, int barWidth, Anchor anchor) {
+        int x = anchor == Anchor.LEFT ? width / 2 - 8 - barWidth : width / 2 + 8;
+        return new Position(x, y);
     }
 
     private static void renderBar(GuiGraphicsExtractor graphics, Minecraft minecraft, ResolvedBar bar, Position position) {
         ResourceBarRenderer renderer = bar.definition().renderer();
         double progress = bar.progress();
-        if (renderer instanceof Textured textured) {
+        if (renderer instanceof Origins origins) {
+            renderOrigins(graphics, origins, progress, position);
+        } else if (renderer instanceof Textured textured) {
             graphics.blitSprite(RenderPipelines.GUI_TEXTURED, textured.backgroundSprite(), position.x(), position.y(), textured.width(), textured.height());
             int filled = (int) Math.round(textured.width() * progress);
             if (filled > 0)
@@ -172,6 +188,17 @@ public enum ResourceBarOverlay implements GuiLayer {
             drawValueDisplay(graphics, minecraft, bar, position.x(), position.y(), bar.width(), bar.height());
     }
 
+    private static void renderOrigins(GuiGraphicsExtractor graphics, Origins renderer, double progress, Position position) {
+        int fillY = 8 + renderer.barIndex() * 10;
+        float fill = (float) progress;
+        if (renderer.inverted()) fill = 1.0F - fill;
+        int filled = (int) (fill * BAR_WIDTH);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, renderer.texture(), position.x(), position.y(), 0.0F, 0.0F, BAR_WIDTH, 5, 256, 256);
+        if (filled > 0)
+            graphics.blit(RenderPipelines.GUI_TEXTURED, renderer.texture(), position.x(), position.y() - 2, 0.0F, fillY, filled, BAR_HEIGHT, 256, 256);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, renderer.texture(), position.x() - 10, position.y() - 2, 73.0F, fillY, 8, 8, 256, 256);
+    }
+
     private static void drawValueDisplay(GuiGraphicsExtractor graphics, Minecraft minecraft, ResolvedBar bar,
                                          int x, int y, int width, int height) {
         String value = switch (bar.definition().valueDisplay()) {
@@ -187,13 +214,12 @@ public enum ResourceBarOverlay implements GuiLayer {
 
     private static void renderSegmented(GuiGraphicsExtractor graphics, Segmented renderer,
                                         double progress, Position position) {
-        int segmentWidth = Math.max(1, (BAR_WIDTH - (renderer.segments() - 1) * renderer.gap()) / renderer.segments());
         int filled = (int) Math.round(progress * renderer.segments());
         int fullColor = color(renderer.fullColor(), DEFAULT_FILL);
         int emptyColor = color(renderer.emptyColor(), DEFAULT_EMPTY);
         for (int index = 0; index < renderer.segments(); index++) {
-            int x = position.x() + index * (segmentWidth + renderer.gap());
-            graphics.fill(x, position.y(), x + segmentWidth, position.y() + BAR_HEIGHT, index < filled ? fullColor : emptyColor);
+            int x = position.x() + index * (BAR_HEIGHT + renderer.gap());
+            graphics.fill(x, position.y(), x + BAR_HEIGHT, position.y() + BAR_HEIGHT, index < filled ? fullColor : emptyColor);
         }
     }
 
@@ -259,7 +285,7 @@ public enum ResourceBarOverlay implements GuiLayer {
     private record LayoutKey(Context context, Anchor anchor) {
     }
 
-    private record ResolvedBar(Identifier id, ResourceBar definition, double current, double minimum,
+    private record ResolvedBar(Identifier resourceId, int index, ResourceBar definition, double current, double minimum,
                                double maximum) {
         private double progress() {
             return this.maximum == this.minimum ? 1.0D : Math.max(0.0D, Math.min(1.0D, (this.current - this.minimum) / (this.maximum - this.minimum)));
@@ -268,6 +294,8 @@ public enum ResourceBarOverlay implements GuiLayer {
         private int width() {
             return switch (this.definition.renderer()) {
                 case Textured textured -> textured.width();
+                case Segmented segmented ->
+                        segmented.segments() * BAR_HEIGHT + (segmented.segments() - 1) * segmented.gap();
                 case Radial radial -> radial.radius() * 2 + radial.thickness();
                 default -> BAR_WIDTH;
             };

@@ -31,7 +31,7 @@ public final class CurrencyPaymentService {
                 count -= batch;
             }
         }
-        return remaining == 0L ? Optional.of(List.copyOf(result)) : Optional.empty();
+        return remaining == 0L ? Optional.of(result) : Optional.empty();
     }
 
     public static OptionalLongResult collectCurrency(Container container) {

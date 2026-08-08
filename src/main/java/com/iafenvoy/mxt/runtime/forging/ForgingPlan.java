@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * Immutable, already-resolved forging plan used by sessions and optimal-step search.
+ * Already-resolved forging plan used by sessions and optimal-step search.
  */
 public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Identifier> finishPattern,
                           int requiredSuffixSteps, Map<Identifier, Integer> deltas, int maxSteps, int optimalSteps) {
@@ -36,8 +36,8 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
     }
 
     public ForgingPlan {
-        finishPattern = List.copyOf(finishPattern);
-        deltas = Map.copyOf(deltas);
+        finishPattern = new LinkedList<>(finishPattern);
+        deltas = new LinkedHashMap<>(deltas);
         if (!(meterMin < 0 && meterMax > 0 && meterMin <= targetMin && targetMin <= targetMax && targetMax <= meterMax)) {
             throw new IllegalArgumentException("Invalid forge meter range");
         }
@@ -102,7 +102,7 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         ArrayList<Identifier> result = new ArrayList<>(Math.min(6, history.size() + 1));
         result.addAll(history.subList(Math.max(0, history.size() - 5), history.size()));
         result.add(method);
-        return List.copyOf(result);
+        return result;
     }
 
     private static boolean suffixMatches(List<Identifier> history, List<Identifier> pattern, int requiredSteps) {
@@ -116,5 +116,8 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
     }
 
     private record SearchState(int value, List<Identifier> history) {
+        SearchState {
+            history = new LinkedList<>(history);
+        }
     }
 }

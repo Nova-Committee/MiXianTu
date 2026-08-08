@@ -1,10 +1,13 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.creature.ContractType;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -13,12 +16,11 @@ import java.util.UUID;
  * Contract state attached to the contracted creature; policy remains in contract_type definitions.
  */
 public final class ContractData {
-    public static final MapCodec<ContractData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Identifier.CODEC.optionalFieldOf("contract_type").forGetter(ContractData::contractType), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(ContractData::owner),
+    public static final MapCodec<ContractData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            RegistryFixedCodec.create(MxtDatapackRegistries.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractData::contractType), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(ContractData::owner),
             Codec.LONG.optionalFieldOf("bound_at", -1L).forGetter(ContractData::boundAt), Codec.BOOL.optionalFieldOf("recalled", false).forGetter(ContractData::recalled)
-    ).apply(instance, ContractData::decode));
-    public static final Codec<ContractData> CODEC = MAP_CODEC.codec();
-    private Optional<Identifier> contractType;
+    ).apply(instance, ContractData::new));
+    private Optional<Holder<ContractType>> contractType;
     private Optional<UUID> owner;
     private long boundAt;
     private boolean recalled;
@@ -27,18 +29,14 @@ public final class ContractData {
         this(Optional.empty(), Optional.empty(), -1L, false);
     }
 
-    private ContractData(Optional<Identifier> contractType, Optional<UUID> owner, long boundAt, boolean recalled) {
+    private ContractData(Optional<Holder<ContractType>> contractType, Optional<UUID> owner, long boundAt, boolean recalled) {
         this.contractType = contractType;
         this.owner = owner;
         this.boundAt = boundAt;
         this.recalled = recalled;
     }
 
-    private static ContractData decode(Optional<Identifier> contractType, Optional<UUID> owner, long boundAt, boolean recalled) {
-        return new ContractData(contractType, owner, boundAt, recalled);
-    }
-
-    public Optional<Identifier> contractType() {
+    public Optional<Holder<ContractType>> contractType() {
         return this.contractType;
     }
 
@@ -58,7 +56,7 @@ public final class ContractData {
         return this.contractType.isPresent() && this.owner.isPresent();
     }
 
-    public void bind(Identifier type, UUID owner, long gameTime) {
+    public void bind(Holder<ContractType> type, UUID owner, long gameTime) {
         this.contractType = Optional.of(type);
         this.owner = Optional.of(owner);
         this.boundAt = gameTime;

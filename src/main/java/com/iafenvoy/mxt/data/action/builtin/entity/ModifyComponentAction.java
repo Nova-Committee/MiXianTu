@@ -5,14 +5,12 @@ import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
 /**
@@ -35,9 +33,8 @@ public record ModifyComponentAction(Holder<Ability> ability, String component,
         double value = this.value.evaluate(context);
         if (!Double.isFinite(value)) return;
         AbilityHolderData holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        Identifier id = HolderHelper.id(this.ability);
-        if (holder.has(id))
-            holder.setComponentState(id, this.component, AbilityComponentState.initial(value, entity.level().getGameTime()));
+        if (holder.has(this.ability))
+            holder.setComponentState(this.ability, this.component, AbilityComponentState.initial(value, entity.level().getGameTime()));
     }
 
     @Override

@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -22,7 +21,7 @@ public record RemoveAbilityAction(Holder<Ability> ability, Identifier source) im
 
     @Override
     public void execute(Entity entity, FormulaContext context) {
-        entity.getData(MxtAttachments.ABILITY_HOLDER).revoke(HolderHelper.id(this.ability), this.source);
+        entity.getData(MxtAttachments.ABILITY_HOLDER).revoke(this.ability, this.source);
     }
 
     @Override

@@ -12,9 +12,11 @@ import com.iafenvoy.mxt.runtime.forging.ForgingService.FinishResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorldData.StationSession;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -46,7 +48,7 @@ public final class ForgingWorkstationService {
         ItemStack input = held.copyWithCount(1);
         held.shrink(1);
         ForgingSessionData data = new ForgingSessionData();
-        data.start(blueprintId, blueprint.plan(), result.session(), input, blueprint.result(), blueprint.qualityByExtraSteps(), blueprint.failureSettlement());
+        data.start(MxtDatapackRegistries.holder(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId).orElseThrow(), blueprint.plan(), result.session(), input, blueprint.result(), blueprint.qualityByExtraSteps(), blueprint.failureSettlement());
         if (!world.put(position, player.getUUID(), data)) {
             if (!player.getInventory().add(input)) player.drop(input, false);
             return false;
@@ -70,7 +72,7 @@ public final class ForgingWorkstationService {
 
     public static boolean finish(ServerPlayer player, BlockPos position, Identifier blueprintId) {
         StationSession station = stationForOwner(player, position).orElse(null);
-        if (station == null || station.session().blueprint().filter(blueprintId::equals).isEmpty() || station.session().plan().isEmpty() || station.session().session().isEmpty())
+        if (station == null || station.session().blueprint().map(HolderHelper::id).filter(blueprintId::equals).isEmpty() || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
         ForgingSessionData data = station.session();
         ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
@@ -156,8 +158,7 @@ public final class ForgingWorkstationService {
     private static Optional<StationSession> stationForOwner(ServerPlayer player, BlockPos position) {
         StationSession station = player.level().getData(MxtAttachments.FORGING_WORLD).get(position).orElse(null);
         if (station == null || !station.owner().equals(player.getUUID())) return Optional.empty();
-        Identifier blueprintId = station.session().blueprint().orElse(null);
-        ForgingBlueprint blueprint = blueprintId == null ? null : MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        ForgingBlueprint blueprint = station.session().blueprint().map(Holder::value).orElse(null);
         return blueprint != null && canUse(player, position, blueprint) ? Optional.of(station) : Optional.empty();
     }
 }

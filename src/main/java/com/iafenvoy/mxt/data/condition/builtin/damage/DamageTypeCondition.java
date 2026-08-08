@@ -8,6 +8,8 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 
+import java.util.Objects;
+
 /**
  * Matches one concrete registered damage type.
  */
@@ -18,7 +20,7 @@ public record DamageTypeCondition(Holder<DamageType> damageType) implements Dama
 
     @Override
     public boolean test(DamageSource source, float amount, FormulaContext context) {
-        return source.typeHolder().is(this.damageType);
+        return Objects.equals(source.type(), this.damageType.value());
     }
 
     @Override

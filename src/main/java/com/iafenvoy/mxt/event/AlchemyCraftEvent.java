@@ -5,6 +5,7 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public abstract class AlchemyCraftEvent extends Event {
@@ -29,7 +30,7 @@ public abstract class AlchemyCraftEvent extends Event {
 
         public Pre(Identifier recipe, AlchemyRecipe definition, List<Identifier> inputs) {
             super(recipe, definition);
-            this.inputs = List.copyOf(inputs);
+            this.inputs = new LinkedList<>(inputs);
         }
 
         public List<Identifier> inputs() {
@@ -44,7 +45,7 @@ public abstract class AlchemyCraftEvent extends Event {
         public Post(Identifier recipe, AlchemyRecipe definition, boolean spoiled, List<Identifier> outputs) {
             super(recipe, definition);
             this.spoiled = spoiled;
-            this.outputs = List.copyOf(outputs);
+            this.outputs = new LinkedList<>(outputs);
         }
 
         public boolean spoiled() {

@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -16,11 +17,11 @@ public record ArtifactStorageData(List<ItemStack> contents) {
     ).apply(instance, ArtifactStorageData::new));
 
     public ArtifactStorageData {
-        contents = contents.stream().map(ItemStack::copy).toList();
+        contents = new LinkedList<>(contents.stream().map(ItemStack::copy).toList());
     }
 
     public ItemStack get(int slot) {
-        return slot < 0 || slot >= this.contents.size() ? ItemStack.EMPTY : this.contents.get(slot).copy();
+        return slot < 0 || slot >= this.contents.size() ? ItemStack.EMPTY : this.contents.get(slot);
     }
 
     public ArtifactStorageData with(int slot, ItemStack value, int capacity) {

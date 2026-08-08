@@ -3,11 +3,11 @@
     "mxt:spirit_stone_ore",
     "#mxt_test:aura_emitters"
   ],
-  "aura_per_block": 2.5,
-  "regen_per_tick_per_block": 0.002,
+  "aura_per_block": 5.0,
+  "regen_per_tick_per_block": 0.01,
   "element_aura_per_block": {
     "mxt_test:fire": 0.01,
     "mxt_test:water": 0.01
   },
-  "environment_tags": ["mxt_test:environment/spirit_stone"]
+  "aura_kinds": ["mxt_test:aura_kind/spirit_stone"]
 }

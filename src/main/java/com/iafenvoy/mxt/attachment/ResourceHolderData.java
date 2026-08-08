@@ -1,9 +1,14 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import net.minecraft.core.Holder;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -13,41 +18,31 @@ import java.util.Map;
  * with the attachment so clients never need to authoritatively evaluate a resource formula.
  */
 public final class ResourceHolderData {
-    public static final MapCodec<ResourceHolderData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).fieldOf("values").forGetter(ResourceHolderData::values),
-            Codec.unboundedMap(Identifier.CODEC, Audit.CODEC).fieldOf("audit").forGetter(ResourceHolderData::audit)
-    ).apply(instance, ResourceHolderData::decode));
-    public static final Codec<ResourceHolderData> CODEC = MAP_CODEC.codec();
-    private final Map<Identifier, Double> values;
-    private final Map<Identifier, Audit> audit;
+    public static final MapCodec<ResourceHolderData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            CollectionCodecs.doubleMap(Resource.CODEC).fieldOf("values").forGetter(ResourceHolderData::values),
+            CollectionCodecs.map(Resource.CODEC, Audit.CODEC).fieldOf("audit").forGetter(ResourceHolderData::audit)
+    ).apply(instance, ResourceHolderData::new));
+    private final Object2DoubleMap<Holder<Resource>> values;
+    private final Map<Holder<Resource>, Audit> audit;
 
     public ResourceHolderData() {
-        this(Map.of(), Map.of());
+        this(Object2DoubleMaps.emptyMap(), Map.of());
     }
 
-    private ResourceHolderData(Map<Identifier, Double> values, Map<Identifier, Audit> audit) {
-        this.values = new LinkedHashMap<>();
+    private ResourceHolderData(Object2DoubleMap<Holder<Resource>> values, Map<Holder<Resource>, Audit> audit) {
+        this.values = new Object2DoubleOpenHashMap<>(values);
         this.audit = new LinkedHashMap<>(audit);
-        values.forEach((id, value) -> {
-            if (!Double.isFinite(value)) throw new IllegalArgumentException("Resource value must be finite");
-            if (!this.audit.containsKey(id)) throw new IllegalArgumentException("Resource audit is required for " + id);
-            this.values.put(id, value);
-        });
     }
 
-    private static ResourceHolderData decode(Map<Identifier, Double> values, Map<Identifier, Audit> audit) {
-        return new ResourceHolderData(values, audit);
+    public double get(Holder<Resource> resource) {
+        return this.values.getDouble(resource);
     }
 
-    public double get(Identifier resource) {
-        return this.values.getOrDefault(resource, 0.0D);
-    }
-
-    public boolean contains(Identifier resource) {
+    public boolean contains(Holder<Resource> resource) {
         return this.values.containsKey(resource);
     }
 
-    public void set(Identifier resource, double value) {
+    public void set(Holder<Resource> resource, double value) {
         if (!Double.isFinite(value)) throw new IllegalArgumentException("Resource value must be finite");
         this.values.put(resource, value);
         this.audit.putIfAbsent(resource, Audit.initial(value));
@@ -56,7 +51,7 @@ public final class ResourceHolderData {
     /**
      * Records a server-side state change with the resolved definition bounds and an auditable source.
      */
-    public void set(Identifier resource, double value, double minSnapshot, double maxSnapshot, long changedAt, String source) {
+    public void set(Holder<Resource> resource, double value, double minSnapshot, double maxSnapshot, long changedAt, String source) {
         if (!Double.isFinite(value) || !Double.isFinite(minSnapshot) || !Double.isFinite(maxSnapshot)
                 || minSnapshot > maxSnapshot || changedAt < -1L || source == null || source.isBlank()) {
             throw new IllegalArgumentException("Invalid resource audit state");
@@ -65,24 +60,28 @@ public final class ResourceHolderData {
         this.audit.put(resource, new Audit(minSnapshot, maxSnapshot, changedAt, source));
     }
 
-    public boolean remove(Identifier resource) {
+    public boolean remove(Holder<Resource> resource) {
         this.audit.remove(resource);
-        return this.values.remove(resource) != null;
+        boolean b = this.values.containsKey(resource);
+        this.values.removeDouble(resource);
+        return b;
     }
 
-    public Map<Identifier, Double> values() {
-        return Map.copyOf(this.values);
+    public Object2DoubleMap<Holder<Resource>> values() {
+        return this.values;
     }
 
-    public Map<Identifier, Audit> audit() {
-        return Map.copyOf(this.audit);
+    public Map<Holder<Resource>, Audit> audit() {
+        return this.audit;
     }
 
-    public Audit audit(Identifier resource) {
+    public Audit audit(Holder<Resource> resource) {
         return this.audit.getOrDefault(resource, Audit.initial(this.get(resource)));
     }
 
-    /** Captures values and resolved bounds together for transactional rollback. */
+    /**
+     * Captures values and resolved bounds together for transactional rollback.
+     */
     public Snapshot snapshot() {
         return new Snapshot(this.values, this.audit);
     }
@@ -98,16 +97,16 @@ public final class ResourceHolderData {
      * Restores legacy value-only state. Prefer {@link #snapshot()} and {@link #restore(Snapshot)}
      * for transactions so resolved client-visible bounds are preserved.
      */
-    public void restore(Map<Identifier, Double> snapshot) {
+    public void restore(Map<Holder<Resource>, Double> snapshot) {
         this.values.clear();
         this.audit.clear();
         snapshot.forEach(this::set);
     }
 
-    public record Snapshot(Map<Identifier, Double> values, Map<Identifier, Audit> audit) {
+    public record Snapshot(Map<Holder<Resource>, Double> values, Map<Holder<Resource>, Audit> audit) {
         public Snapshot {
-            values = Map.copyOf(values);
-            audit = Map.copyOf(audit);
+            values = new LinkedHashMap<>(values);
+            audit = new LinkedHashMap<>(audit);
         }
     }
 
@@ -129,4 +128,5 @@ public final class ResourceHolderData {
             return new Audit(value, value, -1L, "initial");
         }
     }
+
 }

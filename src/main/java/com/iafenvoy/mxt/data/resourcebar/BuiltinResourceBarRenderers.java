@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.resourcebar;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -18,6 +19,25 @@ public final class BuiltinResourceBarRenderers {
 
         @Override
         public MapCodec<Textured> codec() {
+            return CODEC;
+        }
+    }
+
+    /**
+     * Origins-compatible texture sheet: indexed fill row plus indexed 8x8 icon.
+     */
+    public record Origins(Identifier texture, int barIndex, int iconIndex,
+                          boolean inverted) implements ResourceBarRenderer {
+        public static final Identifier DEFAULT_TEXTURE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/resource_bar.png");
+        public static final MapCodec<Origins> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Identifier.CODEC.optionalFieldOf("sprite_location", DEFAULT_TEXTURE).forGetter(Origins::texture),
+                Codec.intRange(0, 24).optionalFieldOf("bar_index", 0).forGetter(Origins::barIndex),
+                Codec.intRange(0, 24).optionalFieldOf("icon_index", 0).forGetter(Origins::iconIndex),
+                Codec.BOOL.optionalFieldOf("inverted", false).forGetter(Origins::inverted)
+        ).apply(i, Origins::new));
+
+        @Override
+        public MapCodec<Origins> codec() {
             return CODEC;
         }
     }

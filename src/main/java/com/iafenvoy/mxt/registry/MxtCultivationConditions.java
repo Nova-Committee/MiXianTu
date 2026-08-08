@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
+import com.iafenvoy.mxt.integration.kubejs.callback.MxtJsGameplayCallbacks;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
@@ -12,6 +13,7 @@ public final class MxtCultivationConditions {
 
     static {
         REGISTRY.register("always", () -> (entity, context) -> true);
+        REGISTRY.register("js", () -> MxtJsGameplayCallbacks::testCultivation);
     }
 
     private MxtCultivationConditions() {

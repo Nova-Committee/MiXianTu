@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SSS",
+    "SSS",
+    "SSS"
+  ],
+  "key": {
+    "S": "mxt:spirit_stone"
+  },
+  "result": {
+    "id": "mxt:spirit_stone_block"
+  }
+}

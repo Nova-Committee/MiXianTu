@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.registry.BehaviorReferences;
 import com.iafenvoy.mxt.registry.BehaviorReferences.Reference;
 import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -18,7 +18,7 @@ import java.util.Optional;
  */
 public record AlchemyRecipe(List<Identifier> inputs, NumberProvider targetTemperature,
                             NumberProvider temperatureTolerance, int minimumFurnaceTier, NumberProvider duration,
-                            List<Identifier> environmentTags, NumberProvider minimumAura,
+                            List<Identifier> auraKinds, NumberProvider minimumAura,
                             List<Identifier> successOutputs, List<Identifier> failureOutputs,
                             Optional<Identifier> successBehavior, Optional<Identifier> failureBehavior) {
     public static final Codec<AlchemyRecipe> CODEC = RecordCodecBuilder.<AlchemyRecipe>create(instance -> instance.group(
@@ -27,7 +27,7 @@ public record AlchemyRecipe(List<Identifier> inputs, NumberProvider targetTemper
             NumberProvider.CODEC.optionalFieldOf("temperature_tolerance", new Constant(0.0D)).forGetter(AlchemyRecipe::temperatureTolerance),
             Codec.INT.optionalFieldOf("minimum_furnace_tier", 0).forGetter(AlchemyRecipe::minimumFurnaceTier),
             NumberProvider.CODEC.fieldOf("duration").forGetter(AlchemyRecipe::duration),
-            Identifier.CODEC.listOf().optionalFieldOf("environment_tags", List.of()).forGetter(AlchemyRecipe::environmentTags),
+            Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(AlchemyRecipe::auraKinds),
             NumberProvider.CODEC.optionalFieldOf("minimum_aura", new Constant(0.0D)).forGetter(AlchemyRecipe::minimumAura),
             Identifier.CODEC.listOf(1, Integer.MAX_VALUE).fieldOf("success_outputs").forGetter(AlchemyRecipe::successOutputs),
             Identifier.CODEC.listOf().optionalFieldOf("failure_outputs", List.of()).forGetter(AlchemyRecipe::failureOutputs),

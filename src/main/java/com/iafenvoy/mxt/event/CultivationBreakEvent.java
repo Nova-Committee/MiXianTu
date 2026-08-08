@@ -62,7 +62,7 @@ public abstract class CultivationBreakEvent extends Event {
 
         public Pre(SpiritData spirit, ResourceHolderData resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> costs) {
             super(spirit, resources, target, definition, context, threshold);
-            this.originalCosts = Map.copyOf(costs);
+            this.originalCosts = new LinkedHashMap<>(costs);
             this.costs = new LinkedHashMap<>(costs);
         }
 
@@ -71,7 +71,7 @@ public abstract class CultivationBreakEvent extends Event {
         }
 
         public Map<Identifier, Double> costs() {
-            return Map.copyOf(this.costs);
+            return this.costs;
         }
 
         public void setCost(Identifier resource, double amount) {
@@ -86,7 +86,7 @@ public abstract class CultivationBreakEvent extends Event {
 
         public Post(SpiritData spirit, ResourceHolderData resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> paidCosts) {
             super(spirit, resources, target, definition, context, threshold);
-            this.paidCosts = Map.copyOf(paidCosts);
+            this.paidCosts = new LinkedHashMap<>(paidCosts);
         }
 
         public Map<Identifier, Double> paidCosts() {

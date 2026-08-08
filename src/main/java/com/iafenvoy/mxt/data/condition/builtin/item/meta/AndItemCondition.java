@@ -11,10 +11,6 @@ import java.util.List;
 public record AndItemCondition(List<ItemCondition> conditions) implements ItemCondition {
     public static final MapCodec<AndItemCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndItemCondition::new, AndItemCondition::conditions);
 
-    public AndItemCondition {
-        conditions = List.copyOf(conditions);
-    }
-
     @Override
     public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
         return this.conditions.stream().allMatch(condition -> condition.test(holder, stack, context));

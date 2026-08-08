@@ -6,13 +6,11 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -32,20 +30,19 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
         if (!Double.isFinite(requested) || requested <= 0.0D) return;
         ResourceHolderData from = actor.getData(MxtAttachments.RESOURCE_HOLDER);
         ResourceHolderData to = target.getData(MxtAttachments.RESOURCE_HOLDER);
-        Identifier id = HolderHelper.id(this.resource);
         FormulaContext targetContext = target instanceof LivingEntity living
-                ? ResourceService.formulaContext(living, id, this.resource.value(), context)
+                ? ResourceService.formulaContext(living, this.resource, context)
                 : context;
-        if (!ResourceService.change(to, id, this.resource.value(), 0.0D, targetContext).valid()) return;
+        if (!ResourceService.change(to, this.resource, 0.0D, targetContext).valid()) return;
         Bounds bounds = ResourceService.resolveBounds(this.resource.value(), targetContext).orElse(null);
         if (bounds == null) return;
-        double moved = Math.min(Math.min(from.get(id), requested), Math.max(0.0D, bounds.max() - to.get(id)));
+        double moved = Math.min(Math.min(from.get(this.resource), requested), Math.max(0.0D, bounds.max() - to.get(this.resource)));
         if (moved <= 0.0D) return;
         FormulaContext sourceContext = actor instanceof LivingEntity living
-                ? ResourceService.formulaContext(living, id, this.resource.value(), context)
+                ? ResourceService.formulaContext(living, this.resource, context)
                 : context;
-        if (!ResourceService.change(from, id, this.resource.value(), -moved, sourceContext).valid()) return;
-        ResourceService.change(to, id, this.resource.value(), moved, targetContext);
+        if (!ResourceService.change(from, this.resource, -moved, sourceContext).valid()) return;
+        ResourceService.change(to, this.resource, moved, targetContext);
     }
 
     @Override

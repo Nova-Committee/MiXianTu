@@ -26,9 +26,11 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
     public boolean test(Entity entity, FormulaContext context) {
         Identifier required = HolderHelper.id(this.realm);
         return entity.getData(MxtAttachments.SPIRIT_DATA).realmStage().map(current -> switch (this.comparison) {
-            case EXACT -> current.equals(required);
-            case AT_LEAST -> ServerCache.get().map(cache -> cache.isRealmAtLeast(current, required)).orElse(false);
-            case AT_MOST -> ServerCache.get().map(cache -> cache.isRealmAtLeast(required, current)).orElse(false);
+            case EXACT -> current.equals(this.realm);
+            case AT_LEAST ->
+                    ServerCache.get().map(cache -> cache.isRealmAtLeast(HolderHelper.id(current), required)).orElse(false);
+            case AT_MOST ->
+                    ServerCache.get().map(cache -> cache.isRealmAtLeast(required, HolderHelper.id(current))).orElse(false);
         }).orElse(false);
     }
 

@@ -1,11 +1,12 @@
 package com.iafenvoy.mxt.runtime.ability;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityType.Aura;
-import com.iafenvoy.mxt.data.ability.AbilityType.Triggered;
+import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
+import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesData;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Post;
@@ -16,9 +17,11 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -43,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -68,22 +72,21 @@ public final class AbilityEventBridge {
         AbilityHolderData abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderData resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         initializeHudResources(entity, resourceHolder);
-        resourceHolder.values().keySet().forEach(resource -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, resource)
-                .ifPresent(definition -> ResourceService.regenerate(resourceHolder, resource, definition, 1L,
-                        ResourceService.formulaContext(entity, resource, definition, FormulaContext.EMPTY))));
+        resourceHolder.values().keySet().forEach(resource -> {
+            Identifier resourceId = HolderHelper.id(resource);
+            Resource definition = resource.value();
+            ResourceService.regenerate(resourceHolder, resourceId, definition, 1L,
+                    ResourceService.formulaContext(entity, resourceId, definition, FormulaContext.EMPTY));
+        });
         dispatch("tick", entity, FormulaContext.of(entity), definition -> true);
         if (entity.level().getGameTime() % 20L == 0L) PassiveAttributeService.reconcile(entity);
         if (entity.level().getGameTime() % 20L == 0L) syncCuriosAbilities(entity, abilities);
         tickAuras(entity, abilities, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
-        Identifier abilityId = abilities.channelledAbility().orElse(null);
-        if (abilityId == null) return;
-        Ability definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
-        if (definition == null) {
-            AbilityService.stopChannel(abilities);
-            return;
-        }
-        AbilityService.tickChannel(abilityId, definition, entity, abilities, resourceHolder,
+        Holder<Ability> ability = abilities.channelledAbility().orElse(null);
+        if (ability == null) return;
+        Ability definition = ability.value();
+        AbilityService.tickChannel(ability, definition, entity, abilities, resourceHolder,
                 entity.level().getGameTime(), FormulaContext.of(entity));
     }
 
@@ -130,8 +133,10 @@ public final class AbilityEventBridge {
         if (entity.level().isClientSide()) return;
         AbilityHolderData holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = equipmentSource(event.getSlot(), event.getTo());
-        itemAbilities(event.getFrom()).forEach(ability -> holder.revoke(ability, source));
-        itemAbilities(event.getTo()).forEach(ability -> holder.grant(ability, source));
+        itemAbilities(event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, ability))
+                .flatMap(Optional::stream).forEach(ability -> holder.revoke(ability, source));
+        itemAbilities(event.getTo()).stream().map(ability -> MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, ability))
+                .flatMap(Optional::stream).forEach(ability -> holder.grant(ability, source));
         FormulaContext context = FormulaContext.of(entity, Map.of("equipment_slot", (double) event.getSlot().ordinal()));
         dispatch("equip", entity, context, definition -> true);
     }
@@ -146,16 +151,19 @@ public final class AbilityEventBridge {
      * Curios equipment participates in the same source-counted ability model.
      */
     private static void syncCuriosAbilities(LivingEntity entity, AbilityHolderData holder) {
-        Set<Identifier> current = new LinkedHashSet<>();
+        Set<Holder<Ability>> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
-            current.addAll(itemAbilities(stack));
-        Identifier source = Identifier.fromNamespaceAndPath("mxt", "curios_equipment");
+            itemAbilities(stack).stream()
+                    .map(ability -> MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, ability))
+                    .flatMap(Optional::stream)
+                    .forEach(current::add);
+        Identifier source = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "curios_equipment");
         holder.reconcileSource(source, current);
     }
 
     private static Identifier equipmentSource(EquipmentSlot slot, ItemStack stack) {
         Identifier item = stack.isEmpty() ? Identifier.fromNamespaceAndPath("minecraft", "air") : BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return Identifier.fromNamespaceAndPath("mxt", "equipment/" + slot.getName() + "/" + item.getNamespace() + "/" + item.getPath());
+        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "equipment/" + slot.getName() + "/" + item.getNamespace() + "/" + item.getPath());
     }
 
     /**
@@ -178,7 +186,7 @@ public final class AbilityEventBridge {
     private static void initializeHudResources(LivingEntity entity, ResourceHolderData holder) {
         if (!(entity instanceof Player)) return;
         MxtDatapackRegistries.holders(MxtDatapackRegistries.RESOURCE)
-                .filter(resource -> resource.value().defaultBar().isPresent())
+                .filter(resource -> !resource.value().bars().isEmpty())
                 .forEach(resource -> initializeResource(entity, holder, resource));
     }
 
@@ -189,14 +197,14 @@ public final class AbilityEventBridge {
     }
 
     private static void tickAuras(LivingEntity actor, AbilityHolderData abilities, long gameTime) {
-        for (Identifier abilityId : abilities.sources().keySet()) {
-            Ability definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
-            if (definition == null || !(definition.type() instanceof Aura(
+        for (Holder<Ability> ability : abilities.sources().keySet()) {
+            Ability definition = ability.value();
+            if (!(definition.type() instanceof AuraAbilityType(
                     NumberProvider interval1,
                     NumberProvider radius1
             )) || !definition.condition().test(actor, FormulaContext.of(actor)))
                 continue;
-            long dueAt = Math.round(abilities.componentState(abilityId, "aura_next_tick").map(AbilityComponentState::value).orElse((double) gameTime));
+            long dueAt = Math.round(abilities.componentState(ability, "aura_next_tick").map(AbilityComponentState::value).orElse((double) gameTime));
             if (gameTime < dueAt) continue;
             FormulaContext actorContext = FormulaContext.of(actor);
             double interval = interval1.evaluate(actorContext);
@@ -209,15 +217,15 @@ public final class AbilityEventBridge {
                 if (distanceSquared <= radiusSquared && definition.targetCondition().test(actor, target, context))
                     definition.biEntityAction().execute(actor, target, context);
             }
-            abilities.setComponentState(abilityId, "aura_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, Math.max(1L, Math.round(interval))), gameTime));
+            abilities.setComponentState(ability, "aura_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, Math.max(1L, Math.round(interval))), gameTime));
         }
     }
 
     private static void finishDueCasts(LivingEntity actor, AbilityHolderData abilities, ResourceHolderData resources, long gameTime) {
-        for (Identifier abilityId : abilities.sources().keySet()) {
-            if (abilities.componentState(abilityId, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE) > gameTime)
+        for (Holder<Ability> ability : abilities.sources().keySet()) {
+            if (abilities.componentState(ability, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE) > gameTime)
                 continue;
-            MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).ifPresent(definition -> AbilityService.finishCast(abilityId, definition, actor, abilities, resources, gameTime, FormulaContext.of(actor)));
+            AbilityService.finishCast(ability, ability.value(), actor, abilities, resources, gameTime, FormulaContext.of(actor));
         }
     }
 
@@ -225,9 +233,10 @@ public final class AbilityEventBridge {
         AbilityHolderData abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderData resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = entity.level().getGameTime();
-        for (Identifier abilityId : abilities.sources().keySet()) {
-            Ability definition = MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, abilityId).orElse(null);
-            if (definition == null || definition.trigger().filter(value -> value.event().equals(trigger)).isEmpty() || !extraCondition.test(definition))
+        for (Holder<Ability> ability : abilities.sources().keySet()) {
+            Identifier abilityId = HolderHelper.id(ability);
+            Ability definition = ability.value();
+            if (definition.trigger().filter(value -> value.event().equals(trigger)).isEmpty() || !extraCondition.test(definition))
                 continue;
             if (!passesTriggerChance(entity, definition, context)) continue;
             DispatchKey key = new DispatchKey(entity.getUUID(), abilityId);
@@ -236,7 +245,7 @@ public final class AbilityEventBridge {
             try {
                 if (NeoForge.EVENT_BUS.post(new Pre(entity, abilityId, definition, trigger, context)).isCanceled())
                     continue;
-                UseResult result = AbilityService.use(abilityId, definition, entity, abilities, resources, gameTime, context);
+                UseResult result = AbilityService.use(ability, definition, entity, abilities, resources, gameTime, context);
                 if (result.committed())
                     NeoForge.EVENT_BUS.post(new Post(entity, abilityId, definition, trigger, context));
             } finally {
@@ -250,7 +259,7 @@ public final class AbilityEventBridge {
      * A triggered ability's chance is evaluated by the server immediately before dispatch.
      */
     private static boolean passesTriggerChance(LivingEntity entity, Ability definition, FormulaContext context) {
-        if (!(definition.type() instanceof Triggered triggered)) return true;
+        if (!(definition.type() instanceof TriggeredAbilityType triggered)) return true;
         final double chance;
         try {
             chance = triggered.chance().evaluate(context);

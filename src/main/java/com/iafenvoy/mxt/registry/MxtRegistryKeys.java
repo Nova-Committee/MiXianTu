@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
@@ -14,7 +15,6 @@ import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.MaterialGrade;
-import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.Title;
@@ -25,6 +25,7 @@ import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
+import com.iafenvoy.mxt.data.aura.ItemAura;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -34,7 +35,7 @@ import net.minecraft.resources.ResourceKey;
  */
 public final class MxtRegistryKeys {
     public static final ResourceKey<Registry<Resource>> RESOURCE = create("resource");
-    public static final ResourceKey<Registry<ResourceBar>> RESOURCE_BAR = create("resource_bar");
+    public static final ResourceKey<Registry<Badge>> BADGE = create("badge");
     public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = create("realm_stage");
     public static final ResourceKey<Registry<Element>> ELEMENT = create("element");
     public static final ResourceKey<Registry<SpiritRoot>> SPIRIT_ROOT = create("spirit_root");
@@ -68,6 +69,7 @@ public final class MxtRegistryKeys {
      * Per-block aura emitters used by the chunk aura cache.
      */
     public static final ResourceKey<Registry<BlockAura>> BLOCK_AURA = create("block_aura");
+    public static final ResourceKey<Registry<ItemAura>> ITEM_AURA = create("item_aura");
 
     private MxtRegistryKeys() {
     }

@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.runtime.creature;
 import com.iafenvoy.mxt.attachment.ContractData;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
@@ -24,7 +24,7 @@ public final class ContractEventBridge {
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof Mob pet) || pet.level().isClientSide()) return;
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
-        ContractType definition = contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).orElse(null);
+        ContractType definition = contract.contractType().map(Holder::value).orElse(null);
         if (!contract.bound() || definition == null) return;
         ServerPlayer owner = ((ServerLevel) pet.level()).getServer().getPlayerList().getPlayer(contract.owner().orElseThrow());
         if (owner == null || owner.level() != pet.level()) return;
@@ -48,7 +48,7 @@ public final class ContractEventBridge {
     public static void onLivingDamage(Post event) {
         if (event.getEntity().level().isClientSide() || !(event.getSource().getEntity() instanceof Mob pet)) return;
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
-        contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).ifPresent(definition -> {
+        contract.contractType().map(Holder::value).ifPresent(definition -> {
             FormulaContext context = FormulaContext.of(pet, Map.of("damage", (double) event.getInflictedDamage()));
             definition.combatAction().execute(pet, event.getEntity(), context);
         });
@@ -61,7 +61,7 @@ public final class ContractEventBridge {
         if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Mob pet)) return;
         ContractData contract = pet.getData(MxtAttachments.CONTRACT);
         if (!contract.bound()) return;
-        contract.contractType().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CONTRACT_TYPE, id)).ifPresent(definition -> {
+        contract.contractType().map(Holder::value).ifPresent(definition -> {
             FormulaContext context = FormulaContext.of(pet);
             definition.breakAction().execute(pet, context);
             definition.penaltyAction().execute(pet, context);

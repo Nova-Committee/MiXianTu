@@ -26,7 +26,7 @@ public abstract class ResourceConsumeEvent extends Event {
     }
 
     public Map<Identifier, Double> amounts() {
-        return Map.copyOf(this.amounts);
+        return this.amounts;
     }
 
     protected void setAmount(Identifier id, double amount) {

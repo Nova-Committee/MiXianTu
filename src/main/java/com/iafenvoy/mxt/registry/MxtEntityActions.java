@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.*;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.*;
+import com.iafenvoy.mxt.integration.kubejs.type.action.JsEntityAction;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -11,6 +12,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtEntityActions {
     public static final DeferredRegister<MapCodec<? extends EntityAction>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ENTITY_ACTION_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<NoOpAction>> NO_OP = REGISTRY.register("no_op", () -> NoOpAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<JsEntityAction>> JS = REGISTRY.register("js", () -> JsEntityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SequenceAction>> SEQUENCE = REGISTRY.register("sequence", () -> SequenceAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<HealAction>> HEAL = REGISTRY.register("heal", () -> HealAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<DamageAction>> DAMAGE = REGISTRY.register("damage", () -> DamageAction.CODEC);

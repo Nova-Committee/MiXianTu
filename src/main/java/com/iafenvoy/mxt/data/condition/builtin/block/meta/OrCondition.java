@@ -11,10 +11,6 @@ import java.util.List;
 public record OrCondition(List<BlockCondition> conditions) implements BlockCondition {
     public static final MapCodec<OrCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(OrCondition::new, OrCondition::conditions);
 
-    public OrCondition {
-        conditions = List.copyOf(conditions);
-    }
-
     @Override
     public boolean test(Level level, BlockPos pos, FormulaContext context) {
         return this.conditions.stream().anyMatch(condition -> condition.test(level, pos, context));

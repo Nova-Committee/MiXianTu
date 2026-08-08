@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.creature;
 
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;

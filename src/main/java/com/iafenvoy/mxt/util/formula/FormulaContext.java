@@ -8,7 +8,6 @@ import net.minecraft.world.level.Level;
 
 import java.util.Map;
 import java.util.LinkedHashMap;
-import java.util.Objects;
 
 /**
  * Immutable, server-authoritative variables supplied to a number formula.
@@ -17,39 +16,49 @@ public record FormulaContext(@NotNull Map<String, Double> variables, @NotNull Ra
     public static final FormulaContext EMPTY = new FormulaContext(Map.of());
 
     public FormulaContext {
-        variables = Map.copyOf(variables);
+        variables = new LinkedHashMap<>(variables);
     }
 
     public FormulaContext(@NotNull Map<String, Double> variables) {
         this(variables, RandomSource.create());
     }
 
-    /** Creates an entity context using its authoritative random source. */
+    /**
+     * Creates an entity context using its authoritative random source.
+     */
     public static FormulaContext of(Entity entity) {
         return of(entity, Map.of());
     }
 
-    /** Creates an entity context and adds finite event-specific values. */
+    /**
+     * Creates an entity context and adds finite event-specific values.
+     */
     public static FormulaContext of(Entity entity, Map<String, Double> extra) {
         return entity instanceof LivingEntity living ? FormulaContexts.forEntity(living, extra) : new FormulaContext(extra, entity.getRandom());
     }
 
-    /** Creates a level context using the level's authoritative random source. */
+    /**
+     * Creates a level context using the level's authoritative random source.
+     */
     public static FormulaContext of(Level level) {
         return of(level, Map.of());
     }
 
-    /** Creates a level context and adds finite event-specific values. */
+    /**
+     * Creates a level context and adds finite event-specific values.
+     */
     public static FormulaContext of(Level level, Map<String, Double> extra) {
         return new FormulaContext(extra, level.getRandom());
     }
 
     public double value(String name) {
-        return this.variables.getOrDefault(name, 0.0D);
+        Double explicit = this.variables.get(name);
+        if (explicit != null) return explicit;
+        return FormulaVariables.resolve(name, this);
     }
 
     public boolean contains(String name) {
-        return this.variables.containsKey(name);
+        return this.variables.containsKey(name) || FormulaVariables.contains(name);
     }
 
     public FormulaContext with(String name, double value) {

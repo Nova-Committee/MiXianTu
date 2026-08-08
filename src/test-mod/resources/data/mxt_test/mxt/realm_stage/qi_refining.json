@@ -1,0 +1,15 @@
+{
+  "resource": "mxt_test:qi",
+  "next_realm": "mxt_test:foundation",
+  "progress_threshold": 100,
+  "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
+  "breakthrough_particle": {
+    "particle": { "type": "minecraft:enchant" },
+    "count": 12,
+    "speed": 0.02,
+    "spread": [0.4, 0.7, 0.4],
+    "offset_y": 0.8
+  },
+  "success_action": { "type": "mxt:apply_effect", "effect": "minecraft:regeneration", "duration_ticks": 100 },
+  "fail_action": { "type": "mxt:apply_effect", "effect": "minecraft:slowness", "duration_ticks": 60 }
+}

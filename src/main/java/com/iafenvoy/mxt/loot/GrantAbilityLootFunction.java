@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.loot;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -21,7 +23,7 @@ public final class GrantAbilityLootFunction extends LootItemConditionalFunction 
     public static final MapCodec<GrantAbilityLootFunction> CODEC = RecordCodecBuilder.mapCodec(instance -> commonFields(instance).and(instance.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(function -> function.target),
             Identifier.CODEC.fieldOf("ability").forGetter(function -> function.ability),
-            Identifier.CODEC.optionalFieldOf("source", Identifier.fromNamespaceAndPath("mxt", "loot")).forGetter(function -> function.source)
+            Identifier.CODEC.optionalFieldOf("source", Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "loot")).forGetter(function -> function.source)
     )).apply(instance, GrantAbilityLootFunction::new));
     private final EntityTarget target;
     private final Identifier ability;
@@ -42,7 +44,8 @@ public final class GrantAbilityLootFunction extends LootItemConditionalFunction 
     @Override
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
-        if (entity != null) entity.getData(MxtAttachments.ABILITY_HOLDER).grant(this.ability, this.source);
+        if (entity != null) MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, this.ability)
+                .ifPresent(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, this.source));
         return stack;
     }
 }

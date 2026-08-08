@@ -27,8 +27,8 @@ public final class ServerCache {
     private static ServerCache INSTANCE;
 
     private final MinecraftServer server;
-    private Map<Identifier, Identifier> resourceByRealm = Map.of();
-    private Map<Identifier, Integer> rankByRealm = Map.of();
+    private Map<Identifier, Identifier> resourceByRealm = new LinkedHashMap<>();
+    private Map<Identifier, Integer> rankByRealm = new LinkedHashMap<>();
 
     private ServerCache(MinecraftServer server) {
         this.server = server;
@@ -68,8 +68,8 @@ public final class ServerCache {
             Identifier resource = resourceHolder.key().identifier();
             resourceHolder.value().firstRealm().ifPresent(first -> this.indexChain(resource, HolderHelper.id(first), resolved, ranks));
         });
-        this.resourceByRealm = Map.copyOf(resolved);
-        this.rankByRealm = Map.copyOf(ranks);
+        this.resourceByRealm = resolved;
+        this.rankByRealm = ranks;
     }
 
     /**
@@ -83,7 +83,9 @@ public final class ServerCache {
         return this.resourceByRealm.containsKey(realm);
     }
 
-    /** Returns the zero-based rank of a realm in its validated resource chain. */
+    /**
+     * Returns the zero-based rank of a realm in its validated resource chain.
+     */
     public Optional<Integer> rankForRealm(Identifier realm) {
         return Optional.ofNullable(this.rankByRealm.get(realm));
     }

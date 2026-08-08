@@ -17,7 +17,6 @@ public record ApplyCursesAction(List<ApplyCurseAction> curses) implements Entity
     ).apply(instance, ApplyCursesAction::new));
 
     public ApplyCursesAction {
-        curses = List.copyOf(curses);
         if (curses.isEmpty()) throw new IllegalArgumentException("curses must not be empty");
     }
 

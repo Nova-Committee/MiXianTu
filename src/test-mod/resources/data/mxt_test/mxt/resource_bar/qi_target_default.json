@@ -1,8 +1,0 @@
-{
-  "resource": "mxt_test:qi",
-  "context": "target_overlay",
-  "anchor": "top_left_stack",
-  "order": 0,
-  "visibility": { "type": "mxt:always" },
-  "renderer": { "type": "mxt:text_only", "format": "default %current%", "color": "#777777", "show_maximum": true }
-}

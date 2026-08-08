@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.Tribulation;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.Optional;
 
@@ -11,12 +12,13 @@ import java.util.Optional;
  * Active tribulation cursor. A missing definition disables progression rather than discarding the cursor.
  */
 public final class TribulationData {
-    public static final MapCodec<TribulationData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Identifier.CODEC.optionalFieldOf("tribulation").forGetter(TribulationData::tribulation), Codec.INT.optionalFieldOf("phase", 0).forGetter(TribulationData::phase),
-            Codec.LONG.optionalFieldOf("phase_ends_at", -1L).forGetter(TribulationData::phaseEndsAt), Codec.BOOL.optionalFieldOf("paused", false).forGetter(TribulationData::paused)
-    ).apply(instance, TribulationData::decode));
-    public static final Codec<TribulationData> CODEC = MAP_CODEC.codec();
-    private Optional<Identifier> tribulation;
+    public static final MapCodec<TribulationData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(TribulationData::tribulation),
+            Codec.INT.optionalFieldOf("phase", 0).forGetter(TribulationData::phase),
+            Codec.LONG.optionalFieldOf("phase_ends_at", -1L).forGetter(TribulationData::phaseEndsAt),
+            Codec.BOOL.optionalFieldOf("paused", false).forGetter(TribulationData::paused)
+    ).apply(instance, TribulationData::new));
+    private Optional<Holder<Tribulation>> tribulation;
     private int phase;
     private long phaseEndsAt;
     private boolean paused;
@@ -25,18 +27,14 @@ public final class TribulationData {
         this(Optional.empty(), 0, -1L, false);
     }
 
-    private TribulationData(Optional<Identifier> tribulation, int phase, long phaseEndsAt, boolean paused) {
+    private TribulationData(Optional<Holder<Tribulation>> tribulation, int phase, long phaseEndsAt, boolean paused) {
         this.tribulation = tribulation;
         this.phase = phase;
         this.phaseEndsAt = phaseEndsAt;
         this.paused = paused;
     }
 
-    private static TribulationData decode(Optional<Identifier> tribulation, int phase, long phaseEndsAt, boolean paused) {
-        return new TribulationData(tribulation, phase, phaseEndsAt, paused);
-    }
-
-    public Optional<Identifier> tribulation() {
+    public Optional<Holder<Tribulation>> tribulation() {
         return this.tribulation;
     }
 
@@ -52,8 +50,8 @@ public final class TribulationData {
         return this.paused;
     }
 
-    public void start(Identifier id, int phase, long endsAt) {
-        this.tribulation = Optional.of(id);
+    public void start(Holder<Tribulation> tribulation, int phase, long endsAt) {
+        this.tribulation = Optional.of(tribulation);
         this.phase = phase;
         this.phaseEndsAt = endsAt;
         this.paused = false;

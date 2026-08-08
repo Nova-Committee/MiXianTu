@@ -9,6 +9,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -16,12 +17,22 @@ import java.util.List;
  * Element relations are data driven; tags classify elements but do not encode precedence.
  */
 public record Element(String translationKey, List<Either<Holder<Element>, TagKey<Element>>> overcomes,
-                      List<Either<Holder<Element>, TagKey<Element>>> adaptedTo, List<Identifier> auraTags) {
+                      List<Either<Holder<Element>, TagKey<Element>>> adaptedTo, List<Identifier> auraKinds) {
     public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.ELEMENT);
     public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.optionalFieldOf("translation_key", "").forGetter(Element::translationKey),
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
-            Identifier.CODEC.listOf().optionalFieldOf("aura_tags", List.of()).forGetter(Element::auraTags)
+            Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(Element::auraKinds)
     ).apply(instance, Element::new));
+
+    /**
+     * Do not expand element holders here. Element relations can form cycles, and a holder's
+     * diagnostic string delegates back to its value's {@code toString()}.
+     */
+    @Override
+    public @NonNull String toString() {
+        return "Element[translationKey=" + this.translationKey + ", overcomes=" + this.overcomes.size()
+                + ", adaptedTo=" + this.adaptedTo.size() + ", auraKinds=" + this.auraKinds + "]";
+    }
 }

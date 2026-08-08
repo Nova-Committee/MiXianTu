@@ -83,10 +83,6 @@ public final class BuiltinResourceBarVisibilities {
     public record And(List<ResourceBarVisibility> values) implements ResourceBarVisibility {
         public static final MapCodec<And> CODEC = ResourceBarVisibility.CODEC.listOf().fieldOf("values").xmap(And::new, And::values);
 
-        public And {
-            values = List.copyOf(values);
-        }
-
         @Override
         public boolean visible(ResourceBarView view) {
             return this.values.stream().allMatch(value -> value.visible(view));
@@ -100,10 +96,6 @@ public final class BuiltinResourceBarVisibilities {
 
     public record Or(List<ResourceBarVisibility> values) implements ResourceBarVisibility {
         public static final MapCodec<Or> CODEC = ResourceBarVisibility.CODEC.listOf().fieldOf("values").xmap(Or::new, Or::values);
-
-        public Or {
-            values = List.copyOf(values);
-        }
 
         @Override
         public boolean visible(ResourceBarView view) {

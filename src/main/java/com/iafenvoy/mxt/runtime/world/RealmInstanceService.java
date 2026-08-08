@@ -8,7 +8,9 @@ import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.Exit;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -38,11 +40,13 @@ public final class RealmInstanceService {
             return Result.rejected(Failure.ALREADY_TRAVELLING);
         ServerLevel destination = destination(player.level().getServer(), definition).orElse(null);
         if (destination == null) return Result.rejected(Failure.MISSING_DIMENSION);
-        Result membership = enter(player.level(), data, id, definition, player.getUUID(), player.level().getGameTime());
+        Holder<RealmInstance> realm = MxtDatapackRegistries.holder(MxtDatapackRegistries.REALM_INSTANCE, id).orElse(null);
+        if (realm == null) return Result.rejected(Failure.DISABLED);
+        Result membership = enter(player.level(), data, realm, player.getUUID(), player.level().getGameTime());
         if (!membership.changed()) return membership;
 
         RealmTravelData travel = player.getData(MxtAttachments.REALM_TRAVEL);
-        travel.begin(id, player.level().dimension().identifier(), player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+        travel.begin(realm, player.level().dimension().identifier(), player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
         double entryX = 0.5D;
         double entryZ = 0.5D;
         double entryY = destination.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, 0, 0);
@@ -50,12 +54,14 @@ public final class RealmInstanceService {
         return membership;
     }
 
-    public static Result enter(ServerLevel level, RealmInstanceData data, Identifier id, RealmInstance definition, UUID member, long gameTime) {
-        if (data.active() && data.definition().filter(id::equals).isEmpty())
+    public static Result enter(ServerLevel level, RealmInstanceData data, Holder<RealmInstance> realm, UUID member, long gameTime) {
+        Identifier id = HolderHelper.id(realm);
+        RealmInstance definition = realm.value();
+        if (data.active() && data.definition().filter(realm::equals).isEmpty())
             return Result.rejected(Failure.OTHER_INSTANCE);
         if (NeoForge.EVENT_BUS.post(new EnterPre(level, id, member)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
-        if (!data.active()) data.start(id, gameTime, definition.durationTicks());
+        if (!data.active()) data.start(realm, gameTime, definition.durationTicks());
         if (!data.add(member, definition.maxMembers())) return Result.rejected(Failure.FULL);
         NeoForge.EVENT_BUS.post(new EnterPost(level, id, member));
         Optional.ofNullable(level.getServer().getPlayerList().getPlayer(member))
@@ -68,32 +74,32 @@ public final class RealmInstanceService {
      */
     public static Result exit(ServerPlayer player, RealmInstanceData data) {
         RealmTravelData travel = player.getData(MxtAttachments.REALM_TRAVEL);
-        Identifier id = travel.realm().orElse(null);
-        if (id == null || !travel.active()) return Result.rejected(Failure.NOT_TRAVELLING);
+        Holder<RealmInstance> realm = travel.realm().orElse(null);
+        if (realm == null || !travel.active()) return Result.rejected(Failure.NOT_TRAVELLING);
+        Identifier id = HolderHelper.id(realm);
         ServerLevel origin = origin(sourceServer(player), travel).orElse(null);
         if (origin == null) return Result.rejected(Failure.MISSING_ORIGIN);
 
         ServerLevel source = player.level();
         player.teleportTo(origin, travel.originX(), travel.originY(), travel.originZ(), Set.of(), travel.originYaw(), travel.originPitch(), false);
         travel.clear();
-        if (data.definition().filter(id::equals).isPresent()) {
+        if (data.definition().filter(realm::equals).isPresent()) {
             data.remove(player.getUUID());
             NeoForge.EVENT_BUS.post(new Exit(source, id, player.getUUID()));
-            MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id)
-                    .ifPresent(definition -> definition.exitAction().execute(player, FormulaContext.of(player)));
+            realm.value().exitAction().execute(player, FormulaContext.of(player));
             if (data.members().isEmpty()) data.clear();
         }
         return Result.exited();
     }
 
     public static Result exit(ServerLevel level, RealmInstanceData data, UUID member) {
-        Identifier id = data.definition().orElse(null);
-        if (id == null || !data.members().contains(member)) return Result.rejected(Failure.NOT_MEMBER);
+        Holder<RealmInstance> realm = data.definition().orElse(null);
+        if (realm == null || !data.members().contains(member)) return Result.rejected(Failure.NOT_MEMBER);
+        Identifier id = HolderHelper.id(realm);
         data.remove(member);
         NeoForge.EVENT_BUS.post(new Exit(level, id, member));
-        MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_INSTANCE, id)
-                .ifPresent(definition -> Optional.ofNullable(level.getServer().getPlayerList().getPlayer(member))
-                        .ifPresent(player -> definition.exitAction().execute(player, FormulaContext.of(player))));
+        Optional.ofNullable(level.getServer().getPlayerList().getPlayer(member))
+                .ifPresent(player -> realm.value().exitAction().execute(player, FormulaContext.of(player)));
         if (data.members().isEmpty()) data.clear();
         return Result.exited();
     }
@@ -114,7 +120,7 @@ public final class RealmInstanceService {
      */
     public static boolean returnIfOrphaned(ServerPlayer player) {
         RealmTravelData travel = player.getData(MxtAttachments.REALM_TRAVEL);
-        Identifier realm = travel.realm().orElse(null);
+        Holder<RealmInstance> realm = travel.realm().orElse(null);
         if (realm == null || !travel.active()) return false;
         for (ServerLevel level : sourceServer(player).getAllLevels()) {
             RealmInstanceData data = level.getData(MxtAttachments.REALM_INSTANCE);

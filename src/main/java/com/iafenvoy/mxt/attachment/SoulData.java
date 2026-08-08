@@ -11,10 +11,13 @@ import java.util.UUID;
  * Optional soul-form state retained after a death transition.
  */
 public final class SoulData {
-    public static final MapCodec<SoulData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.BOOL.optionalFieldOf("active", false).forGetter(SoulData::active), Codec.STRING.optionalFieldOf("origin", "").forGetter(SoulData::origin), Codec.LONG.optionalFieldOf("created_at", -1L).forGetter(SoulData::createdAt), Codec.STRING.optionalFieldOf("source", "").forGetter(SoulData::source), Codec.STRING.optionalFieldOf("manifestation", "").forGetter(SoulData::manifestationValue)
-    ).apply(instance, SoulData::decode));
-    public static final Codec<SoulData> CODEC = MAP_CODEC.codec();
+    public static final MapCodec<SoulData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            Codec.BOOL.optionalFieldOf("active", false).forGetter(SoulData::active),
+            Codec.STRING.optionalFieldOf("origin", "").forGetter(SoulData::origin),
+            Codec.LONG.optionalFieldOf("created_at", -1L).forGetter(SoulData::createdAt),
+            Codec.STRING.optionalFieldOf("source", "").forGetter(SoulData::source),
+            Codec.STRING.optionalFieldOf("manifestation", "").forGetter(SoulData::manifestationValue)
+    ).apply(instance, SoulData::new));
     private boolean active;
     private String origin;
     private long createdAt;
@@ -31,10 +34,6 @@ public final class SoulData {
         this.createdAt = createdAt;
         this.source = source;
         this.manifestation = manifestation;
-    }
-
-    private static SoulData decode(boolean active, String origin, long createdAt, String source, String manifestation) {
-        return new SoulData(active, origin, createdAt, source, manifestation);
     }
 
     public boolean active() {

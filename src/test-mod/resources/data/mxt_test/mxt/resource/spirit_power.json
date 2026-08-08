@@ -3,5 +3,20 @@
   "min": 0,
   "max": "100 + level * 10",
   "regen": 1,
-  "default_bar": "mxt_test:spirit_power_hud"
+  "bars": [
+    {
+      "context": "boss_overlay",
+      "anchor": "right",
+      "order": 0,
+      "visibility": { "type": "mxt:always" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 1 }
+    },
+    {
+      "context": "self_hud",
+      "anchor": "left",
+      "order": 0,
+      "visibility": { "type": "mxt:always" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 1 }
+    }
+  ]
 }

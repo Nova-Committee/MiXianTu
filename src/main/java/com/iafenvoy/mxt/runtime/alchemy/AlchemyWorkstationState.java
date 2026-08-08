@@ -6,7 +6,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,17 +32,17 @@ public final class AlchemyWorkstationState {
     }
 
     private AlchemyWorkstationState(List<ItemStack> inputs, List<ItemStack> outputs, Optional<Snapshot> session) {
-        this.inputs = new ArrayList<>(copyStacks(inputs));
-        this.outputs = new ArrayList<>(copyStacks(outputs));
+        this.inputs = new LinkedList<>(copyStacks(inputs));
+        this.outputs = new LinkedList<>(copyStacks(outputs));
         this.session = session.orElse(null);
     }
 
     public List<ItemStack> inputs() {
-        return copyStacks(this.inputs);
+        return this.inputs;
     }
 
     public List<ItemStack> outputs() {
-        return copyStacks(this.outputs);
+        return this.outputs;
     }
 
     public Optional<Snapshot> session() {

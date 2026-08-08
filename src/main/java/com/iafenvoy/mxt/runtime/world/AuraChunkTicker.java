@@ -11,6 +11,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -54,11 +55,11 @@ public final class AuraChunkTicker {
         if (chunks == null) return;
         Set<LevelChunk> dirty = DIRTY.get(level);
         if (dirty != null) {
-            for (LevelChunk chunk : Set.copyOf(dirty)) BlockAuraService.rebuild(level, chunk);
+            for (LevelChunk chunk : new LinkedHashSet<>(dirty)) BlockAuraService.rebuild(level, chunk);
             dirty.clear();
             DIRTY.remove(level);
         }
-        for (LevelChunk chunk : Set.copyOf(chunks)) {
+        for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
             AuraChunkData aura = chunk.getData(MxtAttachments.AURA_CHUNK);
             if (!aura.initialized())
                 AuraService.getPositionAura(level, chunk.getPos().getMiddleBlockPosition(level.getMinY()));

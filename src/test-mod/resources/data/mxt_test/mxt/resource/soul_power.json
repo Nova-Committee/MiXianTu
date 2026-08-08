@@ -3,5 +3,13 @@
   "min": 0,
   "max": 50,
   "regen": 0.25,
-  "default_bar": "mxt_test:soul_power_hud"
+  "bars": [
+    {
+      "context": "self_hud",
+      "anchor": "right",
+      "order": 1,
+      "visibility": { "type": "mxt:non_full" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 4 }
+    }
+  ]
 }

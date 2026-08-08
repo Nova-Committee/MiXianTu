@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data;
 
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.NumberProvider.Constant;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -24,4 +24,5 @@ public record MaterialGrade(int tier, NumberProvider valueMultiplier, NumberProv
             NumberProvider.CODEC.optionalFieldOf("alchemy_modifier", new Constant(1)).forGetter(MaterialGrade::alchemyModifier),
             Identifier.CODEC.listOf().optionalFieldOf("applicable_tags", List.of()).forGetter(MaterialGrade::applicableTags)
     ).apply(instance, MaterialGrade::new));
+
 }

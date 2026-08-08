@@ -9,6 +9,8 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.LevelChunk;
 
@@ -30,8 +32,8 @@ public final class BlockAuraService {
                 .map(Reference::value).toList();
         double aura = 0.0D;
         double regen = 0.0D;
-        Map<Identifier, Double> elements = new LinkedHashMap<>();
-        Set<Identifier> tags = new LinkedHashSet<>();
+        Map<Holder<Element>, Double> elements = new LinkedHashMap<>();
+        Set<Identifier> auraKinds = new LinkedHashSet<>();
         MutableBlockPos pos = new MutableBlockPos();
         int minX = chunk.getPos().getMinBlockX();
         int minZ = chunk.getPos().getMinBlockZ();
@@ -46,9 +48,9 @@ public final class BlockAuraService {
                         aura += definition.auraPerBlock();
                         regen += definition.regenPerTickPerBlock();
                         definition.elementAuraPerBlock().forEach((element, value) -> elements.merge(element, value, Double::sum));
-                        tags.addAll(definition.environmentTags());
+                        auraKinds.addAll(definition.auraKinds());
                     }
                 }
-        chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(aura, regen, elements, tags);
+        chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(aura, regen, elements, auraKinds);
     }
 }

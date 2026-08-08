@@ -1,0 +1,19 @@
+{
+  "ranks": [
+    { "id": "outer_disciple", "priority": 0, "min_contribution": 0, "permissions": ["mxt:claim"] },
+    {
+      "id": "inner_disciple",
+      "priority": 1,
+      "min_contribution": 20,
+      "permissions": ["mxt:claim"],
+      "promotion_costs": [{ "id": "mxt_test:spirit_power", "amount": 10 }]
+    }
+  ],
+  "tasks": [{ "id": "mxt_test:meditate", "contribution_reward": 20, "once": false }],
+  "exchanges": [{
+    "id": "mxt_test:qingxiao_spirit_crystal",
+    "contribution_cost": 20,
+    "outputs": ["mxt_test:qingxiao_spirit_crystal"]
+  }],
+  "territory_permissions": ["mxt:claim"]
+}

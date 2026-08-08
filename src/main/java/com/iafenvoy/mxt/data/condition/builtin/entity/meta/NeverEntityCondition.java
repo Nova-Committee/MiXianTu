@@ -5,7 +5,9 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 
-/** A reusable false default for optional stop conditions. */
+/**
+ * A reusable false default for optional stop conditions.
+ */
 public enum NeverEntityCondition implements EntityCondition {
     INSTANCE;
     public static final MapCodec<NeverEntityCondition> CODEC = MapCodec.unit(INSTANCE);

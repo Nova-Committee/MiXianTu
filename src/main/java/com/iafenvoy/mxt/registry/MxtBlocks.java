@@ -33,10 +33,20 @@ public final class MxtBlocks {
      */
     public static final DeferredBlock<DropExperienceBlock> SPIRIT_STONE_ORE = register("spirit_stone_ore",
             properties -> new DropExperienceBlock(ConstantInt.of(1), properties.strength(3.0F, 3.0F).requiresCorrectToolForDrops()));
+    public static final DeferredBlock<Block> SPIRIT_STONE_BLOCK = registerSolid("spirit_stone_block",
+            properties -> new Block(properties.strength(5.0F, 6.0F).requiresCorrectToolForDrops()));
 
     public static <T extends Block> DeferredBlock<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
         DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.ofFullCopy(Blocks.CRAFTING_TABLE).noOcclusion().setId(key)));
+        MxtItems.registerBlockItem(path, block);
+        return block;
+    }
+
+    /** Registers a full opaque cube without disabling neighbour face culling. */
+    private static <T extends Block> DeferredBlock<T> registerSolid(String path, Function<Properties, T> factory) {
+        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
+        DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.ofFullCopy(Blocks.IRON_BLOCK).setId(key)));
         MxtItems.registerBlockItem(path, block);
         return block;
     }

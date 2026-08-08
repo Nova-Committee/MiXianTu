@@ -1,41 +1,36 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments.Mutable;
 
-import java.util.Map;
-import java.util.Map.Entry;
-
 /**
  * Adds or upgrades enchantments on the acted item stack.
  */
-public record AddEnchantmentAction(Map<Holder<Enchantment>, Integer> enchantments,
+public record AddEnchantmentAction(Object2IntMap<Holder<Enchantment>> enchantments,
                                    boolean override) implements ItemAction {
     public static final MapCodec<AddEnchantmentAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.unboundedMap(Enchantment.CODEC, Codec.intRange(1, 255)).fieldOf("enchantments").forGetter(AddEnchantmentAction::enchantments),
+            CollectionCodecs.intMap(Enchantment.CODEC).fieldOf("enchantments").forGetter(AddEnchantmentAction::enchantments),
             Codec.BOOL.optionalFieldOf("override", false).forGetter(AddEnchantmentAction::override)
     ).apply(instance, AddEnchantmentAction::new));
 
-    public AddEnchantmentAction {
-        enchantments = Map.copyOf(enchantments);
-    }
-
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {
-        Mutable enchantments = new Mutable(stack.getEnchantments());
-        for (Entry<Holder<Enchantment>, Integer> entry : this.enchantments.entrySet()) {
-            if (this.override || enchantments.getLevel(entry.getKey()) < entry.getValue())
-                enchantments.set(entry.getKey(), entry.getValue());
-        }
+        Mutable enchantments = new Mutable(stack.getAllEnchantments(holder.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
+        for (Object2IntMap.Entry<Holder<Enchantment>> entry : this.enchantments.object2IntEntrySet())
+            if (this.override || enchantments.getLevel(entry.getKey()) < entry.getIntValue())
+                enchantments.set(entry.getKey(), entry.getIntValue());
         stack.set(DataComponents.ENCHANTMENTS, enchantments.toImmutable());
     }
 

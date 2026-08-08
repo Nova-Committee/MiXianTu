@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.*;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.*;
+import com.iafenvoy.mxt.integration.kubejs.type.condition.JsEntityCondition;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -11,6 +12,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtEntityConditions {
     public static final DeferredRegister<MapCodec<? extends EntityCondition>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ENTITY_CONDITION_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AlwaysTrueEntityCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<JsEntityCondition>> JS = REGISTRY.register("js", () -> JsEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<NeverEntityCondition>> NEVER = REGISTRY.register("never", () -> NeverEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AndEntityCondition>> AND = REGISTRY.register("and", () -> AndEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<NotEntityCondition>> NOT = REGISTRY.register("not", () -> NotEntityCondition.CODEC);

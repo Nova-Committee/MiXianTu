@@ -42,7 +42,7 @@ public final class ResourceLedger {
     }
 
     public synchronized Map<Identifier, Double> snapshot() {
-        return Map.copyOf(this.balances);
+        return this.balances;
     }
 
     private void requireFinite(double value, String label) {
@@ -52,6 +52,10 @@ public final class ResourceLedger {
     }
 
     public record TransactionResult(boolean committed, Identifier failedResource, Map<Identifier, Double> amounts) {
+        public TransactionResult {
+            amounts = new LinkedHashMap<>(amounts);
+        }
+
         static TransactionResult committed(Map<Identifier, Double> amounts) {
             return new TransactionResult(true, null, amounts);
         }

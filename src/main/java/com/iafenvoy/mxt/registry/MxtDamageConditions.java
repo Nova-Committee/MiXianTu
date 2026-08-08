@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.condition.builtin.damage.FireDamageCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.MagicDamageCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.ProjectileDamageCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.meta.*;
+import com.iafenvoy.mxt.integration.kubejs.type.condition.JsDamageCondition;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -18,6 +19,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtDamageConditions {
     public static final DeferredRegister<MapCodec<? extends DamageCondition>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.DAMAGE_CONDITION_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<AlwaysTrueDamageCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueDamageCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<JsDamageCondition>> JS = REGISTRY.register("js", () -> JsDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<DamageAmountRangeCondition>> AMOUNT_RANGE = REGISTRY.register("amount_range", () -> DamageAmountRangeCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<DirectDamageCondition>> DIRECTNESS = REGISTRY.register("directness", () -> DirectDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<DamageTypeCondition>> DAMAGE_TYPE = REGISTRY.register("damage_type", () -> DamageTypeCondition.CODEC);

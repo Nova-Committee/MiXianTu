@@ -21,7 +21,6 @@ public record ItemMatcherCondition(List<Entry> entries) implements ItemCondition
     ).apply(instance, ItemMatcherCondition::new));
 
     public ItemMatcherCondition {
-        entries = List.copyOf(entries);
         if (entries.isEmpty()) throw new IllegalArgumentException("items must not be empty");
     }
 

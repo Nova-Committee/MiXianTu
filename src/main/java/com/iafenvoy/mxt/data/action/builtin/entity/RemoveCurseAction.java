@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -22,7 +21,7 @@ public record RemoveCurseAction(Holder<Curse> curse) implements EntityAction {
 
     @Override
     public void execute(Entity entity, FormulaContext context) {
-        CurseService.remove(entity.getData(MxtAttachments.CURSE_HOLDER), HolderHelper.id(this.curse), Reason.CLEANSED, entity.level().getGameTime());
+        CurseService.remove(entity.getData(MxtAttachments.CURSE_HOLDER), this.curse, Reason.CLEANSED, entity.level().getGameTime());
     }
 
     @Override

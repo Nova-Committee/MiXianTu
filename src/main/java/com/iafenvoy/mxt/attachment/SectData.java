@@ -1,41 +1,41 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryFixedCodec;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class SectData {
-    public static final MapCodec<SectData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Identifier.CODEC.optionalFieldOf("sect").forGetter(SectData::sect), Codec.STRING.optionalFieldOf("rank", "").forGetter(SectData::rank), Codec.INT.optionalFieldOf("contribution", 0).forGetter(SectData::contribution),
-            Identifier.CODEC.listOf().optionalFieldOf("completed_tasks", List.of()).forGetter(SectData::completedTasks)
-    ).apply(instance, SectData::decode));
-    public static final Codec<SectData> CODEC = MAP_CODEC.codec();
-    private Identifier sect;
+    public static final MapCodec<SectData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            RegistryFixedCodec.create(MxtDatapackRegistries.SECT).optionalFieldOf("sect").forGetter(SectData::sect), Codec.STRING.optionalFieldOf("rank", "").forGetter(SectData::rank), Codec.INT.optionalFieldOf("contribution", 0).forGetter(SectData::contribution),
+            Identifier.CODEC.listOf().<Set<Identifier>>xmap(LinkedHashSet::new, ArrayList::new).optionalFieldOf("completed_tasks", Set.of()).forGetter(SectData::completedTasks)
+    ).apply(instance, SectData::new));
+    private Holder<Sect> sect;
     private String rank;
     private int contribution;
-    private final LinkedHashSet<Identifier> completedTasks;
+    private final Set<Identifier> completedTasks;
 
     public SectData() {
-        this(Optional.empty(), "", 0, List.of());
+        this(Optional.empty(), "", 0, Set.of());
     }
 
-    private SectData(Optional<Identifier> sect, String rank, int contribution, List<Identifier> completedTasks) {
+    private SectData(Optional<Holder<Sect>> sect, String rank, int contribution, Set<Identifier> completedTasks) {
         this.sect = sect.orElse(null);
         this.rank = rank;
         this.contribution = contribution;
         this.completedTasks = new LinkedHashSet<>(completedTasks);
     }
-
-    private static SectData decode(Optional<Identifier> sect, String rank, int contribution, List<Identifier> completedTasks) {
-        return new SectData(sect, rank, contribution, completedTasks);
-    }
-
-    public Optional<Identifier> sect() {
+    
+    public Optional<Holder<Sect>> sect() {
         return Optional.ofNullable(this.sect);
     }
 
@@ -47,16 +47,16 @@ public final class SectData {
         return this.contribution;
     }
 
-    public List<Identifier> completedTasks() {
-        return List.copyOf(this.completedTasks);
+    public Set<Identifier> completedTasks() {
+        return this.completedTasks;
     }
 
     public boolean member() {
         return this.sect != null;
     }
 
-    public void join(Identifier id, String rank) {
-        this.sect = id;
+    public void join(Holder<Sect> sect, String rank) {
+        this.sect = sect;
         this.rank = rank;
         this.contribution = 0;
         this.completedTasks.clear();

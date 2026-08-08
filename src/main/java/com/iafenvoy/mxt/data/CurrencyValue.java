@@ -28,11 +28,6 @@ public record CurrencyValue(List<Entry> items, long value, List<Exchange> exchan
             items.isEmpty() ? legacyItem.map(item -> List.of(Entry.item(item))).orElse(List.of()) : items, value, exchanges
     ))).validate(CurrencyValue::validate);
 
-    public CurrencyValue {
-        items = List.copyOf(items);
-        exchanges = List.copyOf(exchanges);
-    }
-
     @Override
     public List<Entry> entries() {
         return this.items;

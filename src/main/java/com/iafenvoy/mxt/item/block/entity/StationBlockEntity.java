@@ -97,7 +97,7 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
                 ? Mode.SYSTEM_OWNER : Mode.SYSTEM_CUSTOMER;
         else mode = player.getUUID().equals(this.owner) ? Mode.TRADE_OWNER : Mode.TRADE_CUSTOMER;
         return new StationMenu(mode, containerId, inventory, this.costs, this.rewards, this.stock, this.display,
-                ContainerLevelAccess.create(this.level, this.worldPosition));
+                ContainerLevelAccess.create(player.level(), this.worldPosition));
     }
 
     @Override

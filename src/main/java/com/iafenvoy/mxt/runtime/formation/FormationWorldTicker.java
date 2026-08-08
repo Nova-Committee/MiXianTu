@@ -57,7 +57,9 @@ public final class FormationWorldTicker {
         }
     }
 
-    /** Executes once per 20 ticks for every entity inside the formation's spherical range. */
+    /**
+     * Executes once per 20 ticks for every entity inside the formation's spherical range.
+     */
     private static void executeEntityTickAction(ServerLevel level, BlockPos controller, FormationInstance instance,
                                                 Formation definition) {
         double radius = instance.radius();

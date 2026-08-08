@@ -4,9 +4,8 @@ import com.iafenvoy.mxt.attachment.CurseHolderData;
 import com.iafenvoy.mxt.attachment.CurseHolderData.State;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
@@ -50,7 +49,7 @@ public final class CurseScheduler {
                 queue.nextDue.remove(entry.entity());
                 continue;
             }
-            CurseService.tick(entity, gameTime, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, id), context(entity));
+            CurseService.tick(entity, gameTime, FormulaContext.of(entity));
             reschedule(entity);
         }
         if (queue.entries.isEmpty() && queue.nextDue.isEmpty()) QUEUES.remove(level);
@@ -59,15 +58,10 @@ public final class CurseScheduler {
     static long nextDue(Entity entity, long gameTime) {
         CurseHolderData data = entity.getData(MxtAttachments.CURSE_HOLDER);
         long result = Long.MAX_VALUE;
-        for (Map.Entry<Identifier, State> entry : data.instances().entrySet()) {
-            Curse definition = MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, entry.getKey()).orElse(null);
-            if (definition == null) {
-                data.markUnknown(entry.getKey());
-                continue;
-            }
+        for (Map.Entry<Holder<Curse>, State> entry : data.instances().entrySet()) {
             State state = entry.getValue();
             if (state.expiresAt() >= 0L) result = Math.min(result, state.expiresAt());
-            double intervalValue = definition.tickInterval().evaluate(context(entity));
+            double intervalValue = entry.getKey().value().tickInterval().evaluate(FormulaContext.of(entity));
             if (!Double.isFinite(intervalValue) || intervalValue <= 0.0D) continue;
             long interval = Math.max(1L, Math.round(intervalValue));
             long elapsed = Math.max(0L, gameTime - state.appliedAt());
@@ -75,10 +69,6 @@ public final class CurseScheduler {
             result = Math.min(result, next);
         }
         return result;
-    }
-
-    private static FormulaContext context(Entity entity) {
-        return FormulaContext.of(entity);
     }
 
     private static final class Queue {

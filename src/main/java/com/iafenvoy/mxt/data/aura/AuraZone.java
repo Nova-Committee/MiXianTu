@@ -4,6 +4,10 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.data.ParticleEffect;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.mojang.datafixers.util.Either;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import net.minecraft.resources.Identifier;
@@ -17,22 +21,27 @@ import net.minecraft.world.level.dimension.LevelStem;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.Optional;
+
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 
 /**
  * Immutable datapack template for one aura environment.
  */
-public record AuraZone(double baseAura, double regenPerTick, Map<Identifier, Double> elementAura,
-                       List<Identifier> environmentTags,
+public record AuraZone(double baseAura, double regenPerTick, Object2DoubleMap<Holder<Element>> elementAura,
+                       List<Identifier> auraKinds,
                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
-                       double elementFitBonus, double elementConflictPenalty, Noise noise, ClientRender clientRender) {
+                       double elementFitBonus, double elementConflictPenalty, Noise noise,
+                       Optional<ParticleEffect> particle, ClientRender clientRender,
+                       ClientHud clientHud) {
     public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.AURA_ZONE);
     public static final Codec<AuraZone> DIRECT_CODEC = RecordCodecBuilder.<AuraZone>create(instance -> instance.group(
             Codec.DOUBLE.optionalFieldOf("base_aura", 0.0D).forGetter(AuraZone::baseAura),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraZone::regenPerTick),
-            Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).optionalFieldOf("element_aura", Map.of()).forGetter(AuraZone::elementAura),
-            Identifier.CODEC.listOf().optionalFieldOf("environment_tags", List.of()).forGetter(AuraZone::environmentTags),
+            CollectionCodecs.doubleMap(Element.CODEC).optionalFieldOf("element_aura", Object2DoubleMaps.emptyMap()).forGetter(AuraZone::elementAura),
+            Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(AuraZone::auraKinds),
             RegistryCodecs.keyOrTagList(Registries.LEVEL_STEM).optionalFieldOf("dimensions", List.of()).forGetter(AuraZone::dimensions),
             RegistryCodecs.holderOrTagList(Registries.BIOME).optionalFieldOf("biomes", List.of()).forGetter(AuraZone::biomes),
             Fluctuation.CODEC.optionalFieldOf("fluctuation", Fluctuation.NONE).forGetter(AuraZone::fluctuation),
@@ -40,15 +49,19 @@ public record AuraZone(double baseAura, double regenPerTick, Map<Identifier, Dou
             Codec.DOUBLE.optionalFieldOf("element_fit_bonus", 0.0D).forGetter(AuraZone::elementFitBonus),
             Codec.DOUBLE.optionalFieldOf("element_conflict_penalty", 0.0D).forGetter(AuraZone::elementConflictPenalty),
             Noise.CODEC.optionalFieldOf("noise", Noise.NONE).forGetter(AuraZone::noise),
-            ClientRender.CODEC.optionalFieldOf("client_render", ClientRender.DEFAULT).forGetter(AuraZone::clientRender)
+            ParticleEffect.CODEC.optionalFieldOf("particle").forGetter(AuraZone::particle),
+            ClientRender.CODEC.optionalFieldOf("client_render", ClientRender.DEFAULT).forGetter(AuraZone::clientRender),
+            ClientHud.CODEC.optionalFieldOf("client_hud", ClientHud.NONE).forGetter(AuraZone::clientHud)
     ).apply(instance, AuraZone::new)).validate(AuraZone::validate);
 
     private static DataResult<AuraZone> validate(AuraZone value) {
         if (!finite(value.baseAura) || value.baseAura < 0.0D || !finite(value.regenPerTick)
                 || !finite(value.elementFitBonus) || !finite(value.elementConflictPenalty))
             return DataResult.error(() -> "Aura zone numbers must be finite; base_aura must be non-negative");
-        if (value.elementAura.values().stream().anyMatch(number -> !finite(number)))
+        if (value.elementAura.values().doubleStream().anyMatch(number -> !finite(number)))
             return DataResult.error(() -> "element_aura values must be finite");
+        if (!value.clientHud.valid())
+            return DataResult.error(() -> "client_hud maximum values must be finite and greater than zero");
         return DataResult.success(value);
     }
 
@@ -87,22 +100,54 @@ public record AuraZone(double baseAura, double regenPerTick, Map<Identifier, Dou
      * Seeded 2D value noise; seed lives in datapacks so template distributions are reproducible.
      */
     public record Noise(boolean enabled, long seed, double scale, double amplitude) {
-        public static final Noise NONE = new Noise(false, 0L, 64.0D, 0.0D);
+        public static final Noise NONE = new Noise(false, 0L, 640.0D, 0.0D);
         public static final Codec<Noise> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.BOOL.optionalFieldOf("enable", false).forGetter(Noise::enabled),
                 Codec.LONG.optionalFieldOf("seed", 0L).forGetter(Noise::seed),
-                Codec.DOUBLE.optionalFieldOf("scale", 64.0D).forGetter(Noise::scale),
+                Codec.DOUBLE.optionalFieldOf("scale", 640.0D).forGetter(Noise::scale),
                 Codec.DOUBLE.optionalFieldOf("amplitude", 0.0D).forGetter(Noise::amplitude)
         ).apply(instance, Noise::new));
     }
 
-    public record ClientRender(Identifier particle, int particleDensity, String fogColor, int renderDistance) {
-        public static final ClientRender DEFAULT = new ClientRender(Identifier.withDefaultNamespace("glow"), 0, "#FFFFFF", 64);
+    public record ClientRender(String fogColor, int renderDistance, float fogStrength) {
+        public static final ClientRender DEFAULT = new ClientRender("#FFFFFF", 64, 0.35F);
         public static final Codec<ClientRender> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Identifier.CODEC.optionalFieldOf("particle", Identifier.withDefaultNamespace("glow")).forGetter(ClientRender::particle),
-                Codec.intRange(0, 64).optionalFieldOf("particle_density", 0).forGetter(ClientRender::particleDensity),
                 Codec.STRING.optionalFieldOf("fog_color", "#FFFFFF").forGetter(ClientRender::fogColor),
-                Codec.intRange(8, 256).optionalFieldOf("render_distance", 64).forGetter(ClientRender::renderDistance)
+                Codec.intRange(8, 256).optionalFieldOf("render_distance", 64).forGetter(ClientRender::renderDistance),
+                Codec.floatRange(0.0F, 1.0F).optionalFieldOf("fog_strength", 0.35F).forGetter(ClientRender::fogStrength)
         ).apply(instance, ClientRender::new));
+    }
+
+    /**
+     * Optional Origins-style bars for the current chunk's stored and resolved aura values.
+     */
+    public record ClientHud(Optional<Bar> storedAura, Optional<Bar> sensedConcentration) {
+        public static final ClientHud NONE = new ClientHud(Optional.empty(), Optional.empty());
+        public static final Codec<ClientHud> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Bar.CODEC.optionalFieldOf("stored_aura").forGetter(ClientHud::storedAura),
+                Bar.CODEC.optionalFieldOf("sensed_concentration").forGetter(ClientHud::sensedConcentration)
+        ).apply(instance, ClientHud::new));
+
+        private boolean valid() {
+            return this.storedAura.stream().allMatch(Bar::valid)
+                    && this.sensedConcentration.stream().allMatch(Bar::valid);
+        }
+    }
+
+    /**
+     * One bar row on the aura HUD. The texture row also selects its icon, as in Origins.
+     */
+    public record Bar(double maximum, int barIndex, boolean inverted, Anchor anchor, int order) {
+        public static final Codec<Bar> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.DOUBLE.fieldOf("maximum").forGetter(Bar::maximum),
+                Codec.intRange(0, 24).optionalFieldOf("bar_index", 0).forGetter(Bar::barIndex),
+                Codec.BOOL.optionalFieldOf("inverted", false).forGetter(Bar::inverted),
+                Anchor.CODEC.optionalFieldOf("anchor", Anchor.LEFT).forGetter(Bar::anchor),
+                Codec.INT.optionalFieldOf("order", 0).forGetter(Bar::order)
+        ).apply(instance, Bar::new));
+
+        private boolean valid() {
+            return Double.isFinite(this.maximum) && this.maximum > 0.0D;
+        }
     }
 }

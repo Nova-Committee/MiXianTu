@@ -16,7 +16,7 @@ import java.util.Optional;
 public final class FormationWorldData {
     public static final MapCodec<FormationWorldData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.unboundedMap(Codec.LONG, Snapshot.CODEC).optionalFieldOf("formations", Map.of()).forGetter(FormationWorldData::encoded)
-    ).apply(instance, FormationWorldData::decode));
+    ).apply(instance, FormationWorldData::new));
     public static final Codec<FormationWorldData> CODEC = MAP_CODEC.codec();
     private final Map<Long, Snapshot> formations;
 
@@ -26,10 +26,6 @@ public final class FormationWorldData {
 
     private FormationWorldData(Map<Long, Snapshot> formations) {
         this.formations = new LinkedHashMap<>(formations);
-    }
-
-    private static FormationWorldData decode(Map<Long, Snapshot> formations) {
-        return new FormationWorldData(formations);
     }
 
     public Optional<Snapshot> get(BlockPos position) {
@@ -54,10 +50,10 @@ public final class FormationWorldData {
     public Map<BlockPos, Snapshot> formations() {
         Map<BlockPos, Snapshot> result = new LinkedHashMap<>();
         this.formations.forEach((position, snapshot) -> result.put(BlockPos.of(position), snapshot));
-        return Map.copyOf(result);
+        return result;
     }
 
     private Map<Long, Snapshot> encoded() {
-        return Map.copyOf(this.formations);
+        return this.formations;
     }
 }

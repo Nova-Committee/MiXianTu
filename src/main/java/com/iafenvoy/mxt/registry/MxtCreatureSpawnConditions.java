@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
+import com.iafenvoy.mxt.integration.kubejs.callback.MxtJsGameplayCallbacks;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
@@ -12,6 +13,7 @@ public final class MxtCreatureSpawnConditions {
 
     static {
         REGISTRY.register("always", () -> (creature, context) -> true);
+        REGISTRY.register("js", () -> MxtJsGameplayCallbacks::testCreatureSpawn);
     }
 
     private MxtCreatureSpawnConditions() {

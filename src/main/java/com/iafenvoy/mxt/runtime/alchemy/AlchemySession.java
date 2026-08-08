@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Post;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Pre;
@@ -10,6 +11,7 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -31,7 +33,7 @@ public final class AlchemySession {
     }
 
     public static StartResult start(AlchemyRecipe recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
-        return start(Identifier.fromNamespaceAndPath("mxt", "unknown"), recipe, furnaceTier, inputs, context);
+        return start(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "unknown"), recipe, furnaceTier, inputs, context);
     }
 
     public static StartResult start(Identifier recipeId, AlchemyRecipe recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
@@ -111,6 +113,10 @@ public final class AlchemySession {
     }
 
     public record TickResult(boolean finished, boolean spoiled, long remainingTicks, List<Identifier> outputs) {
+        public TickResult {
+            outputs = new LinkedList<>(outputs);
+        }
+
         static TickResult idle() {
             return new TickResult(false, false, 0L, List.of());
         }
@@ -120,7 +126,7 @@ public final class AlchemySession {
         }
 
         static TickResult finished(List<Identifier> outputs, boolean spoiled) {
-            return new TickResult(true, spoiled, 0L, List.copyOf(outputs));
+            return new TickResult(true, spoiled, 0L, outputs);
         }
     }
 

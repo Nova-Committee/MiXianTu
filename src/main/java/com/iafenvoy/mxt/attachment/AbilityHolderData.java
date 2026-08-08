@@ -1,124 +1,124 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.google.common.collect.*;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMaps;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability.
  */
 public final class AbilityHolderData {
-    public static final MapCodec<AbilityHolderData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Codec.unboundedMap(Identifier.CODEC, Identifier.CODEC.listOf()).optionalFieldOf("sources", Map.of()).forGetter(AbilityHolderData::sources),
-            Codec.unboundedMap(Identifier.CODEC, Codec.LONG).optionalFieldOf("cooldowns", Map.of()).forGetter(AbilityHolderData::cooldowns),
-            Codec.unboundedMap(Identifier.CODEC, Codec.unboundedMap(Codec.STRING, AbilityComponentState.CODEC)).optionalFieldOf("component_states", Map.of()).forGetter(AbilityHolderData::componentStates),
-            Identifier.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityHolderData::channelledAbility)
-    ).apply(instance, AbilityHolderData::decode));
-    public static final Codec<AbilityHolderData> CODEC = MAP_CODEC.codec();
-    private final Map<Identifier, List<Identifier>> sources;
-    private final Map<Identifier, Long> cooldowns;
-    private final Map<Identifier, Map<String, AbilityComponentState>> componentStates;
-    private Optional<Identifier> channelledAbility;
+    public static final MapCodec<AbilityHolderData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            CollectionCodecs.multiMap(Ability.CODEC, Identifier.CODEC).optionalFieldOf("sources", ImmutableMultimap.of()).forGetter(AbilityHolderData::sources),
+            CollectionCodecs.longMap(Ability.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityHolderData::cooldowns),
+            CollectionCodecs.map(Ability.CODEC, CollectionCodecs.map(Codec.STRING, AbilityComponentState.CODEC)).optionalFieldOf("component_states", Map.of()).forGetter(AbilityHolderData::componentStates),
+            Ability.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityHolderData::channelledAbility)
+    ).apply(instance, AbilityHolderData::new));
+    private final Multimap<Holder<Ability>, Identifier> sources;
+    private final Object2LongMap<Holder<Ability>> cooldowns;
+    private final Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates;
+    private Optional<Holder<Ability>> channelledAbility;
 
     public AbilityHolderData() {
-        this(Map.of(), Map.of(), Map.of(), Optional.empty());
+        this(ArrayListMultimap.create(), Object2LongMaps.emptyMap(), Map.of(), Optional.empty());
     }
 
-    private AbilityHolderData(Map<Identifier, List<Identifier>> sources, Map<Identifier, Long> cooldowns,
-                              Map<Identifier, Map<String, AbilityComponentState>> componentStates, Optional<Identifier> channelledAbility) {
-        this.sources = new LinkedHashMap<>();
-        sources.forEach((ability, values) -> this.sources.put(ability, List.copyOf(values)));
-        this.cooldowns = new LinkedHashMap<>(cooldowns);
+    private AbilityHolderData(Multimap<Holder<Ability>, Identifier> sources, Object2LongMap<Holder<Ability>> cooldowns, Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates, Optional<Holder<Ability>> channelledAbility) {
+        this.sources = ArrayListMultimap.create(sources);
+        this.cooldowns = new Object2LongOpenHashMap<>(cooldowns);
         this.componentStates = new LinkedHashMap<>();
-        componentStates.forEach((ability, values) -> this.componentStates.put(ability, Map.copyOf(values)));
+        componentStates.forEach((ability, values) -> this.componentStates.put(ability, new LinkedHashMap<>(values)));
         this.channelledAbility = channelledAbility;
     }
 
-    private static AbilityHolderData decode(Map<Identifier, List<Identifier>> sources, Map<Identifier, Long> cooldowns,
-                                            Map<Identifier, Map<String, AbilityComponentState>> componentStates, Optional<Identifier> channelledAbility) {
-        return new AbilityHolderData(sources, cooldowns, componentStates, channelledAbility);
+    public Multimap<Holder<Ability>, Identifier> sources() {
+        return this.sources;
     }
 
-    public Map<Identifier, List<Identifier>> sources() {
-        return Map.copyOf(this.sources);
+    public Object2LongMap<Holder<Ability>> cooldowns() {
+        return this.cooldowns;
     }
 
-    public Map<Identifier, Long> cooldowns() {
-        return Map.copyOf(this.cooldowns);
+    public Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates() {
+        return this.componentStates;
     }
 
-    public Map<Identifier, Map<String, AbilityComponentState>> componentStates() {
-        return Map.copyOf(this.componentStates);
-    }
-
-    public Optional<Identifier> channelledAbility() {
+    public Optional<Holder<Ability>> channelledAbility() {
         return this.channelledAbility;
     }
 
-    public boolean has(Identifier ability) {
+    public boolean has(Holder<Ability> ability) {
         return this.sources.containsKey(ability);
     }
 
-    public void setSources(Identifier ability, List<Identifier> values) {
-        if (values.isEmpty()) this.sources.remove(ability);
-        else this.sources.put(ability, List.copyOf(values));
+    public void setSources(Holder<Ability> ability, List<Identifier> values) {
+        if (values.isEmpty()) this.sources.removeAll(ability);
+        else {
+            this.sources.removeAll(ability);
+            this.sources.putAll(ability, values);
+        }
     }
 
-    public boolean grant(Identifier ability, Identifier source) {
-        List<Identifier> values = new ArrayList<>(this.sources.getOrDefault(ability, List.of()));
-        if (values.contains(source)) return false;
-        values.add(source);
-        this.sources.put(ability, List.copyOf(values));
+    public boolean grant(Holder<Ability> ability, Identifier source) {
+        if (this.sources.containsEntry(ability, source)) return false;
+        this.sources.put(ability, source);
         return true;
     }
 
-    public boolean revoke(Identifier ability, Identifier source) {
-        List<Identifier> values = new ArrayList<>(this.sources.getOrDefault(ability, List.of()));
-        if (!values.remove(source)) return false;
-        this.setSources(ability, values);
-        if (!this.has(ability)) {
-            this.cooldowns.remove(ability);
+    public boolean revoke(Holder<Ability> ability, Identifier source) {
+        if (!this.sources.remove(ability, source)) return false;
+        if (!this.sources.containsKey(ability)) {
+            this.cooldowns.removeLong(ability);
             this.componentStates.remove(ability);
         }
         return true;
     }
 
-    /**
-     * Replaces exactly one grant source while preserving every other source for each ability.
-     */
-    public void reconcileSource(Identifier source, Collection<Identifier> desiredAbilities) {
-        Set<Identifier> desired = Set.copyOf(desiredAbilities);
-        Set<Identifier> previous = this.sources.entrySet().stream().filter(entry -> entry.getValue().contains(source))
-                .map(Entry::getKey).collect(Collectors.toSet());
-        previous.stream().filter(ability -> !desired.contains(ability)).toList().forEach(ability -> this.revoke(ability, source));
+    public void reconcileSource(Identifier source, Collection<Holder<Ability>> desiredAbilities) {
+        Set<Holder<Ability>> desired = new LinkedHashSet<>(desiredAbilities);
+        Set<Holder<Ability>> previous = this.sources.entries().stream().filter(entry -> entry.getValue().equals(source)).map(Entry::getKey).collect(Collectors.toSet());
+        previous.stream().filter(ability -> !desired.contains(ability)).forEach(ability -> this.revoke(ability, source));
         desired.stream().filter(ability -> !previous.contains(ability)).forEach(ability -> this.grant(ability, source));
     }
 
-    public boolean isOnCooldown(Identifier ability, long gameTime) {
+    public boolean isOnCooldown(Holder<Ability> ability, long gameTime) {
         return this.cooldowns.getOrDefault(ability, -1L) > gameTime;
     }
 
-    public void setCooldownUntil(Identifier ability, long gameTime) {
+    public void setCooldownUntil(Holder<Ability> ability, long gameTime) {
         this.cooldowns.put(ability, gameTime);
     }
 
-    public Optional<AbilityComponentState> componentState(Identifier ability, String key) {
+    public Optional<AbilityComponentState> componentState(Holder<Ability> ability, String key) {
         return Optional.ofNullable(this.componentStates.getOrDefault(ability, Map.of()).get(key));
     }
 
-    public void setComponentState(Identifier ability, String key, AbilityComponentState value) {
+    public void setComponentState(Holder<Ability> ability, String key, AbilityComponentState value) {
         Map<String, AbilityComponentState> values = new LinkedHashMap<>(this.componentStates.getOrDefault(ability, Map.of()));
         values.put(key, value);
-        this.componentStates.put(ability, Map.copyOf(values));
+        this.componentStates.put(ability, values);
     }
 
-    public void setChannelledAbility(Identifier ability) {
+    public void setChannelledAbility(Holder<Ability> ability) {
         this.channelledAbility = Optional.ofNullable(ability);
     }
 
@@ -128,21 +128,21 @@ public final class AbilityHolderData {
 
     public void restore(Snapshot snapshot) {
         this.sources.clear();
-        snapshot.sources().forEach((id, values) -> this.sources.put(id, List.copyOf(values)));
+        this.sources.putAll(snapshot.sources());
         this.cooldowns.clear();
         this.cooldowns.putAll(snapshot.cooldowns());
         this.componentStates.clear();
-        snapshot.componentStates().forEach((id, values) -> this.componentStates.put(id, Map.copyOf(values)));
+        this.componentStates.putAll(snapshot.componentStates());
         this.channelledAbility = snapshot.channelledAbility();
     }
 
-    public record Snapshot(Map<Identifier, List<Identifier>> sources, Map<Identifier, Long> cooldowns,
-                           Map<Identifier, Map<String, AbilityComponentState>> componentStates,
-                           Optional<Identifier> channelledAbility) {
+    public record Snapshot(Multimap<Holder<Ability>, Identifier> sources, Map<Holder<Ability>, Long> cooldowns,
+                           Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates,
+                           Optional<Holder<Ability>> channelledAbility) {
         public Snapshot {
-            sources = Map.copyOf(sources);
-            cooldowns = Map.copyOf(cooldowns);
-            componentStates = Map.copyOf(componentStates);
+            sources = ArrayListMultimap.create(sources);
+            cooldowns = new LinkedHashMap<>(cooldowns);
+            componentStates = new LinkedHashMap<>(componentStates);
         }
     }
 }

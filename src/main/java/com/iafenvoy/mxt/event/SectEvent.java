@@ -1,15 +1,16 @@
 package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.SectData;
-import net.minecraft.resources.Identifier;
+import com.iafenvoy.mxt.data.Sect;
+import net.minecraft.core.Holder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
 public abstract class SectEvent extends Event {
     private final SectData data;
-    private final Identifier sect;
+    private final Holder<Sect> sect;
 
-    protected SectEvent(SectData data, Identifier sect) {
+    protected SectEvent(SectData data, Holder<Sect> sect) {
         this.data = data;
         this.sect = sect;
     }
@@ -18,42 +19,42 @@ public abstract class SectEvent extends Event {
         return this.data;
     }
 
-    public Identifier sect() {
+    public Holder<Sect> sect() {
         return this.sect;
     }
 
     public static final class JoinPre extends SectEvent implements ICancellableEvent {
-        public JoinPre(SectData data, Identifier sect) {
+        public JoinPre(SectData data, Holder<Sect> sect) {
             super(data, sect);
         }
     }
 
     public static final class JoinPost extends SectEvent {
-        public JoinPost(SectData data, Identifier sect) {
+        public JoinPost(SectData data, Holder<Sect> sect) {
             super(data, sect);
         }
     }
 
     public static final class LeavePre extends SectEvent implements ICancellableEvent {
-        public LeavePre(SectData data, Identifier sect) {
+        public LeavePre(SectData data, Holder<Sect> sect) {
             super(data, sect);
         }
     }
 
     public static final class LeavePost extends SectEvent {
-        public LeavePost(SectData data, Identifier sect) {
+        public LeavePost(SectData data, Holder<Sect> sect) {
             super(data, sect);
         }
     }
 
     public static final class PromotePre extends SectEvent implements ICancellableEvent {
-        public PromotePre(SectData data, Identifier sect) {
+        public PromotePre(SectData data, Holder<Sect> sect) {
             super(data, sect);
         }
     }
 
     public static final class PromotePost extends SectEvent {
-        public PromotePost(SectData data, Identifier sect) {
+        public PromotePost(SectData data, Holder<Sect> sect) {
             super(data, sect);
         }
     }

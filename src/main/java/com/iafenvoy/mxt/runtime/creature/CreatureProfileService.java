@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -35,7 +34,7 @@ public final class CreatureProfileService {
         AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
         if (!Double.isFinite(definition.minimumAura()) || aura.concentration() < definition.minimumAura()
                 || (!definition.preferredAuraElements().isEmpty() && aura.elementAura().entrySet().stream().noneMatch(element -> element.getValue() > 0.0D
-                && RegistryCodecs.matches(definition.preferredAuraElements(), creature.level().registryAccess().lookupOrThrow(MxtRegistryKeys.ELEMENT), MxtRegistryKeys.ELEMENT, element.getKey()))))
+                && RegistryCodecs.matches(definition.preferredAuraElements(), element.getKey()))))
             return false;
         final double intelligence;
         try {
@@ -44,7 +43,8 @@ public final class CreatureProfileService {
             return false;
         }
         if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
-        creature.getData(MxtAttachments.CREATURE_SPIRIT).apply(id, intelligence, definition.innerCore(), definition.lootTable());
+        MxtDatapackRegistries.holder(MxtDatapackRegistries.CREATURE_PROFILE, id)
+                .ifPresent(profile -> creature.getData(MxtAttachments.CREATURE_SPIRIT).apply(profile, intelligence, definition.innerCore(), definition.lootTable()));
         return true;
     }
 

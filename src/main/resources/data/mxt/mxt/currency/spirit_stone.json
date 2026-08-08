@@ -1,0 +1,7 @@
+{
+  "item": "mxt:spirit_stone",
+  "value": 1,
+  "exchanges": [
+    {"cost": 10, "result": {"id": "mxt:medium_spirit_stone"}}
+  ]
+}

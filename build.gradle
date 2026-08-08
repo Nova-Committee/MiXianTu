@@ -20,8 +20,8 @@ sourceSets.main.resources {
 }
 
 def testModSourceSet = sourceSets.create('testMod') {
-    java.srcDir('src/test-mod/java')
-    resources.srcDir('src/test-mod/resources')
+    java.setSrcDirs(['src/test-mod/java'])
+    resources.setSrcDirs(['src/test-mod/resources'])
 }
 
 testModSourceSet.compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
@@ -39,6 +39,9 @@ base {
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+def testServerGameDirectory = project.findProperty('mxtTestServerGameDirectory') ?: 'run-test-server'
+def testServerPort = project.findProperty('mxtTestServerPort') ?: '25566'
 
 neoForge {
     version = project.neo_version
@@ -68,11 +71,11 @@ neoForge {
 
         testServer {
             server()
-            gameDirectory = file('run-test-server')
+            gameDirectory = file(testServerGameDirectory)
             ideName = 'Test Server'
             programArgument '--nogui'
             programArgument '--port'
-            programArgument '25566'
+            programArgument testServerPort
             systemProperty 'fml.debugLoading', 'true'
         }
 
@@ -96,6 +99,14 @@ neoForge {
             sourceSet(testModSourceSet)
         }
     }
+}
+
+tasks.named('runTestClient').configure {
+    dependsOn(testModSourceSet.classesTaskName)
+}
+
+tasks.named('runTestServer').configure {
+    dependsOn(testModSourceSet.classesTaskName)
 }
 
 configurations {

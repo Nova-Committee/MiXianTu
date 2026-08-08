@@ -154,9 +154,10 @@ public final class StationMenu extends AbstractContainerMenu {
     }
 
     private void addStock() {
-        for (int row = 0; row < 3; row++)
-            for (int column = 0; column < 7; column++)
-                this.addSlot(new Slot(this.stock, column + row * 7, 8 + column * 18, 72 + row * 18));
+        if (this.stock != null)
+            for (int row = 0; row < 3; row++)
+                for (int column = 0; column < 7; column++)
+                    this.addSlot(new Slot(this.stock, column + row * 7, 8 + column * 18, 72 + row * 18));
     }
 
     private void addPlayerInventory(Inventory inventory, int y) {

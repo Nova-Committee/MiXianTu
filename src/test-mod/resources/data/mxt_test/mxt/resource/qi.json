@@ -3,7 +3,46 @@
   "min": 0,
   "max": "100 + realm_rank * 50 + absorbed_aura * 0.5",
   "regen": "0.25 + realm_rank * 0.1",
-  "restore_on_absorb": true,
-  "default_bar": "mxt_test:qi_hud",
-  "first_realm": "mxt_test:foundation"
+  "cultivation_to_resource": {
+    "multiplier": 0.25,
+    "max_per_tick": 0.5
+  },
+  "resource_to_cultivation": {
+    "multiplier": 0.5,
+    "max_per_tick": 0.75
+  },
+  "bars": [
+    {
+      "context": "self_hud",
+      "anchor": "left",
+      "order": 2,
+      "value_display": "current_and_maximum",
+      "visibility": { "type": "mxt:always" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
+    },
+    {
+      "context": "self_hud",
+      "anchor": "left",
+      "order": 2,
+      "replace_default": true,
+      "visibility": { "type": "mxt:always" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 1, "icon_index": 1 }
+    },
+    {
+      "context": "target_overlay",
+      "anchor": "left",
+      "order": 0,
+      "visibility": { "type": "mxt:always" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
+    },
+    {
+      "context": "target_overlay",
+      "anchor": "left",
+      "order": 0,
+      "replace_default": true,
+      "visibility": { "type": "mxt:always" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
+    }
+  ],
+  "first_realm": "mxt_test:qi_refining"
 }

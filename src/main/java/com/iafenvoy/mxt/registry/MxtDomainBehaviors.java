@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.behavior.DomainBehavior;
+import com.iafenvoy.mxt.integration.kubejs.callback.MxtJsGameplayCallbacks;
 import net.minecraft.core.Registry;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -25,6 +26,7 @@ public final class MxtDomainBehaviors {
         DeferredRegister<DomainBehavior> result = DeferredRegister.create(registry, MiXianTu.MOD_ID);
         result.register("no_op", () -> _ -> {
         });
+        result.register("js", () -> MxtJsGameplayCallbacks::executeBehavior);
         return result;
     }
 }

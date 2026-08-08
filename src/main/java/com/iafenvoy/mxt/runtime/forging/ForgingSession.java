@@ -4,8 +4,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -14,7 +14,7 @@ import java.util.List;
 public final class ForgingSession {
     private final ForgingPlan plan;
     private final int optimalSteps;
-    private final ArrayDeque<Identifier> history = new ArrayDeque<>(6);
+    private final List<Identifier> history = new LinkedList<>();
     private int value;
     private int steps;
 
@@ -55,7 +55,7 @@ public final class ForgingSession {
     }
 
     public List<Identifier> history() {
-        return List.copyOf(this.history);
+        return this.history;
     }
 
     public boolean strike(Identifier method) {
@@ -112,7 +112,7 @@ public final class ForgingSession {
         ).apply(instance, Snapshot::new));
 
         public Snapshot {
-            history = List.copyOf(history);
+            history = new LinkedList<>(history);
         }
     }
 }

@@ -1,22 +1,24 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.RealmInstance;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedList;
 import java.util.Optional;
 import java.util.UUID;
 
 public final class RealmInstanceData {
-    public static final MapCodec<RealmInstanceData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            Identifier.CODEC.optionalFieldOf("definition").forGetter(RealmInstanceData::definition), Codec.LONG.optionalFieldOf("started_at", -1L).forGetter(RealmInstanceData::startedAt), Codec.LONG.optionalFieldOf("expires_at", -1L).forGetter(RealmInstanceData::expiresAt),
+    public static final MapCodec<RealmInstanceData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+            RegistryFixedCodec.create(MxtDatapackRegistries.REALM_INSTANCE).optionalFieldOf("definition").forGetter(RealmInstanceData::definition), Codec.LONG.optionalFieldOf("started_at", -1L).forGetter(RealmInstanceData::startedAt), Codec.LONG.optionalFieldOf("expires_at", -1L).forGetter(RealmInstanceData::expiresAt),
             UUIDUtilCodec.CODEC.listOf().optionalFieldOf("members", List.of()).forGetter(RealmInstanceData::members)
-    ).apply(instance, RealmInstanceData::decode));
-    public static final Codec<RealmInstanceData> CODEC = MAP_CODEC.codec();
-    private Identifier definition;
+    ).apply(instance, RealmInstanceData::new));
+    private Holder<RealmInstance> definition;
     private long startedAt;
     private long expiresAt;
     private final List<UUID> members;
@@ -25,18 +27,14 @@ public final class RealmInstanceData {
         this(Optional.empty(), -1L, -1L, List.of());
     }
 
-    private RealmInstanceData(Optional<Identifier> definition, long startedAt, long expiresAt, List<UUID> members) {
+    private RealmInstanceData(Optional<Holder<RealmInstance>> definition, long startedAt, long expiresAt, List<UUID> members) {
         this.definition = definition.orElse(null);
         this.startedAt = startedAt;
         this.expiresAt = expiresAt;
-        this.members = new ArrayList<>(members);
+        this.members = new LinkedList<>(members);
     }
 
-    private static RealmInstanceData decode(Optional<Identifier> definition, long startedAt, long expiresAt, List<UUID> members) {
-        return new RealmInstanceData(definition, startedAt, expiresAt, members);
-    }
-
-    public Optional<Identifier> definition() {
+    public Optional<Holder<RealmInstance>> definition() {
         return Optional.ofNullable(this.definition);
     }
 
@@ -49,15 +47,15 @@ public final class RealmInstanceData {
     }
 
     public List<UUID> members() {
-        return List.copyOf(this.members);
+        return this.members;
     }
 
     public boolean active() {
         return this.definition != null;
     }
 
-    public void start(Identifier id, long gameTime, long duration) {
-        this.definition = id;
+    public void start(Holder<RealmInstance> definition, long gameTime, long duration) {
+        this.definition = definition;
         this.startedAt = gameTime;
         this.expiresAt = duration <= 0L ? -1L : Math.addExact(gameTime, duration);
         this.members.clear();

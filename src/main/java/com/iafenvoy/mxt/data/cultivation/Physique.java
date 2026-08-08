@@ -11,6 +11,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
 import java.util.List;
@@ -19,10 +20,10 @@ import java.util.List;
  * Element-independent innate or acquired physique. Intentionally has no element field.
  */
 public record Physique(List<AttributeModifier> attributeModifiers,
-                       List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
-                       EntityCondition holderCondition, List<Identifier> exclusiveTags, String rarity,
-                       boolean allowStacking) {
-    public static final Codec<Physique> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                       List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities, EntityCondition holderCondition,
+                       List<Identifier> exclusiveTags, String rarity, boolean allowStacking) {
+    public static final Codec<Holder<Physique>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.PHYSIQUE);
+    public static final Codec<Physique> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             AttributeModifier.CODEC.listOf().optionalFieldOf("attribute_modifiers", List.of()).forGetter(Physique::attributeModifiers),
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
             EntityCondition.CODEC.optionalFieldOf("holder_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Physique::holderCondition),

@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.event.SpiritContractEvent.Action;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Post;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Pre;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.HolderHelper;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
@@ -21,14 +23,15 @@ public final class ContractService {
     private ContractService() {
     }
 
-    public static Result bind(ContractData data, Identifier id, ContractType definition, UUID owner, long gameTime,
+    public static Result bind(ContractData data, Holder<ContractType> type, UUID owner, long gameTime,
                               BooleanSupplier ownerAllowed, BooleanSupplier creatureAllowed) {
         if (data.bound()) return Result.rejected(Failure.ALREADY_BOUND);
         if (!ownerAllowed.getAsBoolean()) return Result.rejected(Failure.OWNER_CONDITIONS);
         if (!creatureAllowed.getAsBoolean()) return Result.rejected(Failure.CREATURE_CONDITIONS);
+        Identifier id = HolderHelper.id(type);
         if (NeoForge.EVENT_BUS.post(new Pre(data, Optional.of(id), owner, Action.BIND)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
-        data.bind(id, owner, gameTime);
+        data.bind(type, owner, gameTime);
         NeoForge.EVENT_BUS.post(new Post(data, Optional.of(id), owner, Action.BIND));
         return Result.bound();
     }
@@ -36,17 +39,18 @@ public final class ContractService {
     /**
      * Evaluates both sides against the contract's fixed condition registry before binding.
      */
-    public static Result bind(ContractData data, Identifier id, ContractType definition, LivingEntity owner,
+    public static Result bind(ContractData data, Holder<ContractType> type, LivingEntity owner,
                               LivingEntity creature, long gameTime, FormulaContext context) {
+        ContractType definition = type.value();
         boolean ownerAllowed = definition.ownerCondition().test(owner, context);
         boolean creatureAllowed = definition.creatureCondition().test(creature, context);
-        return bind(data, id, definition, owner.getUUID(), gameTime, () -> ownerAllowed, () -> creatureAllowed);
+        return bind(data, type, owner.getUUID(), gameTime, () -> ownerAllowed, () -> creatureAllowed);
     }
 
     public static Result breakContract(ContractData data, UUID requester, boolean force) {
         if (!data.bound()) return Result.rejected(Failure.NOT_BOUND);
         if (!force && !data.owner().orElseThrow().equals(requester)) return Result.rejected(Failure.NOT_OWNER);
-        Optional<Identifier> type = data.contractType();
+        Optional<Identifier> type = data.contractType().map(HolderHelper::id);
         if (NeoForge.EVENT_BUS.post(new Pre(data, type, requester, Action.BREAK)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
         data.clear();
@@ -59,10 +63,10 @@ public final class ContractService {
         if (!force && !data.owner().orElseThrow().equals(requester)) return Result.rejected(Failure.NOT_OWNER);
         if (data.recalled() == recalled) return Result.unchanged();
         Action action = recalled ? Action.RECALL : Action.RELEASE;
-        if (NeoForge.EVENT_BUS.post(new Pre(data, data.contractType(), requester, action)).isCanceled())
+        if (NeoForge.EVENT_BUS.post(new Pre(data, data.contractType().map(HolderHelper::id), requester, action)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
         data.setRecalled(recalled);
-        NeoForge.EVENT_BUS.post(new Post(data, data.contractType(), requester, action));
+        NeoForge.EVENT_BUS.post(new Post(data, data.contractType().map(HolderHelper::id), requester, action));
         return Result.recalled();
     }
 

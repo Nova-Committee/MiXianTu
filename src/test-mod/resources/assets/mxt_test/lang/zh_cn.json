@@ -1,8 +1,24 @@
 {
+  "badge.mxt_test.tooltip": "测试说明徽章",
+  "badge.mxt_test.keybind": "测试按键徽章",
+  "badge.mxt_test.recipe.prefix": "配方：",
+  "badge.mxt_test.recipe.suffix": "",
   "element.mxt_test.fire": "火灵",
   "element.mxt_test.water": "水灵",
   "title.mxt_test.test_disciple": "试炼弟子",
   "resource.mxt_test.qi": "灵气",
   "resource.mxt_test.true_essence": "真元",
-  "resource.mxt_test.divine_sense": "神识"
+  "resource.mxt_test.divine_sense": "神识",
+  "item.mxt_test.qingxiao_spirit_crystal": "青霄灵晶",
+  "title.mxt_test.qingxiao_outer_disciple": "青霄外门弟子",
+  "command.mxt_test.kit.success": "已领取青霄试炼包：手持青霄灵晶后执行 /mxt_test cultivate 开始修炼。",
+  "command.mxt_test.kit.realm_failed": "无法初始化青霄试炼境界；请在空白测试角色上使用该命令。",
+  "command.mxt_test.cultivate.success": "青霄吐纳已开始。灵晶会作为隐藏灵气燃料持续消耗。",
+  "command.mxt_test.cultivate.failed": "无法开始青霄吐纳：%s",
+  "command.mxt_test.task.success": "已完成青霄宗门日课，当前贡献：%s",
+  "command.mxt_test.task.failed": "无法完成青霄宗门日课：%s",
+  "command.mxt_test.guide.1": "青霄试炼：1. 执行 /mxt_test kit 领取身份、资源与道具。",
+  "command.mxt_test.guide.2": "2. 主手持有青霄灵晶，执行 /mxt_test cultivate；随后可用 /mxt breakthrough mxt_test:qi 尝试突破。",
+  "command.mxt_test.guide.3": "3. 金块上使用阵盘激活聚灵阵；契约卷轴可绑定狼，秘境令牌可进入末地试炼。",
+  "command.mxt_test.guide.4": "4. 使用 /mxt ability cast mxt_test:qingxiao_firebolt、/mxt_test task 和 /mxt sect claim 验证技能、宗门与领地。"
 }

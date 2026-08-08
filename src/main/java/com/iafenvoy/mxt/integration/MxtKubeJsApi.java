@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -22,6 +23,7 @@ import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -52,23 +54,24 @@ public final class MxtKubeJsApi {
     public static UseResult useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
         if (actor.level().isClientSide())
             return new UseResult(false, false, AbilityService.Failure.SERVER_ONLY, null, Map.of());
-        Ability definition = ability(id).orElse(null);
-        if (definition == null)
+        Holder<Ability> ability = MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, id).orElse(null);
+        if (ability == null)
             return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
-        return AbilityService.use(id, definition, actor, actor.getData(MxtAttachments.ABILITY_HOLDER), actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
+        return AbilityService.use(ability, ability.value(), actor, actor.getData(MxtAttachments.ABILITY_HOLDER), actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
     }
 
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, String source, FormulaContext context) {
         if (target.level().isClientSide())
             return new ApplyResult(null, false, ApplyFailure.SERVER_ONLY);
-        Curse definition = curse(id).orElse(null);
-        if (definition == null) return new ApplyResult(null, false, ApplyFailure.CONDITION);
-        return CurseService.apply(target, id, definition, stacks, target.level().getGameTime(), context, source);
+        Holder<Curse> curse = MxtDatapackRegistries.holder(MxtDatapackRegistries.CURSE, id).orElse(null);
+        if (curse == null) return new ApplyResult(null, false, ApplyFailure.CONDITION);
+        return CurseService.apply(target, curse, stacks, target.level().getGameTime(), context, source);
     }
 
     public static boolean removeCurse(@NotNull Entity target, Identifier id) {
-        return !target.level().isClientSide()
-                && CurseService.remove(target.getData(MxtAttachments.CURSE_HOLDER), id).isPresent();
+        return !target.level().isClientSide() && MxtDatapackRegistries.holder(MxtDatapackRegistries.CURSE, id)
+                .map(curse -> CurseService.remove(target.getData(MxtAttachments.CURSE_HOLDER), curse,
+                        Reason.EXPLICIT, target.level().getGameTime()).isPresent()).orElse(false);
     }
 
     /**
@@ -103,7 +106,7 @@ public final class MxtKubeJsApi {
         if (entity == null || entity.level().isClientSide())
             return new Result(false, null, Map.of());
         try {
-            return ResourceTransactions.tryConsume(entity.getData(MxtAttachments.RESOURCE_HOLDER), ResourceTransactions.evaluate(List.copyOf(costs), context));
+            return ResourceTransactions.tryConsume(entity.getData(MxtAttachments.RESOURCE_HOLDER), ResourceTransactions.evaluate(costs, context));
         } catch (IllegalArgumentException exception) {
             return new Result(false, null, Map.of());
         }

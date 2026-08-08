@@ -5,7 +5,17 @@ import com.iafenvoy.mxt.data.AttributeModifier;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
+import com.iafenvoy.mxt.data.item.ContractScrollData;
+import com.iafenvoy.mxt.data.item.FormationPlateData;
+import com.iafenvoy.mxt.data.item.RealmTokenData;
+import com.iafenvoy.mxt.data.item.ResourceContainerData;
+import com.iafenvoy.mxt.data.item.SpiritBeastData;
+import com.iafenvoy.mxt.data.item.TokenData;
+import com.iafenvoy.mxt.data.aura.ItemAura;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup.Provider;
@@ -31,12 +41,48 @@ public final class DataDrivenItemTooltipEvents {
     public static void appendDetails(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
         Provider registries = event.getContext().registries();
+        ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(event, itemAura.value()));
         ItemBindingService.weapon(registries, stack).ifPresent(weapon -> appendWeapon(event, weapon));
         ItemBindingService.pill(registries, stack).ifPresent(pill -> appendPill(event, pill));
         ItemBindingService.actions(registries, stack).stream()
                 .filter(GrantSpiritRootAction.class::isInstance)
                 .map(GrantSpiritRootAction.class::cast)
                 .forEach(action -> appendSpiritRoot(event, action));
+        appendFrameworkState(event, stack);
+    }
+
+    private static void appendItemAura(ItemTooltipEvent event, ItemAura itemAura) {
+        double total = itemAura.totalAura().evaluate(FormulaContext.EMPTY);
+        double speed = itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY);
+        event.getToolTip().add(Component.translatable("tooltip.mxt.item.item_aura").withStyle(ChatFormatting.AQUA));
+        event.getToolTip().add(Component.translatable("tooltip.mxt.item_aura.total", number(total))
+                .withStyle(ChatFormatting.BLUE));
+        event.getToolTip().add(Component.translatable("tooltip.mxt.item_aura.speed", number(speed))
+                .withStyle(ChatFormatting.BLUE));
+        itemAura.resultStack().ifPresent(template -> event.getToolTip().add(Component.translatable(
+                "tooltip.mxt.item_aura.result", template.create().getHoverName()).withStyle(ChatFormatting.BLUE)));
+    }
+
+    private static void appendFrameworkState(ItemTooltipEvent event, ItemStack stack) {
+        ContractScrollData contract = stack.get(MxtDataComponents.CONTRACT_SCROLL);
+        if (contract != null) event.getToolTip().add(Component.translatable("tooltip.mxt.contract_scroll.type",
+                contract.contractType().map(HolderHelper::id).map(Object::toString).orElse("-")));
+        SpiritBeastData beast = stack.get(MxtDataComponents.SPIRIT_BEAST);
+        if (beast != null) event.getToolTip().add(Component.translatable("tooltip.mxt.spirit_beast_bag.state",
+                beast.entity().isPresent() ? Component.translatable("tooltip.mxt.filled") : Component.translatable("tooltip.mxt.empty")));
+        FormationPlateData formation = stack.get(MxtDataComponents.FORMATION_PLATE);
+        if (formation != null) event.getToolTip().add(Component.translatable("tooltip.mxt.formation_plate.formation",
+                formation.formation().map(HolderHelper::id).map(Object::toString).orElse("-")));
+        RealmTokenData realm = stack.get(MxtDataComponents.REALM_TOKEN);
+        if (realm != null) event.getToolTip().add(Component.translatable("tooltip.mxt.realm_token.realm",
+                realm.realm().map(HolderHelper::id).map(Object::toString).orElse("-")));
+        ResourceContainerData container = stack.get(MxtDataComponents.RESOURCE_CONTAINER);
+        if (container != null) container.values().forEach((resource, amount) -> event.getToolTip().add(
+                Component.translatable("tooltip.mxt.spirit_vessel.resource", HolderHelper.id(resource), number(amount))));
+        TokenData token = stack.get(MxtDataComponents.TOKEN);
+        if (token != null && token.kind().isPresent())
+            event.getToolTip().add(Component.translatable("tooltip.mxt.token",
+                    token.kind().orElseThrow(), token.value().orElse("-")));
     }
 
     private static void appendSpiritRoot(ItemTooltipEvent event, GrantSpiritRootAction action) {

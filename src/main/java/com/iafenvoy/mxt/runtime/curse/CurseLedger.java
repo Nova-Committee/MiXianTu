@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.curse;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.Curse.StackingMode;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.*;
 
@@ -11,48 +11,49 @@ import java.util.*;
  * Applies stacking and expiry rules without allowing consumers to mutate curse state directly.
  */
 public final class CurseLedger {
-    private final Map<Identifier, CurseInstance> instances = new LinkedHashMap<>();
+    private final Map<Holder<Curse>, CurseInstance> instances = new LinkedHashMap<>();
 
     public CurseLedger() {
     }
 
-    public CurseLedger(Map<Identifier, CurseInstance> instances) {
+    public CurseLedger(Map<Holder<Curse>, CurseInstance> instances) {
         this.instances.putAll(instances);
     }
 
-    public synchronized CurseInstance apply(Identifier id, Curse definition, int requestedStacks, long gameTime, FormulaContext context, String source) {
-        return this.apply(id, definition, requestedStacks, gameTime, context, source, Optional.empty());
+    public synchronized CurseInstance apply(Holder<Curse> curse, int requestedStacks, long gameTime, FormulaContext context, String source) {
+        return this.apply(curse, requestedStacks, gameTime, context, source, Optional.empty());
     }
 
-    public synchronized CurseInstance apply(Identifier id, Curse definition, int requestedStacks, long gameTime,
+    public synchronized CurseInstance apply(Holder<Curse> curse, int requestedStacks, long gameTime,
                                             FormulaContext context, String source, Optional<Long> durationOverride) {
         if (requestedStacks <= 0) {
             throw new IllegalArgumentException("requestedStacks must be positive");
         }
-        CurseInstance current = this.instances.get(id);
+        Curse definition = curse.value();
+        CurseInstance current = this.instances.get(curse);
         long expiresAt = expiry(definition, gameTime, context, durationOverride);
         if (current == null || definition.stackingMode() == StackingMode.REPLACE) {
-            CurseInstance created = new CurseInstance(id, Math.min(requestedStacks, definition.maxStacks()), gameTime, expiresAt, source);
-            this.instances.put(id, created);
+            CurseInstance created = new CurseInstance(curse, Math.min(requestedStacks, definition.maxStacks()), gameTime, expiresAt, source);
+            this.instances.put(curse, created);
             return created;
         }
         int minStacks = Math.min(definition.maxStacks(), current.stacks() + requestedStacks);
         CurseInstance updated = switch (definition.stackingMode()) {
             case IGNORE -> current;
             case REFRESH_DURATION ->
-                    new CurseInstance(id, current.stacks(), current.appliedAt(), expiresAt, current.source());
+                    new CurseInstance(curse, current.stacks(), current.appliedAt(), expiresAt, current.source());
             case ADD_STACKS_REFRESH_DURATION ->
-                    new CurseInstance(id, minStacks, current.appliedAt(), expiresAt, current.source());
+                    new CurseInstance(curse, minStacks, current.appliedAt(), expiresAt, current.source());
             case ADD_STACKS_KEEP_DURATION ->
-                    new CurseInstance(id, minStacks, current.appliedAt(), current.expiresAt(), current.source());
+                    new CurseInstance(curse, minStacks, current.appliedAt(), current.expiresAt(), current.source());
             case REPLACE -> throw new IllegalStateException("Handled above");
         };
-        this.instances.put(id, updated);
+        this.instances.put(curse, updated);
         return updated;
     }
 
-    public synchronized Optional<CurseInstance> remove(Identifier id) {
-        return Optional.ofNullable(this.instances.remove(id));
+    public synchronized Optional<CurseInstance> remove(Holder<Curse> curse) {
+        return Optional.ofNullable(this.instances.remove(curse));
     }
 
     public synchronized List<CurseInstance> removeExpired(long gameTime) {
@@ -64,15 +65,15 @@ public final class CurseLedger {
             }
             return false;
         });
-        return List.copyOf(expired);
+        return expired;
     }
 
-    public synchronized Optional<CurseInstance> get(Identifier id) {
-        return Optional.ofNullable(this.instances.get(id));
+    public synchronized Optional<CurseInstance> get(Holder<Curse> curse) {
+        return Optional.ofNullable(this.instances.get(curse));
     }
 
-    public synchronized Map<Identifier, CurseInstance> snapshot() {
-        return Map.copyOf(this.instances);
+    public synchronized Map<Holder<Curse>, CurseInstance> snapshot() {
+        return this.instances;
     }
 
     private static long expiry(Curse definition, long gameTime, FormulaContext context, Optional<Long> durationOverride) {

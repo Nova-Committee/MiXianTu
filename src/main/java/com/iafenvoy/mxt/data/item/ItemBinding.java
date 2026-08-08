@@ -13,12 +13,7 @@ import java.util.List;
  */
 public record ItemBinding(List<Entry> entries, List<EntityAction> actions) implements ItemMatcher {
     public static final Codec<ItemBinding> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            ItemMatcher.ENTRIES_CODEC.fieldOf("items").forGetter(ItemBinding::entries),
+            ENTRIES_CODEC.fieldOf("items").forGetter(ItemBinding::entries),
             EntityAction.SINGLE_CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(ItemBinding::actions)
     ).apply(instance, ItemBinding::new));
-
-    public ItemBinding {
-        entries = List.copyOf(entries);
-        actions = List.copyOf(actions);
-    }
 }

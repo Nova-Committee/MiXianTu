@@ -1,8 +1,11 @@
 package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.util.codec.MiscStreamCodecs;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -16,23 +19,12 @@ import java.util.Optional;
 public record ForgingActionC2SPayload(BlockPos position, ForgingAction action,
                                       Optional<Identifier> definition) implements CustomPacketPayload {
     public static final Type<ForgingActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "forging_action_c2s"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, ForgingActionC2SPayload> STREAM_CODEC = new StreamCodec<>() {
-        @Override
-        public ForgingActionC2SPayload decode(RegistryFriendlyByteBuf buffer) {
-            BlockPos position = buffer.readBlockPos();
-            ForgingAction action = buffer.readEnum(ForgingAction.class);
-            Optional<Identifier> definition = buffer.readBoolean() ? Optional.of(PayloadCodecs.readIdentifier(buffer)) : Optional.empty();
-            return new ForgingActionC2SPayload(position, action, definition);
-        }
-
-        @Override
-        public void encode(RegistryFriendlyByteBuf buffer, ForgingActionC2SPayload value) {
-            buffer.writeBlockPos(value.position());
-            buffer.writeEnum(value.action());
-            buffer.writeBoolean(value.definition().isPresent());
-            value.definition().ifPresent(id -> PayloadCodecs.writeIdentifier(buffer, id));
-        }
-    };
+    public static final StreamCodec<RegistryFriendlyByteBuf, ForgingActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
+            BlockPos.STREAM_CODEC, ForgingActionC2SPayload::position,
+            ForgingAction.STREAM_CODEC, ForgingActionC2SPayload::action,
+            ByteBufCodecs.optional(Identifier.STREAM_CODEC), ForgingActionC2SPayload::definition,
+            ForgingActionC2SPayload::new
+    );
 
     public ForgingActionC2SPayload {
         if (position == null || action == null)
@@ -61,5 +53,16 @@ public record ForgingActionC2SPayload(BlockPos position, ForgingAction action,
     @Override
     public @NonNull Type<ForgingActionC2SPayload> type() {
         return TYPE;
+    }
+
+    /**
+     * Every supported state transition of one server-owned forging session.
+     */
+    public enum ForgingAction {
+        START,
+        STRIKE,
+        FINISH,
+        CANCEL;
+        public static final StreamCodec<ByteBuf, ForgingAction> STREAM_CODEC = MiscStreamCodecs.enumCodec(ForgingAction.class);
     }
 }

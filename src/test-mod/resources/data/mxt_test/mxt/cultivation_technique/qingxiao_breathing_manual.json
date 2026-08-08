@@ -1,0 +1,7 @@
+{
+  "grade": "earth",
+  "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
+  "exclusive_tags": ["mxt_test:technique/qingxiao"],
+  "cultivation_modifier": 1.2,
+  "granted_abilities": ["mxt_test:qingxiao_firebolt"]
+}

@@ -30,7 +30,7 @@ public final class StationScreen extends AbstractContainerScreen<StationMenu> {
         super.init();
         if (this.menu.isCustomer()) {
             this.addRenderableWidget(Button.builder(Component.literal("→"), button ->
-                            ClientPacketDistributor.sendToServer(new StationTradeC2SPayload()))
+                            ClientPacketDistributor.sendToServer(StationTradeC2SPayload.INSTANCE))
                     .pos(this.leftPos + 80, this.topPos + 35).size(16, 18).build());
         }
     }

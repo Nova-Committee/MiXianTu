@@ -111,10 +111,6 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
                 Codec.BOOL.optionalFieldOf("show_finish_pattern", true).forGetter(FinishPattern::showFinishPattern)
         ).apply(instance, FinishPattern::new));
 
-        public FinishPattern {
-            steps = List.copyOf(steps);
-        }
-
         public static FinishPattern none() {
             return new FinishPattern(List.of(), 0, true);
         }

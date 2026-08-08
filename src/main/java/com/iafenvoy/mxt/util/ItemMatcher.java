@@ -30,10 +30,15 @@ public interface ItemMatcher {
     }
 
     static <T extends ItemMatcher> Optional<T> find(Stream<T> matchers, @NotNull ItemStack stack) {
-        if (stack.isEmpty()) return Optional.empty();
-        return matchers
-                .filter(matcher -> matcher.entries().stream().anyMatch(entry -> entry.matches(stack)))
-                .max(Comparator.comparingInt(ItemMatcher::priority));
+        return findAll(matchers, stack).findFirst();
+    }
+
+    static <T extends ItemMatcher> Stream<T> findAll(Registry<T> registry, @NotNull ItemStack stack) {
+        return findAll(registry.stream(), stack);
+    }
+
+    static <T extends ItemMatcher> Stream<T> findAll(Stream<T> matchers, @NotNull ItemStack stack) {
+        return matchers.filter(matcher -> matcher.entries().stream().anyMatch(entry -> entry.matches(stack))).sorted(Comparator.comparingInt(ItemMatcher::priority));
     }
 
     /**
@@ -72,5 +77,4 @@ public interface ItemMatcher {
             return stack.is(this.tag);
         }
     }
-
 }

@@ -2,8 +2,9 @@
   "base_aura": 200.0,
   "regen_per_tick": 0.25,
   "element_aura": { "mxt_test:fire": 0.5 },
-  "environment_tags": ["mxt_test:environment/fire"],
+  "aura_kinds": ["mxt_test:aura_kind/fire"],
   "rules": { "alchemy_env_bonus": true, "natural_spawn_herb": true },
   "element_fit_bonus": 0.4,
-  "client_render": { "particle": "minecraft:glow", "particle_density": 8, "fog_color": "#88ffdd", "render_distance": 64 }
+  "particle": { "particle": { "type": "minecraft:glow" }, "count": 8 },
+  "client_render": { "fog_color": "#88ffdd", "render_distance": 64 }
 }

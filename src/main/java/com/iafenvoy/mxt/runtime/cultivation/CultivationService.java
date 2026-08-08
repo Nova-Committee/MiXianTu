@@ -23,6 +23,7 @@ import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
@@ -47,32 +48,37 @@ public final class CultivationService {
                                              Identifier resource, FormulaContext context, BooleanSupplier conditionsMet) {
         if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failure.SERVER_ONLY, null);
         if (spirit.realmStage().isPresent() && ServerCache.get()
-                .flatMap(cache -> cache.resourceForRealm(spirit.realmStage().orElseThrow()))
+                .flatMap(cache -> cache.resourceForRealm(HolderHelper.id(spirit.realmStage().orElseThrow())))
                 .filter(resource::equals).isEmpty()) return BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null);
         Next next = next(spirit, resource).orElse(null);
         if (next == null) return BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null);
-        return attempt(entity, spirit, resources, next.id(), next.definition(), context, conditionsMet);
+        return attempt(entity, spirit, resources, next.holder(), context, conditionsMet);
     }
 
     /**
      * Entity-aware breakthrough entry point. It preserves the same transaction semantics and
      * dispatches triggered abilities only after the realm state has committed.
      */
-    private static BreakthroughResult attempt(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, Identifier targetId,
-                                              RealmStage target, FormulaContext context, BooleanSupplier conditionsMet) {
+    private static BreakthroughResult attempt(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, Holder<RealmStage> targetHolder,
+                                              FormulaContext context, BooleanSupplier conditionsMet) {
+        Identifier targetId = HolderHelper.id(targetHolder);
+        RealmStage target = targetHolder.value();
         if (!Objects.equals(target.resource(), activeResource(spirit, target)))
             return BreakthroughResult.rejected(Failure.WRONG_RESOURCE, null);
         boolean configuredConditions = target.upgradeConditions().stream().allMatch(condition -> condition.test(entity, context));
         boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), MxtDatapackRegistries.registry(MxtRegistryKeys.ABILITY))
-                .map(HolderHelper::id)
                 .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
-        BreakthroughResult result = commit(spirit, resources, targetId, target, context, () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
+        BreakthroughResult result = commit(spirit, resources, targetHolder, context, () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
         if (result.advanced()) {
             if (entity instanceof ServerPlayer player) MxtCriteriaTriggers.BREAKTHROUGH.get().trigger(player, targetId);
+            target.breakthroughParticle().ifPresent(effect -> {
+                if (entity.level() instanceof ServerLevel level)
+                    effect.send(level, entity.position().add(0.0D, entity.getBbHeight() * 0.5D, 0.0D));
+            });
             target.successAction().execute(entity, context);
             FormulaContext tribulationContext = context.with("aura_tribulation_modifier", AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
             target.tribulation().ifPresent(tribulation ->
-                    TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), HolderHelper.id(tribulation), tribulation.value(),
+                    TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation,
                             entity.level().getGameTime(), tribulationContext));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
         } else {
@@ -81,8 +87,10 @@ public final class CultivationService {
         return result;
     }
 
-    private static BreakthroughResult commit(SpiritData spirit, ResourceHolderData resources, @NotNull Identifier targetId,
-                                             RealmStage target, FormulaContext context, BooleanSupplier conditionsMet, @NotNull IEventBus eventBus) {
+    private static BreakthroughResult commit(SpiritData spirit, ResourceHolderData resources, @NotNull Holder<RealmStage> targetHolder,
+                                             FormulaContext context, BooleanSupplier conditionsMet, @NotNull IEventBus eventBus) {
+        Identifier targetId = HolderHelper.id(targetHolder);
+        RealmStage target = targetHolder.value();
         double threshold = target.progressThreshold().evaluate(context);
         if (!Double.isFinite(threshold) || threshold < 0.0D)
             return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
@@ -100,24 +108,24 @@ public final class CultivationService {
         Result payment = ResourceTransactions.tryConsume(resources, new Evaluation(event.costs()));
         if (!payment.committed())
             return BreakthroughResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
-        spirit.setRealmStage(targetId);
+        spirit.setRealmStage(targetHolder);
         spirit.setCultivationProgress(0.0D);
         eventBus.post(new Post(spirit, resources, targetId, target, context, threshold, payment.amounts()));
         return BreakthroughResult.committed(payment.amounts());
     }
 
     private static Optional<Next> next(SpiritData spirit, Identifier resource) {
-        Identifier current = spirit.realmStage().orElse(null);
+        Holder<RealmStage> current = spirit.realmStage().orElse(null);
         if (current != null) {
-            RealmStage definition = MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, current).orElse(null);
-            if (definition == null || !HolderHelper.id(definition.resource()).equals(resource)) return Optional.empty();
+            RealmStage definition = current.value();
+            if (!HolderHelper.id(definition.resource()).equals(resource)) return Optional.empty();
             return definition.nextRealm().filter(value -> HolderHelper.id(value.value().resource()).equals(resource))
-                    .map(value -> new Next(HolderHelper.id(value), value.value()));
+                    .map(Next::new);
         }
         Resource definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, resource).orElse(null);
         return definition == null ? Optional.empty() : definition.firstRealm()
                 .filter(value -> HolderHelper.id(value.value().resource()).equals(resource))
-                .map(value -> new Next(HolderHelper.id(value), value.value()));
+                .map(Next::new);
     }
 
     /**
@@ -127,19 +135,21 @@ public final class CultivationService {
         ServerCache cache = ServerCache.get().orElse(null);
         Identifier resource = cache == null ? null : cache.resourceForRealm(target).orElse(null);
         if (resource == null) return false;
-        Identifier current = spirit.realmStage().orElse(null);
-        if (current != null && cache.resourceForRealm(current).filter(resource::equals).isEmpty()) return false;
-        spirit.setRealmStage(target);
+        Holder<RealmStage> current = spirit.realmStage().orElse(null);
+        if (current != null && cache.resourceForRealm(HolderHelper.id(current)).filter(resource::equals).isEmpty())
+            return false;
+        Holder<RealmStage> targetHolder = MxtDatapackRegistries.holder(MxtDatapackRegistries.REALM_STAGE, target).orElse(null);
+        if (targetHolder == null) return false;
+        spirit.setRealmStage(targetHolder);
         spirit.setCultivationProgress(0.0D);
         return true;
     }
 
     private static Holder<Resource> activeResource(SpiritData spirit, RealmStage target) {
-        return spirit.realmStage().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, id))
-                .map(RealmStage::resource).orElseGet(target::resource);
+        return spirit.realmStage().map(Holder::value).map(RealmStage::resource).orElseGet(target::resource);
     }
 
-    private record Next(Identifier id, RealmStage definition) {
+    private record Next(Holder<RealmStage> holder) {
     }
 
     public enum Failure {

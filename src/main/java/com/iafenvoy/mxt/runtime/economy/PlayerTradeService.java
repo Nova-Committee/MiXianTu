@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.network.payload.PlayerTradeAction;
+import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload.PlayerTradeAction;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import com.iafenvoy.mxt.util.InventoryUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -60,7 +60,8 @@ public final class PlayerTradeService {
         Session session = SESSIONS.get(player.getUUID());
         if (session == null) return;
         Side side = session.side(player);
-        if (side == null || (action != PlayerTradeAction.CLOSE && player.containerMenu != side.menu)) return;
+        if (side == null || (action != PlayerTradeAction.CLOSE && player.containerMenu != side.menu))
+            return;
         switch (action) {
             case ACCEPT -> session.setAccepted(side, true);
             case CANCEL_ACCEPT -> session.setAccepted(side, false);

@@ -22,7 +22,9 @@ public final class SpiritHerbService {
                 .map(Reference::value), stack);
     }
 
-    /** Reads the matching definition from the client-synchronised registry view. */
+    /**
+     * Reads the matching definition from the client-synchronised registry view.
+     */
     public static Optional<SpiritHerb> find(Provider access, ItemStack stack) {
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.SPIRIT_HERB)
                 .map(Reference::value), stack);

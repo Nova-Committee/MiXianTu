@@ -1,44 +1,32 @@
 package com.iafenvoy.mxt.util.formula;
 
+import com.iafenvoy.mxt.registry.MxtTypeRegistries;
 import net.objecthunter.exp4j.function.Function;
 
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
- * Deterministic extra functions allowed by the formula language.
+ * Functions allowed by the formula language, collected from the intrinsic registry.
  */
-final class FormulaFunctions {
-    private static final List<Function> FUNCTIONS = List.of(
-            new Function("round", 1) {
-                @Override
-                public double apply(double... arguments) {
-                    return Math.round(arguments[0]);
-                }
-            },
-            new Function("clamp", 3) {
-                @Override
-                public double apply(double... arguments) {
-                    return Math.max(arguments[1], Math.min(arguments[0], arguments[2]));
-                }
-            },
-            new Function("min", 2) {
-                @Override
-                public double apply(double... arguments) {
-                    return Math.min(arguments[0], arguments[1]);
-                }
-            },
-            new Function("max", 2) {
-                @Override
-                public double apply(double... arguments) {
-                    return Math.max(arguments[0], arguments[1]);
-                }
-            }
-    );
-
+public final class FormulaFunctions {
     private FormulaFunctions() {
     }
 
-    static List<Function> all() {
-        return FUNCTIONS;
+    public static List<Function> all() {
+        LinkedHashMap<String, Function> functions = new LinkedHashMap<>();
+        MxtTypeRegistries.FORMULA_FUNCTION.forEach(function -> {
+            Function previous = functions.putIfAbsent(function.getName(), function);
+            if (previous != null)
+                throw new IllegalStateException("Duplicate formula function name: " + function.getName());
+        });
+        return new LinkedList<>(functions.values());
+    }
+
+    public static Set<String> names() {
+        return new LinkedHashSet<>(all().stream().map(Function::getName).toList());
     }
 }

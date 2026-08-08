@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.AttributeModifier;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.Tribulation;
+import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.registry.MxtRegistryKeys;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -12,12 +13,14 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,8 +32,8 @@ public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>>
                          NumberProvider progressThreshold, List<EntityCondition> upgradeConditions,
                          List<AttributeModifier> passiveModifiers, List<ResourceCost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
-                         Optional<Holder<Tribulation>> tribulation, EntityAction successAction,
-                         EntityAction failAction) {
+                         Optional<Holder<Tribulation>> tribulation, Optional<ParticleEffect> breakthroughParticle,
+                         EntityAction successAction, EntityAction failAction) {
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE);
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
@@ -41,7 +44,18 @@ public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>>
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             RegistryCodecs.holderOrTagList(MxtRegistryKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
             Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(RealmStage::tribulation),
+            ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle").forGetter(RealmStage::breakthroughParticle),
             EntityAction.CODEC.optionalFieldOf("success_action", NoOpAction.INSTANCE).forGetter(RealmStage::successAction),
             EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(RealmStage::failAction)
     ).apply(instance, RealmStage::new));
+
+    /**
+     * Next-realm links are holder references, so diagnostic output must remain shallow.
+     */
+    @Override
+    public @NonNull String toString() {
+        return "RealmStage[resource=" + HolderHelper.id(this.resource) + ", hasNextRealm=" + this.nextRealm.isPresent()
+                + ", upgradeConditions=" + this.upgradeConditions.size() + ", costs=" + this.breakthroughCosts.size()
+                + ", abilityRequirements=" + this.abilityRequirements.size() + ", hasTribulation=" + this.tribulation.isPresent() + "]";
+    }
 }

@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -12,18 +13,17 @@ import java.util.UUID;
  * Server-owned flight mount state.
  */
 public final class FlightData {
-    public static final MapCodec<FlightData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<FlightData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.BOOL.optionalFieldOf("active", false).forGetter(FlightData::active),
-            Identifier.CODEC.optionalFieldOf("archetype").forGetter(FlightData::archetype),
+            ItemArchetype.CODEC.optionalFieldOf("archetype").forGetter(FlightData::archetype),
             Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(FlightData::startedAt),
             Codec.BOOL.optionalFieldOf("previous_mayfly", false).forGetter(FlightData::previousMayfly),
             Codec.BOOL.optionalFieldOf("previous_flying", false).forGetter(FlightData::previousFlying),
             Codec.FLOAT.optionalFieldOf("previous_flying_speed", 0.05F).forGetter(FlightData::previousFlyingSpeed),
             Codec.STRING.optionalFieldOf("vehicle").forGetter(FlightData::vehicleRaw)
-    ).apply(instance, FlightData::decode));
-    public static final Codec<FlightData> CODEC = MAP_CODEC.codec();
+    ).apply(instance, FlightData::new));
     private boolean active;
-    private Identifier archetype;
+    private Holder<ItemArchetype> archetype;
     private long startedAt;
     private boolean previousMayfly;
     private boolean previousFlying;
@@ -33,7 +33,7 @@ public final class FlightData {
     public FlightData() {
     }
 
-    private FlightData(boolean active, Optional<Identifier> archetype, long startedAt, boolean previousMayfly, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
+    private FlightData(boolean active, Optional<Holder<ItemArchetype>> archetype, long startedAt, boolean previousMayfly, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
         this.active = active;
         this.archetype = archetype.orElse(null);
         this.startedAt = startedAt;
@@ -43,15 +43,11 @@ public final class FlightData {
         this.vehicle = vehicle.orElse(null);
     }
 
-    private static FlightData decode(boolean active, Optional<Identifier> archetype, long startedAt, boolean previousMayfly, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
-        return new FlightData(active, archetype, startedAt, previousMayfly, previousFlying, previousFlyingSpeed, vehicle);
-    }
-
     public boolean active() {
         return this.active;
     }
 
-    public Optional<Identifier> archetype() {
+    public Optional<Holder<ItemArchetype>> archetype() {
         return Optional.ofNullable(this.archetype);
     }
 
@@ -83,7 +79,7 @@ public final class FlightData {
         return Optional.ofNullable(this.vehicle);
     }
 
-    public void start(Identifier archetype, long gameTime, boolean mayfly, boolean flying, float flyingSpeed, UUID vehicle) {
+    public void start(Holder<ItemArchetype> archetype, long gameTime, boolean mayfly, boolean flying, float flyingSpeed, UUID vehicle) {
         this.active = true;
         this.archetype = archetype;
         this.startedAt = gameTime;

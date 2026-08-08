@@ -12,7 +12,7 @@ public record FuelCondition(Comparison comparison) implements ItemCondition {
 
     @Override
     public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
-        return this.comparison.compare(holder.level().fuelValues().burnDuration(stack));
+        return this.comparison.compare(stack.getBurnTime(null, holder.level().fuelValues()));
     }
 
     @Override

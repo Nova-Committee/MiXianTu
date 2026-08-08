@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.curse;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.curse.CurseType.Empty;
 import com.iafenvoy.mxt.data.curse.CurseType.Permanent;
 import com.iafenvoy.mxt.data.curse.CurseType.Timed;
@@ -25,7 +26,7 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
     long expiry(long duration, long gameTime);
 
     static CurseType forIdentifier(Identifier id) {
-        return switch (id.getNamespace().equals("mxt") ? id.getPath() : "") {
+        return switch (id.getNamespace().equals(MiXianTu.MOD_ID) ? id.getPath() : "") {
             case "timed" -> Timed.INSTANCE;
             case "permanent" -> Permanent.INSTANCE;
             case "triggered" -> Triggered.INSTANCE;
@@ -39,7 +40,7 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
 
         @Override
         public Identifier id() {
-            return Identifier.fromNamespaceAndPath("mxt", "timed");
+            return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "timed");
         }
 
         @Override
@@ -60,7 +61,7 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
 
         @Override
         public Identifier id() {
-            return Identifier.fromNamespaceAndPath("mxt", "permanent");
+            return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "permanent");
         }
 
         @Override
@@ -83,7 +84,7 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
 
         @Override
         public Identifier id() {
-            return Identifier.fromNamespaceAndPath("mxt", "triggered");
+            return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "triggered");
         }
 
         @Override
@@ -107,7 +108,7 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
 
         @Override
         public Identifier id() {
-            return Identifier.fromNamespaceAndPath("mxt", "empty");
+            return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
         }
 
         @Override

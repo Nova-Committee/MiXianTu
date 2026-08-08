@@ -18,7 +18,7 @@ import java.util.UUID;
 public final class ForgingWorldData {
     public static final MapCodec<ForgingWorldData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.unboundedMap(Codec.LONG, StationSession.CODEC).optionalFieldOf("sessions", Map.of()).forGetter(ForgingWorldData::encoded)
-    ).apply(instance, ForgingWorldData::decode));
+    ).apply(instance, ForgingWorldData::new));
     public static final Codec<ForgingWorldData> CODEC = MAP_CODEC.codec();
     private final Map<Long, StationSession> sessions;
 
@@ -28,10 +28,6 @@ public final class ForgingWorldData {
 
     private ForgingWorldData(Map<Long, StationSession> sessions) {
         this.sessions = new LinkedHashMap<>(sessions);
-    }
-
-    private static ForgingWorldData decode(Map<Long, StationSession> sessions) {
-        return new ForgingWorldData(sessions);
     }
 
     public Optional<StationSession> get(BlockPos position) {
@@ -52,16 +48,17 @@ public final class ForgingWorldData {
     public Map<BlockPos, StationSession> sessions() {
         Map<BlockPos, StationSession> result = new LinkedHashMap<>();
         this.sessions.forEach((key, value) -> result.put(BlockPos.of(key), value));
-        return Map.copyOf(result);
+        return result;
     }
 
     private Map<Long, StationSession> encoded() {
-        return Map.copyOf(this.sessions);
+        return this.sessions;
     }
 
     public record StationSession(UUID owner, ForgingSessionData session) {
         public static final Codec<StationSession> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                UUIDUtil.CODEC.fieldOf("owner").forGetter(StationSession::owner), ForgingSessionData.CODEC.fieldOf("session").forGetter(StationSession::session)
+                UUIDUtil.CODEC.fieldOf("owner").forGetter(StationSession::owner),
+                ForgingSessionData.CODEC.codec().fieldOf("session").forGetter(StationSession::session)
         ).apply(instance, StationSession::new));
     }
 }

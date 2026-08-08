@@ -1,8 +1,15 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 
 import java.util.*;
@@ -11,56 +18,50 @@ import java.util.*;
  * Chunk-level aura concentration and element offsets, changed by formations and world features.
  */
 public final class AuraChunkData {
-    public static final MapCodec<AuraChunkData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AuraChunkData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.DOUBLE.optionalFieldOf("concentration", 0.0D).forGetter(AuraChunkData::concentration),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraChunkData::regenPerTick),
             Codec.BOOL.optionalFieldOf("initialized", false).forGetter(AuraChunkData::initialized),
-            Identifier.CODEC.optionalFieldOf("template", Identifier.fromNamespaceAndPath("mxt", "empty")).forGetter(AuraChunkData::template),
-            Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).optionalFieldOf("element_bias", Map.of()).forGetter(AuraChunkData::elementBias),
-            Identifier.CODEC.listOf().optionalFieldOf("environment_tags", List.of()).forGetter(AuraChunkData::environmentTags),
-            Identifier.CODEC.listOf().optionalFieldOf("template_environment_tags", List.of()).forGetter(AuraChunkData::templateEnvironmentTags),
+            AuraZone.CODEC.optionalFieldOf("template").forGetter(AuraChunkData::template),
+            CollectionCodecs.doubleMap(Element.CODEC).optionalFieldOf("element_bias", Object2DoubleMaps.emptyMap()).forGetter(AuraChunkData::elementBias),
+            Identifier.CODEC.listOf().<Set<Identifier>>xmap(LinkedHashSet::new, ArrayList::new).optionalFieldOf("aura_kinds", Set.of()).forGetter(AuraChunkData::auraKinds),
+            Identifier.CODEC.listOf().<Set<Identifier>>xmap(LinkedHashSet::new, ArrayList::new).optionalFieldOf("template_aura_kinds", Set.of()).forGetter(AuraChunkData::templateAuraKinds),
             Codec.DOUBLE.optionalFieldOf("block_aura", 0.0D).forGetter(AuraChunkData::blockAura),
             Codec.DOUBLE.optionalFieldOf("block_regen_per_tick", 0.0D).forGetter(AuraChunkData::blockRegenPerTick),
-            Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).optionalFieldOf("block_element_aura", Map.of()).forGetter(AuraChunkData::blockElementAura),
-            Identifier.CODEC.listOf().optionalFieldOf("block_environment_tags", List.of()).forGetter(AuraChunkData::blockEnvironmentTags)
-    ).apply(instance, AuraChunkData::decode));
-    public static final Codec<AuraChunkData> CODEC = MAP_CODEC.codec();
+            CollectionCodecs.doubleMap(Element.CODEC).optionalFieldOf("block_element_aura", Object2DoubleMaps.emptyMap()).forGetter(AuraChunkData::blockElementAura),
+            Identifier.CODEC.listOf().<Set<Identifier>>xmap(LinkedHashSet::new, ArrayList::new).optionalFieldOf("block_aura_kinds", Set.of()).forGetter(AuraChunkData::blockAuraKinds)
+    ).apply(instance, AuraChunkData::new));
     private double concentration;
     private double regenPerTick;
     private boolean initialized;
-    private Identifier template;
-    private final Map<Identifier, Double> elementBias;
-    private final Set<Identifier> environmentTags;
-    private final Set<Identifier> templateEnvironmentTags;
+    private Optional<Holder<AuraZone>> template;
+    private final Object2DoubleMap<Holder<Element>> elementBias;
+    private final Set<Identifier> auraKinds;
+    private final Set<Identifier> templateAuraKinds;
     private double blockAura;
     private double blockRegenPerTick;
-    private final Map<Identifier, Double> blockElementAura;
-    private final Set<Identifier> blockEnvironmentTags;
+    private final Object2DoubleMap<Holder<Element>> blockElementAura;
+    private final Set<Identifier> blockAuraKinds;
 
     public AuraChunkData() {
-        this(0.0D, 0.0D, false, Identifier.fromNamespaceAndPath("mxt", "empty"), Map.of(), List.of(), List.of(), 0.0D, 0.0D, Map.of(), List.of());
+        this(0.0D, 0.0D, false, Optional.empty(), Object2DoubleMaps.emptyMap(), Set.of(), Set.of(), 0.0D, 0.0D, Object2DoubleMaps.emptyMap(), Set.of());
     }
 
-    private AuraChunkData(double concentration, double regenPerTick, boolean initialized, Identifier template, Map<Identifier, Double> elementBias, List<Identifier> environmentTags, List<Identifier> templateEnvironmentTags,
-                          double blockAura, double blockRegenPerTick, Map<Identifier, Double> blockElementAura, List<Identifier> blockEnvironmentTags) {
+    private AuraChunkData(double concentration, double regenPerTick, boolean initialized, Optional<Holder<AuraZone>> template, Object2DoubleMap<Holder<Element>> elementBias, Set<Identifier> auraKinds, Set<Identifier> templateAuraKinds,
+                          double blockAura, double blockRegenPerTick, Object2DoubleMap<Holder<Element>> blockElementAura, Set<Identifier> blockAuraKinds) {
         this.concentration = finite(concentration);
         this.regenPerTick = finite(regenPerTick);
         this.initialized = initialized;
         this.template = template;
-        this.elementBias = new LinkedHashMap<>();
+        this.elementBias = new Object2DoubleOpenHashMap<>();
         elementBias.forEach((key, value) -> this.elementBias.put(key, finite(value)));
-        this.environmentTags = new LinkedHashSet<>(environmentTags);
-        this.templateEnvironmentTags = new LinkedHashSet<>(templateEnvironmentTags.isEmpty() ? environmentTags : templateEnvironmentTags);
+        this.auraKinds = new LinkedHashSet<>(auraKinds);
+        this.templateAuraKinds = new LinkedHashSet<>(templateAuraKinds.isEmpty() ? auraKinds : templateAuraKinds);
         this.blockAura = finite(blockAura);
         this.blockRegenPerTick = finite(blockRegenPerTick);
-        this.blockElementAura = new LinkedHashMap<>();
+        this.blockElementAura = new Object2DoubleOpenHashMap<>();
         blockElementAura.forEach((key, value) -> this.blockElementAura.put(key, finite(value)));
-        this.blockEnvironmentTags = new LinkedHashSet<>(blockEnvironmentTags);
-    }
-
-    private static AuraChunkData decode(double concentration, double regenPerTick, boolean initialized, Identifier template, Map<Identifier, Double> elementBias, List<Identifier> environmentTags, List<Identifier> templateEnvironmentTags,
-                                        double blockAura, double blockRegenPerTick, Map<Identifier, Double> blockElementAura, List<Identifier> blockEnvironmentTags) {
-        return new AuraChunkData(concentration, regenPerTick, initialized, template, elementBias, environmentTags, templateEnvironmentTags, blockAura, blockRegenPerTick, blockElementAura, blockEnvironmentTags);
+        this.blockAuraKinds = new LinkedHashSet<>(blockAuraKinds);
     }
 
     public double concentration() {
@@ -79,24 +80,24 @@ public final class AuraChunkData {
         this.initialized = value;
     }
 
-    public Identifier template() {
+    public Optional<Holder<AuraZone>> template() {
         return this.template;
     }
 
-    public void setTemplate(Identifier value) {
-        this.template = Objects.requireNonNull(value, "template");
+    public void setTemplate(Optional<Holder<AuraZone>> value) {
+        this.template = value;
     }
 
-    public Map<Identifier, Double> elementBias() {
-        return Map.copyOf(this.elementBias);
+    public Object2DoubleMap<Holder<Element>> elementBias() {
+        return this.elementBias;
     }
 
-    public List<Identifier> environmentTags() {
-        return List.copyOf(this.environmentTags);
+    public Set<Identifier> auraKinds() {
+        return this.auraKinds;
     }
 
-    public List<Identifier> templateEnvironmentTags() {
-        return List.copyOf(this.templateEnvironmentTags);
+    public Set<Identifier> templateAuraKinds() {
+        return this.templateAuraKinds;
     }
 
     public double blockAura() {
@@ -107,12 +108,12 @@ public final class AuraChunkData {
         return this.blockRegenPerTick;
     }
 
-    public Map<Identifier, Double> blockElementAura() {
-        return Map.copyOf(this.blockElementAura);
+    public Object2DoubleMap<Holder<Element>> blockElementAura() {
+        return this.blockElementAura;
     }
 
-    public List<Identifier> blockEnvironmentTags() {
-        return List.copyOf(this.blockEnvironmentTags);
+    public Set<Identifier> blockAuraKinds() {
+        return this.blockAuraKinds;
     }
 
     public void setConcentration(double value) {
@@ -123,20 +124,20 @@ public final class AuraChunkData {
         this.regenPerTick = finite(value);
     }
 
-    public void setElementBias(Identifier element, double value) {
+    public void setElementBias(Holder<Element> element, double value) {
         this.elementBias.put(element, finite(value));
     }
 
-    public void setEnvironmentTags(Collection<Identifier> values) {
-        this.templateEnvironmentTags.clear();
-        this.templateEnvironmentTags.addAll(values);
-        this.refreshEnvironmentTags();
+    public void setAuraKinds(Collection<Identifier> values) {
+        this.templateAuraKinds.clear();
+        this.templateAuraKinds.addAll(values);
+        this.refreshAuraKinds();
     }
 
     /**
      * Replaces the cached contribution from blocks while preserving consumed aura stock.
      */
-    public void setBlockContribution(double aura, double regen, Map<Identifier, Double> elements, Collection<Identifier> tags) {
+    public void setBlockContribution(double aura, double regen, Map<Holder<Element>, Double> elements, Collection<Identifier> tags) {
         double newAura = finite(aura);
         double newRegen = finite(regen);
         this.concentration = Math.max(0.0D, this.concentration + newAura - this.blockAura);
@@ -146,26 +147,26 @@ public final class AuraChunkData {
             return Math.abs(next) < 1.0E-9D ? null : next;
         }));
         this.blockElementAura.clear();
-        elements.forEach((key, value) -> {
+        elements.forEach((holder, value) -> {
             double valid = finite(value);
-            this.blockElementAura.put(key, valid);
-            this.elementBias.merge(key, valid, Double::sum);
+            this.blockElementAura.put(holder, valid);
+            this.elementBias.merge(holder, valid, Double::sum);
         });
         this.blockAura = newAura;
         this.blockRegenPerTick = newRegen;
-        this.blockEnvironmentTags.clear();
-        this.blockEnvironmentTags.addAll(tags);
-        this.refreshEnvironmentTags();
+        this.blockAuraKinds.clear();
+        this.blockAuraKinds.addAll(tags);
+        this.refreshAuraKinds();
     }
 
-    public boolean hasEnvironmentTags(Collection<Identifier> values) {
-        return this.environmentTags.containsAll(values);
+    public boolean hasAuraKinds(Collection<Identifier> values) {
+        return this.auraKinds.containsAll(values);
     }
 
-    private void refreshEnvironmentTags() {
-        this.environmentTags.clear();
-        this.environmentTags.addAll(this.templateEnvironmentTags);
-        this.environmentTags.addAll(this.blockEnvironmentTags);
+    private void refreshAuraKinds() {
+        this.auraKinds.clear();
+        this.auraKinds.addAll(this.templateAuraKinds);
+        this.auraKinds.addAll(this.blockAuraKinds);
     }
 
     /**

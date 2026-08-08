@@ -28,4 +28,5 @@ public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCond
     ).apply(instance, ForgingMethod::new)).validate(value -> value.valueDelta == 0
             ? DataResult.error(() -> "value_delta must not be zero")
             : DataResult.success(value));
+
 }

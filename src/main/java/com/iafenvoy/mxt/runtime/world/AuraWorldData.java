@@ -18,7 +18,7 @@ import java.util.UUID;
 public final class AuraWorldData {
     public static final MapCodec<AuraWorldData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
             Codec.unboundedMap(Codec.STRING, Area.CODEC).optionalFieldOf("areas", Map.of()).forGetter(AuraWorldData::encoded)
-    ).apply(instance, AuraWorldData::decode));
+    ).apply(instance, AuraWorldData::new));
     public static final Codec<AuraWorldData> CODEC = MAP_CODEC.codec();
     private final Map<String, Area> areas;
 
@@ -30,16 +30,12 @@ public final class AuraWorldData {
         this.areas = new LinkedHashMap<>(areas);
     }
 
-    private static AuraWorldData decode(Map<String, Area> areas) {
-        return new AuraWorldData(areas);
-    }
-
     private Map<String, Area> encoded() {
-        return Map.copyOf(this.areas);
+        return this.areas;
     }
 
     public Map<String, Area> areas() {
-        return Map.copyOf(this.areas);
+        return this.areas;
     }
 
     public String add(Area area) {

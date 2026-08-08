@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.*;
 import com.iafenvoy.mxt.data.condition.builtin.item.meta.*;
+import com.iafenvoy.mxt.integration.kubejs.type.condition.JsItemCondition;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -11,6 +12,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtItemConditions {
     public static final DeferredRegister<MapCodec<? extends ItemCondition>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ITEM_CONDITION_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<AlwaysTrueItemCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueItemCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<JsItemCondition>> JS = REGISTRY.register("js", () -> JsItemCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<AndItemCondition>> AND = REGISTRY.register("and", () -> AndItemCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemIdCondition>> ITEM_ID = REGISTRY.register("item_id", () -> ItemIdCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<OwnedByItemCondition>> OWNED_BY = REGISTRY.register("owned_by", () -> OwnedByItemCondition.CODEC);
