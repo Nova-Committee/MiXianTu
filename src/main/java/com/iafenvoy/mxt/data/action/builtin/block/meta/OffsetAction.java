@@ -12,12 +12,12 @@ import net.minecraft.world.level.Level;
  * Applies a nested action at a relative block offset.
  */
 public record OffsetAction(BlockAction action, int x, int y, int z) implements BlockAction {
-    public static final MapCodec<OffsetAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<OffsetAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BlockAction.CODEC.fieldOf("action").forGetter(OffsetAction::action),
             Codec.INT.optionalFieldOf("x", 0).forGetter(OffsetAction::x),
             Codec.INT.optionalFieldOf("y", 0).forGetter(OffsetAction::y),
             Codec.INT.optionalFieldOf("z", 0).forGetter(OffsetAction::z)
-    ).apply(instance, OffsetAction::new));
+    ).apply(i, OffsetAction::new));
 
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.attachment;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -13,9 +14,9 @@ import java.util.Optional;
  * Per-chunk sect ownership. Permissions remain defined by the owner's datapack rank policy.
  */
 public final class SectTerritoryData {
-    public static final MapCodec<SectTerritoryData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.SECT).optionalFieldOf("owner").forGetter(SectTerritoryData::owner)
-    ).apply(instance, SectTerritoryData::new));
+    public static final MapCodec<SectTerritoryData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.SECT).optionalFieldOf("owner").forGetter(SectTerritoryData::owner)
+    ).apply(i, SectTerritoryData::new));
     private Holder<Sect> owner;
 
     public SectTerritoryData() {

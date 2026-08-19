@@ -12,10 +12,10 @@ import java.util.Objects;
  * Origins-compatible comparison used by generic datapack conditions.
  */
 public record Comparison(Operation operation, double compareTo) {
-    public static final MapCodec<Comparison> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<Comparison> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Operation.CODEC.fieldOf("comparison").forGetter(Comparison::operation),
             Codec.DOUBLE.fieldOf("compare_to").forGetter(Comparison::compareTo)
-    ).apply(instance, Comparison::new));
+    ).apply(i, Comparison::new));
 
     public boolean compare(double value) {
         return this.operation.compare(value, this.compareTo);

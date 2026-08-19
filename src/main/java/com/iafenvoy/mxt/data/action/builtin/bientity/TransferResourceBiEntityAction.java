@@ -19,10 +19,10 @@ import net.minecraft.world.entity.LivingEntity;
  */
 public record TransferResourceBiEntityAction(Holder<Resource> resource,
                                              NumberProvider amount) implements BiEntityAction {
-    public static final MapCodec<TransferResourceBiEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<TransferResourceBiEntityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(TransferResourceBiEntityAction::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(TransferResourceBiEntityAction::amount)
-    ).apply(instance, TransferResourceBiEntityAction::new));
+    ).apply(i, TransferResourceBiEntityAction::new));
 
     @Override
     public void execute(Entity actor, Entity target, FormulaContext context) {

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.Title;
@@ -23,7 +24,7 @@ public final class TitleService {
 
     public static Result grant(SpiritData spirit, Identifier id, Title definition,
                                Function<Identifier, Title> lookup, BooleanSupplier unlockConditions) {
-        Holder<Title> title = MxtDatapackRegistries.holder(MxtDatapackRegistries.TITLE, id).orElse(null);
+        Holder<Title> title = MxtDatapackRegistries.holder(MxtResourceKeys.TITLE, id).orElse(null);
         if (title == null) return Result.rejected(Failure.DISABLED);
         if (spirit.titles().contains(title)) return Result.rejected(Failure.ALREADY_GRANTED);
         if (!unlockConditions.getAsBoolean()) return Result.rejected(Failure.CONDITIONS);
@@ -47,7 +48,7 @@ public final class TitleService {
     }
 
     public static boolean revoke(SpiritData spirit, Identifier id) {
-        Holder<Title> title = MxtDatapackRegistries.holder(MxtDatapackRegistries.TITLE, id).orElse(null);
+        Holder<Title> title = MxtDatapackRegistries.holder(MxtResourceKeys.TITLE, id).orElse(null);
         if (title == null) return false;
         List<Holder<Title>> titles = new LinkedList<>(spirit.titles());
         if (!titles.remove(title)) return false;

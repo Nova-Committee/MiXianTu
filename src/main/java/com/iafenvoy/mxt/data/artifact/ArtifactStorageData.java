@@ -12,9 +12,9 @@ import java.util.List;
  * Persistent server-owned contents of a storage artifact. Slot limits come from its archetype, never from this payload.
  */
 public record ArtifactStorageData(List<ItemStack> contents) {
-    public static final Codec<ArtifactStorageData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ArtifactStorageData> CODEC = RecordCodecBuilder.create(i -> i.group(
             ItemStack.CODEC.listOf().optionalFieldOf("contents", List.of()).forGetter(ArtifactStorageData::contents)
-    ).apply(instance, ArtifactStorageData::new));
+    ).apply(i, ArtifactStorageData::new));
 
     public ArtifactStorageData {
         contents = new LinkedList<>(contents.stream().map(ItemStack::copy).toList());

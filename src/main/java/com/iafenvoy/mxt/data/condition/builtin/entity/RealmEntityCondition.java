@@ -17,10 +17,10 @@ import java.util.Locale;
 
 public record RealmEntityCondition(Holder<RealmStage> realm,
                                    Comparison comparison) implements EntityCondition {
-    public static final MapCodec<RealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RealmStage.CODEC.fieldOf("realm").forGetter(RealmEntityCondition::realm),
             Comparison.CODEC.optionalFieldOf("comparison", Comparison.EXACT).forGetter(RealmEntityCondition::comparison)
-    ).apply(instance, RealmEntityCondition::new));
+    ).apply(i, RealmEntityCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

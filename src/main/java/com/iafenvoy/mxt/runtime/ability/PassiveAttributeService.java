@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.data.AttributeModifier;
+import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -15,12 +15,14 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Applies all datapack-defined passive modifiers as removable transient vanilla attributes.
@@ -35,7 +37,29 @@ public final class PassiveAttributeService {
      * Reconciles the full generated modifier set. Call only on the server thread.
      */
     public static void reconcile(LivingEntity entity) {
-        removePreviouslyGenerated(entity);
+        if (entity.level().isClientSide()) return;
+        List<Entry> entries = entries(entity);
+        removeGenerated(entity, Set.of());
+        FormulaContext context = FormulaContexts.forEntity(entity);
+        for (Entry entry : entries) apply(entity, entry, context);
+    }
+
+    /**
+     * Updates generated attributes without rebuilding unchanged modifiers. Dynamic
+     * entries are evaluated on every server tick; static entries are only added
+     * when missing. This also repairs attributes lost during player replacement.
+     */
+    public static void tick(LivingEntity entity) {
+        if (entity.level().isClientSide()) return;
+        List<Entry> entries = entries(entity);
+        Set<Identifier> active = new HashSet<>();
+        for (Entry entry : entries) active.add(modifierId(entry));
+        removeGenerated(entity, active);
+        FormulaContext context = FormulaContexts.forEntity(entity);
+        for (Entry entry : entries) apply(entity, entry, context);
+    }
+
+    private static List<Entry> entries(LivingEntity entity) {
         List<Entry> entries = new ArrayList<>();
         Map<Identifier, Integer> abilityIndices = new HashMap<>();
         for (ResolvedModifier value : AbilityModifierService.resolve(entity.getData(MxtAttachments.ABILITY_HOLDER))) {
@@ -50,48 +74,50 @@ public final class PassiveAttributeService {
             addAll(entries, "physique", HolderHelper.id(physique), physique.value().attributeModifiers());
         for (Holder<Title> title : spirit.titles())
             addAll(entries, "title", HolderHelper.id(title), title.value().passiveModifiers());
-
-        FormulaContext context = FormulaContexts.forEntity(entity);
-        for (Entry entry : entries) apply(entity, entry, context);
+        return entries;
     }
 
-    private static void removePreviouslyGenerated(LivingEntity entity) {
+    private static void removeGenerated(LivingEntity entity, Set<Identifier> active) {
         for (AttributeInstance instance : entity.getAttributes().getSyncableAttributes()) {
             instance.getModifiers().stream().filter(modifier -> modifier.id().getNamespace().equals(MiXianTu.MOD_ID)
-                            && modifier.id().getPath().startsWith(PREFIX)).map(net.minecraft.world.entity.ai.attributes.AttributeModifier::id).toList()
+                            && modifier.id().getPath().startsWith(PREFIX)
+                            && !active.contains(modifier.id())).map(AttributeModifier::id).toList()
                     .forEach(instance::removeModifier);
         }
     }
 
-    private static void addAll(List<Entry> target, String kind, Identifier source, List<AttributeModifier> values) {
+    private static void addAll(List<Entry> target, String kind, Identifier source, List<AttributeEntry> values) {
         for (int index = 0; index < values.size(); index++)
             target.add(new Entry(kind, source, index, values.get(index)));
     }
 
     private static void apply(LivingEntity entity, Entry entry, FormulaContext context) {
-        AttributeModifier definition = entry.definition();
+        AttributeEntry definition = entry.definition();
         Holder<Attribute> attribute = definition.attribute();
         AttributeInstance instance = entity.getAttribute(attribute);
         if (instance == null) return;
         final double amount;
         try {
-            amount = definition.value().evaluate(context);
+            amount = definition.amount(context);
         } catch (RuntimeException ignored) {
             return;
         }
         if (!Double.isFinite(amount)) return;
-        Identifier id = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, PREFIX + entry.kind() + "/" + entry.source().getNamespace() + "/" + entry.source().getPath() + "/" + entry.index());
-        instance.addOrUpdateTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, amount, operation(definition.operation())));
+        Identifier id = modifierId(entry);
+        AttributeModifier current = instance.getModifier(id);
+        if (current == null || Double.compare(current.amount(), amount) != 0
+                || current.operation() != definition.modifier().operation())
+            instance.addOrUpdateTransientModifier(new AttributeModifier(id, amount, definition.modifier().operation()));
     }
 
-    private static Operation operation(AttributeModifier.Operation value) {
-        return switch (value) {
-            case ADD_VALUE -> Operation.ADD_VALUE;
-            case ADD_MULTIPLIED_BASE -> Operation.ADD_MULTIPLIED_BASE;
-            case ADD_MULTIPLIED_TOTAL -> Operation.ADD_MULTIPLIED_TOTAL;
-        };
+    private static Identifier modifierId(Entry entry) {
+        AttributeModifier definition = entry.definition().modifier();
+        String source = entry.source().getNamespace() + "/" + entry.source().getPath();
+        String original = definition.id().getNamespace() + "/" + definition.id().getPath();
+        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
+                PREFIX + entry.kind() + "/" + source + "/" + entry.index() + "/" + original);
     }
 
-    private record Entry(String kind, Identifier source, int index, AttributeModifier definition) {
+    private record Entry(String kind, Identifier source, int index, AttributeEntry definition) {
     }
 }

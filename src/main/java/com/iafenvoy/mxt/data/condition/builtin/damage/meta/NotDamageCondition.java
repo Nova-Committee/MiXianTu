@@ -10,9 +10,9 @@ import net.minecraft.world.damagesource.DamageSource;
  * Negates a nested damage condition.
  */
 public record NotDamageCondition(DamageCondition condition) implements DamageCondition {
-    public static final MapCodec<NotDamageCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<NotDamageCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             DamageCondition.CODEC.fieldOf("condition").forGetter(NotDamageCondition::condition)
-    ).apply(instance, NotDamageCondition::new));
+    ).apply(i, NotDamageCondition::new));
 
     @Override
     public boolean test(DamageSource source, float amount, FormulaContext context) {

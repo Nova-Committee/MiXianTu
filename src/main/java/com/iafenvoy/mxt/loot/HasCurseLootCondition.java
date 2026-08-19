@@ -12,10 +12,10 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
 public record HasCurseLootCondition(EntityTarget target, Holder<Curse> curse) implements LootItemCondition {
-    public static final MapCodec<HasCurseLootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<HasCurseLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasCurseLootCondition::target),
             Curse.CODEC.fieldOf("curse").forGetter(HasCurseLootCondition::curse)
-    ).apply(instance, HasCurseLootCondition::new));
+    ).apply(i, HasCurseLootCondition::new));
 
     @Override
     public @NonNull MapCodec<HasCurseLootCondition> codec() {

@@ -26,11 +26,11 @@ import java.util.Optional;
  */
 public record SpawnEntityAction(Holder<EntityType<?>> entityType, Optional<CompoundTag> tag,
                                 EntityAction entityAction) implements BlockAction {
-    public static final MapCodec<SpawnEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SpawnEntityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(Registries.ENTITY_TYPE).fieldOf("entity_type").forGetter(SpawnEntityAction::entityType),
             CompoundTag.CODEC.optionalFieldOf("tag").forGetter(SpawnEntityAction::tag),
             EntityAction.CODEC.optionalFieldOf("entity_action", NoOpAction.INSTANCE).forGetter(SpawnEntityAction::entityAction)
-    ).apply(instance, SpawnEntityAction::new));
+    ).apply(i, SpawnEntityAction::new));
 
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {

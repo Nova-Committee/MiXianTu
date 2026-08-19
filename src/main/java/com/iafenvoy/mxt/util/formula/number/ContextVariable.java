@@ -10,10 +10,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * Resolves a declared variable directly, with a finite fallback for absent context values.
  */
 public record ContextVariable(String variable, double fallback) implements NumberProvider {
-    public static final MapCodec<ContextVariable> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ContextVariable> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("variable").forGetter(ContextVariable::variable),
             FINITE_DOUBLE_CODEC.optionalFieldOf("fallback", 0.0D).forGetter(ContextVariable::fallback)
-    ).apply(instance, ContextVariable::new));
+    ).apply(i, ContextVariable::new));
 
     public ContextVariable {
         if (variable.isBlank() || !Double.isFinite(fallback))

@@ -13,10 +13,10 @@ import net.minecraft.world.item.enchantment.Enchantment;
 
 public record BaseEnchantmentCondition(Holder<Enchantment> enchantment,
                                        Comparison comparison) implements ItemCondition {
-    public static final MapCodec<BaseEnchantmentCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<BaseEnchantmentCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Enchantment.CODEC.fieldOf("enchantment").forGetter(BaseEnchantmentCondition::enchantment),
             Comparison.CODEC.forGetter(BaseEnchantmentCondition::comparison)
-    ).apply(instance, BaseEnchantmentCondition::new));
+    ).apply(i, BaseEnchantmentCondition::new));
 
     @Override
     public boolean test(Entity holder, ItemStack stack, FormulaContext context) {

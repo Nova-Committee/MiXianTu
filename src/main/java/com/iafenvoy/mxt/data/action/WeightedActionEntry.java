@@ -11,10 +11,10 @@ import java.util.List;
  */
 public record WeightedActionEntry<T>(T element, int weight) {
     public static <T> Codec<WeightedActionEntry<T>> codec(Codec<T> elementCodec) {
-        return RecordCodecBuilder.create(instance -> instance.group(
+        return RecordCodecBuilder.create(i -> i.group(
                 elementCodec.fieldOf("element").forGetter(WeightedActionEntry::element),
                 Codec.INT.optionalFieldOf("weight", 1).forGetter(WeightedActionEntry::weight)
-        ).apply(instance, WeightedActionEntry::new));
+        ).apply(i, WeightedActionEntry::new));
     }
 
     public static <T> WeightedActionEntry<T> select(List<WeightedActionEntry<T>> entries, RandomSource random) {

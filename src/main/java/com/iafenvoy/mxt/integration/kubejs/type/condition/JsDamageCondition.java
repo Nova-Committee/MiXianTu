@@ -11,10 +11,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.damagesource.DamageSource;
 
 public record JsDamageCondition(String id, JsonObject params) implements DamageCondition {
-    public static final MapCodec<JsDamageCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsDamageCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsDamageCondition::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsDamageCondition::params)
-    ).apply(instance, JsDamageCondition::new));
+    ).apply(i, JsDamageCondition::new));
 
     @Override
     public boolean test(DamageSource source, float amount, FormulaContext context) {

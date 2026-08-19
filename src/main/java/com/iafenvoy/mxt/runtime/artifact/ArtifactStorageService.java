@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.artifact;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.artifact.ArtifactStorageData;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
@@ -28,7 +29,7 @@ public final class ArtifactStorageService implements ISpiritStorage {
     }
 
     public int slots(ItemStack stack, FormulaContext context) {
-        return ArtifactService.state(stack).archetype().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.ITEM_ARCHETYPE, id))
+        return ArtifactService.state(stack).archetype().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_ARCHETYPE, id))
                 .map(definition -> configuredSlots(definition, context))
                 .orElse(0);
     }

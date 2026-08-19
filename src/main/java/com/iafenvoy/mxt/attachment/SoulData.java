@@ -11,13 +11,13 @@ import java.util.UUID;
  * Optional soul-form state retained after a death transition.
  */
 public final class SoulData {
-    public static final MapCodec<SoulData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SoulData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("active", false).forGetter(SoulData::active),
             Codec.STRING.optionalFieldOf("origin", "").forGetter(SoulData::origin),
             Codec.LONG.optionalFieldOf("created_at", -1L).forGetter(SoulData::createdAt),
             Codec.STRING.optionalFieldOf("source", "").forGetter(SoulData::source),
             Codec.STRING.optionalFieldOf("manifestation", "").forGetter(SoulData::manifestationValue)
-    ).apply(instance, SoulData::new));
+    ).apply(i, SoulData::new));
     private boolean active;
     private String origin;
     private long createdAt;

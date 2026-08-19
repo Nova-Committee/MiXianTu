@@ -2,14 +2,12 @@ package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.data.action.BlockAction;
+import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Failure;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Snapshot;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.StartResult;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.TickResult.State;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -66,10 +64,18 @@ public final class AlchemyWorkstationService {
         List<ItemStack> outputs = toStacks(result.outputs());
         if (outputs.size() != result.outputs().size()) return TickResult.invalidOutput(result.spoiled());
         state.addOutputs(outputs);
-        DomainBehaviorService.execute(MxtTypeRegistries.ALCHEMY_OUTCOME_BEHAVIOR, result.spoiled() ? recipe.failureBehavior() : recipe.successBehavior(),
-                BehaviorContext.of(result.spoiled() ? Kind.ALCHEMY_FAILURE : Kind.ALCHEMY_SUCCESS,
-                        snapshot.recipe(), null, context, !result.spoiled()));
         return TickResult.finished(outputs, result.spoiled());
+    }
+
+    /** Completes an alchemy tick and applies the recipe's block-side behavior at the workstation. */
+    public static TickResult tick(Level level, BlockPos pos, AlchemyWorkstationState state, AlchemyRecipe recipe,
+                                  double temperature, FormulaContext context) {
+        TickResult result = tick(state, recipe, temperature, context);
+        if (result.state() == State.FINISHED) {
+            BlockAction action = result.spoiled() ? recipe.failureBlockAction() : recipe.successBlockAction();
+            action.execute(level, pos, context);
+        }
+        return result;
     }
 
     /**
@@ -79,6 +85,10 @@ public final class AlchemyWorkstationService {
                                   double temperature, FormulaContext context) {
         Identifier recipeId = state.session().map(Snapshot::recipe).orElse(null);
         TickResult result = tick(state, recipe, temperature, context);
+        if (result.state() == State.FINISHED) {
+            EntityAction action = result.spoiled() ? recipe.failureAction() : recipe.successAction();
+            action.execute(owner, context);
+        }
         if (result.state() == State.FINISHED && !result.spoiled() && recipeId != null) {
             MxtCriteriaTriggers.ALCHEMY.get().trigger(owner, recipeId);
         }

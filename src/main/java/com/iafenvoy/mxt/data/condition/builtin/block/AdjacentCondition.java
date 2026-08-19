@@ -11,10 +11,10 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
 
 public record AdjacentCondition(BlockCondition adjacentCondition, Comparison comparison) implements BlockCondition {
-    public static final MapCodec<AdjacentCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AdjacentCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BlockCondition.CODEC.fieldOf("adjacent_condition").forGetter(AdjacentCondition::adjacentCondition),
             Comparison.CODEC.forGetter(AdjacentCondition::comparison)
-    ).apply(instance, AdjacentCondition::new));
+    ).apply(i, AdjacentCondition::new));
 
     @Override
     public boolean test(Level level, BlockPos pos, FormulaContext context) {

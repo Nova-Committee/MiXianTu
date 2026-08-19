@@ -9,7 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 public record HealAction(NumberProvider amount) implements EntityAction {
-    public static final MapCodec<HealAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(NumberProvider.CODEC.fieldOf("amount").forGetter(HealAction::amount)).apply(instance, HealAction::new));
+    public static final MapCodec<HealAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(NumberProvider.CODEC.fieldOf("amount").forGetter(HealAction::amount)).apply(i, HealAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

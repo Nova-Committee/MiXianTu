@@ -17,12 +17,12 @@ import java.util.Optional;
 public record PassengerAction(Optional<EntityAction> action, Optional<BiEntityAction> biEntityAction,
                               Optional<BiEntityCondition> biEntityCondition,
                               boolean recursive) implements EntityAction {
-    public static final MapCodec<PassengerAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<PassengerAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityAction.CODEC.optionalFieldOf("action").forGetter(PassengerAction::action),
             BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(PassengerAction::biEntityAction),
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(PassengerAction::biEntityCondition),
             Codec.BOOL.optionalFieldOf("recursive", false).forGetter(PassengerAction::recursive)
-    ).apply(instance, PassengerAction::new));
+    ).apply(i, PassengerAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

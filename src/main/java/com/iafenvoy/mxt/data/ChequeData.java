@@ -9,8 +9,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  */
 public record ChequeData(long value, String issuer) {
     public static final ChequeData EMPTY = new ChequeData(0L, "");
-    public static final Codec<ChequeData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ChequeData> CODEC = RecordCodecBuilder.create(i -> i.group(
             MiscCodecs.longRange(0, Long.MAX_VALUE).fieldOf("value").forGetter(ChequeData::value),
             Codec.STRING.optionalFieldOf("issuer", "").forGetter(ChequeData::issuer)
-    ).apply(instance, ChequeData::new));
+    ).apply(i, ChequeData::new));
 }

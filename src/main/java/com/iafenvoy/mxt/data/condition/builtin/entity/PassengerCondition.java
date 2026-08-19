@@ -12,10 +12,10 @@ import java.util.Optional;
 
 public record PassengerCondition(Optional<BiEntityCondition> biEntityCondition,
                                  Comparison comparison) implements EntityCondition {
-    public static final MapCodec<PassengerCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<PassengerCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(PassengerCondition::biEntityCondition),
             Comparison.CODEC.forGetter(PassengerCondition::comparison)
-    ).apply(instance, PassengerCondition::new));
+    ).apply(i, PassengerCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

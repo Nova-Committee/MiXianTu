@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.RealmInstance;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,15 +15,15 @@ import java.util.Optional;
  * Return location retained while a player is inside a temporary realm instance.
  */
 public final class RealmTravelData {
-    public static final MapCodec<RealmTravelData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTravelData::realm),
+    public static final MapCodec<RealmTravelData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTravelData::realm),
             Identifier.CODEC.optionalFieldOf("origin_dimension").forGetter(RealmTravelData::originDimension),
             Codec.DOUBLE.optionalFieldOf("origin_x", 0.0D).forGetter(RealmTravelData::originX),
             Codec.DOUBLE.optionalFieldOf("origin_y", 0.0D).forGetter(RealmTravelData::originY),
             Codec.DOUBLE.optionalFieldOf("origin_z", 0.0D).forGetter(RealmTravelData::originZ),
             Codec.FLOAT.optionalFieldOf("origin_yaw", 0.0F).forGetter(RealmTravelData::originYaw),
             Codec.FLOAT.optionalFieldOf("origin_pitch", 0.0F).forGetter(RealmTravelData::originPitch)
-    ).apply(instance, RealmTravelData::new));
+    ).apply(i, RealmTravelData::new));
     private Optional<Holder<RealmInstance>> realm;
     private Optional<Identifier> originDimension;
     private double originX;

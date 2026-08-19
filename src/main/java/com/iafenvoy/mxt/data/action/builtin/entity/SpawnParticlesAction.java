@@ -18,7 +18,7 @@ import java.util.Optional;
 public record SpawnParticlesAction(ParticleOptions particle, Optional<BiEntityCondition> biEntityCondition, int count,
                                    float speed, boolean force, Vec3 spread, float offsetX, float offsetY,
                                    float offsetZ) implements EntityAction {
-    public static final MapCodec<SpawnParticlesAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SpawnParticlesAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ParticleTypes.CODEC.fieldOf("particle").forGetter(SpawnParticlesAction::particle),
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(SpawnParticlesAction::biEntityCondition),
             Codec.intRange(0, Integer.MAX_VALUE).fieldOf("count").forGetter(SpawnParticlesAction::count),
@@ -28,7 +28,7 @@ public record SpawnParticlesAction(ParticleOptions particle, Optional<BiEntityCo
             Codec.FLOAT.optionalFieldOf("offset_x", 0.0F).forGetter(SpawnParticlesAction::offsetX),
             Codec.FLOAT.optionalFieldOf("offset_y", 0.5F).forGetter(SpawnParticlesAction::offsetY),
             Codec.FLOAT.optionalFieldOf("offset_z", 0.0F).forGetter(SpawnParticlesAction::offsetZ)
-    ).apply(instance, SpawnParticlesAction::new));
+    ).apply(i, SpawnParticlesAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -14,7 +14,7 @@ import java.util.Optional;
  */
 public record FormationPlateData(Optional<Holder<Formation>> formation) {
     public static final FormationPlateData EMPTY = new FormationPlateData(Optional.empty());
-    public static final Codec<FormationPlateData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            RegistryFixedCodec.create(MxtRegistryKeys.FORMATION).optionalFieldOf("formation").forGetter(FormationPlateData::formation)
-    ).apply(instance, FormationPlateData::new));
+    public static final Codec<FormationPlateData> CODEC = RecordCodecBuilder.create(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.FORMATION).optionalFieldOf("formation").forGetter(FormationPlateData::formation)
+    ).apply(i, FormationPlateData::new));
 }

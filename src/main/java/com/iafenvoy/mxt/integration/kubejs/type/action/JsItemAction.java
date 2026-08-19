@@ -12,10 +12,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
 public record JsItemAction(String id, JsonObject params) implements ItemAction {
-    public static final MapCodec<JsItemAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsItemAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsItemAction::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsItemAction::params)
-    ).apply(instance, JsItemAction::new));
+    ).apply(i, JsItemAction::new));
 
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {

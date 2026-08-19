@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.sect;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.SectData;
@@ -49,7 +50,7 @@ public final class SectTerritoryEventBridge {
         Identifier owner = territory.owner().map(HolderHelper::id).orElse(null);
         if (owner == null) return true;
         SectData membership = player.getData(MxtAttachments.SECT);
-        return MxtDatapackRegistries.holder(MxtDatapackRegistries.SECT, owner)
+        return MxtDatapackRegistries.holder(MxtResourceKeys.SECT, owner)
                 .map(sect -> SectService.canUseTerritory(membership, sect, territory, permission))
                 .orElse(false);
     }

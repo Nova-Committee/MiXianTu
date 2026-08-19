@@ -16,12 +16,12 @@ import net.minecraft.world.entity.projectile.Projectile;
  */
 public record SpawnProjectileAction(EntityType<?> entityType, NumberProvider velocityX, NumberProvider velocityY,
                                     NumberProvider velocityZ) implements EntityAction {
-    public static final MapCodec<SpawnProjectileAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SpawnProjectileAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BuiltInRegistries.ENTITY_TYPE.byNameCodec().fieldOf("entity_type").forGetter(SpawnProjectileAction::entityType),
             NumberProvider.CODEC.fieldOf("velocity_x").forGetter(SpawnProjectileAction::velocityX),
             NumberProvider.CODEC.fieldOf("velocity_y").forGetter(SpawnProjectileAction::velocityY),
             NumberProvider.CODEC.fieldOf("velocity_z").forGetter(SpawnProjectileAction::velocityZ)
-    ).apply(instance, SpawnProjectileAction::new));
+    ).apply(i, SpawnProjectileAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

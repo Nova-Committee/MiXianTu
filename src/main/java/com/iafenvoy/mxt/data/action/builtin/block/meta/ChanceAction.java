@@ -11,11 +11,11 @@ import net.minecraft.world.level.Level;
 import java.util.Optional;
 
 public record ChanceAction(BlockAction action, float chance, Optional<BlockAction> failAction) implements BlockAction {
-    public static final MapCodec<ChanceAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ChanceAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BlockAction.CODEC.fieldOf("action").forGetter(ChanceAction::action),
             Codec.floatRange(0.0F, 1.0F).fieldOf("chance").forGetter(ChanceAction::chance),
             BlockAction.CODEC.optionalFieldOf("fail_action").forGetter(ChanceAction::failAction)
-    ).apply(instance, ChanceAction::new));
+    ).apply(i, ChanceAction::new));
 
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {

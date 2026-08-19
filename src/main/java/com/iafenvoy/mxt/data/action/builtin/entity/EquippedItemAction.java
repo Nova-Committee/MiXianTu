@@ -13,10 +13,10 @@ import net.minecraft.world.entity.LivingEntity;
  * Runs an item action against one equipped stack.
  */
 public record EquippedItemAction(EquipmentSlot slot, ItemAction action) implements EntityAction {
-    public static final MapCodec<EquippedItemAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<EquippedItemAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EquipmentSlot.CODEC.fieldOf("slot").forGetter(EquippedItemAction::slot),
             ItemAction.CODEC.fieldOf("action").forGetter(EquippedItemAction::action)
-    ).apply(instance, EquippedItemAction::new));
+    ).apply(i, EquippedItemAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

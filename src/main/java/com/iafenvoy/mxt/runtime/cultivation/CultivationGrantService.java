@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -47,7 +47,7 @@ public final class CultivationGrantService {
 
     private static int grantAll(AbilityHolderData holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {
         int granted = 0;
-        for (Holder<Ability> ability : RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtRegistryKeys.ABILITY))
+        for (Holder<Ability> ability : RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
                 .distinct().toList())
             if (holder.grant(ability, source)) granted++;
         return granted;

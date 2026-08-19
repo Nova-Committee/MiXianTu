@@ -14,10 +14,10 @@ import net.minecraft.world.entity.Entity;
  * Removes only the specified source, preserving grants from every other source.
  */
 public record RemoveAbilityAction(Holder<Ability> ability, Identifier source) implements EntityAction {
-    public static final MapCodec<RemoveAbilityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RemoveAbilityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ability.CODEC.fieldOf("ability").forGetter(RemoveAbilityAction::ability),
             Identifier.CODEC.fieldOf("source").forGetter(RemoveAbilityAction::source)
-    ).apply(instance, RemoveAbilityAction::new));
+    ).apply(i, RemoveAbilityAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

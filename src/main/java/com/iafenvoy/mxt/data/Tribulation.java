@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
@@ -21,14 +21,14 @@ import java.util.List;
 public record Tribulation(EntityCondition triggerCondition, List<Phase> phases,
                           NumberProvider difficultyScale, EntityAction successAction,
                           EntityAction failAction) {
-    public static final Codec<Holder<Tribulation>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.TRIBULATION);
-    public static final Codec<Tribulation> DIRECT_CODEC = RecordCodecBuilder.<Tribulation>create(instance -> instance.group(
+    public static final Codec<Holder<Tribulation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TRIBULATION);
+    public static final Codec<Tribulation> DIRECT_CODEC = RecordCodecBuilder.<Tribulation>create(i -> i.group(
             EntityCondition.CODEC.optionalFieldOf("trigger_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Tribulation::triggerCondition),
             Phase.CODEC.listOf().fieldOf("phases").forGetter(Tribulation::phases),
             NumberProvider.CODEC.optionalFieldOf("difficulty_scale", new Constant(1.0D)).forGetter(Tribulation::difficultyScale),
             EntityAction.CODEC.optionalFieldOf("success_action", NoOpAction.INSTANCE).forGetter(Tribulation::successAction),
             EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(Tribulation::failAction)
-    ).apply(instance, Tribulation::new)).validate(Tribulation::validate);
+    ).apply(i, Tribulation::new)).validate(Tribulation::validate);
 
     private static DataResult<Tribulation> validate(Tribulation value) {
         if (value.phases.isEmpty())
@@ -37,10 +37,10 @@ public record Tribulation(EntityCondition triggerCondition, List<Phase> phases,
     }
 
     public record Phase(NumberProvider duration, EntityAction startAction, EntityAction endAction) {
-        public static final Codec<Phase> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Phase> CODEC = RecordCodecBuilder.create(i -> i.group(
                 NumberProvider.CODEC.fieldOf("duration").forGetter(Phase::duration),
                 EntityAction.CODEC.optionalFieldOf("start_action", NoOpAction.INSTANCE).forGetter(Phase::startAction),
                 EntityAction.CODEC.optionalFieldOf("end_action", NoOpAction.INSTANCE).forGetter(Phase::endAction)
-        ).apply(instance, Phase::new));
+        ).apply(i, Phase::new));
     }
 }

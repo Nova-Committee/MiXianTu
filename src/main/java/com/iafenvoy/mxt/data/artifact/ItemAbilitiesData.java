@@ -10,8 +10,8 @@ import java.util.List;
  * Explicit ability IDs granted while an artifact is equipped or otherwise active.
  */
 public record ItemAbilitiesData(List<Identifier> abilities) {
-    public static final Codec<ItemAbilitiesData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ItemAbilitiesData> CODEC = RecordCodecBuilder.create(i -> i.group(
             Identifier.CODEC.listOf().optionalFieldOf("abilities", List.of()).forGetter(ItemAbilitiesData::abilities)
-    ).apply(instance, ItemAbilitiesData::new));
+    ).apply(i, ItemAbilitiesData::new));
 
 }

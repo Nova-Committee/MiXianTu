@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.render;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import net.minecraft.client.Minecraft;
@@ -51,7 +51,7 @@ public final class AuraZoneRenderer {
     private static Optional<ResolvedFog> resolve(Entity entity) {
         if (entity == null) return Optional.empty();
         Snapshot snapshot = AuraClientState.current();
-        Registry<AuraZone> zones = entity.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.AURA_ZONE);
+        Registry<AuraZone> zones = entity.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         return zones.getOptional(snapshot.source()).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.concentration(), zone.baseAura()));
     }
 

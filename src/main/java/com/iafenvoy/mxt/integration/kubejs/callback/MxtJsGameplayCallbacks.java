@@ -1,14 +1,12 @@
 package com.iafenvoy.mxt.integration.kubejs.callback;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
 import java.util.function.BiPredicate;
 import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
 
 /**
  * Callback storage for direct-ID gameplay registries.
@@ -16,7 +14,6 @@ import java.util.function.Consumer;
 public final class MxtJsGameplayCallbacks {
     private static volatile BiPredicate<Mob, FormulaContext> creatureSpawn;
     private static volatile BiPredicate<LivingEntity, FormulaContext> cultivation;
-    private static volatile Consumer<BehaviorContext> behavior;
 
     private MxtJsGameplayCallbacks() {
     }
@@ -29,10 +26,6 @@ public final class MxtJsGameplayCallbacks {
         cultivation = callback;
     }
 
-    public static void registerBehavior(Consumer<BehaviorContext> callback) {
-        behavior = callback;
-    }
-
     public static boolean testCreatureSpawn(Mob mob, FormulaContext context) {
         BiPredicate<Mob, FormulaContext> callback = creatureSpawn;
         return callback == null ? unknown("creature spawn condition") : test("creature spawn condition", () -> callback.test(mob, context));
@@ -43,23 +36,9 @@ public final class MxtJsGameplayCallbacks {
         return callback == null ? unknown("cultivation condition") : test("cultivation condition", () -> callback.test(entity, context));
     }
 
-    public static void executeBehavior(BehaviorContext context) {
-        Consumer<BehaviorContext> callback = behavior;
-        if (callback == null) {
-            MiXianTu.LOGGER.warn("Unknown KubeJS domain behavior for {}", context.definition());
-            return;
-        }
-        try {
-            callback.accept(context);
-        } catch (Exception exception) {
-            MiXianTu.LOGGER.error("KubeJS domain behavior failed for {}", context.definition(), exception);
-        }
-    }
-
     public static void clear() {
         creatureSpawn = null;
         cultivation = null;
-        behavior = null;
     }
 
     private static boolean unknown(String type) {

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.economy;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import net.minecraft.core.Holder.Reference;
@@ -47,7 +48,7 @@ public final class CurrencyPaymentService {
     }
 
     public static List<Denomination> denominations() {
-        return MxtDatapackRegistries.holders(MxtDatapackRegistries.CURRENCY)
+        return MxtDatapackRegistries.holders(MxtResourceKeys.CURRENCY)
                 .map(Reference::value)
                 .flatMap(definition -> BuiltInRegistries.ITEM.stream()
                         .filter(item -> definition.entries().stream().anyMatch(entry -> entry.matches(new ItemStack(item))))

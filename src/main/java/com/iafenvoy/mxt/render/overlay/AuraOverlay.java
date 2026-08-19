@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.render.overlay;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AuraChunkData;
@@ -8,7 +9,6 @@ import com.iafenvoy.mxt.data.aura.AuraZone.ClientHud;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Origins;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import net.minecraft.client.DeltaTracker;
@@ -47,7 +47,7 @@ public enum AuraOverlay implements GuiLayer {
         Player player = minecraft.player;
         if (minecraft.options.hideGui || player == null || minecraft.level == null) return;
         Snapshot snapshot = AuraClientState.current();
-        ClientHud hud = minecraft.level.registryAccess().lookupOrThrow(MxtDatapackRegistries.AURA_ZONE)
+        ClientHud hud = minecraft.level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE)
                 .getOptional(snapshot.source()).map(AuraZone::clientHud).orElse(ClientHud.NONE);
         AuraChunkData aura = minecraft.level.getChunkAt(player.blockPosition()).getData(MxtAttachments.AURA_CHUNK);
         List<AuraHudBar> bars = new ArrayList<>();

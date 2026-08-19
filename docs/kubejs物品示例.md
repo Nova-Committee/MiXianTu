@@ -25,6 +25,7 @@ StartupEvents.registry('item', event => {
 // kubejs/data/example/mxt/item_binding/fire_root_pellet.json
 {
   "items": "kubejs:fire_root_pellet",
+  "quality_group": "#example:group/pellet",
   "actions": [
     {
       "type": "mxt:grant_spirit_root",
@@ -39,7 +40,8 @@ StartupEvents.registry('item', event => {
 {
   "items": ["kubejs:firebound_sword", "#example:fire_weapons"],
   "attack_damage": 8,
-  "attack_speed": -2.4
+  "attack_speed": -2.4,
+  "quality_group": "#example:group/firebound_weapon"
 }
 ```
 
@@ -47,10 +49,23 @@ StartupEvents.registry('item', event => {
 // kubejs/data/example/mxt/pill_binding/returning_pill.json
 {
   "items": "kubejs:returning_pill",
+  "quality_group": "#example:group/pill",
   "toxicity_gain": 10,
   "toxicity_threshold": 100,
   "toxicity_after_overdose": 25
 }
 ```
+
+```json
+// kubejs/data/example/mxt/technique_binding/fire_manual.json
+{
+  "items": "kubejs:fire_manual",
+  "technique": "example:fire_manual",
+  "quality_group": "#example:group/manual",
+  "set_active": true
+}
+```
+
+四种绑定均只引用已经由 KubeJS、原版或其他模组注册的物品；`quality_group` 是可选的原版 `item_quality` 标签引用。当前各绑定的运行时接入状态和缺口以 [模块实现审计](模块实现审计.md) 为准。
 
 KubeJS 重载物品注册表后需要重启游戏；MXT 的绑定数据可使用 `/reload` 重载。绑定的物品 ID 不存在时，数据包加载会失败，避免产生无法解析的物品规则。

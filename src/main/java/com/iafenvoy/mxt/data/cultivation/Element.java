@@ -4,7 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
@@ -18,13 +18,13 @@ import java.util.List;
  */
 public record Element(String translationKey, List<Either<Holder<Element>, TagKey<Element>>> overcomes,
                       List<Either<Holder<Element>, TagKey<Element>>> adaptedTo, List<Identifier> auraKinds) {
-    public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.ELEMENT);
-    public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ELEMENT);
+    public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.optionalFieldOf("translation_key", "").forGetter(Element::translationKey),
-            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
-            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
             Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(Element::auraKinds)
-    ).apply(instance, Element::new));
+    ).apply(i, Element::new));
 
     /**
      * Do not expand element holders here. Element relations can form cycles, and a holder's

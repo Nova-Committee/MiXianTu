@@ -11,11 +11,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
 public record BlockCollisionCondition(float offsetX, float offsetY, float offsetZ) implements EntityCondition {
-    public static final MapCodec<BlockCollisionCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<BlockCollisionCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.FLOAT.optionalFieldOf("offset_x", 0.0F).forGetter(BlockCollisionCondition::offsetX),
             Codec.FLOAT.optionalFieldOf("offset_y", 0.0F).forGetter(BlockCollisionCondition::offsetY),
             Codec.FLOAT.optionalFieldOf("offset_z", 0.0F).forGetter(BlockCollisionCondition::offsetZ)
-    ).apply(instance, BlockCollisionCondition::new));
+    ).apply(i, BlockCollisionCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

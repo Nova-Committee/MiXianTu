@@ -106,10 +106,10 @@ public final class ForgingSession {
     }
 
     public record Snapshot(int value, int steps, int optimalSteps, List<Identifier> history) {
-        public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.fieldOf("value").forGetter(Snapshot::value), Codec.INT.fieldOf("steps").forGetter(Snapshot::steps),
                 Codec.INT.fieldOf("optimal_steps").forGetter(Snapshot::optimalSteps), Identifier.CODEC.listOf().fieldOf("history").forGetter(Snapshot::history)
-        ).apply(instance, Snapshot::new));
+        ).apply(i, Snapshot::new));
 
         public Snapshot {
             history = new LinkedList<>(history);

@@ -14,9 +14,9 @@ import java.util.Objects;
  * Matches one concrete registered damage type.
  */
 public record DamageTypeCondition(Holder<DamageType> damageType) implements DamageCondition {
-    public static final MapCodec<DamageTypeCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<DamageTypeCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             DamageType.CODEC.fieldOf("damage_type").forGetter(DamageTypeCondition::damageType)
-    ).apply(instance, DamageTypeCondition::new));
+    ).apply(i, DamageTypeCondition::new));
 
     @Override
     public boolean test(DamageSource source, float amount, FormulaContext context) {

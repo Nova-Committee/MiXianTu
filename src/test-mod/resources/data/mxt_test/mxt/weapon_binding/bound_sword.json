@@ -2,6 +2,10 @@
   "items": ["minecraft:diamond_sword", "minecraft:netherite_sword"],
   "attack_damage": 6,
   "attack_speed": -2.4,
+  "quality_group": "#mxt_test:group/forged",
+  "condition": {
+    "type": "mxt:always_true"
+  },
   "attributes": [],
   "use_action": {
     "type": "mxt:add_resource",

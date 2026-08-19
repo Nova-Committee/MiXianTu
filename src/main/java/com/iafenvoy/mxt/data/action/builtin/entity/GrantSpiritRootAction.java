@@ -15,9 +15,9 @@ import net.minecraft.world.entity.LivingEntity;
  * Grants one configured spirit root to a living entity.
  */
 public record GrantSpiritRootAction(Holder<SpiritRoot> spiritRoot) implements EntityAction {
-    public static final MapCodec<GrantSpiritRootAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<GrantSpiritRootAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             SpiritRoot.CODEC.fieldOf("spirit_root").forGetter(GrantSpiritRootAction::spiritRoot)
-    ).apply(instance, GrantSpiritRootAction::new));
+    ).apply(i, GrantSpiritRootAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

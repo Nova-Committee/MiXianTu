@@ -19,7 +19,7 @@ import java.util.*;
  * Persistent cultivation identity. Spirit roots and physiques intentionally use separate collections.
  */
 public final class SpiritData {
-    public static final MapCodec<SpiritData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SpiritData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.DOUBLE.optionalFieldOf("cultivation_progress", 0.0D).forGetter(SpiritData::cultivationProgress),
             RealmStage.CODEC.optionalFieldOf("realm_stage").forGetter(SpiritData::realmStage),
             CollectionCodecs.list(SpiritRoot.CODEC).optionalFieldOf("spirit_roots", List.of()).forGetter(SpiritData::spiritRoots),
@@ -34,7 +34,7 @@ public final class SpiritData {
             Codec.LONG.optionalFieldOf("lifespan_remaining", -1L).forGetter(SpiritData::lifespanRemaining),
             SoulState.CODEC.optionalFieldOf("soul", SoulState.EMPTY).forGetter(SpiritData::soulState),
             ItemAuraState.CODEC.optionalFieldOf("item_aura_state", ItemAuraState.EMPTY).forGetter(SpiritData::itemAuraState)
-    ).apply(instance, SpiritData::new));
+    ).apply(i, SpiritData::new));
     private double cultivationProgress;
     private Optional<Holder<RealmStage>> realmStage;
     private final List<Holder<SpiritRoot>> spiritRoots;
@@ -255,12 +255,12 @@ public final class SpiritData {
 
     private record SoulState(double karma, double heartDemon, double soulStrength, double soulSenseRange) {
         private static final SoulState EMPTY = new SoulState(0.0D, 0.0D, 0.0D, 0.0D);
-        private static final Codec<SoulState> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        private static final Codec<SoulState> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.DOUBLE.optionalFieldOf("karma", 0.0D).forGetter(SoulState::karma),
                 Codec.DOUBLE.optionalFieldOf("heart_demon", 0.0D).forGetter(SoulState::heartDemon),
                 Codec.DOUBLE.optionalFieldOf("strength", 0.0D).forGetter(SoulState::soulStrength),
                 Codec.DOUBLE.optionalFieldOf("sense_range", 0.0D).forGetter(SoulState::soulSenseRange)
-        ).apply(instance, SoulState::new));
+        ).apply(i, SoulState::new));
 
         private SoulState {
             if (!Double.isFinite(karma) || !Double.isFinite(heartDemon) || !Double.isFinite(soulStrength)
@@ -271,11 +271,11 @@ public final class SpiritData {
 
     public record ItemAuraState(Optional<Holder<ItemAura>> aura, double remaining, double maximum) {
         private static final ItemAuraState EMPTY = new ItemAuraState(Optional.empty(), 0.0D, 0.0D);
-        private static final Codec<ItemAuraState> CODEC = RecordCodecBuilder.<ItemAuraState>create(instance -> instance.group(
+        private static final Codec<ItemAuraState> CODEC = RecordCodecBuilder.<ItemAuraState>create(i -> i.group(
                 ItemAura.CODEC.optionalFieldOf("aura").forGetter(ItemAuraState::aura),
                 Codec.DOUBLE.optionalFieldOf("remaining", 0.0D).forGetter(ItemAuraState::remaining),
                 Codec.DOUBLE.optionalFieldOf("maximum", 0.0D).forGetter(ItemAuraState::maximum)
-        ).apply(instance, ItemAuraState::new)).validate(ItemAuraState::validate);
+        ).apply(i, ItemAuraState::new)).validate(ItemAuraState::validate);
 
         public ItemAuraState {
             if (!Double.isFinite(remaining) || remaining < 0.0D || !Double.isFinite(maximum) || maximum < 0.0D || remaining > maximum)

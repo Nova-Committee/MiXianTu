@@ -15,10 +15,10 @@ import java.util.List;
  * One entry in the common costs array.
  */
 public record ResourceCost(Holder<Resource> resource, NumberProvider amount) {
-    public static final Codec<ResourceCost> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ResourceCost> CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("id").forGetter(ResourceCost::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(ResourceCost::amount)
-    ).apply(instance, ResourceCost::new));
+    ).apply(i, ResourceCost::new));
     public static final Codec<List<ResourceCost>> LIST_CODEC = AutoIgnoreListCodec.create(CODEC);
 
     public double evaluate(FormulaContext context) {

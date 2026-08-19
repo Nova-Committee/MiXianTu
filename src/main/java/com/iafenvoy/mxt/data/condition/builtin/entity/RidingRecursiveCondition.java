@@ -12,10 +12,10 @@ import java.util.Optional;
 
 public record RidingRecursiveCondition(Optional<BiEntityCondition> biEntityCondition,
                                        Comparison comparison) implements EntityCondition {
-    public static final MapCodec<RidingRecursiveCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RidingRecursiveCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(RidingRecursiveCondition::biEntityCondition),
             Comparison.CODEC.forGetter(RidingRecursiveCondition::comparison)
-    ).apply(instance, RidingRecursiveCondition::new));
+    ).apply(i, RidingRecursiveCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

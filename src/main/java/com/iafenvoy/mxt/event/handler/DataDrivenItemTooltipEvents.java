@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.event.handler;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.AttributeModifier;
+import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.data.item.PillBinding;
+import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.item.ContractScrollData;
 import com.iafenvoy.mxt.data.item.FormationPlateData;
@@ -12,12 +13,15 @@ import com.iafenvoy.mxt.data.item.ResourceContainerData;
 import com.iafenvoy.mxt.data.item.SpiritBeastData;
 import com.iafenvoy.mxt.data.item.TokenData;
 import com.iafenvoy.mxt.data.aura.ItemAura;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -41,9 +45,11 @@ public final class DataDrivenItemTooltipEvents {
     public static void appendDetails(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
         Provider registries = event.getContext().registries();
+        ItemQualityService.find(registries, stack).ifPresent(quality -> appendQuality(event, quality));
         ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(event, itemAura.value()));
         ItemBindingService.weapon(registries, stack).ifPresent(weapon -> appendWeapon(event, weapon));
         ItemBindingService.pill(registries, stack).ifPresent(pill -> appendPill(event, pill));
+        ItemBindingService.technique(registries, stack).ifPresent(technique -> appendTechnique(event, technique));
         ItemBindingService.actions(registries, stack).stream()
                 .filter(GrantSpiritRootAction.class::isInstance)
                 .map(GrantSpiritRootAction.class::cast)
@@ -61,6 +67,15 @@ public final class DataDrivenItemTooltipEvents {
                 .withStyle(ChatFormatting.BLUE));
         itemAura.resultStack().ifPresent(template -> event.getToolTip().add(Component.translatable(
                 "tooltip.mxt.item_aura.result", template.create().getHoverName()).withStyle(ChatFormatting.BLUE)));
+    }
+
+    private static void appendQuality(ItemTooltipEvent event, Holder<ItemQuality> quality) {
+        ItemQuality value = quality.value();
+        event.getToolTip().add(Component.translatable("tooltip.mxt.item.quality", value.displayName()));
+        value.description().ifPresent(description -> event.getToolTip().add(description.copy().withStyle(ChatFormatting.DARK_GRAY)));
+        if (event.getFlags().isAdvanced()) {
+            event.getToolTip().add(Component.literal(HolderHelper.id(quality).toString()).withStyle(ChatFormatting.DARK_GRAY));
+        }
     }
 
     private static void appendFrameworkState(ItemTooltipEvent event, ItemStack stack) {
@@ -97,13 +112,13 @@ public final class DataDrivenItemTooltipEvents {
                 number(weapon.attackDamage().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
         event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attack_speed",
                 number(weapon.attackSpeed().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
-        for (AttributeModifier attribute : weapon.attributes()) {
+        for (AttributeEntry attribute : weapon.attributes()) {
             {
                 Attribute value = attribute.attribute().value();
-                double amount = attribute.value().evaluate(FormulaContext.EMPTY);
-                if (!Double.isFinite(amount) || amount == 0.0D) return;
+                double amount = attribute.amount(FormulaContext.EMPTY);
+                if (!Double.isFinite(amount) || amount == 0.0D) continue;
                 Component name = Component.translatable(value.getDescriptionId());
-                switch (attribute.operation()) {
+                switch (attribute.modifier().operation()) {
                     case ADD_VALUE -> event.getToolTip().add(Component.translatable("tooltip.mxt.weapon.attribute.add",
                             signed(amount), name).withStyle(ChatFormatting.BLUE));
                     case ADD_MULTIPLIED_BASE ->
@@ -128,6 +143,11 @@ public final class DataDrivenItemTooltipEvents {
             event.getToolTip().add(Component.translatable("tooltip.mxt.pill.toxicity", signed(gain), number(threshold))
                     .withStyle(ChatFormatting.DARK_PURPLE));
         }
+    }
+
+    private static void appendTechnique(ItemTooltipEvent event, TechniqueBinding technique) {
+        event.getToolTip().add(Component.translatable("tooltip.mxt.item.cultivation_technique",
+                HolderHelper.id(technique.technique()).toString()).withStyle(ChatFormatting.GREEN));
     }
 
     private static String number(double value) {

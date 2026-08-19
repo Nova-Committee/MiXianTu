@@ -1,14 +1,17 @@
 package com.iafenvoy.mxt.event.handler;
 
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
 import com.iafenvoy.mxt.runtime.artifact.FlightEventBridge;
 import com.iafenvoy.mxt.runtime.creature.ContractEventBridge;
 import com.iafenvoy.mxt.runtime.creature.CreatureProfileEventBridge;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionEventBridge;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanEventBridge;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.curse.CurseEventBridge;
 import com.iafenvoy.mxt.runtime.forging.ForgingEventBridge;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.runtime.sect.SectTerritoryEventBridge;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationEventBridge;
@@ -28,7 +31,9 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent;
@@ -84,12 +89,26 @@ public final class MxtGameplayEvents {
 
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
+        if (!event.getEntity().level().isClientSide()
+                && !ItemQualityService.canUse(event.getEntity(), event.getEntity().getMainHandItem())) {
+            event.setCanceled(true);
+            return;
+        }
         AbilityEventBridge.onAttack(event);
         ItemBindingService.onMainHandWeaponAttack(event.getEntity(), event.getTarget());
     }
 
     @SubscribeEvent
     public static void onItemUse(RightClickItem event) {
+        if (!event.getEntity().level().isClientSide()
+                && !ItemQualityService.canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) {
+            event.setCanceled(true);
+            return;
+        }
+        if (TechniqueItemService.use(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) {
+            event.setCanceled(true);
+            return;
+        }
         if (event.getHand() == InteractionHand.MAIN_HAND)
             ItemBindingService.onMainHandWeaponUse(event.getEntity());
     }
@@ -105,12 +124,19 @@ public final class MxtGameplayEvents {
 
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
+        if (!event.getEntity().level().isClientSide()
+                && !ItemQualityService.canUse(event.getEntity(), event.getItem())) return;
         AbilityEventBridge.onItemUseFinish(event);
         ItemBindingService.onUseFinish(event.getEntity(), event.getItem());
     }
 
     @SubscribeEvent
     public static void onBlockUse(RightClickBlock event) {
+        if (!event.getEntity().level().isClientSide()
+                && !ItemQualityService.canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) {
+            event.setCanceled(true);
+            return;
+        }
         AbilityEventBridge.onBlockUse(event);
         SectTerritoryEventBridge.onUse(event);
     }
@@ -148,5 +174,21 @@ public final class MxtGameplayEvents {
     @SubscribeEvent
     public static void onPlayerLogin(PlayerLoggedInEvent event) {
         RealmTravelEventBridge.onPlayerLogin(event);
+        refreshPlayerAttributes(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerClone(Clone event) {
+        refreshPlayerAttributes(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerRespawnEvent event) {
+        refreshPlayerAttributes(event.getEntity());
+    }
+
+    private static void refreshPlayerAttributes(LivingEntity entity) {
+        PassiveAttributeService.reconcile(entity);
+        ItemBindingService.refreshEquipped(entity);
     }
 }

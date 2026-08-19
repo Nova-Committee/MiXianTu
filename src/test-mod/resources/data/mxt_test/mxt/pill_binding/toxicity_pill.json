@@ -1,6 +1,10 @@
 {
   "items": ["minecraft:honey_bottle", "minecraft:suspicious_stew"],
   "toxicity_gain": 25,
+  "quality_group": "#mxt_test:group/forged",
+  "condition": {
+    "type": "mxt:always_true"
+  },
   "toxicity_threshold": 100,
   "toxicity_after_overdose": 20
 }

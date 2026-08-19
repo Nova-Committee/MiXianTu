@@ -25,12 +25,12 @@ public final class TradeCommand {
         if (player == null) return 0;
         RequestResult result = PlayerTradeService.request(player, target);
         switch (result) {
-            case TOO_FAR -> player.sendSystemMessage(Component.translatable("mxt.command.trade.too_far"));
-            case SELF -> player.sendSystemMessage(Component.translatable("mxt.command.trade.self"));
-            case BUSY -> player.sendSystemMessage(Component.translatable("mxt.command.trade.busy"));
+            case TOO_FAR -> player.sendSystemMessage(Component.translatable("command.mxt.trade.too_far"));
+            case SELF -> player.sendSystemMessage(Component.translatable("command.mxt.trade.self"));
+            case BUSY -> player.sendSystemMessage(Component.translatable("command.mxt.trade.busy"));
             case SENT -> {
-                player.sendSystemMessage(Component.translatable("mxt.command.trade.request_sent"));
-                target.sendSystemMessage(Component.translatable("mxt.command.trade.request", player.getDisplayName())
+                player.sendSystemMessage(Component.translatable("command.mxt.trade.request_sent"));
+                target.sendSystemMessage(Component.translatable("command.mxt.trade.request", player.getDisplayName())
                         .withStyle(style -> style.withClickEvent(new RunCommand("/trade " + player.getGameProfile().name()))));
             }
         }

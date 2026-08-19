@@ -11,10 +11,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
 public record DimensionCondition(ResourceKey<Level> dimension, boolean inverted) implements EntityCondition {
-    public static final MapCodec<DimensionCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<DimensionCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ResourceKey.codec(Registries.DIMENSION).fieldOf("dimension").forGetter(DimensionCondition::dimension),
             Codec.BOOL.optionalFieldOf("inverted", false).forGetter(DimensionCondition::inverted)
-    ).apply(instance, DimensionCondition::new));
+    ).apply(i, DimensionCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

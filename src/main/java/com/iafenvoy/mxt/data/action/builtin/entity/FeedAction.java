@@ -9,10 +9,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 public record FeedAction(int food, float saturation) implements EntityAction {
-    public static final MapCodec<FeedAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<FeedAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.INT.fieldOf("food").forGetter(FeedAction::food),
             Codec.FLOAT.fieldOf("saturation").forGetter(FeedAction::saturation)
-    ).apply(instance, FeedAction::new));
+    ).apply(i, FeedAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

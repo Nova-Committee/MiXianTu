@@ -14,6 +14,8 @@ import com.iafenvoy.mxt.data.item.RealmTokenData;
 import com.iafenvoy.mxt.data.item.ResourceContainerData;
 import com.iafenvoy.mxt.data.item.SpiritBeastData;
 import com.iafenvoy.mxt.data.item.TokenData;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -25,7 +27,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  */
 public final class MxtDataComponents {
     public static final DeferredRegister<DataComponentType<?>> REGISTRY = DeferredRegister.create(BuiltInRegistries.DATA_COMPONENT_TYPE, MiXianTu.MOD_ID);
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ForgingResultData>> FORGING_RESULT = REGISTRY.register("forging_result", () -> DataComponentType.<ForgingResultData>builder().persistent(ForgingResultData.CODEC).build());
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ForgingResultData>> FORGING_RESULT = REGISTRY.register("forging_result", () -> DataComponentType.<ForgingResultData>builder().persistent(ForgingResultData.CODEC).networkSynchronized(ByteBufCodecs.fromCodecWithRegistries(ForgingResultData.CODEC)).build());
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<ItemQuality>>> ITEM_QUALITY = REGISTRY.register("item_quality", () -> DataComponentType.<Holder<ItemQuality>>builder().persistent(ItemQuality.CODEC).networkSynchronized(ByteBufCodecs.fromCodecWithRegistries(ItemQuality.CODEC)).build());
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ArtifactStateData>> ARTIFACT_STATE = REGISTRY.register("artifact_state", () -> DataComponentType.<ArtifactStateData>builder().persistent(ArtifactStateData.CODEC).build());
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ArtifactStorageData>> ARTIFACT_STORAGE = REGISTRY.register("artifact_storage", () -> DataComponentType.<ArtifactStorageData>builder().persistent(ArtifactStorageData.CODEC).build());
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemAbilitiesData>> ITEM_ABILITIES = REGISTRY.register("item_abilities", () -> DataComponentType.<ItemAbilitiesData>builder().persistent(ItemAbilitiesData.CODEC).build());

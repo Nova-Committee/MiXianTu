@@ -10,10 +10,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
 public record ChargeArtifactItemAction(NumberProvider amount, NumberProvider capacity) implements ItemAction {
-    public static final MapCodec<ChargeArtifactItemAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ChargeArtifactItemAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("amount").forGetter(ChargeArtifactItemAction::amount),
             NumberProvider.CODEC.fieldOf("capacity").forGetter(ChargeArtifactItemAction::capacity)
-    ).apply(instance, ChargeArtifactItemAction::new));
+    ).apply(i, ChargeArtifactItemAction::new));
 
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {

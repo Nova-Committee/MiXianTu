@@ -18,10 +18,10 @@ import java.util.Locale;
 public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements BiEntityCondition {
     private static final Codec<Block> BLOCK_CODEC = enumCodec(Block.class);
     private static final Codec<Fluid> FLUID_CODEC = enumCodec(Fluid.class);
-    public static final MapCodec<CanSeeCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<CanSeeCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BLOCK_CODEC.optionalFieldOf("shape_type", Block.VISUAL).forGetter(CanSeeCondition::shapeType),
             FLUID_CODEC.optionalFieldOf("fluid_handling", Fluid.NONE).forGetter(CanSeeCondition::fluidHandling)
-    ).apply(instance, CanSeeCondition::new));
+    ).apply(i, CanSeeCondition::new));
 
     @Override
     public boolean test(Entity actor, Entity target, FormulaContext context) {

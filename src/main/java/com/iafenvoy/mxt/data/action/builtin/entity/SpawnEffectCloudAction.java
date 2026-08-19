@@ -19,12 +19,12 @@ import java.util.List;
  */
 public record SpawnEffectCloudAction(float radius, float radiusOnUse, int waitTime,
                                      List<MobEffectInstance> effects) implements EntityAction {
-    public static final MapCodec<SpawnEffectCloudAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SpawnEffectCloudAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.FLOAT.optionalFieldOf("radius", 3.0F).forGetter(SpawnEffectCloudAction::radius),
             Codec.FLOAT.optionalFieldOf("radius_on_use", -0.5F).forGetter(SpawnEffectCloudAction::radiusOnUse),
             Codec.INT.optionalFieldOf("wait_time", 10).forGetter(SpawnEffectCloudAction::waitTime),
             MobEffectInstance.CODEC.listOf().optionalFieldOf("effects", List.of()).forGetter(SpawnEffectCloudAction::effects)
-    ).apply(instance, SpawnEffectCloudAction::new));
+    ).apply(i, SpawnEffectCloudAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

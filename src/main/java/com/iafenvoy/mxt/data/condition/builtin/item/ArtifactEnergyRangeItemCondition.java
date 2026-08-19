@@ -10,10 +10,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
 public record ArtifactEnergyRangeItemCondition(NumberProvider min, NumberProvider max) implements ItemCondition {
-    public static final MapCodec<ArtifactEnergyRangeItemCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ArtifactEnergyRangeItemCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("min").forGetter(ArtifactEnergyRangeItemCondition::min),
             NumberProvider.CODEC.fieldOf("max").forGetter(ArtifactEnergyRangeItemCondition::max)
-    ).apply(instance, ArtifactEnergyRangeItemCondition::new));
+    ).apply(i, ArtifactEnergyRangeItemCondition::new));
 
     @Override
     public boolean test(Entity holder, ItemStack stack, FormulaContext context) {

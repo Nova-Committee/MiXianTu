@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.ability;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
@@ -79,7 +80,7 @@ public final class AbilityEventBridge {
                     ResourceService.formulaContext(entity, resourceId, definition, FormulaContext.EMPTY));
         });
         dispatch("tick", entity, FormulaContext.of(entity), definition -> true);
-        if (entity.level().getGameTime() % 20L == 0L) PassiveAttributeService.reconcile(entity);
+        PassiveAttributeService.tick(entity);
         if (entity.level().getGameTime() % 20L == 0L) syncCuriosAbilities(entity, abilities);
         tickAuras(entity, abilities, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
@@ -133,9 +134,9 @@ public final class AbilityEventBridge {
         if (entity.level().isClientSide()) return;
         AbilityHolderData holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = equipmentSource(event.getSlot(), event.getTo());
-        itemAbilities(event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, ability))
+        itemAbilities(event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                 .flatMap(Optional::stream).forEach(ability -> holder.revoke(ability, source));
-        itemAbilities(event.getTo()).stream().map(ability -> MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, ability))
+        itemAbilities(event.getTo()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                 .flatMap(Optional::stream).forEach(ability -> holder.grant(ability, source));
         FormulaContext context = FormulaContext.of(entity, Map.of("equipment_slot", (double) event.getSlot().ordinal()));
         dispatch("equip", entity, context, definition -> true);
@@ -154,7 +155,7 @@ public final class AbilityEventBridge {
         Set<Holder<Ability>> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
             itemAbilities(stack).stream()
-                    .map(ability -> MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, ability))
+                    .map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                     .flatMap(Optional::stream)
                     .forEach(current::add);
         Identifier source = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "curios_equipment");
@@ -185,7 +186,7 @@ public final class AbilityEventBridge {
      */
     private static void initializeHudResources(LivingEntity entity, ResourceHolderData holder) {
         if (!(entity instanceof Player)) return;
-        MxtDatapackRegistries.holders(MxtDatapackRegistries.RESOURCE)
+        MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
                 .filter(resource -> !resource.value().bars().isEmpty())
                 .forEach(resource -> initializeResource(entity, holder, resource));
     }

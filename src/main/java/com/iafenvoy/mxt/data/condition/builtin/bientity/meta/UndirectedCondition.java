@@ -10,9 +10,9 @@ import net.minecraft.world.entity.Entity;
  * Makes a directed bi-entity condition pass in either direction.
  */
 public record UndirectedCondition(BiEntityCondition condition) implements BiEntityCondition {
-    public static final MapCodec<UndirectedCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<UndirectedCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityCondition.CODEC.fieldOf("condition").forGetter(UndirectedCondition::condition)
-    ).apply(instance, UndirectedCondition::new));
+    ).apply(i, UndirectedCondition::new));
 
     @Override
     public boolean test(Entity actor, Entity target, FormulaContext context) {

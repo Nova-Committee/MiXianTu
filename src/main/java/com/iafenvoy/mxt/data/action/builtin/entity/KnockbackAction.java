@@ -11,11 +11,11 @@ import net.minecraft.world.entity.Entity;
  * Adds a bounded velocity vector; collision and fall handling remain vanilla-owned.
  */
 public record KnockbackAction(NumberProvider x, NumberProvider y, NumberProvider z) implements EntityAction {
-    public static final MapCodec<KnockbackAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<KnockbackAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("x").forGetter(KnockbackAction::x),
             NumberProvider.CODEC.fieldOf("y").forGetter(KnockbackAction::y),
             NumberProvider.CODEC.fieldOf("z").forGetter(KnockbackAction::z)
-    ).apply(instance, KnockbackAction::new));
+    ).apply(i, KnockbackAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

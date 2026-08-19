@@ -1,32 +1,40 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.data.AttributeModifier;
+import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.bientity.meta.BiEntityNoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
-import com.iafenvoy.mxt.util.ItemMatcher.Entry;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.util.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.tags.TagKey;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Weapon behaviour attached directly to an already registered physical item.
  */
 public record WeaponBinding(List<Entry> entries, NumberProvider attackDamage, NumberProvider attackSpeed,
-                            List<AttributeModifier> attributes, EntityAction useAction, BiEntityAction attackAction,
-                            EntityAction tickAction) implements ItemMatcher {
-    public static final Codec<WeaponBinding> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                            List<AttributeEntry> attributes, EntityAction useAction, BiEntityAction attackAction,
+                            EntityAction tickAction, Optional<TagKey<ItemQuality>> qualityGroup,
+                            EntityCondition condition) implements ItemMatcher {
+    public static final Codec<WeaponBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(WeaponBinding::entries),
             NumberProvider.CODEC.optionalFieldOf("attack_damage", new Constant(0.0D)).forGetter(WeaponBinding::attackDamage),
             NumberProvider.CODEC.optionalFieldOf("attack_speed", new Constant(0.0D)).forGetter(WeaponBinding::attackSpeed),
-            AttributeModifier.CODEC.listOf().optionalFieldOf("attributes", List.of()).forGetter(WeaponBinding::attributes),
+            AttributeEntry.CODEC.listOf().optionalFieldOf("attributes", List.of()).forGetter(WeaponBinding::attributes),
             EntityAction.CODEC.optionalFieldOf("use_action", NoOpAction.INSTANCE).forGetter(WeaponBinding::useAction),
             BiEntityAction.CODEC.optionalFieldOf("attack_action", BiEntityNoOpAction.INSTANCE).forGetter(WeaponBinding::attackAction),
-            EntityAction.CODEC.optionalFieldOf("tick_action", NoOpAction.INSTANCE).forGetter(WeaponBinding::tickAction)
-    ).apply(instance, WeaponBinding::new));
+            EntityAction.CODEC.optionalFieldOf("tick_action", NoOpAction.INSTANCE).forGetter(WeaponBinding::tickAction),
+            TagKey.hashedCodec(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality_group").forGetter(WeaponBinding::qualityGroup),
+            EntityCondition.CODEC.optionalFieldOf("condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(WeaponBinding::condition)
+    ).apply(i, WeaponBinding::new));
 }

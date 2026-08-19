@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.attachment;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint.FailureSettlement;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint.QualityThreshold;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession.Snapshot;
@@ -20,7 +21,7 @@ import java.util.Optional;
  * Player-owned server forging session snapshot. The input stack remains server-side.
  */
 public final class ForgingSessionData {
-    public static final MapCodec<ForgingSessionData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ForgingSessionData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ForgingBlueprint.CODEC.optionalFieldOf("blueprint").forGetter(ForgingSessionData::blueprint),
             ForgingPlan.CODEC.optionalFieldOf("plan").forGetter(ForgingSessionData::plan),
             Snapshot.CODEC.optionalFieldOf("session").forGetter(ForgingSessionData::session),
@@ -28,7 +29,7 @@ public final class ForgingSessionData {
             Identifier.CODEC.optionalFieldOf("result").forGetter(ForgingSessionData::result),
             QualityThreshold.CODEC.listOf().optionalFieldOf("quality_by_extra_steps", List.of()).forGetter(ForgingSessionData::qualityByExtraSteps),
             FailureSettlement.CODEC.codec().optionalFieldOf("failure_settlement", FailureSettlement.destroyInput()).forGetter(ForgingSessionData::failureSettlement)
-    ).apply(instance, ForgingSessionData::new));
+    ).apply(i, ForgingSessionData::new));
     private Holder<ForgingBlueprint> blueprint;
     private ForgingPlan plan;
     private Snapshot session;
@@ -103,7 +104,7 @@ public final class ForgingSessionData {
         this.session = value.snapshot();
     }
 
-    public Identifier qualityFor(int extraSteps) {
+    public Holder<ItemQuality> qualityFor(int extraSteps) {
         if (extraSteps < 0) throw new IllegalArgumentException("extraSteps must be non-negative");
         return this.qualityByExtraSteps.stream().filter(entry -> extraSteps <= entry.maxExtraSteps()).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Forging quality snapshot has no terminal threshold")).quality();

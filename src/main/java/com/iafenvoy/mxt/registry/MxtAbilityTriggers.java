@@ -11,7 +11,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * Canonical trigger names consumed by the centralized ability event bridge.
  */
 public final class MxtAbilityTriggers {
-    public static final DeferredRegister<MapCodec<? extends AbilityTrigger>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ABILITY_TRIGGER_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends AbilityTrigger>> REGISTRY = DeferredRegister.create(MxtRegistries.ABILITY_TRIGGER_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends AbilityTrigger>, MapCodec<Builtin>> USE = register("use");
     public static final DeferredHolder<MapCodec<? extends AbilityTrigger>, MapCodec<Builtin>> TICK = register("tick");
     public static final DeferredHolder<MapCodec<? extends AbilityTrigger>, MapCodec<Builtin>> ATTACK = register("attack");

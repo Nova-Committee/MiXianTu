@@ -14,7 +14,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class MxtResourceBarVisibilities {
-    public static final DeferredRegister<MapCodec<? extends ResourceBarVisibility>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.RESOURCE_BAR_VISIBILITY_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends ResourceBarVisibility>> REGISTRY = DeferredRegister.create(MxtRegistries.RESOURCE_BAR_VISIBILITY_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends ResourceBarVisibility>, MapCodec<Always>> ALWAYS = REGISTRY.register("always", () -> Always.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceBarVisibility>, MapCodec<NonFull>> NON_FULL = REGISTRY.register("non_full", () -> NonFull.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceBarVisibility>, MapCodec<RecentlyChanged>> RECENTLY_CHANGED = REGISTRY.register("recently_changed", () -> RecentlyChanged.CODEC);

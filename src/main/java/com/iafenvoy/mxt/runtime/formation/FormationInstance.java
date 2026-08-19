@@ -78,10 +78,10 @@ public final class FormationInstance {
      */
     public record Snapshot(@NotNull Identifier formation, double radius, @NotNull Optional<UUID> owner, boolean active,
                            long maintenanceCount) {
-        public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Identifier.CODEC.fieldOf("formation").forGetter(Snapshot::formation), Codec.DOUBLE.fieldOf("radius").forGetter(Snapshot::radius), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(Snapshot::owner),
                 Codec.BOOL.optionalFieldOf("active", true).forGetter(Snapshot::active), Codec.LONG.optionalFieldOf("maintenance_count", 0L).forGetter(Snapshot::maintenanceCount)
-        ).apply(instance, Snapshot::new));
+        ).apply(i, Snapshot::new));
 
         public Snapshot(Identifier formation, double radius, boolean active, long maintenanceCount) {
             this(formation, radius, Optional.empty(), active, maintenanceCount);

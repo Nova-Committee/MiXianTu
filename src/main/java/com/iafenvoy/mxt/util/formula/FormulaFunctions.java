@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.util.formula;
 
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import net.objecthunter.exp4j.function.Function;
 
 import java.util.LinkedHashMap;
@@ -18,7 +18,7 @@ public final class FormulaFunctions {
 
     public static List<Function> all() {
         LinkedHashMap<String, Function> functions = new LinkedHashMap<>();
-        MxtTypeRegistries.FORMULA_FUNCTION.forEach(function -> {
+        MxtRegistries.FORMULA_FUNCTION.forEach(function -> {
             Function previous = functions.putIfAbsent(function.getName(), function);
             if (previous != null)
                 throw new IllegalStateException("Duplicate formula function name: " + function.getName());

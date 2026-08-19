@@ -27,12 +27,12 @@ import java.util.stream.Collectors;
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability.
  */
 public final class AbilityHolderData {
-    public static final MapCodec<AbilityHolderData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AbilityHolderData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.multiMap(Ability.CODEC, Identifier.CODEC).optionalFieldOf("sources", ImmutableMultimap.of()).forGetter(AbilityHolderData::sources),
             CollectionCodecs.longMap(Ability.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityHolderData::cooldowns),
             CollectionCodecs.map(Ability.CODEC, CollectionCodecs.map(Codec.STRING, AbilityComponentState.CODEC)).optionalFieldOf("component_states", Map.of()).forGetter(AbilityHolderData::componentStates),
             Ability.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityHolderData::channelledAbility)
-    ).apply(instance, AbilityHolderData::new));
+    ).apply(i, AbilityHolderData::new));
     private final Multimap<Holder<Ability>, Identifier> sources;
     private final Object2LongMap<Holder<Ability>> cooldowns;
     private final Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates;

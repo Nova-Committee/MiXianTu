@@ -1,7 +1,7 @@
 {
   "holder_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "attribute_modifiers": [
-    { "attribute": "minecraft:max_health", "operation": "add_value", "value": 4 }
+    { "attribute": "minecraft:max_health", "id": "mxt_test:physique/iron_bone", "amount": 4, "operation": "add_value" }
   ],
   "granted_abilities": [],
   "exclusive_tags": ["mxt_test:physique/bone"],

@@ -11,10 +11,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 
 public record AttributeCondition(Holder<Attribute> attribute, Comparison comparison) implements EntityCondition {
-    public static final MapCodec<AttributeCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AttributeCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Attribute.CODEC.fieldOf("attribute").forGetter(AttributeCondition::attribute),
             Comparison.CODEC.forGetter(AttributeCondition::comparison)
-    ).apply(instance, AttributeCondition::new));
+    ).apply(i, AttributeCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

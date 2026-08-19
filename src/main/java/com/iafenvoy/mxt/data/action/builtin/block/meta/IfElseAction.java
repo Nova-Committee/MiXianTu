@@ -12,11 +12,11 @@ import java.util.Optional;
 
 public record IfElseAction(BlockCondition condition, BlockAction ifAction,
                            Optional<BlockAction> elseAction) implements BlockAction {
-    public static final MapCodec<IfElseAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<IfElseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BlockCondition.CODEC.fieldOf("condition").forGetter(IfElseAction::condition),
             BlockAction.CODEC.fieldOf("if_action").forGetter(IfElseAction::ifAction),
             BlockAction.CODEC.optionalFieldOf("else_action").forGetter(IfElseAction::elseAction)
-    ).apply(instance, IfElseAction::new));
+    ).apply(i, IfElseAction::new));
 
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {

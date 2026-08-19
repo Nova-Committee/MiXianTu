@@ -12,10 +12,10 @@ import net.minecraft.resources.Identifier;
  * A positive resource gain evaluated by a data-driven action.
  */
 public record ResourceGain(Holder<Resource> resource, NumberProvider amount) {
-    public static final Codec<ResourceGain> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ResourceGain> CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("id").forGetter(ResourceGain::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(ResourceGain::amount)
-    ).apply(instance, ResourceGain::new));
+    ).apply(i, ResourceGain::new));
 
     public double evaluate(FormulaContext context) {
         double value = this.amount.evaluate(context);

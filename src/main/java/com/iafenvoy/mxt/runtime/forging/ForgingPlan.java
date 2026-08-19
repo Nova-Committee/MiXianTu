@@ -13,7 +13,7 @@ import java.util.Map.Entry;
  */
 public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Identifier> finishPattern,
                           int requiredSuffixSteps, Map<Identifier, Integer> deltas, int maxSteps, int optimalSteps) {
-    public static final Codec<ForgingPlan> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ForgingPlan> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.INT.fieldOf("meter_min").forGetter(ForgingPlan::meterMin),
             Codec.INT.fieldOf("meter_max").forGetter(ForgingPlan::meterMax),
             Codec.INT.fieldOf("target_min").forGetter(ForgingPlan::targetMin),
@@ -22,7 +22,7 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
             Codec.intRange(0, 6).fieldOf("required_suffix_steps").forGetter(ForgingPlan::requiredSuffixSteps),
             Codec.unboundedMap(Identifier.CODEC, Codec.INT).fieldOf("deltas").forGetter(ForgingPlan::deltas),
             Codec.INT.fieldOf("max_steps").forGetter(ForgingPlan::maxSteps)
-    ).apply(instance, ForgingPlan::new));
+    ).apply(i, ForgingPlan::new));
 
     public ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Identifier> finishPattern,
                        int requiredSuffixSteps, Map<Identifier, Integer> deltas, int maxSteps) {

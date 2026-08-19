@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.RealmInstanceData;
 import com.iafenvoy.mxt.attachment.RealmTravelData;
@@ -40,7 +41,7 @@ public final class RealmInstanceService {
             return Result.rejected(Failure.ALREADY_TRAVELLING);
         ServerLevel destination = destination(player.level().getServer(), definition).orElse(null);
         if (destination == null) return Result.rejected(Failure.MISSING_DIMENSION);
-        Holder<RealmInstance> realm = MxtDatapackRegistries.holder(MxtDatapackRegistries.REALM_INSTANCE, id).orElse(null);
+        Holder<RealmInstance> realm = MxtDatapackRegistries.holder(MxtResourceKeys.REALM_INSTANCE, id).orElse(null);
         if (realm == null) return Result.rejected(Failure.DISABLED);
         Result membership = enter(player.level(), data, realm, player.getUUID(), player.level().getGameTime());
         if (!membership.changed()) return membership;

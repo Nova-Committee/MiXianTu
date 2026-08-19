@@ -12,10 +12,10 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
 public record RealmLootCondition(EntityTarget target, Holder<RealmStage> realm) implements LootItemCondition {
-    public static final MapCodec<RealmLootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RealmLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(RealmLootCondition::target),
             RealmStage.CODEC.fieldOf("realm").forGetter(RealmLootCondition::realm)
-    ).apply(instance, RealmLootCondition::new));
+    ).apply(i, RealmLootCondition::new));
 
     @Override
     public @NonNull MapCodec<RealmLootCondition> codec() {

@@ -10,10 +10,10 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 public record JsNumberProvider(String id, JsonObject params) implements NumberProvider {
-    public static final MapCodec<JsNumberProvider> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsNumberProvider> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsNumberProvider::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsNumberProvider::params)
-    ).apply(instance, JsNumberProvider::new));
+    ).apply(i, JsNumberProvider::new));
 
     @Override
     public double evaluate(FormulaContext context) {

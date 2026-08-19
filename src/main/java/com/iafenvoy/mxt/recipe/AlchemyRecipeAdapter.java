@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.recipe;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
@@ -19,15 +20,15 @@ import org.jspecify.annotations.NonNull;
  * Recipe-manager reference; AlchemySession owns temperature and output transactions.
  */
 public record AlchemyRecipeAdapter(Identifier definition) implements Recipe<SingleRecipeInput> {
-    public static final MapCodec<AlchemyRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AlchemyRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.fieldOf("definition").forGetter(AlchemyRecipeAdapter::definition)
-    ).apply(instance, AlchemyRecipeAdapter::new));
+    ).apply(i, AlchemyRecipeAdapter::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, AlchemyRecipeAdapter> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     @Override
     public boolean matches(SingleRecipeInput input, @NonNull Level level) {
         if (input.isEmpty()) return false;
-        return MxtDatapackRegistries.get(MxtDatapackRegistries.ALCHEMY_RECIPE, this.definition)
+        return MxtDatapackRegistries.get(MxtResourceKeys.ALCHEMY_RECIPE, this.definition)
                 .filter(value -> value.inputs().size() == 1)
                 .map(value -> value.inputs().getFirst().equals(BuiltInRegistries.ITEM.getKey(input.item().getItem())))
                 .orElse(false);

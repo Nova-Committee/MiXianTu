@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.resource;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
@@ -59,7 +60,7 @@ public final class ResourceTransactions {
         // The holder is intentionally a value-only attachment.  A cost may never create a
         // negative balance, even when a caller has not resolved the optional datapack bounds.
         for (Entry<Identifier, Double> entry : evaluation.amounts.entrySet()) {
-            Holder<Resource> resource = MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, entry.getKey()).orElse(null);
+            Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, entry.getKey()).orElse(null);
             if (resource == null) return Result.rejected(entry.getKey(), evaluation.amounts);
             double amount = entry.getValue();
             double current = holder.get(resource);
@@ -68,7 +69,7 @@ public final class ResourceTransactions {
                 return Result.rejected(entry.getKey(), evaluation.amounts);
             }
         }
-        evaluation.amounts.forEach((id, amount) -> MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, id).ifPresent(resource -> {
+        evaluation.amounts.forEach((id, amount) -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
             Audit previous = holder.audit(resource);
             holder.set(resource, holder.get(resource) - amount, previous.minSnapshot(), previous.maxSnapshot(), previous.lastChangedTick(), "cost");
         }));

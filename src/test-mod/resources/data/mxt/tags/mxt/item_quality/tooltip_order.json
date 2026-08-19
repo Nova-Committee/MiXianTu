@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "mxt_test:excellent",
+    "mxt_test:normal",
+    "mxt_test:poor"
+  ]
+}

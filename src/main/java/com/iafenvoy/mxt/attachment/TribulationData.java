@@ -12,12 +12,12 @@ import java.util.Optional;
  * Active tribulation cursor. A missing definition disables progression rather than discarding the cursor.
  */
 public final class TribulationData {
-    public static final MapCodec<TribulationData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<TribulationData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(TribulationData::tribulation),
             Codec.INT.optionalFieldOf("phase", 0).forGetter(TribulationData::phase),
             Codec.LONG.optionalFieldOf("phase_ends_at", -1L).forGetter(TribulationData::phaseEndsAt),
             Codec.BOOL.optionalFieldOf("paused", false).forGetter(TribulationData::paused)
-    ).apply(instance, TribulationData::new));
+    ).apply(i, TribulationData::new));
     private Optional<Holder<Tribulation>> tribulation;
     private int phase;
     private long phaseEndsAt;

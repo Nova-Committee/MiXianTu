@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -28,7 +29,7 @@ public final class BlockAuraService {
     }
 
     public static void rebuild(ServerLevel level, LevelChunk chunk) {
-        List<BlockAura> active = MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.BLOCK_AURA)
+        List<BlockAura> active = MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.BLOCK_AURA)
                 .map(Reference::value).toList();
         double aura = 0.0D;
         double regen = 0.0D;

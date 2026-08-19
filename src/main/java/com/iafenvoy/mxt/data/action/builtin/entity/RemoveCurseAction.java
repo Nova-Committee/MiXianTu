@@ -15,9 +15,9 @@ import net.minecraft.world.entity.Entity;
  * Removes one curse through the same event-aware transaction used by expiry.
  */
 public record RemoveCurseAction(Holder<Curse> curse) implements EntityAction {
-    public static final MapCodec<RemoveCurseAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RemoveCurseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Curse.CODEC.fieldOf("curse").forGetter(RemoveCurseAction::curse)
-    ).apply(instance, RemoveCurseAction::new));
+    ).apply(i, RemoveCurseAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

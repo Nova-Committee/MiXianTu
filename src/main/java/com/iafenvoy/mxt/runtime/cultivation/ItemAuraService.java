@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.aura.ItemAura;
@@ -24,7 +25,7 @@ public final class ItemAuraService {
 
     public static Optional<Holder<ItemAura>> find(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        return MxtDatapackRegistries.holders(access, MxtDatapackRegistries.ITEM_AURA)
+        return MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_AURA)
                 .filter(holder -> holder.value().entries().stream().anyMatch(entry -> entry.matches(stack)))
                 .map(holder -> (Holder<ItemAura>) holder)
                 .findFirst();

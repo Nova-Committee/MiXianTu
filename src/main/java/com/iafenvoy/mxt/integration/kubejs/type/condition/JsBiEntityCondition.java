@@ -11,10 +11,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 
 public record JsBiEntityCondition(String id, JsonObject params) implements BiEntityCondition {
-    public static final MapCodec<JsBiEntityCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsBiEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsBiEntityCondition::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsBiEntityCondition::params)
-    ).apply(instance, JsBiEntityCondition::new));
+    ).apply(i, JsBiEntityCondition::new));
 
     @Override
     public boolean test(Entity actor, Entity target, FormulaContext context) {

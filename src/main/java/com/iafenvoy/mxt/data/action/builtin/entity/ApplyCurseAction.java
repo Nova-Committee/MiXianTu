@@ -18,11 +18,11 @@ import java.util.Optional;
  */
 public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
                                Optional<NumberProvider> durationTicks) implements EntityAction {
-    public static final MapCodec<ApplyCurseAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ApplyCurseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Curse.CODEC.fieldOf("curse").forGetter(ApplyCurseAction::curse),
             NumberProvider.CODEC.optionalFieldOf("stacks", new Constant(1.0D)).forGetter(ApplyCurseAction::stacks),
             NumberProvider.CODEC.optionalFieldOf("duration_ticks").forGetter(ApplyCurseAction::durationTicks)
-    ).apply(instance, ApplyCurseAction::new));
+    ).apply(i, ApplyCurseAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

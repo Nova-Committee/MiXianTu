@@ -21,10 +21,10 @@ import java.util.Optional;
  */
 public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projectile,
                                         EntityCondition projectileCondition) implements DamageCondition {
-    public static final MapCodec<ProjectileDamageCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ProjectileDamageCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(Registries.ENTITY_TYPE).optionalFieldOf("projectile").forGetter(ProjectileDamageCondition::projectile),
             EntityCondition.CODEC.optionalFieldOf("projectile_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(ProjectileDamageCondition::projectileCondition)
-    ).apply(instance, ProjectileDamageCondition::new));
+    ).apply(i, ProjectileDamageCondition::new));
 
     @Override
     public boolean test(DamageSource source, float amount, FormulaContext context) {

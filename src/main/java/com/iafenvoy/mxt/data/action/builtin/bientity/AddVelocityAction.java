@@ -18,7 +18,7 @@ import java.util.function.BiFunction;
 
 public record AddVelocityAction(float x, float y, float z, Reference reference, boolean client, boolean server,
                                 boolean set) implements BiEntityAction {
-    public static final MapCodec<AddVelocityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AddVelocityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.FLOAT.optionalFieldOf("x", 0.0F).forGetter(AddVelocityAction::x),
             Codec.FLOAT.optionalFieldOf("y", 0.0F).forGetter(AddVelocityAction::y),
             Codec.FLOAT.optionalFieldOf("z", 0.0F).forGetter(AddVelocityAction::z),
@@ -26,7 +26,7 @@ public record AddVelocityAction(float x, float y, float z, Reference reference, 
             Codec.BOOL.optionalFieldOf("client", true).forGetter(AddVelocityAction::client),
             Codec.BOOL.optionalFieldOf("server", true).forGetter(AddVelocityAction::server),
             Codec.BOOL.optionalFieldOf("set", false).forGetter(AddVelocityAction::set)
-    ).apply(instance, AddVelocityAction::new));
+    ).apply(i, AddVelocityAction::new));
 
     @Override
     public void execute(Entity actor, Entity target, FormulaContext context) {

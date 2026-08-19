@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.util.formula;
 
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
@@ -56,8 +56,8 @@ public final class FormulaVariables {
 
     private static Optional<FormulaVariable> variable(String name) {
         FormulaVariable result = null;
-        for (FormulaVariable candidate : MxtTypeRegistries.FORMULA_VARIABLE) {
-            Identifier id = MxtTypeRegistries.FORMULA_VARIABLE.getKey(candidate);
+        for (FormulaVariable candidate : MxtRegistries.FORMULA_VARIABLE) {
+            Identifier id = MxtRegistries.FORMULA_VARIABLE.getKey(candidate);
             if (!Objects.equals(id.getPath(), name)) continue;
             if (result != null) throw new IllegalStateException("Duplicate formula variable name: " + name);
             result = candidate;

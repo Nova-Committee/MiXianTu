@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AuraChunkData;
@@ -97,15 +98,15 @@ public final class AuraService {
     }
 
     private static Resolved staticZone(Level level, BlockPos pos) {
-        Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtDatapackRegistries.AURA_ZONE);
+        Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         Identifier dimension = level.dimension().identifier();
         Identifier biome = level.getBiome(pos).unwrapKey().map(ResourceKey::identifier).orElse(EMPTY);
         Resolved fallback = new Resolved(Optional.empty(), EMPTY_ZONE, SourceKind.CHUNK);
         Registry<Biome> biomeRegistry = level.registryAccess().lookupOrThrow(Registries.BIOME);
-        Resolved biomeResult = MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.AURA_ZONE)
+        Resolved biomeResult = MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.AURA_ZONE)
                 .filter(holder -> RegistryCodecs.matches(holder.value().biomes(), biomeRegistry, Registries.BIOME, biome))
                 .findFirst().map(holder -> resolved(holder, SourceKind.BIOME)).orElse(fallback);
-        return MxtDatapackRegistries.holders(level.registryAccess(), MxtDatapackRegistries.AURA_ZONE)
+        return MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.AURA_ZONE)
                 .filter(holder -> matchesDimension(level, holder.value(), dimension))
                 .findFirst().map(holder -> resolved(holder, SourceKind.DIMENSION)).orElse(biomeResult);
     }
@@ -124,7 +125,7 @@ public final class AuraService {
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel server)) return Optional.empty();
         return server.getData(MxtAttachments.AURA_WORLD).bestAt(pos)
-                .flatMap(entry -> MxtDatapackRegistries.holder(MxtDatapackRegistries.AURA_ZONE, entry.getValue().zone())
+                .flatMap(entry -> MxtDatapackRegistries.holder(MxtResourceKeys.AURA_ZONE, entry.getValue().zone())
                         .map(zone -> new Resolved(Optional.of(zone), zone.value(), SourceKind.CUSTOM)));
     }
 
@@ -133,7 +134,7 @@ public final class AuraService {
         return server.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet().stream()
                 .filter(entry -> entry.getKey().distSqr(pos) <= entry.getValue().radius() * entry.getValue().radius())
                 .max(Comparator.comparingDouble(entry -> -entry.getKey().distSqr(pos)))
-                .flatMap(entry -> MxtDatapackRegistries.get(MxtDatapackRegistries.FORMATION, entry.getValue().formation())
+                .flatMap(entry -> MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation())
                         .flatMap(Formation::auraZone)
                         .map(zone -> new Resolved(Optional.of(zone), zone.value(), SourceKind.FORMATION)));
     }

@@ -20,10 +20,10 @@ import net.minecraft.world.item.enchantment.ItemEnchantments.Mutable;
  */
 public record AddEnchantmentAction(Object2IntMap<Holder<Enchantment>> enchantments,
                                    boolean override) implements ItemAction {
-    public static final MapCodec<AddEnchantmentAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AddEnchantmentAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.intMap(Enchantment.CODEC).fieldOf("enchantments").forGetter(AddEnchantmentAction::enchantments),
             Codec.BOOL.optionalFieldOf("override", false).forGetter(AddEnchantmentAction::override)
-    ).apply(instance, AddEnchantmentAction::new));
+    ).apply(i, AddEnchantmentAction::new));
 
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {

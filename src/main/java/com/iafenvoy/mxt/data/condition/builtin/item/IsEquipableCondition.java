@@ -13,9 +13,9 @@ import net.minecraft.world.item.equipment.Equippable;
 import java.util.Optional;
 
 public record IsEquipableCondition(Optional<EquipmentSlot> slot) implements ItemCondition {
-    public static final MapCodec<IsEquipableCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<IsEquipableCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EquipmentSlot.CODEC.optionalFieldOf("slot").forGetter(IsEquipableCondition::slot)
-    ).apply(instance, IsEquipableCondition::new));
+    ).apply(i, IsEquipableCondition::new));
 
     @Override
     public boolean test(Entity holder, ItemStack stack, FormulaContext context) {

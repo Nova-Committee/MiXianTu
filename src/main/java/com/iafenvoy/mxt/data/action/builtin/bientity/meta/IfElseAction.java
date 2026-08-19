@@ -11,11 +11,11 @@ import java.util.Optional;
 
 public record IfElseAction(BiEntityCondition condition, BiEntityAction ifAction,
                            Optional<BiEntityAction> elseAction) implements BiEntityAction {
-    public static final MapCodec<IfElseAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<IfElseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityCondition.CODEC.fieldOf("condition").forGetter(IfElseAction::condition),
             BiEntityAction.CODEC.fieldOf("if_action").forGetter(IfElseAction::ifAction),
             BiEntityAction.CODEC.optionalFieldOf("else_action").forGetter(IfElseAction::elseAction)
-    ).apply(instance, IfElseAction::new));
+    ).apply(i, IfElseAction::new));
 
     @Override
     public void execute(Entity actor, Entity target, FormulaContext context) {

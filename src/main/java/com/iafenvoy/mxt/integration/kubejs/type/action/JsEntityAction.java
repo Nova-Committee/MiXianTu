@@ -11,10 +11,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 
 public record JsEntityAction(String id, JsonObject params) implements EntityAction {
-    public static final MapCodec<JsEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsEntityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsEntityAction::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsEntityAction::params)
-    ).apply(instance, JsEntityAction::new));
+    ).apply(i, JsEntityAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

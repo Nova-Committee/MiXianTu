@@ -11,12 +11,12 @@ import java.util.Optional;
  */
 public record ArtifactStateData(Optional<String> ownerUuid, Optional<Identifier> archetype, double nourishment,
                                 double spiritEnergy) {
-    public static final Codec<ArtifactStateData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ArtifactStateData> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.optionalFieldOf("owner_uuid").forGetter(ArtifactStateData::ownerUuid),
             Identifier.CODEC.optionalFieldOf("archetype").forGetter(ArtifactStateData::archetype),
             Codec.DOUBLE.optionalFieldOf("nourishment", 0.0D).forGetter(ArtifactStateData::nourishment),
             Codec.DOUBLE.optionalFieldOf("spirit_energy", 0.0D).forGetter(ArtifactStateData::spiritEnergy)
-    ).apply(instance, ArtifactStateData::new));
+    ).apply(i, ArtifactStateData::new));
 
     public ArtifactStateData {
         if (!Double.isFinite(nourishment) || nourishment < 0.0D || !Double.isFinite(spiritEnergy) || spiritEnergy < 0.0D) {

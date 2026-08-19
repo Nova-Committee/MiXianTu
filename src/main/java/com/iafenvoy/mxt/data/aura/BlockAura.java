@@ -24,13 +24,13 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 public record BlockAura(List<Either<Holder<Block>, TagKey<Block>>> blocks, double auraPerBlock,
                         double regenPerTickPerBlock, Object2DoubleMap<Holder<Element>> elementAuraPerBlock,
                         List<Identifier> auraKinds) {
-    public static final Codec<BlockAura> CODEC = RecordCodecBuilder.<BlockAura>create(instance -> instance.group(
+    public static final Codec<BlockAura> CODEC = RecordCodecBuilder.<BlockAura>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.BLOCK).fieldOf("blocks").forGetter(BlockAura::blocks),
             Codec.DOUBLE.optionalFieldOf("aura_per_block", 0.0D).forGetter(BlockAura::auraPerBlock),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick_per_block", 0.0D).forGetter(BlockAura::regenPerTickPerBlock),
             CollectionCodecs.doubleMap(Element.CODEC).optionalFieldOf("element_aura_per_block", Object2DoubleMaps.emptyMap()).forGetter(BlockAura::elementAuraPerBlock),
             Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(BlockAura::auraKinds)
-    ).apply(instance, BlockAura::new)).validate(BlockAura::validate);
+    ).apply(i, BlockAura::new)).validate(BlockAura::validate);
 
     private static DataResult<BlockAura> validate(BlockAura definition) {
         if (definition.blocks().isEmpty()) return DataResult.error(() -> "blocks must not be empty");

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.badge;
 
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
@@ -15,8 +15,8 @@ import java.util.function.Function;
  * It is intentionally data-only until a UI chooses to render it.
  */
 public interface Badge {
-    Codec<Holder<Badge>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.BADGE);
-    Codec<Badge> DIRECT_CODEC = MxtTypeRegistries.BADGE_TYPE.byNameCodec().dispatch("type", Badge::codec, Function.identity());
+    Codec<Holder<Badge>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.BADGE);
+    Codec<Badge> DIRECT_CODEC = MxtRegistries.BADGE_TYPE.byNameCodec().dispatch("type", Badge::codec, Function.identity());
 
     Identifier sprite();
 

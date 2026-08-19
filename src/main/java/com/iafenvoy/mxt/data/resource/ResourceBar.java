@@ -19,7 +19,7 @@ public record ResourceBar(Context context, Anchor anchor, int order,
     /**
      * Inline codec used by the owning {@link Resource} definition.
      */
-    public static final Codec<ResourceBar> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ResourceBar> CODEC = RecordCodecBuilder.create(i -> i.group(
             Context.CODEC.optionalFieldOf("context", Context.SELF_HUD).forGetter(ResourceBar::context),
             Anchor.CODEC.fieldOf("anchor").forGetter(ResourceBar::anchor),
             Codec.INT.optionalFieldOf("order", 0).forGetter(ResourceBar::order),
@@ -27,7 +27,7 @@ public record ResourceBar(Context context, Anchor anchor, int order,
             ResourceBarRenderer.CODEC.fieldOf("renderer").forGetter(ResourceBar::renderer),
             ValueDisplay.CODEC.optionalFieldOf("value_display", ValueDisplay.NONE).forGetter(ResourceBar::valueDisplay),
             Codec.BOOL.optionalFieldOf("replace_default", false).forGetter(ResourceBar::replaceDefault)
-    ).apply(instance, ResourceBar::new));
+    ).apply(i, ResourceBar::new));
 
     public enum Context implements StringRepresentable {
         SELF_HUD, TARGET_OVERLAY, BOSS_OVERLAY;

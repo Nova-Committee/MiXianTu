@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.integration;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -44,17 +45,17 @@ public final class MxtKubeJsApi {
     }
 
     public static Optional<Ability> ability(@NotNull Identifier id) {
-        return MxtDatapackRegistries.get(MxtDatapackRegistries.ABILITY, id);
+        return MxtDatapackRegistries.get(MxtResourceKeys.ABILITY, id);
     }
 
     public static Optional<Curse> curse(@NotNull Identifier id) {
-        return MxtDatapackRegistries.get(MxtDatapackRegistries.CURSE, id);
+        return MxtDatapackRegistries.get(MxtResourceKeys.CURSE, id);
     }
 
     public static UseResult useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
         if (actor.level().isClientSide())
             return new UseResult(false, false, AbilityService.Failure.SERVER_ONLY, null, Map.of());
-        Holder<Ability> ability = MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, id).orElse(null);
+        Holder<Ability> ability = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null)
             return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
         return AbilityService.use(ability, ability.value(), actor, actor.getData(MxtAttachments.ABILITY_HOLDER), actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
@@ -63,13 +64,13 @@ public final class MxtKubeJsApi {
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, String source, FormulaContext context) {
         if (target.level().isClientSide())
             return new ApplyResult(null, false, ApplyFailure.SERVER_ONLY);
-        Holder<Curse> curse = MxtDatapackRegistries.holder(MxtDatapackRegistries.CURSE, id).orElse(null);
+        Holder<Curse> curse = MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, id).orElse(null);
         if (curse == null) return new ApplyResult(null, false, ApplyFailure.CONDITION);
         return CurseService.apply(target, curse, stacks, target.level().getGameTime(), context, source);
     }
 
     public static boolean removeCurse(@NotNull Entity target, Identifier id) {
-        return !target.level().isClientSide() && MxtDatapackRegistries.holder(MxtDatapackRegistries.CURSE, id)
+        return !target.level().isClientSide() && MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, id)
                 .map(curse -> CurseService.remove(target.getData(MxtAttachments.CURSE_HOLDER), curse,
                         Reason.EXPLICIT, target.level().getGameTime()).isPresent()).orElse(false);
     }
@@ -84,7 +85,7 @@ public final class MxtKubeJsApi {
     public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier resource, FormulaContext context) {
         if (entity.level().isClientSide())
             return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
-        if (MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, resource).isEmpty())
+        if (MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, resource).isEmpty())
             return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
         return CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA), entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context, () -> true);
     }
@@ -117,7 +118,7 @@ public final class MxtKubeJsApi {
     }
 
     public static String addAuraBox(Level level, Identifier zone, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int priority) {
-        if (!(level instanceof ServerLevel server) || MxtDatapackRegistries.get(MxtDatapackRegistries.AURA_ZONE, zone).isEmpty())
+        if (!(level instanceof ServerLevel server) || MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, zone).isEmpty())
             throw new IllegalArgumentException("Aura areas require a loaded server aura_zone");
         return server.getData(MxtAttachments.AURA_WORLD).add(new Area(zone, new Shape(minX, minY, minZ, maxX, maxY, maxZ), priority));
     }

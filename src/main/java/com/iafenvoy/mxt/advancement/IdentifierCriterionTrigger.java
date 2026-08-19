@@ -23,14 +23,14 @@ public final class IdentifierCriterionTrigger extends SimpleCriterionTrigger<Ins
     }
 
     public void trigger(ServerPlayer player, Identifier definition) {
-        this.trigger(player, instance -> instance.definition().isEmpty() || instance.definition().get().equals(definition));
+        this.trigger(player, i -> i.definition().isEmpty() || i.definition().get().equals(definition));
     }
 
     public record Instance(Optional<ContextAwarePredicate> player,
                            Optional<Identifier> definition) implements SimpleInstance {
-        public static final Codec<Instance> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Instance> CODEC = RecordCodecBuilder.create(i -> i.group(
                 EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player").forGetter(Instance::player),
                 Identifier.CODEC.optionalFieldOf("definition").forGetter(Instance::definition)
-        ).apply(instance, Instance::new));
+        ).apply(i, Instance::new));
     }
 }

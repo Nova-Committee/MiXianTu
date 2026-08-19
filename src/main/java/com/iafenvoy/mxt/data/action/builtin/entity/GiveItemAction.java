@@ -14,11 +14,11 @@ import java.util.Optional;
 
 public record GiveItemAction(ItemStack stack, Optional<ItemAction> itemAction,
                              Optional<EquipmentSlot> preferredSlot) implements EntityAction {
-    public static final MapCodec<GiveItemAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<GiveItemAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ItemStack.CODEC.fieldOf("stack").forGetter(GiveItemAction::stack),
             ItemAction.CODEC.optionalFieldOf("item_action").forGetter(GiveItemAction::itemAction),
             EquipmentSlot.CODEC.optionalFieldOf("preferred_slot").forGetter(GiveItemAction::preferredSlot)
-    ).apply(instance, GiveItemAction::new));
+    ).apply(i, GiveItemAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

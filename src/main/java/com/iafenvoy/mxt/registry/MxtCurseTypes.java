@@ -14,7 +14,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * Built-in curse lifecycle algorithms selectable from datapacks.
  */
 public final class MxtCurseTypes {
-    public static final DeferredRegister<MapCodec<? extends CurseType>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.CURSE_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends CurseType>> REGISTRY = DeferredRegister.create(MxtRegistries.CURSE_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<Timed>> TIMED = REGISTRY.register("timed", () -> Timed.CODEC);
     public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<Permanent>> PERMANENT = REGISTRY.register("permanent", () -> Permanent.CODEC);
     public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<Triggered>> TRIGGERED = REGISTRY.register("triggered", () -> Triggered.CODEC);

@@ -131,10 +131,10 @@ public final class AlchemySession {
     }
 
     public record Snapshot(Identifier recipe, long remainingTicks, boolean spoiled, boolean complete) {
-        public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Identifier.CODEC.fieldOf("recipe").forGetter(Snapshot::recipe), Codec.LONG.fieldOf("remaining_ticks").forGetter(Snapshot::remainingTicks),
                 Codec.BOOL.optionalFieldOf("spoiled", false).forGetter(Snapshot::spoiled), Codec.BOOL.optionalFieldOf("complete", false).forGetter(Snapshot::complete)
-        ).apply(instance, Snapshot::new));
+        ).apply(i, Snapshot::new));
 
         public Snapshot {
             if (remainingTicks < 0L)

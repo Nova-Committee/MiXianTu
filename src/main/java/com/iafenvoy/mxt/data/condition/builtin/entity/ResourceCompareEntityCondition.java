@@ -12,9 +12,9 @@ import net.minecraft.world.entity.Entity;
 
 public record ResourceCompareEntityCondition(Holder<Resource> resource,
                                              NumberProvider min) implements EntityCondition {
-    public static final MapCodec<ResourceCompareEntityCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ResourceCompareEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(ResourceCompareEntityCondition::resource), NumberProvider.CODEC.fieldOf("min").forGetter(ResourceCompareEntityCondition::min)
-    ).apply(instance, ResourceCompareEntityCondition::new));
+    ).apply(i, ResourceCompareEntityCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

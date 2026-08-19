@@ -1,0 +1,9 @@
+{
+  "items": "mxt:cultivation_jade_slip",
+  "technique": "mxt_test:qingxiao_breathing_manual",
+  "quality_group": "#mxt_test:group/forged",
+  "condition": {
+    "type": "mxt:always_true"
+  },
+  "set_active": true
+}

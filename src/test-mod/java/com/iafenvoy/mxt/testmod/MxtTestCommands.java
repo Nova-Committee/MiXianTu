@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.SectData;
 import com.iafenvoy.mxt.attachment.SpiritData;
@@ -88,9 +89,9 @@ public final class MxtTestCommands {
             return 0;
         }
         spirit.setCultivationProgress(80.0D);
-        ensureResource(player, resources, require(MxtDatapackRegistries.RESOURCE, QI), 80.0D);
-        ensureResource(player, resources, require(MxtDatapackRegistries.RESOURCE, SPIRIT_POWER), 80.0D);
-        ensureResource(player, resources, require(MxtDatapackRegistries.RESOURCE, SOUL_POWER), 20.0D);
+        ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, QI), 80.0D);
+        ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 80.0D);
+        ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SOUL_POWER), 20.0D);
         joinSect(player);
 
         give(player, new ItemStack(MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.get(), 8));
@@ -106,10 +107,10 @@ public final class MxtTestCommands {
     }
 
     private static void grantIdentity(ServerPlayer player, SpiritData spirit, FormulaContext context) {
-        HolderLookup<SpiritRoot> root = new HolderLookup<>(MxtDatapackRegistries.SPIRIT_ROOT, ROOT);
-        HolderLookup<Physique> physique = new HolderLookup<>(MxtDatapackRegistries.PHYSIQUE, PHYSIQUE);
-        HolderLookup<CultivationTechnique> technique = new HolderLookup<>(MxtDatapackRegistries.CULTIVATION_TECHNIQUE, TECHNIQUE);
-        HolderLookup<Title> title = new HolderLookup<>(MxtDatapackRegistries.TITLE, TITLE);
+        HolderLookup<SpiritRoot> root = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, ROOT);
+        HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
+        HolderLookup<CultivationTechnique> technique = new HolderLookup<>(MxtResourceKeys.CULTIVATION_TECHNIQUE, TECHNIQUE);
+        HolderLookup<Title> title = new HolderLookup<>(MxtResourceKeys.TITLE, TITLE);
         CultivationIdentityService.grantSpiritRoot(player, ROOT, root.value());
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
         TechniqueService.learn(player, spirit, TECHNIQUE, technique.value(), ignored -> Optional.empty(), context);
@@ -121,7 +122,7 @@ public final class MxtTestCommands {
     private static int startCultivation(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        CultivateAction action = require(MxtDatapackRegistries.CULTIVATE_ACTION, CULTIVATE).value();
+        CultivateAction action = require(MxtResourceKeys.CULTIVATE_ACTION, CULTIVATE).value();
         CultivationActionService.Result result = CultivationActionService.start(player, player.getData(MxtAttachments.SPIRIT_DATA),
                 CULTIVATE, action, player.level().getGameTime(), FormulaContext.of(player));
         if (!result.started()) {
@@ -136,7 +137,7 @@ public final class MxtTestCommands {
         ServerPlayer player = player(source);
         if (player == null) return 0;
         SectData data = player.getData(MxtAttachments.SECT);
-        Result result = SectService.completeTask(data, require(MxtDatapackRegistries.SECT, SECT), SECT_TASK);
+        Result result = SectService.completeTask(data, require(MxtResourceKeys.SECT, SECT), SECT_TASK);
         if (!result.changed()) {
             source.sendFailure(Component.translatable("command.mxt_test.task.failed", result.failure().name()));
             return 0;
@@ -164,24 +165,24 @@ public final class MxtTestCommands {
     private static void joinSect(ServerPlayer player) {
         SectData data = player.getData(MxtAttachments.SECT);
         if (data.member()) return;
-        SectService.join(data, require(MxtDatapackRegistries.SECT, SECT));
+        SectService.join(data, require(MxtResourceKeys.SECT, SECT));
     }
 
     private static ItemStack formationPlate() {
         ItemStack stack = new ItemStack(MxtItems.FORMATION_PLATE.get());
-        stack.set(MxtDataComponents.FORMATION_PLATE, new FormationPlateData(Optional.of(require(MxtDatapackRegistries.FORMATION, FORMATION))));
+        stack.set(MxtDataComponents.FORMATION_PLATE, new FormationPlateData(Optional.of(require(MxtResourceKeys.FORMATION, FORMATION))));
         return stack;
     }
 
     private static ItemStack realmToken() {
         ItemStack stack = new ItemStack(MxtItems.REALM_TOKEN.get());
-        stack.set(MxtDataComponents.REALM_TOKEN, new RealmTokenData(Optional.of(require(MxtDatapackRegistries.REALM_INSTANCE, REALM))));
+        stack.set(MxtDataComponents.REALM_TOKEN, new RealmTokenData(Optional.of(require(MxtResourceKeys.REALM_INSTANCE, REALM))));
         return stack;
     }
 
     private static ItemStack contractScroll() {
         ItemStack stack = new ItemStack(MxtItems.CONTRACT_SCROLL.get());
-        stack.set(MxtDataComponents.CONTRACT_SCROLL, new ContractScrollData(Optional.of(require(MxtDatapackRegistries.CONTRACT_TYPE, CONTRACT))));
+        stack.set(MxtDataComponents.CONTRACT_SCROLL, new ContractScrollData(Optional.of(require(MxtResourceKeys.CONTRACT_TYPE, CONTRACT))));
         return stack;
     }
 
@@ -191,7 +192,7 @@ public final class MxtTestCommands {
 
     private static ServerPlayer player(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
-        if (player == null) source.sendFailure(Component.translatable("mxt.command.requires_player"));
+        if (player == null) source.sendFailure(Component.translatable("command.mxt.requires_player"));
         return player;
     }
 

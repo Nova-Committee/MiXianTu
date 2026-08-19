@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.item;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -14,7 +14,7 @@ import java.util.Optional;
  */
 public record ContractScrollData(Optional<Holder<ContractType>> contractType) {
     public static final ContractScrollData EMPTY = new ContractScrollData(Optional.empty());
-    public static final Codec<ContractScrollData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractScrollData::contractType)
-    ).apply(instance, ContractScrollData::new));
+    public static final Codec<ContractScrollData> CODEC = RecordCodecBuilder.create(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractScrollData::contractType)
+    ).apply(i, ContractScrollData::new));
 }

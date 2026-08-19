@@ -1,27 +1,38 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
+import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
+import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
+import com.iafenvoy.mxt.render.accessory.AccessoryRenderReloadListener;
 import com.iafenvoy.mxt.screen.gui.ChequeTableScreen;
 import com.iafenvoy.mxt.screen.gui.ExchangeStationScreen;
 import com.iafenvoy.mxt.screen.gui.PlayerTradeScreen;
 import com.iafenvoy.mxt.screen.gui.StationScreen;
 import net.minecraft.client.renderer.entity.NoopRenderer;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.player.PlayerModelType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.minecraft.resources.Identifier;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class MxtRenderers {
     @SubscribeEvent
-    public static void register(RegisterRenderers event) {
+    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(MxtEntityTypes.FLYING_SWORD.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), NoopRenderer::new);
+
+        event.registerBlockEntityRenderer(MxtBlockEntities.TRADE_STATION.get(), StationBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(MxtBlockEntities.SYSTEM_STATION.get(), StationBlockEntityRenderer::new);
     }
 
     @SubscribeEvent
-    public static void register(RegisterMenuScreensEvent event) {
+    public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(MxtMenus.CHEQUE_TABLE.get(), ChequeTableScreen::new);
         event.register(MxtMenus.EXCHANGE_STATION.get(), ExchangeStationScreen::new);
         event.register(MxtMenus.SYSTEM_STATION_OWNER.get(), StationScreen::new);
@@ -31,9 +42,22 @@ public final class MxtRenderers {
         event.register(MxtMenus.PLAYER_TRADE.get(), PlayerTradeScreen::new);
     }
 
+    /**
+     * Adds Curios back and belt weapon layers to both vanilla player model variants.
+     */
     @SubscribeEvent
-    public static void registerBlockEntityRenderers(RegisterRenderers event) {
-        event.registerBlockEntityRenderer(MxtBlockEntities.TRADE_STATION.get(), StationBlockEntityRenderer::new);
-        event.registerBlockEntityRenderer(MxtBlockEntities.SYSTEM_STATION.get(), StationBlockEntityRenderer::new);
+    public static void addPlayerLayers(EntityRenderersEvent.AddLayers event) {
+        for (PlayerModelType skin : event.getSkins()) {
+            AvatarRenderer<AbstractClientPlayer> renderer = event.getPlayerRenderer(skin);
+            if (renderer == null) continue;
+            renderer.addLayer(new BackWeaponRenderer(renderer, event.getContext().getItemModelResolver()));
+            renderer.addLayer(new BeltWeaponRenderer(renderer, event.getContext().getItemModelResolver()));
+        }
+    }
+
+    @SubscribeEvent
+    public static void registerAccessoryRenderReload(AddClientReloadListenersEvent event) {
+        event.addListener(Identifier.fromNamespaceAndPath(com.iafenvoy.mxt.MiXianTu.MOD_ID, "accessory_render"),
+                new AccessoryRenderReloadListener());
     }
 }

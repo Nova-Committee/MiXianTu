@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.AuraChunkData;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
@@ -37,7 +38,7 @@ public final class CultivationActionService {
 
     public static Result start(SpiritData spirit, @NotNull Identifier actionId, CultivateAction definition,
                                long gameTime, BooleanSupplier conditionsMet) {
-        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtDatapackRegistries.CULTIVATE_ACTION, actionId).orElse(null);
+        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATE_ACTION, actionId).orElse(null);
         if (action == null) return Result.rejected(Failure.DISABLED, null);
         return start(spirit, action, definition, gameTime, conditionsMet);
     }
@@ -75,8 +76,8 @@ public final class CultivationActionService {
     public static Result tick(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, AuraChunkData aura, Identifier actionId,
                               CultivateAction definition, long gameTime, FormulaContext context,
                               BooleanSupplier conditionsMet) {
-        double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id),
-                id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATION_TECHNIQUE, id));
+        double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id),
+                id -> MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATION_TECHNIQUE, id));
         return tick(spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, affinity);
     }
 
@@ -86,7 +87,7 @@ public final class CultivationActionService {
     public static Result tick(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, AuraResult aura, Identifier actionId,
                               CultivateAction definition, long gameTime, FormulaContext context,
                               BooleanSupplier conditionsMet) {
-        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtDatapackRegistries.CULTIVATE_ACTION, actionId).orElse(null);
+        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATE_ACTION, actionId).orElse(null);
         if (action == null) return Result.rejected(Failure.DISABLED, null);
         return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet);
     }
@@ -95,8 +96,8 @@ public final class CultivationActionService {
                               CultivateAction definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
         Identifier actionId = HolderHelper.id(action);
         if (aura.suppressCultivate()) return stop(spirit, action, definition, gameTime, Failure.ENVIRONMENT);
-        double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id),
-                id -> MxtDatapackRegistries.get(MxtDatapackRegistries.CULTIVATION_TECHNIQUE, id));
+        double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id),
+                id -> MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATION_TECHNIQUE, id));
         return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
     }
 
@@ -144,7 +145,7 @@ public final class CultivationActionService {
     private static Result tick(SpiritData spirit, ResourceHolderData resources, AuraChunkData aura, Identifier actionId,
                                CultivateAction definition, long gameTime, FormulaContext context,
                                BooleanSupplier conditionsMet, double affinity) {
-        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtDatapackRegistries.CULTIVATE_ACTION, actionId).orElse(null);
+        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATE_ACTION, actionId).orElse(null);
         if (action == null) return Result.rejected(Failure.DISABLED, null);
         if (spirit.cultivateAction().filter(action::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
@@ -186,7 +187,7 @@ public final class CultivationActionService {
     }
 
     private static Result stop(SpiritData spirit, Identifier actionId, CultivateAction definition, long gameTime, Failure reason) {
-        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtDatapackRegistries.CULTIVATE_ACTION, actionId).orElse(null);
+        Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATE_ACTION, actionId).orElse(null);
         return action == null ? Result.rejected(Failure.DISABLED, null) : stop(spirit, action, definition, gameTime, reason);
     }
 
@@ -209,7 +210,7 @@ public final class CultivationActionService {
 
     private static boolean canApplyGains(ResourceHolderData resources, Map<Identifier, Double> gains, FormulaContext context) {
         for (Entry<Identifier, Double> gain : gains.entrySet()) {
-            Resource definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey()).orElse(null);
+            Resource definition = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey()).orElse(null);
             if (definition == null || !ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context).valid())
                 return false;
         }
@@ -219,7 +220,7 @@ public final class CultivationActionService {
     private static boolean canApplyGains(LivingEntity entity, ResourceHolderData resources, Map<Identifier, Double> gains,
                                          FormulaContext context) {
         for (Entry<Identifier, Double> gain : gains.entrySet()) {
-            Resource definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey()).orElse(null);
+            Resource definition = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey()).orElse(null);
             if (definition == null || !ResourceService.change(resources, gain.getKey(), definition, gain.getValue(),
                     ResourceService.formulaContext(entity, gain.getKey(), definition, context)).valid())
                 return false;
@@ -229,28 +230,28 @@ public final class CultivationActionService {
 
     private static void applyGains(ResourceHolderData resources, Map<Identifier, Double> gains, FormulaContext context) {
         for (Entry<Identifier, Double> gain : gains.entrySet())
-            MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey())
+            MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey())
                     .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context));
     }
 
     private static void applyGains(LivingEntity entity, ResourceHolderData resources, Map<Identifier, Double> gains,
                                    FormulaContext context) {
         for (Entry<Identifier, Double> gain : gains.entrySet())
-            MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, gain.getKey())
+            MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey())
                     .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(),
                             ResourceService.formulaContext(entity, gain.getKey(), definition, context)));
     }
 
     private static boolean canConvertAbsorption(SpiritData spirit, ResourceHolderData resources, double absorbed,
                                                 FormulaContext context) {
-        ActiveResource active = activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+        ActiveResource active = activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id)
                 .map(definition -> new ActiveResource(id, definition))).orElse(null);
         return active == null || conversion(active, context, spirit, resources).valid();
     }
 
     private static boolean canConvertAbsorption(LivingEntity entity, SpiritData spirit, ResourceHolderData resources,
                                                 double absorbed, FormulaContext context) {
-        ActiveResource active = activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+        ActiveResource active = activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id)
                 .map(definition -> new ActiveResource(id, definition))).orElse(null);
         return active == null || conversion(active, ResourceService.formulaContext(entity, active.id(), active.definition(), context), spirit, resources).valid();
     }
@@ -261,7 +262,7 @@ public final class CultivationActionService {
      */
     private static void restoreAbsorption(SpiritData spirit, ResourceHolderData resources, double absorbed,
                                           FormulaContext context) {
-        activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+        activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id)
                 .map(definition -> new ActiveResource(id, definition))).ifPresent(active ->
                 ResourceService.change(resources, active.id(), active.definition(), absorbed,
                         ResourceService.formulaContext(spirit, active.id(), active.definition(), context)));
@@ -269,7 +270,7 @@ public final class CultivationActionService {
 
     private static void restoreAbsorption(LivingEntity entity, SpiritData spirit, ResourceHolderData resources,
                                           double absorbed, FormulaContext context) {
-        activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+        activeResource(spirit).flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id)
                 .map(definition -> new ActiveResource(id, definition))).ifPresent(active ->
                 ResourceService.change(resources, active.id(), active.definition(), absorbed,
                         ResourceService.formulaContext(entity, active.id(), active.definition(), context)));
@@ -292,14 +293,14 @@ public final class CultivationActionService {
 
     private static void convert(Optional<Identifier> resourceId, SpiritData spirit, ResourceHolderData resources,
                                 FormulaContext context) {
-        resourceId.flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+        resourceId.flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id)
                 .map(definition -> new ActiveResource(id, definition))).ifPresent(active ->
                 convert(active, spirit, resources, ResourceService.formulaContext(spirit, active.id(), active.definition(), context)));
     }
 
     private static void convert(Optional<Identifier> resourceId, SpiritData spirit, ResourceHolderData resources,
                                 FormulaContext context, LivingEntity entity) {
-        resourceId.flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id)
+        resourceId.flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id)
                 .map(definition -> new ActiveResource(id, definition))).ifPresent(active ->
                 convert(active, spirit, resources, ResourceService.formulaContext(entity, active.id(), active.definition(), context)));
     }
@@ -309,7 +310,7 @@ public final class CultivationActionService {
         Conversion conversion = conversion(active, context, spirit, resources);
         if (!conversion.valid()) return;
         Resource definition = active.definition();
-        Holder<Resource> resource = MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, active.id()).orElse(null);
+        Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, active.id()).orElse(null);
         if (resource == null) return;
         Bounds bounds = ResourceService.resolveBounds(definition, context).orElseThrow();
 
@@ -337,7 +338,7 @@ public final class CultivationActionService {
     }
 
     private static Optional<Identifier> activeResource(SpiritData spirit) {
-        return spirit.realmStage().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, id))
+        return spirit.realmStage().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.REALM_STAGE, id))
                 .map(realm -> HolderHelper.id(realm.resource()));
     }
 

@@ -24,12 +24,12 @@ import java.util.function.Function;
  */
 public record RelativeRotationCondition(EnumSet<Axis> axis, RotationType actorRotation, RotationType targetRotation,
                                         Comparison comparison) implements BiEntityCondition {
-    public static final MapCodec<RelativeRotationCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RelativeRotationCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Axis.CODEC.listOf().xmap(EnumSet::copyOf, List::copyOf).optionalFieldOf("axis", EnumSet.allOf(Axis.class)).forGetter(RelativeRotationCondition::axis),
             RotationType.CODEC.optionalFieldOf("actor_rotation", RotationType.HEAD).forGetter(RelativeRotationCondition::actorRotation),
             RotationType.CODEC.optionalFieldOf("target_rotation", RotationType.BODY).forGetter(RelativeRotationCondition::targetRotation),
             Comparison.CODEC.forGetter(RelativeRotationCondition::comparison)
-    ).apply(instance, RelativeRotationCondition::new));
+    ).apply(i, RelativeRotationCondition::new));
 
     @Override
     public boolean test(Entity actor, Entity target, FormulaContext context) {

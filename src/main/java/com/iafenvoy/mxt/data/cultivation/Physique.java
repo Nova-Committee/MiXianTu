@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.data.AttributeModifier;
+import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
@@ -19,16 +19,16 @@ import java.util.List;
 /**
  * Element-independent innate or acquired physique. Intentionally has no element field.
  */
-public record Physique(List<AttributeModifier> attributeModifiers,
+public record Physique(List<AttributeEntry> attributeModifiers,
                        List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities, EntityCondition holderCondition,
                        List<Identifier> exclusiveTags, String rarity, boolean allowStacking) {
-    public static final Codec<Holder<Physique>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.PHYSIQUE);
-    public static final Codec<Physique> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            AttributeModifier.CODEC.listOf().optionalFieldOf("attribute_modifiers", List.of()).forGetter(Physique::attributeModifiers),
-            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
+    public static final Codec<Holder<Physique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PHYSIQUE);
+    public static final Codec<Physique> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+            AttributeEntry.CODEC.listOf().optionalFieldOf("attribute_modifiers", List.of()).forGetter(Physique::attributeModifiers),
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
             EntityCondition.CODEC.optionalFieldOf("holder_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Physique::holderCondition),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Physique::exclusiveTags),
             Codec.STRING.optionalFieldOf("rarity", "common").forGetter(Physique::rarity),
             Codec.BOOL.optionalFieldOf("allow_stacking", false).forGetter(Physique::allowStacking)
-    ).apply(instance, Physique::new));
+    ).apply(i, Physique::new));
 }

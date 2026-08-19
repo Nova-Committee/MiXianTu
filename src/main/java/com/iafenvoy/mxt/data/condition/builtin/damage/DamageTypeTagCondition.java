@@ -13,9 +13,9 @@ import net.minecraft.world.damagesource.DamageType;
  * Matches a damage source against a damage-type tag.
  */
 public record DamageTypeTagCondition(TagKey<DamageType> tag) implements DamageCondition {
-    public static final MapCodec<DamageTypeTagCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<DamageTypeTagCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             TagKey.codec(Registries.DAMAGE_TYPE).fieldOf("tag").forGetter(DamageTypeTagCondition::tag)
-    ).apply(instance, DamageTypeTagCondition::new));
+    ).apply(i, DamageTypeTagCondition::new));
 
     @Override
     public boolean test(DamageSource source, float amount, FormulaContext context) {

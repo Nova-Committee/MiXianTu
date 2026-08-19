@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.alchemy;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Failure;
@@ -8,6 +9,8 @@ import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.TickResult;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.TickResult.State;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 
 /**
  * Inventory/UI-neutral contract for an alchemy block entity or another server workstation.
@@ -23,7 +26,7 @@ public interface AlchemyWorkstation {
     void setChanged();
 
     default StartResult startAlchemy(Identifier recipe, FormulaContext context) {
-        StartResult result = MxtDatapackRegistries.get(MxtDatapackRegistries.ALCHEMY_RECIPE, recipe)
+        StartResult result = MxtDatapackRegistries.get(MxtResourceKeys.ALCHEMY_RECIPE, recipe)
                 .map(definition -> AlchemyWorkstationService.start(this.alchemyState(), recipe, definition, this.furnaceTier(), context))
                 .orElse(StartResult.rejected(Failure.DISABLED));
         if (result.started()) this.setChanged();
@@ -33,8 +36,18 @@ public interface AlchemyWorkstation {
     default TickResult tickAlchemy(FormulaContext context) {
         Identifier recipe = this.alchemyState().session().map(Snapshot::recipe).orElse(null);
         if (recipe == null) return TickResult.idle();
-        TickResult result = MxtDatapackRegistries.get(MxtDatapackRegistries.ALCHEMY_RECIPE, recipe)
+        TickResult result = MxtDatapackRegistries.get(MxtResourceKeys.ALCHEMY_RECIPE, recipe)
                 .map(definition -> AlchemyWorkstationService.tick(this.alchemyState(), definition, this.temperature(), context))
+                .orElse(TickResult.invalidOutput(false));
+        if (result.state() != State.IDLE) this.setChanged();
+        return result;
+    }
+
+    default TickResult tickAlchemy(Level level, BlockPos pos, FormulaContext context) {
+        Identifier recipe = this.alchemyState().session().map(Snapshot::recipe).orElse(null);
+        if (recipe == null) return TickResult.idle();
+        TickResult result = MxtDatapackRegistries.get(MxtResourceKeys.ALCHEMY_RECIPE, recipe)
+                .map(definition -> AlchemyWorkstationService.tick(level, pos, this.alchemyState(), definition, this.temperature(), context))
                 .orElse(TickResult.invalidOutput(false));
         if (result.state() != State.IDLE) this.setChanged();
         return result;

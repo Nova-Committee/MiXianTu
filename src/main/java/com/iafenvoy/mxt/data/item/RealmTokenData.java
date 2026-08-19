@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.item;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.RealmInstance;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -14,7 +14,7 @@ import java.util.Optional;
  */
 public record RealmTokenData(Optional<Holder<RealmInstance>> realm) {
     public static final RealmTokenData EMPTY = new RealmTokenData(Optional.empty());
-    public static final Codec<RealmTokenData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTokenData::realm)
-    ).apply(instance, RealmTokenData::new));
+    public static final Codec<RealmTokenData> CODEC = RecordCodecBuilder.create(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTokenData::realm)
+    ).apply(i, RealmTokenData::new));
 }

@@ -13,7 +13,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class MxtResourceValueProviders {
-    public static final DeferredRegister<MapCodec<? extends ResourceValueProvider>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.RESOURCE_VALUE_PROVIDER_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends ResourceValueProvider>> REGISTRY = DeferredRegister.create(MxtRegistries.RESOURCE_VALUE_PROVIDER_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends ResourceValueProvider>, MapCodec<Current>> CURRENT = REGISTRY.register("current", () -> Current.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceValueProvider>, MapCodec<JsResourceValueProvider>> JS = REGISTRY.register("js", () -> JsResourceValueProvider.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceValueProvider>, MapCodec<Maximum>> MAX = REGISTRY.register("max", () -> Maximum.CODEC);

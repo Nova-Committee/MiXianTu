@@ -14,10 +14,10 @@ import java.util.Optional;
  * Origins-compatible player experience action without Origin-specific state.
  */
 public record AddExperienceAction(Optional<Integer> points, Optional<Integer> levels) implements EntityAction {
-    public static final MapCodec<AddExperienceAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AddExperienceAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.INT.optionalFieldOf("points").forGetter(AddExperienceAction::points),
             Codec.INT.optionalFieldOf("levels").forGetter(AddExperienceAction::levels)
-    ).apply(instance, AddExperienceAction::new));
+    ).apply(i, AddExperienceAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

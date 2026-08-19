@@ -12,9 +12,9 @@ import net.minecraft.world.entity.Entity;
  * Tests the vehicle at the root of this entity's riding chain.
  */
 public record RidingRootCondition(BiEntityCondition bientityCondition) implements EntityCondition {
-    public static final MapCodec<RidingRootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RidingRootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition", new ConstantCondition(true)).forGetter(RidingRootCondition::bientityCondition)
-    ).apply(instance, RidingRootCondition::new));
+    ).apply(i, RidingRootCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

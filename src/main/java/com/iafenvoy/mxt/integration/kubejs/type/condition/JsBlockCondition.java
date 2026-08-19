@@ -12,10 +12,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 public record JsBlockCondition(String id, JsonObject params) implements BlockCondition {
-    public static final MapCodec<JsBlockCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsBlockCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsBlockCondition::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsBlockCondition::params)
-    ).apply(instance, JsBlockCondition::new));
+    ).apply(i, JsBlockCondition::new));
 
     @Override
     public boolean test(Level level, BlockPos pos, FormulaContext context) {

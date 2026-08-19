@@ -30,13 +30,13 @@ public final class MxtCreativeTabs {
             .displayItems((parameters, output) -> MxtItems.registeredItems().forEach(item -> output.accept(item.get()))).build());
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ITEM = REGISTRY.register("item", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.mxt.item")).icon(() -> new ItemStack(Items.APPLE))
-            .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtDatapackRegistries.ITEM_BINDING).forEach(output::accept)).build());
+            .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtResourceKeys.ITEM_BINDING).forEach(output::accept)).build());
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> PILL = REGISTRY.register("pill", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.mxt.pill")).icon(() -> new ItemStack(Items.HONEY_BOTTLE))
-            .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtDatapackRegistries.PILL_BINDING).forEach(output::accept)).build());
+            .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtResourceKeys.PILL_BINDING).forEach(output::accept)).build());
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> WEAPON = REGISTRY.register("weapon", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.mxt.weapon")).icon(() -> new ItemStack(Items.DIAMOND_SWORD))
-            .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtDatapackRegistries.WEAPON_BINDING).forEach(output::accept)).build());
+            .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtResourceKeys.WEAPON_BINDING).forEach(output::accept)).build());
 
     private static <T extends ItemMatcher> Stream<Item> matchingItems(Provider holders, ResourceKey<Registry<T>> registry) {
         List<T> bindings = MxtDatapackRegistries.holders(holders, registry).map(Reference::value).toList();

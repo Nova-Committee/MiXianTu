@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.block.meta.NoOpBlockAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
@@ -25,8 +25,8 @@ public record Formation(Identifier structureTemplate, NumberProvider radius, Lis
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction,
                         Optional<Holder<AuraZone>> auraZone) {
-    public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.FORMATION);
-    public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
+    public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Identifier.CODEC.fieldOf("structure_template").forGetter(Formation::structureTemplate),
             NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
             ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
@@ -36,5 +36,5 @@ public record Formation(Identifier structureTemplate, NumberProvider radius, Lis
             BlockAction.CODEC.optionalFieldOf("deactivate_action", NoOpBlockAction.INSTANCE).forGetter(Formation::deactivateAction),
             EntityAction.CODEC.optionalFieldOf("entity_tick_action", NoOpAction.INSTANCE).forGetter(Formation::entityTickAction),
             AuraZone.CODEC.optionalFieldOf("aura_zone").forGetter(Formation::auraZone)
-    ).apply(instance, Formation::new));
+    ).apply(i, Formation::new));
 }

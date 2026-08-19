@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.alchemy;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -18,7 +19,7 @@ public final class SpiritHerbService {
     }
 
     public static Optional<SpiritHerb> find(ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.SPIRIT_HERB)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.SPIRIT_HERB)
                 .map(Reference::value), stack);
     }
 
@@ -26,7 +27,7 @@ public final class SpiritHerbService {
      * Reads the matching definition from the client-synchronised registry view.
      */
     public static Optional<SpiritHerb> find(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.SPIRIT_HERB)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
                 .map(Reference::value), stack);
     }
 }

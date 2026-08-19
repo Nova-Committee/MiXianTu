@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.command;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
@@ -75,7 +76,7 @@ public final class MxtCommand {
         String text = MxtDatapackRegistries.registries().stream()
                 .map(key -> key.identifier() + "=" + MxtDatapackRegistries.size(key))
                 .collect(Collectors.joining(", "));
-        source.sendSuccess(() -> Component.translatable("mxt.command.registries.list", text), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.registries.list", text), false);
         return MxtDatapackRegistries.registries().size();
     }
 
@@ -83,7 +84,7 @@ public final class MxtCommand {
         int registryCount = MxtDatapackRegistries.registries().size();
         int entryCount = MxtDatapackRegistries.registries().stream()
                 .mapToInt(MxtDatapackRegistries::size).sum();
-        source.sendSuccess(() -> Component.translatable("mxt.command.registries.validation_passed", registryCount, entryCount,
+        source.sendSuccess(() -> Component.translatable("command.mxt.registries.validation_passed", registryCount, entryCount,
                 "native datapack registries loaded"), false);
         return 1;
     }
@@ -91,14 +92,14 @@ public final class MxtCommand {
     private static int attachmentStatus(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("mxt.command.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
         AbilityHolderData abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         CurseHolderData curses = player.getData(MxtAttachments.CURSE_HOLDER);
         ResourceHolderData resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         SpiritData spirit = player.getData(MxtAttachments.SPIRIT_DATA);
-        source.sendSuccess(() -> Component.translatable("mxt.command.attachment.status", resources.values().size(), abilities.sources().size(),
+        source.sendSuccess(() -> Component.translatable("command.mxt.attachment.status", resources.values().size(), abilities.sources().size(),
                 abilities.cooldowns().size(), curses.instances().size(), spirit.spiritRoots().size(), spirit.physiques().size()), false);
         return 1;
     }
@@ -107,10 +108,10 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         Identifier id = parseId(source, rawId);
         if (player == null || id == null) return 0;
-        Reference<Resource> resource = MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, id).orElse(null);
+        Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
         if (resource == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("mxt.command.resource.query", id, value), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", id, value), false);
         return 1;
     }
 
@@ -118,35 +119,35 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         Identifier id = parseId(source, rawId);
         if (player == null || id == null) return 0;
-        Reference<Resource> resource = MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, id).orElse(null);
+        Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
         if (resource == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
-        source.sendSuccess(() -> Component.translatable("mxt.command.resource.set", id, value), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", id, value), true);
         return 1;
     }
 
     private static int cultivateStatus(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("mxt.command.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
         SpiritData spirit = player.getData(MxtAttachments.SPIRIT_DATA);
-        Component action = spirit.cultivateAction().<Component>map(id -> Component.literal(id.toString())).orElseGet(() -> Component.translatable("mxt.command.none"));
-        source.sendSuccess(() -> Component.translatable("mxt.command.cultivate.status", action, spirit.cultivationProgress(), spirit.nextCultivateTick()), false);
+        Component action = spirit.cultivateAction().<Component>map(id -> Component.literal(id.toString())).orElseGet(() -> Component.translatable("command.mxt.none"));
+        source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, spirit.cultivationProgress(), spirit.nextCultivateTick()), false);
         return 1;
     }
 
     private static int queryAura(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("mxt.command.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
         String elements = aura.elementAura().entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue()).collect(Collectors.joining(", "));
         String auraKinds = String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList());
-        source.sendSuccess(() -> Component.translatable("mxt.command.aura.query", aura.concentration(), aura.regenPerTick(),
+        source.sendSuccess(() -> Component.translatable("command.mxt.aura.query", aura.concentration(), aura.regenPerTick(),
                 aura.source().toString(), aura.sourceKind().name(), elements, auraKinds, aura.suppressCultivate()), false);
         return 1;
     }
@@ -154,11 +155,11 @@ public final class MxtCommand {
     private static int queryVein(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("mxt.command.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
         SpiritStoneVein.Result vein = SpiritStoneVein.inspect(player.level(), player.blockPosition());
-        source.sendSuccess(() -> Component.translatable("mxt.command.aura.vein", vein.blocks(), vein.grade().name().toLowerCase(Locale.ROOT)), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.aura.vein", vein.blocks(), vein.grade().name().toLowerCase(Locale.ROOT)), false);
         return vein.blocks();
     }
 
@@ -166,27 +167,27 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         Identifier id = parseId(source, rawId);
         if (player == null || id == null) return 0;
-        UseResult result = MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, id).map(ability -> AbilityService.use(ability, ability.value(), player,
+        UseResult result = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).map(ability -> AbilityService.use(ability, ability.value(), player,
                 player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player))).orElse(null);
         if (result == null || !result.committed()) {
-            source.sendFailure(Component.translatable("mxt.command.ability.cast_failed", result == null ? "unknown_definition" : result.failure()));
+            source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("mxt.command.ability.cast_success", id), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", id), true);
         return 1;
     }
 
     private static int attemptBreakthrough(CommandSourceStack source, String rawId) {
         ServerPlayer player = source.getPlayer();
         Identifier id = parseId(source, rawId);
-        if (player == null || id == null || MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, id).isEmpty())
+        if (player == null || id == null || MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id).isEmpty())
             return 0;
         BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.SPIRIT_DATA), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
-            source.sendFailure(Component.translatable("mxt.command.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
+            source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("mxt.command.breakthrough.success", id), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", id), true);
         return 1;
     }
 
@@ -195,10 +196,10 @@ public final class MxtCommand {
         Identifier realm = parseId(source, rawId);
         if (player == null || realm == null) return 0;
         if (!CultivationService.setRealm(player.getData(MxtAttachments.SPIRIT_DATA), realm)) {
-            source.sendFailure(Component.translatable("mxt.command.realm.set_failed", realm));
+            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", realm));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("mxt.command.realm.set_success", realm), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", realm), true);
         return 1;
     }
 
@@ -208,7 +209,7 @@ public final class MxtCommand {
         SectData membership = player.getData(MxtAttachments.SECT);
         Holder<Sect> sect = membership.sect().orElse(null);
         if (sect == null) {
-            source.sendFailure(Component.translatable("mxt.command.sect.not_member"));
+            source.sendFailure(Component.translatable("command.mxt.sect.not_member"));
             return 0;
         }
         SectTerritoryData territory = player.level().getChunkAt(player.blockPosition()).getData(MxtAttachments.SECT_TERRITORY);
@@ -216,10 +217,10 @@ public final class MxtCommand {
                 ? SectService.releaseTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM)
                 : SectService.claimTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM);
         if (!result.changed()) {
-            source.sendFailure(Component.translatable("mxt.command.sect.territory_failed", result.failure()));
+            source.sendFailure(Component.translatable("command.mxt.sect.territory_failed", result.failure()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable(release ? "mxt.command.sect.territory_released" : "mxt.command.sect.territory_claimed"), true);
+        source.sendSuccess(() -> Component.translatable(release ? "command.mxt.sect.territory_released" : "command.mxt.sect.territory_claimed"), true);
         return 1;
     }
 
@@ -227,16 +228,16 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         if (!SoulService.reclaim(player)) {
-            source.sendFailure(Component.translatable("mxt.command.soul.no_reclaimable"));
+            source.sendFailure(Component.translatable("command.mxt.soul.no_reclaimable"));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("mxt.command.soul.reclaimed"), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.soul.reclaimed"), true);
         return 1;
     }
 
     private static Identifier parseId(CommandSourceStack source, String rawId) {
         Identifier id = Identifier.tryParse(rawId);
-        if (id == null) source.sendFailure(Component.translatable("mxt.command.invalid_id", rawId));
+        if (id == null) source.sendFailure(Component.translatable("command.mxt.invalid_id", rawId));
         return id;
     }
 }

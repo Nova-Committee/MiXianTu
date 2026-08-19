@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.attachment;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -14,10 +15,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public final class RealmInstanceData {
-    public static final MapCodec<RealmInstanceData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.REALM_INSTANCE).optionalFieldOf("definition").forGetter(RealmInstanceData::definition), Codec.LONG.optionalFieldOf("started_at", -1L).forGetter(RealmInstanceData::startedAt), Codec.LONG.optionalFieldOf("expires_at", -1L).forGetter(RealmInstanceData::expiresAt),
+    public static final MapCodec<RealmInstanceData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("definition").forGetter(RealmInstanceData::definition), Codec.LONG.optionalFieldOf("started_at", -1L).forGetter(RealmInstanceData::startedAt), Codec.LONG.optionalFieldOf("expires_at", -1L).forGetter(RealmInstanceData::expiresAt),
             UUIDUtilCodec.CODEC.listOf().optionalFieldOf("members", List.of()).forGetter(RealmInstanceData::members)
-    ).apply(instance, RealmInstanceData::new));
+    ).apply(i, RealmInstanceData::new));
     private Holder<RealmInstance> definition;
     private long startedAt;
     private long expiresAt;

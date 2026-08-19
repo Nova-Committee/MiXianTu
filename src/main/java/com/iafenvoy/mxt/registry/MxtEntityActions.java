@@ -10,7 +10,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class MxtEntityActions {
-    public static final DeferredRegister<MapCodec<? extends EntityAction>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ENTITY_ACTION_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends EntityAction>> REGISTRY = DeferredRegister.create(MxtRegistries.ENTITY_ACTION_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<NoOpAction>> NO_OP = REGISTRY.register("no_op", () -> NoOpAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<JsEntityAction>> JS = REGISTRY.register("js", () -> JsEntityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SequenceAction>> SEQUENCE = REGISTRY.register("sequence", () -> SequenceAction.CODEC);

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.recipe;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
@@ -18,14 +19,14 @@ import org.jspecify.annotations.NonNull;
  * Recipe-manager reference; structure validation remains a server-side formation adapter.
  */
 public record FormationRecipeAdapter(Identifier definition) implements Recipe<SingleRecipeInput> {
-    public static final MapCodec<FormationRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<FormationRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.fieldOf("definition").forGetter(FormationRecipeAdapter::definition)
-    ).apply(instance, FormationRecipeAdapter::new));
+    ).apply(i, FormationRecipeAdapter::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, FormationRecipeAdapter> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     @Override
     public boolean matches(SingleRecipeInput input, @NonNull Level level) {
-        return !input.isEmpty() && MxtDatapackRegistries.get(MxtDatapackRegistries.FORMATION, this.definition).isPresent();
+        return !input.isEmpty() && MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, this.definition).isPresent();
     }
 
     @Override

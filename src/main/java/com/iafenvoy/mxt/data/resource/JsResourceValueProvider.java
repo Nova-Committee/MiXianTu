@@ -14,10 +14,10 @@ import net.minecraft.core.Holder;
  * Script-dispatched implementation kept here because ResourceValueProvider is sealed.
  */
 public record JsResourceValueProvider(String id, JsonObject params) implements ResourceValueProvider {
-    public static final MapCodec<JsResourceValueProvider> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsResourceValueProvider> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsResourceValueProvider::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsResourceValueProvider::params)
-    ).apply(instance, JsResourceValueProvider::new));
+    ).apply(i, JsResourceValueProvider::new));
 
     @Override
     public double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context) {

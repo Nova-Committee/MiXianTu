@@ -16,10 +16,10 @@ import org.jspecify.annotations.NonNull;
  */
 public record HasSpiritRootLootCondition(EntityTarget target,
                                          Holder<SpiritRoot> spiritRoot) implements LootItemCondition {
-    public static final MapCodec<HasSpiritRootLootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<HasSpiritRootLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasSpiritRootLootCondition::target),
             SpiritRoot.CODEC.fieldOf("spirit_root").forGetter(HasSpiritRootLootCondition::spiritRoot)
-    ).apply(instance, HasSpiritRootLootCondition::new));
+    ).apply(i, HasSpiritRootLootCondition::new));
 
     @Override
     public @NonNull MapCodec<HasSpiritRootLootCondition> codec() {

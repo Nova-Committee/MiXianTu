@@ -11,13 +11,13 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 public record AddVelocityAction(float x, float y, float z, Space space, boolean set) implements EntityAction {
-    public static final MapCodec<AddVelocityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AddVelocityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.FLOAT.optionalFieldOf("x", 0.0F).forGetter(AddVelocityAction::x),
             Codec.FLOAT.optionalFieldOf("y", 0.0F).forGetter(AddVelocityAction::y),
             Codec.FLOAT.optionalFieldOf("z", 0.0F).forGetter(AddVelocityAction::z),
             Space.CODEC.optionalFieldOf("space", Space.WORLD).forGetter(AddVelocityAction::space),
             Codec.BOOL.optionalFieldOf("set", false).forGetter(AddVelocityAction::set)
-    ).apply(instance, AddVelocityAction::new));
+    ).apply(i, AddVelocityAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

@@ -14,11 +14,11 @@ import java.util.Set;
  * Swaps either endpoint of a bi-entity action to the other endpoint's position.
  */
 public record TeleportAction(boolean teleportActor, boolean teleportTarget, boolean rotate) implements BiEntityAction {
-    public static final MapCodec<TeleportAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<TeleportAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("teleport_actor", false).forGetter(TeleportAction::teleportActor),
             Codec.BOOL.optionalFieldOf("teleport_target", true).forGetter(TeleportAction::teleportTarget),
             Codec.BOOL.optionalFieldOf("rotate", false).forGetter(TeleportAction::rotate)
-    ).apply(instance, TeleportAction::new));
+    ).apply(i, TeleportAction::new));
 
     @Override
     public void execute(Entity actor, Entity target, FormulaContext context) {

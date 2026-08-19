@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -16,10 +16,10 @@ import java.util.UUID;
  * Contract state attached to the contracted creature; policy remains in contract_type definitions.
  */
 public final class ContractData {
-    public static final MapCodec<ContractData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractData::contractType), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(ContractData::owner),
+    public static final MapCodec<ContractData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractData::contractType), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(ContractData::owner),
             Codec.LONG.optionalFieldOf("bound_at", -1L).forGetter(ContractData::boundAt), Codec.BOOL.optionalFieldOf("recalled", false).forGetter(ContractData::recalled)
-    ).apply(instance, ContractData::new));
+    ).apply(i, ContractData::new));
     private Optional<Holder<ContractType>> contractType;
     private Optional<UUID> owner;
     private long boundAt;

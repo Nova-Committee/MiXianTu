@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.util.formula;
 
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.Trio;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.Expression;
@@ -20,7 +20,7 @@ import java.util.function.Function;
 public interface NumberProvider {
     Logger LOGGER = LogUtils.getLogger();
     Codec<Double> FINITE_DOUBLE_CODEC = Codec.DOUBLE.validate(value -> Double.isFinite(value) ? DataResult.success(value) : DataResult.error(() -> "Number provider value must be finite: " + value));
-    Codec<NumberProvider> TYPED_CODEC = MxtTypeRegistries.NUMBER_PROVIDER_TYPE.byNameCodec().dispatch("type", NumberProvider::codec, Function.identity());
+    Codec<NumberProvider> TYPED_CODEC = MxtRegistries.NUMBER_PROVIDER_TYPE.byNameCodec().dispatch("type", NumberProvider::codec, Function.identity());
     Codec<NumberProvider> CODEC = Trio.codec(Codec.DOUBLE, Codec.STRING, TYPED_CODEC).comapFlatMap(
             value -> value.map(
                     constant -> Double.isFinite(constant) ? DataResult.success(new Constant(constant)) : DataResult.error(() -> "Number provider value must be finite: " + constant),

@@ -2,9 +2,8 @@ package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.ItemMatcher;
-import com.iafenvoy.mxt.util.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -21,14 +20,14 @@ import java.util.Optional;
  */
 public record ItemAura(List<Entry> items, NumberProvider totalAura, NumberProvider consumeSpeed,
                        Optional<ItemStackTemplate> resultStack, EntityAction exhaustedAction) implements ItemMatcher {
-    public static final Codec<Holder<ItemAura>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.ITEM_AURA);
-    public static final Codec<ItemAura> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<Holder<ItemAura>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_AURA);
+    public static final Codec<ItemAura> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(ItemAura::items),
             NumberProvider.CODEC.fieldOf("total_aura").forGetter(ItemAura::totalAura),
             NumberProvider.CODEC.fieldOf("consume_speed").forGetter(ItemAura::consumeSpeed),
             ItemStackTemplate.CODEC.optionalFieldOf("result_stack").forGetter(ItemAura::resultStack),
             EntityAction.CODEC.optionalFieldOf("exhausted_action", NoOpAction.INSTANCE).forGetter(ItemAura::exhaustedAction)
-    ).apply(instance, ItemAura::new));
+    ).apply(i, ItemAura::new));
 
     @Override
     public List<Entry> entries() {

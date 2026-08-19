@@ -18,7 +18,7 @@ import java.util.*;
  * Chunk-level aura concentration and element offsets, changed by formations and world features.
  */
 public final class AuraChunkData {
-    public static final MapCodec<AuraChunkData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AuraChunkData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.DOUBLE.optionalFieldOf("concentration", 0.0D).forGetter(AuraChunkData::concentration),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraChunkData::regenPerTick),
             Codec.BOOL.optionalFieldOf("initialized", false).forGetter(AuraChunkData::initialized),
@@ -30,7 +30,7 @@ public final class AuraChunkData {
             Codec.DOUBLE.optionalFieldOf("block_regen_per_tick", 0.0D).forGetter(AuraChunkData::blockRegenPerTick),
             CollectionCodecs.doubleMap(Element.CODEC).optionalFieldOf("block_element_aura", Object2DoubleMaps.emptyMap()).forGetter(AuraChunkData::blockElementAura),
             Identifier.CODEC.listOf().<Set<Identifier>>xmap(LinkedHashSet::new, ArrayList::new).optionalFieldOf("block_aura_kinds", Set.of()).forGetter(AuraChunkData::blockAuraKinds)
-    ).apply(instance, AuraChunkData::new));
+    ).apply(i, AuraChunkData::new));
     private double concentration;
     private double regenPerTick;
     private boolean initialized;

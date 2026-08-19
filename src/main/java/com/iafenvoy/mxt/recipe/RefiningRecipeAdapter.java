@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.recipe;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
@@ -19,15 +20,15 @@ import org.jspecify.annotations.NonNull;
  * Recipe-manager bridge for refining one item into a declared artifact archetype.
  */
 public record RefiningRecipeAdapter(Identifier input, Identifier archetype) implements Recipe<SingleRecipeInput> {
-    public static final MapCodec<RefiningRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RefiningRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.fieldOf("input").forGetter(RefiningRecipeAdapter::input),
             Identifier.CODEC.fieldOf("archetype").forGetter(RefiningRecipeAdapter::archetype)
-    ).apply(instance, RefiningRecipeAdapter::new));
+    ).apply(i, RefiningRecipeAdapter::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, RefiningRecipeAdapter> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     @Override
     public boolean matches(SingleRecipeInput input, @NonNull Level level) {
-        return !input.isEmpty() && MxtDatapackRegistries.get(MxtDatapackRegistries.ITEM_ARCHETYPE, this.archetype).isPresent()
+        return !input.isEmpty() && MxtDatapackRegistries.get(MxtResourceKeys.ITEM_ARCHETYPE, this.archetype).isPresent()
                 && this.input.equals(BuiltInRegistries.ITEM.getKey(input.item().getItem()));
     }
 

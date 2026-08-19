@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -64,7 +65,7 @@ public final class ServerCache {
     private void rebuild() {
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
         Map<Identifier, Integer> ranks = new LinkedHashMap<>();
-        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtDatapackRegistries.RESOURCE).forEach(resourceHolder -> {
+        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.RESOURCE).forEach(resourceHolder -> {
             Identifier resource = resourceHolder.key().identifier();
             resourceHolder.value().firstRealm().ifPresent(first -> this.indexChain(resource, HolderHelper.id(first), resolved, ranks));
         });
@@ -110,7 +111,7 @@ public final class ServerCache {
                 MiXianTu.LOGGER.error("Ignoring cyclic cultivation chain for resource {} at realm {}", resource, current);
                 return;
             }
-            RealmStage stage = MxtDatapackRegistries.get(MxtDatapackRegistries.REALM_STAGE, current).orElse(null);
+            RealmStage stage = MxtDatapackRegistries.get(MxtResourceKeys.REALM_STAGE, current).orElse(null);
             if (stage == null || !HolderHelper.id(stage.resource()).equals(resource)) {
                 MiXianTu.LOGGER.error("Ignoring invalid cultivation chain for resource {} at realm {}", resource, current);
                 return;

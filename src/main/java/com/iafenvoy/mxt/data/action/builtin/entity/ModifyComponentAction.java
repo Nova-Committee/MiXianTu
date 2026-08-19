@@ -18,11 +18,11 @@ import net.minecraft.world.entity.Entity;
  */
 public record ModifyComponentAction(Holder<Ability> ability, String component,
                                     NumberProvider value) implements EntityAction {
-    public static final MapCodec<ModifyComponentAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ModifyComponentAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ability.CODEC.fieldOf("ability").forGetter(ModifyComponentAction::ability),
             Codec.STRING.fieldOf("component").forGetter(ModifyComponentAction::component),
             NumberProvider.CODEC.fieldOf("value").forGetter(ModifyComponentAction::value)
-    ).apply(instance, ModifyComponentAction::new));
+    ).apply(i, ModifyComponentAction::new));
 
     public ModifyComponentAction {
         if (component.isBlank()) throw new IllegalArgumentException("component must not be blank");

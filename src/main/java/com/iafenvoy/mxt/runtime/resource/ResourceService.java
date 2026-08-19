@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.resource;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.attachment.SpiritData;
@@ -38,7 +39,7 @@ public final class ResourceService {
     }
 
     public static Result initialize(ResourceHolderData holder, Identifier id, Resource definition, FormulaContext context) {
-        return MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, id)
+        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> initialize(holder, resource, context)).orElse(Result.invalid());
     }
 
@@ -56,7 +57,7 @@ public final class ResourceService {
     }
 
     public static Result change(ResourceHolderData holder, Identifier id, Resource definition, double amount, FormulaContext context) {
-        return MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, id)
+        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> change(holder, resource, amount, context)).orElse(Result.invalid());
     }
 
@@ -68,7 +69,7 @@ public final class ResourceService {
     }
 
     public static Result regenerate(ResourceHolderData holder, Identifier id, Resource definition, long elapsedTicks, FormulaContext context) {
-        return MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, id)
+        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> regenerate(holder, resource, elapsedTicks, context)).orElse(Result.invalid());
     }
 
@@ -93,7 +94,7 @@ public final class ResourceService {
     }
 
     public static FormulaContext formulaContext(SpiritData spirit, Identifier resource, Resource definition, FormulaContext base) {
-        return MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, resource)
+        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource)
                 .map(value -> formulaContext(spirit, value, base)).orElse(base);
     }
 
@@ -106,7 +107,7 @@ public final class ResourceService {
     }
 
     public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, Resource definition, FormulaContext base) {
-        return MxtDatapackRegistries.holder(MxtDatapackRegistries.RESOURCE, resource)
+        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource)
                 .map(value -> formulaContext(entity, value, base)).orElse(base);
     }
 

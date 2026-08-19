@@ -19,12 +19,12 @@ public record PlaySoundAction(SoundEvent sound, Optional<SoundSource> category, 
             value -> SoundSource.valueOf(value.toUpperCase(Locale.ROOT)),
             value -> value.name().toLowerCase(Locale.ROOT)
     );
-    public static final MapCodec<PlaySoundAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<PlaySoundAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BuiltInRegistries.SOUND_EVENT.byNameCodec().fieldOf("sound").forGetter(PlaySoundAction::sound),
             SOUND_SOURCE_CODEC.optionalFieldOf("category").forGetter(PlaySoundAction::category),
             Codec.FLOAT.optionalFieldOf("volume", 1.0F).forGetter(PlaySoundAction::volume),
             Codec.FLOAT.optionalFieldOf("pitch", 1.0F).forGetter(PlaySoundAction::pitch)
-    ).apply(instance, PlaySoundAction::new));
+    ).apply(i, PlaySoundAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

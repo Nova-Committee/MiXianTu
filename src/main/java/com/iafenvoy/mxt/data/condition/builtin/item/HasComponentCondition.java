@@ -15,9 +15,9 @@ import net.minecraft.world.item.ItemStack;
  * Tests whether an item stack has a particular data component.
  */
 public record HasComponentCondition(Holder<DataComponentType<?>> component) implements ItemCondition {
-    public static final MapCodec<HasComponentCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<HasComponentCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(Registries.DATA_COMPONENT_TYPE).fieldOf("component").forGetter(HasComponentCondition::component)
-    ).apply(instance, HasComponentCondition::new));
+    ).apply(i, HasComponentCondition::new));
 
     @Override
     public boolean test(Entity holder, ItemStack stack, FormulaContext context) {

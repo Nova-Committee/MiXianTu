@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.formation;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
@@ -32,7 +33,7 @@ public final class FormationWorldTicker {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 20L != 0L) return;
         FormationWorldData world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, Snapshot> entry : world.formations().entrySet()) {
-            Optional<Formation> definition = MxtDatapackRegistries.get(MxtDatapackRegistries.FORMATION, entry.getValue().formation());
+            Optional<Formation> definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation());
             if (definition.isEmpty() || !VALIDATOR.matches(level, entry.getKey(), definition.get())) {
                 world.remove(entry.getKey());
                 definition.ifPresent(value -> value.deactivateAction().execute(level, entry.getKey(), FormulaContext.of(level)));

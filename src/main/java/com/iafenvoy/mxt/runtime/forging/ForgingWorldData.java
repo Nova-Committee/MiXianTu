@@ -16,9 +16,9 @@ import java.util.UUID;
  * Level-persistent work sessions keyed by a validated forging workstation position.
  */
 public final class ForgingWorldData {
-    public static final MapCodec<ForgingWorldData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ForgingWorldData> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.unboundedMap(Codec.LONG, StationSession.CODEC).optionalFieldOf("sessions", Map.of()).forGetter(ForgingWorldData::encoded)
-    ).apply(instance, ForgingWorldData::new));
+    ).apply(i, ForgingWorldData::new));
     public static final Codec<ForgingWorldData> CODEC = MAP_CODEC.codec();
     private final Map<Long, StationSession> sessions;
 
@@ -56,9 +56,9 @@ public final class ForgingWorldData {
     }
 
     public record StationSession(UUID owner, ForgingSessionData session) {
-        public static final Codec<StationSession> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<StationSession> CODEC = RecordCodecBuilder.create(i -> i.group(
                 UUIDUtil.CODEC.fieldOf("owner").forGetter(StationSession::owner),
                 ForgingSessionData.CODEC.codec().fieldOf("session").forGetter(StationSession::session)
-        ).apply(instance, StationSession::new));
+        ).apply(i, StationSession::new));
     }
 }

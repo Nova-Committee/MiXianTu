@@ -14,10 +14,10 @@ import net.minecraft.world.entity.Entity;
  * Grants an ability using an explicit persistent source identity.
  */
 public record GrantAbilityAction(Holder<Ability> ability, Identifier source) implements EntityAction {
-    public static final MapCodec<GrantAbilityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<GrantAbilityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ability.CODEC.fieldOf("ability").forGetter(GrantAbilityAction::ability),
             Identifier.CODEC.fieldOf("source").forGetter(GrantAbilityAction::source)
-    ).apply(instance, GrantAbilityAction::new));
+    ).apply(i, GrantAbilityAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

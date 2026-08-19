@@ -13,7 +13,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class MxtResourceBarRenderers {
-    public static final DeferredRegister<MapCodec<? extends ResourceBarRenderer>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.RESOURCE_BAR_RENDERER_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends ResourceBarRenderer>> REGISTRY = DeferredRegister.create(MxtRegistries.RESOURCE_BAR_RENDERER_TYPE, MiXianTu.MOD_ID);
+
     public static final DeferredHolder<MapCodec<? extends ResourceBarRenderer>, MapCodec<Textured>> TEXTURED = REGISTRY.register("textured_bar", () -> Textured.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceBarRenderer>, MapCodec<Segmented>> SEGMENTED = REGISTRY.register("segmented_bar", () -> Segmented.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceBarRenderer>, MapCodec<Radial>> RADIAL = REGISTRY.register("radial_bar", () -> Radial.CODEC);

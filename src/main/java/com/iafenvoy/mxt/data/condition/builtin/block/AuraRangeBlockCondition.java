@@ -10,10 +10,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 public record AuraRangeBlockCondition(NumberProvider min, NumberProvider max) implements BlockCondition {
-    public static final MapCodec<AuraRangeBlockCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AuraRangeBlockCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("min").forGetter(AuraRangeBlockCondition::min),
             NumberProvider.CODEC.fieldOf("max").forGetter(AuraRangeBlockCondition::max)
-    ).apply(instance, AuraRangeBlockCondition::new));
+    ).apply(i, AuraRangeBlockCondition::new));
 
     @Override
     public boolean test(Level level, BlockPos pos, FormulaContext context) {

@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderData;
 import com.iafenvoy.mxt.data.artifact.ForgingResultData;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent.Cancel;
 import com.iafenvoy.mxt.event.ForgingEvent.CompletePost;
 import com.iafenvoy.mxt.event.ForgingEvent.CompletePre;
@@ -16,6 +17,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.Map;
@@ -65,12 +67,12 @@ public final class ForgingService {
         return finish(blueprintId, session, blueprint::qualityFor);
     }
 
-    public static FinishResult finish(Identifier blueprintId, ForgingSession session, IntFunction<Identifier> qualityForExtraSteps) {
+    public static FinishResult finish(Identifier blueprintId, ForgingSession session, IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
         if (NeoForge.EVENT_BUS.post(new CompletePre(blueprintId, session)).isCanceled())
             return FinishResult.rejected(Failure.CANCELLED);
         if (!session.canComplete()) return FinishResult.rejected(Failure.NOT_COMPLETE);
         int extra = session.extraSteps();
-        Identifier quality = qualityForExtraSteps.apply(extra);
+        Holder<ItemQuality> quality = qualityForExtraSteps.apply(extra);
         if (quality == null) return FinishResult.rejected(Failure.INVALID_BLUEPRINT);
         ForgingResultData result = new ForgingResultData(blueprintId, session.value(), session.steps(), session.optimalSteps(), extra, quality);
         NeoForge.EVENT_BUS.post(new CompletePost(blueprintId, session, result));

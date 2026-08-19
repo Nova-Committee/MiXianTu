@@ -14,10 +14,10 @@ import java.util.Optional;
 
 public record EquippedItemCondition(EquipmentSlot equipmentSlot,
                                     Optional<ItemCondition> itemCondition) implements EntityCondition {
-    public static final MapCodec<EquippedItemCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<EquippedItemCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EquipmentSlot.CODEC.fieldOf("equipment_slot").forGetter(EquippedItemCondition::equipmentSlot),
             ItemCondition.CODEC.optionalFieldOf("item_condition").forGetter(EquippedItemCondition::itemCondition)
-    ).apply(instance, EquippedItemCondition::new));
+    ).apply(i, EquippedItemCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

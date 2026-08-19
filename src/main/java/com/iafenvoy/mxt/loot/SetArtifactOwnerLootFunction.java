@@ -17,10 +17,10 @@ import java.util.List;
  * Assigns a generated artifact to a selected entity without trusting a client-provided UUID.
  */
 public final class SetArtifactOwnerLootFunction extends LootItemConditionalFunction {
-    public static final MapCodec<SetArtifactOwnerLootFunction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SetArtifactOwnerLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             LootItemCondition.DIRECT_CODEC.listOf().optionalFieldOf("conditions", List.of()).forGetter(function -> function.predicates),
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(function -> function.target)
-    ).apply(instance, SetArtifactOwnerLootFunction::new));
+    ).apply(i, SetArtifactOwnerLootFunction::new));
     private final EntityTarget target;
 
     private SetArtifactOwnerLootFunction(List<LootItemCondition> conditions, EntityTarget target) {
@@ -36,7 +36,7 @@ public final class SetArtifactOwnerLootFunction extends LootItemConditionalFunct
     @Override
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
-        if (entity != null) ArtifactService.refine(stack, entity.getUUID());
+        if (entity != null) ArtifactService.refine(stack, entity);
         return stack;
     }
 }

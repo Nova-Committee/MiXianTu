@@ -1,10 +1,12 @@
 package com.iafenvoy.mxt.runtime.cultivation;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.SpiritData;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
@@ -25,7 +27,7 @@ public final class TechniqueService {
     }
 
     public static Result learn(SpiritData spirit, Identifier id, CultivationTechnique definition, Lookup lookup) {
-        Holder<CultivationTechnique> technique = MxtDatapackRegistries.holder(MxtDatapackRegistries.CULTIVATION_TECHNIQUE, id).orElse(null);
+        Holder<CultivationTechnique> technique = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION_TECHNIQUE, id).orElse(null);
         if (technique == null) return Result.rejected(Failure.DISABLED);
         if (spirit.learnedTechniques().contains(technique)) return Result.rejected(Failure.ALREADY_LEARNED);
         Set<Identifier> existing = new HashSet<>();
@@ -46,7 +48,10 @@ public final class TechniqueService {
      */
     public static Result learn(LivingEntity entity, SpiritData spirit, Identifier id, CultivationTechnique definition, Lookup lookup, FormulaContext context) {
         boolean allowed = definition.learnCondition().test(entity, context);
-        return allowed ? learn(spirit, id, definition, lookup) : Result.rejected(Failure.CONDITIONS);
+        if (!allowed) return Result.rejected(Failure.CONDITIONS);
+        Result result = learn(spirit, id, definition, lookup);
+        if (result.learned()) CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        return result;
     }
 
     @FunctionalInterface

@@ -13,7 +13,7 @@ import java.util.UUID;
  * Server-owned flight mount state.
  */
 public final class FlightData {
-    public static final MapCodec<FlightData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<FlightData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("active", false).forGetter(FlightData::active),
             ItemArchetype.CODEC.optionalFieldOf("archetype").forGetter(FlightData::archetype),
             Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(FlightData::startedAt),
@@ -21,7 +21,7 @@ public final class FlightData {
             Codec.BOOL.optionalFieldOf("previous_flying", false).forGetter(FlightData::previousFlying),
             Codec.FLOAT.optionalFieldOf("previous_flying_speed", 0.05F).forGetter(FlightData::previousFlyingSpeed),
             Codec.STRING.optionalFieldOf("vehicle").forGetter(FlightData::vehicleRaw)
-    ).apply(instance, FlightData::new));
+    ).apply(i, FlightData::new));
     private boolean active;
     private Holder<ItemArchetype> archetype;
     private long startedAt;

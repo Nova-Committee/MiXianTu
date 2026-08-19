@@ -19,10 +19,10 @@ import java.util.function.DoubleBinaryOperator;
  * content can still scale them from the current formula context.
  */
 public record Modifier(NumberProvider value, ModifierOperation operation) {
-    public static final Codec<Modifier> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<Modifier> CODEC = RecordCodecBuilder.create(i -> i.group(
             NumberProvider.CODEC.fieldOf("value").forGetter(Modifier::value),
             ModifierOperation.CODEC.optionalFieldOf("operation", ModifierOperation.ADD_BASE_EARLY).forGetter(Modifier::operation)
-    ).apply(instance, Modifier::new));
+    ).apply(i, Modifier::new));
 
     public double value(FormulaContext context) {
         double resolved = this.value.evaluate(context);

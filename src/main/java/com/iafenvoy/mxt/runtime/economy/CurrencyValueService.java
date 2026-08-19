@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.economy;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -21,7 +22,7 @@ public final class CurrencyValueService {
     }
 
     public static OptionalLong unitValue(Item item) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.CURRENCY).map(Reference::value), new ItemStack(item))
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.CURRENCY).map(Reference::value), new ItemStack(item))
                 .map(CurrencyValue::value)
                 .map(OptionalLong::of)
                 .orElseGet(OptionalLong::empty);
@@ -31,7 +32,7 @@ public final class CurrencyValueService {
      * Reads one currency value from the client-synchronised datapack registries.
      */
     public static OptionalLong unitValue(Provider access, Item item) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.CURRENCY).map(Reference::value), new ItemStack(item))
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), new ItemStack(item))
                 .map(CurrencyValue::value)
                 .map(OptionalLong::of)
                 .orElseGet(OptionalLong::empty);
@@ -49,7 +50,7 @@ public final class CurrencyValueService {
      */
     public static List<ExchangeOffer> exchangeOffers(ItemStack input) {
         if (input.isEmpty()) return List.of();
-        return MxtDatapackRegistries.holders(MxtDatapackRegistries.CURRENCY)
+        return MxtDatapackRegistries.holders(MxtResourceKeys.CURRENCY)
                 .map(Reference::value)
                 .filter(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)))
                 .flatMap(definition -> definition.exchanges().stream())
@@ -59,7 +60,7 @@ public final class CurrencyValueService {
 
     public static List<ExchangeOffer> exchangeOffers(RegistryAccess registryAccess, ItemStack input) {
         if (input.isEmpty()) return List.of();
-        return MxtDatapackRegistries.holders(registryAccess, MxtDatapackRegistries.CURRENCY)
+        return MxtDatapackRegistries.holders(registryAccess, MxtResourceKeys.CURRENCY)
                 .map(Reference::value)
                 .filter(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)))
                 .flatMap(definition -> definition.exchanges().stream())
@@ -72,7 +73,7 @@ public final class CurrencyValueService {
      */
     public static boolean isExchangeInput(RegistryAccess registryAccess, ItemStack input) {
         if (input.isEmpty()) return false;
-        return MxtDatapackRegistries.holders(registryAccess, MxtDatapackRegistries.CURRENCY)
+        return MxtDatapackRegistries.holders(registryAccess, MxtResourceKeys.CURRENCY)
                 .map(Reference::value)
                 .anyMatch(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(input)) && !definition.exchanges().isEmpty());
     }

@@ -14,10 +14,10 @@ import net.minecraft.world.entity.Entity;
  */
 public record PassengerRecursiveCondition(BiEntityCondition bientityCondition,
                                           Comparison comparison) implements EntityCondition {
-    public static final MapCodec<PassengerRecursiveCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<PassengerRecursiveCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityCondition.CODEC.optionalFieldOf("bientity_condition", new ConstantCondition(true)).forGetter(PassengerRecursiveCondition::bientityCondition),
             Comparison.CODEC.forGetter(PassengerRecursiveCondition::comparison)
-    ).apply(instance, PassengerRecursiveCondition::new));
+    ).apply(i, PassengerRecursiveCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

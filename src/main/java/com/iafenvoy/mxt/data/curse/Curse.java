@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -24,8 +24,8 @@ public record Curse(CurseType typedType, NumberProvider durationTicks, NumberPro
                     StackingMode stackingMode, EntityCondition applicationCondition, EntityAction onApply,
                     EntityAction onTick, EntityAction onRemove, List<Identifier> cleanseTags,
                     boolean allowForceRemove) {
-    public static final Codec<Holder<Curse>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.CURSE);
-    public static final Codec<Curse> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<Holder<Curse>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CURSE);
+    public static final Codec<Curse> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             CurseType.MAP_CODEC.forGetter(Curse::typedType),
             NumberProvider.CODEC.optionalFieldOf("duration_ticks", new Constant(0.0D)).forGetter(Curse::durationTicks),
             NumberProvider.CODEC.optionalFieldOf("tick_interval", new Constant(20.0D)).forGetter(Curse::tickInterval),
@@ -37,7 +37,7 @@ public record Curse(CurseType typedType, NumberProvider durationTicks, NumberPro
             EntityAction.CODEC.optionalFieldOf("on_remove", NoOpAction.INSTANCE).forGetter(Curse::onRemove),
             Identifier.CODEC.listOf().optionalFieldOf("cleanse_tags", List.of()).forGetter(Curse::cleanseTags),
             Codec.BOOL.optionalFieldOf("allow_force_remove", false).forGetter(Curse::allowForceRemove)
-    ).apply(instance, Curse::new));
+    ).apply(i, Curse::new));
 
     /**
      * Curse actions can apply or remove curses, including the defining curse itself.

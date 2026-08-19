@@ -114,22 +114,22 @@ public final class PlayerTradeService {
                 this.second.accepted = false;
                 this.first.menu.setPartnerAccepted(false);
                 this.second.menu.setPartnerAccepted(false);
-                this.first.player.sendSystemMessage(Component.translatable("mxt.command.trade.no_space"));
-                this.second.player.sendSystemMessage(Component.translatable("mxt.command.trade.no_space"));
+                this.first.player.sendSystemMessage(Component.translatable("command.mxt.trade.no_space"));
+                this.second.player.sendSystemMessage(Component.translatable("command.mxt.trade.no_space"));
                 return;
             }
             InventoryUtil.insertItems(this.first.player.getInventory(), this.second.offer);
             InventoryUtil.insertItems(this.second.player.getInventory(), this.first.offer);
-            this.first.player.sendSystemMessage(Component.translatable("mxt.command.trade.success"));
-            this.second.player.sendSystemMessage(Component.translatable("mxt.command.trade.success"));
+            this.first.player.sendSystemMessage(Component.translatable("command.mxt.trade.success"));
+            this.second.player.sendSystemMessage(Component.translatable("command.mxt.trade.success"));
             this.close();
         }
 
         private void cancel(Component canceller) {
             InventoryUtil.insertItems(this.first.player.getInventory(), this.first.offer);
             InventoryUtil.insertItems(this.second.player.getInventory(), this.second.offer);
-            this.first.player.sendSystemMessage(Component.translatable("mxt.command.trade.cancel", canceller));
-            this.second.player.sendSystemMessage(Component.translatable("mxt.command.trade.cancel", canceller));
+            this.first.player.sendSystemMessage(Component.translatable("command.mxt.trade.cancel", canceller));
+            this.second.player.sendSystemMessage(Component.translatable("command.mxt.trade.cancel", canceller));
             this.close();
         }
 

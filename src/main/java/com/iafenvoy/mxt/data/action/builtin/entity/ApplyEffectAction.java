@@ -17,11 +17,11 @@ import net.minecraft.world.entity.LivingEntity;
  */
 public record ApplyEffectAction(MobEffect effect, NumberProvider durationTicks,
                                 NumberProvider amplifier) implements EntityAction {
-    public static final MapCodec<ApplyEffectAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ApplyEffectAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BuiltInRegistries.MOB_EFFECT.byNameCodec().fieldOf("effect").forGetter(ApplyEffectAction::effect),
             NumberProvider.CODEC.fieldOf("duration_ticks").forGetter(ApplyEffectAction::durationTicks),
             NumberProvider.CODEC.optionalFieldOf("amplifier", new Constant(0.0D)).forGetter(ApplyEffectAction::amplifier)
-    ).apply(instance, ApplyEffectAction::new));
+    ).apply(i, ApplyEffectAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

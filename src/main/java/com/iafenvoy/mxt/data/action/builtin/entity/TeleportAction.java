@@ -8,14 +8,14 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 
 /**
- * Moves an entity within its current level. Cross-dimension travel remains an explicit domain behavior.
+ * Moves an entity within its current level. Cross-dimension travel remains an explicit extension point.
  */
 public record TeleportAction(NumberProvider x, NumberProvider y, NumberProvider z) implements EntityAction {
-    public static final MapCodec<TeleportAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<TeleportAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("x").forGetter(TeleportAction::x),
             NumberProvider.CODEC.fieldOf("y").forGetter(TeleportAction::y),
             NumberProvider.CODEC.fieldOf("z").forGetter(TeleportAction::z)
-    ).apply(instance, TeleportAction::new));
+    ).apply(i, TeleportAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

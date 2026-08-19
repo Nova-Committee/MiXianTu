@@ -10,9 +10,9 @@ import java.util.Optional;
  */
 public record TokenData(Optional<String> kind, Optional<String> value, Optional<String> owner) {
     public static final TokenData EMPTY = new TokenData(Optional.empty(), Optional.empty(), Optional.empty());
-    public static final Codec<TokenData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<TokenData> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.optionalFieldOf("kind").forGetter(TokenData::kind),
             Codec.STRING.optionalFieldOf("value").forGetter(TokenData::value),
             Codec.STRING.optionalFieldOf("owner").forGetter(TokenData::owner)
-    ).apply(instance, TokenData::new));
+    ).apply(i, TokenData::new));
 }

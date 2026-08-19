@@ -17,7 +17,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * Persistent ability state component schemas.
  */
 public final class MxtAbilityComponents {
-    public static final DeferredRegister<MapCodec<? extends AbilityComponent>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ABILITY_COMPONENT_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends AbilityComponent>> REGISTRY = DeferredRegister.create(MxtRegistries.ABILITY_COMPONENT_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends AbilityComponent>, MapCodec<CooldownAbilityComponent>> COOLDOWN = REGISTRY.register("cooldown", () -> CooldownAbilityComponent.CODEC);
     public static final DeferredHolder<MapCodec<? extends AbilityComponent>, MapCodec<ChargesAbilityComponent>> CHARGES = REGISTRY.register("charges", () -> ChargesAbilityComponent.CODEC);
     public static final DeferredHolder<MapCodec<? extends AbilityComponent>, MapCodec<ToggleAbilityComponent>> TOGGLE = REGISTRY.register("toggle", () -> ToggleAbilityComponent.CODEC);

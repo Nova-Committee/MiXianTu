@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.loot;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -20,11 +21,11 @@ import java.util.List;
  * Grants a persistent ability source to the selected loot-context entity.
  */
 public final class GrantAbilityLootFunction extends LootItemConditionalFunction {
-    public static final MapCodec<GrantAbilityLootFunction> CODEC = RecordCodecBuilder.mapCodec(instance -> commonFields(instance).and(instance.group(
+    public static final MapCodec<GrantAbilityLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(function -> function.target),
             Identifier.CODEC.fieldOf("ability").forGetter(function -> function.ability),
             Identifier.CODEC.optionalFieldOf("source", Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "loot")).forGetter(function -> function.source)
-    )).apply(instance, GrantAbilityLootFunction::new));
+    )).apply(i, GrantAbilityLootFunction::new));
     private final EntityTarget target;
     private final Identifier ability;
     private final Identifier source;
@@ -44,7 +45,7 @@ public final class GrantAbilityLootFunction extends LootItemConditionalFunction 
     @Override
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
-        if (entity != null) MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, this.ability)
+        if (entity != null) MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, this.ability)
                 .ifPresent(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, this.source));
         return stack;
     }

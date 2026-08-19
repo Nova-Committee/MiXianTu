@@ -11,7 +11,7 @@ import java.util.Optional;
  */
 public record SpiritBeastData(Optional<CompoundTag> entity) {
     public static final SpiritBeastData EMPTY = new SpiritBeastData(Optional.empty());
-    public static final Codec<SpiritBeastData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<SpiritBeastData> CODEC = RecordCodecBuilder.create(i -> i.group(
             CompoundTag.CODEC.optionalFieldOf("entity").forGetter(SpiritBeastData::entity)
-    ).apply(instance, SpiritBeastData::new));
+    ).apply(i, SpiritBeastData::new));
 }

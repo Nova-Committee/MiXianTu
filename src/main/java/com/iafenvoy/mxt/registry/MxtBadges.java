@@ -15,7 +15,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * Built-in Badge codecs; datapacks select, but cannot add, badge types.
  */
 public final class MxtBadges {
-    public static final DeferredRegister<MapCodec<? extends Badge>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.BADGE_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends Badge>> REGISTRY = DeferredRegister.create(MxtRegistries.BADGE_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends Badge>, MapCodec<EmptyBadge>> EMPTY = REGISTRY.register("empty", () -> EmptyBadge.CODEC);
     public static final DeferredHolder<MapCodec<? extends Badge>, MapCodec<CraftingRecipeBadge>> CRAFTING_RECIPE = REGISTRY.register("crafting_recipe", () -> CraftingRecipeBadge.CODEC);
     public static final DeferredHolder<MapCodec<? extends Badge>, MapCodec<KeybindBadge>> KEYBIND = REGISTRY.register("keybind", () -> KeybindBadge.CODEC);

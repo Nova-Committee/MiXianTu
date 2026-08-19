@@ -14,11 +14,11 @@ import java.util.Optional;
 
 public record ScoreboardCondition(Optional<String> name, String objective,
                                   Comparison comparison) implements EntityCondition {
-    public static final MapCodec<ScoreboardCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ScoreboardCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.optionalFieldOf("name").forGetter(ScoreboardCondition::name),
             Codec.STRING.fieldOf("objective").forGetter(ScoreboardCondition::objective),
             Comparison.CODEC.forGetter(ScoreboardCondition::comparison)
-    ).apply(instance, ScoreboardCondition::new));
+    ).apply(i, ScoreboardCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

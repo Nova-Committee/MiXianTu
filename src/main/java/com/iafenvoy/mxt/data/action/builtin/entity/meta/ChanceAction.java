@@ -11,11 +11,11 @@ import java.util.Optional;
 
 public record ChanceAction(EntityAction action, float chance,
                            Optional<EntityAction> failAction) implements EntityAction {
-    public static final MapCodec<ChanceAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ChanceAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityAction.CODEC.fieldOf("action").forGetter(ChanceAction::action),
             Codec.floatRange(0.0F, 1.0F).fieldOf("chance").forGetter(ChanceAction::chance),
             EntityAction.CODEC.optionalFieldOf("fail_action").forGetter(ChanceAction::failAction)
-    ).apply(instance, ChanceAction::new));
+    ).apply(i, ChanceAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

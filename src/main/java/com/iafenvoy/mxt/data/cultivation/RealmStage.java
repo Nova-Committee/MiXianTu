@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.data.AttributeModifier;
+import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ParticleEffect;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
@@ -30,24 +30,24 @@ import java.util.Optional;
  */
 public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>> nextRealm,
                          NumberProvider progressThreshold, List<EntityCondition> upgradeConditions,
-                         List<AttributeModifier> passiveModifiers, List<ResourceCost> breakthroughCosts,
+                         List<AttributeEntry> passiveModifiers, List<ResourceCost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          Optional<Holder<Tribulation>> tribulation, Optional<ParticleEffect> breakthroughParticle,
                          EntityAction successAction, EntityAction failAction) {
-    public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE);
-    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
+    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
-            RegistryFixedCodec.create(MxtRegistryKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
+            RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
             NumberProvider.CODEC.fieldOf("progress_threshold").forGetter(RealmStage::progressThreshold),
             AutoIgnoreListCodec.create(EntityCondition.SINGLE_CODEC).optionalFieldOf("upgrade_conditions", List.of()).forGetter(RealmStage::upgradeConditions),
-            AttributeModifier.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(RealmStage::passiveModifiers),
+            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(RealmStage::passiveModifiers),
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
-            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
             Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(RealmStage::tribulation),
             ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle").forGetter(RealmStage::breakthroughParticle),
             EntityAction.CODEC.optionalFieldOf("success_action", NoOpAction.INSTANCE).forGetter(RealmStage::successAction),
             EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(RealmStage::failAction)
-    ).apply(instance, RealmStage::new));
+    ).apply(i, RealmStage::new));
 
     /**
      * Next-realm links are holder references, so diagnostic output must remain shallow.

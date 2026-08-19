@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.Sect;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,10 +15,10 @@ import java.util.Optional;
 import java.util.Set;
 
 public final class SectData {
-    public static final MapCodec<SectData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.SECT).optionalFieldOf("sect").forGetter(SectData::sect), Codec.STRING.optionalFieldOf("rank", "").forGetter(SectData::rank), Codec.INT.optionalFieldOf("contribution", 0).forGetter(SectData::contribution),
+    public static final MapCodec<SectData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.SECT).optionalFieldOf("sect").forGetter(SectData::sect), Codec.STRING.optionalFieldOf("rank", "").forGetter(SectData::rank), Codec.INT.optionalFieldOf("contribution", 0).forGetter(SectData::contribution),
             Identifier.CODEC.listOf().<Set<Identifier>>xmap(LinkedHashSet::new, ArrayList::new).optionalFieldOf("completed_tasks", Set.of()).forGetter(SectData::completedTasks)
-    ).apply(instance, SectData::new));
+    ).apply(i, SectData::new));
     private Holder<Sect> sect;
     private String rank;
     private int contribution;

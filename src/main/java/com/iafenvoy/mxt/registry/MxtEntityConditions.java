@@ -10,7 +10,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class MxtEntityConditions {
-    public static final DeferredRegister<MapCodec<? extends EntityCondition>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ENTITY_CONDITION_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends EntityCondition>> REGISTRY = DeferredRegister.create(MxtRegistries.ENTITY_CONDITION_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AlwaysTrueEntityCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<JsEntityCondition>> JS = REGISTRY.register("js", () -> JsEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<NeverEntityCondition>> NEVER = REGISTRY.register("never", () -> NeverEntityCondition.CODEC);

@@ -1,11 +1,14 @@
 package com.iafenvoy.mxt.runtime.item;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.AttributeModifier;
+import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.item.ItemBinding;
 import com.iafenvoy.mxt.data.item.PillBinding;
+import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.alchemy.PillService;
 import com.iafenvoy.mxt.util.ItemMatcher;
@@ -16,11 +19,13 @@ import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.item.Item;
@@ -49,23 +54,58 @@ public final class ItemBindingService {
     }
 
     public static Optional<WeaponBinding> weapon(ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.WEAPON_BINDING)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.WEAPON_BINDING)
                 .map(Reference::value), stack);
     }
 
     public static Optional<WeaponBinding> weapon(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.WEAPON_BINDING)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.WEAPON_BINDING)
                 .map(Reference::value), stack);
     }
 
     public static Optional<PillBinding> pill(ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.PILL_BINDING)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.PILL_BINDING)
                 .map(Reference::value), stack);
     }
 
     public static Optional<PillBinding> pill(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.PILL_BINDING)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING)
                 .map(Reference::value), stack);
+    }
+
+    public static Optional<TechniqueBinding> technique(ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.TECHNIQUE_BINDING)
+                .map(Reference::value), stack);
+    }
+
+    public static Optional<TechniqueBinding> technique(Provider access, ItemStack stack) {
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING)
+                .map(Reference::value), stack);
+    }
+
+    /** Resolves every binding type once for a single item stack. */
+    public static ResolvedBindings resolve(ItemStack stack) {
+        return new ResolvedBindings(binding(stack), weapon(stack), pill(stack), technique(stack));
+    }
+
+    /** Client-safe counterpart of {@link #resolve(ItemStack)}. */
+    public static ResolvedBindings resolve(Provider access, ItemStack stack) {
+        return new ResolvedBindings(binding(access, stack), weapon(access, stack), pill(access, stack), technique(access, stack));
+    }
+
+    /** Resolves the quality group selected by the most specific matching binding. */
+    public static Optional<TagKey<ItemQuality>> qualityGroup(ItemStack stack) {
+        return resolve(stack).qualityGroup();
+    }
+
+    /** Client-safe counterpart of {@link #qualityGroup(ItemStack)}. */
+    public static Optional<TagKey<ItemQuality>> qualityGroup(Provider access, ItemStack stack) {
+        return resolve(access, stack).qualityGroup();
+    }
+
+    /** Tests all matching binding conditions with one consistent formula context. */
+    public static boolean conditionsMet(LivingEntity entity, ItemStack stack, FormulaContext context) {
+        return resolve(stack).conditionsMet(entity, context);
     }
 
     /**
@@ -73,8 +113,8 @@ public final class ItemBindingService {
      */
     public static void refreshEquipped(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
-        refreshWeapon(entity.getItemBySlot(EquipmentSlot.MAINHAND));
-        refreshWeapon(entity.getItemBySlot(EquipmentSlot.OFFHAND));
+        refreshWeapon(entity, entity.getItemBySlot(EquipmentSlot.MAINHAND));
+        refreshWeapon(entity, entity.getItemBySlot(EquipmentSlot.OFFHAND));
     }
 
     /**
@@ -82,8 +122,11 @@ public final class ItemBindingService {
      */
     public static void tickMainHandWeapon(LivingEntity holder) {
         if (holder.level().isClientSide()) return;
+        ItemStack stack = holder.getMainHandItem();
+        ResolvedBindings bindings = resolve(stack);
+        if (!ItemQualityService.canUse(holder, stack, bindings)) return;
         FormulaContext context = FormulaContext.of(holder);
-        weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.tickAction().execute(holder, context));
+        bindings.weapon().ifPresent(weapon -> weapon.tickAction().execute(holder, context));
     }
 
     /**
@@ -91,11 +134,14 @@ public final class ItemBindingService {
      */
     public static void onMainHandWeaponAttack(LivingEntity holder, Entity target) {
         if (holder.level().isClientSide()) return;
+        ItemStack stack = holder.getMainHandItem();
+        ResolvedBindings bindings = resolve(stack);
+        if (!ItemQualityService.canUse(holder, stack, bindings)) return;
         FormulaContext context = FormulaContext.of(holder, Map.of(
                 "target_is_living", target instanceof LivingEntity ? 1.0D : 0.0D,
                 "target_health", target instanceof LivingEntity living ? (double) living.getHealth() : 0.0D
         ));
-        weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.attackAction().execute(holder, target, context));
+        bindings.weapon().ifPresent(weapon -> weapon.attackAction().execute(holder, target, context));
     }
 
     /**
@@ -103,8 +149,11 @@ public final class ItemBindingService {
      */
     public static void onMainHandWeaponUse(LivingEntity holder) {
         if (holder.level().isClientSide()) return;
+        ItemStack stack = holder.getMainHandItem();
+        ResolvedBindings bindings = resolve(stack);
+        if (!ItemQualityService.canUse(holder, stack, bindings)) return;
         FormulaContext context = FormulaContext.of(holder);
-        weapon(holder.getMainHandItem()).ifPresent(weapon -> weapon.useAction().execute(holder, context));
+        bindings.weapon().ifPresent(weapon -> weapon.useAction().execute(holder, context));
     }
 
     /**
@@ -112,47 +161,55 @@ public final class ItemBindingService {
      */
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return;
+        ResolvedBindings bindings = resolve(stack);
+        if (!ItemQualityService.canUse(entity, stack, bindings)) return;
         FormulaContext context = FormulaContext.of(entity);
-        actions(stack).forEach(action -> action.execute(entity, context));
-        pill(stack).ifPresent(definition -> PillService.consume(entity, definition));
+        bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
+        bindings.pill().ifPresent(definition -> PillService.consume(entity, definition));
     }
 
     private static Optional<ItemBinding> binding(ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtDatapackRegistries.ITEM_BINDING)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.ITEM_BINDING)
                 .map(Reference::value), stack);
     }
 
     private static Optional<ItemBinding> binding(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtDatapackRegistries.ITEM_BINDING)
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_BINDING)
                 .map(Reference::value), stack);
     }
 
-    private static void refreshWeapon(ItemStack stack) {
-        weapon(stack).ifPresent(weapon -> {
-            ItemAttributeModifiers modifiers = weaponModifiers(stack.getItem(), weapon);
+    private static void refreshWeapon(LivingEntity entity, ItemStack stack) {
+        ResolvedBindings bindings = resolve(stack);
+        bindings.weapon().ifPresent(weapon -> {
+            if (!ItemQualityService.canUse(entity, stack, bindings)) {
+                stack.remove(DataComponents.ATTRIBUTE_MODIFIERS);
+                return;
+            }
+            ItemAttributeModifiers modifiers = weaponModifiers(stack.getItem(), weapon, entity);
             if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {
                 stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
             }
         });
     }
 
-    private static ItemAttributeModifiers weaponModifiers(Item item, WeaponBinding weapon) {
+    private static ItemAttributeModifiers weaponModifiers(Item item, WeaponBinding weapon, LivingEntity entity) {
         Builder builder = ItemAttributeModifiers.builder();
+        FormulaContext context = FormulaContext.of(entity);
         add(builder, Attributes.ATTACK_DAMAGE, modifierId(item, "attack_damage"),
-                weapon.attackDamage().evaluate(FormulaContext.EMPTY), Operation.ADD_VALUE);
+                weapon.attackDamage().evaluate(context), Operation.ADD_VALUE);
         add(builder, Attributes.ATTACK_SPEED, modifierId(item, "attack_speed"),
-                weapon.attackSpeed().evaluate(FormulaContext.EMPTY), Operation.ADD_VALUE);
+                weapon.attackSpeed().evaluate(context), Operation.ADD_VALUE);
         for (int index = 0; index < weapon.attributes().size(); index++) {
-            AttributeModifier attribute = weapon.attributes().get(index);
-            add(builder, attribute.attribute(), modifierId(item, "attribute_" + index),
-                    attribute.value().evaluate(FormulaContext.EMPTY), operation(attribute.operation()));
+            AttributeEntry attribute = weapon.attributes().get(index);
+            add(builder, attribute.attribute(), attribute.modifier().id(),
+                    attribute.amount(context), attribute.modifier().operation());
         }
         return builder.build();
     }
 
     private static void add(Builder builder, Holder<Attribute> attribute, Identifier id, double value, Operation operation) {
         if (Double.isFinite(value) && value != 0.0D) {
-            builder.add(attribute, new net.minecraft.world.entity.ai.attributes.AttributeModifier(id, value, operation), EquipmentSlotGroup.MAINHAND);
+            builder.add(attribute, new AttributeModifier(id, value, operation), EquipmentSlotGroup.MAINHAND);
         }
     }
 
@@ -162,11 +219,21 @@ public final class ItemBindingService {
                 "weapon_binding/" + itemId.getNamespace() + "/" + itemId.getPath() + "/" + suffix);
     }
 
-    private static Operation operation(AttributeModifier.Operation operation) {
-        return switch (operation) {
-            case ADD_VALUE -> Operation.ADD_VALUE;
-            case ADD_MULTIPLIED_BASE -> Operation.ADD_MULTIPLIED_BASE;
-            case ADD_MULTIPLIED_TOTAL -> Operation.ADD_MULTIPLIED_TOTAL;
-        };
+    /** Immutable resolution snapshot used to avoid repeated matcher scans in a single operation. */
+    public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon,
+                                   Optional<PillBinding> pill, Optional<TechniqueBinding> technique) {
+        public Optional<TagKey<ItemQuality>> qualityGroup() {
+            return this.weapon.flatMap(WeaponBinding::qualityGroup)
+                    .or(() -> this.pill.flatMap(PillBinding::qualityGroup))
+                    .or(() -> this.technique.flatMap(TechniqueBinding::qualityGroup))
+                    .or(() -> this.item.flatMap(ItemBinding::qualityGroup));
+        }
+
+        public boolean conditionsMet(LivingEntity entity, FormulaContext context) {
+            return this.weapon.map(value -> value.condition().test(entity, context)).orElse(true)
+                    && this.pill.map(value -> value.condition().test(entity, context)).orElse(true)
+                    && this.technique.map(value -> value.condition().test(entity, context)).orElse(true)
+                    && this.item.map(value -> value.condition().test(entity, context)).orElse(true);
+        }
     }
 }

@@ -42,9 +42,9 @@ public record WeightedList(List<Entry> distribution) implements NumberProvider {
     }
 
     public record Entry(NumberProvider data, int weight) {
-        public static final MapCodec<Entry> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+        public static final MapCodec<Entry> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 CODEC.fieldOf("data").forGetter(Entry::data),
                 Codec.intRange(1, Integer.MAX_VALUE).fieldOf("weight").forGetter(Entry::weight)
-        ).apply(instance, Entry::new));
+        ).apply(i, Entry::new));
     }
 }

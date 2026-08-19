@@ -10,7 +10,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public final class MxtItemConditions {
-    public static final DeferredRegister<MapCodec<? extends ItemCondition>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.ITEM_CONDITION_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends ItemCondition>> REGISTRY = DeferredRegister.create(MxtRegistries.ITEM_CONDITION_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<AlwaysTrueItemCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueItemCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<JsItemCondition>> JS = REGISTRY.register("js", () -> JsItemCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<AndItemCondition>> AND = REGISTRY.register("and", () -> AndItemCondition.CODEC);

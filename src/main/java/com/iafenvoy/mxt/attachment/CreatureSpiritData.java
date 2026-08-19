@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,12 +15,12 @@ import java.util.Optional;
  * Persistent creature-profile state; it is separate from a creature's optional player-like SpiritData.
  */
 public final class CreatureSpiritData {
-    public static final MapCodec<CreatureSpiritData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            RegistryFixedCodec.create(MxtDatapackRegistries.CREATURE_PROFILE).optionalFieldOf("profile").forGetter(CreatureSpiritData::profile),
+    public static final MapCodec<CreatureSpiritData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE).optionalFieldOf("profile").forGetter(CreatureSpiritData::profile),
             Codec.DOUBLE.optionalFieldOf("intelligence", 0.0D).forGetter(CreatureSpiritData::intelligence),
             Identifier.CODEC.optionalFieldOf("inner_core").forGetter(CreatureSpiritData::innerCore),
             Identifier.CODEC.optionalFieldOf("loot_table").forGetter(CreatureSpiritData::lootTable)
-    ).apply(instance, CreatureSpiritData::new));
+    ).apply(i, CreatureSpiritData::new));
 
     private Holder<CreatureProfile> profile;
     private double intelligence;

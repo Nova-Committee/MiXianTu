@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.artifact;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.artifact.ArtifactStateData;
 import com.iafenvoy.mxt.data.artifact.ForgingResultData;
@@ -6,10 +7,7 @@ import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext;
-import com.iafenvoy.mxt.runtime.behavior.BehaviorContext.Kind;
-import com.iafenvoy.mxt.runtime.behavior.DomainBehaviorService;
+import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.runtime.energy.ArtifactSpiritEnergy;
 import com.iafenvoy.mxt.runtime.energy.ISpiritEnergy;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -18,6 +16,7 @@ import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.world.entity.Entity;
 
 /**
  * Server-side ownership and energy operations for artifact ItemStacks.
@@ -26,18 +25,18 @@ public final class ArtifactService {
     private ArtifactService() {
     }
 
-    public static RefineResult refine(ItemStack stack, UUID owner) {
-        if (NeoForge.EVENT_BUS.post(new Pre(stack, owner)).isCanceled())
+    public static RefineResult refine(ItemStack stack, Entity owner) {
+        UUID ownerUuid = owner.getUUID();
+        if (NeoForge.EVENT_BUS.post(new Pre(stack, ownerUuid)).isCanceled())
             return RefineResult.CANCELLED;
         ArtifactStateData current = state(stack);
-        String requestedOwner = owner.toString();
+        String requestedOwner = ownerUuid.toString();
         if (current.ownerUuid().isPresent() && !current.ownerUuid().get().equals(requestedOwner))
             return RefineResult.OWNED_BY_OTHER;
         stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner));
-        NeoForge.EVENT_BUS.post(new Post(stack, owner));
-        current.archetype().flatMap(id -> MxtDatapackRegistries.get(MxtDatapackRegistries.ITEM_ARCHETYPE, id)).ifPresent(definition ->
-                DomainBehaviorService.execute(MxtTypeRegistries.ARTIFACT_LIFECYCLE_BEHAVIOR, definition.refineBehavior(),
-                        BehaviorContext.of(Kind.ARTIFACT_REFINE, current.archetype().orElseThrow(), null, FormulaContext.EMPTY, true)));
+        NeoForge.EVENT_BUS.post(new Post(stack, ownerUuid));
+        current.archetype().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_ARCHETYPE, id)).ifPresent(definition ->
+                definition.refineAction().execute(owner, stack, FormulaContext.of(owner)));
         return RefineResult.REFINED;
     }
 

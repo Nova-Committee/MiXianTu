@@ -20,12 +20,12 @@ import java.util.Optional;
 
 public record ExplodeAction(float power, ExplosionInteraction interaction, Optional<BlockCondition> indestructible,
                             boolean createFire) implements BlockAction {
-    public static final MapCodec<ExplodeAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ExplodeAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.FLOAT.fieldOf("power").forGetter(ExplodeAction::power),
             ExplosionInteraction.CODEC.optionalFieldOf("interaction", ExplosionInteraction.MOB).forGetter(ExplodeAction::interaction),
             BlockCondition.CODEC.optionalFieldOf("indestructible").forGetter(ExplodeAction::indestructible),
             Codec.BOOL.optionalFieldOf("create_fire", false).forGetter(ExplodeAction::createFire)
-    ).apply(instance, ExplodeAction::new));
+    ).apply(i, ExplodeAction::new));
 
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {

@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
  * The resolved item id for a framework-provided unidentified item.
  */
 public record IdentificationData(Identifier result) {
-    public static final Codec<IdentificationData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<IdentificationData> CODEC = RecordCodecBuilder.create(i -> i.group(
             Identifier.CODEC.fieldOf("result").forGetter(IdentificationData::result)
-    ).apply(instance, IdentificationData::new));
+    ).apply(i, IdentificationData::new));
 }

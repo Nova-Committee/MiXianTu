@@ -14,9 +14,9 @@ import java.util.Map;
  * Persistent curse instances only; definitions are looked up from the reloadable curse registry.
  */
 public final class CurseHolderData {
-    public static final MapCodec<CurseHolderData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<CurseHolderData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.map(Curse.CODEC, State.CODEC).optionalFieldOf("instances", Map.of()).forGetter(CurseHolderData::instances)
-    ).apply(instance, CurseHolderData::new));
+    ).apply(i, CurseHolderData::new));
     private final Map<Holder<Curse>, State> instances;
 
     public CurseHolderData() {
@@ -54,14 +54,14 @@ public final class CurseHolderData {
         if (state != null) this.instances.put(curse, state.markedKnown());
     }
 
-    public record State(int stacks, long appliedAt, long expiresAt, String source,
-                        Map<String, String> componentState, boolean unknownDefinition) {
-        public static final Codec<State> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public record State(int stacks, long appliedAt, long expiresAt, String source, Map<String, String> componentState,
+                        boolean unknownDefinition) {
+        public static final Codec<State> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(1, 256).fieldOf("stacks").forGetter(State::stacks), Codec.LONG.fieldOf("applied_at").forGetter(State::appliedAt),
                 Codec.LONG.fieldOf("expires_at").forGetter(State::expiresAt), Codec.STRING.optionalFieldOf("source", "unknown").forGetter(State::source),
                 CollectionCodecs.map(Codec.STRING, Codec.STRING).optionalFieldOf("component_state", Map.of()).forGetter(State::componentState),
                 Codec.BOOL.optionalFieldOf("unknown_definition", false).forGetter(State::unknownDefinition)
-        ).apply(instance, State::new));
+        ).apply(i, State::new));
 
         public State(int stacks, long appliedAt, long expiresAt, String source) {
             this(stacks, appliedAt, expiresAt, source, Map.of(), false);

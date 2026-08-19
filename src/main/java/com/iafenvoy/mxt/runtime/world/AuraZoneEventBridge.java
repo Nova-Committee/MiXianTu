@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.world;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.event.AuraZoneEvent.Enter;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.Registry;
 import com.iafenvoy.mxt.data.aura.AuraZone;
@@ -40,7 +40,7 @@ public final class AuraZoneEventBridge {
 
     public static void onLevelTick(Post event) {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 5L != 0L) return;
-        Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtDatapackRegistries.AURA_ZONE);
+        Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         level.players().forEach(player -> {
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
             if (level.getGameTime() % 20L == 0L) {

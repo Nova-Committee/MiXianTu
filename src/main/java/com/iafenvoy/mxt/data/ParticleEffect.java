@@ -17,7 +17,7 @@ public record ParticleEffect(ParticleOptions particle, int count, float speed, b
             ParticleTypes.END_ROD, 20, 0.03F, false,
             new Vec3(0.6D, 1.0D, 0.6D), 0.0F, 0.8F, 0.0F);
 
-    public static final Codec<ParticleEffect> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<ParticleEffect> CODEC = RecordCodecBuilder.create(i -> i.group(
             ParticleTypes.CODEC.fieldOf("particle").forGetter(ParticleEffect::particle),
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("count", 16).forGetter(ParticleEffect::count),
             Codec.FLOAT.optionalFieldOf("speed", 0.0F).forGetter(ParticleEffect::speed),
@@ -26,7 +26,7 @@ public record ParticleEffect(ParticleOptions particle, int count, float speed, b
             Codec.FLOAT.optionalFieldOf("offset_x", 0.0F).forGetter(ParticleEffect::offsetX),
             Codec.FLOAT.optionalFieldOf("offset_y", 0.5F).forGetter(ParticleEffect::offsetY),
             Codec.FLOAT.optionalFieldOf("offset_z", 0.0F).forGetter(ParticleEffect::offsetZ)
-    ).apply(instance, ParticleEffect::new));
+    ).apply(i, ParticleEffect::new));
 
     /**
      * Broadcasts this effect to players in the server level.

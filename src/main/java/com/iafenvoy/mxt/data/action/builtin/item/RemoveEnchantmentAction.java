@@ -19,11 +19,11 @@ import java.util.Optional;
 
 public record RemoveEnchantmentAction(List<Holder<Enchantment>> enchantment, Optional<Integer> level,
                                       boolean resetRepairCost) implements ItemAction {
-    public static final MapCodec<RemoveEnchantmentAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<RemoveEnchantmentAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             AutoIgnoreListCodec.create(Enchantment.CODEC).optionalFieldOf("enchantment", List.of()).forGetter(RemoveEnchantmentAction::enchantment),
             Codec.INT.optionalFieldOf("level").forGetter(RemoveEnchantmentAction::level),
             Codec.BOOL.optionalFieldOf("reset_repair_cost", false).forGetter(RemoveEnchantmentAction::resetRepairCost)
-    ).apply(instance, RemoveEnchantmentAction::new));
+    ).apply(i, RemoveEnchantmentAction::new));
 
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {

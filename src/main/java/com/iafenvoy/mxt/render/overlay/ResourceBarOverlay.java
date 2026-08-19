@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.render.overlay;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderData;
@@ -16,7 +17,6 @@ import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Origins;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -74,7 +74,7 @@ public enum ResourceBarOverlay implements GuiLayer {
     }
 
     private static List<ResolvedBar> collect(Player player) {
-        Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtDatapackRegistries.RESOURCE);
+        Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
         List<ResolvedBar> result = new ArrayList<>();
         collectFor(result, resources, player, Context.SELF_HUD);
         if (minecraft().crosshairPickEntity instanceof LivingEntity target)

@@ -14,12 +14,12 @@ import java.util.Optional;
  */
 public record Sect(List<Rank> ranks, List<Task> tasks, List<Exchange> exchanges,
                    List<Identifier> territoryPermissions) {
-    public static final Codec<Sect> CODEC = RecordCodecBuilder.<Sect>create(instance -> instance.group(
+    public static final Codec<Sect> CODEC = RecordCodecBuilder.<Sect>create(i -> i.group(
             Rank.CODEC.listOf().fieldOf("ranks").forGetter(Sect::ranks),
             Task.CODEC.listOf().optionalFieldOf("tasks", List.of()).forGetter(Sect::tasks),
             Exchange.CODEC.listOf().optionalFieldOf("exchanges", List.of()).forGetter(Sect::exchanges),
             Identifier.CODEC.listOf().optionalFieldOf("territory_permissions", List.of()).forGetter(Sect::territoryPermissions)
-    ).apply(instance, Sect::new)).validate(Sect::validate);
+    ).apply(i, Sect::new)).validate(Sect::validate);
 
     private static DataResult<Sect> validate(Sect value) {
         if (value.ranks().isEmpty())
@@ -35,25 +35,25 @@ public record Sect(List<Rank> ranks, List<Task> tasks, List<Exchange> exchanges,
 
     public record Rank(String id, int priority, int minContribution, List<Identifier> permissions,
                        List<ResourceCost> promotionCosts) {
-        public static final Codec<Rank> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Rank> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.STRING.fieldOf("id").forGetter(Rank::id),
                 Codec.INT.optionalFieldOf("priority", 0).forGetter(Rank::priority),
                 Codec.INT.optionalFieldOf("min_contribution", 0).forGetter(Rank::minContribution),
                 Identifier.CODEC.listOf().optionalFieldOf("permissions", List.of()).forGetter(Rank::permissions),
                 ResourceCost.LIST_CODEC.optionalFieldOf("promotion_costs", List.of()).forGetter(Rank::promotionCosts)
-        ).apply(instance, Rank::new));
+        ).apply(i, Rank::new));
     }
 
     /**
      * A server-side completion hook may award a one-shot or repeatable contribution task.
      */
     public record Task(Identifier id, int contributionReward, boolean once, Optional<Identifier> requiredPermission) {
-        public static final Codec<Task> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Task> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(Task::id),
                 Codec.intRange(1, Integer.MAX_VALUE).fieldOf("contribution_reward").forGetter(Task::contributionReward),
                 Codec.BOOL.optionalFieldOf("once", true).forGetter(Task::once),
                 Identifier.CODEC.optionalFieldOf("required_permission").forGetter(Task::requiredPermission)
-        ).apply(instance, Task::new));
+        ).apply(i, Task::new));
     }
 
     /**
@@ -61,12 +61,12 @@ public record Sect(List<Rank> ranks, List<Task> tasks, List<Exchange> exchanges,
      */
     public record Exchange(Identifier id, int contributionCost, List<ResourceCost> costs, List<Identifier> outputs,
                            Optional<Identifier> requiredPermission) {
-        public static final Codec<Exchange> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Exchange> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(Exchange::id),
                 Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("contribution_cost", 0).forGetter(Exchange::contributionCost),
                 ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Exchange::costs),
                 Identifier.CODEC.listOf().fieldOf("outputs").forGetter(Exchange::outputs),
                 Identifier.CODEC.optionalFieldOf("required_permission").forGetter(Exchange::requiredPermission)
-        ).apply(instance, Exchange::new));
+        ).apply(i, Exchange::new));
     }
 }

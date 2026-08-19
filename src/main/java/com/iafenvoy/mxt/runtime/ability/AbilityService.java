@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.ability;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.AbilityHolderData;
 import com.iafenvoy.mxt.attachment.AbilityHolderData.Snapshot;
@@ -322,7 +323,7 @@ public final class AbilityService {
     private static FormulaContext withElementAffinity(LivingEntity actor, Ability definition, FormulaContext context) {
         if (definition.elementAffinity().isEmpty()) return context;
         double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_DATA), definition.elementAffinity(), context,
-                id -> MxtDatapackRegistries.get(MxtDatapackRegistries.SPIRIT_ROOT, id));
+                id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id));
         LinkedHashMap<String, Double> variables = new LinkedHashMap<>(context.variables());
         variables.put("element_modifier", modifier);
         return new FormulaContext(variables, context.random());

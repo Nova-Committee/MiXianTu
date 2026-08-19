@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.loot;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -16,10 +17,10 @@ import org.jspecify.annotations.NonNull;
  */
 public record HasAbilityLootCondition(EntityTarget target,
                                       Identifier ability) implements LootItemCondition {
-    public static final MapCodec<HasAbilityLootCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<HasAbilityLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasAbilityLootCondition::target),
             Identifier.CODEC.fieldOf("ability").forGetter(HasAbilityLootCondition::ability)
-    ).apply(instance, HasAbilityLootCondition::new));
+    ).apply(i, HasAbilityLootCondition::new));
 
     @Override
     public @NonNull MapCodec<HasAbilityLootCondition> codec() {
@@ -29,7 +30,7 @@ public record HasAbilityLootCondition(EntityTarget target,
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        return entity != null && MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, this.ability)
+        return entity != null && MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, this.ability)
                 .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability)).orElse(false);
     }
 }

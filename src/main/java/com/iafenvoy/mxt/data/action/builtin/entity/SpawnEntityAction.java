@@ -15,12 +15,12 @@ import net.minecraft.world.entity.EntityType;
  */
 public record SpawnEntityAction(EntityType<?> entityType, NumberProvider x, NumberProvider y,
                                 NumberProvider z) implements EntityAction {
-    public static final MapCodec<SpawnEntityAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<SpawnEntityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BuiltInRegistries.ENTITY_TYPE.byNameCodec().fieldOf("entity_type").forGetter(SpawnEntityAction::entityType),
             NumberProvider.CODEC.fieldOf("x").forGetter(SpawnEntityAction::x),
             NumberProvider.CODEC.fieldOf("y").forGetter(SpawnEntityAction::y),
             NumberProvider.CODEC.fieldOf("z").forGetter(SpawnEntityAction::z)
-    ).apply(instance, SpawnEntityAction::new));
+    ).apply(i, SpawnEntityAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

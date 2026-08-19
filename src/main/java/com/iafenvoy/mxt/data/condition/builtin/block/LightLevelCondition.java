@@ -22,10 +22,10 @@ public record LightLevelCondition(Optional<LightLayer> lightType, Comparison com
             return DataResult.error(() -> "Unknown light type " + value);
         }
     }, value -> value.name().toLowerCase(Locale.ROOT));
-    public static final MapCodec<LightLevelCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<LightLevelCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             LIGHT_LAYER_CODEC.optionalFieldOf("light_type").forGetter(LightLevelCondition::lightType),
             Comparison.CODEC.forGetter(LightLevelCondition::comparison)
-    ).apply(instance, LightLevelCondition::new));
+    ).apply(i, LightLevelCondition::new));
 
     @Override
     public boolean test(Level level, BlockPos pos, FormulaContext context) {

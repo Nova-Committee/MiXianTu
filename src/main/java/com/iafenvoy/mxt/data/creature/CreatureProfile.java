@@ -3,12 +3,12 @@ package com.iafenvoy.mxt.data.creature;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -30,15 +30,15 @@ public record CreatureProfile(Optional<Holder<RealmStage>> realmStage, NumberPro
                               List<Either<Holder<EntityType<?>>, TagKey<EntityType<?>>>> entityTypeTags,
                               List<Either<Holder<Element>, TagKey<Element>>> preferredAuraElements,
                               double minimumAura) {
-    public static final Codec<CreatureProfile> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<CreatureProfile> CODEC = RecordCodecBuilder.create(i -> i.group(
             RealmStage.CODEC.optionalFieldOf("realm_stage").forGetter(CreatureProfile::realmStage),
             NumberProvider.CODEC.optionalFieldOf("intelligence", new Constant(0.0D)).forGetter(CreatureProfile::intelligence),
-            AutoIgnoreListCodec.create(MxtTypeRegistries.CREATURE_SPAWN_CONDITION.byNameCodec()).optionalFieldOf("spawn_conditions", List.of()).forGetter(CreatureProfile::spawnConditions),
+            AutoIgnoreListCodec.create(MxtRegistries.CREATURE_SPAWN_CONDITION.byNameCodec()).optionalFieldOf("spawn_conditions", List.of()).forGetter(CreatureProfile::spawnConditions),
             Identifier.CODEC.optionalFieldOf("inner_core").forGetter(CreatureProfile::innerCore),
             Identifier.CODEC.optionalFieldOf("loot_table").forGetter(CreatureProfile::lootTable),
             Identifier.CODEC.listOf().optionalFieldOf("contract_tags", List.of()).forGetter(CreatureProfile::contractTags),
             RegistryCodecs.holderOrTagList(Registries.ENTITY_TYPE).optionalFieldOf("entity_type_tags", List.of()).forGetter(CreatureProfile::entityTypeTags),
-            RegistryCodecs.holderOrTagList(MxtRegistryKeys.ELEMENT).optionalFieldOf("preferred_aura_elements", List.of()).forGetter(CreatureProfile::preferredAuraElements),
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("preferred_aura_elements", List.of()).forGetter(CreatureProfile::preferredAuraElements),
             Codec.DOUBLE.optionalFieldOf("minimum_aura", 0.0D).forGetter(CreatureProfile::minimumAura)
-    ).apply(instance, CreatureProfile::new));
+    ).apply(i, CreatureProfile::new));
 }

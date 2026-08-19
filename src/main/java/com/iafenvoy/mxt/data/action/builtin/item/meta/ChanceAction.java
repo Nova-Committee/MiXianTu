@@ -11,11 +11,11 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Optional;
 
 public record ChanceAction(ItemAction action, float chance, Optional<ItemAction> failAction) implements ItemAction {
-    public static final MapCodec<ChanceAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ChanceAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ItemAction.CODEC.fieldOf("action").forGetter(ChanceAction::action),
             Codec.floatRange(0.0F, 1.0F).fieldOf("chance").forGetter(ChanceAction::chance),
             ItemAction.CODEC.optionalFieldOf("fail_action").forGetter(ChanceAction::failAction)
-    ).apply(instance, ChanceAction::new));
+    ).apply(i, ChanceAction::new));
 
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {

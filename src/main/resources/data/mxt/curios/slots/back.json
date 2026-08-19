@@ -1,0 +1,6 @@
+{
+  "size": 2,
+  "add_cosmetic": true,
+  "icon": "curios:slot/empty_back_slot",
+  "validators": ["curios:tag", "mxt:back_auto"]
+}

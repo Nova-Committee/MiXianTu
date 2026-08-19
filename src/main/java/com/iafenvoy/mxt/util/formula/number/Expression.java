@@ -18,11 +18,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 
 public final class Expression implements NumberProvider {
-    public static final MapCodec<Expression> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<Expression> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("expression").forGetter(Expression::source),
             Codec.lazyInitialized(() -> CollectionCodecs.map(Codec.STRING, CODEC))
                     .optionalFieldOf("params", Map.of()).forGetter(Expression::params)
-    ).apply(instance, Expression::new));
+    ).apply(i, Expression::new));
 
     private final String source;
     private final Map<String, NumberProvider> params;

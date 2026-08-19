@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.data.curse.CurseType.Empty;
 import com.iafenvoy.mxt.data.curse.CurseType.Permanent;
 import com.iafenvoy.mxt.data.curse.CurseType.Timed;
 import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.resources.Identifier;
@@ -16,7 +16,7 @@ import java.util.function.Function;
  * Code-owned lifecycle policy selected by a curse definition's {@code type}.
  */
 public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
-    Codec<CurseType> CODEC = MxtTypeRegistries.CURSE_TYPE.byNameCodec().dispatch("type", CurseType::codec, Function.identity());
+    Codec<CurseType> CODEC = MxtRegistries.CURSE_TYPE.byNameCodec().dispatch("type", CurseType::codec, Function.identity());
     MapCodec<CurseType> MAP_CODEC = MapCodec.assumeMapUnsafe(CODEC);
 
     Identifier id();

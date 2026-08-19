@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.loot;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
@@ -21,11 +22,11 @@ import java.util.List;
  * Vanilla loot integration for a server-validated curse application.
  */
 public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
-    public static final MapCodec<ApplyCurseLootFunction> CODEC = RecordCodecBuilder.mapCodec(instance -> commonFields(instance).and(instance.group(
+    public static final MapCodec<ApplyCurseLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(function -> function.target),
             Identifier.CODEC.fieldOf("curse").forGetter(function -> function.curse),
             Codec.intRange(1, 256).optionalFieldOf("stacks", 1).forGetter(function -> function.stacks)
-    )).apply(instance, ApplyCurseLootFunction::new));
+    )).apply(i, ApplyCurseLootFunction::new));
     private final EntityTarget target;
     private final Identifier curse;
     private final int stacks;
@@ -46,7 +47,7 @@ public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
         if (entity != null)
-            MxtDatapackRegistries.holder(MxtDatapackRegistries.CURSE, this.curse).ifPresent(curse ->
+            MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, this.curse).ifPresent(curse ->
                     CurseService.apply(entity, curse, this.stacks, entity.level().getGameTime(), FormulaContext.of(entity), "loot"));
         return stack;
     }

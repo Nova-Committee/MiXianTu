@@ -12,9 +12,9 @@ import java.util.List;
  * Applies several independently configured curses through the standard server transaction.
  */
 public record ApplyCursesAction(List<ApplyCurseAction> curses) implements EntityAction {
-    public static final MapCodec<ApplyCursesAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ApplyCursesAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ApplyCurseAction.CODEC.codec().listOf().fieldOf("curses").forGetter(ApplyCursesAction::curses)
-    ).apply(instance, ApplyCursesAction::new));
+    ).apply(i, ApplyCursesAction::new));
 
     public ApplyCursesAction {
         if (curses.isEmpty()) throw new IllegalArgumentException("curses must not be empty");

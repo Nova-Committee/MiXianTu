@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.network;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -14,6 +15,10 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.SlotContext;
+import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
@@ -26,11 +31,11 @@ public final class ServerNetworkHandler {
     static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         if (payload.cancel()) {
-            MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, payload.ability()).ifPresent(ability ->
+            MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability ->
                     AbilityService.cancelCast(ability, player.getData(MxtAttachments.ABILITY_HOLDER), player.level().getGameTime()));
             return;
         }
-        MxtDatapackRegistries.holder(MxtDatapackRegistries.ABILITY, payload.ability()).ifPresent(ability -> AbilityService.use(ability, ability.value(), player,
+        MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability -> AbilityService.use(ability, ability.value(), player,
                 player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player)));
     }
 
@@ -39,10 +44,10 @@ public final class ServerNetworkHandler {
         Identifier definition = payload.definition().orElse(null);
         switch (payload.action()) {
             case START ->
-                    MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_BLUEPRINT, definition).ifPresent(blueprint ->
+                    MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, definition).ifPresent(blueprint ->
                             ForgingWorkstationService.start(player, payload.position(), definition, blueprint));
             case STRIKE ->
-                    MxtDatapackRegistries.get(MxtDatapackRegistries.FORGING_METHOD, definition).ifPresent(method ->
+                    MxtDatapackRegistries.get(MxtResourceKeys.FORGING_METHOD, definition).ifPresent(method ->
                             ForgingWorkstationService.strike(player, payload.position(), definition, method));
             case FINISH -> ForgingWorkstationService.finish(player, payload.position(), definition);
             case CANCEL -> ForgingWorkstationService.cancel(player, payload.position());
@@ -57,7 +62,7 @@ public final class ServerNetworkHandler {
             }
             return;
         }
-        MxtDatapackRegistries.holder(MxtDatapackRegistries.ITEM_ARCHETYPE, payload.archetype()).ifPresent(archetype ->
+        MxtDatapackRegistries.holder(MxtResourceKeys.ITEM_ARCHETYPE, payload.archetype()).ifPresent(archetype ->
                 FlightService.mount(player, player.getMainHandItem(), archetype, FormulaContext.of(player)));
     }
 
@@ -76,5 +81,19 @@ public final class ServerNetworkHandler {
 
     static void onPlayerTradeAction(PlayerTradeActionC2SPayload payload, IPayloadContext context) {
         if (context.player() instanceof ServerPlayer player) PlayerTradeService.handleAction(player, payload.action());
+    }
+
+    static void onBackSlotSwap(BackSlotSwapC2SPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        ItemStack hand = player.getMainHandItem();
+        CuriosApi.getCuriosInventory(player).flatMap(handler -> handler.getStacksHandler("back")).ifPresent(back -> {
+            IDynamicStackHandler stacks = back.getStacks();
+            if (stacks.getSlots() <= 0) return;
+            ItemStack target = stacks.getStackInSlot(0);
+            SlotContext slot = new SlotContext("back", player, 0, false, back.getRenders().get(0));
+            if (!CuriosApi.isStackValid(slot, hand)) return;
+            stacks.setStackInSlot(0, hand.copy());
+            player.getInventory().setSelectedItem(target);
+        });
     }
 }

@@ -7,10 +7,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 public record ChargesAbilityComponent(NumberProvider maximum,
                                       NumberProvider rechargeTicks) implements AbilityComponent {
-    public static final MapCodec<ChargesAbilityComponent> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ChargesAbilityComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("maximum").forGetter(ChargesAbilityComponent::maximum),
             NumberProvider.CODEC.fieldOf("recharge_ticks").forGetter(ChargesAbilityComponent::rechargeTicks)
-    ).apply(instance, ChargesAbilityComponent::new));
+    ).apply(i, ChargesAbilityComponent::new));
 
     @Override
     public MapCodec<ChargesAbilityComponent> codec() {

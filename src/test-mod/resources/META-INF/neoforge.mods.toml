@@ -26,6 +26,6 @@ side="BOTH"
 [[dependencies.mxt_test]]
 modId="mxt"
 type="required"
-versionRange="[1.0.0,)"
+versionRange="[0,)"
 ordering="AFTER"
 side="BOTH"

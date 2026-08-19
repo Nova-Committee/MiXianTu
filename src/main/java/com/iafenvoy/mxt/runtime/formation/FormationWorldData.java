@@ -14,9 +14,9 @@ import java.util.Optional;
  * Persistable level-scoped index of active formations, keyed by their validated controller position.
  */
 public final class FormationWorldData {
-    public static final MapCodec<FormationWorldData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<FormationWorldData> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.unboundedMap(Codec.LONG, Snapshot.CODEC).optionalFieldOf("formations", Map.of()).forGetter(FormationWorldData::encoded)
-    ).apply(instance, FormationWorldData::new));
+    ).apply(i, FormationWorldData::new));
     public static final Codec<FormationWorldData> CODEC = MAP_CODEC.codec();
     private final Map<Long, Snapshot> formations;
 

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.condition;
 
 import com.iafenvoy.mxt.data.condition.builtin.item.meta.AndItemCondition;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -16,7 +16,7 @@ import java.util.function.Function;
  * Code-owned predicate against one ItemStack.
  */
 public interface ItemCondition {
-    Codec<ItemCondition> SINGLE_CODEC = MxtTypeRegistries.ITEM_CONDITION_TYPE.byNameCodec().dispatch("type", ItemCondition::codec, Function.identity());
+    Codec<ItemCondition> SINGLE_CODEC = MxtRegistries.ITEM_CONDITION_TYPE.byNameCodec().dispatch("type", ItemCondition::codec, Function.identity());
     Codec<ItemCondition> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
             value -> value.map(condition -> condition, AndItemCondition::new),
             condition -> condition instanceof AndItemCondition(

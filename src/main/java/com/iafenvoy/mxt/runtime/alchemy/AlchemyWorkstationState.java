@@ -16,11 +16,11 @@ import java.util.Optional;
  * recipe inputs, the active session snapshot, and completed output stacks.
  */
 public final class AlchemyWorkstationState {
-    public static final MapCodec<AlchemyWorkstationState> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AlchemyWorkstationState> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ItemStack.CODEC.listOf().optionalFieldOf("inputs", List.of()).forGetter(AlchemyWorkstationState::inputs),
             ItemStack.CODEC.listOf().optionalFieldOf("outputs", List.of()).forGetter(AlchemyWorkstationState::outputs),
             Snapshot.CODEC.optionalFieldOf("session").forGetter(AlchemyWorkstationState::session)
-    ).apply(instance, AlchemyWorkstationState::new));
+    ).apply(i, AlchemyWorkstationState::new));
     public static final Codec<AlchemyWorkstationState> CODEC = MAP_CODEC.codec();
 
     private final List<ItemStack> inputs;

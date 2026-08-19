@@ -17,14 +17,14 @@ import java.util.Optional;
  * so modded items can participate without a hardcoded coin item class.
  */
 public record CurrencyValue(List<Entry> items, long value, List<Exchange> exchanges) implements ItemMatcher {
-    public static final Codec<CurrencyValue> CODEC = RecordCodecBuilder.<CurrencyValue>create(instance -> instance.group(
+    public static final Codec<CurrencyValue> CODEC = RecordCodecBuilder.<CurrencyValue>create(i -> i.group(
             ENTRIES_CODEC.optionalFieldOf("items", List.of()).forGetter(CurrencyValue::items),
             BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("item").forGetter(definition -> definition.items().size() == 1 && definition.items().getFirst() instanceof ItemEntry(
                     Item item
             ) ? Optional.of(item) : Optional.empty()),
             Codec.LONG.fieldOf("value").forGetter(CurrencyValue::value),
             Exchange.CODEC.listOf().fieldOf("exchanges").forGetter(CurrencyValue::exchanges)
-    ).apply(instance, (items, legacyItem, value, exchanges) -> new CurrencyValue(
+    ).apply(i, (items, legacyItem, value, exchanges) -> new CurrencyValue(
             items.isEmpty() ? legacyItem.map(item -> List.of(Entry.item(item))).orElse(List.of()) : items, value, exchanges
     ))).validate(CurrencyValue::validate);
 
@@ -43,9 +43,9 @@ public record CurrencyValue(List<Entry> items, long value, List<Exchange> exchan
      * One selected exchange: consume currency items and create the configured result stack.
      */
     public record Exchange(int cost, ItemStackTemplate result) {
-        public static final Codec<Exchange> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Exchange> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ExtraCodecs.intRange(1, 99).fieldOf("cost").forGetter(Exchange::cost),
                 ItemStackTemplate.CODEC.fieldOf("result").forGetter(Exchange::result)
-        ).apply(instance, Exchange::new));
+        ).apply(i, Exchange::new));
     }
 }

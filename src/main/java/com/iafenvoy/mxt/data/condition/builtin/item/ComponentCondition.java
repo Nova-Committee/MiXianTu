@@ -19,10 +19,10 @@ import net.minecraft.world.item.ItemStack;
  * Matches the serialized value of a data component using partial NBT comparison.
  */
 public record ComponentCondition(Holder<DataComponentType<?>> component, CompoundTag nbt) implements ItemCondition {
-    public static final MapCodec<ComponentCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ComponentCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(Registries.DATA_COMPONENT_TYPE).fieldOf("component").forGetter(ComponentCondition::component),
             CompoundTag.CODEC.fieldOf("nbt").forGetter(ComponentCondition::nbt)
-    ).apply(instance, ComponentCondition::new));
+    ).apply(i, ComponentCondition::new));
 
     @Override
     public boolean test(Entity holder, ItemStack stack, FormulaContext context) {

@@ -12,10 +12,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 public record JsBlockAction(String id, JsonObject params) implements BlockAction {
-    public static final MapCodec<JsBlockAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<JsBlockAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsBlockAction::id),
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsBlockAction::params)
-    ).apply(instance, JsBlockAction::new));
+    ).apply(i, JsBlockAction::new));
 
     @Override
     public void execute(Level level, BlockPos pos, FormulaContext context) {

@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.data.forging;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
@@ -34,8 +35,8 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
                                Identifier result, List<Either<Holder<Block>, TagKey<Block>>> workstationBlocks,
                                EntityAction completeAction, EntityAction failAction,
                                FailureSettlement failureSettlement) {
-    public static final Codec<Holder<ForgingBlueprint>> CODEC = RegistryFixedCodec.create(MxtDatapackRegistries.FORGING_BLUEPRINT);
-    public static final Codec<ForgingBlueprint> DIRECT_CODEC = RecordCodecBuilder.<ForgingBlueprint>create(instance -> instance.group(
+    public static final Codec<Holder<ForgingBlueprint>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORGING_BLUEPRINT);
+    public static final Codec<ForgingBlueprint> DIRECT_CODEC = RecordCodecBuilder.<ForgingBlueprint>create(i -> i.group(
             Identifier.CODEC.fieldOf("input").forGetter(ForgingBlueprint::input),
             AutoIgnoreListCodec.create(ForgingMethod.CODEC).fieldOf("allowed_methods").forGetter(ForgingBlueprint::allowedMethods),
             MeterBounds.MAP_CODEC.forGetter(ForgingBlueprint::meter),
@@ -47,7 +48,7 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
             EntityAction.CODEC.optionalFieldOf("complete_action", NoOpAction.INSTANCE).forGetter(ForgingBlueprint::completeAction),
             EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(ForgingBlueprint::failAction),
             FailureSettlement.CODEC.codec().optionalFieldOf("failure_settlement", FailureSettlement.destroyInput()).forGetter(ForgingBlueprint::failureSettlement)
-    ).apply(instance, ForgingBlueprint::new)).validate(ForgingBlueprint::validate);
+    ).apply(i, ForgingBlueprint::new)).validate(ForgingBlueprint::validate);
 
     private static DataResult<ForgingBlueprint> validate(ForgingBlueprint definition) {
         if (definition.allowedMethods.isEmpty() || definition.allowedMethods.stream().map(ForgingBlueprint::methodId).distinct().count() != definition.allowedMethods.size()) {
@@ -86,18 +87,18 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
                 .orElseThrow(() -> new IllegalArgumentException("Forging method must be a registry reference"));
     }
 
-    public Identifier qualityFor(int extraSteps) {
+    public Holder<ItemQuality> qualityFor(int extraSteps) {
         if (extraSteps < 0) throw new IllegalArgumentException("extraSteps must be non-negative");
         return this.qualityByExtraSteps.stream().filter(entry -> extraSteps <= entry.maxExtraSteps()).findFirst().orElseThrow().quality();
     }
 
     public record MeterBounds(int min, int max, int targetMin, int targetMax) {
-        public static final MapCodec<MeterBounds> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+        public static final MapCodec<MeterBounds> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.INT.fieldOf("meter_min").forGetter(MeterBounds::min),
                 Codec.INT.fieldOf("meter_max").forGetter(MeterBounds::max),
                 Codec.INT.fieldOf("target_min").forGetter(MeterBounds::targetMin),
                 Codec.INT.fieldOf("target_max").forGetter(MeterBounds::targetMax)
-        ).apply(instance, MeterBounds::new));
+        ).apply(i, MeterBounds::new));
 
         public boolean valid() {
             return this.min < 0 && this.max > 0 && this.min <= this.targetMin && this.targetMin <= this.targetMax && this.targetMax <= this.max;
@@ -105,11 +106,11 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
     }
 
     public record FinishPattern(List<Holder<ForgingMethod>> steps, int requiredSuffixSteps, boolean showFinishPattern) {
-        public static final MapCodec<FinishPattern> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+        public static final MapCodec<FinishPattern> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 AutoIgnoreListCodec.create(ForgingMethod.CODEC).fieldOf("steps").forGetter(FinishPattern::steps),
                 Codec.intRange(0, 6).optionalFieldOf("required_suffix_steps", 0).forGetter(FinishPattern::requiredSuffixSteps),
                 Codec.BOOL.optionalFieldOf("show_finish_pattern", true).forGetter(FinishPattern::showFinishPattern)
-        ).apply(instance, FinishPattern::new));
+        ).apply(i, FinishPattern::new));
 
         public static FinishPattern none() {
             return new FinishPattern(List.of(), 0, true);
@@ -120,10 +121,10 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
         }
     }
 
-    public record QualityThreshold(int maxExtraSteps, Identifier quality) {
-        public static final Codec<QualityThreshold> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Codec.INT.fieldOf("max_extra_steps").forGetter(QualityThreshold::maxExtraSteps), Identifier.CODEC.fieldOf("quality").forGetter(QualityThreshold::quality)
-        ).apply(instance, QualityThreshold::new));
+    public record QualityThreshold(int maxExtraSteps, Holder<ItemQuality> quality) {
+        public static final Codec<QualityThreshold> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.INT.fieldOf("max_extra_steps").forGetter(QualityThreshold::maxExtraSteps), ItemQuality.CODEC.fieldOf("quality").forGetter(QualityThreshold::quality)
+        ).apply(i, QualityThreshold::new));
 
         static boolean valid(List<QualityThreshold> entries) {
             if (entries.isEmpty() || entries.getLast().maxExtraSteps() != Integer.MAX_VALUE) return false;
@@ -142,11 +143,11 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
      * this keeps one-item forging inputs meaningful without inventing fractional stacks.
      */
     public record FailureSettlement(Optional<Identifier> result, double inputReturnRatio, double materialLossRatio) {
-        public static final MapCodec<FailureSettlement> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+        public static final MapCodec<FailureSettlement> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.optionalFieldOf("result").forGetter(FailureSettlement::result),
                 Codec.doubleRange(0, 1).optionalFieldOf("input_return_ratio", 0.0D).forGetter(FailureSettlement::inputReturnRatio),
                 Codec.doubleRange(0, 1).optionalFieldOf("material_loss_ratio", 1.0D).forGetter(FailureSettlement::materialLossRatio)
-        ).apply(instance, FailureSettlement::new));
+        ).apply(i, FailureSettlement::new));
 
         public static FailureSettlement destroyInput() {
             return new FailureSettlement(Optional.empty(), 0.0D, 1.0D);

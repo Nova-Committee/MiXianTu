@@ -7,10 +7,10 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 public record Binomial(NumberProvider trials, NumberProvider probability) implements NumberProvider {
     private static final int MAX_TRIALS = 16_384;
-    public static final MapCodec<Binomial> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<Binomial> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CODEC.fieldOf("n").forGetter(Binomial::trials),
             CODEC.fieldOf("p").forGetter(Binomial::probability)
-    ).apply(instance, Binomial::new));
+    ).apply(i, Binomial::new));
 
     @Override
     public double evaluate(FormulaContext context) {

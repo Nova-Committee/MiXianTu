@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Current;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Maximum;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Missing;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Regen;
-import com.iafenvoy.mxt.registry.MxtTypeRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
@@ -19,7 +19,7 @@ import java.util.function.Function;
  * Resolves a resource-derived value at runtime without exposing attachment mutation to data.
  */
 public sealed interface ResourceValueProvider permits Current, Maximum, Regen, Missing, Constant, JsResourceValueProvider {
-    Codec<ResourceValueProvider> CODEC = MxtTypeRegistries.RESOURCE_VALUE_PROVIDER_TYPE.byNameCodec().dispatch("type", ResourceValueProvider::codec, Function.identity());
+    Codec<ResourceValueProvider> CODEC = MxtRegistries.RESOURCE_VALUE_PROVIDER_TYPE.byNameCodec().dispatch("type", ResourceValueProvider::codec, Function.identity());
 
     double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context);
 

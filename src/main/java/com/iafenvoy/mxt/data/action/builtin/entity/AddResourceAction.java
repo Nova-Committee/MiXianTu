@@ -20,10 +20,10 @@ import net.minecraft.world.entity.LivingEntity;
  */
 public record AddResourceAction(Holder<Resource> resource,
                                 NumberProvider amount) implements EntityAction {
-    public static final MapCodec<AddResourceAction> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<AddResourceAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(AddResourceAction::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(AddResourceAction::amount)
-    ).apply(instance, AddResourceAction::new));
+    ).apply(i, AddResourceAction::new));
 
     @Override
     public void execute(Entity entity, FormulaContext context) {

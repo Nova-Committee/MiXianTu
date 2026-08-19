@@ -14,9 +14,9 @@ import java.util.Map;
  * ItemStack component for curse instances before they are transferred to an entity.
  */
 public record CurseContainerData(Map<Holder<Curse>, State> instances) {
-    public static final MapCodec<CurseContainerData> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<CurseContainerData> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.map(Curse.CODEC, State.CODEC).optionalFieldOf("instances", Map.of()).forGetter(CurseContainerData::instances)
-    ).apply(instance, CurseContainerData::new));
+    ).apply(i, CurseContainerData::new));
     public static final Codec<CurseContainerData> CODEC = MAP_CODEC.codec();
 
     public CurseContainerData() {

@@ -19,7 +19,7 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -66,7 +66,7 @@ public final class CultivationService {
         if (!Objects.equals(target.resource(), activeResource(spirit, target)))
             return BreakthroughResult.rejected(Failure.WRONG_RESOURCE, null);
         boolean configuredConditions = target.upgradeConditions().stream().allMatch(condition -> condition.test(entity, context));
-        boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), MxtDatapackRegistries.registry(MxtRegistryKeys.ABILITY))
+        boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
                 .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
         BreakthroughResult result = commit(spirit, resources, targetHolder, context, () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
         if (result.advanced()) {
@@ -122,7 +122,7 @@ public final class CultivationService {
             return definition.nextRealm().filter(value -> HolderHelper.id(value.value().resource()).equals(resource))
                     .map(Next::new);
         }
-        Resource definition = MxtDatapackRegistries.get(MxtDatapackRegistries.RESOURCE, resource).orElse(null);
+        Resource definition = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, resource).orElse(null);
         return definition == null ? Optional.empty() : definition.firstRealm()
                 .filter(value -> HolderHelper.id(value.value().resource()).equals(resource))
                 .map(Next::new);
@@ -138,7 +138,7 @@ public final class CultivationService {
         Holder<RealmStage> current = spirit.realmStage().orElse(null);
         if (current != null && cache.resourceForRealm(HolderHelper.id(current)).filter(resource::equals).isEmpty())
             return false;
-        Holder<RealmStage> targetHolder = MxtDatapackRegistries.holder(MxtDatapackRegistries.REALM_STAGE, target).orElse(null);
+        Holder<RealmStage> targetHolder = MxtDatapackRegistries.holder(MxtResourceKeys.REALM_STAGE, target).orElse(null);
         if (targetHolder == null) return false;
         spirit.setRealmStage(targetHolder);
         spirit.setCultivationProgress(0.0D);

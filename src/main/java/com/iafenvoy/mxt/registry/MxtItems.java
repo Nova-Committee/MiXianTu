@@ -12,7 +12,6 @@ import com.iafenvoy.mxt.item.SpiritVesselItem;
 import com.iafenvoy.mxt.item.TokenItem;
 import com.iafenvoy.mxt.data.item.ContractScrollData;
 import com.iafenvoy.mxt.data.item.FormationPlateData;
-import com.iafenvoy.mxt.data.item.IdentificationData;
 import com.iafenvoy.mxt.data.item.RealmTokenData;
 import com.iafenvoy.mxt.data.item.ResourceContainerData;
 import com.iafenvoy.mxt.data.item.SpiritBeastData;
@@ -54,14 +53,8 @@ public final class MxtItems {
     public static final DeferredItem<Item> SPIRIT_WOOD = register("spirit_wood", Item::new);
     public static final DeferredItem<Item> SPIRIT_WOOD_CORE = register("spirit_wood_core", Item::new);
     public static final DeferredItem<Item> BLANK_PILL = register("blank_pill", Item::new);
-    public static final DeferredItem<Item> UNKNOWN_PILL = register("unknown_pill", properties -> new Item(properties.component(MxtDataComponents.IDENTIFICATION,
-            new IdentificationData(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "blank_pill")))));
     public static final DeferredItem<Item> BLANK_WEAPON = register("blank_weapon", Item::new);
-    public static final DeferredItem<Item> UNKNOWN_WEAPON = register("unknown_weapon", properties -> new Item(properties.component(MxtDataComponents.IDENTIFICATION,
-            new IdentificationData(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "blank_weapon")))));
     public static final DeferredItem<Item> BLANK_ARTIFACT = register("blank_artifact", Item::new);
-    public static final DeferredItem<Item> UNKNOWN_ARTIFACT = register("unknown_artifact", properties -> new Item(properties.component(MxtDataComponents.IDENTIFICATION,
-            new IdentificationData(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "blank_artifact")))));
     public static final DeferredItem<Item> SPIRIT_RING = register("spirit_ring", Item::new);
     public static final DeferredItem<Item> STORAGE_BAG = register("storage_bag", Item::new);
     public static final DeferredItem<TokenItem> WOODEN_TOKEN = register("wooden_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenData.EMPTY)));

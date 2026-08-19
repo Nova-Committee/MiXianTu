@@ -12,10 +12,10 @@ import net.minecraft.world.phys.AABB;
 
 public record InBlockAnywhereCondition(BlockCondition blockCondition,
                                        Comparison comparison) implements EntityCondition {
-    public static final MapCodec<InBlockAnywhereCondition> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<InBlockAnywhereCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BlockCondition.CODEC.fieldOf("block_condition").forGetter(InBlockAnywhereCondition::blockCondition),
             Comparison.CODEC.fieldOf("comparison").forGetter(InBlockAnywhereCondition::comparison)
-    ).apply(instance, InBlockAnywhereCondition::new));
+    ).apply(i, InBlockAnywhereCondition::new));
 
     @Override
     public boolean test(Entity entity, FormulaContext context) {

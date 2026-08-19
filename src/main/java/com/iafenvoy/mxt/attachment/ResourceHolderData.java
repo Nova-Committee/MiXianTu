@@ -18,10 +18,10 @@ import java.util.Map;
  * with the attachment so clients never need to authoritatively evaluate a resource formula.
  */
 public final class ResourceHolderData {
-    public static final MapCodec<ResourceHolderData> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<ResourceHolderData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.doubleMap(Resource.CODEC).fieldOf("values").forGetter(ResourceHolderData::values),
             CollectionCodecs.map(Resource.CODEC, Audit.CODEC).fieldOf("audit").forGetter(ResourceHolderData::audit)
-    ).apply(instance, ResourceHolderData::new));
+    ).apply(i, ResourceHolderData::new));
     private final Object2DoubleMap<Holder<Resource>> values;
     private final Map<Holder<Resource>, Audit> audit;
 
@@ -111,12 +111,12 @@ public final class ResourceHolderData {
     }
 
     public record Audit(double minSnapshot, double maxSnapshot, long lastChangedTick, String source) {
-        public static final Codec<Audit> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<Audit> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.DOUBLE.fieldOf("min_snapshot").forGetter(Audit::minSnapshot),
                 Codec.DOUBLE.fieldOf("max_snapshot").forGetter(Audit::maxSnapshot),
                 Codec.LONG.fieldOf("last_changed_tick").forGetter(Audit::lastChangedTick),
                 Codec.STRING.fieldOf("source").forGetter(Audit::source)
-        ).apply(instance, Audit::new));
+        ).apply(i, Audit::new));
 
         public Audit {
             if (!Double.isFinite(minSnapshot) || !Double.isFinite(maxSnapshot) || minSnapshot > maxSnapshot

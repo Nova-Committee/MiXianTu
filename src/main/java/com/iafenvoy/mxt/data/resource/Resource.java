@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.resource;
 
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.registry.MxtRegistryKeys;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -22,8 +22,8 @@ import java.util.Optional;
 public record Resource(NumberProvider defaultValue, NumberProvider min, NumberProvider max, NumberProvider regen,
                        ResourceConversion cultivationToResource, ResourceConversion resourceToCultivation,
                        List<ResourceBar> bars, Optional<Holder<RealmStage>> firstRealm) {
-    public static final Codec<Holder<Resource>> CODEC = RegistryFixedCodec.create(MxtRegistryKeys.RESOURCE);
-    public static final Codec<Resource> DIRECT_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<Holder<Resource>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.RESOURCE);
+    public static final Codec<Resource> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             NumberProvider.CODEC.fieldOf("default_value").forGetter(Resource::defaultValue),
             NumberProvider.CODEC.optionalFieldOf("min", new Constant(0.0D)).forGetter(Resource::min),
             NumberProvider.CODEC.fieldOf("max").forGetter(Resource::max),
@@ -32,7 +32,7 @@ public record Resource(NumberProvider defaultValue, NumberProvider min, NumberPr
             ResourceConversion.CODEC.optionalFieldOf("resource_to_cultivation", ResourceConversion.DEFAULT).forGetter(Resource::resourceToCultivation),
             ResourceBar.CODEC.listOf().optionalFieldOf("bars", List.of()).forGetter(Resource::bars),
             RealmStage.CODEC.optionalFieldOf("first_realm").forGetter(Resource::firstRealm)
-    ).apply(instance, Resource::new));
+    ).apply(i, Resource::new));
 
     @Override
     public @NonNull String toString() {
@@ -46,9 +46,9 @@ public record Resource(NumberProvider defaultValue, NumberProvider min, NumberPr
      */
     public record ResourceConversion(NumberProvider multiplier, NumberProvider maxPerTick) {
         public static final ResourceConversion DEFAULT = new ResourceConversion(new Constant(1.0D), new Constant(1.0D));
-        public static final Codec<ResourceConversion> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        public static final Codec<ResourceConversion> CODEC = RecordCodecBuilder.create(i -> i.group(
                 NumberProvider.CODEC.optionalFieldOf("multiplier", new Constant(1.0D)).forGetter(ResourceConversion::multiplier),
                 NumberProvider.CODEC.optionalFieldOf("max_per_tick", new Constant(1.0D)).forGetter(ResourceConversion::maxPerTick)
-        ).apply(instance, ResourceConversion::new));
+        ).apply(i, ResourceConversion::new));
     }
 }

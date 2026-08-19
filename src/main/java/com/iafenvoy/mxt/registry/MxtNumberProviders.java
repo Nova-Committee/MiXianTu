@@ -20,7 +20,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * this remains an intrinsic type registry until the project migrates to that version.
  */
 public final class MxtNumberProviders {
-    public static final DeferredRegister<MapCodec<? extends NumberProvider>> REGISTRY = DeferredRegister.create(MxtTypeRegistries.NUMBER_PROVIDER_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends NumberProvider>> REGISTRY = DeferredRegister.create(MxtRegistries.NUMBER_PROVIDER_TYPE, MiXianTu.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Constant>> CONSTANT = REGISTRY.register("constant", () -> Constant.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<JsNumberProvider>> JS = REGISTRY.register("js", () -> JsNumberProvider.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Expression>> EXPRESSION = REGISTRY.register("expression", () -> Expression.MAP_CODEC);

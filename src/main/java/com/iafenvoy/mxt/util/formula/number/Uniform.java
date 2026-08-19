@@ -6,10 +6,10 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 public record Uniform(NumberProvider min, NumberProvider max) implements NumberProvider {
-    public static final MapCodec<Uniform> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final MapCodec<Uniform> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CODEC.fieldOf("min").forGetter(Uniform::min),
             CODEC.fieldOf("max").forGetter(Uniform::max)
-    ).apply(instance, Uniform::new));
+    ).apply(i, Uniform::new));
 
     @Override
     public double evaluate(FormulaContext context) {
