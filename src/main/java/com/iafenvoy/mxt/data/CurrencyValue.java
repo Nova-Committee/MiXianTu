@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -25,7 +26,7 @@ public record CurrencyValue(List<Entry> items, long value, List<Exchange> exchan
             Codec.LONG.fieldOf("value").forGetter(CurrencyValue::value),
             Exchange.CODEC.listOf().fieldOf("exchanges").forGetter(CurrencyValue::exchanges)
     ).apply(i, (items, legacyItem, value, exchanges) -> new CurrencyValue(
-            items.isEmpty() ? legacyItem.map(item -> List.of(Entry.item(item))).orElse(List.of()) : items, value, exchanges
+            items.isEmpty() ? legacyItem.map(item -> List.of((Entry) new ItemEntry(item))).orElse(List.of()) : items, value, exchanges
     ))).validate(CurrencyValue::validate);
 
     @Override

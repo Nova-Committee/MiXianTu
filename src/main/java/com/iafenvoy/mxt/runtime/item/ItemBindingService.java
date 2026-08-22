@@ -11,7 +11,7 @@ import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.alchemy.PillService;
-import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -20,6 +20,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
@@ -32,6 +33,15 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.ItemAttributeModifiers.Builder;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
+import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 
 import java.util.List;
 import java.util.Map;
@@ -41,8 +51,49 @@ import java.util.Optional;
  * Resolves datapack gameplay bindings for items already registered by Minecraft,
  * a mod, or KubeJS. No logical item definition is stored in an ItemStack.
  */
+@EventBusSubscriber
 public final class ItemBindingService {
     private ItemBindingService() {
+    }
+
+    @SubscribeEvent
+    public static void onEntityTick(Post event) {
+        if (event.getEntity() instanceof LivingEntity entity) {
+            refreshEquipped(entity);
+            tickMainHandWeapon(entity);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onAttack(AttackEntityEvent event) {
+        onMainHandWeaponAttack(event.getEntity(), event.getTarget());
+    }
+
+    @SubscribeEvent
+    public static void onItemUse(RightClickItem event) {
+        if (event.getHand() == InteractionHand.MAIN_HAND)
+            onMainHandWeaponUse(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onUseFinish(Finish event) {
+        if (!ItemQualityService.canUse(event.getEntity(), event.getItem())) return;
+        onUseFinish(event.getEntity(), event.getItem());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerLoggedInEvent event) {
+        refreshEquipped(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerClone(Clone event) {
+        refreshEquipped(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerRespawnEvent event) {
+        refreshEquipped(event.getEntity());
     }
 
     public static List<EntityAction> actions(ItemStack stack) {

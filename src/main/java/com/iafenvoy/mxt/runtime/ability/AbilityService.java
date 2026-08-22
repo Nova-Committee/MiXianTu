@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.ability;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.AbilityHolderData;
-import com.iafenvoy.mxt.attachment.AbilityHolderData.Snapshot;
-import com.iafenvoy.mxt.attachment.CurseHolderData;
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent.Snapshot;
+import com.iafenvoy.mxt.attachment.CurseHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
 import com.iafenvoy.mxt.data.ability.AbilityComponent;
 import com.iafenvoy.mxt.data.ability.component.ChargesAbilityComponent;
 import com.iafenvoy.mxt.data.ability.component.CooldownAbilityComponent;
@@ -53,13 +53,13 @@ public final class AbilityService {
     private AbilityService() {
     }
 
-    public static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityHolderData abilities,
-                                        ResourceHolderData resources, long gameTime, FormulaContext context) {
+    public static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityHolderComponent abilities,
+                                        ResourceHolderComponent resources, long gameTime, FormulaContext context) {
         return prepare(ability, definition, abilities, resources, gameTime, context, null);
     }
 
-    private static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityHolderData abilities,
-                                         ResourceHolderData resources, long gameTime, FormulaContext context,
+    private static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityHolderComponent abilities,
+                                         ResourceHolderComponent resources, long gameTime, FormulaContext context,
                                          LivingEntity payer) {
         if (!abilities.has(ability)) return PrepareResult.rejected(Failure.NOT_GRANTED, null);
         if (abilities.isOnCooldown(ability, gameTime)) return PrepareResult.rejected(Failure.COOLDOWN, null);
@@ -97,7 +97,7 @@ public final class AbilityService {
     /**
      * Commits cost, component state and cooldown as one server-thread operation.
      */
-    public static CommitResult commit(PreparedUse use, AbilityHolderData abilities, ResourceHolderData resources, long gameTime) {
+    public static CommitResult commit(PreparedUse use, AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime) {
         if (abilities.isOnCooldown(use.ability(), gameTime)) return CommitResult.rejected(Failure.COOLDOWN, null);
         Result payment = ResourceTransactions.tryConsume(resources, use.costs);
         if (!payment.committed()) return CommitResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
@@ -113,7 +113,7 @@ public final class AbilityService {
      * the action, preventing an action from taking effect when its declared costs cannot be paid.
      */
     public static UseResult use(Holder<Ability> ability, Ability definition, @NotNull Entity actor,
-                                AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
+                                AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime,
                                 FormulaContext context) {
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context.variables());
@@ -145,7 +145,7 @@ public final class AbilityService {
      * Completes a previously scheduled cast after the entity-tick bridge revalidates its definition.
      */
     public static UseResult finishCast(Holder<Ability> ability, Ability definition, Entity actor,
-                                       AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
+                                       AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime,
                                        FormulaContext context) {
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context.variables());
@@ -166,7 +166,7 @@ public final class AbilityService {
     }
 
     private static UseResult finishPreparedUse(PreparedUse preparedUse, Ability definition, Entity actor,
-                                               AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
+                                               AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime,
                                                FormulaContext context) {
         Pre resourceEvent = new Pre(resources, preparedUse.costs().amounts());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
@@ -193,7 +193,7 @@ public final class AbilityService {
      * Runs at most one upkeep pulse. Call this only from the server entity tick bridge.
      */
     public static ChannelResult tickChannel(Holder<Ability> ability, Ability definition, Entity actor,
-                                            AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
+                                            AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime,
                                             FormulaContext context) {
         if (actor instanceof LivingEntity living) {
             context = withElementAffinity(living, definition, FormulaContexts.forEntity(living, context.variables()));
@@ -241,7 +241,7 @@ public final class AbilityService {
         return ChannelResult.pulsed(followingTick, payment.amounts());
     }
 
-    public static boolean stopChannel(AbilityHolderData abilities) {
+    public static boolean stopChannel(AbilityHolderComponent abilities) {
         if (abilities.channelledAbility().isEmpty()) return false;
         abilities.setChannelledAbility(null);
         return true;
@@ -250,7 +250,7 @@ public final class AbilityService {
     /**
      * Clears a pending cast without touching resources, cooldowns or unrelated component state.
      */
-    public static boolean cancelCast(Holder<Ability> ability, AbilityHolderData abilities, long gameTime) {
+    public static boolean cancelCast(Holder<Ability> ability, AbilityHolderComponent abilities, long gameTime) {
         double endsAt = abilities.componentState(ability, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE);
         if (endsAt == Double.MAX_VALUE) return false;
         abilities.setComponentState(ability, "cast_ends_at", AbilityComponentState.initial(Double.MAX_VALUE, gameTime));
@@ -264,7 +264,7 @@ public final class AbilityService {
         ))) return true;
         if (requiresOperator && (!(actor instanceof ServerPlayer player) || !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)))
             return false;
-        if (effect != WordAbilityType.WordEffect.SELF_HEAL) return true;
+        if (effect != WordEffect.SELF_HEAL) return true;
         try {
             double amount = amount1.evaluate(context);
             return Double.isFinite(amount) && amount >= 0.0D && amount <= Float.MAX_VALUE;
@@ -274,10 +274,10 @@ public final class AbilityService {
     }
 
     private static void executeWord(WordAbilityType word, Entity actor, FormulaContext context) {
-        if (word.effect() == WordAbilityType.WordEffect.SELF_HEAL && actor instanceof LivingEntity living) {
+        if (word.effect() == WordEffect.SELF_HEAL && actor instanceof LivingEntity living) {
             living.heal((float) word.amount().evaluate(context));
-        } else if (word.effect() == WordAbilityType.WordEffect.PURGE_SELF_CURSES) {
-            CurseHolderData holder = actor.getData(MxtAttachments.CURSE_HOLDER);
+        } else if (word.effect() == WordEffect.PURGE_SELF_CURSES) {
+            CurseHolderComponent holder = actor.getData(MxtAttachments.CURSE_HOLDER);
             new LinkedList<>(holder.instances().keySet()).forEach(curse ->
                     CurseService.remove(holder, curse, Reason.EXPLICIT, -1L));
         }
@@ -287,12 +287,12 @@ public final class AbilityService {
      * Executes a composite as one transaction: every child must commit or all state is restored.
      */
     public static UseResult useComposite(Holder<Ability> composite, Ability compositeDefinition, Entity actor,
-                                         AbilityHolderData abilities, ResourceHolderData resources, long gameTime,
+                                         AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime,
                                          FormulaContext context) {
         if (!(compositeDefinition.type() instanceof CompositeAbilityType(List<Holder<Ability>> abilities1, boolean allRequired)))
             return UseResult.rejected(Failure.INVALID_FORMULA, null);
         Snapshot abilitySnapshot = abilities.snapshot();
-        ResourceHolderData.Snapshot resourceSnapshot = resources.snapshot();
+        ResourceHolderComponent.Snapshot resourceSnapshot = resources.snapshot();
         LinkedHashMap<Identifier, Double> paid = new LinkedHashMap<>();
         UseResult lastFailure = UseResult.rejected(Failure.NOT_GRANTED, null);
         for (Holder<Ability> childHolder : abilities1) {
@@ -314,8 +314,8 @@ public final class AbilityService {
         return allRequired ? UseResult.committed(paid) : lastFailure;
     }
 
-    private static ResourceHolderData copyOf(ResourceHolderData source) {
-        ResourceHolderData copy = new ResourceHolderData();
+    private static ResourceHolderComponent copyOf(ResourceHolderComponent source) {
+        ResourceHolderComponent copy = new ResourceHolderComponent();
         source.values().forEach(copy::set);
         return copy;
     }

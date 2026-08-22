@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.attachment.ContractData;
-import com.iafenvoy.mxt.data.item.SpiritBeastData;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+
+import com.iafenvoy.mxt.attachment.ContractComponent;
+import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -39,12 +40,12 @@ public final class SpiritBeastBagItem extends Item {
                                                            @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
         if (!(target instanceof Mob mob)) return InteractionResult.PASS;
-        SpiritBeastData stored = stack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastData.EMPTY);
+        SpiritBeastComponent stored = stack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
         if (stored.entity().isPresent()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.occupied"));
             return InteractionResult.FAIL;
         }
-        ContractData contract = mob.getData(MxtAttachments.CONTRACT);
+        ContractComponent contract = mob.getData(MxtAttachments.CONTRACT);
         if (!contract.bound() || contract.owner().filter(player.getUUID()::equals).isEmpty()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.not_owner"));
             return InteractionResult.FAIL;
@@ -53,7 +54,7 @@ public final class SpiritBeastBagItem extends Item {
         mob.saveWithoutId(output);
         CompoundTag entity = output.buildResult();
         entity.putString("id", BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).toString());
-        stack.set(MxtDataComponents.SPIRIT_BEAST, new SpiritBeastData(Optional.of(entity)));
+        stack.set(MxtDataComponents.SPIRIT_BEAST, new SpiritBeastComponent(Optional.of(entity)));
         mob.discard();
         ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.stored"));
         return InteractionResult.SUCCESS;
@@ -62,7 +63,7 @@ public final class SpiritBeastBagItem extends Item {
     @Override
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        SpiritBeastData stored = stack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastData.EMPTY);
+        SpiritBeastComponent stored = stack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         if (stored.entity().isEmpty() || !(level instanceof ServerLevel serverLevel)) return InteractionResult.FAIL;
         Entity restored = EntityType.loadEntityRecursive(stored.entity().orElseThrow(), serverLevel, EntitySpawnReason.BUCKET, entity -> {
@@ -73,7 +74,7 @@ public final class SpiritBeastBagItem extends Item {
             ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.release_failed"));
             return InteractionResult.FAIL;
         }
-        stack.set(MxtDataComponents.SPIRIT_BEAST, SpiritBeastData.EMPTY);
+        stack.set(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
         ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.released"));
         return InteractionResult.SUCCESS_SERVER;
     }

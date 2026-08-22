@@ -1,6 +1,4 @@
 {
-  "base_aura": 0.0,
-  "regen_per_tick": 0.0,
   "aura_kinds": ["mxt_test:aura_kind/void"],
   "dimensions": ["minecraft:the_end"],
   "rules": { "cultivate_suppress": true, "tribulation_modify": -0.20 },

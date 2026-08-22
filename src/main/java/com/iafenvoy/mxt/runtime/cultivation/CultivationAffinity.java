@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.AuraChunkData;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.AuraChunkComponent;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -24,7 +25,8 @@ public final class CultivationAffinity {
     private CultivationAffinity() {
     }
 
-    public static double multiplier(SpiritData spirit, AuraChunkData aura, FormulaContext context,
+    /** Legacy attachment-only path; it retains element separation but has no zone-specific modifiers. */
+    public static double multiplier(SpiritComponent spirit, AuraChunkComponent aura, FormulaContext context,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -32,24 +34,22 @@ public final class CultivationAffinity {
         for (Holder<SpiritRoot> rootHolder : spirit.spiritRoots()) {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
-            double bias = aura.elementBias().getOrDefault(root.element(), 0.0D);
-            if (!Double.isFinite(base) || !Double.isFinite(bias) || base < 0.0D) return Double.NaN;
-            total += base * Math.max(0.0D, 1.0D + bias);
+            AuraPool pool = aura.auras().get(root.element());
+            double concentration = pool == null ? 0.0D : pool.amount() / Math.max(1.0D, pool.maximum());
+            if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
+            total += base * Math.max(0.0D, 1.0D + concentration);
             count++;
         }
         double result = count == 0 ? 1.0D : total / count;
         if (spirit.activeTechnique().isPresent()) {
-            CultivationTechnique technique = spirit.activeTechnique().orElseThrow().value();
-            {
-                double modifier = technique.cultivationModifier().evaluate(context);
-                if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
-                result *= modifier;
-            }
+            double modifier = spirit.activeTechnique().orElseThrow().value().cultivationModifier().evaluate(context);
+            if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
+            result *= modifier;
         }
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 
-    public static double multiplier(SpiritData spirit, AuraResult aura, FormulaContext context,
+    public static double multiplier(SpiritComponent spirit, AuraResult aura, FormulaContext context,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -57,9 +57,11 @@ public final class CultivationAffinity {
         for (Holder<SpiritRoot> rootHolder : spirit.spiritRoots()) {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
-            double element = aura.elementAura().getOrDefault(root.element(), 0.0D);
-            if (!Double.isFinite(base) || !Double.isFinite(element) || base < 0.0D) return Double.NaN;
-            double modifier = Math.max(0.0D, 1.0D + element + (element > 0.0D ? aura.elementFitBonus() : -aura.elementConflictPenalty()));
+            AuraPool pool = aura.pool(root.element());
+            double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
+            if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
+            double modifier = Math.max(0.0D, 1.0D + concentration
+                    + (pool.amount() > 0.0D ? aura.elementFitBonus() : -aura.elementConflictPenalty()));
             total += base * modifier;
             count++;
         }
@@ -71,7 +73,7 @@ public final class CultivationAffinity {
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 
-    public static double abilityMultiplier(SpiritData spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements, FormulaContext context,
+    public static double abilityMultiplier(SpiritComponent spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements, FormulaContext context,
                                            Function<Identifier, Optional<SpiritRoot>> roots) {
         if (elements.isEmpty()) return 1.0D;
         double total = 0.0D;

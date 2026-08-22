@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.attachment.SoulData;
+import com.iafenvoy.mxt.attachment.SoulComponent;
 import com.iafenvoy.mxt.event.SoulEvent.ReclaimPost;
 import com.iafenvoy.mxt.event.SoulEvent.ReclaimPre;
 import com.iafenvoy.mxt.event.SoulEvent.TransferPost;
@@ -21,7 +21,7 @@ public final class SoulService {
     }
 
     public static boolean transfer(Entity entity, String source) {
-        SoulData soul = entity.getData(MxtAttachments.SOUL);
+        SoulComponent soul = entity.getData(MxtAttachments.SOUL);
         if (NeoForge.EVENT_BUS.post(new TransferPre(entity, soul)).isCanceled()) return false;
         SoulEntity manifestation = null;
         if (entity.level() instanceof ServerLevel level) {
@@ -39,7 +39,7 @@ public final class SoulService {
      * Clears only the caller's own active soul and removes its recorded manifestation when available.
      */
     public static boolean reclaim(Entity entity) {
-        SoulData soul = entity.getData(MxtAttachments.SOUL);
+        SoulComponent soul = entity.getData(MxtAttachments.SOUL);
         if (!soul.active() || !entity.getUUID().toString().equals(soul.origin())) return false;
         if (NeoForge.EVENT_BUS.post(new ReclaimPre(entity, soul)).isCanceled()) return false;
         if (entity.level() instanceof ServerLevel level) {

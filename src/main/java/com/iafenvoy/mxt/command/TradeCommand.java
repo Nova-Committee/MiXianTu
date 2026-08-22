@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.command;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService.RequestResult;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.ClickEvent.RunCommand;
@@ -13,16 +15,15 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 public final class TradeCommand {
-    public static void registerCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(literal("trade")
                 .requires(source -> source.getPlayer() != null)
                 .then(argument("target", EntityArgument.player())
-                        .executes(ctx -> trade(ctx.getSource(), EntityArgument.getPlayer(ctx, "target")))));
+                        .executes(TradeCommand::trade)));
     }
 
-    private static int trade(CommandSourceStack source, ServerPlayer target) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) return 0;
+    private static int trade(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException(), target = EntityArgument.getPlayer(ctx, "target");
         RequestResult result = PlayerTradeService.request(player, target);
         switch (result) {
             case TOO_FAR -> player.sendSystemMessage(Component.translatable("command.mxt.trade.too_far"));

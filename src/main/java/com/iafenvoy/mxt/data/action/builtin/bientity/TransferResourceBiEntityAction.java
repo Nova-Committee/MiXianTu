@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -28,8 +28,8 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
     public void execute(Entity actor, Entity target, FormulaContext context) {
         double requested = this.amount.evaluate(context);
         if (!Double.isFinite(requested) || requested <= 0.0D) return;
-        ResourceHolderData from = actor.getData(MxtAttachments.RESOURCE_HOLDER);
-        ResourceHolderData to = target.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderComponent from = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderComponent to = target.getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext targetContext = target instanceof LivingEntity living
                 ? ResourceService.formulaContext(living, this.resource, context)
                 : context;

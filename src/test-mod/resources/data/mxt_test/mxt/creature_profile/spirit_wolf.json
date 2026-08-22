@@ -6,5 +6,5 @@
   "contract_tags": ["mxt_test:contract/master_servant"],
   "entity_type_tags": ["minecraft:wolf", "#mxt_test:spirit_wolves"],
   "preferred_aura_elements": ["mxt_test:fire", "#mxt_test:warm_elements"],
-  "minimum_aura": 10.0
+  "minimum_aura": { "mxt_test:fire": 10.0 }
 }

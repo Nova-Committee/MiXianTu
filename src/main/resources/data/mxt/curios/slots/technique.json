@@ -1,0 +1,6 @@
+{
+  "order": 2,
+  "size": 4,
+  "icon": "mxt:slot/empty_technique_slot",
+  "validators": ["curios:tag"]
+}

@@ -1,10 +1,13 @@
 {
-  "base_aura": 0.0,
-  "regen_per_tick": 0.0,
-  "element_aura": {
-    "mxt_test:fire": 0.10,
-    "mxt_test:water": 0.10
+  "aura": {
+    "mxt_test:fire": { "amount": 80.0, "max": { "type": "mxt:fixed", "value": 40.0 }, "regen_per_tick": 0.0 },
+    "mxt_test:water": { "amount": 80.0, "max": { "type": "mxt:fixed", "value": 40.0 }, "regen_per_tick": 0.0 }
   },
+  "distribution": "equal",
+  "cultivate_condition": { "type": "mxt:aura_range", "aura": {
+    "mxt_test:fire": { "min": 0, "max": 100 },
+    "mxt_test:water": { "min": 0, "max": 100 }
+  } },
   "aura_kinds": ["mxt_test:aura_kind/common"],
   "dimensions": "minecraft:overworld",
   "noise": {

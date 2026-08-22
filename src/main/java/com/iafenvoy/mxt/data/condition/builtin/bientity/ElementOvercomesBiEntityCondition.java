@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -31,7 +31,7 @@ public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
                 .anyMatch(targetElement -> RegistryCodecs.matches(element.value().overcomes(), targetElement)));
     }
 
-    private static Set<Holder<Element>> elements(SpiritData spirit) {
+    private static Set<Holder<Element>> elements(SpiritComponent spirit) {
         return spirit.spiritRoots().stream().flatMap(root -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, root).stream())
                 .map(SpiritRoot::element).collect(Collectors.toUnmodifiableSet());
     }

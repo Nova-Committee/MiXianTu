@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.runtime.world;
+import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.aura.BlockAura;
+import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -31,9 +33,7 @@ public final class BlockAuraService {
     public static void rebuild(ServerLevel level, LevelChunk chunk) {
         List<BlockAura> active = MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.BLOCK_AURA)
                 .map(Reference::value).toList();
-        double aura = 0.0D;
-        double regen = 0.0D;
-        Map<Holder<Element>, Double> elements = new LinkedHashMap<>();
+        Map<Holder<Element>, AuraValue> aura = new LinkedHashMap<>();
         Set<Identifier> auraKinds = new LinkedHashSet<>();
         MutableBlockPos pos = new MutableBlockPos();
         int minX = chunk.getPos().getMinBlockX();
@@ -46,12 +46,17 @@ public final class BlockAuraService {
                     for (BlockAura definition : active) {
                         if (!RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, Registries.BLOCK, id))
                             continue;
-                        aura += definition.auraPerBlock();
-                        regen += definition.regenPerTickPerBlock();
-                        definition.elementAuraPerBlock().forEach((element, value) -> elements.merge(element, value, Double::sum));
+                        definition.aura().forEach((element, value) -> aura.merge(element, value, BlockAuraService::merge));
                         auraKinds.addAll(definition.auraKinds());
                     }
                 }
-        chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(aura, regen, elements, auraKinds);
+        chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(aura, auraKinds);
+    }
+
+    private static AuraValue merge(AuraValue first, AuraValue second) {
+        double amount = first.amount() + second.amount();
+        double maximum = first.max().resolve(first.amount()) + second.max().resolve(second.amount());
+        return new AuraValue(amount, new Fixed(maximum),
+                first.regenPerTick() + second.regenPerTick());
     }
 }

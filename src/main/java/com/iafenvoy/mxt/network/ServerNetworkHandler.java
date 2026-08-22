@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.network;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.network.payload.*;
@@ -9,27 +10,23 @@ import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
+import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-/**
- * Applies C2S requests after they have reached the server main thread.
- */
 public final class ServerNetworkHandler {
-    private ServerNetworkHandler() {
-    }
-
     static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
+        Player player = context.player();
         if (payload.cancel()) {
             MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability ->
                     AbilityService.cancelCast(ability, player.getData(MxtAttachments.ABILITY_HOLDER), player.level().getGameTime()));
@@ -46,9 +43,8 @@ public final class ServerNetworkHandler {
             case START ->
                     MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, definition).ifPresent(blueprint ->
                             ForgingWorkstationService.start(player, payload.position(), definition, blueprint));
-            case STRIKE ->
-                    MxtDatapackRegistries.get(MxtResourceKeys.FORGING_METHOD, definition).ifPresent(method ->
-                            ForgingWorkstationService.strike(player, payload.position(), definition, method));
+            case STRIKE -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_METHOD, definition).ifPresent(method ->
+                    ForgingWorkstationService.strike(player, payload.position(), definition, method));
             case FINISH -> ForgingWorkstationService.finish(player, payload.position(), definition);
             case CANCEL -> ForgingWorkstationService.cancel(player, payload.position());
         }
@@ -67,16 +63,17 @@ public final class ServerNetworkHandler {
     }
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player) || !(player.containerMenu instanceof ChequeTableMenu menu))
+        Player player = context.player();
+        if (!(player.containerMenu instanceof ChequeTableMenu menu))
             return;
         if (payload.checkIn()) menu.checkIn(player);
         else menu.checkOut();
     }
 
     static void onStationTrade(StationTradeC2SPayload payload, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer player && player.containerMenu instanceof StationMenu menu && menu.isCustomer()) {
+        Player player = context.player();
+        if (player.containerMenu instanceof StationMenu menu && menu.isCustomer())
             menu.trade(player);
-        }
     }
 
     static void onPlayerTradeAction(PlayerTradeActionC2SPayload payload, IPayloadContext context) {
@@ -84,16 +81,20 @@ public final class ServerNetworkHandler {
     }
 
     static void onBackSlotSwap(BackSlotSwapC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
+        Player player = context.player();
         ItemStack hand = player.getMainHandItem();
-        CuriosApi.getCuriosInventory(player).flatMap(handler -> handler.getStacksHandler("back")).ifPresent(back -> {
+        CuriosApi.getCuriosInventory(player).flatMap(handler -> handler.getStacksHandler("back_weapon")).ifPresent(back -> {
             IDynamicStackHandler stacks = back.getStacks();
             if (stacks.getSlots() <= 0) return;
             ItemStack target = stacks.getStackInSlot(0);
-            SlotContext slot = new SlotContext("back", player, 0, false, back.getRenders().get(0));
-            if (!CuriosApi.isStackValid(slot, hand)) return;
+            SlotContext slot = new SlotContext("back_weapon", player, 0, false, back.getRenders().getFirst());
+            if (!hand.isEmpty() && !CuriosApi.isStackValid(slot, hand)) return;
             stacks.setStackInSlot(0, hand.copy());
             player.getInventory().setSelectedItem(target);
         });
+    }
+
+    static void onSpiritBurst(SpiritBurstC2SPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) SpiritBurstService.setFiring(player, payload.firing());
     }
 }

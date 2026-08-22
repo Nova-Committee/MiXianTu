@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.data.item.FormationPlateData;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+
+import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.item.FormationPlateComponent;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -29,7 +30,7 @@ public final class FormationPlateItem extends Item {
     public @NotNull InteractionResult useOn(@NotNull UseOnContext context) {
         if (!(context.getPlayer() instanceof ServerPlayer player) || !(context.getLevel() instanceof ServerLevel level))
             return InteractionResult.SUCCESS;
-        FormationPlateData plate = context.getItemInHand().getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateData.EMPTY);
+        FormationPlateComponent plate = context.getItemInHand().getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY);
         if (plate.formation().isEmpty()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.unbound"));
             return InteractionResult.FAIL;

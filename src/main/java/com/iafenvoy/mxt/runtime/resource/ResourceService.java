@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -26,7 +26,7 @@ public final class ResourceService {
     private ResourceService() {
     }
 
-    public static Result initialize(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context) {
+    public static Result initialize(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context) {
         Resource definition = resource.value();
         if (holder.contains(resource)) return Result.unchanged(holder.get(resource));
         Bounds bounds = bounds(definition, context);
@@ -38,12 +38,12 @@ public final class ResourceService {
         return Result.changed(clamped);
     }
 
-    public static Result initialize(ResourceHolderData holder, Identifier id, Resource definition, FormulaContext context) {
+    public static Result initialize(ResourceHolderComponent holder, Identifier id, Resource definition, FormulaContext context) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> initialize(holder, resource, context)).orElse(Result.invalid());
     }
 
-    public static Result change(ResourceHolderData holder, Holder<Resource> resource, double amount, FormulaContext context) {
+    public static Result change(ResourceHolderComponent holder, Holder<Resource> resource, double amount, FormulaContext context) {
         Resource definition = resource.value();
         if (!Double.isFinite(amount)) return Result.invalid();
         Result initialized = initialize(holder, resource, context);
@@ -56,19 +56,19 @@ public final class ResourceService {
         return Result.changed(value);
     }
 
-    public static Result change(ResourceHolderData holder, Identifier id, Resource definition, double amount, FormulaContext context) {
+    public static Result change(ResourceHolderComponent holder, Identifier id, Resource definition, double amount, FormulaContext context) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> change(holder, resource, amount, context)).orElse(Result.invalid());
     }
 
-    public static Result regenerate(ResourceHolderData holder, Holder<Resource> resource, long elapsedTicks, FormulaContext context) {
+    public static Result regenerate(ResourceHolderComponent holder, Holder<Resource> resource, long elapsedTicks, FormulaContext context) {
         if (elapsedTicks < 0L) throw new IllegalArgumentException("Elapsed ticks cannot be negative");
         double regen = resource.value().regen().evaluate(context);
         if (!Double.isFinite(regen)) return Result.invalid();
         return change(holder, resource, regen * elapsedTicks, context);
     }
 
-    public static Result regenerate(ResourceHolderData holder, Identifier id, Resource definition, long elapsedTicks, FormulaContext context) {
+    public static Result regenerate(ResourceHolderComponent holder, Identifier id, Resource definition, long elapsedTicks, FormulaContext context) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> regenerate(holder, resource, elapsedTicks, context)).orElse(Result.invalid());
     }
@@ -78,7 +78,7 @@ public final class ResourceService {
      * {@code absorbed_aura} is the active realm's accumulated cultivation progress and is
      * deliberately zero for every resource outside that realm chain.
      */
-    public static FormulaContext formulaContext(SpiritData spirit, Holder<Resource> resource, FormulaContext base) {
+    public static FormulaContext formulaContext(SpiritComponent spirit, Holder<Resource> resource, FormulaContext base) {
         Resource definition = resource.value();
         Map<String, Double> values = new LinkedHashMap<>(base.variables());
         int realmRank = realmRank(spirit, resource, definition);
@@ -93,7 +93,7 @@ public final class ResourceService {
         return new FormulaContext(values, base.random());
     }
 
-    public static FormulaContext formulaContext(SpiritData spirit, Identifier resource, Resource definition, FormulaContext base) {
+    public static FormulaContext formulaContext(SpiritComponent spirit, Identifier resource, Resource definition, FormulaContext base) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource)
                 .map(value -> formulaContext(spirit, value, base)).orElse(base);
     }
@@ -121,7 +121,7 @@ public final class ResourceService {
         return resolveBounds(definition, context).orElse(null);
     }
 
-    private static int realmRank(SpiritData spirit, Holder<Resource> resource, Resource definition) {
+    private static int realmRank(SpiritComponent spirit, Holder<Resource> resource, Resource definition) {
         Holder<RealmStage> current = spirit.realmStage().orElse(null);
         if (current == null) return -1;
         Identifier currentId = HolderHelper.id(current);

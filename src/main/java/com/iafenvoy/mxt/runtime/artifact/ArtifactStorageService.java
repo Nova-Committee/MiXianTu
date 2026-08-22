@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.runtime.artifact;
+
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.data.artifact.ArtifactStorageData;
+import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -61,7 +62,7 @@ public final class ArtifactStorageService implements ISpiritStorage {
         return Math.clamp((int) Math.floor(evaluated), 0, MAX_SLOTS);
     }
 
-    private static ArtifactStorageData storage(ItemStack stack) {
-        return Optional.ofNullable(stack.get(MxtDataComponents.ARTIFACT_STORAGE)).orElseGet(() -> new ArtifactStorageData(List.of()));
+    private static ArtifactStorageComponent storage(ItemStack stack) {
+        return Optional.ofNullable(stack.get(MxtDataComponents.ARTIFACT_STORAGE)).orElseGet(() -> new ArtifactStorageComponent(List.of()));
     }
 }

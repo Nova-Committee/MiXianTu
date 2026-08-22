@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.item.block.ChequeTableBlock;
+import com.iafenvoy.mxt.item.block.DisplayStandBlock;
 import com.iafenvoy.mxt.item.block.ExchangeStationBlock;
 import com.iafenvoy.mxt.item.block.SystemStationBlock;
 import com.iafenvoy.mxt.item.block.TradeStationBlock;
@@ -12,6 +13,7 @@ import net.minecraft.util.valueproviders.ConstantInt;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DropExperienceBlock;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -32,9 +34,15 @@ public final class MxtBlocks {
      * Grade is derived from the connected vein at runtime; no per-block grade state is persisted.
      */
     public static final DeferredBlock<DropExperienceBlock> SPIRIT_STONE_ORE = register("spirit_stone_ore",
-            properties -> new DropExperienceBlock(ConstantInt.of(1), properties.strength(3.0F, 3.0F).requiresCorrectToolForDrops()));
+            properties -> new DropExperienceBlock(ConstantInt.of(1), properties.strength(3.0F, 3.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
     public static final DeferredBlock<Block> SPIRIT_STONE_BLOCK = registerSolid("spirit_stone_block",
-            properties -> new Block(properties.strength(5.0F, 6.0F).requiresCorrectToolForDrops()));
+            properties -> new Block(properties.strength(5.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops()));
+    public static final DeferredBlock<DisplayStandBlock> OAK_DISPLAY_STAND = register("oak_display_stand", DisplayStandBlock::new);
+    public static final DeferredBlock<DisplayStandBlock> BIRCH_DISPLAY_STAND = register("birch_display_stand", DisplayStandBlock::new);
+    public static final DeferredBlock<DisplayStandBlock> SPRUCE_DISPLAY_STAND = register("spruce_display_stand", DisplayStandBlock::new);
+    public static final DeferredBlock<DisplayStandBlock> JUNGLE_DISPLAY_STAND = register("jungle_display_stand", DisplayStandBlock::new);
+    public static final DeferredBlock<DisplayStandBlock> ACACIA_DISPLAY_STAND = register("acacia_display_stand", DisplayStandBlock::new);
+    public static final DeferredBlock<DisplayStandBlock> DARK_OAK_DISPLAY_STAND = register("dark_oak_display_stand", DisplayStandBlock::new);
 
     public static <T extends Block> DeferredBlock<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

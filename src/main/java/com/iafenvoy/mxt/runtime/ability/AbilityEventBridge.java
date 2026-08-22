@@ -1,23 +1,26 @@
 package com.iafenvoy.mxt.runtime.ability;
+
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityHolderData;
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
-import com.iafenvoy.mxt.data.artifact.ItemAbilitiesData;
+import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Post;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Pre;
 import com.iafenvoy.mxt.integration.CuriosIntegration;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -26,7 +29,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -41,6 +43,8 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -55,12 +59,14 @@ import java.util.function.Predicate;
 /**
  * Centralizes vanilla-event subscriptions and dispatches only abilities held by the affected entity.
  */
+@EventBusSubscriber
 public final class AbilityEventBridge {
     private static final ThreadLocal<Set<DispatchKey>> DISPATCHING = ThreadLocal.withInitial(HashSet::new);
 
     private AbilityEventBridge() {
     }
 
+    @SubscribeEvent
     public static void onLivingDamage(LivingDamageEvent.Post event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
@@ -68,10 +74,11 @@ public final class AbilityEventBridge {
         dispatch("hurt", entity, context, definition -> definition.damageCondition().test(event.getSource(), event.getInflictedDamage(), context));
     }
 
+    @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
-        AbilityHolderData abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        ResourceHolderData resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        AbilityHolderComponent abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        ResourceHolderComponent resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         initializeHudResources(entity, resourceHolder);
         resourceHolder.values().keySet().forEach(resource -> {
             Identifier resourceId = HolderHelper.id(resource);
@@ -91,6 +98,7 @@ public final class AbilityEventBridge {
                 entity.level().getGameTime(), FormulaContext.of(entity));
     }
 
+    @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
         if (event.getEntity().level().isClientSide()) return;
         Map<String, Double> values = new LinkedHashMap<>();
@@ -99,6 +107,7 @@ public final class AbilityEventBridge {
         dispatch("attack", event.getEntity(), FormulaContext.of(event.getEntity(), values), definition -> true);
     }
 
+    @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         LivingEntity victim = event.getEntity();
         if (victim.level().isClientSide()) return;
@@ -110,17 +119,20 @@ public final class AbilityEventBridge {
         }
     }
 
+    @SubscribeEvent
     public static void onItemUseFinish(Finish event) {
         LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide()) return;
+        if (entity.level().isClientSide() || !ItemQualityService.canUse(entity, event.getItem())) return;
         dispatch("item_use", entity, FormulaContext.of(entity, Map.of("use_duration", (double) event.getDuration())), definition -> true);
     }
 
+    @SubscribeEvent
     public static void onBlockUse(RightClickBlock event) {
         if (event.getLevel().isClientSide()) return;
         dispatch("block_use", event.getEntity(), blockContext(event.getEntity(), event.getPos()), definition -> true);
     }
 
+    @SubscribeEvent
     public static void onBlockBreak(BreakBlockEvent event) {
         if (event.getLevel().isClientSide()) return;
         dispatch("block_break", event.getPlayer(), blockContext(event.getPlayer(), event.getPos()), definition -> true);
@@ -129,10 +141,11 @@ public final class AbilityEventBridge {
     /**
      * Keeps equipment-contributed ability sources in sync before dispatching the equip trigger.
      */
+    @SubscribeEvent
     public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
-        AbilityHolderData holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityHolderComponent holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = equipmentSource(event.getSlot(), event.getTo());
         itemAbilities(event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                 .flatMap(Optional::stream).forEach(ability -> holder.revoke(ability, source));
@@ -144,14 +157,14 @@ public final class AbilityEventBridge {
 
     private static List<Identifier> itemAbilities(ItemStack stack) {
         if (stack.isEmpty()) return List.of();
-        ItemAbilitiesData data = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesData(List.of()));
+        ItemAbilitiesComponent data = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesComponent(List.of()));
         return data.abilities();
     }
 
     /**
      * Curios equipment participates in the same source-counted ability model.
      */
-    private static void syncCuriosAbilities(LivingEntity entity, AbilityHolderData holder) {
+    private static void syncCuriosAbilities(LivingEntity entity, AbilityHolderComponent holder) {
         Set<Holder<Ability>> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
             itemAbilities(stack).stream()
@@ -184,20 +197,18 @@ public final class AbilityEventBridge {
      * HUD resources are part of the player's visible baseline state, rather than
      * being created only after an ability happens to spend or restore them.
      */
-    private static void initializeHudResources(LivingEntity entity, ResourceHolderData holder) {
+    private static void initializeHudResources(LivingEntity entity, ResourceHolderComponent holder) {
         if (!(entity instanceof Player)) return;
         MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
                 .filter(resource -> !resource.value().bars().isEmpty())
                 .forEach(resource -> initializeResource(entity, holder, resource));
     }
 
-    private static void initializeResource(LivingEntity entity, ResourceHolderData holder, Reference<Resource> resource) {
-        resource.unwrapKey().map(ResourceKey::identifier)
-                .ifPresent(id -> ResourceService.initialize(holder, id, resource.value(),
-                        ResourceService.formulaContext(entity, id, resource.value(), FormulaContext.EMPTY)));
+    private static void initializeResource(LivingEntity entity, ResourceHolderComponent holder, Reference<Resource> resource) {
+        HolderHelper.idOptional(resource).ifPresent(id -> ResourceService.initialize(holder, id, resource.value(), ResourceService.formulaContext(entity, id, resource.value(), FormulaContext.EMPTY)));
     }
 
-    private static void tickAuras(LivingEntity actor, AbilityHolderData abilities, long gameTime) {
+    private static void tickAuras(LivingEntity actor, AbilityHolderComponent abilities, long gameTime) {
         for (Holder<Ability> ability : abilities.sources().keySet()) {
             Ability definition = ability.value();
             if (!(definition.type() instanceof AuraAbilityType(
@@ -222,7 +233,7 @@ public final class AbilityEventBridge {
         }
     }
 
-    private static void finishDueCasts(LivingEntity actor, AbilityHolderData abilities, ResourceHolderData resources, long gameTime) {
+    private static void finishDueCasts(LivingEntity actor, AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime) {
         for (Holder<Ability> ability : abilities.sources().keySet()) {
             if (abilities.componentState(ability, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE) > gameTime)
                 continue;
@@ -231,8 +242,8 @@ public final class AbilityEventBridge {
     }
 
     private static void dispatch(String trigger, LivingEntity entity, FormulaContext context, Predicate<Ability> extraCondition) {
-        AbilityHolderData abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        ResourceHolderData resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        AbilityHolderComponent abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        ResourceHolderComponent resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = entity.level().getGameTime();
         for (Holder<Ability> ability : abilities.sources().keySet()) {
             Identifier abilityId = HolderHelper.id(ability);

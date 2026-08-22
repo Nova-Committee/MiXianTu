@@ -2,13 +2,11 @@ package com.iafenvoy.mxt.render.overlay;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AuraChunkData;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Bar;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientHud;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Origins;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import net.minecraft.client.DeltaTracker;
@@ -34,7 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Minimal client view of the synchronized current-chunk aura attachment.
+ * Client HUD backed by the server-authoritative current-position aura snapshot.
  */
 @EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
 public enum AuraOverlay implements GuiLayer {
@@ -49,11 +47,10 @@ public enum AuraOverlay implements GuiLayer {
         Snapshot snapshot = AuraClientState.current();
         ClientHud hud = minecraft.level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE)
                 .getOptional(snapshot.source()).map(AuraZone::clientHud).orElse(ClientHud.NONE);
-        AuraChunkData aura = minecraft.level.getChunkAt(player.blockPosition()).getData(MxtAttachments.AURA_CHUNK);
         List<AuraHudBar> bars = new ArrayList<>();
         hud.storedAura().ifPresent(definition -> bars.add(new AuraHudBar(definition,
-                aura.initialized() ? aura.concentration() : snapshot.concentration())));
-        hud.sensedConcentration().ifPresent(definition -> bars.add(new AuraHudBar(definition, snapshot.concentration())));
+                snapshot.concentration(), maximum(snapshot.maximum(), definition.maximum()))));
+        hud.sensedConcentration().ifPresent(definition -> bars.add(new AuraHudBar(definition, snapshot.concentration(), definition.maximum())));
         Map<Anchor, Integer> offsets = new EnumMap<>(Anchor.class);
         bars.stream().sorted(Comparator.comparing((AuraHudBar bar) -> bar.definition().anchor())
                         .thenComparingInt(bar -> bar.definition().order()))
@@ -61,7 +58,7 @@ public enum AuraOverlay implements GuiLayer {
                     Anchor anchor = bar.definition().anchor();
                     int offset = offsets.computeIfAbsent(anchor, value -> ResourceBarOverlay.reservedSelfHudHeight(player, value));
                     Position position = position(minecraft, player, anchor, offset);
-                    renderBar(graphics, bar.definition(), bar.value(), position.x(), position.y());
+                    renderBar(graphics, bar.definition(), bar.value(), bar.maximum(), position.x(), position.y());
                     offsets.put(anchor, offset + 8);
                 });
     }
@@ -77,8 +74,8 @@ public enum AuraOverlay implements GuiLayer {
         return new Position(x, y - offset);
     }
 
-    private static void renderBar(GuiGraphicsExtractor graphics, Bar definition, double value, int x, int y) {
-        float fill = (float) Math.clamp(value / definition.maximum(), 0.0D, 1.0D);
+    private static void renderBar(GuiGraphicsExtractor graphics, Bar definition, double value, double maximum, int x, int y) {
+        float fill = (float) Math.clamp(value / maximum, 0.0D, 1.0D);
         if (definition.inverted()) fill = 1.0F - fill;
         int row = 8 + definition.barIndex() * 10;
         graphics.blit(RenderPipelines.GUI_TEXTURED, Origins.DEFAULT_TEXTURE, x, y, 0.0F, 0.0F, BAR_WIDTH, 5, 256, 256);
@@ -91,7 +88,11 @@ public enum AuraOverlay implements GuiLayer {
         event.registerAbove(VanillaGuiLayers.HOTBAR, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "aura"), INSTANCE);
     }
 
-    private record AuraHudBar(Bar definition, double value) {
+    private static double maximum(double dynamic, double fallback) {
+        return Double.isFinite(dynamic) && dynamic > 0.0D ? dynamic : fallback;
+    }
+
+    private record AuraHudBar(Bar definition, double value, double maximum) {
     }
 
     private record Position(int x, int y) {

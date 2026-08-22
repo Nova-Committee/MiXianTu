@@ -3,7 +3,7 @@
   "aura_kinds": ["mxt_test:aura_kind/fire"],
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
   "absorb_amount": "1 + level * 0.1",
-  "aura_cost": 1,
+  "aura_costs": { "mxt_test:fire": 1 },
   "aura_gains": [{ "id": "mxt_test:qi", "amount": "2 + level * 0.1" }],
   "cooldown": 0,
   "tick_action": { "type": "mxt:apply_effect", "effect": "minecraft:fire_resistance", "duration_ticks": 40 }

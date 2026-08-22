@@ -11,21 +11,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * Codec adapters for the immutable collections produced by datapack codecs.
  */
 public final class CollectionCodecs {
-    private CollectionCodecs() {
-    }
-
     public static <K, V> Codec<Map<K, V>> map(Codec<K> keyCodec, Codec<V> valueCodec) {
         return AutoIgnoreMapCodec.create(keyCodec, valueCodec);
     }
 
-    public static <V> Codec<List<V>> list(Codec<V> elementCodec) {
+    public static <T> Codec<List<T>> list(Codec<T> elementCodec) {
         return AutoIgnoreListCodec.create(elementCodec);
+    }
+
+    public static <T> Codec<Set<T>> set(Codec<T> elementCodec) {
+        return elementCodec.listOf().xmap(Set::copyOf, List::copyOf);
     }
 
     public static <K, V> Codec<Multimap<K, V>> multiMap(Codec<K> keyCodec, Codec<V> valueCodec) {
@@ -37,14 +40,14 @@ public final class CollectionCodecs {
     }
 
     public static <K> Codec<Object2DoubleMap<K>> doubleMap(Codec<K> keyCodec) {
-        return map(keyCodec, Codec.DOUBLE).xmap(Object2DoubleOpenHashMap::new, Object2DoubleOpenHashMap::new);
+        return map(keyCodec, Codec.DOUBLE).xmap(Object2DoubleOpenHashMap::new, Function.identity());
     }
 
     public static <K> Codec<Object2IntMap<K>> intMap(Codec<K> keyCodec) {
-        return map(keyCodec, Codec.INT).xmap(Object2IntOpenHashMap::new, Object2IntOpenHashMap::new);
+        return map(keyCodec, Codec.INT).xmap(Object2IntOpenHashMap::new, Function.identity());
     }
 
     public static <K> Codec<Object2LongMap<K>> longMap(Codec<K> keyCodec) {
-        return map(keyCodec, Codec.LONG).xmap(Object2LongOpenHashMap::new, Object2LongOpenHashMap::new);
+        return map(keyCodec, Codec.LONG).xmap(Object2LongOpenHashMap::new, Function.identity());
     }
 }

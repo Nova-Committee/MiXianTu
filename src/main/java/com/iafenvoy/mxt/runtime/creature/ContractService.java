@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.creature;
 
-import com.iafenvoy.mxt.attachment.ContractData;
+import com.iafenvoy.mxt.attachment.ContractComponent;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Action;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Post;
@@ -23,7 +23,7 @@ public final class ContractService {
     private ContractService() {
     }
 
-    public static Result bind(ContractData data, Holder<ContractType> type, UUID owner, long gameTime,
+    public static Result bind(ContractComponent data, Holder<ContractType> type, UUID owner, long gameTime,
                               BooleanSupplier ownerAllowed, BooleanSupplier creatureAllowed) {
         if (data.bound()) return Result.rejected(Failure.ALREADY_BOUND);
         if (!ownerAllowed.getAsBoolean()) return Result.rejected(Failure.OWNER_CONDITIONS);
@@ -39,7 +39,7 @@ public final class ContractService {
     /**
      * Evaluates both sides against the contract's fixed condition registry before binding.
      */
-    public static Result bind(ContractData data, Holder<ContractType> type, LivingEntity owner,
+    public static Result bind(ContractComponent data, Holder<ContractType> type, LivingEntity owner,
                               LivingEntity creature, long gameTime, FormulaContext context) {
         ContractType definition = type.value();
         boolean ownerAllowed = definition.ownerCondition().test(owner, context);
@@ -47,7 +47,7 @@ public final class ContractService {
         return bind(data, type, owner.getUUID(), gameTime, () -> ownerAllowed, () -> creatureAllowed);
     }
 
-    public static Result breakContract(ContractData data, UUID requester, boolean force) {
+    public static Result breakContract(ContractComponent data, UUID requester, boolean force) {
         if (!data.bound()) return Result.rejected(Failure.NOT_BOUND);
         if (!force && !data.owner().orElseThrow().equals(requester)) return Result.rejected(Failure.NOT_OWNER);
         Optional<Identifier> type = data.contractType().map(HolderHelper::id);
@@ -58,7 +58,7 @@ public final class ContractService {
         return Result.broken();
     }
 
-    public static Result setRecalled(ContractData data, UUID requester, boolean recalled, boolean force) {
+    public static Result setRecalled(ContractComponent data, UUID requester, boolean recalled, boolean force) {
         if (!data.bound()) return Result.rejected(Failure.NOT_BOUND);
         if (!force && !data.owner().orElseThrow().equals(requester)) return Result.rejected(Failure.NOT_OWNER);
         if (data.recalled() == recalled) return Result.unchanged();

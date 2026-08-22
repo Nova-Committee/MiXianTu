@@ -53,15 +53,15 @@ public sealed interface Trio<F, S, T> permits First, Second, Third {
     }
 
     default Optional<F> first() {
-        return this.map(Optional::of, ignored -> Optional.empty(), ignored -> Optional.empty());
+        return this.map(Optional::of, _ -> Optional.empty(), _ -> Optional.empty());
     }
 
     default Optional<S> second() {
-        return this.map(ignored -> Optional.empty(), Optional::of, ignored -> Optional.empty());
+        return this.map(_ -> Optional.empty(), Optional::of, _ -> Optional.empty());
     }
 
     default Optional<T> third() {
-        return this.map(ignored -> Optional.empty(), ignored -> Optional.empty(), Optional::of);
+        return this.map(_ -> Optional.empty(), _ -> Optional.empty(), Optional::of);
     }
 
     record First<F, S, T>(F value) implements Trio<F, S, T> {

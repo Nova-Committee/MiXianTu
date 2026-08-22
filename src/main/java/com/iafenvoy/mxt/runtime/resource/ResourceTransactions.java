@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent.Audit;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -56,7 +56,7 @@ public final class ResourceTransactions {
         return new Evaluation(amounts);
     }
 
-    public static Result tryConsume(ResourceHolderData holder, Evaluation evaluation) {
+    public static Result tryConsume(ResourceHolderComponent holder, Evaluation evaluation) {
         // The holder is intentionally a value-only attachment.  A cost may never create a
         // negative balance, even when a caller has not resolved the optional datapack bounds.
         for (Entry<Identifier, Double> entry : evaluation.amounts.entrySet()) {

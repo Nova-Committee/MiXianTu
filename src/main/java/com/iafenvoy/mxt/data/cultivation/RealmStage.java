@@ -10,7 +10,9 @@ import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -28,7 +30,8 @@ import java.util.Optional;
 /**
  * One named realm stage. Conditions and outcomes are resolved by the cultivation runtime.
  */
-public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>> nextRealm,
+public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeight, EntityCondition cultivateCondition,
+                         Optional<Holder<RealmStage>> nextRealm,
                          NumberProvider progressThreshold, List<EntityCondition> upgradeConditions,
                          List<AttributeEntry> passiveModifiers, List<ResourceCost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
@@ -37,6 +40,8 @@ public record RealmStage(Holder<Resource> resource, Optional<Holder<RealmStage>>
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
+            NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
+            EntityCondition.CODEC.optionalFieldOf("cultivate_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(RealmStage::cultivateCondition),
             RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
             NumberProvider.CODEC.fieldOf("progress_threshold").forGetter(RealmStage::progressThreshold),
             AutoIgnoreListCodec.create(EntityCondition.SINGLE_CODEC).optionalFieldOf("upgrade_conditions", List.of()).forGetter(RealmStage::upgradeConditions),

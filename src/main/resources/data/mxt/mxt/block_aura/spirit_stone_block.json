@@ -1,0 +1,6 @@
+{
+  "blocks": "mxt:spirit_stone_block",
+  "aura": {
+    "mxt:common": { "amount": 50.0, "max": 50.0, "regen_per_tick": 0.1 }
+  }
+}

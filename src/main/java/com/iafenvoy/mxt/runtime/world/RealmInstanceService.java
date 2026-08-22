@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.RealmInstanceData;
-import com.iafenvoy.mxt.attachment.RealmTravelData;
+import com.iafenvoy.mxt.attachment.RealmInstanceComponent;
+import com.iafenvoy.mxt.attachment.RealmTravelComponent;
 import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPost;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
@@ -36,7 +36,7 @@ public final class RealmInstanceService {
     /**
      * Enters a realm only after its target dimension is available, then retains an exact return location.
      */
-    public static Result enter(ServerPlayer player, RealmInstanceData data, Identifier id, RealmInstance definition) {
+    public static Result enter(ServerPlayer player, RealmInstanceComponent data, Identifier id, RealmInstance definition) {
         if (player.getData(MxtAttachments.REALM_TRAVEL).active())
             return Result.rejected(Failure.ALREADY_TRAVELLING);
         ServerLevel destination = destination(player.level().getServer(), definition).orElse(null);
@@ -46,7 +46,7 @@ public final class RealmInstanceService {
         Result membership = enter(player.level(), data, realm, player.getUUID(), player.level().getGameTime());
         if (!membership.changed()) return membership;
 
-        RealmTravelData travel = player.getData(MxtAttachments.REALM_TRAVEL);
+        RealmTravelComponent travel = player.getData(MxtAttachments.REALM_TRAVEL);
         travel.begin(realm, player.level().dimension().identifier(), player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
         double entryX = 0.5D;
         double entryZ = 0.5D;
@@ -55,7 +55,7 @@ public final class RealmInstanceService {
         return membership;
     }
 
-    public static Result enter(ServerLevel level, RealmInstanceData data, Holder<RealmInstance> realm, UUID member, long gameTime) {
+    public static Result enter(ServerLevel level, RealmInstanceComponent data, Holder<RealmInstance> realm, UUID member, long gameTime) {
         Identifier id = HolderHelper.id(realm);
         RealmInstance definition = realm.value();
         if (data.active() && data.definition().filter(realm::equals).isEmpty())
@@ -73,8 +73,8 @@ public final class RealmInstanceService {
     /**
      * Returns a player to the exact origin captured when entering.
      */
-    public static Result exit(ServerPlayer player, RealmInstanceData data) {
-        RealmTravelData travel = player.getData(MxtAttachments.REALM_TRAVEL);
+    public static Result exit(ServerPlayer player, RealmInstanceComponent data) {
+        RealmTravelComponent travel = player.getData(MxtAttachments.REALM_TRAVEL);
         Holder<RealmInstance> realm = travel.realm().orElse(null);
         if (realm == null || !travel.active()) return Result.rejected(Failure.NOT_TRAVELLING);
         Identifier id = HolderHelper.id(realm);
@@ -93,7 +93,7 @@ public final class RealmInstanceService {
         return Result.exited();
     }
 
-    public static Result exit(ServerLevel level, RealmInstanceData data, UUID member) {
+    public static Result exit(ServerLevel level, RealmInstanceComponent data, UUID member) {
         Holder<RealmInstance> realm = data.definition().orElse(null);
         if (realm == null || !data.members().contains(member)) return Result.rejected(Failure.NOT_MEMBER);
         Identifier id = HolderHelper.id(realm);
@@ -105,7 +105,7 @@ public final class RealmInstanceService {
         return Result.exited();
     }
 
-    public static boolean expire(ServerLevel level, RealmInstanceData data, long gameTime) {
+    public static boolean expire(ServerLevel level, RealmInstanceComponent data, long gameTime) {
         if (!data.active() || !data.expired(gameTime)) return false;
         for (UUID member : new ArrayList<>(data.members())) {
             ServerPlayer player = level.getServer().getPlayerList().getPlayer(member);
@@ -120,11 +120,11 @@ public final class RealmInstanceService {
      * Restores an expired realm traveller after login, without requiring the old realm instance to remain loaded.
      */
     public static boolean returnIfOrphaned(ServerPlayer player) {
-        RealmTravelData travel = player.getData(MxtAttachments.REALM_TRAVEL);
+        RealmTravelComponent travel = player.getData(MxtAttachments.REALM_TRAVEL);
         Holder<RealmInstance> realm = travel.realm().orElse(null);
         if (realm == null || !travel.active()) return false;
         for (ServerLevel level : sourceServer(player).getAllLevels()) {
-            RealmInstanceData data = level.getData(MxtAttachments.REALM_INSTANCE);
+            RealmInstanceComponent data = level.getData(MxtAttachments.REALM_INSTANCE);
             if (data.active() && data.definition().filter(realm::equals).isPresent() && data.members().contains(player.getUUID()))
                 return false;
         }
@@ -139,7 +139,7 @@ public final class RealmInstanceService {
         return definition.dimension().map(id -> server.getLevel(ResourceKey.create(Registries.DIMENSION, id)));
     }
 
-    private static Optional<ServerLevel> origin(MinecraftServer server, RealmTravelData travel) {
+    private static Optional<ServerLevel> origin(MinecraftServer server, RealmTravelComponent travel) {
         return travel.originDimension().map(id -> server.getLevel(ResourceKey.create(Registries.DIMENSION, id)));
     }
 

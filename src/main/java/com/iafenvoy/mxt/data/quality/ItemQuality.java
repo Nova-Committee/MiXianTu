@@ -12,8 +12,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
-import java.util.Optional;
-
 /**
  * Shared item quality definition, including common economic, forging, and
  * alchemy modifiers.
@@ -22,15 +20,23 @@ import java.util.Optional;
  * than this definition, so datapacks can reorganise them without rewriting
  * individual quality files.</p>
  */
-public record ItemQuality(Component displayName, Optional<Component> description, NumberProvider valueMultiplier,
-                          NumberProvider forgingModifier, NumberProvider alchemyModifier, EntityCondition condition) {
+public record ItemQuality(Component displayName, Modifier valueMultiplier,
+                          Modifier forgingModifier, Modifier alchemyModifier,
+                          EntityCondition condition) {
     public static final Codec<Holder<ItemQuality>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_QUALITY);
     public static final Codec<ItemQuality> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             BadgeCodecs.TRANSLATABLE_COMPONENT.fieldOf("display_name").forGetter(ItemQuality::displayName),
-            BadgeCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("description").forGetter(ItemQuality::description),
-            NumberProvider.CODEC.optionalFieldOf("value_multiplier", new Constant(1.0D)).forGetter(ItemQuality::valueMultiplier),
-            NumberProvider.CODEC.optionalFieldOf("forging_modifier", new Constant(1.0D)).forGetter(ItemQuality::forgingModifier),
-            NumberProvider.CODEC.optionalFieldOf("alchemy_modifier", new Constant(1.0D)).forGetter(ItemQuality::alchemyModifier),
+            Modifier.CODEC.optionalFieldOf("value_multiplier", Modifier.DEFAULT).forGetter(ItemQuality::valueMultiplier),
+            Modifier.CODEC.optionalFieldOf("forging_modifier", Modifier.DEFAULT).forGetter(ItemQuality::forgingModifier),
+            Modifier.CODEC.optionalFieldOf("alchemy_modifier", Modifier.DEFAULT).forGetter(ItemQuality::alchemyModifier),
             EntityCondition.CODEC.optionalFieldOf("condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(ItemQuality::condition)
     ).apply(i, ItemQuality::new));
+
+    public record Modifier(Component description, NumberProvider modifier) {
+        public static final Modifier DEFAULT = new Modifier(Component.empty(), new Constant(1.0D));
+        public static final Codec<Modifier> CODEC = RecordCodecBuilder.create(i -> i.group(
+                BadgeCodecs.TRANSLATABLE_COMPONENT.fieldOf("description").forGetter(Modifier::description),
+                NumberProvider.CODEC.optionalFieldOf("modifier", new Constant(1.0D)).forGetter(Modifier::modifier)
+        ).apply(i, Modifier::new));
+    }
 }

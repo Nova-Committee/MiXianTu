@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.attachment.PillToxicityData;
+import com.iafenvoy.mxt.attachment.PillToxicityComponent;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,7 +16,7 @@ public final class PillService {
     public static Result consume(LivingEntity entity, PillBinding definition) {
         FormulaContext context = FormulaContext.of(entity);
         definition.onConsume().execute(entity, context);
-        PillToxicityData toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);
+        PillToxicityComponent toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);
         double value = toxicity.add(definition.toxicityGain().evaluate(context));
         double threshold = definition.toxicityThreshold().evaluate(context);
         if (Double.isFinite(threshold) && value >= threshold) {

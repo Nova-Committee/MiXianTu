@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.attachment.CurseHolderData;
-import com.iafenvoy.mxt.attachment.CurseHolderData.State;
+import com.iafenvoy.mxt.attachment.CurseHolderComponent;
+import com.iafenvoy.mxt.attachment.CurseHolderComponent.State;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
@@ -11,13 +11,13 @@ import org.jetbrains.annotations.NotNull;
  * Server-side curse removal transaction events, including expiry and cleansing.
  */
 public abstract class CurseRemoveEvent extends Event {
-    private final CurseHolderData holder;
+    private final CurseHolderComponent holder;
     private final Identifier curse;
     private final State state;
     private final Reason reason;
     private final long gameTime;
 
-    protected CurseRemoveEvent(@NotNull CurseHolderData holder, @NotNull Identifier curse, @NotNull State state, @NotNull Reason reason, long gameTime) {
+    protected CurseRemoveEvent(@NotNull CurseHolderComponent holder, @NotNull Identifier curse, @NotNull State state, @NotNull Reason reason, long gameTime) {
         this.holder = holder;
         this.curse = curse;
         this.state = state;
@@ -25,7 +25,7 @@ public abstract class CurseRemoveEvent extends Event {
         this.gameTime = gameTime;
     }
 
-    public CurseHolderData holder() {
+    public CurseHolderComponent holder() {
         return this.holder;
     }
 
@@ -46,13 +46,13 @@ public abstract class CurseRemoveEvent extends Event {
     }
 
     public static final class Pre extends CurseRemoveEvent implements ICancellableEvent {
-        public Pre(CurseHolderData holder, Identifier curse, State state, Reason reason, long gameTime) {
+        public Pre(CurseHolderComponent holder, Identifier curse, State state, Reason reason, long gameTime) {
             super(holder, curse, state, reason, gameTime);
         }
     }
 
     public static final class Post extends CurseRemoveEvent {
-        public Post(CurseHolderData holder, Identifier curse, State state, Reason reason, long gameTime) {
+        public Post(CurseHolderComponent holder, Identifier curse, State state, Reason reason, long gameTime) {
             super(holder, curse, state, reason, gameTime);
         }
     }

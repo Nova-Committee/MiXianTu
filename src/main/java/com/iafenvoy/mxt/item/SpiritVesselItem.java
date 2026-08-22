@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.data.item.ResourceContainerData;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.data.item.ResourceContainerComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -38,22 +39,22 @@ public final class SpiritVesselItem extends Item {
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!(player instanceof ServerPlayer)) return InteractionResult.SUCCESS;
-        ResourceContainerData container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerData.EMPTY);
+        ResourceContainerComponent container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY);
         Object2DoubleMap<Holder<Resource>> values = new Object2DoubleOpenHashMap<>(container.values());
-        ResourceHolderData holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderComponent holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         boolean changed = player.isShiftKeyDown() ? store(holder, values, player) : release(holder, values, player);
         if (!changed) {
             ItemFeedback.send(player, Component.translatable(player.isShiftKeyDown()
                     ? "item.mxt.spirit_vessel.store_failed" : "item.mxt.spirit_vessel.release_failed"));
             return InteractionResult.FAIL;
         }
-        stack.set(MxtDataComponents.RESOURCE_CONTAINER, new ResourceContainerData(values));
+        stack.set(MxtDataComponents.RESOURCE_CONTAINER, new ResourceContainerComponent(values));
         ItemFeedback.send(player, Component.translatable(player.isShiftKeyDown()
                 ? "item.mxt.spirit_vessel.stored" : "item.mxt.spirit_vessel.released"));
         return InteractionResult.SUCCESS_SERVER;
     }
 
-    private static boolean store(ResourceHolderData holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
+    private static boolean store(ResourceHolderComponent holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
         boolean changed = false;
         for (Entry<Holder<Resource>, Double> entry : new LinkedHashMap<>(holder.values()).entrySet()) {
             double stored = values.getOrDefault(entry.getKey(), 0.0D);
@@ -69,7 +70,7 @@ public final class SpiritVesselItem extends Item {
         return changed;
     }
 
-    private static boolean release(ResourceHolderData holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
+    private static boolean release(ResourceHolderComponent holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
         boolean changed = false;
         for (Object2DoubleMap.Entry<Holder<Resource>> entry : values.object2DoubleEntrySet()) {
             double before = holder.get(entry.getKey());

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.forging;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.data.artifact.ForgingResultData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -44,7 +44,7 @@ public final class ForgingService {
     }
 
     public static StrikeResult strike(ForgingSession session, Identifier methodId, ForgingMethod method,
-                                      ResourceHolderData resources, FormulaContext context, BooleanSupplier conditions) {
+                                      ResourceHolderComponent resources, FormulaContext context, BooleanSupplier conditions) {
         if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failure.CONDITIONS, null);
         if (!session.canStrike(methodId)) return StrikeResult.rejected(Failure.INVALID_STRIKE, null);
         StrikePre event = new StrikePre(session, methodId, method, resources, context);
@@ -74,7 +74,7 @@ public final class ForgingService {
         int extra = session.extraSteps();
         Holder<ItemQuality> quality = qualityForExtraSteps.apply(extra);
         if (quality == null) return FinishResult.rejected(Failure.INVALID_BLUEPRINT);
-        ForgingResultData result = new ForgingResultData(blueprintId, session.value(), session.steps(), session.optimalSteps(), extra, quality);
+        ForgingResultComponent result = new ForgingResultComponent(blueprintId, session.value(), session.steps(), session.optimalSteps(), extra, quality);
         NeoForge.EVENT_BUS.post(new CompletePost(blueprintId, session, result));
         return FinishResult.finished(result);
     }
@@ -113,8 +113,8 @@ public final class ForgingService {
         }
     }
 
-    public record FinishResult(ForgingResultData result, Failure failure) {
-        private static FinishResult finished(ForgingResultData result) {
+    public record FinishResult(ForgingResultComponent result, Failure failure) {
+        private static FinishResult finished(ForgingResultComponent result) {
             return new FinishResult(result, null);
         }
 

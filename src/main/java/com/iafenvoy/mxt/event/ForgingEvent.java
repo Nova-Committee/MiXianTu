@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.data.artifact.ForgingResultData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -58,11 +58,11 @@ public abstract class ForgingEvent extends Event {
         private final ForgingSession session;
         private final Identifier method;
         private final ForgingMethod definition;
-        private final ResourceHolderData resources;
+        private final ResourceHolderComponent resources;
         private final FormulaContext context;
         private List<ResourceCost> costs;
 
-        public StrikePre(ForgingSession session, Identifier method, ForgingMethod definition, ResourceHolderData resources, FormulaContext context) {
+        public StrikePre(ForgingSession session, Identifier method, ForgingMethod definition, ResourceHolderComponent resources, FormulaContext context) {
             this.session = session;
             this.method = method;
             this.definition = definition;
@@ -83,7 +83,7 @@ public abstract class ForgingEvent extends Event {
             return this.definition;
         }
 
-        public ResourceHolderData resources() {
+        public ResourceHolderComponent resources() {
             return this.resources;
         }
 
@@ -133,9 +133,9 @@ public abstract class ForgingEvent extends Event {
     public static final class CompletePost extends ForgingEvent {
         private final Identifier blueprint;
         private final ForgingSession session;
-        private final ForgingResultData result;
+        private final ForgingResultComponent result;
 
-        public CompletePost(Identifier blueprint, ForgingSession session, ForgingResultData result) {
+        public CompletePost(Identifier blueprint, ForgingSession session, ForgingResultComponent result) {
             this.blueprint = blueprint;
             this.session = session;
             this.result = result;
@@ -149,7 +149,7 @@ public abstract class ForgingEvent extends Event {
             return this.session;
         }
 
-        public ForgingResultData result() {
+        public ForgingResultComponent result() {
             return this.result;
         }
     }

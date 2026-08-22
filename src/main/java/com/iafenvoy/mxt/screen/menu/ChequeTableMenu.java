@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.screen.menu;
 
-import com.iafenvoy.mxt.data.ChequeData;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+
+import com.iafenvoy.mxt.data.economy.ChequeComponent;
 import com.iafenvoy.mxt.item.ChequeItem;
 import com.iafenvoy.mxt.registry.MxtBlocks;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
@@ -53,7 +54,7 @@ public final class ChequeTableMenu extends AbstractContainerMenu {
 
     public boolean checkIn(Player player) {
         ItemStack blank = this.chequeInput.getItem(0);
-        if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeData.EMPTY).value() != 0L)
+        if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY).value() != 0L)
             return false;
         OptionalLongResult value = CurrencyPaymentService.collectCurrency(this.currency);
         if (!value.valid() || value.value() <= 0L || !this.chequeOutput.getItem(0).isEmpty()) return false;
@@ -66,7 +67,7 @@ public final class ChequeTableMenu extends AbstractContainerMenu {
 
     public boolean checkOut() {
         ItemStack cheque = this.chequeInput.getItem(0);
-        ChequeData data = cheque.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeData.EMPTY);
+        ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY);
         if (!cheque.is(MxtItems.CHEQUE.get()) || data.value() <= 0L || !this.currency.isEmpty()) return false;
         List<ItemStack> change = CurrencyPaymentService.makeChange(data.value()).orElse(null);
         if (change == null || change.size() > this.currency.getContainerSize()) return false;

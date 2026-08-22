@@ -4,16 +4,20 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 
-/**
- * Type-safe codecs for references into native and datapack registries.
- */
+import java.util.Optional;
+
 public final class HolderHelper {
     public static final Identifier EMPTY = Identifier.fromNamespaceAndPath("", "");
 
-    /**
-     * Obtains the stable id of a registry-backed holder.
-     */
     public static Identifier id(Holder<?> holder) {
-        return holder.unwrapKey().map(ResourceKey::identifier).orElse(EMPTY);
+        return idOptional(holder).orElse(EMPTY);
+    }
+
+    public static Identifier idOrNull(Holder<?> holder) {
+        return idOptional(holder).orElse(null);
+    }
+
+    public static Optional<Identifier> idOptional(Holder<?> holder) {
+        return holder.unwrapKey().map(ResourceKey::identifier);
     }
 }

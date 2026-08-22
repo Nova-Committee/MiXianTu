@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityHolderData;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -17,7 +17,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Rebuilds only the abilities owned by cultivation identity sources.
@@ -28,9 +28,9 @@ public final class CultivationGrantService {
     private CultivationGrantService() {
     }
 
-    public static Result recalculate(SpiritData spirit, AbilityHolderData abilities) {
+    public static Result recalculate(SpiritComponent spirit, AbilityHolderComponent abilities) {
         int revoked = 0;
-        for (Map.Entry<Holder<Ability>, Identifier> entry : abilities.sources().entries())
+        for (Entry<Holder<Ability>, Identifier> entry : abilities.sources().entries())
             if (isCultivationSource(entry.getValue()) && abilities.revoke(entry.getKey(), entry.getValue())) revoked++;
         int granted = 0;
         for (Holder<SpiritRoot> root : spirit.spiritRoots()) {
@@ -45,7 +45,7 @@ public final class CultivationGrantService {
         return new Result(granted, revoked);
     }
 
-    private static int grantAll(AbilityHolderData holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {
+    private static int grantAll(AbilityHolderComponent holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {
         int granted = 0;
         for (Holder<Ability> ability : RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
                 .distinct().toList())

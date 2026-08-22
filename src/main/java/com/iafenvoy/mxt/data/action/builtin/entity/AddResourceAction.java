@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -29,7 +29,7 @@ public record AddResourceAction(Holder<Resource> resource,
     public void execute(Entity entity, FormulaContext context) {
         double amount = this.amount.evaluate(context);
         if (!Double.isFinite(amount)) return;
-        ResourceHolderData resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderComponent resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         Identifier id = HolderHelper.id(this.resource);
         FormulaContext resourceContext = entity instanceof LivingEntity living
                 ? ResourceService.formulaContext(living, id, this.resource.value(), context)

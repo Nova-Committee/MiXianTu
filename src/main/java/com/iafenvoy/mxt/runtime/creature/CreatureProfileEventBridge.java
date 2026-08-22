@@ -15,19 +15,24 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Applies creature profiles once on server-side spawn and materializes an optional inner core at death.
  */
+@EventBusSubscriber
 public final class CreatureProfileEventBridge {
     private CreatureProfileEventBridge() {
     }
 
+    @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Mob creature)) return;
         CreatureProfileService.applySelected(creature);
     }
 
+    @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Mob creature)) return;
         creature.getData(MxtAttachments.CREATURE_SPIRIT).innerCore().flatMap(BuiltInRegistries.ITEM::getOptional).ifPresent(item ->

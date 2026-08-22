@@ -2,12 +2,12 @@ package com.iafenvoy.mxt.command;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityHolderData;
-import com.iafenvoy.mxt.attachment.CurseHolderData;
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.SectData;
-import com.iafenvoy.mxt.attachment.SectTerritoryData;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.CurseHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.SectComponent;
+import com.iafenvoy.mxt.attachment.SectTerritoryComponent;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -27,7 +27,6 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -46,7 +45,7 @@ import static net.minecraft.commands.Commands.literal;
  * Minimal server-only diagnostic surface; it never accepts client attachment payloads.
  */
 public final class MxtCommand {
-    public static void registerCommand(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext context) {
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(literal(MiXianTu.MOD_ID)
                 .then(literal("registries")
                         .then(literal("list").executes(ctx -> listRegistries(ctx.getSource())))
@@ -95,10 +94,10 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        AbilityHolderData abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
-        CurseHolderData curses = player.getData(MxtAttachments.CURSE_HOLDER);
-        ResourceHolderData resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        SpiritData spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        AbilityHolderComponent abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
+        CurseHolderComponent curses = player.getData(MxtAttachments.CURSE_HOLDER);
+        ResourceHolderComponent resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
         source.sendSuccess(() -> Component.translatable("command.mxt.attachment.status", resources.values().size(), abilities.sources().size(),
                 abilities.cooldowns().size(), curses.instances().size(), spirit.spiritRoots().size(), spirit.physiques().size()), false);
         return 1;
@@ -132,7 +131,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        SpiritData spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
         Component action = spirit.cultivateAction().<Component>map(id -> Component.literal(id.toString())).orElseGet(() -> Component.translatable("command.mxt.none"));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, spirit.cultivationProgress(), spirit.nextCultivateTick()), false);
         return 1;
@@ -145,7 +144,8 @@ public final class MxtCommand {
             return 0;
         }
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
-        String elements = aura.elementAura().entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue()).collect(Collectors.joining(", "));
+        String elements = aura.aura().entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue().amount()
+                + "/" + entry.getValue().maximum() + "+" + entry.getValue().regenPerTick()).collect(Collectors.joining(", "));
         String auraKinds = String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList());
         source.sendSuccess(() -> Component.translatable("command.mxt.aura.query", aura.concentration(), aura.regenPerTick(),
                 aura.source().toString(), aura.sourceKind().name(), elements, auraKinds, aura.suppressCultivate()), false);
@@ -206,13 +206,13 @@ public final class MxtCommand {
     private static int claimTerritory(CommandSourceStack source, boolean release) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        SectData membership = player.getData(MxtAttachments.SECT);
+        SectComponent membership = player.getData(MxtAttachments.SECT);
         Holder<Sect> sect = membership.sect().orElse(null);
         if (sect == null) {
             source.sendFailure(Component.translatable("command.mxt.sect.not_member"));
             return 0;
         }
-        SectTerritoryData territory = player.level().getChunkAt(player.blockPosition()).getData(MxtAttachments.SECT_TERRITORY);
+        SectTerritoryComponent territory = player.level().getChunkAt(player.blockPosition()).getData(MxtAttachments.SECT_TERRITORY);
         Result result = release
                 ? SectService.releaseTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM)
                 : SectService.claimTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM);

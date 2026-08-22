@@ -1,5 +1,6 @@
 {
   "resource": "mxt_test:qi",
+  "aura_share_weight": 4,
   "progress_threshold": 250,
   "upgrade_conditions": [
     {

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.datafixers.util.Either;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.EntityType;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 /**
  * Datapack profile applied to tagged creature types; it does not create an entity type.
@@ -29,7 +31,7 @@ public record CreatureProfile(Optional<Holder<RealmStage>> realmStage, NumberPro
                               Optional<Identifier> lootTable, List<Identifier> contractTags,
                               List<Either<Holder<EntityType<?>>, TagKey<EntityType<?>>>> entityTypeTags,
                               List<Either<Holder<Element>, TagKey<Element>>> preferredAuraElements,
-                              double minimumAura) {
+                              Map<Holder<Element>, NumberProvider> minimumAura) {
     public static final Codec<CreatureProfile> CODEC = RecordCodecBuilder.create(i -> i.group(
             RealmStage.CODEC.optionalFieldOf("realm_stage").forGetter(CreatureProfile::realmStage),
             NumberProvider.CODEC.optionalFieldOf("intelligence", new Constant(0.0D)).forGetter(CreatureProfile::intelligence),
@@ -39,6 +41,6 @@ public record CreatureProfile(Optional<Holder<RealmStage>> realmStage, NumberPro
             Identifier.CODEC.listOf().optionalFieldOf("contract_tags", List.of()).forGetter(CreatureProfile::contractTags),
             RegistryCodecs.holderOrTagList(Registries.ENTITY_TYPE).optionalFieldOf("entity_type_tags", List.of()).forGetter(CreatureProfile::entityTypeTags),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("preferred_aura_elements", List.of()).forGetter(CreatureProfile::preferredAuraElements),
-            Codec.DOUBLE.optionalFieldOf("minimum_aura", 0.0D).forGetter(CreatureProfile::minimumAura)
+            CollectionCodecs.map(Element.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(CreatureProfile::minimumAura)
     ).apply(i, CreatureProfile::new));
 }

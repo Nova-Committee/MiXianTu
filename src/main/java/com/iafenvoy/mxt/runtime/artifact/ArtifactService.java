@@ -1,13 +1,13 @@
 package com.iafenvoy.mxt.runtime.artifact;
+
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.data.artifact.ArtifactStateData;
-import com.iafenvoy.mxt.data.artifact.ForgingResultData;
+import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
+import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.runtime.energy.ArtifactSpiritEnergy;
 import com.iafenvoy.mxt.runtime.energy.ISpiritEnergy;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -29,7 +29,7 @@ public final class ArtifactService {
         UUID ownerUuid = owner.getUUID();
         if (NeoForge.EVENT_BUS.post(new Pre(stack, ownerUuid)).isCanceled())
             return RefineResult.CANCELLED;
-        ArtifactStateData current = state(stack);
+        ArtifactStateComponent current = state(stack);
         String requestedOwner = ownerUuid.toString();
         if (current.ownerUuid().isPresent() && !current.ownerUuid().get().equals(requestedOwner))
             return RefineResult.OWNED_BY_OTHER;
@@ -52,8 +52,8 @@ public final class ArtifactService {
         return new ArtifactSpiritEnergy(stack, Double.MAX_VALUE).extract(amount);
     }
 
-    public static ArtifactStateData state(ItemStack stack) {
-        return Optional.ofNullable(stack.get(MxtDataComponents.ARTIFACT_STATE)).orElseGet(ArtifactStateData::empty);
+    public static ArtifactStateComponent state(ItemStack stack) {
+        return Optional.ofNullable(stack.get(MxtDataComponents.ARTIFACT_STATE)).orElseGet(ArtifactStateComponent::empty);
     }
 
     public static ISpiritEnergy energyStorage(ItemStack stack, double capacity) {
@@ -67,7 +67,7 @@ public final class ArtifactService {
     /**
      * Writes immutable server-computed forge provenance to a completed item.
      */
-    public static void applyForgingResult(ItemStack stack, ForgingResultData result) {
+    public static void applyForgingResult(ItemStack stack, ForgingResultComponent result) {
         stack.set(MxtDataComponents.FORGING_RESULT, result);
     }
 

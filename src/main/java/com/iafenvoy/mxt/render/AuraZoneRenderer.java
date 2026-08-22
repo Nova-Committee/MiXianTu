@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.render;
+import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
@@ -28,7 +29,7 @@ public final class AuraZoneRenderer {
     @SubscribeEvent
     public static void onFogColor(ComputeFogColor event) {
         resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasVisualOverride).ifPresent(fog -> {
-            int color = color(fog.render().fogColor());
+            int color = fog.render().fogColor();
             float strength = fog.strength();
             event.setRed(blend(event.getRed(), ((color >>> 16) & 0xFF) / 255.0F, strength));
             event.setGreen(blend(event.getGreen(), ((color >>> 8) & 0xFF) / 255.0F, strength));
@@ -52,24 +53,16 @@ public final class AuraZoneRenderer {
         if (entity == null) return Optional.empty();
         Snapshot snapshot = AuraClientState.current();
         Registry<AuraZone> zones = entity.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
-        return zones.getOptional(snapshot.source()).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.concentration(), zone.baseAura()));
+        return zones.getOptional(snapshot.source()).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.concentration(),
+                zone.aura().values().stream().mapToDouble(AuraValue::amount).sum()));
     }
 
     private static boolean hasVisualOverride(ResolvedFog fog) {
-        return fog.strength() > 0.0F && !"#FFFFFF".equalsIgnoreCase(fog.render().fogColor());
+        return fog.strength() > 0.0F && fog.render().fogColor() != 0xFFFFFF;
     }
 
     private static float blend(float current, float target, float strength) {
         return current + (target - current) * strength;
-    }
-
-    private static int color(String value) {
-        try {
-            String hex = value.startsWith("#") ? value.substring(1) : value;
-            return (int) Long.parseLong(hex.length() == 8 ? hex.substring(2) : hex, 16);
-        } catch (RuntimeException ignored) {
-            return 0xFFFFFF;
-        }
     }
 
     private record ResolvedFog(ClientRender render, double concentration, double baseAura) {

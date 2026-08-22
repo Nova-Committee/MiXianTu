@@ -1,0 +1,6 @@
+{
+  "order": 0,
+  "size": 2,
+  "icon": "mxt:slot/empty_back_weapon_slot",
+  "validators": ["curios:tag", "mxt:back_weapon_auto"]
+}

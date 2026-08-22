@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt;
 
 import com.iafenvoy.jupiter.ConfigManager;
-import com.iafenvoy.jupiter.ServerConfigManager;
+import com.iafenvoy.jupiter.ServerConfigManager.PermissionChecker;
 import com.iafenvoy.mxt.integration.MxtKubeJsEvents;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.integration.CuriosIntegration;
@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.registry.*;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.ModContainer;
 import org.slf4j.Logger;
 
 @Mod(MiXianTu.MOD_ID)
@@ -18,7 +17,7 @@ public final class MiXianTu {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public MiXianTu(IEventBus bus) {
-        ConfigManager.getInstance().registerServerConfigHandler(MxtServerConfig.INSTANCE, ServerConfigManager.PermissionChecker.IS_OPERATOR);
+        ConfigManager.getInstance().registerServerConfigHandler(MxtServerConfig.INSTANCE, PermissionChecker.IS_OPERATOR);
 
         CuriosIntegration.registerPredicates();
 
@@ -30,6 +29,7 @@ public final class MiXianTu {
         MxtMenus.REGISTRY.register(bus);
         MxtCreativeTabs.REGISTRY.register(bus);
         MxtEntityTypes.REGISTRY.register(bus);
+        MxtParticleTypes.REGISTRY.register(bus);
         MxtRecipeSerializers.REGISTRY.register(bus);
         MxtLootFunctions.REGISTRY.register(bus);
         MxtLootConditions.REGISTRY.register(bus);
@@ -39,6 +39,7 @@ public final class MiXianTu {
         MxtAbilityComponents.REGISTRY.register(bus);
         MxtAbilityTriggers.REGISTRY.register(bus);
         MxtNumberProviders.REGISTRY.register(bus);
+        MxtAuraMaximums.REGISTRY.register(bus);
         MxtFormulaFunctions.REGISTRY.register(bus);
         MxtFormulaVariables.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
@@ -54,6 +55,7 @@ public final class MiXianTu {
         MxtResourceBarRenderers.REGISTRY.register(bus);
         MxtResourceBarVisibilities.REGISTRY.register(bus);
         MxtBadges.REGISTRY.register(bus);
+        MxtItemMatchers.REGISTRY.register(bus);
         MxtCreatureSpawnConditions.REGISTRY.register(bus);
         MxtCultivationConditions.REGISTRY.register(bus);
 

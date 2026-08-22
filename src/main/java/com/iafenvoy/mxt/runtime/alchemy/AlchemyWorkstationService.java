@@ -44,8 +44,11 @@ public final class AlchemyWorkstationService {
     public static StartResult start(Level level, BlockPos pos, AlchemyWorkstationState state, Identifier recipeId,
                                     AlchemyRecipe recipe, int furnaceTier, FormulaContext context) {
         AuraResult aura = AuraService.getPositionAura(level, pos);
-        double minimum = recipe.minimumAura().evaluate(context);
-        if (!Double.isFinite(minimum) || minimum < 0.0D || aura.concentration() < minimum || !CollectionHelper.containsAllFast(aura.auraKinds(), recipe.auraKinds()))
+        boolean auraMet = recipe.minimumAura().entrySet().stream().allMatch(entry -> {
+            double minimum = entry.getValue().evaluate(context);
+            return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
+        });
+        if (!auraMet || !CollectionHelper.containsAllFast(aura.auraKinds(), recipe.auraKinds()))
             return StartResult.rejected(Failure.ENVIRONMENT);
         return start(state, recipeId, recipe, furnaceTier, context);
     }

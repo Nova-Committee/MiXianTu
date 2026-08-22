@@ -1,20 +1,29 @@
 package com.iafenvoy.mxt.runtime.item;
 
-import com.iafenvoy.mxt.data.artifact.ForgingResultData;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+
+import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
+import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,15 +36,34 @@ import java.util.Comparator;
  * Direct stack data takes precedence over a forge result, which in turn takes
  * precedence over a binding's tag-defined default quality.
  */
+@EventBusSubscriber
 public final class ItemQualityService {
     private ItemQualityService() {
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onAttack(AttackEntityEvent event) {
+        if (!event.getEntity().level().isClientSide()
+                && !canUse(event.getEntity(), event.getEntity().getMainHandItem())) event.setCanceled(true);
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onItemUse(RightClickItem event) {
+        if (!event.getEntity().level().isClientSide()
+                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) event.setCanceled(true);
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onBlockUse(RightClickBlock event) {
+        if (!event.getEntity().level().isClientSide()
+                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) event.setCanceled(true);
     }
 
     public static Optional<Holder<ItemQuality>> find(ItemStack stack) {
         return find(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY), stack, ItemBindingService.resolve(stack));
     }
 
-    public static Optional<Holder<ItemQuality>> find(HolderLookup.Provider access, ItemStack stack) {
+    public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
         return find(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), stack, ItemBindingService.resolve(access, stack), access);
     }
 
@@ -73,11 +101,11 @@ public final class ItemQualityService {
     }
 
     /** Client-safe counterpart of {@link #ordered()}. */
-    public static List<Holder<ItemQuality>> ordered(HolderLookup.Provider access) {
+    public static List<Holder<ItemQuality>> ordered(Provider access) {
         return ordered(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY));
     }
 
-    private static List<Holder<ItemQuality>> ordered(HolderLookup.RegistryLookup<ItemQuality> registry) {
+    private static List<Holder<ItemQuality>> ordered(RegistryLookup<ItemQuality> registry) {
         Set<Holder<ItemQuality>> values = new LinkedHashSet<>();
         registry.get(ItemQualityTags.TOOLTIP_ORDER).ifPresent(tag -> tag.forEach(quality -> addEnabled(values, quality)));
         registry.listElements().forEach(quality -> addEnabled(values, quality));
@@ -90,11 +118,11 @@ public final class ItemQualityService {
     }
 
     /** Client-safe counterpart of {@link #group(Identifier)}. */
-    public static List<Holder<ItemQuality>> group(HolderLookup.Provider access, Identifier group) {
+    public static List<Holder<ItemQuality>> group(Provider access, Identifier group) {
         return group(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), group);
     }
 
-    private static List<Holder<ItemQuality>> group(HolderLookup.RegistryLookup<ItemQuality> registry, Identifier group) {
+    private static List<Holder<ItemQuality>> group(RegistryLookup<ItemQuality> registry, Identifier group) {
         return registry.get(ItemQualityTags.group(group))
                 .map(tag -> tag.stream().filter(ItemQualityService::enabled).toList())
                 .orElse(List.of());
@@ -106,11 +134,11 @@ public final class ItemQualityService {
     }
 
     /** Client-safe counterpart of {@link #groups()}. */
-    public static List<TagKey<ItemQuality>> groups(HolderLookup.Provider access) {
+    public static List<TagKey<ItemQuality>> groups(Provider access) {
         return groups(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY));
     }
 
-    private static List<TagKey<ItemQuality>> groups(HolderLookup.RegistryLookup<ItemQuality> registry) {
+    private static List<TagKey<ItemQuality>> groups(RegistryLookup<ItemQuality> registry) {
         return registry.listTagIds()
                 .filter(ItemQualityTags::isGroup)
                 .sorted(Comparator.comparing(tag -> tag.location().toString()))
@@ -121,22 +149,22 @@ public final class ItemQualityService {
         return enabled(quality) && quality.is(ItemQualityTags.group(group));
     }
 
-    private static Optional<Holder<ItemQuality>> find(HolderLookup.RegistryLookup<ItemQuality> registry, ItemStack stack,
-                                                       ResolvedBindings bindings) {
+    private static Optional<Holder<ItemQuality>> find(RegistryLookup<ItemQuality> registry, ItemStack stack,
+                                                      ResolvedBindings bindings) {
         return intrinsic(stack)
                 .or(() -> groupDefault(registry, bindings.qualityGroup()))
-                .or(() -> SpiritHerbService.find(stack).map(herb -> herb.quality()).filter(ItemQualityService::enabled));
+                .or(() -> SpiritHerbService.find(stack).map(SpiritHerb::quality).filter(ItemQualityService::enabled));
     }
 
-    private static Optional<Holder<ItemQuality>> find(HolderLookup.RegistryLookup<ItemQuality> registry, ItemStack stack,
-                                                       ResolvedBindings bindings, HolderLookup.Provider access) {
+    private static Optional<Holder<ItemQuality>> find(RegistryLookup<ItemQuality> registry, ItemStack stack,
+                                                      ResolvedBindings bindings, Provider access) {
         return intrinsic(stack)
                 .or(() -> groupDefault(registry, bindings.qualityGroup()))
-                .or(() -> SpiritHerbService.find(access, stack).map(herb -> herb.quality()).filter(ItemQualityService::enabled));
+                .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality).filter(ItemQualityService::enabled));
     }
 
-    private static Optional<Holder<ItemQuality>> groupDefault(HolderLookup.RegistryLookup<ItemQuality> registry,
-                                                                Optional<TagKey<ItemQuality>> qualityGroup) {
+    private static Optional<Holder<ItemQuality>> groupDefault(RegistryLookup<ItemQuality> registry,
+                                                              Optional<TagKey<ItemQuality>> qualityGroup) {
         return qualityGroup
                 .flatMap(registry::get)
                 .flatMap(values -> values.stream().filter(ItemQualityService::enabled).reduce((first, second) -> second));
@@ -145,7 +173,7 @@ public final class ItemQualityService {
     private static Optional<Holder<ItemQuality>> intrinsic(ItemStack stack) {
         Holder<ItemQuality> direct = stack.get(MxtDataComponents.ITEM_QUALITY.get());
         if (enabled(direct)) return Optional.of(direct);
-        ForgingResultData forged = stack.get(MxtDataComponents.FORGING_RESULT);
+        ForgingResultComponent forged = stack.get(MxtDataComponents.FORGING_RESULT);
         if (forged != null && enabled(forged.quality())) return Optional.of(forged.quality());
         return Optional.empty();
     }

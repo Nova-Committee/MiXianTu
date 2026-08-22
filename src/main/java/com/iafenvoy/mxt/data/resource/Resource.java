@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.resource;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -19,7 +20,8 @@ import java.util.Optional;
  * Its {@code max} and {@code regen} formulas receive the owning resource chain's
  * realm rank and absorbed aura through {@code ResourceService}.
  */
-public record Resource(NumberProvider defaultValue, NumberProvider min, NumberProvider max, NumberProvider regen,
+public record Resource(NumberProvider defaultValue, NumberProvider min, NumberProvider max, NumberProvider regen, NumberProvider burstAmount,
+                       int particleColor,
                        ResourceConversion cultivationToResource, ResourceConversion resourceToCultivation,
                        List<ResourceBar> bars, Optional<Holder<RealmStage>> firstRealm) {
     public static final Codec<Holder<Resource>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.RESOURCE);
@@ -28,6 +30,8 @@ public record Resource(NumberProvider defaultValue, NumberProvider min, NumberPr
             NumberProvider.CODEC.optionalFieldOf("min", new Constant(0.0D)).forGetter(Resource::min),
             NumberProvider.CODEC.fieldOf("max").forGetter(Resource::max),
             NumberProvider.CODEC.optionalFieldOf("regen", new Constant(0.0D)).forGetter(Resource::regen),
+            NumberProvider.CODEC.optionalFieldOf("burst_amount", new Constant(0.0D)).forGetter(Resource::burstAmount),
+            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("particle_color", 0xFFFFFF).forGetter(Resource::particleColor),
             ResourceConversion.CODEC.optionalFieldOf("cultivation_to_resource", ResourceConversion.DEFAULT).forGetter(Resource::cultivationToResource),
             ResourceConversion.CODEC.optionalFieldOf("resource_to_cultivation", ResourceConversion.DEFAULT).forGetter(Resource::resourceToCultivation),
             ResourceBar.CODEC.listOf().optionalFieldOf("bars", List.of()).forGetter(Resource::bars),

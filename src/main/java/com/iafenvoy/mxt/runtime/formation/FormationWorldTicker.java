@@ -15,6 +15,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -23,15 +25,17 @@ import java.util.Optional;
 /**
  * Low-frequency lifecycle dispatcher; it never scans unloaded chunks.
  */
+@EventBusSubscriber
 public final class FormationWorldTicker {
     private static final FormationStructureValidator VALIDATOR = FormationStructureValidator.TEMPLATE;
 
     private FormationWorldTicker() {
     }
 
+    @SubscribeEvent
     public static void onLevelTick(Post event) {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 20L != 0L) return;
-        FormationWorldData world = level.getData(MxtAttachments.FORMATION_WORLD);
+        FormationWorldComponent world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, Snapshot> entry : world.formations().entrySet()) {
             Optional<Formation> definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation());
             if (definition.isEmpty() || !VALIDATOR.matches(level, entry.getKey(), definition.get())) {

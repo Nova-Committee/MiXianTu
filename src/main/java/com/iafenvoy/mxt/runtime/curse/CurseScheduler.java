@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.curse;
 
-import com.iafenvoy.mxt.attachment.CurseHolderData;
-import com.iafenvoy.mxt.attachment.CurseHolderData.State;
+import com.iafenvoy.mxt.attachment.CurseHolderComponent;
+import com.iafenvoy.mxt.attachment.CurseHolderComponent.State;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -56,7 +56,7 @@ public final class CurseScheduler {
     }
 
     static long nextDue(Entity entity, long gameTime) {
-        CurseHolderData data = entity.getData(MxtAttachments.CURSE_HOLDER);
+        CurseHolderComponent data = entity.getData(MxtAttachments.CURSE_HOLDER);
         long result = Long.MAX_VALUE;
         for (Map.Entry<Holder<Curse>, State> entry : data.instances().entrySet()) {
             State state = entry.getValue();

@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
+import com.iafenvoy.mxt.runtime.spirit.SpiritBurstEntity;
 import com.iafenvoy.mxt.runtime.world.SoulEntity;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -26,6 +27,10 @@ public final class MxtEntityTypes {
             Builder.of(SoulEntity::new, MobCategory.MISC).noLootTable().sized(0.3F, 0.5F)
                     .clientTrackingRange(8).updateInterval(20)
                     .build(ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "soul"))));
+    public static final DeferredHolder<EntityType<?>, EntityType<SpiritBurstEntity>> SPIRIT_BURST = REGISTRY.register("spirit_burst", () ->
+            Builder.<SpiritBurstEntity>of(SpiritBurstEntity::new, MobCategory.MISC).noLootTable().sized(0.0F, 0.0F)
+                    .clientTrackingRange(8).updateInterval(1)
+                    .build(ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_burst"))));
 
     private MxtEntityTypes() {
     }

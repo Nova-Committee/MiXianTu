@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.attachment.FlightData;
-import com.iafenvoy.mxt.data.artifact.ArtifactStateData;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+
+import com.iafenvoy.mxt.attachment.FlightComponent;
+import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -31,7 +32,7 @@ public final class FlightService {
         if (!ownsEquippedArchetype(player, artifact, archetype)) {
             return Result.rejected(Failure.NOT_OWNED);
         }
-        FlightData data = player.getData(MxtAttachments.FLIGHT);
+        FlightComponent data = player.getData(MxtAttachments.FLIGHT);
         if (data.active()) return Result.rejected(Failure.ALREADY_ACTIVE);
         double speed = definition.flightSpeed().evaluate(context);
         if (!Double.isFinite(speed) || speed <= 0.0D) return Result.rejected(Failure.INVALID_FORMULA);
@@ -48,13 +49,13 @@ public final class FlightService {
     }
 
     public static boolean ownsEquippedArchetype(ServerPlayer player, ItemStack artifact, Holder<ItemArchetype> archetype) {
-        ArtifactStateData state = artifact.get(MxtDataComponents.ARTIFACT_STATE);
+        ArtifactStateComponent state = artifact.get(MxtDataComponents.ARTIFACT_STATE);
         return !artifact.isEmpty() && state != null && state.archetype().filter(HolderHelper.id(archetype)::equals).isPresent()
                 && ArtifactService.isOwner(artifact, player.getUUID());
     }
 
     public static Result tick(ServerPlayer player, ItemArchetype definition, FormulaContext context) {
-        FlightData data = player.getData(MxtAttachments.FLIGHT);
+        FlightComponent data = player.getData(MxtAttachments.FLIGHT);
         if (!data.active()) return Result.inactive();
         if (!(player.getVehicle() instanceof FlyingSwordEntity sword) || data.vehicle().filter(sword.getUUID()::equals).isEmpty()) {
             return dismount(player, Failure.MOUNT_LOST);
@@ -76,7 +77,7 @@ public final class FlightService {
     }
 
     public static Result dismount(ServerPlayer player, Failure reason) {
-        FlightData data = player.getData(MxtAttachments.FLIGHT);
+        FlightComponent data = player.getData(MxtAttachments.FLIGHT);
         if (player.getVehicle() instanceof FlyingSwordEntity sword) {
             player.stopRiding();
             sword.discard();

@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.render.overlay;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.ResourceHolderData.Audit;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent.Audit;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
@@ -17,6 +18,7 @@ import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Origins;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -24,7 +26,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -103,10 +104,10 @@ public enum ResourceBarOverlay implements GuiLayer {
     }
 
     private static void collectFor(List<ResolvedBar> result, Registry<Resource> resources, LivingEntity entity, Context context) {
-        ResourceHolderData values = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderComponent values = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
-            Identifier id = resource.unwrapKey().map(ResourceKey::identifier).orElse(null);
+            Identifier id = HolderHelper.idOrNull(resource);
             if (id == null || !values.contains(resource)) continue;
             List<ResourceBar> definitions = resource.value().bars();
             for (int index = 0; index < definitions.size(); index++) {
@@ -179,10 +180,10 @@ public enum ResourceBarOverlay implements GuiLayer {
         } else if (renderer instanceof Radial radial) {
             renderRadial(graphics, radial, progress, position);
         } else if (renderer instanceof TextOnly(
-                String format, String color, boolean showMaximum
+                String format, int color, boolean showMaximum
         )) {
             drawValue(graphics, minecraft, bar, position.x(), position.y(), BAR_WIDTH, BAR_HEIGHT,
-                    color(color, 0xFFFFFFFF), showMaximum, format);
+                    opaque(color), showMaximum, format);
         }
         if (!(renderer instanceof TextOnly) && bar.definition().valueDisplay() != ValueDisplay.NONE)
             drawValueDisplay(graphics, minecraft, bar, position.x(), position.y(), bar.width(), bar.height());
@@ -215,8 +216,8 @@ public enum ResourceBarOverlay implements GuiLayer {
     private static void renderSegmented(GuiGraphicsExtractor graphics, Segmented renderer,
                                         double progress, Position position) {
         int filled = (int) Math.round(progress * renderer.segments());
-        int fullColor = color(renderer.fullColor(), DEFAULT_FILL);
-        int emptyColor = color(renderer.emptyColor(), DEFAULT_EMPTY);
+        int fullColor = opaque(renderer.fullColor());
+        int emptyColor = opaque(renderer.emptyColor());
         for (int index = 0; index < renderer.segments(); index++) {
             int x = position.x() + index * (BAR_HEIGHT + renderer.gap());
             graphics.fill(x, position.y(), x + BAR_HEIGHT, position.y() + BAR_HEIGHT, index < filled ? fullColor : emptyColor);
@@ -229,7 +230,7 @@ public enum ResourceBarOverlay implements GuiLayer {
         int centerY = position.y() + renderer.radius();
         drawArc(graphics, centerX, centerY, renderer.radius(), renderer.thickness(), renderer.startAngle(), renderer.endAngle(), 1.0D, DEFAULT_EMPTY);
         drawArc(graphics, centerX, centerY, renderer.radius(), renderer.thickness(), renderer.startAngle(), renderer.endAngle(), progress,
-                color(renderer.fillColor(), DEFAULT_FILL));
+                opaque(renderer.fillColor()));
     }
 
     private static void drawArc(GuiGraphicsExtractor graphics, int centerX, int centerY, int radius, int thickness,
@@ -264,14 +265,8 @@ public enum ResourceBarOverlay implements GuiLayer {
         return Math.abs(value - Math.rint(value)) < 0.0001D ? Long.toString(Math.round(value)) : String.format(Locale.ROOT, "%.1f", value);
     }
 
-    private static int color(String value, int fallback) {
-        try {
-            String hex = value.startsWith("#") ? value.substring(1) : value;
-            long parsed = Long.parseLong(hex, 16);
-            return hex.length() <= 6 ? (int) (0xFF000000L | parsed) : (int) parsed;
-        } catch (NumberFormatException exception) {
-            return fallback;
-        }
+    private static int opaque(int color) {
+        return 0xFF000000 | color;
     }
 
     @SubscribeEvent

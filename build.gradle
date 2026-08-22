@@ -122,6 +122,7 @@ dependencies {
     compileOnly "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
 //    localRuntime "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
 
+    implementation "curse.maven:jade-324717:8651070"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

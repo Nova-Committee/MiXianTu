@@ -1,11 +1,12 @@
 {
   "structure_template": "mxt_test:spirit_gathering",
   "radius": 8,
+  "max_bonus": { "mxt_test:fire": 50 },
   "activation_costs": [{ "id": "mxt_test:spirit_power", "amount": 10 }],
   "maintenance_costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
-  "activate_action": { "type": "mxt:change_aura", "amount": 20 },
-  "tick_action": { "type": "mxt:change_aura", "amount": 2 },
-  "deactivate_action": { "type": "mxt:change_aura", "amount": -10 },
+  "activate_action": { "type": "mxt:change_aura", "aura": { "mxt_test:fire": 20 } },
+  "tick_action": { "type": "mxt:change_aura", "aura": { "mxt_test:fire": 2 } },
+  "deactivate_action": { "type": "mxt:change_aura", "aura": { "mxt_test:fire": -10 } },
   "entity_tick_action": {
     "type": "mxt:apply_effect",
     "effect": "minecraft:regeneration",

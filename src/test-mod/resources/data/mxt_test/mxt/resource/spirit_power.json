@@ -3,6 +3,8 @@
   "min": 0,
   "max": "100 + level * 10",
   "regen": 1,
+  "burst_amount": 10,
+  "particle_color": "#66CCFF",
   "bars": [
     {
       "context": "boss_overlay",

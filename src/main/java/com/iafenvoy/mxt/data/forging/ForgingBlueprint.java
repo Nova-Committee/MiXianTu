@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.data.forging;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -6,6 +7,7 @@ import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.util.CollectionHelper;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
@@ -16,7 +18,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
@@ -51,7 +52,7 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
     ).apply(i, ForgingBlueprint::new)).validate(ForgingBlueprint::validate);
 
     private static DataResult<ForgingBlueprint> validate(ForgingBlueprint definition) {
-        if (definition.allowedMethods.isEmpty() || definition.allowedMethods.stream().map(ForgingBlueprint::methodId).distinct().count() != definition.allowedMethods.size()) {
+        if (definition.allowedMethods.isEmpty() || definition.allowedMethods.stream().map(HolderHelper::id).distinct().count() != definition.allowedMethods.size()) {
             return DataResult.error(() -> "allowed_methods must not be empty");
         }
         if (!definition.meter.valid()) {
@@ -59,7 +60,7 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
         }
         if (definition.maxSteps <= 0 || definition.workstationBlocks.isEmpty())
             return DataResult.error(() -> "max_steps and workstation_blocks must not be empty");
-        if (!definition.finishPattern.valid() || !CollectionHelper.containsAllFast(definition.allowedMethods.stream().map(ForgingBlueprint::methodId).toList(), definition.finishPattern.steps().stream().map(ForgingBlueprint::methodId).toList()))
+        if (!definition.finishPattern.valid() || !CollectionHelper.containsAllFast(definition.allowedMethods.stream().map(HolderHelper::id).toList(), definition.finishPattern.steps().stream().map(HolderHelper::id).toList()))
             return DataResult.error(() -> "Invalid finish_pattern");
         if (!QualityThreshold.valid(definition.qualityByExtraSteps))
             return DataResult.error(() -> "quality_by_extra_steps must be ascending and end at Integer.MAX_VALUE");
@@ -78,13 +79,8 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
     public ForgingPlan plan() {
         Map<Identifier, Integer> deltas = new LinkedHashMap<>();
         for (Holder<ForgingMethod> method : this.allowedMethods)
-            deltas.put(methodId(method), method.value().valueDelta());
-        return new ForgingPlan(this.meter.min(), this.meter.max(), this.meter.targetMin(), this.meter.targetMax(), this.finishPattern.steps().stream().map(ForgingBlueprint::methodId).toList(), this.finishPattern.requiredSuffixSteps(), deltas, this.maxSteps);
-    }
-
-    private static Identifier methodId(Holder<ForgingMethod> method) {
-        return method.unwrapKey().map(ResourceKey::identifier)
-                .orElseThrow(() -> new IllegalArgumentException("Forging method must be a registry reference"));
+            deltas.put(HolderHelper.id(method), method.value().valueDelta());
+        return new ForgingPlan(this.meter.min(), this.meter.max(), this.meter.targetMin(), this.meter.targetMax(), this.finishPattern.steps().stream().map(HolderHelper::id).toList(), this.finishPattern.requiredSuffixSteps(), deltas, this.maxSteps);
     }
 
     public Holder<ItemQuality> qualityFor(int extraSteps) {

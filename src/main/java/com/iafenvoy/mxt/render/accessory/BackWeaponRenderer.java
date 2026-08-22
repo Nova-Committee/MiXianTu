@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.render.accessory;
 
 import com.iafenvoy.mxt.integration.CuriosIntegration;
+import com.iafenvoy.mxt.integration.CuriosIntegration.Place;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -14,6 +15,7 @@ import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -34,11 +36,13 @@ public final class BackWeaponRenderer extends RenderLayer<AvatarRenderState, Pla
                        @NotNull AvatarRenderState state, float yRot, float xRot) {
         AbstractClientPlayer player = player(state);
         if (player == null || player.getItemBySlot(EquipmentSlot.CHEST).getItem() == Items.ELYTRA) return;
-        Map<CuriosIntegration.Place, ItemStack> stacks = CuriosIntegration.equippedForCosmetic(player);
-        ItemStack left = stacks.get(CuriosIntegration.Place.BACK_LEFT);
-        ItemStack right = stacks.get(CuriosIntegration.Place.BACK_RIGHT);
-        if (left != null && !left.isEmpty()) renderItem(left, poseStack, collector, packedLight, player, state, true);
-        if (right != null && !right.isEmpty()) renderItem(right, poseStack, collector, packedLight, player, state, false);
+        Map<Place, ItemStack> stacks = CuriosIntegration.equippedForRender(player);
+        ItemStack left = stacks.get(Place.BACK_LEFT);
+        ItemStack right = stacks.get(Place.BACK_RIGHT);
+        if (left != null && !left.isEmpty())
+            this.renderItem(left, poseStack, collector, packedLight, player, state, true);
+        if (right != null && !right.isEmpty())
+            this.renderItem(right, poseStack, collector, packedLight, player, state, false);
     }
 
     private void renderItem(ItemStack stack, PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
@@ -52,19 +56,15 @@ public final class BackWeaponRenderer extends RenderLayer<AvatarRenderState, Pla
         if (left) poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
         poseStack.mulPose(Axis.XP.rotationDegrees(145.0F));
         poseStack.translate(0.0D, -0.2D, 0.1D);
-        AccessoryRenderDefinition renderDefinition = AccessoryRenderDefinitions.back(stack);
-        renderDefinition.apply(poseStack, stack, left, true);
-        CuriosIntegration.BackHolder holder = CuriosIntegration.getBack(stack.getItem());
-        if (holder != null) holder.transformer().accept(poseStack, left);
-        this.submitItem(stack, renderDefinition, poseStack, collector, packedLight, player, state);
+        AccessoryRenderDefinition renderDefinition = AccessoryRenderManager.back(stack);
+        renderDefinition.apply(poseStack, true);
+        this.submitItem(stack, poseStack, collector, packedLight, player, state);
         poseStack.popPose();
     }
 
-    private void submitItem(ItemStack stack, AccessoryRenderDefinition renderDefinition, PoseStack poseStack,
-                             SubmitNodeCollector collector, int packedLight,
-                             AbstractClientPlayer player, AvatarRenderState state) {
+    private void submitItem(ItemStack stack, PoseStack poseStack, SubmitNodeCollector collector, int packedLight, AbstractClientPlayer player, AvatarRenderState state) {
         ItemStackRenderState itemState = new ItemStackRenderState();
-        this.itemModelResolver.updateForLiving(itemState, stack, renderDefinition.displayContext(), player);
+        this.itemModelResolver.updateForLiving(itemState, stack, ItemDisplayContext.THIRD_PERSON_LEFT_HAND, player);
         itemState.submit(poseStack, collector, packedLight, LivingEntityRenderer.getOverlayCoords(state, 0.0F), state.outlineColor);
     }
 

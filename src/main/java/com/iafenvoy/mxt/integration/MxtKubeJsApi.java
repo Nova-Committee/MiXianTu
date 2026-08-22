@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.integration;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -18,8 +18,8 @@ import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
-import com.iafenvoy.mxt.runtime.world.AuraWorldData.Area;
-import com.iafenvoy.mxt.runtime.world.AuraWorldData.Shape;
+import com.iafenvoy.mxt.runtime.world.AuraWorldComponent.Area;
+import com.iafenvoy.mxt.runtime.world.AuraWorldComponent.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -95,7 +95,7 @@ public final class MxtKubeJsApi {
      */
     public static boolean addCultivation(LivingEntity entity, double amount) {
         if (entity == null || entity.level().isClientSide() || !Double.isFinite(amount) || amount < 0.0D) return false;
-        SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritComponent spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         spirit.setCultivationProgress(spirit.cultivationProgress() + amount);
         return true;
     }

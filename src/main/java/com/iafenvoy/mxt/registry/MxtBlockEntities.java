@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.item.block.entity.SystemStationBlockEntity;
 import com.iafenvoy.mxt.item.block.entity.TradeStationBlockEntity;
+import com.iafenvoy.mxt.item.block.entity.DisplayStandBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -17,6 +18,10 @@ public final class MxtBlockEntities {
             new BlockEntityType<>(TradeStationBlockEntity::new, MxtBlocks.TRADE_STATION.get()));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SystemStationBlockEntity>> SYSTEM_STATION = REGISTRY.register("system_station", () ->
             new BlockEntityType<>(SystemStationBlockEntity::new, MxtBlocks.SYSTEM_STATION.get()));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DisplayStandBlockEntity>> DISPLAY_STAND = REGISTRY.register("display_stand", () ->
+            new BlockEntityType<>(DisplayStandBlockEntity::new,
+                    MxtBlocks.OAK_DISPLAY_STAND.get(), MxtBlocks.BIRCH_DISPLAY_STAND.get(), MxtBlocks.SPRUCE_DISPLAY_STAND.get(),
+                    MxtBlocks.JUNGLE_DISPLAY_STAND.get(), MxtBlocks.ACACIA_DISPLAY_STAND.get(), MxtBlocks.DARK_OAK_DISPLAY_STAND.get()));
 
     private MxtBlockEntities() {
     }

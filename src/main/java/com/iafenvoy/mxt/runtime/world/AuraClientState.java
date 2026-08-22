@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
  */
 public final class AuraClientState {
     private static final Identifier EMPTY = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
-    private static volatile Snapshot current = new Snapshot(EMPTY, 0.0D);
+    private static volatile Snapshot current = new Snapshot(EMPTY, 0.0D, 0.0D);
 
     private AuraClientState() {
     }
@@ -17,10 +17,11 @@ public final class AuraClientState {
         return current;
     }
 
-    public static void update(Identifier source, double concentration) {
-        current = new Snapshot(source, Double.isFinite(concentration) ? Math.max(0.0D, concentration) : 0.0D);
+    public static void update(Identifier source, double concentration, double maximum) {
+        current = new Snapshot(source, Double.isFinite(concentration) ? Math.max(0.0D, concentration) : 0.0D,
+                Double.isNaN(maximum) || maximum < 0.0D ? 0.0D : maximum);
     }
 
-    public record Snapshot(Identifier source, double concentration) {
+    public record Snapshot(Identifier source, double concentration, double maximum) {
     }
 }

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.resource;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Constant;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Current;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Maximum;
@@ -21,7 +21,7 @@ import java.util.function.Function;
 public sealed interface ResourceValueProvider permits Current, Maximum, Regen, Missing, Constant, JsResourceValueProvider {
     Codec<ResourceValueProvider> CODEC = MxtRegistries.RESOURCE_VALUE_PROVIDER_TYPE.byNameCodec().dispatch("type", ResourceValueProvider::codec, Function.identity());
 
-    double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context);
+    double resolve(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context);
 
     MapCodec<? extends ResourceValueProvider> codec();
 
@@ -30,7 +30,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         public static final MapCodec<Current> CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context) {
+        public double resolve(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context) {
             return holder.get(resource);
         }
 
@@ -45,7 +45,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         public static final MapCodec<Maximum> CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context) {
+        public double resolve(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context) {
             return resource.value().max().evaluate(context);
         }
 
@@ -60,7 +60,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         public static final MapCodec<Regen> CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context) {
+        public double resolve(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context) {
             return resource.value().regen().evaluate(context);
         }
 
@@ -75,7 +75,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         public static final MapCodec<Missing> CODEC = MapCodec.unit(INSTANCE);
 
         @Override
-        public double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context) {
+        public double resolve(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context) {
             return Math.max(0.0D, resource.value().max().evaluate(context) - holder.get(resource));
         }
 
@@ -89,7 +89,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         public static final MapCodec<Constant> CODEC = NumberProvider.CODEC.fieldOf("value").xmap(Constant::new, Constant::value);
 
         @Override
-        public double resolve(ResourceHolderData holder, Holder<Resource> resource, FormulaContext context) {
+        public double resolve(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context) {
             return this.value.evaluate(context);
         }
 

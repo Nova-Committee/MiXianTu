@@ -33,8 +33,11 @@ public final class CreatureProfileService {
         if (!definition.spawnConditions().stream().allMatch(condition -> condition.test(creature, context)))
             return false;
         AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
-        if (!Double.isFinite(definition.minimumAura()) || aura.concentration() < definition.minimumAura()
-                || (!definition.preferredAuraElements().isEmpty() && aura.elementAura().entrySet().stream().noneMatch(element -> element.getValue() > 0.0D
+        if (!definition.minimumAura().entrySet().stream().allMatch(entry -> {
+            double minimum = entry.getValue().evaluate(context);
+            return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
+        })
+                || (!definition.preferredAuraElements().isEmpty() && aura.aura().entrySet().stream().noneMatch(element -> element.getValue().amount() > 0.0D
                 && RegistryCodecs.matches(definition.preferredAuraElements(), element.getKey()))))
             return false;
         final double intelligence;

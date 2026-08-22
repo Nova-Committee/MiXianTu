@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.attachment.TribulationData;
+import com.iafenvoy.mxt.attachment.TribulationComponent;
 import com.iafenvoy.mxt.data.Tribulation;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
@@ -11,19 +11,19 @@ import org.jetbrains.annotations.NotNull;
  * Lifecycle events around the persisted tribulation phase cursor.
  */
 public abstract class TribulationEvent extends Event {
-    private final TribulationData data;
+    private final TribulationComponent data;
     private final Identifier tribulation;
     private final Tribulation definition;
     private final int phase;
 
-    protected TribulationEvent(@NotNull TribulationData data, @NotNull Identifier tribulation, @NotNull Tribulation definition, int phase) {
+    protected TribulationEvent(@NotNull TribulationComponent data, @NotNull Identifier tribulation, @NotNull Tribulation definition, int phase) {
         this.data = data;
         this.tribulation = tribulation;
         this.definition = definition;
         this.phase = phase;
     }
 
-    public TribulationData data() {
+    public TribulationComponent data() {
         return this.data;
     }
 
@@ -40,31 +40,31 @@ public abstract class TribulationEvent extends Event {
     }
 
     public static final class StartPre extends TribulationEvent implements ICancellableEvent {
-        public StartPre(TribulationData d, Identifier i, Tribulation f) {
+        public StartPre(TribulationComponent d, Identifier i, Tribulation f) {
             super(d, i, f, 0);
         }
     }
 
     public static final class StartPost extends TribulationEvent {
-        public StartPost(TribulationData d, Identifier i, Tribulation f) {
+        public StartPost(TribulationComponent d, Identifier i, Tribulation f) {
             super(d, i, f, 0);
         }
     }
 
     public static final class PhasePre extends TribulationEvent implements ICancellableEvent {
-        public PhasePre(TribulationData d, Identifier i, Tribulation f, int p) {
+        public PhasePre(TribulationComponent d, Identifier i, Tribulation f, int p) {
             super(d, i, f, p);
         }
     }
 
     public static final class PhasePost extends TribulationEvent {
-        public PhasePost(TribulationData d, Identifier i, Tribulation f, int p) {
+        public PhasePost(TribulationComponent d, Identifier i, Tribulation f, int p) {
             super(d, i, f, p);
         }
     }
 
     public static final class Complete extends TribulationEvent {
-        public Complete(TribulationData d, Identifier i, Tribulation f, int p) {
+        public Complete(TribulationComponent d, Identifier i, Tribulation f, int p) {
             super(d, i, f, p);
         }
     }

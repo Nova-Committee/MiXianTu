@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.attachment.AbilityHolderData;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -32,7 +32,7 @@ public record ModifyComponentAction(Holder<Ability> ability, String component,
     public void execute(Entity entity, FormulaContext context) {
         double value = this.value.evaluate(context);
         if (!Double.isFinite(value)) return;
-        AbilityHolderData holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityHolderComponent holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
         if (holder.has(this.ability))
             holder.setComponentState(this.ability, this.component, AbilityComponentState.initial(value, entity.level().getGameTime()));
     }

@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.badge.Badge;
@@ -52,6 +53,7 @@ import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
@@ -72,6 +74,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends AbilityComponent>>> ABILITY_COMPONENT_TYPE = create("ability_component_type");
     public static final ResourceKey<Registry<MapCodec<? extends AbilityTrigger>>> ABILITY_TRIGGER_TYPE = create("ability_trigger_type");
     public static final ResourceKey<Registry<MapCodec<? extends NumberProvider>>> NUMBER_PROVIDER_TYPE = create("number_provider_type");
+    public static final ResourceKey<Registry<MapCodec<? extends AuraMaximum>>> AURA_MAXIMUM_TYPE = create("aura_maximum_type");
     public static final ResourceKey<Registry<Function>> FORMULA_FUNCTION = create("formula_function");
     public static final ResourceKey<Registry<FormulaVariable>> FORMULA_VARIABLE = create("formula_variable");
     public static final ResourceKey<Registry<MapCodec<? extends ResourceValueProvider>>> RESOURCE_VALUE_PROVIDER_TYPE = create("resource_value_provider_type");
@@ -87,6 +90,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends ResourceBarRenderer>>> RESOURCE_BAR_RENDERER_TYPE = create("resource_bar_renderer_type");
     public static final ResourceKey<Registry<MapCodec<? extends ResourceBarVisibility>>> RESOURCE_BAR_VISIBILITY_TYPE = create("resource_bar_visibility_type");
     public static final ResourceKey<Registry<MapCodec<? extends Badge>>> BADGE_TYPE = create("badge_type");
+    public static final ResourceKey<Registry<MapCodec<? extends Entry>>> ITEM_MATCHER_ENTRY_TYPE = create("item_matcher_entry_type");
     public static final ResourceKey<Registry<CreatureSpawnCondition>> CREATURE_SPAWN_CONDITION = create("creature_spawn_condition");
     public static final ResourceKey<Registry<CultivationCondition>> CULTIVATION_CONDITION = create("cultivation_condition");
 

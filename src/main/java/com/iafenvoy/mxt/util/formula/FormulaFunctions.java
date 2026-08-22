@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Functions allowed by the formula language, collected from the intrinsic registry.
@@ -27,6 +28,6 @@ public final class FormulaFunctions {
     }
 
     public static Set<String> names() {
-        return new LinkedHashSet<>(all().stream().map(Function::getName).toList());
+        return all().stream().map(Function::getName).collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }

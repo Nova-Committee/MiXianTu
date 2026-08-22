@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.attachment.ContractData;
-import com.iafenvoy.mxt.data.item.ContractScrollData;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+
+import com.iafenvoy.mxt.attachment.ContractComponent;
+import com.iafenvoy.mxt.data.item.ContractScrollComponent;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.ContractService.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -30,12 +31,12 @@ public final class ContractScrollItem extends Item {
     public @NotNull InteractionResult interactLivingEntity(@NotNull ItemStack stack, @NotNull Player player,
                                                            @NotNull LivingEntity target, @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
-        ContractScrollData scroll = stack.getOrDefault(MxtDataComponents.CONTRACT_SCROLL, ContractScrollData.EMPTY);
+        ContractScrollComponent scroll = stack.getOrDefault(MxtDataComponents.CONTRACT_SCROLL, ContractScrollComponent.EMPTY);
         if (scroll.contractType().isEmpty()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.contract_scroll.unbound"));
             return InteractionResult.FAIL;
         }
-        ContractData contract = target.getData(MxtAttachments.CONTRACT);
+        ContractComponent contract = target.getData(MxtAttachments.CONTRACT);
         Result result = ContractService.bind(contract, scroll.contractType().orElseThrow(), player, target,
                 player.level().getGameTime(), FormulaContexts.forEntities(player, target, Map.of()));
         if (!result.changed()) {

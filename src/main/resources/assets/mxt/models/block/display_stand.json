@@ -1,0 +1,56 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:cutout",
+  "display": {
+    "gui": {
+      "rotation": [30, 225, 0],
+      "translation": [0, -1.5, 0],
+      "scale": [0.5, 0.5, 0.5]
+    }
+  },
+  "textures": {
+    "particle": "#planks"
+  },
+  "elements": [
+    {
+      "from": [2, 0, 2],
+      "to": [14, 3, 14],
+      "faces": {
+        "north": {"texture": "#planks"}, "east": {"texture": "#planks"}, "south": {"texture": "#planks"},
+        "west": {"texture": "#planks"}, "up": {"texture": "#planks"}, "down": {"texture": "#planks"}
+      }
+    },
+    {
+      "from": [4, 3, 4],
+      "to": [12, 9, 12],
+      "faces": {
+        "north": {"texture": "#planks"}, "east": {"texture": "#planks"}, "south": {"texture": "#planks"},
+        "west": {"texture": "#planks"}, "up": {"texture": "#planks"}, "down": {"texture": "#planks"}
+      }
+    },
+    {
+      "from": [4.5, 9, 4.5],
+      "to": [11.5, 15, 11.5],
+      "faces": {
+        "north": {"texture": "#planks"}, "east": {"texture": "#planks"}, "south": {"texture": "#planks"},
+        "west": {"texture": "#planks"}, "up": {"texture": "#planks"}, "down": {"texture": "#planks"}
+      }
+    },
+    {
+      "from": [4, 15, 4],
+      "to": [12, 20, 12],
+      "faces": {
+        "north": {"texture": "#planks"}, "east": {"texture": "#planks"}, "south": {"texture": "#planks"},
+        "west": {"texture": "#planks"}, "up": {"texture": "#planks"}, "down": {"texture": "#planks"}
+      }
+    },
+    {
+      "from": [2.5, 20, 2.5],
+      "to": [13.5, 23, 13.5],
+      "faces": {
+        "north": {"texture": "#planks"}, "east": {"texture": "#planks"}, "south": {"texture": "#planks"},
+        "west": {"texture": "#planks"}, "up": {"texture": "#planks"}, "down": {"texture": "#planks"}
+      }
+    }
+  ]
+}

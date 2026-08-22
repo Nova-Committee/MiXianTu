@@ -1,22 +1,18 @@
 package com.iafenvoy.mxt.testmod;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.SectData;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.registry.*;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.SectComponent;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
-import com.iafenvoy.mxt.data.item.ContractScrollData;
-import com.iafenvoy.mxt.data.item.FormationPlateData;
-import com.iafenvoy.mxt.data.item.RealmTokenData;
+import com.iafenvoy.mxt.data.item.ContractScrollComponent;
+import com.iafenvoy.mxt.data.item.FormationPlateComponent;
+import com.iafenvoy.mxt.data.item.RealmTokenComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
@@ -79,8 +75,8 @@ public final class MxtTestCommands {
     private static int giveKit(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        SpiritData spirit = player.getData(MxtAttachments.SPIRIT_DATA);
-        ResourceHolderData resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        ResourceHolderComponent resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext context = FormulaContext.of(player);
 
         grantIdentity(player, spirit, context);
@@ -106,7 +102,7 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static void grantIdentity(ServerPlayer player, SpiritData spirit, FormulaContext context) {
+    private static void grantIdentity(ServerPlayer player, SpiritComponent spirit, FormulaContext context) {
         HolderLookup<SpiritRoot> root = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, ROOT);
         HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
         HolderLookup<CultivationTechnique> technique = new HolderLookup<>(MxtResourceKeys.CULTIVATION_TECHNIQUE, TECHNIQUE);
@@ -136,7 +132,7 @@ public final class MxtTestCommands {
     private static int completeSectTask(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        SectData data = player.getData(MxtAttachments.SECT);
+        SectComponent data = player.getData(MxtAttachments.SECT);
         Result result = SectService.completeTask(data, require(MxtResourceKeys.SECT, SECT), SECT_TASK);
         if (!result.changed()) {
             source.sendFailure(Component.translatable("command.mxt_test.task.failed", result.failure().name()));
@@ -155,7 +151,7 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static void ensureResource(ServerPlayer player, ResourceHolderData resources, Holder<Resource> resource, double minimum) {
+    private static void ensureResource(ServerPlayer player, ResourceHolderComponent resources, Holder<Resource> resource, double minimum) {
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
         ResourceService.initialize(resources, resource, context);
         double missing = minimum - resources.get(resource);
@@ -163,26 +159,26 @@ public final class MxtTestCommands {
     }
 
     private static void joinSect(ServerPlayer player) {
-        SectData data = player.getData(MxtAttachments.SECT);
+        SectComponent data = player.getData(MxtAttachments.SECT);
         if (data.member()) return;
         SectService.join(data, require(MxtResourceKeys.SECT, SECT));
     }
 
     private static ItemStack formationPlate() {
         ItemStack stack = new ItemStack(MxtItems.FORMATION_PLATE.get());
-        stack.set(MxtDataComponents.FORMATION_PLATE, new FormationPlateData(Optional.of(require(MxtResourceKeys.FORMATION, FORMATION))));
+        stack.set(MxtDataComponents.FORMATION_PLATE, new FormationPlateComponent(Optional.of(require(MxtResourceKeys.FORMATION, FORMATION))));
         return stack;
     }
 
     private static ItemStack realmToken() {
         ItemStack stack = new ItemStack(MxtItems.REALM_TOKEN.get());
-        stack.set(MxtDataComponents.REALM_TOKEN, new RealmTokenData(Optional.of(require(MxtResourceKeys.REALM_INSTANCE, REALM))));
+        stack.set(MxtDataComponents.REALM_TOKEN, new RealmTokenComponent(Optional.of(require(MxtResourceKeys.REALM_INSTANCE, REALM))));
         return stack;
     }
 
     private static ItemStack contractScroll() {
         ItemStack stack = new ItemStack(MxtItems.CONTRACT_SCROLL.get());
-        stack.set(MxtDataComponents.CONTRACT_SCROLL, new ContractScrollData(Optional.of(require(MxtResourceKeys.CONTRACT_TYPE, CONTRACT))));
+        stack.set(MxtDataComponents.CONTRACT_SCROLL, new ContractScrollComponent(Optional.of(require(MxtResourceKeys.CONTRACT_TYPE, CONTRACT))));
         return stack;
     }
 

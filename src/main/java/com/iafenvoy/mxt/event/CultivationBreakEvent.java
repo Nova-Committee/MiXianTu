@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
@@ -16,14 +16,14 @@ import java.util.Map;
  * Authoritative transaction event emitted around a realm breakthrough.
  */
 public abstract class CultivationBreakEvent extends Event {
-    private final SpiritData spirit;
-    private final ResourceHolderData resources;
+    private final SpiritComponent spirit;
+    private final ResourceHolderComponent resources;
     private final Identifier target;
     private final RealmStage definition;
     private final FormulaContext context;
     private final double threshold;
 
-    protected CultivationBreakEvent(@NotNull SpiritData spirit, @NotNull ResourceHolderData resources, @NotNull Identifier target, @NotNull RealmStage definition, @NotNull FormulaContext context, double threshold) {
+    protected CultivationBreakEvent(@NotNull SpiritComponent spirit, @NotNull ResourceHolderComponent resources, @NotNull Identifier target, @NotNull RealmStage definition, @NotNull FormulaContext context, double threshold) {
         this.spirit = spirit;
         this.resources = resources;
         this.target = target;
@@ -32,11 +32,11 @@ public abstract class CultivationBreakEvent extends Event {
         this.threshold = threshold;
     }
 
-    public SpiritData spirit() {
+    public SpiritComponent spirit() {
         return this.spirit;
     }
 
-    public ResourceHolderData resources() {
+    public ResourceHolderComponent resources() {
         return this.resources;
     }
 
@@ -60,7 +60,7 @@ public abstract class CultivationBreakEvent extends Event {
         private final Map<Identifier, Double> originalCosts;
         private final Map<Identifier, Double> costs;
 
-        public Pre(SpiritData spirit, ResourceHolderData resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> costs) {
+        public Pre(SpiritComponent spirit, ResourceHolderComponent resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> costs) {
             super(spirit, resources, target, definition, context, threshold);
             this.originalCosts = new LinkedHashMap<>(costs);
             this.costs = new LinkedHashMap<>(costs);
@@ -84,7 +84,7 @@ public abstract class CultivationBreakEvent extends Event {
     public static final class Post extends CultivationBreakEvent {
         private final Map<Identifier, Double> paidCosts;
 
-        public Post(SpiritData spirit, ResourceHolderData resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> paidCosts) {
+        public Post(SpiritComponent spirit, ResourceHolderComponent resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> paidCosts) {
             super(spirit, resources, target, definition, context, threshold);
             this.paidCosts = new LinkedHashMap<>(paidCosts);
         }

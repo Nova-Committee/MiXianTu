@@ -1,17 +1,27 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
+import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
+import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
+import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.attachment.ResourceHolderData.Snapshot;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent.Snapshot;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
+import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
+import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.data.aura.AuraValue;
+import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
-import com.iafenvoy.mxt.attachment.AuraChunkData;
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.SpiritData;
-import com.iafenvoy.mxt.attachment.AbilityHolderData;
+import com.iafenvoy.mxt.attachment.AuraChunkComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -20,14 +30,13 @@ import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
-import com.iafenvoy.mxt.data.artifact.ForgingResultData;
+import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Origins;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.PrepareResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
@@ -40,21 +49,26 @@ import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
+import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
-import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.Expression;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.util.ItemMatcher.Entry;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.RandomSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -133,10 +147,21 @@ public final class MxtTestMod {
                 .orElseThrow(() -> new IllegalStateException("Item aura test definition was not loaded"));
         if (!same(itemAura.totalAura().evaluate(FormulaContext.EMPTY), 100.0D)
                 || !same(itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY), 1.0D)
-                || itemAura.resultStack().isEmpty()
-                || itemAura.resultStack().get().count() != 1
+                || !same(itemAura.releaseSpeed().evaluate(FormulaContext.EMPTY), 2.0D)
+                || itemAura.resultStack().isPresent()
+                || spiritStone.get(MxtDataComponents.SPIRIT_STORAGE) != null
                 || ItemAuraService.find(event.getServer().registryAccess(), spiritStone).isEmpty()) {
             throw new IllegalStateException("Item aura did not resolve its fuel item and values");
+        }
+        SpiritItemAccess stoneAccess = (SpiritItemAccess) spiritStone.getItem();
+        spiritStone.set(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(101));
+        if (stoneAccess.add(spiritStone, 100, 0, false) != 0
+                || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 100
+                || stoneAccess.extract(spiritStone, 100, 100, false) != 0
+                || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 0
+                || stoneAccess.add(spiritStone, 100, 100, false) != 0
+                || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 100) {
+            throw new IllegalStateException("Spirit stone charging did not clamp overflow or preserve empty charge");
         }
         ItemStack qingxiaoCrystal = new ItemStack(MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.get());
         ItemAura qingxiaoAura = MxtDatapackRegistries.get(MxtResourceKeys.ITEM_AURA,
@@ -144,6 +169,7 @@ public final class MxtTestMod {
                 .orElseThrow(() -> new IllegalStateException("Qingxiao spirit crystal definition was not loaded"));
         if (!same(qingxiaoAura.totalAura().evaluate(FormulaContext.EMPTY), 180.0D)
                 || !same(qingxiaoAura.consumeSpeed().evaluate(FormulaContext.EMPTY), 1.0D)
+                || !same(qingxiaoAura.releaseSpeed().evaluate(FormulaContext.EMPTY), 3.0D)
                 || ItemAuraService.find(event.getServer().registryAccess(), qingxiaoCrystal).isEmpty()) {
             throw new IllegalStateException("Qingxiao spirit crystal did not bind its test-mod item");
         }
@@ -153,7 +179,7 @@ public final class MxtTestMod {
         if (matcherEntries.size() != 2 || !matcherEntries.get(1).matches(weapon)) {
             throw new IllegalStateException("Physical item matcher entries did not match the weapon stack");
         }
-        if (ResourceHolderData.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("""
+        if (ResourceHolderComponent.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("""
                 {"values": {"mxt_test:spirit_power": 1.0}}
                 """)).result().isPresent()) {
             throw new IllegalStateException("Resource holder data must require its current audit structure");
@@ -169,8 +195,9 @@ public final class MxtTestMod {
         verifyFormationTemplate(event);
         ItemStack fireGinseng = new ItemStack(Items.RED_MUSHROOM);
         if (SpiritHerbService.find(fireGinseng).filter(herb -> HolderHelper.id(herb.quality()).equals(Identifier.parse("mxt_test:spirit_iron"))
-                && same(herb.quality().value().valueMultiplier().evaluate(FormulaContext.EMPTY), 1.5D)
-                && same(herb.quality().value().forgingModifier().evaluate(FormulaContext.EMPTY), 1.1D)).isEmpty()
+                && same(herb.quality().value().valueMultiplier().modifier().evaluate(FormulaContext.EMPTY), 1.5D)
+                && same(herb.quality().value().forgingModifier().modifier().evaluate(FormulaContext.EMPTY), 1.1D)
+                && same(herb.quality().value().alchemyModifier().modifier().evaluate(FormulaContext.EMPTY), 1.0D)).isEmpty()
                 || ItemQualityService.find(event.getServer().registryAccess(), fireGinseng)
                 .map(HolderHelper::id).filter(Identifier.parse("mxt_test:spirit_iron")::equals).isEmpty()) {
             throw new IllegalStateException("Spirit herb quality did not resolve through the shared item-quality system");
@@ -216,7 +243,7 @@ public final class MxtTestMod {
         }
         ItemStack forged = new ItemStack(Items.IRON_SWORD);
         forged.set(MxtDataComponents.FORGING_RESULT,
-                new ForgingResultData(Identifier.parse("mxt_test:iron_sword"), 3, 2, 2, 0, excellent));
+                new ForgingResultComponent(Identifier.parse("mxt_test:iron_sword"), 3, 2, 2, 0, excellent));
         if (ItemQualityService.find(event.getServer().registryAccess(), forged)
                 .map(HolderHelper::id).filter(excellentId::equals).isEmpty()) {
             throw new IllegalStateException("Forging-result quality did not resolve");
@@ -255,10 +282,12 @@ public final class MxtTestMod {
                 || !same(spiritPower.value().cultivationToResource().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(spiritPower.value().cultivationToResource().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(spiritPower.value().resourceToCultivation().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
-                || !same(spiritPower.value().resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)) {
+                || !same(spiritPower.value().resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
+                || !same(spiritPower.value().burstAmount().evaluate(FormulaContext.EMPTY), 10.0D)
+                || spiritPower.value().particleColor() != 0x66CCFF) {
             throw new IllegalStateException("Resource cultivation conversion settings were not decoded correctly");
         }
-        SpiritData spirit = new SpiritData();
+        SpiritComponent spirit = new SpiritComponent();
         spirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
         spirit.setCultivationProgress(40.0D);
         FormulaContext foundationContext = ResourceService.formulaContext(spirit, qi, FormulaContext.EMPTY);
@@ -267,7 +296,7 @@ public final class MxtTestMod {
         if (!same(foundationBounds.max(), 170.0D) || !same(qi.value().regen().evaluate(foundationContext), 0.35D)) {
             throw new IllegalStateException("Qi maximum and regeneration did not use foundation absorbed aura");
         }
-        ResourceHolderData holder = new ResourceHolderData();
+        ResourceHolderComponent holder = new ResourceHolderComponent();
         ResourceService.initialize(holder, qi, foundationContext);
         ResourceService.regenerate(holder, qi, 4L, foundationContext);
         if (!same(holder.get(qi), 1.4D)) {
@@ -296,13 +325,13 @@ public final class MxtTestMod {
         Identifier meditationId = Identifier.parse("mxt_test:fire_meditation");
         CultivateAction meditation = MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATE_ACTION, meditationId)
                 .orElseThrow(() -> new IllegalStateException("Cultivation restoration test action was not loaded"));
-        SpiritData absorbingSpirit = new SpiritData();
+        SpiritComponent absorbingSpirit = new SpiritComponent();
         absorbingSpirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
-        ResourceHolderData absorbingResources = new ResourceHolderData();
+        ResourceHolderComponent absorbingResources = new ResourceHolderComponent();
         absorbingResources.set(spiritPower, 5.0D);
-        AuraChunkData absorbingAura = new AuraChunkData();
-        absorbingAura.setConcentration(10.0D);
-        absorbingAura.setAuraKinds(List.of(Identifier.parse("mxt_test:aura_kind/fire")));
+        AuraChunkComponent absorbingAura = new AuraChunkComponent();
+        Holder<Element> fire = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"));
+        absorbingAura.initializeAuras(Map.of(fire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of(Identifier.parse("mxt_test:aura_kind/fire")));
         if (!CultivationActionService.start(absorbingSpirit, meditationId, meditation, 0L, () -> true).started()) {
             throw new IllegalStateException("Cultivation restoration test action did not start");
         }
@@ -315,12 +344,30 @@ public final class MxtTestMod {
         Result convertedWhileWaiting = CultivationActionService.tick(absorbingSpirit, absorbingResources,
                 absorbingAura, meditationId, meditation, 1L, FormulaContext.EMPTY, () -> true);
         if (!convertedWhileWaiting.waiting() || !same(absorbingSpirit.cultivationProgress(), 0.75D)
-                || !same(absorbingResources.get(qi), 1.5D) || !same(absorbingAura.concentration(), 9.0D)) {
+                || !same(absorbingResources.get(qi), 1.5D) || !same(absorbingAura.auras().get(fire).amount(), 9.0D)) {
             throw new IllegalStateException("Cultivation conversion did not use its source-side limit every game tick");
         }
     }
 
     private static void verifyEnergyCosts() {
+        if (MiscCodecs.COLOR.parse(JsonOps.INSTANCE, JsonParser.parseString("\"#FFFFFFFF\""))
+                .result().filter(value -> value == -1).isEmpty()
+                || MiscCodecs.COLOR.parse(JsonOps.INSTANCE, JsonParser.parseString("4294967295"))
+                .result().filter(value -> value == -1).isEmpty()
+                || MiscCodecs.COLOR_NO_ALPHA.parse(JsonOps.INSTANCE, JsonParser.parseString("\"#66CCFF\""))
+                .result().filter(value -> value == 0x66CCFF).isEmpty()
+                || MiscCodecs.COLOR_NO_ALPHA.parse(JsonOps.INSTANCE, JsonParser.parseString("\"66CCFF\""))
+                .result().isPresent()
+                || MiscCodecs.COLOR_NO_ALPHA.parse(JsonOps.INSTANCE, JsonParser.parseString("\"#GGGGGG\""))
+                .result().isPresent()) {
+            throw new IllegalStateException("Color codecs must validate hexadecimal values and preserve unsigned int bits");
+        }
+        if (ItemAuraComponent.CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(3.5D))
+                .result().map(ItemAuraComponent::remain).filter(value -> same(value, 3.5D)).isEmpty()
+                || ItemAuraComponent.CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(-1.0D)).result().isPresent()
+                || ItemAuraComponent.CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(Double.NaN)).result().isPresent()) {
+            throw new IllegalStateException("Item-aura component codec must only accept finite non-negative remainders");
+        }
         if (NumberProvider.FINITE_DOUBLE_CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(Double.NaN)).result().isPresent()
                 || NumberProvider.FINITE_DOUBLE_CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(Double.POSITIVE_INFINITY)).result().isPresent()) {
             throw new IllegalStateException("Number-provider codecs must reject non-finite values while loading");
@@ -348,9 +395,9 @@ public final class MxtTestMod {
         if (!same(ability.value().castTime().evaluate(FormulaContext.EMPTY), 0.0D)) {
             throw new IllegalStateException("Inline structured number providers did not evaluate correctly");
         }
-        AbilityHolderData abilities = new AbilityHolderData();
+        AbilityHolderComponent abilities = new AbilityHolderComponent();
         abilities.grant(ability, Identifier.fromNamespaceAndPath(MOD_ID, "test"));
-        ResourceHolderData abilityResources = new ResourceHolderData();
+        ResourceHolderComponent abilityResources = new ResourceHolderComponent();
         abilityResources.set(spiritPower, 20.0D);
         abilityResources.set(soulPower, 3.0D);
         PrepareResult prepared = AbilityService.prepare(ability, ability.value(), abilities, abilityResources, 0L, FormulaContext.EMPTY);
@@ -361,13 +408,14 @@ public final class MxtTestMod {
 
         Formation formation = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, Identifier.parse("mxt_test:spirit_gathering"))
                 .orElseThrow(() -> new IllegalStateException("Formation energy-cost test definition was not loaded"));
-        ResourceHolderData formationResources = new ResourceHolderData();
+        ResourceHolderComponent formationResources = new ResourceHolderComponent();
         formationResources.set(spiritPower, 20.0D);
         ActivateResult activation = FormationService.activate(Identifier.parse("mxt_test:spirit_gathering"), formation,
                 formationResources, FormulaContext.EMPTY);
         if (!activation.active() || !same(formationResources.get(spiritPower), 10.0D)
                 || !FormationService.maintain(activation.instance(), formation, formationResources, FormulaContext.EMPTY).maintained()
-                || !same(formationResources.get(spiritPower), 9.0D)) {
+                || !same(formationResources.get(spiritPower), 9.0D)
+                || !same(formation.maxBonus().get(requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"))).evaluate(FormulaContext.EMPTY), 50.0D)) {
             throw new IllegalStateException("Formation activation and upkeep did not deduct their declared resource bar");
         }
     }
@@ -417,7 +465,7 @@ public final class MxtTestMod {
         AuraZone visuals = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:firelands"))
                 .orElseThrow(() -> new IllegalStateException("Aura visual test definition was not loaded"));
         if (visuals.particle().isEmpty() || visuals.particle().get().count() <= 0
-                || "#FFFFFF".equalsIgnoreCase(visuals.clientRender().fogColor())) {
+                || visuals.clientRender().fogColor() == 0xFFFFFF) {
             throw new IllegalStateException("Aura-zone client render configuration was not retained");
         }
         RealmStage foundationStage = requireHolder(MxtResourceKeys.REALM_STAGE, Identifier.parse("mxt_test:foundation")).value();
@@ -425,12 +473,64 @@ public final class MxtTestMod {
                 || foundationStage.breakthroughParticle().get().count() <= 0) {
             throw new IllegalStateException("Realm breakthrough particle configuration was not decoded");
         }
-        if (visuals.elementAura().size() != 2 || visuals.elementAura().keySet().stream()
+        if (visuals.aura().size() != 2 || visuals.aura().keySet().stream()
                 .noneMatch(element -> HolderHelper.id(element).equals(Identifier.parse("mxt_test:fire")))) {
             throw new IllegalStateException("Aura-zone element values were not decoded as element holders");
         }
         AuraZone overworld = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:overworld"))
                 .orElseThrow(() -> new IllegalStateException("Aura HUD test definition was not loaded"));
+        AuraZone firelands = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:firelands"))
+                .orElseThrow(() -> new IllegalStateException("Initial-multiplier aura maximum test definition was not loaded"));
+        AuraZone nether = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:nether"))
+                .orElseThrow(() -> new IllegalStateException("Unlimited aura maximum test definition was not loaded"));
+        AuraZone end = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:end_suppressed"))
+                .orElseThrow(() -> new IllegalStateException("Default aura maximum test definition was not loaded"));
+        Holder<Element> fire = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"));
+        if (!(overworld.aura().get(fire).max() instanceof Fixed(double value1)) || !same(value1, 40.0D)
+                || !(firelands.aura().get(fire).max() instanceof InitialMultiplier(
+                double multiplier1
+        )) || !same(multiplier1, 3.0D)
+                || !(nether.aura().get(fire).max() instanceof Unlimited)
+                || !end.aura().isEmpty()) {
+            throw new IllegalStateException("Aura-zone maximum definitions were not decoded correctly");
+        }
+        if (overworld.distribution() != Distribution.EQUAL
+                || firelands.distribution() != Distribution.RANDOM
+                || nether.distribution() != Distribution.REALM_WEIGHTED
+                || !(overworld.cultivateCondition() instanceof AuraRangeEntityCondition)
+                || !(foundationStage.cultivateCondition() instanceof AuraRangeEntityCondition)
+                || !same(foundationStage.auraShareWeight().evaluate(FormulaContext.EMPTY), 2.0D)) {
+            throw new IllegalStateException("Aura sharing strategies, cultivation condition, or realm weights were not decoded correctly");
+        }
+        List<Double> equalShares = AuraDistributionService.distribute(List.of(10.0D, 10.0D, 10.0D), List.of(1.0D, 1.0D, 1.0D),
+                12.0D, Distribution.EQUAL, RandomSource.create(1L));
+        List<Double> weightedShares = AuraDistributionService.distribute(List.of(10.0D, 10.0D, 10.0D), List.of(1.0D, 2.0D, 4.0D),
+                14.0D, Distribution.REALM_WEIGHTED, RandomSource.create(1L));
+        List<Double> randomShares = AuraDistributionService.distribute(List.of(10.0D, 10.0D), List.of(1.0D, 1.0D),
+                10.0D, Distribution.RANDOM, RandomSource.create(1L));
+        if (equalShares.stream().anyMatch(value -> !same(value, 4.0D))
+                || !same(weightedShares.get(0), 2.0D) || !same(weightedShares.get(1), 4.0D) || !same(weightedShares.get(2), 8.0D)
+                || !same(randomShares.stream().mapToDouble(Double::doubleValue).sum(), 10.0D)
+                || randomShares.stream().filter(value -> same(value, 10.0D)).count() != 1L) {
+            throw new IllegalStateException("Shared aura distribution did not honor the configured allocation strategies");
+        }
+        AuraChunkComponent capacity = new AuraChunkComponent();
+        Holder<Element> capacityFire = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"));
+        capacity.initializeAuras(Map.of(capacityFire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of());
+        capacity.setBlockContribution(Map.of(capacityFire, new AuraValue(5.0D, new Fixed(5.0D), 1.0D)), List.of());
+        capacity.regenerateAuras(20L);
+        AuraPool pool = capacity.auras().get(capacityFire);
+        if (!same(pool.maximum(), 15.0D) || !same(pool.amount(), 15.0D)) {
+            throw new IllegalStateException("Block aura must extend, rather than consume, environmental capacity");
+        }
+        AuraPool formationPool = pool.withMaximum(pool.maximum() + 50.0D).change(50.0D);
+        if (!same(formationPool.maximum(), 65.0D) || !same(formationPool.amount(), 65.0D)) {
+            throw new IllegalStateException("Formation capacity bonuses did not extend the chunk limit");
+        }
+        AuraPool unlimited = new AuraPool(1_000.0D, Double.POSITIVE_INFINITY, 0.0D);
+        if (!Double.isInfinite(unlimited.maximum()) || !same(unlimited.amount(), 1_000.0D)) {
+            throw new IllegalStateException("Unlimited aura capacity did not preserve stored aura");
+        }
         if (overworld.clientHud().storedAura().isEmpty() || overworld.clientHud().sensedConcentration().isEmpty()
                 || !same(overworld.clientHud().storedAura().get().maximum(), 100.0D)
                 || !same(overworld.clientHud().sensedConcentration().get().maximum(), 100.0D)
@@ -442,8 +542,8 @@ public final class MxtTestMod {
         }
         BlockAura spiritStone = MxtDatapackRegistries.get(MxtResourceKeys.BLOCK_AURA, Identifier.parse("mxt_test:spirit_stone_ore"))
                 .orElseThrow(() -> new IllegalStateException("Spirit-stone aura configuration was not loaded"));
-        if (!same(overworld.baseAura(), 0.0D) || overworld.noise().amplitude() <= 0.0D
-                || spiritStone.auraPerBlock() * 12.0D <= overworld.noise().amplitude() * 2.0D) {
+        if (overworld.aura().isEmpty() || overworld.noise().amplitude() <= 0.0D
+                || spiritStone.aura().values().stream().mapToDouble(AuraValue::amount).sum() * 12.0D <= overworld.noise().amplitude() * 2.0D) {
             throw new IllegalStateException("Natural aura must remain sparse compared with a spirit-stone vein");
         }
     }

@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.render.accessory;
 
 import com.iafenvoy.mxt.integration.CuriosIntegration;
+import com.iafenvoy.mxt.integration.CuriosIntegration.Place;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -14,6 +15,7 @@ import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,11 +34,13 @@ public final class BeltWeaponRenderer extends RenderLayer<AvatarRenderState, Pla
                        @NotNull AvatarRenderState state, float yRot, float xRot) {
         AbstractClientPlayer player = player(state);
         if (player == null) return;
-        Map<CuriosIntegration.Place, ItemStack> stacks = CuriosIntegration.equippedForCosmetic(player);
-        ItemStack left = stacks.get(CuriosIntegration.Place.BELT_LEFT);
-        ItemStack right = stacks.get(CuriosIntegration.Place.BELT_RIGHT);
-        if (left != null && !left.isEmpty()) renderItem(left, poseStack, collector, packedLight, player, state, true);
-        if (right != null && !right.isEmpty()) renderItem(right, poseStack, collector, packedLight, player, state, false);
+        Map<Place, ItemStack> stacks = CuriosIntegration.equippedForRender(player);
+        ItemStack left = stacks.get(Place.BELT_LEFT);
+        ItemStack right = stacks.get(Place.BELT_RIGHT);
+        if (left != null && !left.isEmpty())
+            this.renderItem(left, poseStack, collector, packedLight, player, state, true);
+        if (right != null && !right.isEmpty())
+            this.renderItem(right, poseStack, collector, packedLight, player, state, false);
     }
 
     private void renderItem(ItemStack stack, PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
@@ -47,12 +51,10 @@ public final class BeltWeaponRenderer extends RenderLayer<AvatarRenderState, Pla
         poseStack.translate(side * (left ? 1.0D : -1.0D), 0.5D, 0.05D);
         poseStack.mulPose(Axis.YP.rotationDegrees(-90.0F));
         poseStack.scale(1.5F, 1.5F, 1.5F);
-        AccessoryRenderDefinition renderDefinition = AccessoryRenderDefinitions.belt(stack);
-        renderDefinition.apply(poseStack, stack, left, false);
-        CuriosIntegration.BeltHolder holder = CuriosIntegration.getBelt(stack.getItem());
-        if (holder != null) holder.transformer().accept(poseStack, left);
+        AccessoryRenderDefinition renderDefinition = AccessoryRenderManager.belt(stack);
+        renderDefinition.apply(poseStack, false);
         ItemStackRenderState itemState = new ItemStackRenderState();
-        this.itemModelResolver.updateForLiving(itemState, stack, renderDefinition.displayContext(), player);
+        this.itemModelResolver.updateForLiving(itemState, stack, ItemDisplayContext.GROUND, player);
         itemState.submit(poseStack, collector, packedLight, LivingEntityRenderer.getOverlayCoords(state, 0.0F), state.outlineColor);
         poseStack.popPose();
     }

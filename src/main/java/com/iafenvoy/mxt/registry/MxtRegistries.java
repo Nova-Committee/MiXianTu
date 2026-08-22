@@ -11,12 +11,14 @@ import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
+import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.MapCodec;
 import net.objecthunter.exp4j.function.Function;
@@ -36,6 +38,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends AbilityComponent>> ABILITY_COMPONENT_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.ABILITY_COMPONENT_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends AbilityTrigger>> ABILITY_TRIGGER_TYPE = new DefaultedMappedRegistry<>("use", MxtResourceKeys.ABILITY_TRIGGER_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends NumberProvider>> NUMBER_PROVIDER_TYPE = new DefaultedMappedRegistry<>("constant", MxtResourceKeys.NUMBER_PROVIDER_TYPE, Lifecycle.stable(), false);
+    public static final DefaultedRegistry<MapCodec<? extends AuraMaximum>> AURA_MAXIMUM_TYPE = new DefaultedMappedRegistry<>("initial_multiplier", MxtResourceKeys.AURA_MAXIMUM_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<Function> FORMULA_FUNCTION = new DefaultedMappedRegistry<>("round", MxtResourceKeys.FORMULA_FUNCTION, Lifecycle.stable(), false);
     public static final DefaultedRegistry<FormulaVariable> FORMULA_VARIABLE = new DefaultedMappedRegistry<>("zero", MxtResourceKeys.FORMULA_VARIABLE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends ResourceValueProvider>> RESOURCE_VALUE_PROVIDER_TYPE = new DefaultedMappedRegistry<>("current", MxtResourceKeys.RESOURCE_VALUE_PROVIDER_TYPE, Lifecycle.stable(), false);
@@ -51,6 +54,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarRenderer>> RESOURCE_BAR_RENDERER_TYPE = new DefaultedMappedRegistry<>("missing", MxtResourceKeys.RESOURCE_BAR_RENDERER_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = new DefaultedMappedRegistry<>("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends Badge>> BADGE_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.BADGE_TYPE, Lifecycle.stable(), false);
+    public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = new DefaultedMappedRegistry<>("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<CreatureSpawnCondition> CREATURE_SPAWN_CONDITION = new DefaultedMappedRegistry<>("always", MxtResourceKeys.CREATURE_SPAWN_CONDITION, Lifecycle.stable(), false);
     public static final DefaultedRegistry<CultivationCondition> CULTIVATION_CONDITION = new DefaultedMappedRegistry<>("always", MxtResourceKeys.CULTIVATION_CONDITION, Lifecycle.stable(), false);
 
@@ -61,6 +65,7 @@ public final class MxtRegistries {
         event.register(ABILITY_COMPONENT_TYPE);
         event.register(ABILITY_TRIGGER_TYPE);
         event.register(NUMBER_PROVIDER_TYPE);
+        event.register(AURA_MAXIMUM_TYPE);
         event.register(FORMULA_FUNCTION);
         event.register(FORMULA_VARIABLE);
         event.register(RESOURCE_VALUE_PROVIDER_TYPE);
@@ -76,6 +81,7 @@ public final class MxtRegistries {
         event.register(RESOURCE_BAR_RENDERER_TYPE);
         event.register(RESOURCE_BAR_VISIBILITY_TYPE);
         event.register(BADGE_TYPE);
+        event.register(ITEM_MATCHER_ENTRY_TYPE);
         event.register(CREATURE_SPAWN_CONDITION);
         event.register(CULTIVATION_CONDITION);
     }

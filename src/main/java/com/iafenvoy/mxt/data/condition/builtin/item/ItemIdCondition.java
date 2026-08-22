@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
 import com.iafenvoy.mxt.data.condition.ItemCondition;
-import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
@@ -21,7 +22,7 @@ public record ItemIdCondition(Item item) implements ItemCondition, ItemMatcher {
 
     @Override
     public List<Entry> entries() {
-        return List.of(Entry.item(this.item));
+        return List.of(new ItemEntry(this.item));
     }
 
     @Override

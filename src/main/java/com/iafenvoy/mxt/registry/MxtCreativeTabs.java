@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.HolderLookup.Provider;
@@ -27,7 +28,14 @@ public final class MxtCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.mxt.main"))
             .icon(() -> new ItemStack(MxtItems.CHEQUE.get()))
-            .displayItems((parameters, output) -> MxtItems.registeredItems().forEach(item -> output.accept(item.get()))).build());
+            .displayItems((parameters, output) -> {
+                MxtItems.registeredItems().forEach(item -> output.accept(item.get()));
+                MxtItems.spiritStones().forEach(item -> {
+                    ItemStack empty = new ItemStack(item.get());
+                    empty.set(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0));
+                    output.accept(empty);
+                });
+            }).build());
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ITEM = REGISTRY.register("item", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.mxt.item")).icon(() -> new ItemStack(Items.APPLE))
             .displayItems((parameters, output) -> matchingItems(parameters.holders(), MxtResourceKeys.ITEM_BINDING).forEach(output::accept)).build());

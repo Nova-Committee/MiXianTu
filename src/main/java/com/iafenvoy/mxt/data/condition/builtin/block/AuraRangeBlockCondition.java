@@ -1,27 +1,27 @@
 package com.iafenvoy.mxt.data.condition.builtin.block;
 
 import com.iafenvoy.mxt.data.condition.BlockCondition;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.data.aura.AuraRequirement;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.world.level.Level;
 
-public record AuraRangeBlockCondition(NumberProvider min, NumberProvider max) implements BlockCondition {
-    public static final MapCodec<AuraRangeBlockCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            NumberProvider.CODEC.fieldOf("min").forGetter(AuraRangeBlockCondition::min),
-            NumberProvider.CODEC.fieldOf("max").forGetter(AuraRangeBlockCondition::max)
-    ).apply(i, AuraRangeBlockCondition::new));
+import java.util.Map;
+
+public record AuraRangeBlockCondition(Map<Holder<Element>, AuraRequirement> aura) implements BlockCondition {
+    public static final MapCodec<AuraRangeBlockCondition> CODEC = CollectionCodecs.map(Element.CODEC, AuraRequirement.CODEC)
+            .fieldOf("aura").xmap(AuraRangeBlockCondition::new, AuraRangeBlockCondition::aura);
 
     @Override
     public boolean test(Level level, BlockPos pos, FormulaContext context) {
-        double min = this.min.evaluate(context);
-        double max = this.max.evaluate(context);
-        if (!Double.isFinite(min) || !Double.isFinite(max) || min > max) return false;
-        double aura = AuraService.getPositionAura(level, pos).concentration();
-        return aura >= min && aura <= max;
+        AuraResult resolved = AuraService.getPositionAura(level, pos);
+        return this.aura.entrySet().stream().allMatch(entry -> entry.getValue().test(resolved.pool(entry.getKey()).amount(), context));
     }
 
     @Override

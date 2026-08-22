@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderData;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.CultivationBreakEvent.Post;
@@ -44,7 +44,7 @@ public final class CultivationService {
     /**
      * Attempts the only legal next realm in the active resource's linear chain.
      */
-    public static BreakthroughResult attempt(LivingEntity entity, SpiritData spirit, ResourceHolderData resources,
+    public static BreakthroughResult attempt(LivingEntity entity, SpiritComponent spirit, ResourceHolderComponent resources,
                                              Identifier resource, FormulaContext context, BooleanSupplier conditionsMet) {
         if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failure.SERVER_ONLY, null);
         if (spirit.realmStage().isPresent() && ServerCache.get()
@@ -59,7 +59,7 @@ public final class CultivationService {
      * Entity-aware breakthrough entry point. It preserves the same transaction semantics and
      * dispatches triggered abilities only after the realm state has committed.
      */
-    private static BreakthroughResult attempt(LivingEntity entity, SpiritData spirit, ResourceHolderData resources, Holder<RealmStage> targetHolder,
+    private static BreakthroughResult attempt(LivingEntity entity, SpiritComponent spirit, ResourceHolderComponent resources, Holder<RealmStage> targetHolder,
                                               FormulaContext context, BooleanSupplier conditionsMet) {
         Identifier targetId = HolderHelper.id(targetHolder);
         RealmStage target = targetHolder.value();
@@ -87,7 +87,7 @@ public final class CultivationService {
         return result;
     }
 
-    private static BreakthroughResult commit(SpiritData spirit, ResourceHolderData resources, @NotNull Holder<RealmStage> targetHolder,
+    private static BreakthroughResult commit(SpiritComponent spirit, ResourceHolderComponent resources, @NotNull Holder<RealmStage> targetHolder,
                                              FormulaContext context, BooleanSupplier conditionsMet, @NotNull IEventBus eventBus) {
         Identifier targetId = HolderHelper.id(targetHolder);
         RealmStage target = targetHolder.value();
@@ -114,7 +114,7 @@ public final class CultivationService {
         return BreakthroughResult.committed(payment.amounts());
     }
 
-    private static Optional<Next> next(SpiritData spirit, Identifier resource) {
+    private static Optional<Next> next(SpiritComponent spirit, Identifier resource) {
         Holder<RealmStage> current = spirit.realmStage().orElse(null);
         if (current != null) {
             RealmStage definition = current.value();
@@ -131,7 +131,7 @@ public final class CultivationService {
     /**
      * Sets a validated realm administratively without traversing the registry at call time.
      */
-    public static boolean setRealm(SpiritData spirit, Identifier target) {
+    public static boolean setRealm(SpiritComponent spirit, Identifier target) {
         ServerCache cache = ServerCache.get().orElse(null);
         Identifier resource = cache == null ? null : cache.resourceForRealm(target).orElse(null);
         if (resource == null) return false;
@@ -145,7 +145,7 @@ public final class CultivationService {
         return true;
     }
 
-    private static Holder<Resource> activeResource(SpiritData spirit, RealmStage target) {
+    private static Holder<Resource> activeResource(SpiritComponent spirit, RealmStage target) {
         return spirit.realmStage().map(Holder::value).map(RealmStage::resource).orElseGet(target::resource);
     }
 

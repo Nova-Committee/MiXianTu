@@ -3,7 +3,8 @@
     "minecraft:player"
   ],
   "slots": [
-    "back",
-    "belt"
+    "back_weapon",
+    "belt_item",
+    "technique"
   ]
 }

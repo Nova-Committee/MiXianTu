@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
@@ -26,7 +26,7 @@ public final class TechniqueService {
     private TechniqueService() {
     }
 
-    public static Result learn(SpiritData spirit, Identifier id, CultivationTechnique definition, Lookup lookup) {
+    public static Result learn(SpiritComponent spirit, Identifier id, CultivationTechnique definition, Lookup lookup) {
         Holder<CultivationTechnique> technique = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION_TECHNIQUE, id).orElse(null);
         if (technique == null) return Result.rejected(Failure.DISABLED);
         if (spirit.learnedTechniques().contains(technique)) return Result.rejected(Failure.ALREADY_LEARNED);
@@ -46,7 +46,7 @@ public final class TechniqueService {
     /**
      * Entity-aware learning entry point that evaluates every declared fixed cultivation condition.
      */
-    public static Result learn(LivingEntity entity, SpiritData spirit, Identifier id, CultivationTechnique definition, Lookup lookup, FormulaContext context) {
+    public static Result learn(LivingEntity entity, SpiritComponent spirit, Identifier id, CultivationTechnique definition, Lookup lookup, FormulaContext context) {
         boolean allowed = definition.learnCondition().test(entity, context);
         if (!allowed) return Result.rejected(Failure.CONDITIONS);
         Result result = learn(spirit, id, definition, lookup);

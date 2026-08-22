@@ -1,0 +1,1 @@
+{"type":"minecraft:block","pools":[{"rolls":1,"entries":[{"type":"minecraft:item","name":"mxt:spruce_display_stand"}],"conditions":[{"condition":"minecraft:survives_explosion"}]}],"random_sequence":"mxt:blocks/spruce_display_stand"}

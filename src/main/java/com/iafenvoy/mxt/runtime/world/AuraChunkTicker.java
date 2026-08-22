@@ -1,13 +1,18 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.attachment.AuraChunkData;
+import com.iafenvoy.mxt.attachment.AuraChunkComponent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.event.level.ChunkEvent.Load;
 import net.neoforged.neoforge.event.level.ChunkEvent.Unload;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -18,6 +23,7 @@ import java.util.Set;
 /**
  * Regenerates aura only for chunks observed as loaded, without scanning a whole level each tick.
  */
+@EventBusSubscriber
 public final class AuraChunkTicker {
     private static final long INTERVAL_TICKS = 20L;
     private static final Map<ServerLevel, Set<LevelChunk>> LOADED = Collections.synchronizedMap(new IdentityHashMap<>());
@@ -26,12 +32,14 @@ public final class AuraChunkTicker {
     private AuraChunkTicker() {
     }
 
+    @SubscribeEvent
     public static void onChunkLoad(Load event) {
         if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
         LOADED.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(event.getChunk());
         BlockAuraService.rebuild(level, event.getChunk());
     }
 
+    @SubscribeEvent
     public static void onChunkUnload(Unload event) {
         if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
         Set<LevelChunk> chunks = LOADED.get(level);
@@ -49,6 +57,7 @@ public final class AuraChunkTicker {
         DIRTY.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(level.getChunkAt(pos));
     }
 
+    @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLevelTick(Post event) {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % INTERVAL_TICKS != 0L) return;
         Set<LevelChunk> chunks = LOADED.get(level);
@@ -60,10 +69,22 @@ public final class AuraChunkTicker {
             DIRTY.remove(level);
         }
         for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
-            AuraChunkData aura = chunk.getData(MxtAttachments.AURA_CHUNK);
+            AuraChunkComponent aura = chunk.getData(MxtAttachments.AURA_CHUNK);
             if (!aura.initialized())
                 AuraService.getPositionAura(level, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
-            aura.regenerate(INTERVAL_TICKS);
+            aura.regenerateAuras(INTERVAL_TICKS);
         }
+    }
+
+    /** Runs after protection handlers so canceled block changes do not invalidate aura caches. */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onBlockBreak(BreakBlockEvent event) {
+        if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level) markDirty(level, event.getPos());
+    }
+
+    /** Runs after protection handlers so canceled block changes do not invalidate aura caches. */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onBlockPlace(EntityPlaceEvent event) {
+        if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level) markDirty(level, event.getPos());
     }
 }

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.cultivation.Physique;
@@ -16,6 +16,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -27,10 +32,26 @@ import java.util.Set;
 /**
  * Applies all datapack-defined passive modifiers as removable transient vanilla attributes.
  */
+@EventBusSubscriber
 public final class PassiveAttributeService {
     private static final String PREFIX = "passive/";
 
     private PassiveAttributeService() {
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerLoggedInEvent event) {
+        reconcile(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerClone(Clone event) {
+        reconcile(event.getEntity());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerRespawnEvent event) {
+        reconcile(event.getEntity());
     }
 
     /**
@@ -67,7 +88,7 @@ public final class PassiveAttributeService {
             entries.add(new Entry("ability", value.ability(), index, value.modifier()));
         }
 
-        SpiritData spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritComponent spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         spirit.realmStage().ifPresent(realm -> addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers()));
         spirit.activeTechnique().ifPresent(technique -> addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers()));
         for (Holder<Physique> physique : spirit.physiques())

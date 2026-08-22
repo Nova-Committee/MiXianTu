@@ -13,6 +13,9 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.Map;
 import java.util.UUID;
@@ -21,12 +24,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Tracks aura source transitions without retaining unloaded entities.
  */
+@EventBusSubscriber
 public final class AuraZoneEventBridge {
     private static final Map<UUID, AuraResult> LAST = new ConcurrentHashMap<>();
 
     private AuraZoneEventBridge() {
     }
 
+    @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
         if (!(entity.level() instanceof ServerLevel)) return;
@@ -38,6 +43,7 @@ public final class AuraZoneEventBridge {
         }
     }
 
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onLevelTick(Post event) {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 5L != 0L) return;
         Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
@@ -45,7 +51,7 @@ public final class AuraZoneEventBridge {
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
             if (level.getGameTime() % 20L == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
-                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), aura.concentration()));
+                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), aura.concentration(), aura.maximum()));
             }
             zones.getOptional(aura.source()).flatMap(AuraZone::particle)
                     .ifPresent(effect -> effect.sendTo(level, player, player.position()));

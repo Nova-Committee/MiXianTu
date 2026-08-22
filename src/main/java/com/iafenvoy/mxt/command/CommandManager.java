@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -12,8 +11,8 @@ public final class CommandManager {
     @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
-        CommandBuildContext context = event.getBuildContext();
-        MxtCommand.registerCommand(dispatcher, context);
-        TradeCommand.registerCommand(dispatcher);
+        DisplayCommand.register(dispatcher);
+        MxtCommand.register(dispatcher);
+        TradeCommand.register(dispatcher);
     }
 }

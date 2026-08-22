@@ -10,12 +10,10 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Static rules shared by items tagged or configured as a cultivation artifact.
@@ -24,7 +22,7 @@ public record ItemArchetype(String itemType, NumberProvider spiritCapacity, Numb
                             NumberProvider flightSpeed, List<ResourceCost> flightCosts,
                             List<Holder<Ability>> grantedAbilities, ItemAction refineAction) {
     public static final Codec<Holder<ItemArchetype>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_ARCHETYPE);
-    public static final Codec<ItemArchetype> DIRECT_CODEC = RecordCodecBuilder.<ItemArchetype>create(i -> i.group(
+    public static final Codec<ItemArchetype> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.fieldOf("item_type").forGetter(ItemArchetype::itemType),
             NumberProvider.CODEC.optionalFieldOf("spirit_capacity", new Constant(0.0D)).forGetter(ItemArchetype::spiritCapacity),
             NumberProvider.CODEC.optionalFieldOf("storage_slots", new Constant(0.0D)).forGetter(ItemArchetype::storageSlots),

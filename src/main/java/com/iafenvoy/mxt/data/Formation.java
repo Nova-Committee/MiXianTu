@@ -8,6 +8,8 @@ import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -15,12 +17,13 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
  * A multiblock formation's static shape, resource costs, and lifecycle actions.
  */
-public record Formation(Identifier structureTemplate, NumberProvider radius, List<ResourceCost> activationCosts,
+public record Formation(Identifier structureTemplate, NumberProvider radius, Map<Holder<Element>, NumberProvider> maxBonus, List<ResourceCost> activationCosts,
                         List<ResourceCost> maintenanceCosts, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction,
@@ -29,6 +32,7 @@ public record Formation(Identifier structureTemplate, NumberProvider radius, Lis
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Identifier.CODEC.fieldOf("structure_template").forGetter(Formation::structureTemplate),
             NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
+            CollectionCodecs.map(Element.CODEC, NumberProvider.CODEC).optionalFieldOf("max_bonus", Map.of()).forGetter(Formation::maxBonus),
             ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
             ResourceCost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
             BlockAction.CODEC.optionalFieldOf("activate_action", NoOpBlockAction.INSTANCE).forGetter(Formation::activateAction),

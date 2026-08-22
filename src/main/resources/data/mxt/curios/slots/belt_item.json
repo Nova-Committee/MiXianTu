@@ -1,0 +1,6 @@
+{
+  "order": 1,
+  "size": 2,
+  "icon": "mxt:slot/empty_belt_item_slot",
+  "validators": ["curios:tag", "mxt:belt_item_auto"]
+}

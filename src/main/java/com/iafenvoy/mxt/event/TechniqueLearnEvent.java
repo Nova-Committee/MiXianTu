@@ -1,23 +1,23 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.attachment.SpiritData;
+import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
 public abstract class TechniqueLearnEvent extends Event {
-    private final SpiritData spirit;
+    private final SpiritComponent spirit;
     private final Identifier technique;
     private final CultivationTechnique definition;
 
-    protected TechniqueLearnEvent(SpiritData spirit, Identifier technique, CultivationTechnique definition) {
+    protected TechniqueLearnEvent(SpiritComponent spirit, Identifier technique, CultivationTechnique definition) {
         this.spirit = spirit;
         this.technique = technique;
         this.definition = definition;
     }
 
-    public SpiritData spirit() {
+    public SpiritComponent spirit() {
         return this.spirit;
     }
 
@@ -30,13 +30,13 @@ public abstract class TechniqueLearnEvent extends Event {
     }
 
     public static final class Pre extends TechniqueLearnEvent implements ICancellableEvent {
-        public Pre(SpiritData spirit, Identifier technique, CultivationTechnique definition) {
+        public Pre(SpiritComponent spirit, Identifier technique, CultivationTechnique definition) {
             super(spirit, technique, definition);
         }
     }
 
     public static final class Post extends TechniqueLearnEvent {
-        public Post(SpiritData spirit, Identifier technique, CultivationTechnique definition) {
+        public Post(SpiritComponent spirit, Identifier technique, CultivationTechnique definition) {
             super(spirit, technique, definition);
         }
     }

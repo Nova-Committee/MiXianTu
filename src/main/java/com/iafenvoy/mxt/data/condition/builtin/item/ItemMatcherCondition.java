@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
 import com.iafenvoy.mxt.data.condition.ItemCondition;
-import com.iafenvoy.mxt.util.ItemMatcher;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

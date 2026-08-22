@@ -7,6 +7,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
@@ -28,7 +29,7 @@ public record AddEnchantmentAction(Object2IntMap<Holder<Enchantment>> enchantmen
     @Override
     public void execute(Entity holder, ItemStack stack, FormulaContext context) {
         Mutable enchantments = new Mutable(stack.getAllEnchantments(holder.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
-        for (Object2IntMap.Entry<Holder<Enchantment>> entry : this.enchantments.object2IntEntrySet())
+        for (Entry<Holder<Enchantment>> entry : this.enchantments.object2IntEntrySet())
             if (this.override || enchantments.getLevel(entry.getKey()) < entry.getIntValue())
                 enchantments.set(entry.getKey(), entry.getIntValue());
         stack.set(DataComponents.ENCHANTMENTS, enchantments.toImmutable());
