@@ -56,7 +56,7 @@ public record AlchemyRecipeAdapter(Identifier definition) implements Recipe<Sing
 
     @Override
     public @NonNull RecipeType<? extends Recipe<SingleRecipeInput>> getType() {
-        return MxtRecipeTypes.ALCHEMY;
+        return MxtRecipeTypes.ALCHEMY.get();
     }
 
     @Override

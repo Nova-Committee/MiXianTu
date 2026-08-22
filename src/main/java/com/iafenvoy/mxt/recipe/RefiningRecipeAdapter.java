@@ -54,7 +54,7 @@ public record RefiningRecipeAdapter(Identifier input, Identifier archetype) impl
 
     @Override
     public @NonNull RecipeType<? extends Recipe<SingleRecipeInput>> getType() {
-        return MxtRecipeTypes.REFINING;
+        return MxtRecipeTypes.REFINING.get();
     }
 
     @Override

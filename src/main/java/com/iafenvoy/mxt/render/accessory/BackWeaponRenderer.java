@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.accessory;
 
-import com.iafenvoy.mxt.integration.CuriosIntegration;
-import com.iafenvoy.mxt.integration.CuriosIntegration.Place;
+import com.iafenvoy.mxt.compat.CuriosIntegration;
+import com.iafenvoy.mxt.compat.CuriosIntegration.Place;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;

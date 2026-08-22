@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
-import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService.OptionalLongResult;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.screen.EconomySlots.Input;
 import com.iafenvoy.mxt.screen.EconomySlots.Output;
@@ -23,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.OptionalLong;
 
 /**
  * Menu state and all authoritative cheque conversion operations.
@@ -44,7 +44,8 @@ public final class ChequeTableMenu extends AbstractContainerMenu {
             for (int column = 0; column < 5; column++) {
                 int index = column + row * 5;
                 this.addSlot(new Input(this.currency, index, 8 + column * 18, 18 + row * 18,
-                        stack -> CurrencyValueService.unitValue(stack.getItem()).isPresent()));
+                        stack -> CurrencyValueService.unitValue(inventory.player.level().registryAccess(), inventory.player, stack).isPresent()
+                                && CurrencyValueService.unitValue(inventory.player.level().registryAccess(), inventory.player, stack).getAsLong() > 0L));
             }
         }
         this.addSlot(new Input(this.chequeInput, 0, 134, 18, stack -> stack.is(MxtItems.CHEQUE.get())));
@@ -56,9 +57,9 @@ public final class ChequeTableMenu extends AbstractContainerMenu {
         ItemStack blank = this.chequeInput.getItem(0);
         if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY).value() != 0L)
             return false;
-        OptionalLongResult value = CurrencyPaymentService.collectCurrency(this.currency);
-        if (!value.valid() || value.value() <= 0L || !this.chequeOutput.getItem(0).isEmpty()) return false;
-        this.chequeOutput.setItem(0, ChequeItem.create(value.value(), player.getGameProfile().name()));
+        OptionalLong value = CurrencyPaymentService.collectCurrency(this.currency, player);
+        if (value.isEmpty() || value.getAsLong() <= 0L || !this.chequeOutput.getItem(0).isEmpty()) return false;
+        this.chequeOutput.setItem(0, ChequeItem.create(value.getAsLong(), player.getGameProfile().name()));
         blank.shrink(1);
         this.currency.clearContent();
         this.broadcastChanges();

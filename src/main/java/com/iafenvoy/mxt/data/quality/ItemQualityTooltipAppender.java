@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.quality;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
@@ -23,7 +22,7 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import java.util.function.Consumer;
 
 /** Adds the datapack-resolved quality and its modifiers to item tooltips. */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class ItemQualityTooltipAppender {
     private ItemQualityTooltipAppender() {
     }

@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.builtin.bientity.*;
 import com.iafenvoy.mxt.data.action.builtin.bientity.meta.*;
-import com.iafenvoy.mxt.integration.kubejs.type.action.JsBiEntityAction;
+import com.iafenvoy.mxt.compat.kubejs.type.action.JsBiEntityAction;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

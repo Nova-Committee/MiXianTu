@@ -1,6 +1,9 @@
 package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.runtime.world.AuraPool;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -8,17 +11,19 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
+
 /**
- * Server-authoritative aura source and resolved concentration for the local player.
+ * Server-authoritative aura source and independent elemental pools for the local player.
  */
-public record AuraStateS2CPayload(Identifier source, double concentration, double maximum) implements CustomPacketPayload {
+public record AuraStateS2CPayload(Identifier source, Map<Identifier, AuraPool> aura) implements CustomPacketPayload {
     public static final Type<AuraStateS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "aura_state_s2c"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, AuraStateS2CPayload> STREAM_CODEC = StreamCodec.composite(
-            Identifier.STREAM_CODEC, AuraStateS2CPayload::source,
-            ByteBufCodecs.DOUBLE, AuraStateS2CPayload::concentration,
-            ByteBufCodecs.DOUBLE, AuraStateS2CPayload::maximum,
-            AuraStateS2CPayload::new
-    );
+    public static final Codec<AuraStateS2CPayload> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Identifier.CODEC.fieldOf("source").forGetter(AuraStateS2CPayload::source),
+            Codec.unboundedMap(Identifier.CODEC, AuraPool.CODEC).fieldOf("aura").forGetter(AuraStateS2CPayload::aura)
+    ).apply(i, AuraStateS2CPayload::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, AuraStateS2CPayload> STREAM_CODEC =
+            ByteBufCodecs.fromCodecWithRegistries(CODEC);
 
     @Override
     public @NonNull Type<AuraStateS2CPayload> type() {

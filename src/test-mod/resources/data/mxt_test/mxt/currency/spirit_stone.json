@@ -1,0 +1,13 @@
+{
+  "items": "mxt:spirit_stone",
+  "value": 10,
+  "unavailable_when": [
+    {
+      "condition": {
+        "type": "mxt:spirit_storage_not_full"
+      },
+      "reason": "tooltip.mxt.currency_spirit_not_full"
+    }
+  ],
+  "exchanges": []
+}

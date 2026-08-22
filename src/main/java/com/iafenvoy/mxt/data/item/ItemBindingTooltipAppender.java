@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
@@ -25,7 +24,7 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import java.util.function.Consumer;
 
 /** Adds data-driven weapon, pill, technique and item-action details. */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class ItemBindingTooltipAppender {
     private ItemBindingTooltipAppender() {
     }

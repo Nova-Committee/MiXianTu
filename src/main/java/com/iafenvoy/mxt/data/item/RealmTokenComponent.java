@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
@@ -28,7 +27,7 @@ import java.util.function.Consumer;
 /**
  * Datapack-selected realm instance carried by an access token.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public record RealmTokenComponent(Optional<Holder<RealmInstance>> realm) implements TooltipProvider {
     public static final RealmTokenComponent EMPTY = new RealmTokenComponent(Optional.empty());
     public static final Codec<RealmTokenComponent> CODEC = RecordCodecBuilder.create(i -> i.group(

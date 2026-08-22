@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
-import com.iafenvoy.mxt.integration.kubejs.callback.MxtJsGameplayCallbacks;
+import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsGameplayCallbacks;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**

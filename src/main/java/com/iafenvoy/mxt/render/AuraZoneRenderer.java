@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.render;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
@@ -21,14 +20,14 @@ import java.util.Optional;
 /**
  * Applies the client-only portion of an aura-zone definition around the camera entity.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class AuraZoneRenderer {
     private AuraZoneRenderer() {
     }
 
     @SubscribeEvent
     public static void onFogColor(ComputeFogColor event) {
-        resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasVisualOverride).ifPresent(fog -> {
+        resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasFogStrength).filter(fog -> fog.render().fogColor() != 0xFFFFFF).ifPresent(fog -> {
             int color = fog.render().fogColor();
             float strength = fog.strength();
             event.setRed(blend(event.getRed(), ((color >>> 16) & 0xFF) / 255.0F, strength));
@@ -39,7 +38,7 @@ public final class AuraZoneRenderer {
 
     @SubscribeEvent
     public static void onRenderFog(RenderFog event) {
-        resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasVisualOverride)
+        resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasFogStrength)
                 .ifPresent(fog -> {
                     float originalFar = event.getFarPlaneDistance();
                     float targetFar = Math.min(originalFar, fog.render().renderDistance());
@@ -57,8 +56,8 @@ public final class AuraZoneRenderer {
                 zone.aura().values().stream().mapToDouble(AuraValue::amount).sum()));
     }
 
-    private static boolean hasVisualOverride(ResolvedFog fog) {
-        return fog.strength() > 0.0F && fog.render().fogColor() != 0xFFFFFF;
+    private static boolean hasFogStrength(ResolvedFog fog) {
+        return fog.strength() > 0.0F;
     }
 
     private static float blend(float current, float target, float strength) {

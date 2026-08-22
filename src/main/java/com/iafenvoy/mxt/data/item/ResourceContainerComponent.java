@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 /**
  * Portable, resource-agnostic energy storage used by stones, batteries and future artifacts.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public record ResourceContainerComponent(Object2DoubleMap<Holder<Resource>> values) implements TooltipProvider {
     public static final Codec<ResourceContainerComponent> CODEC = CollectionCodecs.doubleMap(Resource.CODEC).xmap(ResourceContainerComponent::new, ResourceContainerComponent::values);
     public static final ResourceContainerComponent EMPTY = new ResourceContainerComponent(Object2DoubleMaps.emptyMap());

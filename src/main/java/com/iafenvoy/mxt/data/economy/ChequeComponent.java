@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.economy;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
@@ -23,7 +22,7 @@ import java.util.function.Consumer;
 /**
  * Persistent value recorded on a cheque. The value is independent of a particular currency item.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public record ChequeComponent(long value, String issuer) implements TooltipProvider {
     public static final ChequeComponent EMPTY = new ChequeComponent(0L, "");
     public static final Codec<ChequeComponent> CODEC = RecordCodecBuilder.create(i -> i.group(

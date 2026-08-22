@@ -1,6 +1,12 @@
 {
   "item": "mxt:supreme_spirit_stone",
   "value": 1000,
+  "unavailable_when": [
+    {
+      "condition": {"type": "mxt:spirit_storage_not_full"},
+      "reason": "tooltip.mxt.currency_spirit_not_full"
+    }
+  ],
   "exchanges": [
     {"cost": 1, "result": {"id": "mxt:high_spirit_stone", "count": 10}}
   ]

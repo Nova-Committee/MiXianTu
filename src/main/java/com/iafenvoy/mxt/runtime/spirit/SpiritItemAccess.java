@@ -7,7 +7,10 @@ import net.minecraft.world.item.ItemStack;
  * Both operations return the part of {@code amount} that could not be moved.
  */
 public interface SpiritItemAccess {
-    int add(ItemStack stack, int capacity, int amount, boolean simulate);
+    /** Returns this stack's current data-driven spirit capacity. */
+    int getCapacity(ItemStack stack);
 
-    int extract(ItemStack stack, int capacity, int amount, boolean simulate);
+    int add(ItemStack stack, int amount, boolean simulate);
+
+    int extract(ItemStack stack, int amount, boolean simulate);
 }

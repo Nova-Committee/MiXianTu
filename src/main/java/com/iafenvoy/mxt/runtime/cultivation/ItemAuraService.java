@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -23,6 +24,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.Optional;
 
@@ -53,6 +55,12 @@ public final class ItemAuraService {
     /** Resolves an item's whole-unit spirit capacity from its active item-aura definition. */
     public static int capacity(Provider access, ItemStack stack, FormulaContext context) {
         return find(access, stack).map(holder -> capacity(holder.value(), context)).orElse(0);
+    }
+
+    /** Resolves capacity against the active server's datapack registry. */
+    public static int capacity(ItemStack stack) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server == null ? 0 : capacity(server.registryAccess(), stack, FormulaContext.EMPTY);
     }
 
     private static int capacity(ItemAura definition, FormulaContext context) {
@@ -137,8 +145,8 @@ public final class ItemAuraService {
             }
             if (item.getItem() instanceof SpiritItemAccess access) {
                 int capacity = capacity(definition.value(), context);
-                access.extract(item, capacity, 0, false);
-                int unavailable = access.extract(item, capacity, capacity, true);
+                access.extract(item, 0, false);
+                int unavailable = access.extract(item, access.getCapacity(item), true);
                 int available = capacity - unavailable;
                 if (available <= 0) {
                     holding.clear();
@@ -179,7 +187,7 @@ public final class ItemAuraService {
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof SpiritItemAccess access) {
-            access.extract(item, capacity(active.value(), context), Integer.MAX_VALUE, false);
+            access.extract(item, Integer.MAX_VALUE, false);
             giveItem(entity, item);
         } else {
             active.value().resultStack().ifPresent(template -> giveItem(entity, template.create()));

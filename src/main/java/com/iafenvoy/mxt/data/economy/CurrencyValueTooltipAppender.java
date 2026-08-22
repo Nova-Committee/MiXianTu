@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.data.economy;
 
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
+import com.iafenvoy.mxt.data.CurrencyValue;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
@@ -19,7 +21,7 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import java.util.function.Consumer;
 
 /** Adds datapack currency values to item tooltips. */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class CurrencyValueTooltipAppender {
     private CurrencyValueTooltipAppender() {
     }
@@ -33,7 +35,17 @@ public final class CurrencyValueTooltipAppender {
                                             Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
-        CurrencyValueService.unitValue(registries, stack.getItem()).ifPresent(value -> builder.accept(
-                Component.translatable("item.mxt.currency_value", value).withStyle(ChatFormatting.GOLD)));
+        CurrencyValueService.definition(registries, stack).ifPresent(definition -> {
+            boolean valid = definition.unavailableWhen().isEmpty() || player != null && definition.unavailableWhen().stream().noneMatch(entry ->
+                    entry.condition().test(player, stack, FormulaContext.EMPTY));
+            long value = valid ? definition.value() : 0L;
+            builder.accept(Component.translatable("item.mxt.currency_value", value).withStyle(ChatFormatting.GOLD));
+            if (!valid) {
+                CurrencyValueService.unavailableReason(registries, player, stack)
+                        .map(UnavailableWhen::reason)
+                        .ifPresentOrElse(reason -> builder.accept(reason.copy().withStyle(ChatFormatting.RED)),
+                                () -> builder.accept(Component.translatable("tooltip.mxt.currency_invalid").withStyle(ChatFormatting.RED)));
+            }
+        });
     }
 }

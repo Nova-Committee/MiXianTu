@@ -1,1 +1,1 @@
-com.iafenvoy.mxt.integration.kubejs.MxtKubeJsPlugin mxt
+com.iafenvoy.mxt.compat.kubejs.MxtKubeJsPlugin mxt

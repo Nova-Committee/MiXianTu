@@ -51,7 +51,7 @@ public record FormationRecipeAdapter(Identifier definition) implements Recipe<Si
 
     @Override
     public @NonNull RecipeType<? extends Recipe<SingleRecipeInput>> getType() {
-        return MxtRecipeTypes.FORMATION;
+        return MxtRecipeTypes.FORMATION.get();
     }
 
     @Override

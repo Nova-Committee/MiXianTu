@@ -31,6 +31,7 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
     private static final int INVENTORY_END = 38;
     private final ContainerLevelAccess access;
     private final RegistryAccess registryAccess;
+    private final Player owner;
     private final DataSlot selectedExchange = DataSlot.standalone();
     private final Container input = new SimpleContainer(1) {
         @Override
@@ -57,11 +58,12 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
         super(MxtMenus.EXCHANGE_STATION.get(), containerId);
         this.access = access;
         this.registryAccess = inventory.player.level().registryAccess();
+        this.owner = inventory.player;
         this.selectedExchange.set(-1);
         this.inputSlot = this.addSlot(new Slot(this.input, 0, 20, 33) {
             @Override
             public boolean mayPlace(@NonNull ItemStack stack) {
-                return CurrencyValueService.isExchangeInput(ExchangeStationMenu.this.registryAccess, stack);
+                return CurrencyValueService.isExchangeInput(ExchangeStationMenu.this.registryAccess, ExchangeStationMenu.this.owner, stack);
             }
         });
         this.resultSlot = this.addSlot(new Slot(this.result, 0, 143, 33) {
@@ -138,7 +140,7 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
             slot.onQuickCraft(stack, original);
         } else if (slotIndex == INPUT_SLOT) {
             if (!this.moveItemStackTo(stack, INVENTORY_START, INVENTORY_END, false)) return ItemStack.EMPTY;
-        } else if (CurrencyValueService.isExchangeInput(this.registryAccess, stack)) {
+        } else if (CurrencyValueService.isExchangeInput(this.registryAccess, player, stack)) {
             if (!this.moveItemStackTo(stack, INPUT_SLOT, RESULT_SLOT, false)) return ItemStack.EMPTY;
         } else if (slotIndex < 29) {
             if (!this.moveItemStackTo(stack, 29, INVENTORY_END, false)) return ItemStack.EMPTY;
@@ -169,7 +171,7 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
     private void setupOfferList(ItemStack stack) {
         this.selectedExchange.set(-1);
         this.resultSlot.set(ItemStack.EMPTY);
-        this.offers = stack.isEmpty() ? List.of() : CurrencyValueService.exchangeOffers(this.registryAccess, stack);
+        this.offers = stack.isEmpty() ? List.of() : CurrencyValueService.exchangeOffers(this.registryAccess, this.owner, stack);
         this.broadcastChanges();
     }
 

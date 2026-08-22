@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.*;
 import com.iafenvoy.mxt.data.condition.builtin.item.meta.*;
-import com.iafenvoy.mxt.integration.kubejs.type.condition.JsItemCondition;
+import com.iafenvoy.mxt.compat.kubejs.type.condition.JsItemCondition;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -35,6 +35,7 @@ public final class MxtItemConditions {
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<BaseEnchantmentCondition>> BASE_ENCHANTMENT = REGISTRY.register("base_enchantment", () -> BaseEnchantmentCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<HasComponentCondition>> HAS_COMPONENT = REGISTRY.register("has_component", () -> HasComponentCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ComponentCondition>> COMPONENT = REGISTRY.register("component", () -> ComponentCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<SpiritStorageNotFullCondition>> SPIRIT_STORAGE_NOT_FULL = REGISTRY.register("spirit_storage_not_full", () -> SpiritStorageNotFullCondition.CODEC);
 
     private MxtItemConditions() {
     }

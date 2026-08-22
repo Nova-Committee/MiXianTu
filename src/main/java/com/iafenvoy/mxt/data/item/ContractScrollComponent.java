@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
@@ -28,7 +27,7 @@ import java.util.function.Consumer;
 /**
  * Datapack-selected contract policy carried by a reusable contract scroll.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public record ContractScrollComponent(Optional<Holder<ContractType>> contractType) implements TooltipProvider {
     public static final ContractScrollComponent EMPTY = new ContractScrollComponent(Optional.empty());
     public static final Codec<ContractScrollComponent> CODEC = RecordCodecBuilder.create(i -> i.group(

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -21,7 +20,7 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import java.util.function.Consumer;
 
 /** Adds the datapack-defined aura-fuel information to matching item tooltips. */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class ItemAuraTooltipAppender {
     private ItemAuraTooltipAppender() {
     }

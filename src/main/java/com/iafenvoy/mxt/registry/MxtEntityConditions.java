@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.*;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.*;
-import com.iafenvoy.mxt.integration.kubejs.type.condition.JsEntityCondition;
+import com.iafenvoy.mxt.compat.kubejs.type.condition.JsEntityCondition;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

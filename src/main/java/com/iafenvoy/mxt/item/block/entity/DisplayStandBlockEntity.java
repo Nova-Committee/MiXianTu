@@ -1,10 +1,8 @@
 package com.iafenvoy.mxt.item.block.entity;
 
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
-import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
@@ -46,10 +44,7 @@ public final class DisplayStandBlockEntity extends BlockEntity implements Spirit
         SpiritAccess.requireNonNegative(amount);
         if (!(this.displayedItem.getItem() instanceof SpiritItemAccess access)) return amount;
         if (this.level == null) return amount;
-        int capacity = ItemAuraService.capacity(this.level.registryAccess(), this.displayedItem, FormulaContext.EMPTY);
-        if (capacity <= 0) return amount;
-
-        int remaining = access.add(this.displayedItem, capacity, amount, simulate);
+        int remaining = access.add(this.displayedItem, amount, simulate);
         if (!simulate && remaining != amount) this.markChangedAndSync();
         return remaining;
     }

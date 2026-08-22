@@ -11,7 +11,7 @@ import com.iafenvoy.mxt.data.condition.builtin.damage.FireDamageCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.MagicDamageCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.ProjectileDamageCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.meta.*;
-import com.iafenvoy.mxt.integration.kubejs.type.condition.JsDamageCondition;
+import com.iafenvoy.mxt.compat.kubejs.type.condition.JsDamageCondition;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

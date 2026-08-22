@@ -1,14 +1,11 @@
 package com.iafenvoy.mxt.compat.jade;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.data.aura.SpiritStorageTooltipAppender;
+import com.iafenvoy.mxt.data.aura.SpiritStorageTooltipAppender.Charge;
 import com.iafenvoy.mxt.item.block.entity.DisplayStandBlockEntity;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
-import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -26,7 +23,6 @@ import snownee.jade.api.ui.Element;
 /** Shows the displayed item and its charge on wooden display stands. */
 public enum DisplayStandComponentProvider implements IComponentProvider<BlockAccessor> {
     INSTANCE;
-
     private static final Identifier ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "display_stand");
 
     @Override
@@ -36,14 +32,8 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         if (item.isEmpty()) return;
 
         tooltip.add(new DisplayedItemElement(item));
-        if (!(item.getItem() instanceof SpiritItemAccess)) return;
-        int capacity = ItemAuraService.capacity(accessor.getLevel().registryAccess(), item, FormulaContext.EMPTY);
-        if (capacity <= 0) return;
-
-        SpiritStorageComponent storedComponent = item.get(MxtDataComponents.SPIRIT_STORAGE);
-        int stored = Math.min(capacity, storedComponent == null ? capacity : storedComponent.amount());
-        int percentage = (int) Math.round(stored * 100.0D / capacity);
-        tooltip.add(new ChargeBarElement(percentage, stored, capacity));
+        SpiritStorageTooltipAppender.resolveCharge(accessor.getLevel().registryAccess(), item, FormulaContext.EMPTY)
+                .ifPresent(charge -> tooltip.add(new ChargeBarElement(charge)));
     }
 
     @Override
@@ -54,22 +44,6 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
     @Override
     public @NonNull Identifier getUid() {
         return ID;
-    }
-
-    private static ChatFormatting color(int percentage) {
-        if (percentage >= 75) return ChatFormatting.GREEN;
-        if (percentage >= 50) return ChatFormatting.YELLOW;
-        if (percentage >= 25) return ChatFormatting.GOLD;
-        return ChatFormatting.RED;
-    }
-
-    private static int colorValue(int percentage) {
-        return switch (color(percentage)) {
-            case GREEN -> 0xFF55FF55;
-            case YELLOW -> 0xFFFFFF55;
-            case GOLD -> 0xFFFFAA00;
-            default -> 0xFFFF5555;
-        };
     }
 
     /** Jade-style single-item row: item icon on the left and its name on the right. */
@@ -111,10 +85,10 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         private final int stored;
         private final int capacity;
 
-        private ChargeBarElement(int percentage, int stored, int capacity) {
-            this.percentage = percentage;
-            this.stored = stored;
-            this.capacity = capacity;
+        private ChargeBarElement(Charge charge) {
+            this.percentage = charge.percentage();
+            this.stored = charge.stored();
+            this.capacity = charge.capacity();
             this.width = 132;
             this.height = BAR_HEIGHT;
         }
@@ -125,10 +99,11 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
             int y = this.getY();
             int filledWidth = Math.round(BAR_WIDTH * this.percentage / 100.0F);
             graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, 0xFF303030);
-            if (filledWidth > 0) graphics.fill(x, y, x + filledWidth, y + BAR_HEIGHT, colorValue(this.percentage));
+            if (filledWidth > 0) graphics.fill(x, y, x + filledWidth, y + BAR_HEIGHT,
+                    SpiritStorageTooltipAppender.colorValue(this.percentage));
             graphics.outline(x, y, BAR_WIDTH, BAR_HEIGHT, 0xFF000000);
             graphics.text(Minecraft.getInstance().font, this.percentage + "%", x + BAR_WIDTH + 5, y,
-                    colorValue(this.percentage));
+                    SpiritStorageTooltipAppender.colorValue(this.percentage));
         }
 
         @Override

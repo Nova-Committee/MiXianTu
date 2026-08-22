@@ -34,7 +34,7 @@ import java.util.Map;
 /**
  * Client HUD backed by the server-authoritative current-position aura snapshot.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public enum AuraOverlay implements GuiLayer {
     INSTANCE;
     private static final int BAR_WIDTH = 71;

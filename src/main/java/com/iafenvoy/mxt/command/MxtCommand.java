@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.attachment.SectComponent;
 import com.iafenvoy.mxt.attachment.SectTerritoryComponent;
 import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -24,18 +25,24 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.SpiritStoneVein;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.ChatFormatting;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static net.minecraft.commands.Commands.argument;
@@ -52,19 +59,33 @@ public final class MxtCommand {
                         .then(literal("validate").executes(ctx -> validationStatus(ctx.getSource()))))
                 .then(literal("attachment").then(literal("status").executes(ctx -> attachmentStatus(ctx.getSource()))))
                 .then(literal("resource")
-                        .then(argument("id", StringArgumentType.word()).executes(ctx -> queryResource(ctx.getSource(), StringArgumentType.getString(ctx, "id")))
+                        .then(argument("id", IdentifierArgument.id())
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.RESOURCE))
+                                .executes(ctx -> queryResource(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))
                                 .then(literal("set").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                                         .then(argument("value", DoubleArgumentType.doubleArg()).executes(ctx -> setResource(ctx.getSource(),
-                                                StringArgumentType.getString(ctx, "id"), DoubleArgumentType.getDouble(ctx, "value")))))))
+                                                IdentifierArgument.getId(ctx, "id"), DoubleArgumentType.getDouble(ctx, "value")))))))
                 .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
-                .then(literal("aura").then(literal("query").executes(ctx -> queryAura(ctx.getSource())))
+                .then(literal("aura").then(literal("query")
+                                .executes(ctx -> queryAura(ctx.getSource(), null))
+                                .then(argument("type", IdentifierArgument.id())
+                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                                MxtDatapackRegistries.holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.ELEMENT)
+                                                        .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder))
+                                        .executes(ctx -> queryAura(ctx.getSource(), IdentifierArgument.getId(ctx, "type")))))
                         .then(literal("vein").executes(ctx -> queryVein(ctx.getSource()))))
                 .then(literal("ability").then(literal("cast").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(argument("id", StringArgumentType.word()).executes(ctx -> castAbility(ctx.getSource(), StringArgumentType.getString(ctx, "id"))))))
+                        .then(argument("id", IdentifierArgument.id())
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.ABILITY))
+                                .executes(ctx -> castAbility(ctx.getSource(), IdentifierArgument.getId(ctx, "id"))))))
                 .then(literal("breakthrough").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(argument("resource", StringArgumentType.word()).executes(ctx -> attemptBreakthrough(ctx.getSource(), StringArgumentType.getString(ctx, "resource")))))
+                        .then(argument("resource", IdentifierArgument.id())
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.RESOURCE))
+                                .executes(ctx -> attemptBreakthrough(ctx.getSource(), IdentifierArgument.getId(ctx, "resource")))))
                 .then(literal("realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(literal("set").then(argument("realm", StringArgumentType.word()).executes(ctx -> setRealm(ctx.getSource(), StringArgumentType.getString(ctx, "realm"))))))
+                        .then(literal("set").then(argument("realm", IdentifierArgument.id())
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_STAGE))
+                                .executes(ctx -> setRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "realm"))))))
                 .then(literal("sect").then(literal("claim").executes(ctx -> claimTerritory(ctx.getSource(), false)))
                         .then(literal("release").executes(ctx -> claimTerritory(ctx.getSource(), true))))
                 .then(literal("soul").then(literal("reclaim").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
@@ -77,6 +98,15 @@ public final class MxtCommand {
                 .collect(Collectors.joining(", "));
         source.sendSuccess(() -> Component.translatable("command.mxt.registries.list", text), false);
         return MxtDatapackRegistries.registries().size();
+    }
+
+    private static <T> java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestRegistry(
+            com.mojang.brigadier.context.CommandContext<CommandSourceStack> context,
+            com.mojang.brigadier.suggestion.SuggestionsBuilder builder,
+            net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<T>> key) {
+        return SharedSuggestionProvider.suggest(
+                MxtDatapackRegistries.holders(context.getSource().getServer().registryAccess(), key)
+                        .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
     }
 
     private static int validationStatus(CommandSourceStack source) {
@@ -103,25 +133,23 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int queryResource(CommandSourceStack source, String rawId) {
+    private static int queryResource(CommandSourceStack source, Identifier id) {
         ServerPlayer player = source.getPlayer();
-        Identifier id = parseId(source, rawId);
-        if (player == null || id == null) return 0;
+        if (player == null) return 0;
         Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
         if (resource == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", id, value), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", id.toString(), value), false);
         return 1;
     }
 
-    private static int setResource(CommandSourceStack source, String rawId, double value) {
+    private static int setResource(CommandSourceStack source, Identifier id, double value) {
         ServerPlayer player = source.getPlayer();
-        Identifier id = parseId(source, rawId);
-        if (player == null || id == null) return 0;
+        if (player == null) return 0;
         Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
         if (resource == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", id, value), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", id.toString(), value), true);
         return 1;
     }
 
@@ -137,19 +165,52 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int queryAura(CommandSourceStack source) {
+    private static int queryAura(CommandSourceStack source, Identifier rawType) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
-        String elements = aura.aura().entrySet().stream().map(entry -> entry.getKey() + "=" + entry.getValue().amount()
-                + "/" + entry.getValue().maximum() + "+" + entry.getValue().regenPerTick()).collect(Collectors.joining(", "));
-        String auraKinds = String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList());
-        source.sendSuccess(() -> Component.translatable("command.mxt.aura.query", aura.concentration(), aura.regenPerTick(),
-                aura.source().toString(), aura.sourceKind().name(), elements, auraKinds, aura.suppressCultivate()), false);
+        if (rawType != null) {
+            Identifier type = rawType;
+            Reference<Element> holder = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, type).orElse(null);
+            if (holder == null) {
+                source.sendFailure(Component.translatable("command.mxt.aura.unknown_type", type.toString()));
+                return 0;
+            }
+            var pool = aura.pool(holder);
+            source.sendSuccess(() -> auraReport(aura, Map.of(holder, pool)), false);
+            return 1;
+        }
+        source.sendSuccess(() -> auraReport(aura, aura.aura()), false);
         return 1;
+    }
+
+    private static Component auraReport(AuraResult aura, Map<? extends Holder<Element>, com.iafenvoy.mxt.runtime.world.AuraPool> pools) {
+        MutableComponent report = Component.translatable("command.mxt.aura.query.header").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", aura.source().toString(),
+                Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.kinds",
+                aura.auraKinds().isEmpty() ? Component.translatable("command.mxt.none") : String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList())));
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.suppressed", aura.suppressCultivate()));
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.elements").withStyle(ChatFormatting.GRAY));
+        if (pools.isEmpty()) {
+            report.append(Component.literal("\n  ")).append(Component.translatable("command.mxt.aura.query.empty").withStyle(ChatFormatting.DARK_GRAY));
+            return report;
+        }
+        pools.forEach((element, pool) -> report.append(Component.literal("\n  ")).append(Component.translatable("command.mxt.aura.query.element",
+                elementName(element), auraNumber(pool.amount()), auraNumber(pool.maximum()), TooltipText.signed(pool.regenPerTick()))));
+        return report;
+    }
+
+    private static Component elementName(Holder<Element> element) {
+        String translationKey = element.value().translationKey();
+        return translationKey.isBlank() ? Component.literal(HolderHelper.id(element).toString()) : Component.translatable(translationKey);
+    }
+
+    private static String auraNumber(double value) {
+        return value == Double.POSITIVE_INFINITY ? "\u221E" : TooltipText.number(value);
     }
 
     private static int queryVein(CommandSourceStack source) {
@@ -163,43 +224,40 @@ public final class MxtCommand {
         return vein.blocks();
     }
 
-    private static int castAbility(CommandSourceStack source, String rawId) {
+    private static int castAbility(CommandSourceStack source, Identifier id) {
         ServerPlayer player = source.getPlayer();
-        Identifier id = parseId(source, rawId);
-        if (player == null || id == null) return 0;
+        if (player == null) return 0;
         UseResult result = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).map(ability -> AbilityService.use(ability, ability.value(), player,
                 player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player))).orElse(null);
         if (result == null || !result.committed()) {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", id), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", id.toString()), true);
         return 1;
     }
 
-    private static int attemptBreakthrough(CommandSourceStack source, String rawId) {
+    private static int attemptBreakthrough(CommandSourceStack source, Identifier id) {
         ServerPlayer player = source.getPlayer();
-        Identifier id = parseId(source, rawId);
-        if (player == null || id == null || MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id).isEmpty())
+        if (player == null || MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id).isEmpty())
             return 0;
         BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.SPIRIT_DATA), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", id), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", id.toString()), true);
         return 1;
     }
 
-    private static int setRealm(CommandSourceStack source, String rawId) {
+    private static int setRealm(CommandSourceStack source, Identifier realm) {
         ServerPlayer player = source.getPlayer();
-        Identifier realm = parseId(source, rawId);
-        if (player == null || realm == null) return 0;
+        if (player == null) return 0;
         if (!CultivationService.setRealm(player.getData(MxtAttachments.SPIRIT_DATA), realm)) {
-            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", realm));
+            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", realm.toString()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", realm), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", realm.toString()), true);
         return 1;
     }
 
@@ -235,9 +293,4 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static Identifier parseId(CommandSourceStack source, String rawId) {
-        Identifier id = Identifier.tryParse(rawId);
-        if (id == null) source.sendFailure(Component.translatable("command.mxt.invalid_id", rawId));
-        return id;
-    }
 }

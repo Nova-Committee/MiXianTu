@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.data.resource;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.integration.kubejs.callback.MxtJsValueCallbacks;
-import com.iafenvoy.mxt.integration.kubejs.codec.MxtJsCodecs;
+import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsValueCallbacks;
+import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;

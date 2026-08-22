@@ -48,7 +48,7 @@ import java.util.Map;
  * Client-side resource HUD. Its collection and stacking model follows Origins'
  * resource overlay, while rendering is driven by MiXianTu's resource-bar data.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public enum ResourceBarOverlay implements GuiLayer {
     INSTANCE;
 

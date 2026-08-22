@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.util.formula.number.Expression;
 import com.iafenvoy.mxt.util.formula.number.Sum;
 import com.iafenvoy.mxt.util.formula.number.Uniform;
 import com.iafenvoy.mxt.util.formula.number.WeightedList;
-import com.iafenvoy.mxt.integration.kubejs.type.number.JsNumberProvider;
+import com.iafenvoy.mxt.compat.kubejs.type.number.JsNumberProvider;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 /**
  * Serialized contract creature retained by a spirit beast bag.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public record SpiritBeastComponent(Optional<CompoundTag> entity) implements TooltipProvider {
     public static final SpiritBeastComponent EMPTY = new SpiritBeastComponent(Optional.empty());
     public static final Codec<SpiritBeastComponent> CODEC = RecordCodecBuilder.create(i -> i.group(

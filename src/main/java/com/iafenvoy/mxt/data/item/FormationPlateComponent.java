@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -27,7 +26,7 @@ import java.util.function.Consumer;
 /**
  * Selected formation definition for a portable formation controller.
  */
-@EventBusSubscriber(modid = MiXianTu.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public record FormationPlateComponent(Optional<Holder<Formation>> formation) implements TooltipProvider {
     public static final FormationPlateComponent EMPTY = new FormationPlateComponent(Optional.empty());
     public static final Codec<FormationPlateComponent> CODEC = RecordCodecBuilder.create(i -> i.group(

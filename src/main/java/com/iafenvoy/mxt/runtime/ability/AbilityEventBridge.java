@@ -15,7 +15,7 @@ import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Post;
 import com.iafenvoy.mxt.event.AbilityTriggerEvent.Pre;
-import com.iafenvoy.mxt.integration.CuriosIntegration;
+import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;

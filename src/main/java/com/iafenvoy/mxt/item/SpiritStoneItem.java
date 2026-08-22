@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
+import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -14,7 +15,13 @@ public class SpiritStoneItem extends Item implements SpiritItemAccess {
     }
 
     @Override
-    public int add(ItemStack stack, int capacity, int amount, boolean simulate) {
+    public int getCapacity(ItemStack stack) {
+        return ItemAuraService.capacity(stack);
+    }
+
+    @Override
+    public int add(ItemStack stack, int amount, boolean simulate) {
+        int capacity = this.getCapacity(stack);
         SpiritAccess.requireNonNegative(capacity);
         SpiritAccess.requireNonNegative(amount);
         if (stack.getItem() != this) return amount;
@@ -27,7 +34,8 @@ public class SpiritStoneItem extends Item implements SpiritItemAccess {
     }
 
     @Override
-    public int extract(ItemStack stack, int capacity, int amount, boolean simulate) {
+    public int extract(ItemStack stack, int amount, boolean simulate) {
+        int capacity = this.getCapacity(stack);
         SpiritAccess.requireNonNegative(capacity);
         SpiritAccess.requireNonNegative(amount);
         if (stack.getItem() != this) return amount;
