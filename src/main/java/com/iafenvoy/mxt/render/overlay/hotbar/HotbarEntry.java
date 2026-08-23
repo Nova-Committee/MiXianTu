@@ -20,6 +20,15 @@ public interface HotbarEntry {
         return 0xFF7E8799;
     }
 
+    /**
+     * Returns the remaining cooldown fraction, matching vanilla item cooldown
+     * rendering semantics. A value of {@code 0} means ready and {@code 1}
+     * means the cooldown has just started.
+     */
+    default float cooldown(Player player) {
+        return 0.0F;
+    }
+
     default void onPress(Player player) {
     }
 

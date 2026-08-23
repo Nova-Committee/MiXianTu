@@ -2,7 +2,6 @@ package com.iafenvoy.mxt;
 
 import com.iafenvoy.jupiter.ConfigManager;
 import com.iafenvoy.jupiter.ServerConfigManager.PermissionChecker;
-import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsEvents;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.registry.*;
@@ -61,7 +60,5 @@ public final class MiXianTu {
         MxtResourceBarRenderers.REGISTRY.register(bus);
         MxtResourceBarVisibilities.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
-
-        MxtKubeJsEvents.register();
     }
 }

@@ -31,9 +31,6 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     private static final EventHandler RESOURCE_CONSUME = EVENTS.server("resourceConsume", () -> ResourceConsumeKubeEvent.class);
     private static final EventHandler AURA_ZONE = EVENTS.server("auraZone", () -> AuraZoneKubeEvent.class);
 
-    private MxtKubeJsEventDispatcher() {
-    }
-
     @Override
     public void postAbility(AbilityUseEvent event) {
         EventResult result = ABILITY_USE.post(new AbilityUseKubeEvent(event));

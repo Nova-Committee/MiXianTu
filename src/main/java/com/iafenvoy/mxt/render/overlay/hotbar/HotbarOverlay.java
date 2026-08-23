@@ -48,14 +48,11 @@ public enum HotbarOverlay implements GuiLayer {
         int width = HotbarOverlayRenderer.width(entries.size());
         int x = minecraft.getWindow().getGuiScaledWidth() / 2 - width / 2;
         int y = minecraft.getWindow().getGuiScaledHeight() - 72;
-        HotbarOverlayRenderer.drawSlots(graphics, minecraft.font, entries, x, y, HotbarController::isEntryActive);
+        HotbarOverlayRenderer.drawSlots(graphics, minecraft.font, entries, x, y, HotbarController::isEntryActive, player);
 
         if (HotbarController.mode() == Mode.ABILITY) {
             List<ResolvedAbility> abilities = AbilityHotbarClient.all(player);
             long gameTime = player.level().getGameTime();
-            for (int index = 0; index < abilities.size(); index++)
-                drawCooldown(graphics, minecraft, player, abilities.get(index),
-                        x + index * (HotbarOverlayRenderer.SLOT_SIZE + HotbarOverlayRenderer.SLOT_GAP), y, gameTime);
             drawCastBar(graphics, minecraft, player, x, y - 10, abilities, gameTime);
         } else {
             List<? extends Reference<Resource>> resources = SpiritBurstClient.resources(player);
@@ -64,22 +61,6 @@ public enum HotbarOverlay implements GuiLayer {
                 Reference<Resource> selected = resources.get(Math.min(SpiritBurstClient.selectedIndex(), resources.size() - 1));
                 String value = String.format(Locale.ROOT, "%.1f", holder.get(selected));
                 graphics.text(minecraft.font, value, x, y - 10, 0xFFE0E5EF, false);
-            }
-        }
-    }
-
-    private static void drawCooldown(GuiGraphicsExtractor graphics, Minecraft minecraft, Player player,
-                                     ResolvedAbility ability, int x, int y, long gameTime) {
-        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        Optional<Holder<Ability>> bound = holder.sources().keySet().stream().filter(value -> value.value() == ability.definition()).findFirst();
-        if (bound.isPresent()) {
-            long cooldownUntil = holder.cooldowns().getOrDefault(bound.get(), -1L);
-            if (cooldownUntil > gameTime) {
-                long remaining = cooldownUntil - gameTime;
-                graphics.fill(x, y, x + HotbarOverlayRenderer.SLOT_SIZE, y + HotbarOverlayRenderer.SLOT_SIZE, 0x99000000);
-                graphics.text(minecraft.font, Long.toString(remaining),
-                        x + (HotbarOverlayRenderer.SLOT_SIZE - minecraft.font.width(Long.toString(remaining))) / 2,
-                        y + 7, 0xFFFFD36B, false);
             }
         }
     }

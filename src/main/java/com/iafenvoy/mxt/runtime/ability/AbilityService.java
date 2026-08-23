@@ -120,6 +120,7 @@ public final class AbilityService {
         if (!payment.committed()) return CommitResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         if (player != null) use.costsList().forEach(cost -> cost.consume(player));
         abilities.setCooldownUntil(use.ability(), Math.addExact(gameTime, use.cooldownTicks));
+        abilities.setComponentState(use.ability(), "cooldown_duration", AbilityComponentState.initial(use.cooldownTicks(), gameTime));
         if (use.consumeCharge) {
             abilities.setComponentState(use.ability(), "charges", AbilityComponentState.initial(Math.max(0.0D, use.chargeBefore - 1.0D), gameTime));
         }

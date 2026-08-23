@@ -22,8 +22,7 @@ public final class SpiritWispParticle extends SingleQuadParticle {
                                double velocityZ, SpiritWispParticleOptions options, TextureAtlasSprite sprite) {
         super(level, x, y, z, sprite);
         this.setParticleSpeed(velocityX, velocityY, velocityZ);
-        this.setColor((options.color() >> 16 & 0xFF) / 255.0F, (options.color() >> 8 & 0xFF) / 255.0F,
-                (options.color() & 0xFF) / 255.0F);
+        this.setColor((options.color() >> 16 & 0xFF) / 255.0F, (options.color() >> 8 & 0xFF) / 255.0F, (options.color() & 0xFF) / 255.0F);
         this.setAlpha(TRAIL_ALPHA);
         this.initialSize = options.size();
         this.quadSize = this.initialSize;

@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Font;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
 import java.util.function.IntPredicate;
@@ -21,11 +22,16 @@ public final class HotbarOverlayRenderer {
     }
 
     public static void drawSlots(GuiGraphicsExtractor graphics, Font font, List<? extends HotbarEntry> slots, int x, int y, int selected) {
-        drawSlots(graphics, font, slots, x, y, index -> index == selected);
+        drawSlots(graphics, font, slots, x, y, index -> index == selected, null);
     }
 
     public static void drawSlots(GuiGraphicsExtractor graphics, Font font, List<? extends HotbarEntry> slots,
                                  int x, int y, IntPredicate selected) {
+        drawSlots(graphics, font, slots, x, y, selected, null);
+    }
+
+    public static void drawSlots(GuiGraphicsExtractor graphics, Font font, List<? extends HotbarEntry> slots,
+                                 int x, int y, IntPredicate selected, Player player) {
         for (int index = 0; index < slots.size(); index++) {
             HotbarEntry slot = slots.get(index);
             int slotX = x + index * (SLOT_SIZE + SLOT_GAP);
@@ -39,6 +45,12 @@ public final class HotbarOverlayRenderer {
                 if (name.length() > 3) name = name.substring(0, 3);
                 graphics.text(font, name, slotX + (SLOT_SIZE - font.width(name)) / 2, y + 10, 0xFFE0E5EF, false);
             });
+            if (player != null) {
+                float cooldown = Math.max(0.0F, Math.min(1.0F, slot.cooldown(player)));
+                int height = (int) Math.ceil(cooldown * SLOT_SIZE);
+                if (height > 0)
+                    graphics.fill(slotX, y + SLOT_SIZE - height, slotX + SLOT_SIZE, y + SLOT_SIZE, 0xB0000000);
+            }
         }
     }
 }

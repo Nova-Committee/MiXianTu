@@ -95,6 +95,8 @@ flowchart LR
 
 ## 数据包与扩展
 
+完整文档已按 Docusaurus 结构拆分到 [docs](docs/index.md)，包括基本信息、游玩内容、数据包开发、KubeJS、Java API、AI Skill 和 FORMAT 规范。
+
 动态表文件路径统一为：
 
 ```text
@@ -125,6 +127,8 @@ ID、单个标签或二者混合的数组；完整字段和限制以 Codec 文�
 | [经济系统数据包格式](docs/经济系统数据包格式.md)    | 货币、兑换、找零与交易站数据。                                                           |
 | [KubeJS 物品示例](docs/kubejs物品示例.md) | 用 KubeJS 注册内容物品，再交给绑定表处理的示例。                                              |
 | [通用物品](docs/通用物品.md)              | 本体通用物品、组件和预留内容的清单。                                                        |
+
+推荐从 [Docusaurus 文档首页](docs/index.md) 开始；旧专题文件保留用于迁移和审计依据。
 
 ## 测试与开发
 

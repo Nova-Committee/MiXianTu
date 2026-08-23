@@ -99,19 +99,6 @@ public final class CuriosIntegration {
     }
 
     public enum Place {
-        BACK_LEFT(EquipmentSlot.CHEST),
-        BACK_RIGHT(EquipmentSlot.CHEST),
-        BELT_LEFT(EquipmentSlot.CHEST),
-        BELT_RIGHT(EquipmentSlot.CHEST);
-
-        private final EquipmentSlot slot;
-
-        Place(EquipmentSlot slot) {
-            this.slot = slot;
-        }
-
-        public EquipmentSlot slot() {
-            return this.slot;
-        }
+        BACK_LEFT, BACK_RIGHT, BELT_LEFT, BELT_RIGHT
     }
 }
