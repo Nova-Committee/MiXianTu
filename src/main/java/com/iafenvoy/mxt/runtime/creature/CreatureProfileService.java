@@ -39,7 +39,7 @@ public final class CreatureProfileService {
             return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
         })
                 || (!definition.preferredAuraElements().isEmpty() && aura.aura().entrySet().stream().noneMatch(element -> element.getValue().amount() > 0.0D
-                && RegistryCodecs.matches(definition.preferredAuraElements(), element.getKey()))))
+                && element.getKey().value().auraType().filter(type -> RegistryCodecs.matches(definition.preferredAuraElements(), type)).isPresent())))
             return false;
         final double intelligence;
         try {

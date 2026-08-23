@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -14,8 +14,8 @@ import net.minecraft.world.level.Level;
 
 import java.util.Map;
 
-public record AuraRangeBlockCondition(Map<Holder<Element>, AuraRequirement> aura) implements BlockCondition {
-    public static final MapCodec<AuraRangeBlockCondition> CODEC = CollectionCodecs.map(Element.CODEC, AuraRequirement.CODEC)
+public record AuraRangeBlockCondition(Map<Holder<Resource>, AuraRequirement> aura) implements BlockCondition {
+    public static final MapCodec<AuraRangeBlockCondition> CODEC = CollectionCodecs.map(Resource.CODEC, AuraRequirement.CODEC)
             .fieldOf("aura").xmap(AuraRangeBlockCondition::new, AuraRangeBlockCondition::aura);
 
     @Override

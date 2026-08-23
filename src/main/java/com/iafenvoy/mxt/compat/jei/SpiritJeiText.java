@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.compat.jei;
 
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -26,14 +26,14 @@ final class SpiritJeiText {
     private SpiritJeiText() {
     }
 
-    static List<Component> auraLines(Map<Holder<Element>, NumberProvider> aura, Font font, int maxWidth) {
+    static List<Component> auraLines(Map<Holder<Resource>, NumberProvider> aura, Font font, int maxWidth) {
         List<Component> lines = new ArrayList<>();
         if (aura.isEmpty()) {
             lines.add(Component.translatable("jei.mxt.aura_cost_none"));
             return lines;
         }
         boolean first = true;
-        for (Entry<Holder<Element>, NumberProvider> entry : aura.entrySet()) {
+        for (Entry<Holder<Resource>, NumberProvider> entry : aura.entrySet()) {
             lines.add(auraLine(entry, first, font, maxWidth));
             first = false;
             if (lines.size() == 3) break;
@@ -41,23 +41,21 @@ final class SpiritJeiText {
         return lines;
     }
 
-    private static MutableComponent auraLine(Entry<Holder<Element>, NumberProvider> entry, boolean first, Font font, int maxWidth) {
+    private static MutableComponent auraLine(Entry<Holder<Resource>, NumberProvider> entry, boolean first, Font font, int maxWidth) {
         String value = providerName(entry.getValue());
-        String name = elementName(entry.getKey());
+        String name = resourceName(entry.getKey());
         MutableComponent line = first ? Component.translatable("jei.mxt.aura_cost_label") : Component.empty();
-        line.append(Component.literal(name).withColor(readableTextColor(entry.getKey().value().color(), PANEL_BACKGROUND)));
+        int color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);
+        line.append(Component.literal(name).withColor(readableTextColor(color, PANEL_BACKGROUND)));
         line.append(Component.literal(" x" + value));
         if (font.width(line) <= maxWidth) return line;
         String shortened = trim(font, value, Math.max(12, maxWidth - font.width(name) - (first ? 22 : 8)));
         line = first ? Component.translatable("jei.mxt.aura_cost_label") : Component.empty();
-        line.append(Component.literal(name).withColor(readableTextColor(entry.getKey().value().color(), PANEL_BACKGROUND)));
+        line.append(Component.literal(name).withColor(readableTextColor(color, PANEL_BACKGROUND)));
         return line.append(Component.literal(" x" + shortened));
     }
 
-    private static String elementName(Holder<Element> holder) {
-        Element element = holder.value();
-        String key = element.translationKey();
-        if (key != null && !key.isBlank()) return Component.translatable(key).getString();
+    private static String resourceName(Holder<Resource> holder) {
         return HolderHelper.id(holder).getPath();
     }
 

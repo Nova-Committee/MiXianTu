@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render;
 
 import com.iafenvoy.mxt.data.aura.AuraValue;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.aura.AuraZone;
@@ -67,10 +67,13 @@ public final class AuraZoneRenderer {
         double green = 0.0D;
         double blue = 0.0D;
         boolean hasExplicitColor = false;
-        for (Entry<Holder<Element>, AuraValue> entry : zone.aura().entrySet()) {
+        for (Entry<Holder<Resource>, AuraValue> entry : zone.aura().entrySet()) {
             double amount = snapshot.pool(HolderHelper.id(entry.getKey())).amount();
             if (!Double.isFinite(amount) || amount <= 0.0D) continue;
-            int color = entry.getValue().color() == 0xFFFFFF ? entry.getKey().value().color() : entry.getValue().color();
+            int color = entry.getValue().color();
+            if (color == 0xFFFFFF) {
+                color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);
+            }
             hasExplicitColor |= color != 0xFFFFFF;
             red += ((color >>> 16) & 0xFF) * amount;
             green += ((color >>> 8) & 0xFF) * amount;

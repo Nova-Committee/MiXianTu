@@ -1,7 +1,7 @@
 {
-  "aura": { "mxt_test:fire": { "amount": 100.0, "max": { "type": "mxt:unlimited" }, "regen_per_tick": 0.0 } },
+  "aura": { "mxt_test:spirit_power": { "amount": 100.0, "max": { "type": "mxt:unlimited" }, "regen_per_tick": 0.0 } },
   "distribution": "realm_weighted",
-  "cultivate_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:fire": { "min": 0, "max": 100 } } },
+  "cultivate_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:spirit_power": { "min": 0, "max": 100 } } },
   "aura_kinds": ["mxt_test:aura_kind/fire"],
   "dimensions": ["minecraft:the_nether"],
   "fluctuation": { "enable": true, "cycle_type": "day", "amplitude": 0.15 },

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * Per-block aura contribution, accumulated and cached for each loaded chunk.
  */
-public record BlockAura(List<Either<Holder<Block>, TagKey<Block>>> blocks, Map<Holder<Element>, AuraValue> aura,
+public record BlockAura(List<Either<Holder<Block>, TagKey<Block>>> blocks, Map<Holder<Resource>, AuraValue> aura,
                         List<Identifier> auraKinds) {
     public static final Codec<BlockAura> CODEC = RecordCodecBuilder.<BlockAura>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.BLOCK).fieldOf("blocks").forGetter(BlockAura::blocks),

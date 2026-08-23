@@ -14,7 +14,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Map;
 
 /**
- * Server-authoritative aura source and independent elemental pools for the local player.
+ * Server-authoritative aura source and independent resource pools for the local player.
  */
 public record AuraStateS2CPayload(Identifier source, Map<Identifier, AuraPool> aura) implements CustomPacketPayload {
     public static final Type<AuraStateS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "aura_state_s2c"));

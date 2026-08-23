@@ -14,7 +14,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.LevelChunk;
 
@@ -34,7 +34,7 @@ public final class BlockAuraService {
     public static void rebuild(ServerLevel level, LevelChunk chunk) {
         List<BlockAura> active = MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.BLOCK_AURA)
                 .map(Reference::value).toList();
-        Map<Holder<Element>, AuraValue> aura = new LinkedHashMap<>();
+        Map<Holder<Resource>, AuraValue> aura = new LinkedHashMap<>();
         Set<Identifier> auraKinds = new LinkedHashSet<>();
         MutableBlockPos pos = new MutableBlockPos();
         int minX = chunk.getPos().getMinBlockX();
@@ -47,7 +47,7 @@ public final class BlockAuraService {
                     for (BlockAura definition : active) {
                         if (!RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, Registries.BLOCK, id))
                             continue;
-                        definition.aura().forEach((element, value) -> aura.merge(element, value, BlockAuraService::merge));
+                        definition.aura().forEach((resource, value) -> aura.merge(resource, value, BlockAuraService::merge));
                         auraKinds.addAll(definition.auraKinds());
                     }
                 }

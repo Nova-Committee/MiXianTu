@@ -1,5 +1,5 @@
 {
-  "aura": { "mxt_test:fire": { "amount": 200.0, "max": 200.0, "regen_per_tick": 0.25 } },
+  "aura": { "mxt_test:spirit_power": { "amount": 200.0, "max": 200.0, "regen_per_tick": 0.25 } },
   "aura_kinds": ["mxt_test:aura_kind/fire"],
   "rules": { "alchemy_env_bonus": true, "natural_spawn_herb": true },
   "element_fit_bonus": 0.4,

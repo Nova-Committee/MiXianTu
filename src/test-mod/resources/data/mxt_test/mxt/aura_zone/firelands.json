@@ -1,10 +1,10 @@
 {
   "aura": {
-    "mxt_test:fire": { "amount": 120.0, "max": { "type": "mxt:initial_multiplier", "multiplier": 3.0 }, "regen_per_tick": 0.0, "color": "#ff5522" },
-    "mxt_test:water": { "amount": 20.0, "max": 20.0, "regen_per_tick": 0.0, "color": "#3388ff" }
+    "mxt_test:spirit_power": { "amount": 120.0, "max": { "type": "mxt:initial_multiplier", "multiplier": 3.0 }, "regen_per_tick": 0.0, "color": "#ff5522" },
+    "mxt_test:water_power": { "amount": 20.0, "max": 20.0, "regen_per_tick": 0.0, "color": "#3388ff" }
   },
   "distribution": "random",
-  "cultivate_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:fire": { "min": 0, "max": 100 } } },
+  "cultivate_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:spirit_power": { "min": 0, "max": 100 } } },
   "aura_kinds": ["mxt_test:aura_kind/fire"],
   "biomes": "#minecraft:is_overworld",
   "fluctuation": {

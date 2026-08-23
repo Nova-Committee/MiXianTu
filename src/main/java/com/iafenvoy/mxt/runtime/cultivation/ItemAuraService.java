@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.attachment.FloatHoldingItemComponent;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
-import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -54,16 +53,16 @@ public final class ItemAuraService {
     }
 
     /**
-     * Returns the single elemental aura type accepted by this fuel or chargeable item.
+     * Returns the single resource accepted by this fuel or chargeable item.
      */
-    public static Optional<Holder<Element>> type(Provider access, ItemStack stack) {
+    public static Optional<Holder<Resource>> type(Provider access, ItemStack stack) {
         return find(access, stack).map(holder -> holder.value().type());
     }
 
     /**
-     * Resolves the item's elemental aura type against the active server registry access.
+     * Resolves the item's resource type against the active server registry access.
      */
-    public static Optional<Holder<Element>> type(ItemStack stack) {
+    public static Optional<Holder<Resource>> type(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server == null ? Optional.empty() : type(server.registryAccess(), stack);
     }

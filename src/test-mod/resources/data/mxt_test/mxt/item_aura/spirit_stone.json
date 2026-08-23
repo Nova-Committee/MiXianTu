@@ -1,6 +1,6 @@
 {
   "items": "mxt:spirit_stone",
-  "type": "mxt_test:fire",
+  "type": "mxt_test:spirit_power",
   "aura": 100,
   "consume_speed": 1,
   "release_speed": 2,

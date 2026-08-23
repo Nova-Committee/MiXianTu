@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
-import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -160,7 +159,7 @@ public final class MxtTestMod {
                         Identifier.parse("mxt_test:spirit_stone"))
                 .orElseThrow(() -> new IllegalStateException("Item aura test definition was not loaded"));
         if (!same(itemAura.aura().evaluate(FormulaContext.EMPTY), 100.0D)
-                || !HolderHelper.id(itemAura.type()).equals(Identifier.parse("mxt_test:fire"))
+                || !HolderHelper.id(itemAura.type()).equals(Identifier.parse("mxt_test:spirit_power"))
                 || !same(itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(itemAura.releaseSpeed().evaluate(FormulaContext.EMPTY), 2.0D)
                 || itemAura.resultStack().isPresent()
@@ -169,7 +168,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Item aura did not resolve its fuel item and values");
         }
         SpiritItemAccess stoneAccess = (SpiritItemAccess) spiritStone.getItem();
-        Holder<Element> commonAura = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt:common"));
+        Holder<Resource> commonAura = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt:common"));
         spiritStone.set(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(101));
         if (stoneAccess.getCapacity(spiritStone) != 100
                 || stoneAccess.add(spiritStone, commonAura, 0, false) != 0
@@ -347,7 +346,7 @@ public final class MxtTestMod {
         ResourceHolderComponent absorbingResources = new ResourceHolderComponent();
         absorbingResources.set(spiritPower, 5.0D);
         AuraChunkComponent absorbingAura = new AuraChunkComponent();
-        Holder<Element> fire = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"));
+        Holder<Resource> fire = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
         absorbingAura.initializeAuras(Map.of(fire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of(Identifier.parse("mxt_test:aura_kind/fire")));
         if (!CultivationActionService.start(absorbingSpirit, meditationId, meditation, 0L, () -> true).started()) {
             throw new IllegalStateException("Cultivation restoration test action did not start");
@@ -432,7 +431,7 @@ public final class MxtTestMod {
         if (!activation.active() || !same(formationResources.get(spiritPower), 10.0D)
                 || !FormationService.maintain(activation.instance(), formation, formationResources, FormulaContext.EMPTY).maintained()
                 || !same(formationResources.get(spiritPower), 9.0D)
-                || !same(formation.maxBonus().get(requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"))).evaluate(FormulaContext.EMPTY), 50.0D)) {
+                || !same(formation.maxBonus().get(requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))).evaluate(FormulaContext.EMPTY), 50.0D)) {
             throw new IllegalStateException("Formation activation and upkeep did not deduct their declared resource bar");
         }
     }
@@ -491,7 +490,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Realm breakthrough particle configuration was not decoded");
         }
         if (visuals.aura().size() != 2 || visuals.aura().keySet().stream()
-                .noneMatch(element -> HolderHelper.id(element).equals(Identifier.parse("mxt_test:fire")))) {
+                .noneMatch(resource -> HolderHelper.id(resource).equals(Identifier.parse("mxt_test:spirit_power")))) {
             throw new IllegalStateException("Aura-zone element values were not decoded as element holders");
         }
         AuraZone overworld = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:overworld"))
@@ -502,7 +501,7 @@ public final class MxtTestMod {
                 .orElseThrow(() -> new IllegalStateException("Unlimited aura maximum test definition was not loaded"));
         AuraZone end = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:end_suppressed"))
                 .orElseThrow(() -> new IllegalStateException("Default aura maximum test definition was not loaded"));
-        Holder<Element> fire = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"));
+        Holder<Resource> fire = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
         if (!(overworld.aura().get(fire).max() instanceof Fixed(double value1)) || !same(value1, 40.0D)
                 || !(firelands.aura().get(fire).max() instanceof InitialMultiplier(
                 double multiplier1
@@ -532,7 +531,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Shared aura distribution did not honor the configured allocation strategies");
         }
         AuraChunkComponent capacity = new AuraChunkComponent();
-        Holder<Element> capacityFire = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"));
+        Holder<Resource> capacityFire = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
         capacity.initializeAuras(Map.of(capacityFire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of());
         capacity.setBlockContribution(Map.of(capacityFire, new AuraValue(5.0D, new Fixed(5.0D), 1.0D, 0xFFFFFF)), List.of());
         capacity.regenerateAuras(20L);

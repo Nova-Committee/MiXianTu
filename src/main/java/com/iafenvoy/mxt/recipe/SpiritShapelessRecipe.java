@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.recipe;
 
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -28,11 +28,11 @@ import java.util.Map;
  * A shapeless recipe whose completion also consumes stored spirit power.
  */
 public record SpiritShapelessRecipe(List<Ingredient> ingredients, ItemStackTemplate result,
-                                    Map<Holder<Element>, NumberProvider> aura) implements SpiritRecipe {
+                                    Map<Holder<Resource>, NumberProvider> aura) implements SpiritRecipe {
     public static final MapCodec<SpiritShapelessRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ingredient.CODEC.listOf(1, 9).fieldOf("ingredients").forGetter(SpiritShapelessRecipe::ingredients),
             ItemStackTemplate.CODEC.fieldOf("result").forGetter(SpiritShapelessRecipe::result),
-            CollectionCodecs.map(Element.CODEC, NumberProvider.CODEC).fieldOf("aura").forGetter(SpiritShapelessRecipe::aura)
+            CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).fieldOf("aura").forGetter(SpiritShapelessRecipe::aura)
     ).apply(i, SpiritShapelessRecipe::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, SpiritShapelessRecipe> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 

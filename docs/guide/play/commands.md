@@ -12,7 +12,7 @@ title: 命令
 | `/mxt resource <id>` | 查询资源值。 |
 | `/mxt resource <id> set <value>` | 设置资源值。 |
 | `/mxt cultivate status` | 查看修炼状态。 |
-| `/mxt aura query [type]` | 查询当前位置灵气；不填类型时显示全部元素。 |
+| `/mxt aura query [type]` | 查询当前位置灵气；`type` 是资源 ID，不填时显示全部资源，并附带资源的元素标记。 |
 | `/mxt aura vein` | 查询当前位置灵石矿脉等级。 |
 | `/mxt ability cast <id>` | 强制施放技能。 |
 | `/mxt breakthrough <resource>` | 尝试突破指定资源对应的境界。 |

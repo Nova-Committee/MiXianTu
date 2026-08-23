@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.screen.menu;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
@@ -109,9 +109,9 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         return new RecipeMatch(recipe, this.costs(recipe.aura()));
     }
 
-    private Map<Holder<Element>, Integer> costs(Map<Holder<Element>, NumberProvider> aura) {
-        Map<Holder<Element>, Integer> costs = new LinkedHashMap<>();
-        for (Entry<Holder<Element>, NumberProvider> entry : aura.entrySet()) {
+    private Map<Holder<Resource>, Integer> costs(Map<Holder<Resource>, NumberProvider> aura) {
+        Map<Holder<Resource>, Integer> costs = new LinkedHashMap<>();
+        for (Entry<Holder<Resource>, NumberProvider> entry : aura.entrySet()) {
             double value = entry.getValue().evaluate(FormulaContext.of(this.player));
             if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
             costs.put(entry.getKey(), (int) Math.ceil(value));
@@ -164,6 +164,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         if (this.table != null) this.table.clearAura();
     }
 
-    private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Element>, Integer> costs) {
+    private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Resource>, Integer> costs) {
     }
 }

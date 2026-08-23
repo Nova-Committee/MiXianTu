@@ -7,7 +7,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
- * Formula-backed lower and upper bounds for one elemental aura pool.
+ * Formula-backed lower and upper bounds for one resource pool.
  */
 public record AuraRequirement(NumberProvider min, NumberProvider max) {
     public static final Codec<AuraRequirement> CODEC = RecordCodecBuilder.create(i -> i.group(

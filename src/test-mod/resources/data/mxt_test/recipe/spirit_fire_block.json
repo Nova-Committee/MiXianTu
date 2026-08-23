@@ -11,6 +11,6 @@
     "id": "minecraft:magma_block"
   },
   "aura": {
-    "mxt_test:fire": 20
+    "mxt_test:spirit_power": 20
   }
 }

@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.mojang.datafixers.util.Either;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -31,7 +31,7 @@ import java.util.Optional;
 /**
  * Immutable datapack template for one aura environment.
  */
-public record AuraZone(Map<Holder<Element>, AuraValue> aura,
+public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
                        List<Identifier> auraKinds,
                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
@@ -78,11 +78,11 @@ public record AuraZone(Map<Holder<Element>, AuraValue> aura,
                 visual.elementConflictPenalty, visual.noise, visual.particle, visual.clientRender, visual.clientHud);
     }
 
-    private record Core(Map<Holder<Element>, AuraValue> aura,
+    private record Core(Map<Holder<Resource>, AuraValue> aura,
                         List<Identifier> auraKinds, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                         List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                         EntityCondition cultivateCondition, Distribution distribution) {
-        private static Core from(Map<Holder<Element>, AuraValue> aura,
+        private static Core from(Map<Holder<Resource>, AuraValue> aura,
                                  List<Identifier> auraKinds, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                                  List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                                  EntityCondition cultivateCondition, Distribution distribution) {

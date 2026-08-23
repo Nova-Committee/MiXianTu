@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.attachment.SectComponent;
 import com.iafenvoy.mxt.attachment.SectTerritoryComponent;
 import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.data.Sect;
-import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -181,7 +180,7 @@ public final class MxtCommand {
         }
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
         if (type != null) {
-            Reference<Element> holder = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, type).orElse(null);
+            Reference<Resource> holder = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, type).orElse(null);
             if (holder == null) {
                 source.sendFailure(Component.translatable("command.mxt.aura.unknown_type", type.toString()));
                 return 0;
@@ -194,7 +193,7 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static Component auraReport(AuraResult aura, Map<? extends Holder<Element>, AuraPool> pools) {
+    private static Component auraReport(AuraResult aura, Map<? extends Holder<Resource>, AuraPool> pools) {
         MutableComponent report = Component.translatable("command.mxt.aura.query.header").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", aura.source().toString(), Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.kinds", aura.auraKinds().isEmpty() ? Component.translatable("command.mxt.none") : String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList())));
@@ -204,14 +203,14 @@ public final class MxtCommand {
             report.append(Component.literal("\n  ")).append(Component.translatable("command.mxt.aura.query.empty").withStyle(ChatFormatting.DARK_GRAY));
             return report;
         }
-        pools.forEach((element, pool) -> report.append(Component.literal("\n  ")).append(Component.translatable("command.mxt.aura.query.element",
-                elementName(element), auraNumber(pool.amount()), auraNumber(pool.maximum()), TooltipText.signed(pool.regenPerTick()))));
+        pools.forEach((resource, pool) -> report.append(Component.literal("\n  ")).append(Component.translatable("command.mxt.aura.query.element",
+                resourceName(resource), auraNumber(pool.amount()), auraNumber(pool.maximum()), TooltipText.signed(pool.regenPerTick()))));
         return report;
     }
 
-    private static Component elementName(Holder<Element> element) {
-        String translationKey = element.value().translationKey();
-        return translationKey.isBlank() ? Component.literal(HolderHelper.id(element).toString()) : Component.translatable(translationKey);
+    private static Component resourceName(Holder<Resource> resource) {
+        MutableComponent base = Component.literal(HolderHelper.id(resource).toString());
+        return resource.value().auraType().map(type -> base.copy().append(" (").append(Component.translatable(type.value().translationKey())).append(")")).orElse(base);
     }
 
     private static String auraNumber(double value) {

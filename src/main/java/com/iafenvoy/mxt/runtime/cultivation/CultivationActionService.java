@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.AuraChunkComponent;
@@ -122,7 +122,7 @@ public final class CultivationActionService {
             return Result.waitingResult();
         }
         double baseGain = definition.absorbAmount().evaluate(context) * affinity;
-        Map<Holder<Element>, Double> auraCosts = evaluateAuraCosts(definition, context);
+        Map<Holder<Resource>, Double> auraCosts = evaluateAuraCosts(definition, context);
         if (auraCosts == null) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(baseGain) || baseGain < 0.0D)
@@ -177,7 +177,7 @@ public final class CultivationActionService {
             return Result.waitingResult();
         }
         double gain = definition.absorbAmount().evaluate(context) * affinity;
-        Map<Holder<Element>, Double> auraCosts = evaluateAuraCosts(definition, context);
+        Map<Holder<Resource>, Double> auraCosts = evaluateAuraCosts(definition, context);
         if (auraCosts == null) return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(gain) || gain < 0.0D)
@@ -242,10 +242,10 @@ public final class CultivationActionService {
         return amounts;
     }
 
-    private static Map<Holder<Element>, Double> evaluateAuraCosts(CultivateAction definition,
+    private static Map<Holder<Resource>, Double> evaluateAuraCosts(CultivateAction definition,
                                                                   FormulaContext context) {
-        Map<Holder<Element>, Double> values = new LinkedHashMap<>();
-        for (Entry<Holder<Element>, NumberProvider> entry : definition.auraCosts().entrySet()) {
+        Map<Holder<Resource>, Double> values = new LinkedHashMap<>();
+        for (Entry<Holder<Resource>, NumberProvider> entry : definition.auraCosts().entrySet()) {
             double value = entry.getValue().evaluate(context);
             if (!Double.isFinite(value) || value < 0.0D) return null;
             if (value > 0.0D) values.put(entry.getKey(), value);
@@ -253,13 +253,13 @@ public final class CultivationActionService {
         return values;
     }
 
-    private static boolean hasAura(AuraChunkComponent aura, Map<Holder<Element>, Double> costs) {
+    private static boolean hasAura(AuraChunkComponent aura, Map<Holder<Resource>, Double> costs) {
         return costs.entrySet().stream().allMatch(entry -> aura.auras().getOrDefault(entry.getKey(), new AuraPool(0.0D, 0.0D, 0.0D)).amount() >= entry.getValue());
     }
 
-    private static Map<Holder<Element>, Double> scaleAuraCosts(Map<Holder<Element>, Double> values,
+    private static Map<Holder<Resource>, Double> scaleAuraCosts(Map<Holder<Resource>, Double> values,
                                                                double multiplier) {
-        Map<Holder<Element>, Double> result = new LinkedHashMap<>();
+        Map<Holder<Resource>, Double> result = new LinkedHashMap<>();
         values.forEach((element, amount) -> result.put(element, amount * multiplier));
         return result;
     }
@@ -267,8 +267,8 @@ public final class CultivationActionService {
     /**
      * A multi-element cultivation tick proceeds at the limiting element's allocated ratio.
      */
-    private static double allocationFactor(Map<Holder<Element>, Double> requested,
-                                           Map<Holder<Element>, Double> allocated) {
+    private static double allocationFactor(Map<Holder<Resource>, Double> requested,
+                                           Map<Holder<Resource>, Double> allocated) {
         return requested.entrySet().stream()
                 .filter(entry -> entry.getValue() > 0.0D)
                 .mapToDouble(entry -> Math.clamp(allocated.getOrDefault(entry.getKey(), 0.0D) / entry.getValue(), 0.0D, 1.0D))

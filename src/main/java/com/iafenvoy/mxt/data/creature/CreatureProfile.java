@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.creature;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
@@ -31,7 +32,7 @@ public record CreatureProfile(Optional<Holder<RealmStage>> realmStage, NumberPro
                               Optional<Identifier> lootTable, List<Identifier> contractTags,
                               List<Either<Holder<EntityType<?>>, TagKey<EntityType<?>>>> entityTypeTags,
                               List<Either<Holder<Element>, TagKey<Element>>> preferredAuraElements,
-                              Map<Holder<Element>, NumberProvider> minimumAura) {
+                              Map<Holder<Resource>, NumberProvider> minimumAura) {
     public static final Codec<CreatureProfile> CODEC = RecordCodecBuilder.create(i -> i.group(
             RealmStage.CODEC.optionalFieldOf("realm_stage").forGetter(CreatureProfile::realmStage),
             NumberProvider.CODEC.optionalFieldOf("intelligence", new Constant(0.0D)).forGetter(CreatureProfile::intelligence),
@@ -41,6 +42,6 @@ public record CreatureProfile(Optional<Holder<RealmStage>> realmStage, NumberPro
             Identifier.CODEC.listOf().optionalFieldOf("contract_tags", List.of()).forGetter(CreatureProfile::contractTags),
             RegistryCodecs.holderOrTagList(Registries.ENTITY_TYPE).optionalFieldOf("entity_type_tags", List.of()).forGetter(CreatureProfile::entityTypeTags),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("preferred_aura_elements", List.of()).forGetter(CreatureProfile::preferredAuraElements),
-            CollectionCodecs.map(Element.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(CreatureProfile::minimumAura)
+            CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(CreatureProfile::minimumAura)
     ).apply(i, CreatureProfile::new));
 }

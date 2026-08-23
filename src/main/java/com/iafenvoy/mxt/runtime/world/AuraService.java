@@ -14,7 +14,7 @@ import com.iafenvoy.mxt.data.aura.AuraZone.Noise;
 import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
@@ -59,7 +59,7 @@ public final class AuraService {
                 && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(lower, level, pos), formation.id())).isCanceled()) {
             resolved = formation;
         }
-        Map<Holder<Element>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
+        Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
         if (pools.isEmpty()) pools = pools(resolved.definition(), pos, level.getGameTime());
         applyMaximumBonus(pools, resolved.maxBonus());
         return new AuraResult(pools, resolved.definition().auraKinds(),
@@ -74,24 +74,24 @@ public final class AuraService {
     }
 
     /**
-     * Consumes each requested elemental pool atomically.
+     * Consumes each requested resource pool atomically.
      */
-    public static boolean consume(Level level, BlockPos pos, Map<Holder<Element>, Double> costs) {
+    public static boolean consume(Level level, BlockPos pos, Map<Holder<Resource>, Double> costs) {
         if (costs.values().stream().anyMatch(value -> !Double.isFinite(value) || value < 0.0D)) return false;
         return level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).consume(costs);
     }
 
     /**
-     * Applies independent elemental deltas. Missing elements are never implicitly created.
+     * Applies independent resource deltas. Missing resources are never implicitly created.
      */
-    public static void change(Level level, BlockPos pos, Map<Holder<Element>, Double> amounts) {
+    public static void change(Level level, BlockPos pos, Map<Holder<Resource>, Double> amounts) {
         if (amounts.values().stream().anyMatch(value -> !Double.isFinite(value))) return;
         level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).change(amounts);
     }
 
     public static void initialize(AuraChunkComponent chunk, Resolved resolved, BlockPos pos) {
         AuraZone zone = resolved.definition();
-        Map<Holder<Element>, AuraPool> pools = pools(zone, pos, 0L);
+        Map<Holder<Resource>, AuraPool> pools = pools(zone, pos, 0L);
         chunk.initializeAuras(pools, zone.auraKinds());
         chunk.setTemplate(resolved.holder());
         chunk.setInitialized(true);
@@ -167,17 +167,17 @@ public final class AuraService {
         return new Resolved(Optional.of(holder), holder.value(), kind, Map.of());
     }
 
-    private static Map<Holder<Element>, Double> evaluateMaximumBonus(Formation formation, FormulaContext context) {
-        Map<Holder<Element>, Double> values = new LinkedHashMap<>();
-        formation.maxBonus().forEach((element, provider) -> {
+    private static Map<Holder<Resource>, Double> evaluateMaximumBonus(Formation formation, FormulaContext context) {
+        Map<Holder<Resource>, Double> values = new LinkedHashMap<>();
+        formation.maxBonus().forEach((resource, provider) -> {
             double value = provider.evaluate(context);
-            if (Double.isFinite(value) && value > 0.0D) values.put(element, value);
+            if (Double.isFinite(value) && value > 0.0D) values.put(resource, value);
         });
         return values;
     }
 
-    private static void applyMaximumBonus(Map<Holder<Element>, AuraPool> pools, Map<Holder<Element>, Double> bonuses) {
-        bonuses.forEach((element, bonus) -> pools.computeIfPresent(element, (ignored, pool) ->
+    private static void applyMaximumBonus(Map<Holder<Resource>, AuraPool> pools, Map<Holder<Resource>, Double> bonuses) {
+        bonuses.forEach((resource, bonus) -> pools.computeIfPresent(resource, (ignored, pool) ->
                 pool.maximum() == Double.POSITIVE_INFINITY ? pool : pool.withMaximum(pool.maximum() + bonus)));
     }
 
@@ -198,12 +198,12 @@ public final class AuraService {
         return lerp(lerp(a, b, u), lerp(c, d, u), v) * noise.amplitude();
     }
 
-    private static Map<Holder<Element>, AuraPool> pools(AuraZone zone, BlockPos pos, long gameTime) {
-        Map<Holder<Element>, AuraPool> pools = new LinkedHashMap<>();
+    private static Map<Holder<Resource>, AuraPool> pools(AuraZone zone, BlockPos pos, long gameTime) {
+        Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>();
         double fluctuation = factor(zone, gameTime);
-        zone.aura().forEach((element, value) -> {
+        zone.aura().forEach((resource, value) -> {
             double initial = Math.max(0.0D, (value.amount() + perlin(pos.getX(), pos.getZ(), zone.noise())) / 10.0D - 5.0D);
-            pools.put(element, new AuraPool(initial * fluctuation, value.max().resolve(initial), value.regenPerTick()));
+            pools.put(resource, new AuraPool(initial * fluctuation, value.max().resolve(initial), value.regenPerTick()));
         });
         return pools;
     }
@@ -227,7 +227,7 @@ public final class AuraService {
     }
 
     public record Resolved(Optional<Holder<AuraZone>> holder, AuraZone definition, SourceKind kind,
-                           Map<Holder<Element>, Double> maxBonus) {
+                           Map<Holder<Resource>, Double> maxBonus) {
         public Identifier id() {
             return this.holder.map(HolderHelper::id).orElse(EMPTY);
         }

@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.spirit;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -49,7 +49,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         super(type, level);
     }
 
-    public SpiritBurstEntity(Level level, Player owner, Holder<Element> auraType, int amount, int particleColor) {
+    public SpiritBurstEntity(Level level, Player owner, Holder<Resource> auraType, int amount, int particleColor) {
         this(MxtEntityTypes.SPIRIT_BURST.get(), level);
         this.setOwner(owner);
         this.setAuraType(auraType);
@@ -136,17 +136,17 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         this.getEntityData().set(PARTICLE_COLOR, particleColor);
     }
 
-    public void setAuraType(Holder<Element> type) {
+    public void setAuraType(Holder<Resource> type) {
         Identifier id = type.unwrapKey().map(ResourceKey::identifier)
                 .orElseThrow(() -> new IllegalArgumentException("Spirit burst aura type must be a registry holder"));
         this.getEntityData().set(AURA_TYPE, id.toString());
     }
 
-    private Optional<Reference<Element>> auraType() {
+    private Optional<Reference<Resource>> auraType() {
         Identifier id = Identifier.tryParse(this.getEntityData().get(AURA_TYPE));
         if (id == null) return Optional.empty();
-        return this.level().registryAccess().lookupOrThrow(MxtResourceKeys.ELEMENT)
-                .get(ResourceKey.create(MxtResourceKeys.ELEMENT, id));
+        return this.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE)
+                .get(ResourceKey.create(MxtResourceKeys.RESOURCE, id));
     }
 
     private void spawnTrailParticles() {

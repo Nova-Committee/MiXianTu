@@ -101,7 +101,7 @@ public final class SpiritBurstService {
         if (!ResourceService.initialize(holder, resource, context).valid() || holder.get(resource) < amount)
             return false;
         if (!ResourceService.change(holder, resource, -amount, context).valid()) return false;
-        player.level().addFreshEntity(new SpiritBurstEntity(player.level(), player, definition.auraType().get(), amount, definition.particleColor()));
+        player.level().addFreshEntity(new SpiritBurstEntity(player.level(), player, resource, amount, definition.particleColor()));
         return true;
     }
 

@@ -1,0 +1,7 @@
+{
+  "default_value": 0,
+  "min": 0,
+  "max": 100,
+  "regen": 0,
+  "aura_type": "mxt_test:water"
+}

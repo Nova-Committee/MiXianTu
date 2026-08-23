@@ -5,7 +5,7 @@ title: Java 公开 API
 | API | 作用 |
 | --- | --- |
 | `MxtDatapackRegistries` | 查询原版动态注册表、Holder、禁用标签和客户端同步数据。 |
-| `AuraService` | 查询坐标最终灵气、环境来源、分元素灵气和区域覆写。 |
+| `AuraService` | 查询坐标最终灵气、环境来源、按资源分离的灵气池和区域覆写；资源可附带元素标记。 |
 | `ResourceService` | 初始化、读取、修改资源并进行最大值和恢复计算。 |
 | `CultivationService` | 修炼、资源转换、境界突破和境界设置。 |
 | `AbilityService` | 服务端执行技能、Cost、冷却、取消和行为。 |

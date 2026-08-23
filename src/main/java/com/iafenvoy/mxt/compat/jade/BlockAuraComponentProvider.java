@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.compat.jade;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.BlockAura;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.TooltipText;
@@ -46,21 +46,21 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
     }
 
     private static final class Totals {
-        private final Map<Holder<Element>, double[]> elements = new LinkedHashMap<>();
+        private final Map<Holder<Resource>, double[]> resources = new LinkedHashMap<>();
 
         private void add(BlockAura definition) {
-            definition.aura().forEach((element, value) -> {
-                double[] totals = this.elements.computeIfAbsent(element, ignored -> new double[2]);
+            definition.aura().forEach((resource, value) -> {
+                double[] totals = this.resources.computeIfAbsent(resource, ignored -> new double[2]);
                 totals[0] += value.amount();
                 totals[1] += value.regenPerTick();
             });
         }
 
         private void appendTo(ITooltip tooltip) {
-            this.elements.entrySet().stream()
+            this.resources.entrySet().stream()
                     .filter(entry -> entry.getValue()[0] != 0.0D || entry.getValue()[1] != 0.0D)
                     .forEach(entry -> tooltip.add(Component.translatable("jade.mxt.block_aura.element",
-                            Component.translatable(entry.getKey().value().translationKey()),
+                            Component.literal(com.iafenvoy.mxt.util.HolderHelper.id(entry.getKey()).toString()),
                             TooltipText.signed(entry.getValue()[0])), ID));
         }
     }

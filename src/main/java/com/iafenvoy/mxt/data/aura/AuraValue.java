@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
@@ -12,7 +12,7 @@ import net.minecraft.core.Holder;
 import java.util.Map;
 
 /**
- * One elemental aura entry in a datapack definition. {@code amount} is the
+ * One resource aura entry in a datapack definition. {@code amount} is the
  * zone's initial stock or a block's capacity contribution, depending on its owner.
  * The color is used by environment rendering; particles and HUD bars keep their own colors.
  */
@@ -24,7 +24,7 @@ public record AuraValue(double amount, AuraMaximum max, double regenPerTick, int
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraValue::regenPerTick),
             MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("color", 0xFFFFFF).forGetter(AuraValue::color)
     ).apply(i, AuraValue::new)).validate(AuraValue::validate);
-    public static final Codec<Map<Holder<Element>, AuraValue>> MAP_CODEC = CollectionCodecs.map(Element.CODEC, CODEC);
+    public static final Codec<Map<Holder<Resource>, AuraValue>> MAP_CODEC = CollectionCodecs.map(Resource.CODEC, CODEC);
 
     private static DataResult<AuraValue> validate(AuraValue value) {
         return Double.isFinite(value.amount) && value.amount >= 0.0D && Double.isFinite(value.regenPerTick)

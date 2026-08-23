@@ -15,6 +15,6 @@
     "id": "minecraft:iron_ingot"
   },
   "aura": {
-    "mxt_test:fire": 45
+    "mxt_test:spirit_power": 45
   }
 }

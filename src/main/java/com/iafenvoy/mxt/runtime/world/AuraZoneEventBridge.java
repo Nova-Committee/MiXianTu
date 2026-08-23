@@ -56,7 +56,7 @@ public final class AuraZoneEventBridge {
             if (level.getGameTime() % 20L == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
                 Map<Identifier, AuraPool> values = new LinkedHashMap<>();
-                aura.aura().forEach((element, pool) -> values.put(HolderHelper.id(element), pool));
+                aura.aura().forEach((resource, pool) -> values.put(HolderHelper.id(resource), pool));
                 PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), values));
             }
             zones.getOptional(aura.source()).flatMap(AuraZone::particle)

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.item.block.entity;
 
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
 import net.minecraft.core.BlockPos;
@@ -44,17 +44,17 @@ public final class DisplayStandBlockEntity extends BlockEntity implements Spirit
     }
 
     @Override
-    public int add(Holder<Element> type, int amount, boolean simulate) {
+    public int add(Holder<Resource> resource, int amount, boolean simulate) {
         SpiritAccess.requireNonNegative(amount);
         if (!(this.displayedItem.getItem() instanceof SpiritItemAccess access)) return amount;
         if (this.level == null) return amount;
-        int remaining = access.add(this.displayedItem, type, amount, simulate);
+        int remaining = access.add(this.displayedItem, resource, amount, simulate);
         if (!simulate && remaining != amount) this.markChangedAndSync();
         return remaining;
     }
 
     @Override
-    public int extract(Holder<Element> type, int amount, boolean simulate) {
+    public int extract(Holder<Resource> resource, int amount, boolean simulate) {
         return SpiritAccess.requireNonNegative(amount);
     }
 

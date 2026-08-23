@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import net.minecraft.core.Holder;
 import net.minecraft.world.item.ItemStack;
 
@@ -15,12 +15,12 @@ public interface SpiritItemAccess {
     int getCapacity(ItemStack stack);
 
     /**
-     * Attempts to add one elemental aura type to this stack.
+     * Attempts to add one resource to this stack.
      */
-    int add(ItemStack stack, Holder<Element> type, int amount, boolean simulate);
+    int add(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate);
 
     /**
-     * Attempts to extract one elemental aura type from this stack.
+     * Attempts to extract one resource from this stack.
      */
-    int extract(ItemStack stack, Holder<Element> type, int amount, boolean simulate);
+    int extract(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate);
 }

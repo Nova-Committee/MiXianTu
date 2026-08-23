@@ -8,7 +8,7 @@
     "id": "minecraft:sea_lantern"
   },
   "aura": {
-    "mxt_test:fire": 8,
-    "mxt_test:water": 8
+    "mxt_test:spirit_power": 8,
+    "mxt_test:water_power": 8
   }
 }

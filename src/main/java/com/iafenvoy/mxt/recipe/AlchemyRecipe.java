@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.block.meta.NoOpBlockAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
@@ -35,7 +35,7 @@ import java.util.Map;
  */
 public record AlchemyRecipe(List<Identifier> inputs, NumberProvider targetTemperature,
                             NumberProvider temperatureTolerance, int minimumFurnaceTier, NumberProvider duration,
-                            List<Identifier> auraKinds, Map<Holder<Element>, NumberProvider> minimumAura,
+                            List<Identifier> auraKinds, Map<Holder<Resource>, NumberProvider> minimumAura,
                             List<Identifier> successOutputs, List<Identifier> failureOutputs,
                             EntityAction successAction, EntityAction failureAction,
                             BlockAction successBlockAction, BlockAction failureBlockAction)
@@ -47,7 +47,7 @@ public record AlchemyRecipe(List<Identifier> inputs, NumberProvider targetTemper
             Codec.INT.optionalFieldOf("minimum_furnace_tier", 0).forGetter(AlchemyRecipe::minimumFurnaceTier),
             NumberProvider.CODEC.fieldOf("duration").forGetter(AlchemyRecipe::duration),
             Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(AlchemyRecipe::auraKinds),
-            CollectionCodecs.map(Element.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(AlchemyRecipe::minimumAura),
+            CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(AlchemyRecipe::minimumAura),
             Identifier.CODEC.listOf(1, Integer.MAX_VALUE).fieldOf("success_outputs").forGetter(AlchemyRecipe::successOutputs),
             Identifier.CODEC.listOf().optionalFieldOf("failure_outputs", List.of()).forGetter(AlchemyRecipe::failureOutputs),
             EntityAction.CODEC.optionalFieldOf("success_action", NoOpAction.INSTANCE).forGetter(AlchemyRecipe::successAction),

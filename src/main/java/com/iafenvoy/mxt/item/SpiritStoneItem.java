@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
-import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
@@ -24,11 +24,11 @@ public class SpiritStoneItem extends Item implements SpiritItemAccess {
     }
 
     @Override
-    public int add(ItemStack stack, Holder<Element> type, int amount, boolean simulate) {
+    public int add(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate) {
         int capacity = this.getCapacity(stack);
         SpiritAccess.requireNonNegative(capacity);
         SpiritAccess.requireNonNegative(amount);
-        if (stack.getItem() != this || ItemAuraService.type(stack).filter(type::equals).isEmpty()) return amount;
+        if (stack.getItem() != this || ItemAuraService.type(stack).filter(resource::equals).isEmpty()) return amount;
 
         int stored = this.normalizeStored(stack, capacity, simulate);
         int accepted = Math.min(amount, capacity - stored);
@@ -38,11 +38,11 @@ public class SpiritStoneItem extends Item implements SpiritItemAccess {
     }
 
     @Override
-    public int extract(ItemStack stack, Holder<Element> type, int amount, boolean simulate) {
+    public int extract(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate) {
         int capacity = this.getCapacity(stack);
         SpiritAccess.requireNonNegative(capacity);
         SpiritAccess.requireNonNegative(amount);
-        if (stack.getItem() != this || ItemAuraService.type(stack).filter(type::equals).isEmpty()) return amount;
+        if (stack.getItem() != this || ItemAuraService.type(stack).filter(resource::equals).isEmpty()) return amount;
 
         int stored = this.normalizeStored(stack, capacity, simulate);
         int extracted = Math.min(amount, stored);
