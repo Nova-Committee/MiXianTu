@@ -1,0 +1,14 @@
+{
+  "type": "mxt:spirit_shaped",
+  "pattern": ["I"],
+  "key": {
+    "I": "minecraft:iron_ingot"
+  },
+  "result": {
+    "id": "minecraft:gold_nugget",
+    "count": 9
+  },
+  "aura": {
+    "mxt_test:fire": 10
+  }
+}

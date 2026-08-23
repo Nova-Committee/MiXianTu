@@ -76,13 +76,17 @@ public final class AuraChunkTicker {
         }
     }
 
-    /** Runs after protection handlers so canceled block changes do not invalidate aura caches. */
+    /**
+     * Runs after protection handlers so canceled block changes do not invalidate aura caches.
+     */
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockBreak(BreakBlockEvent event) {
         if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level) markDirty(level, event.getPos());
     }
 
-    /** Runs after protection handlers so canceled block changes do not invalidate aura caches. */
+    /**
+     * Runs after protection handlers so canceled block changes do not invalidate aura caches.
+     */
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockPlace(EntityPlaceEvent event) {
         if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level) markDirty(level, event.getPos());

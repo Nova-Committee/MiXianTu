@@ -9,8 +9,9 @@ import net.minecraft.resources.Identifier;
 /**
  * Immutable item component written only when a forging session successfully completes.
  */
-public record ForgingResultComponent(Identifier blueprint, int finalValue, int actualSteps, int optimalSteps, int extraSteps,
-                                Holder<ItemQuality> quality) {
+public record ForgingResultComponent(Identifier blueprint, int finalValue, int actualSteps, int optimalSteps,
+                                     int extraSteps,
+                                     Holder<ItemQuality> quality) {
     public static final Codec<ForgingResultComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             Identifier.CODEC.fieldOf("blueprint").forGetter(ForgingResultComponent::blueprint),
             Codec.INT.fieldOf("final_value").forGetter(ForgingResultComponent::finalValue),

@@ -26,7 +26,8 @@ public final class CultivationActionEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide() || entity instanceof ServerPlayer) return;
+        if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide() || entity instanceof ServerPlayer)
+            return;
         tick(entity);
     }
 

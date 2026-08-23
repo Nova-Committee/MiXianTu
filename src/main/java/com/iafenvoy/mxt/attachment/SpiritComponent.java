@@ -52,8 +52,8 @@ public final class SpiritComponent {
     }
 
     private SpiritComponent(double cultivationProgress, Optional<Holder<RealmStage>> realmStage, List<Holder<SpiritRoot>> spiritRoots, List<Holder<Physique>> physiques, Optional<Holder<CultivationTechnique>> activeTechnique,
-                       List<Holder<CultivationTechnique>> learnedTechniques, List<Holder<Title>> titles, Optional<Holder<CultivateAction>> cultivateAction, long cultivateStartedAt, long nextCultivateTick,
-                       Map<Holder<CultivateAction>, Long> cultivateCooldowns, long lifespanRemaining, SoulState soulState) {
+                            List<Holder<CultivationTechnique>> learnedTechniques, List<Holder<Title>> titles, Optional<Holder<CultivateAction>> cultivateAction, long cultivateStartedAt, long nextCultivateTick,
+                            Map<Holder<CultivateAction>, Long> cultivateCooldowns, long lifespanRemaining, SoulState soulState) {
         this.cultivationProgress = cultivationProgress;
         this.realmStage = realmStage;
         this.spiritRoots = new LinkedList<>(spiritRoots);

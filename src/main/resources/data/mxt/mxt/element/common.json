@@ -2,5 +2,6 @@
   "translation_key": "element.mxt.common",
   "overcomes": [],
   "adapted_to": ["mxt:common"],
-  "aura_kinds": ["mxt:common"]
+  "aura_kinds": ["mxt:common"],
+  "color": "#ffffff"
 }

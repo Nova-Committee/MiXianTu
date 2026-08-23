@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.attachment.ResourceHolderComponent.Snapshot;
@@ -78,6 +79,7 @@ import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -85,6 +87,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 
@@ -100,8 +103,19 @@ public final class MxtTestMod {
     public MxtTestMod(IEventBus modBus) {
         MxtTestItems.REGISTRY.register(modBus);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::verifyItemBindings);
+        NeoForge.EVENT_BUS.addListener(MxtTestMod::grantTestAbilities);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
         LOGGER.info("Loaded MiXianTu test mod");
+    }
+
+    private static void grantTestAbilities(PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        Identifier source = Identifier.fromNamespaceAndPath(MOD_ID, "hotbar_test");
+        for (String id : List.of("firebolt", "water_shield", "infuse_true_essence", "awaken_divine_sense")) {
+            MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, Identifier.fromNamespaceAndPath(MOD_ID, id))
+                    .ifPresent(ability -> holder.grant(ability, source));
+        }
     }
 
     private static void verifyItemBindings(ServerStartedEvent event) {
@@ -145,7 +159,8 @@ public final class MxtTestMod {
         ItemAura itemAura = MxtDatapackRegistries.get(MxtResourceKeys.ITEM_AURA,
                         Identifier.parse("mxt_test:spirit_stone"))
                 .orElseThrow(() -> new IllegalStateException("Item aura test definition was not loaded"));
-        if (!same(itemAura.totalAura().evaluate(FormulaContext.EMPTY), 100.0D)
+        if (!same(itemAura.aura().evaluate(FormulaContext.EMPTY), 100.0D)
+                || !HolderHelper.id(itemAura.type()).equals(Identifier.parse("mxt_test:fire"))
                 || !same(itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(itemAura.releaseSpeed().evaluate(FormulaContext.EMPTY), 2.0D)
                 || itemAura.resultStack().isPresent()
@@ -154,13 +169,14 @@ public final class MxtTestMod {
             throw new IllegalStateException("Item aura did not resolve its fuel item and values");
         }
         SpiritItemAccess stoneAccess = (SpiritItemAccess) spiritStone.getItem();
+        Holder<Element> commonAura = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt:common"));
         spiritStone.set(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(101));
         if (stoneAccess.getCapacity(spiritStone) != 100
-                || stoneAccess.add(spiritStone, 0, false) != 0
+                || stoneAccess.add(spiritStone, commonAura, 0, false) != 0
                 || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 100
-                || stoneAccess.extract(spiritStone, 100, false) != 0
+                || stoneAccess.extract(spiritStone, commonAura, 100, false) != 0
                 || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 0
-                || stoneAccess.add(spiritStone, 100, false) != 0
+                || stoneAccess.add(spiritStone, commonAura, 100, false) != 0
                 || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 100) {
             throw new IllegalStateException("Spirit stone charging did not clamp overflow or preserve empty charge");
         }
@@ -168,7 +184,7 @@ public final class MxtTestMod {
         ItemAura qingxiaoAura = MxtDatapackRegistries.get(MxtResourceKeys.ITEM_AURA,
                         Identifier.parse("mxt_test:qingxiao_spirit_crystal"))
                 .orElseThrow(() -> new IllegalStateException("Qingxiao spirit crystal definition was not loaded"));
-        if (!same(qingxiaoAura.totalAura().evaluate(FormulaContext.EMPTY), 180.0D)
+        if (!same(qingxiaoAura.aura().evaluate(FormulaContext.EMPTY), 180.0D)
                 || !same(qingxiaoAura.consumeSpeed().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(qingxiaoAura.releaseSpeed().evaluate(FormulaContext.EMPTY), 3.0D)
                 || ItemAuraService.find(event.getServer().registryAccess(), qingxiaoCrystal).isEmpty()) {
@@ -518,7 +534,7 @@ public final class MxtTestMod {
         AuraChunkComponent capacity = new AuraChunkComponent();
         Holder<Element> capacityFire = requireHolder(MxtResourceKeys.ELEMENT, Identifier.parse("mxt_test:fire"));
         capacity.initializeAuras(Map.of(capacityFire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of());
-        capacity.setBlockContribution(Map.of(capacityFire, new AuraValue(5.0D, new Fixed(5.0D), 1.0D)), List.of());
+        capacity.setBlockContribution(Map.of(capacityFire, new AuraValue(5.0D, new Fixed(5.0D), 1.0D, 0xFFFFFF)), List.of());
         capacity.regenerateAuras(20L);
         AuraPool pool = capacity.auras().get(capacityFire);
         if (!same(pool.maximum(), 15.0D) || !same(pool.amount(), 15.0D)) {

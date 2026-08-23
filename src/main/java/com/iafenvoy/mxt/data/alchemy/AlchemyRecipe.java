@@ -21,7 +21,8 @@ import java.util.Map;
  */
 public record AlchemyRecipe(List<Identifier> inputs, NumberProvider targetTemperature,
                             NumberProvider temperatureTolerance, int minimumFurnaceTier, NumberProvider duration,
-                            List<Identifier> auraKinds, Map<Holder<Element>, NumberProvider> minimumAura, List<Identifier> successOutputs,
+                            List<Identifier> auraKinds, Map<Holder<Element>, NumberProvider> minimumAura,
+                            List<Identifier> successOutputs,
                             List<Identifier> failureOutputs, EntityAction successAction, EntityAction failureAction,
                             BlockAction successBlockAction, BlockAction failureBlockAction) {
     public static final Codec<AlchemyRecipe> CODEC = RecordCodecBuilder.create(i -> i.group(

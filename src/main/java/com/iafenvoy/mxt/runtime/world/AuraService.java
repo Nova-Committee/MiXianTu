@@ -73,13 +73,17 @@ public final class AuraService {
                 resolved.definition().cultivateCondition(), resolved.definition().distribution(), resolved.id(), resolved.kind());
     }
 
-    /** Consumes each requested elemental pool atomically. */
+    /**
+     * Consumes each requested elemental pool atomically.
+     */
     public static boolean consume(Level level, BlockPos pos, Map<Holder<Element>, Double> costs) {
         if (costs.values().stream().anyMatch(value -> !Double.isFinite(value) || value < 0.0D)) return false;
         return level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).consume(costs);
     }
 
-    /** Applies independent elemental deltas. Missing elements are never implicitly created. */
+    /**
+     * Applies independent elemental deltas. Missing elements are never implicitly created.
+     */
     public static void change(Level level, BlockPos pos, Map<Holder<Element>, Double> amounts) {
         if (amounts.values().stream().anyMatch(value -> !Double.isFinite(value))) return;
         level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).change(amounts);
@@ -134,7 +138,9 @@ public final class AuraService {
                                 SourceKind.FORMATION, evaluateMaximumBonus(formation, FormulaContext.of(level))))));
     }
 
-    /** Highest active formation capacity bonus that intersects the given chunk. */
+    /**
+     * Highest active formation capacity bonus that intersects the given chunk.
+     */
     @Deprecated
     public static double formationMaximumBonus(ServerLevel level, LevelChunk chunk) {
         double minX = chunk.getPos().getMinBlockX();
@@ -220,7 +226,8 @@ public final class AuraService {
         return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
     }
 
-    public record Resolved(Optional<Holder<AuraZone>> holder, AuraZone definition, SourceKind kind, Map<Holder<Element>, Double> maxBonus) {
+    public record Resolved(Optional<Holder<AuraZone>> holder, AuraZone definition, SourceKind kind,
+                           Map<Holder<Element>, Double> maxBonus) {
         public Identifier id() {
             return this.holder.map(HolderHelper::id).orElse(EMPTY);
         }

@@ -3,8 +3,10 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.MiXianTu;
 import net.minecraft.resources.Identifier;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Client-side copy of the server-resolved aura at the local player's position.
@@ -55,7 +57,7 @@ public final class AuraClientState {
 
         private static Snapshot interpolate(Snapshot from, Snapshot to, double factor) {
             Map<Identifier, AuraPool> values = new LinkedHashMap<>();
-            java.util.Set<Identifier> ids = new java.util.HashSet<>(from.aura.keySet());
+            Set<Identifier> ids = new HashSet<>(from.aura.keySet());
             ids.addAll(to.aura.keySet());
             ids.forEach(id -> {
                 AuraPool start = from.aura.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
@@ -64,7 +66,8 @@ public final class AuraClientState {
                 double maximum = end.maximum() == Double.POSITIVE_INFINITY ? Double.POSITIVE_INFINITY
                         : lerp(start.maximum() == Double.POSITIVE_INFINITY ? end.maximum() : start.maximum(), end.maximum(), factor);
                 double regen = lerp(start.regenPerTick(), end.regenPerTick(), factor);
-                if (amount > 0.0D || maximum > 0.0D || regen != 0.0D) values.put(id, new AuraPool(amount, maximum, regen));
+                if (amount > 0.0D || maximum > 0.0D || regen != 0.0D)
+                    values.put(id, new AuraPool(amount, maximum, regen));
             });
             return new Snapshot(to.source, Map.copyOf(values));
         }

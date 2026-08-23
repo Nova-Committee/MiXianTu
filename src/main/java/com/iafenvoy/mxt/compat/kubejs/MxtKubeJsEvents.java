@@ -62,11 +62,11 @@ public final class MxtKubeJsEvents {
             NeoForge.EVENT_BUS.addListener(AbilityUseEvent.Post.class, MxtKubeJsEvents::postAbility);
             NeoForge.EVENT_BUS.addListener(CurseApplyEvent.Pre.class, MxtKubeJsEvents::postCurse);
             NeoForge.EVENT_BUS.addListener(CurseApplyEvent.Post.class, MxtKubeJsEvents::postCurse);
-            NeoForge.EVENT_BUS.addListener(ResourceConsumeEvent.Pre.class, MxtKubeJsEvents::postResource);
-            NeoForge.EVENT_BUS.addListener(ResourceConsumeEvent.Post.class, MxtKubeJsEvents::postResource);
-            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Enter.class, MxtKubeJsEvents::postAura);
-            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Leave.class, MxtKubeJsEvents::postAura);
-            NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Tick.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(Pre.class, MxtKubeJsEvents::postResource);
+            NeoForge.EVENT_BUS.addListener(Post.class, MxtKubeJsEvents::postResource);
+            NeoForge.EVENT_BUS.addListener(Enter.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(Leave.class, MxtKubeJsEvents::postAura);
+            NeoForge.EVENT_BUS.addListener(Tick.class, MxtKubeJsEvents::postAura);
             NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Override.class, MxtKubeJsEvents::postAura);
             registered = true;
         }

@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.data.ability.AbilityComponent;
 import com.iafenvoy.mxt.data.ability.AbilityTrigger;
 import com.iafenvoy.mxt.data.ability.AbilityType;
+import com.iafenvoy.mxt.data.ability.TargetSelector;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
@@ -34,6 +36,8 @@ import net.neoforged.neoforge.registries.NewRegistryEvent;
 @EventBusSubscriber
 public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends AbilityType>> ABILITY_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.ABILITY_TYPE, Lifecycle.stable(), false);
+    public static final DefaultedRegistry<MapCodec<? extends TargetSelector>> ABILITY_TARGET_SELECTOR_TYPE = new DefaultedMappedRegistry<>("self", MxtResourceKeys.ABILITY_TARGET_SELECTOR_TYPE, Lifecycle.stable(), false);
+    public static final DefaultedRegistry<MapCodec<? extends Cost>> COST_TYPE = new DefaultedMappedRegistry<>("resource", MxtResourceKeys.COST_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends CurseType>> CURSE_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.CURSE_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends AbilityComponent>> ABILITY_COMPONENT_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.ABILITY_COMPONENT_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends AbilityTrigger>> ABILITY_TRIGGER_TYPE = new DefaultedMappedRegistry<>("use", MxtResourceKeys.ABILITY_TRIGGER_TYPE, Lifecycle.stable(), false);
@@ -61,6 +65,8 @@ public final class MxtRegistries {
     @SubscribeEvent
     public static void newRegistries(NewRegistryEvent event) {
         event.register(ABILITY_TYPE);
+        event.register(ABILITY_TARGET_SELECTOR_TYPE);
+        event.register(COST_TYPE);
         event.register(CURSE_TYPE);
         event.register(ABILITY_COMPONENT_TYPE);
         event.register(ABILITY_TRIGGER_TYPE);

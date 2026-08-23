@@ -12,7 +12,9 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.ExtraCodecs;
 import org.jspecify.annotations.NonNull;
 
-/** Client-side visual parameters for a tracked spirit-burst trail particle. */
+/**
+ * Client-side visual parameters for a tracked spirit-burst trail particle.
+ */
 public record SpiritWispParticleOptions(int color, float size) implements ParticleOptions {
     public static final MapCodec<SpiritWispParticleOptions> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ExtraCodecs.RGB_COLOR_CODEC.fieldOf("color").forGetter(SpiritWispParticleOptions::color),
@@ -26,7 +28,8 @@ public record SpiritWispParticleOptions(int color, float size) implements Partic
 
     public SpiritWispParticleOptions {
         if (color < 0 || color > 0xFFFFFF) throw new IllegalArgumentException("Particle color must be an RGB value");
-        if (!Float.isFinite(size) || size <= 0.0F) throw new IllegalArgumentException("Particle size must be finite and positive");
+        if (!Float.isFinite(size) || size <= 0.0F)
+            throw new IllegalArgumentException("Particle size must be finite and positive");
     }
 
     @Override

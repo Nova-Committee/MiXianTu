@@ -1,6 +1,7 @@
 {
   "items": "mxt:spirit_stone",
-  "total_aura": 100,
+  "type": "mxt:common",
+  "aura": 100,
   "consume_speed": 1,
   "release_speed": 2
 }

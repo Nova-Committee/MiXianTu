@@ -1,4 +1,5 @@
 {
+  "type": "mxt:alchemy",
   "inputs": ["minecraft:red_mushroom", "minecraft:honey_bottle"],
   "target_temperature": 600,
   "temperature_tolerance": 50,

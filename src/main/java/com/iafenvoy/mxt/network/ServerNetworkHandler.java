@@ -95,6 +95,7 @@ public final class ServerNetworkHandler {
     }
 
     static void onSpiritBurst(SpiritBurstC2SPayload payload, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer player) SpiritBurstService.setFiring(player, payload.firing());
+        if (context.player() instanceof ServerPlayer player)
+            SpiritBurstService.setFiring(player, payload.resource(), payload.firing());
     }
 }

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.SpiritComponent;
@@ -50,7 +51,8 @@ public final class TechniqueService {
         boolean allowed = definition.learnCondition().test(entity, context);
         if (!allowed) return Result.rejected(Failure.CONDITIONS);
         Result result = learn(spirit, id, definition, lookup);
-        if (result.learned()) CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        if (result.learned())
+            CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return result;
     }
 

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.item;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
@@ -134,27 +135,37 @@ public final class ItemBindingService {
                 .map(Reference::value), stack);
     }
 
-    /** Resolves every binding type once for a single item stack. */
+    /**
+     * Resolves every binding type once for a single item stack.
+     */
     public static ResolvedBindings resolve(ItemStack stack) {
         return new ResolvedBindings(binding(stack), weapon(stack), pill(stack), technique(stack));
     }
 
-    /** Client-safe counterpart of {@link #resolve(ItemStack)}. */
+    /**
+     * Client-safe counterpart of {@link #resolve(ItemStack)}.
+     */
     public static ResolvedBindings resolve(Provider access, ItemStack stack) {
         return new ResolvedBindings(binding(access, stack), weapon(access, stack), pill(access, stack), technique(access, stack));
     }
 
-    /** Resolves the quality group selected by the most specific matching binding. */
+    /**
+     * Resolves the quality group selected by the most specific matching binding.
+     */
     public static Optional<TagKey<ItemQuality>> qualityGroup(ItemStack stack) {
         return resolve(stack).qualityGroup();
     }
 
-    /** Client-safe counterpart of {@link #qualityGroup(ItemStack)}. */
+    /**
+     * Client-safe counterpart of {@link #qualityGroup(ItemStack)}.
+     */
     public static Optional<TagKey<ItemQuality>> qualityGroup(Provider access, ItemStack stack) {
         return resolve(access, stack).qualityGroup();
     }
 
-    /** Tests all matching binding conditions with one consistent formula context. */
+    /**
+     * Tests all matching binding conditions with one consistent formula context.
+     */
     public static boolean conditionsMet(LivingEntity entity, ItemStack stack, FormulaContext context) {
         return resolve(stack).conditionsMet(entity, context);
     }
@@ -270,7 +281,9 @@ public final class ItemBindingService {
                 "weapon_binding/" + itemId.getNamespace() + "/" + itemId.getPath() + "/" + suffix);
     }
 
-    /** Immutable resolution snapshot used to avoid repeated matcher scans in a single operation. */
+    /**
+     * Immutable resolution snapshot used to avoid repeated matcher scans in a single operation.
+     */
     public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon,
                                    Optional<PillBinding> pill, Optional<TechniqueBinding> technique) {
         public Optional<TagKey<ItemQuality>> qualityGroup() {

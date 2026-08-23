@@ -2,7 +2,9 @@ package com.iafenvoy.mxt.util;
 
 import java.util.Locale;
 
-/** Common formatting helpers for item tooltip values. */
+/**
+ * Common formatting helpers for item tooltip values.
+ */
 public final class TooltipText {
     private TooltipText() {
     }

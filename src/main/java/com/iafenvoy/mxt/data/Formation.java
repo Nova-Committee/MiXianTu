@@ -23,7 +23,8 @@ import java.util.Optional;
 /**
  * A multiblock formation's static shape, resource costs, and lifecycle actions.
  */
-public record Formation(Identifier structureTemplate, NumberProvider radius, Map<Holder<Element>, NumberProvider> maxBonus, List<ResourceCost> activationCosts,
+public record Formation(Identifier structureTemplate, NumberProvider radius,
+                        Map<Holder<Element>, NumberProvider> maxBonus, List<ResourceCost> activationCosts,
                         List<ResourceCost> maintenanceCosts, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction,

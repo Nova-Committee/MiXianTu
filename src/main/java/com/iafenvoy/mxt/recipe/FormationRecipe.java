@@ -1,37 +1,36 @@
 package com.iafenvoy.mxt.recipe;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.*;
+import net.minecraft.world.item.crafting.PlacementInfo;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Recipe-manager reference; AlchemySession owns temperature and output transactions.
+ * Native recipe entry containing the complete formation payload.
  */
-public record AlchemyRecipeAdapter(Identifier definition) implements Recipe<SingleRecipeInput> {
-    public static final MapCodec<AlchemyRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("definition").forGetter(AlchemyRecipeAdapter::definition)
-    ).apply(i, AlchemyRecipeAdapter::new));
-    public static final StreamCodec<RegistryFriendlyByteBuf, AlchemyRecipeAdapter> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
+public record FormationRecipe(Formation definition) implements Recipe<SingleRecipeInput> {
+    public static final MapCodec<FormationRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Formation.DIRECT_CODEC.fieldOf("definition").forGetter(FormationRecipe::definition)
+    ).apply(i, FormationRecipe::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, FormationRecipe> PACKET_CODEC =
+            ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     @Override
     public boolean matches(SingleRecipeInput input, @NonNull Level level) {
-        if (input.isEmpty()) return false;
-        return MxtDatapackRegistries.get(MxtResourceKeys.ALCHEMY_RECIPE, this.definition)
-                .filter(value -> value.inputs().size() == 1)
-                .map(value -> value.inputs().getFirst().equals(BuiltInRegistries.ITEM.getKey(input.item().getItem())))
-                .orElse(false);
+        return !input.isEmpty();
     }
 
     @Override
@@ -46,17 +45,17 @@ public record AlchemyRecipeAdapter(Identifier definition) implements Recipe<Sing
 
     @Override
     public @NonNull String group() {
-        return "mxt.alchemy";
+        return "mxt.formation";
     }
 
     @Override
     public @NonNull RecipeSerializer<? extends Recipe<SingleRecipeInput>> getSerializer() {
-        return MxtRecipeSerializers.ALCHEMY.get();
+        return MxtRecipeSerializers.FORMATION.get();
     }
 
     @Override
     public @NonNull RecipeType<? extends Recipe<SingleRecipeInput>> getType() {
-        return MxtRecipeTypes.ALCHEMY.get();
+        return MxtRecipeTypes.FORMATION.get();
     }
 
     @Override

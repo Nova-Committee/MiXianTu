@@ -1,0 +1,16 @@
+{
+  "type": "mxt:spirit_shaped",
+  "pattern": [
+    "FF",
+    "FF"
+  ],
+  "key": {
+    "F": "minecraft:fire_charge"
+  },
+  "result": {
+    "id": "minecraft:magma_block"
+  },
+  "aura": {
+    "mxt_test:fire": 20
+  }
+}

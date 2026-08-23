@@ -20,7 +20,9 @@ import java.util.stream.Stream;
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
-/** Displays one of the executing player's equipped item stacks in chat. */
+/**
+ * Displays one of the executing player's equipped item stacks in chat.
+ */
 public final class DisplayCommand {
     private static final EnumSet<EquipmentSlot> DISPLAY_SLOTS = EnumSet.of(
             EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD,

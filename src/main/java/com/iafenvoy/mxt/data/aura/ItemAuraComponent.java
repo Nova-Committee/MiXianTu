@@ -3,7 +3,9 @@ package com.iafenvoy.mxt.data.aura;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 
-/** Persistent remaining aura stored on one partially consumed item stack. */
+/**
+ * Persistent remaining aura stored on one partially consumed item stack.
+ */
 public record ItemAuraComponent(double remain) {
     public static final Codec<ItemAuraComponent> CODEC = Codec.DOUBLE.comapFlatMap(
             value -> Double.isFinite(value) && value >= 0.0D

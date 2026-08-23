@@ -16,6 +16,7 @@ import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.Optional;
 import java.util.UUID;
+
 import net.minecraft.world.entity.Entity;
 
 /**

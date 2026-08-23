@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.action.EntityAction;

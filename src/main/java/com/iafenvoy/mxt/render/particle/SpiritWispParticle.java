@@ -10,7 +10,9 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.util.RandomSource;
 import org.jspecify.annotations.NonNull;
 
-/** A small full-bright, softly fading mote used to form a continuous spirit-burst trail. */
+/**
+ * A small full-bright, softly fading mote used to form a continuous spirit-burst trail.
+ */
 public final class SpiritWispParticle extends SingleQuadParticle {
     private static final int TRAIL_LIFETIME = 12;
     private static final float TRAIL_ALPHA = 0.30F;

@@ -1,12 +1,16 @@
 package com.iafenvoy.mxt.render;
+
 import com.iafenvoy.mxt.data.aura.AuraValue;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.api.distmarker.Dist;
@@ -15,6 +19,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ViewportEvent.ComputeFogColor;
 import net.neoforged.neoforge.client.event.ViewportEvent.RenderFog;
 
+import java.util.Map.Entry;
 import java.util.Optional;
 
 /**
@@ -28,7 +33,7 @@ public final class AuraZoneRenderer {
     @SubscribeEvent
     public static void onFogColor(ComputeFogColor event) {
         resolve(Minecraft.getInstance().getCameraEntity()).filter(AuraZoneRenderer::hasFogStrength).filter(fog -> fog.render().fogColor() != 0xFFFFFF).ifPresent(fog -> {
-            int color = fog.render().fogColor();
+            int color = fog.color();
             float strength = fog.strength();
             event.setRed(blend(event.getRed(), ((color >>> 16) & 0xFF) / 255.0F, strength));
             event.setGreen(blend(event.getGreen(), ((color >>> 8) & 0xFF) / 255.0F, strength));
@@ -53,7 +58,29 @@ public final class AuraZoneRenderer {
         Snapshot snapshot = AuraClientState.current();
         Registry<AuraZone> zones = entity.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         return zones.getOptional(snapshot.source()).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.concentration(),
-                zone.aura().values().stream().mapToDouble(AuraValue::amount).sum()));
+                zone.aura().values().stream().mapToDouble(AuraValue::amount).sum(), resolveColor(zone, snapshot)));
+    }
+
+    private static int resolveColor(AuraZone zone, Snapshot snapshot) {
+        double weight = 0.0D;
+        double red = 0.0D;
+        double green = 0.0D;
+        double blue = 0.0D;
+        boolean hasExplicitColor = false;
+        for (Entry<Holder<Element>, AuraValue> entry : zone.aura().entrySet()) {
+            double amount = snapshot.pool(HolderHelper.id(entry.getKey())).amount();
+            if (!Double.isFinite(amount) || amount <= 0.0D) continue;
+            int color = entry.getValue().color() == 0xFFFFFF ? entry.getKey().value().color() : entry.getValue().color();
+            hasExplicitColor |= color != 0xFFFFFF;
+            red += ((color >>> 16) & 0xFF) * amount;
+            green += ((color >>> 8) & 0xFF) * amount;
+            blue += (color & 0xFF) * amount;
+            weight += amount;
+        }
+        if (weight <= 0.0D || !hasExplicitColor) return zone.clientRender().fogColor();
+        return ((int) Math.round(red / weight) << 16)
+                | ((int) Math.round(green / weight) << 8)
+                | (int) Math.round(blue / weight);
     }
 
     private static boolean hasFogStrength(ResolvedFog fog) {
@@ -64,7 +91,7 @@ public final class AuraZoneRenderer {
         return current + (target - current) * strength;
     }
 
-    private record ResolvedFog(ClientRender render, double concentration, double baseAura) {
+    private record ResolvedFog(ClientRender render, double concentration, double baseAura, int color) {
         private float strength() {
             double scale = Math.max(1.0D, this.baseAura);
             double concentrationFactor = Math.clamp(this.concentration / scale, 0.0D, 1.0D);

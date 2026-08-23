@@ -39,7 +39,9 @@ public record AuraResult(Map<Holder<Element>, AuraPool> aura,
         return this.rules.cultivateSuppress();
     }
 
-    /** Relative concentration controls the base cultivation speed for this position. */
+    /**
+     * Relative concentration controls the base cultivation speed for this position.
+     */
     public double cultivationSpeed() {
         double maximum = this.maximum();
         double concentration = this.concentration();

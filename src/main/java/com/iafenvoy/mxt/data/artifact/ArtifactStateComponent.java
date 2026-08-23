@@ -10,7 +10,7 @@ import java.util.Optional;
  * Persistent ItemStack state for ownership, nurturing and an optional archetype definition.
  */
 public record ArtifactStateComponent(Optional<String> ownerUuid, Optional<Identifier> archetype, double nourishment,
-                                double spiritEnergy) {
+                                     double spiritEnergy) {
     public static final Codec<ArtifactStateComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.optionalFieldOf("owner_uuid").forGetter(ArtifactStateComponent::ownerUuid),
             Identifier.CODEC.optionalFieldOf("archetype").forGetter(ArtifactStateComponent::archetype),

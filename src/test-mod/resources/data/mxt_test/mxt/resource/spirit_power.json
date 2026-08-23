@@ -5,6 +5,7 @@
   "regen": 1,
   "burst_amount": 10,
   "particle_color": "#66CCFF",
+  "aura_type": "mxt_test:fire",
   "bars": [
     {
       "context": "boss_overlay",

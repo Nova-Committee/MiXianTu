@@ -1,9 +1,11 @@
 package com.iafenvoy.mxt.item.block.entity;
 
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -16,7 +18,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.NonNull;
 
-/** Persistent displayed stack shared by every wooden display stand variant. */
+/**
+ * Persistent displayed stack shared by every wooden display stand variant.
+ */
 public final class DisplayStandBlockEntity extends BlockEntity implements SpiritAccess {
     private ItemStack displayedItem = ItemStack.EMPTY;
 
@@ -40,17 +44,17 @@ public final class DisplayStandBlockEntity extends BlockEntity implements Spirit
     }
 
     @Override
-    public int add(int amount, boolean simulate) {
+    public int add(Holder<Element> type, int amount, boolean simulate) {
         SpiritAccess.requireNonNegative(amount);
         if (!(this.displayedItem.getItem() instanceof SpiritItemAccess access)) return amount;
         if (this.level == null) return amount;
-        int remaining = access.add(this.displayedItem, amount, simulate);
+        int remaining = access.add(this.displayedItem, type, amount, simulate);
         if (!simulate && remaining != amount) this.markChangedAndSync();
         return remaining;
     }
 
     @Override
-    public int extract(int amount, boolean simulate) {
+    public int extract(Holder<Element> type, int amount, boolean simulate) {
         return SpiritAccess.requireNonNegative(amount);
     }
 

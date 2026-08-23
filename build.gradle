@@ -32,6 +32,8 @@ repositories {
     maven { url = "https://jitpack.io" }
     maven { url = "https://maven.theillusivec4.top/" }
     maven { url = "https://maven.latvian.dev/releases" }
+    maven { url = "https://maven.blamejared.com/" }
+    maven { url = "https://modmaven.dev" }
 }
 
 base {
@@ -123,6 +125,8 @@ dependencies {
 //    localRuntime "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
 
     implementation "curse.maven:jade-324717:8651070"
+    compileOnly("mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}")
+    runtimeOnly("mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}")
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

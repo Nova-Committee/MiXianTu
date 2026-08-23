@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.screen.gui.ChequeTableScreen;
 import com.iafenvoy.mxt.screen.gui.ExchangeStationScreen;
 import com.iafenvoy.mxt.screen.gui.PlayerTradeScreen;
 import com.iafenvoy.mxt.screen.gui.StationScreen;
+import com.iafenvoy.mxt.screen.gui.SpiritCraftingScreen;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -48,6 +49,7 @@ public final class MxtRenderers {
         event.register(MxtMenus.TRADE_STATION_OWNER.get(), StationScreen::new);
         event.register(MxtMenus.TRADE_STATION_CUSTOMER.get(), StationScreen::new);
         event.register(MxtMenus.PLAYER_TRADE.get(), PlayerTradeScreen::new);
+        event.register(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SpiritCraftingScreen::new);
     }
 
     /**

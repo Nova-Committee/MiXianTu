@@ -66,7 +66,9 @@ public final class AuraDistributionService {
         for (List<Claim> claims : claimsByChunk.values()) reserve(level, gameTime, claims);
     }
 
-    /** Returns a pre-reserved share for this tick, or empty when no player prepass exists. */
+    /**
+     * Returns a pre-reserved share for this tick, or empty when no player prepass exists.
+     */
     public static Optional<Map<Holder<Element>, Double>> take(ServerPlayer player) {
         Allocation allocation = ALLOCATIONS.remove(player.getUUID());
         return allocation == null || allocation.gameTime() != player.level().getGameTime()
@@ -103,7 +105,8 @@ public final class AuraDistributionService {
      */
     public static List<Double> distribute(List<Double> requests, List<Double> weights, double available,
                                           Distribution distribution, RandomSource random) {
-        if (requests.size() != weights.size()) throw new IllegalArgumentException("Requests and weights must have equal sizes");
+        if (requests.size() != weights.size())
+            throw new IllegalArgumentException("Requests and weights must have equal sizes");
         List<Double> result = new ArrayList<>(Collections.nCopies(requests.size(), 0.0D));
         double remaining = Double.isFinite(available) ? Math.max(0.0D, available) : Double.MAX_VALUE;
         List<Integer> active = new ArrayList<>();

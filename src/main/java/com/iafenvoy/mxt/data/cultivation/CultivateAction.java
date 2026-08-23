@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.data.cultivation;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -26,7 +27,8 @@ import java.util.Map;
  */
 public record CultivateAction(EntityCondition startCondition, EntityCondition stopCondition, int tickInterval,
                               List<Identifier> auraKinds, List<ResourceCost> costs, NumberProvider absorbAmount,
-                              Map<Holder<Element>, NumberProvider> auraCosts, List<ResourceGain> auraGains, int cooldownTicks,
+                              Map<Holder<Element>, NumberProvider> auraCosts, List<ResourceGain> auraGains,
+                              int cooldownTicks,
                               EntityAction tickAction) {
     public static final Codec<Holder<CultivateAction>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CULTIVATE_ACTION);
     public static final Codec<CultivateAction> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(

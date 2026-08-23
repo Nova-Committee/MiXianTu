@@ -1,12 +1,18 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.syncher.SynchedEntityData.Builder;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -25,6 +31,8 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Optional;
+
 /**
  * Server-authoritative spirit-power projectile. Its visible beam is a client-side
  * particle trail sampled between two consecutive projectile positions.
@@ -35,14 +43,16 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final float TRAIL_PARTICLE_SIZE = 0.085F;
     private static final EntityDataAccessor<Integer> AMOUNT = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PARTICLE_COLOR = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<String> AURA_TYPE = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.STRING);
 
     public SpiritBurstEntity(EntityType<? extends SpiritBurstEntity> type, Level level) {
         super(type, level);
     }
 
-    public SpiritBurstEntity(Level level, Player owner, int amount, int particleColor) {
+    public SpiritBurstEntity(Level level, Player owner, Holder<Element> auraType, int amount, int particleColor) {
         this(MxtEntityTypes.SPIRIT_BURST.get(), level);
         this.setOwner(owner);
+        this.setAuraType(auraType);
         this.setAmount(amount);
         this.setParticleColor(particleColor);
         this.setPos(owner.getX(), owner.getEyeY() - 0.1D, owner.getZ());
@@ -53,6 +63,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     protected void defineSynchedData(@NonNull Builder builder) {
         builder.define(AMOUNT, 0);
         builder.define(PARTICLE_COLOR, 0xFFFFFF);
+        builder.define(AURA_TYPE, "");
     }
 
     @Override
@@ -77,7 +88,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
             BlockPos pos = hit.getBlockPos();
             BlockEntity blockEntity = this.level().getBlockEntity(pos);
             if (blockEntity instanceof SpiritAccess accessor) {
-                accessor.add(this.amount(), false);
+                this.auraType().ifPresent(type -> accessor.add(type, this.amount(), false));
             }
             this.discard();
         }
@@ -92,12 +103,14 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
         this.setAmount(input.getIntOr("amount", 0));
         this.setParticleColor(input.getIntOr("particle_color", 0xFFFFFF));
+        this.getEntityData().set(AURA_TYPE, input.getStringOr("aura_type", ""));
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
         output.putInt("amount", this.amount());
         output.putInt("particle_color", this.particleColor());
+        output.putString("aura_type", this.getEntityData().get(AURA_TYPE));
     }
 
     @Override
@@ -121,6 +134,19 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         if (particleColor < 0 || particleColor > 0xFFFFFF)
             throw new IllegalArgumentException("Particle color must be an RGB value");
         this.getEntityData().set(PARTICLE_COLOR, particleColor);
+    }
+
+    public void setAuraType(Holder<Element> type) {
+        Identifier id = type.unwrapKey().map(ResourceKey::identifier)
+                .orElseThrow(() -> new IllegalArgumentException("Spirit burst aura type must be a registry holder"));
+        this.getEntityData().set(AURA_TYPE, id.toString());
+    }
+
+    private Optional<Reference<Element>> auraType() {
+        Identifier id = Identifier.tryParse(this.getEntityData().get(AURA_TYPE));
+        if (id == null) return Optional.empty();
+        return this.level().registryAccess().lookupOrThrow(MxtResourceKeys.ELEMENT)
+                .get(ResourceKey.create(MxtResourceKeys.ELEMENT, id));
     }
 
     private void spawnTrailParticles() {
@@ -190,7 +216,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
         BlockEntity blockEntity = this.level().getBlockEntity(closestPos);
         if (!(blockEntity instanceof SpiritAccess accessor)) return false;
-        accessor.add(this.amount(), false);
+        this.auraType().ifPresent(type -> accessor.add(type, this.amount(), false));
         this.discard();
         return true;
     }

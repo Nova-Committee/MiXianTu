@@ -18,7 +18,9 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
-/** Renders the single item resting above a display stand. */
+/**
+ * Renders the single item resting above a display stand.
+ */
 public final class DisplayStandBlockEntityRenderer implements BlockEntityRenderer<DisplayStandBlockEntity, State> {
     private final ItemModelResolver itemModelResolver;
 

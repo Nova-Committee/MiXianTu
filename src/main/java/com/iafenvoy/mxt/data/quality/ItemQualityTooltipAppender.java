@@ -21,7 +21,9 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
 import java.util.function.Consumer;
 
-/** Adds the datapack-resolved quality and its modifiers to item tooltips. */
+/**
+ * Adds the datapack-resolved quality and its modifiers to item tooltips.
+ */
 @EventBusSubscriber(Dist.CLIENT)
 public final class ItemQualityTooltipAppender {
     private ItemQualityTooltipAppender() {
@@ -45,7 +47,8 @@ public final class ItemQualityTooltipAppender {
         appendModifier(builder, value.valueMultiplier());
         appendModifier(builder, value.forgingModifier());
         appendModifier(builder, value.alchemyModifier());
-        if (flag.isAdvanced()) builder.accept(Component.literal(HolderHelper.id(quality).toString()).withStyle(ChatFormatting.DARK_GRAY));
+        if (flag.isAdvanced())
+            builder.accept(Component.literal(HolderHelper.id(quality).toString()).withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private static void appendModifier(Consumer<Component> builder, Modifier modifier) {

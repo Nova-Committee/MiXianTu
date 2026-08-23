@@ -4,7 +4,9 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 
-/** Tag conventions used by the item-quality registry. */
+/**
+ * Tag conventions used by the item-quality registry.
+ */
 public final class ItemQualityTags {
     private static final String GROUP_PREFIX = "group/";
     public static final TagKey<ItemQuality> TOOLTIP_ORDER = create(Identifier.fromNamespaceAndPath("mxt", "tooltip_order"));

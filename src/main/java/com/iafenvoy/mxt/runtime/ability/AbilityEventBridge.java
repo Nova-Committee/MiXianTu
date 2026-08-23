@@ -23,6 +23,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -226,8 +227,12 @@ public final class AbilityEventBridge {
             for (Entity target : actor.level().getEntities(actor, actor.getBoundingBox().inflate(radius))) {
                 double distanceSquared = actor.distanceToSqr(target);
                 FormulaContext context = FormulaContext.of(actor, Map.of("aura_radius", radius, "distance", Math.sqrt(distanceSquared)));
-                if (distanceSquared <= radiusSquared && definition.targetCondition().test(actor, target, context))
-                    definition.biEntityAction().execute(actor, target, context);
+                if (distanceSquared <= radiusSquared) {
+                    FormulaContext targetContext = actor instanceof LivingEntity caster && target instanceof LivingEntity livingTarget
+                            ? FormulaContexts.forEntities(caster, livingTarget, context.variables()) : context;
+                    if (definition.targetCondition().test(actor, target, targetContext))
+                        definition.biEntityAction().execute(actor, target, targetContext);
+                }
             }
             abilities.setComponentState(ability, "aura_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, Math.max(1L, Math.round(interval))), gameTime));
         }

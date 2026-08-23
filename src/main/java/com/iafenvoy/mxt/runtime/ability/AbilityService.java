@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.ability;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
@@ -14,6 +15,7 @@ import com.iafenvoy.mxt.data.ability.type.ChannelledAbilityType;
 import com.iafenvoy.mxt.data.ability.type.CompositeAbilityType;
 import com.iafenvoy.mxt.data.ability.type.WordAbilityType;
 import com.iafenvoy.mxt.data.ability.type.WordAbilityType.WordEffect;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.event.AbilityUseEvent;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
@@ -24,6 +26,7 @@ import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
@@ -37,6 +40,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.NotNull;
 
@@ -86,21 +90,35 @@ public final class AbilityService {
             }
             chargeBefore = available;
         }
-        Evaluation costs = payer == null ? ResourceTransactions.evaluate(definition.costs(), context)
-                : ResourceTransactions.evaluate(payer, definition.costs(), context);
+        Evaluation costs = evaluateResourceCosts(definition.costs(), payer, context);
+        if (!definition.costs().isEmpty()) {
+            if (requiresPlayerCost(definition.costs()) && !(payer instanceof Player))
+                return PrepareResult.rejected(Failure.INSUFFICIENT_COST, null);
+            if (payer instanceof Player player && definition.costs().stream().anyMatch(cost -> !cost.check(player)))
+                return PrepareResult.rejected(Failure.INSUFFICIENT_COST, null);
+        }
         Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
         if (!preview.committed())
             return PrepareResult.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
-        return PrepareResult.prepared(new PreparedUse(ability, costs, Math.round(castTime), Math.round(cooldown), channelInterval, charges.isPresent(), chargeBefore));
+        return PrepareResult.prepared(new PreparedUse(ability, costs, definition.costs(), Math.round(castTime), Math.round(cooldown), channelInterval, charges.isPresent(), chargeBefore));
     }
 
     /**
      * Commits cost, component state and cooldown as one server-thread operation.
      */
     public static CommitResult commit(PreparedUse use, AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime) {
+        return commit(use, abilities, resources, gameTime, null);
+    }
+
+    private static CommitResult commit(PreparedUse use, AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime, Player player) {
         if (abilities.isOnCooldown(use.ability(), gameTime)) return CommitResult.rejected(Failure.COOLDOWN, null);
+        if (requiresPlayerCost(use.costsList()) && player == null)
+            return CommitResult.rejected(Failure.INSUFFICIENT_COST, null);
+        if (player != null && use.costsList().stream().anyMatch(cost -> !cost.check(player)))
+            return CommitResult.rejected(Failure.INSUFFICIENT_COST, null);
         Result payment = ResourceTransactions.tryConsume(resources, use.costs);
         if (!payment.committed()) return CommitResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        if (player != null) use.costsList().forEach(cost -> cost.consume(player));
         abilities.setCooldownUntil(use.ability(), Math.addExact(gameTime, use.cooldownTicks));
         if (use.consumeCharge) {
             abilities.setComponentState(use.ability(), "charges", AbilityComponentState.initial(Math.max(0.0D, use.chargeBefore - 1.0D), gameTime));
@@ -170,9 +188,9 @@ public final class AbilityService {
                                                FormulaContext context) {
         Pre resourceEvent = new Pre(resources, preparedUse.costs().amounts());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
-        PreparedUse adjustedUse = new PreparedUse(preparedUse.ability(), new Evaluation(resourceEvent.amounts()),
+        PreparedUse adjustedUse = new PreparedUse(preparedUse.ability(), new Evaluation(resourceEvent.amounts()), preparedUse.costsList(),
                 preparedUse.castTimeTicks(), preparedUse.cooldownTicks(), preparedUse.channelIntervalTicks(), preparedUse.consumeCharge(), preparedUse.chargeBefore());
-        CommitResult committed = commit(adjustedUse, abilities, resources, gameTime);
+        CommitResult committed = commit(adjustedUse, abilities, resources, gameTime, actor instanceof Player player ? player : null);
         if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelledAbilityType) {
             abilities.setChannelledAbility(preparedUse.ability());
@@ -181,6 +199,7 @@ public final class AbilityService {
             executeWord(word, actor, context);
         } else {
             definition.entityAction().execute(actor, context);
+            executeTargetAction(definition, actor, context);
         }
         NeoForge.EVENT_BUS.post(new Post(resources, committed.amounts()));
         NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, HolderHelper.id(preparedUse.ability()), definition, context, committed.amounts()));
@@ -234,6 +253,7 @@ public final class AbilityService {
             return ChannelResult.stopped(Failure.INSUFFICIENT_RESOURCE);
         }
         definition.entityAction().execute(actor, context);
+        executeTargetAction(definition, actor, context);
         NeoForge.EVENT_BUS.post(new Post(resources, payment.amounts()));
         long intervalTicks = Math.max(1L, Math.round(interval));
         long followingTick = Math.addExact(gameTime, intervalTicks);
@@ -289,7 +309,9 @@ public final class AbilityService {
     public static UseResult useComposite(Holder<Ability> composite, Ability compositeDefinition, Entity actor,
                                          AbilityHolderComponent abilities, ResourceHolderComponent resources, long gameTime,
                                          FormulaContext context) {
-        if (!(compositeDefinition.type() instanceof CompositeAbilityType(List<Holder<Ability>> abilities1, boolean allRequired)))
+        if (!(compositeDefinition.type() instanceof CompositeAbilityType(
+                List<Holder<Ability>> abilities1, boolean allRequired
+        )))
             return UseResult.rejected(Failure.INVALID_FORMULA, null);
         Snapshot abilitySnapshot = abilities.snapshot();
         ResourceHolderComponent.Snapshot resourceSnapshot = resources.snapshot();
@@ -320,6 +342,27 @@ public final class AbilityService {
         return copy;
     }
 
+    private static Evaluation evaluateResourceCosts(List<Cost> costs, LivingEntity payer, FormulaContext context) {
+        LinkedHashMap<Identifier, Double> amounts = new LinkedHashMap<>();
+        for (Cost cost : costs) {
+            if (!(cost instanceof com.iafenvoy.mxt.data.cost.ResourceCost resourceCost)) continue;
+            Identifier id = resourceCost.id();
+            FormulaContext costContext = payer == null ? context
+                    : ResourceService.formulaContext(payer, id, resourceCost.resource().value(), context);
+            double amount = resourceCost.evaluate(costContext);
+            if (amounts.put(id, amount) != null)
+                throw new IllegalArgumentException("Duplicate resource cost " + id);
+        }
+        return new Evaluation(amounts);
+    }
+
+    /**
+     * Resource-only costs can run without a Player; item and other costs still require one.
+     */
+    private static boolean requiresPlayerCost(List<Cost> costs) {
+        return costs.stream().anyMatch(cost -> !(cost instanceof com.iafenvoy.mxt.data.cost.ResourceCost));
+    }
+
     private static FormulaContext withElementAffinity(LivingEntity actor, Ability definition, FormulaContext context) {
         if (definition.elementAffinity().isEmpty()) return context;
         double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_DATA), definition.elementAffinity(), context,
@@ -333,9 +376,22 @@ public final class AbilityService {
         return definition.components().stream().filter(type::isInstance).map(type::cast).findFirst();
     }
 
-    public enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY}
+    /**
+     * Applies a bi-entity action to every selected target after the actor action succeeds.
+     */
+    private static void executeTargetAction(Ability definition, Entity actor, FormulaContext context) {
+        definition.targetSelector().select(actor, context)
+                .forEach(target -> {
+                    FormulaContext targetContext = actor instanceof LivingEntity caster && target instanceof LivingEntity livingTarget
+                            ? FormulaContexts.forEntities(caster, livingTarget, context.variables()) : context;
+                    if (definition.targetCondition().test(actor, target, targetContext))
+                        definition.biEntityAction().execute(actor, target, targetContext);
+                });
+    }
 
-    public record PreparedUse(Holder<Ability> ability, Evaluation costs, long castTimeTicks,
+    public enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY}
+
+    public record PreparedUse(Holder<Ability> ability, Evaluation costs, List<Cost> costsList, long castTimeTicks,
                               long cooldownTicks, long channelIntervalTicks,
                               boolean consumeCharge, double chargeBefore) {
     }

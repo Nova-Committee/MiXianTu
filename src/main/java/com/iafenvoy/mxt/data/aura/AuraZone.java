@@ -91,7 +91,8 @@ public record AuraZone(Map<Holder<Element>, AuraValue> aura,
         }
     }
 
-    private record Visual(double elementFitBonus, double elementConflictPenalty, Noise noise, Optional<ParticleEffect> particle,
+    private record Visual(double elementFitBonus, double elementConflictPenalty, Noise noise,
+                          Optional<ParticleEffect> particle,
                           ClientRender clientRender, ClientHud clientHud) {
         private static Visual from(double elementFitBonus, double elementConflictPenalty, Noise noise, Optional<ParticleEffect> particle,
                                    ClientRender clientRender, ClientHud clientHud) {
@@ -126,7 +127,9 @@ public record AuraZone(Map<Holder<Element>, AuraValue> aura,
         static final Codec<CycleType> CODEC = Codec.STRING.xmap(value -> valueOf(value.toUpperCase(Locale.ROOT)), value -> value.name().toLowerCase(Locale.ROOT));
     }
 
-    /** Selects how one chunk's shared cultivation aura is allocated among due players. */
+    /**
+     * Selects how one chunk's shared cultivation aura is allocated among due players.
+     */
     public enum Distribution {
         RANDOM, EQUAL, REALM_WEIGHTED;
         public static final Codec<Distribution> CODEC = Codec.STRING.xmap(

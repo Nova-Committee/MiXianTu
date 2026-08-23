@@ -1,0 +1,8 @@
+{
+  "type": "mxt:active",
+  "costs": [
+    { "type": "mxt:resource", "resource": "mxt_test:spirit_power", "amount": 1 },
+    { "type": "mxt:item", "items": "minecraft:apple", "amount": 1 }
+  ],
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 1 }
+}

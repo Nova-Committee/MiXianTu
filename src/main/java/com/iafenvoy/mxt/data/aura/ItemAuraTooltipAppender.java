@@ -19,7 +19,9 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
 import java.util.function.Consumer;
 
-/** Adds the datapack-defined aura-fuel information to matching item tooltips. */
+/**
+ * Adds the datapack-defined aura-fuel information to matching item tooltips.
+ */
 @EventBusSubscriber(Dist.CLIENT)
 public final class ItemAuraTooltipAppender {
     private ItemAuraTooltipAppender() {
@@ -38,7 +40,7 @@ public final class ItemAuraTooltipAppender {
     }
 
     private static void appendItemAura(Consumer<Component> builder, ItemAura itemAura) {
-        double total = itemAura.totalAura().evaluate(FormulaContext.EMPTY);
+        double total = itemAura.aura().evaluate(FormulaContext.EMPTY);
         double speed = itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY);
         double releaseSpeed = itemAura.releaseSpeed().evaluate(FormulaContext.EMPTY);
         builder.accept(Component.translatable("tooltip.mxt.item.item_aura").withStyle(ChatFormatting.AQUA));

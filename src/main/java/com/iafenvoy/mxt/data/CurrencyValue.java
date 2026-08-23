@@ -45,7 +45,9 @@ public record CurrencyValue(List<Entry> items, long value, List<UnavailableWhen>
         return DataResult.success(definition);
     }
 
-    /** A stack condition that makes this denomination unavailable, with a datapack-defined reason. */
+    /**
+     * A stack condition that makes this denomination unavailable, with a datapack-defined reason.
+     */
     public record UnavailableWhen(ItemCondition condition, Component reason) {
         public static final Codec<UnavailableWhen> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ItemCondition.CODEC.fieldOf("condition").forGetter(UnavailableWhen::condition),

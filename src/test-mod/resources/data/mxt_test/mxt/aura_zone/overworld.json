@@ -1,7 +1,7 @@
 {
   "aura": {
-    "mxt_test:fire": { "amount": 80.0, "max": { "type": "mxt:fixed", "value": 40.0 }, "regen_per_tick": 0.0 },
-    "mxt_test:water": { "amount": 80.0, "max": { "type": "mxt:fixed", "value": 40.0 }, "regen_per_tick": 0.0 }
+    "mxt_test:fire": { "amount": 80.0, "max": { "type": "mxt:fixed", "value": 40.0 }, "regen_per_tick": 0.0, "color": "#ff5522" },
+    "mxt_test:water": { "amount": 80.0, "max": { "type": "mxt:fixed", "value": 40.0 }, "regen_per_tick": 0.0, "color": "#3388ff" }
   },
   "distribution": "equal",
   "cultivate_condition": { "type": "mxt:aura_range", "aura": {

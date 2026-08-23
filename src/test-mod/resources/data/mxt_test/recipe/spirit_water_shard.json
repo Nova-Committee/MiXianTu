@@ -1,0 +1,14 @@
+{
+  "type": "mxt:spirit_shapeless",
+  "ingredients": [
+    "minecraft:amethyst_shard",
+    "minecraft:amethyst_shard"
+  ],
+  "result": {
+    "id": "minecraft:prismarine_shard",
+    "count": 2
+  },
+  "aura": {
+    "mxt_test:water": 12
+  }
+}

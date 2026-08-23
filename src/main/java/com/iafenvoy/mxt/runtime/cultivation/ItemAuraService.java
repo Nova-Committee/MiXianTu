@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.SpiritComponent;
 import com.iafenvoy.mxt.attachment.FloatHoldingItemComponent;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -52,19 +53,38 @@ public final class ItemAuraService {
         return find(entity.level().registryAccess(), stack);
     }
 
-    /** Resolves an item's whole-unit spirit capacity from its active item-aura definition. */
+    /**
+     * Returns the single elemental aura type accepted by this fuel or chargeable item.
+     */
+    public static Optional<Holder<Element>> type(Provider access, ItemStack stack) {
+        return find(access, stack).map(holder -> holder.value().type());
+    }
+
+    /**
+     * Resolves the item's elemental aura type against the active server registry access.
+     */
+    public static Optional<Holder<Element>> type(ItemStack stack) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server == null ? Optional.empty() : type(server.registryAccess(), stack);
+    }
+
+    /**
+     * Resolves an item's whole-unit spirit capacity from its active item-aura definition.
+     */
     public static int capacity(Provider access, ItemStack stack, FormulaContext context) {
         return find(access, stack).map(holder -> capacity(holder.value(), context)).orElse(0);
     }
 
-    /** Resolves capacity against the active server's datapack registry. */
+    /**
+     * Resolves capacity against the active server's datapack registry.
+     */
     public static int capacity(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server == null ? 0 : capacity(server.registryAccess(), stack, FormulaContext.EMPTY);
     }
 
     private static int capacity(ItemAura definition, FormulaContext context) {
-        double total = definition.totalAura().evaluate(context);
+        double total = definition.aura().evaluate(context);
         if (!Double.isFinite(total) || total <= 0.0D) return 0;
         return total >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.floor(total);
     }
@@ -101,7 +121,9 @@ public final class ItemAuraService {
         return new TickResult(consumed, released, false, true);
     }
 
-    /** Returns an interrupted fuel item to its owner without consuming it. */
+    /**
+     * Returns an interrupted fuel item to its owner without consuming it.
+     */
     public static void returnFloatingItem(LivingEntity entity) {
         ItemStack item = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).take();
         if (item.isEmpty()) return;
@@ -137,7 +159,7 @@ public final class ItemAuraService {
         FloatHoldingItemComponent holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         holding.set(item);
         if (item.get(MxtDataComponents.ITEM_AURA) == null) {
-            double total = definition.value().totalAura().evaluate(context);
+            double total = definition.value().aura().evaluate(context);
             if (!Double.isFinite(total) || total <= 0.0D) {
                 holding.clear();
                 giveItem(entity, item);
@@ -145,8 +167,8 @@ public final class ItemAuraService {
             }
             if (item.getItem() instanceof SpiritItemAccess access) {
                 int capacity = capacity(definition.value(), context);
-                access.extract(item, 0, false);
-                int unavailable = access.extract(item, access.getCapacity(item), true);
+                access.extract(item, definition.value().type(), 0, false);
+                int unavailable = access.extract(item, definition.value().type(), access.getCapacity(item), true);
                 int available = capacity - unavailable;
                 if (available <= 0) {
                     holding.clear();
@@ -178,16 +200,18 @@ public final class ItemAuraService {
 
     private static ItemStack takeFreshHeldItem(LivingEntity entity) {
         ItemStack mainHand = entity.getMainHandItem();
-        if (mainHand.get(MxtDataComponents.ITEM_AURA) == null && find(entity, mainHand).isPresent()) return mainHand.split(1);
+        if (mainHand.get(MxtDataComponents.ITEM_AURA) == null && find(entity, mainHand).isPresent())
+            return mainHand.split(1);
         ItemStack offHand = entity.getOffhandItem();
-        if (offHand.get(MxtDataComponents.ITEM_AURA) == null && find(entity, offHand).isPresent()) return offHand.split(1);
+        if (offHand.get(MxtDataComponents.ITEM_AURA) == null && find(entity, offHand).isPresent())
+            return offHand.split(1);
         return ItemStack.EMPTY;
     }
 
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof SpiritItemAccess access) {
-            access.extract(item, Integer.MAX_VALUE, false);
+            access.extract(item, active.value().type(), Integer.MAX_VALUE, false);
             giveItem(entity, item);
         } else {
             active.value().resultStack().ifPresent(template -> giveItem(entity, template.create()));

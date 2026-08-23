@@ -38,7 +38,7 @@ public final class CuriosIntegration {
             case MANUAL -> false;
             case ALL -> true;
             case WEAPONS -> ItemBindingService.weapon(context.entity().level().registryAccess(), stack).isPresent();
-        }; 
+        };
     }
 
     private static boolean acceptsBelt(BeltMode mode, SlotContext context, ItemStack stack) {

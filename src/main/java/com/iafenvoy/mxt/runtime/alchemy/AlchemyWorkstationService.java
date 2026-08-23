@@ -70,7 +70,9 @@ public final class AlchemyWorkstationService {
         return TickResult.finished(outputs, result.spoiled());
     }
 
-    /** Completes an alchemy tick and applies the recipe's block-side behavior at the workstation. */
+    /**
+     * Completes an alchemy tick and applies the recipe's block-side behavior at the workstation.
+     */
     public static TickResult tick(Level level, BlockPos pos, AlchemyWorkstationState state, AlchemyRecipe recipe,
                                   double temperature, FormulaContext context) {
         TickResult result = tick(state, recipe, temperature, context);

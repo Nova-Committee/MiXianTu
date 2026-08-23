@@ -17,7 +17,9 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClick
 
 import java.util.Optional;
 
-/** Server-side use path for books, jade slips, and other technique items. */
+/**
+ * Server-side use path for books, jade slips, and other technique items.
+ */
 @EventBusSubscriber
 public final class TechniqueItemService {
     private TechniqueItemService() {

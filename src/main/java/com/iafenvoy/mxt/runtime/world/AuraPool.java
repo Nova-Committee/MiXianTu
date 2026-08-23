@@ -9,7 +9,9 @@ import net.minecraft.core.Holder;
 
 import java.util.Map;
 
-/** Mutable-free serializable state for one independently stored elemental aura pool. */
+/**
+ * Mutable-free serializable state for one independently stored elemental aura pool.
+ */
 public record AuraPool(double amount, double maximum, double regenPerTick) {
     public static final Codec<AuraPool> CODEC = RecordCodecBuilder.<AuraPool>create(i -> i.group(
             Codec.DOUBLE.optionalFieldOf("amount", 0.0D).forGetter(AuraPool::amount),

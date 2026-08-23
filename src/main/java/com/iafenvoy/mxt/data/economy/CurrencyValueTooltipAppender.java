@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.economy;
 
 import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
-import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup.Provider;
@@ -20,7 +19,9 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
 import java.util.function.Consumer;
 
-/** Adds datapack currency values to item tooltips. */
+/**
+ * Adds datapack currency values to item tooltips.
+ */
 @EventBusSubscriber(Dist.CLIENT)
 public final class CurrencyValueTooltipAppender {
     private CurrencyValueTooltipAppender() {

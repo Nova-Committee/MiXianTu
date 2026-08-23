@@ -11,11 +11,12 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityComponent;
 import com.iafenvoy.mxt.data.ability.AbilityTrigger;
 import com.iafenvoy.mxt.data.ability.AbilityType;
+import com.iafenvoy.mxt.data.ability.TargetSelector;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.data.aura.AuraZone;
@@ -70,6 +71,8 @@ import net.objecthunter.exp4j.function.Function;
 public final class MxtResourceKeys {
     // Builtin registries
     public static final ResourceKey<Registry<MapCodec<? extends AbilityType>>> ABILITY_TYPE = create("ability_type");
+    public static final ResourceKey<Registry<MapCodec<? extends TargetSelector>>> ABILITY_TARGET_SELECTOR_TYPE = create("ability_target_selector_type");
+    public static final ResourceKey<Registry<MapCodec<? extends Cost>>> COST_TYPE = create("cost_type");
     public static final ResourceKey<Registry<MapCodec<? extends CurseType>>> CURSE_TYPE = create("curse_type");
     public static final ResourceKey<Registry<MapCodec<? extends AbilityComponent>>> ABILITY_COMPONENT_TYPE = create("ability_component_type");
     public static final ResourceKey<Registry<MapCodec<? extends AbilityTrigger>>> ABILITY_TRIGGER_TYPE = create("ability_trigger_type");
@@ -109,7 +112,6 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<CultivateAction>> CULTIVATE_ACTION = create("cultivate_action");
     public static final ResourceKey<Registry<ItemArchetype>> ITEM_ARCHETYPE = create("item_archetype");
     public static final ResourceKey<Registry<SpiritHerb>> SPIRIT_HERB = create("spirit_herb");
-    public static final ResourceKey<Registry<AlchemyRecipe>> ALCHEMY_RECIPE = create("alchemy_recipe");
     public static final ResourceKey<Registry<Formation>> FORMATION = create("formation");
     public static final ResourceKey<Registry<Tribulation>> TRIBULATION = create("tribulation");
     public static final ResourceKey<Registry<CreatureProfile>> CREATURE_PROFILE = create("creature_profile");

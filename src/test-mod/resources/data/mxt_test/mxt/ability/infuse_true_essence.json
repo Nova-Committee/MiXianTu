@@ -1,5 +1,6 @@
 {
   "type": "mxt:active",
+  "slot": "utility",
   "cooldown": 20,
   "entity_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 5 }
 }

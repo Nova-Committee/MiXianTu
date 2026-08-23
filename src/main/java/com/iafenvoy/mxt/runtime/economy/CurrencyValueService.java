@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.economy;
+
 import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.OptionalLong;
 import java.util.Optional;
 import java.util.stream.Stream;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +37,9 @@ public final class CurrencyValueService {
         return unitValue(new ItemStack(item));
     }
 
-    /** Returns the value of a complete stack. */
+    /**
+     * Returns the value of a complete stack.
+     */
     public static OptionalLong unitValue(@NotNull ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return OptionalLong.empty();
@@ -135,7 +139,9 @@ public final class CurrencyValueService {
                         && !definition.exchanges().isEmpty());
     }
 
-    /** Finds a currency definition by stack matcher without evaluating unavailable_when. */
+    /**
+     * Finds a currency definition by stack matcher without evaluating unavailable_when.
+     */
     public static Optional<CurrencyValue> definition(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), stack);

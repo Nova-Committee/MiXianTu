@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.command;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
@@ -20,6 +21,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResul
 import com.iafenvoy.mxt.runtime.sect.SectService;
 import com.iafenvoy.mxt.runtime.sect.SectService.Result;
 import com.iafenvoy.mxt.runtime.sect.SectTerritoryEventBridge;
+import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -29,20 +31,26 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.ChatFormatting;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static net.minecraft.commands.Commands.argument;
@@ -100,10 +108,10 @@ public final class MxtCommand {
         return MxtDatapackRegistries.registries().size();
     }
 
-    private static <T> java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestRegistry(
-            com.mojang.brigadier.context.CommandContext<CommandSourceStack> context,
-            com.mojang.brigadier.suggestion.SuggestionsBuilder builder,
-            net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<T>> key) {
+    private static <T> CompletableFuture<Suggestions> suggestRegistry(
+            CommandContext<CommandSourceStack> context,
+            SuggestionsBuilder builder,
+            ResourceKey<Registry<T>> key) {
         return SharedSuggestionProvider.suggest(
                 MxtDatapackRegistries.holders(context.getSource().getServer().registryAccess(), key)
                         .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
@@ -165,21 +173,20 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int queryAura(CommandSourceStack source, Identifier rawType) {
+    private static int queryAura(CommandSourceStack source, Identifier type) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
-        if (rawType != null) {
-            Identifier type = rawType;
+        if (type != null) {
             Reference<Element> holder = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, type).orElse(null);
             if (holder == null) {
                 source.sendFailure(Component.translatable("command.mxt.aura.unknown_type", type.toString()));
                 return 0;
             }
-            var pool = aura.pool(holder);
+            AuraPool pool = aura.pool(holder);
             source.sendSuccess(() -> auraReport(aura, Map.of(holder, pool)), false);
             return 1;
         }
@@ -187,12 +194,10 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static Component auraReport(AuraResult aura, Map<? extends Holder<Element>, com.iafenvoy.mxt.runtime.world.AuraPool> pools) {
+    private static Component auraReport(AuraResult aura, Map<? extends Holder<Element>, AuraPool> pools) {
         MutableComponent report = Component.translatable("command.mxt.aura.query.header").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", aura.source().toString(),
-                Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
-        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.kinds",
-                aura.auraKinds().isEmpty() ? Component.translatable("command.mxt.none") : String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList())));
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", aura.source().toString(), Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.kinds", aura.auraKinds().isEmpty() ? Component.translatable("command.mxt.none") : String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList())));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.suppressed", aura.suppressCultivate()));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.elements").withStyle(ChatFormatting.GRAY));
         if (pools.isEmpty()) {
@@ -210,7 +215,7 @@ public final class MxtCommand {
     }
 
     private static String auraNumber(double value) {
-        return value == Double.POSITIVE_INFINITY ? "\u221E" : TooltipText.number(value);
+        return value == Double.POSITIVE_INFINITY ? "∞" : TooltipText.number(value);
     }
 
     private static int queryVein(CommandSourceStack source) {

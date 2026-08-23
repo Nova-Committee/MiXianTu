@@ -20,7 +20,9 @@ import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 import snownee.jade.api.ui.Element;
 
-/** Shows the displayed item and its charge on wooden display stands. */
+/**
+ * Shows the displayed item and its charge on wooden display stands.
+ */
 public enum DisplayStandComponentProvider implements IComponentProvider<BlockAccessor> {
     INSTANCE;
     private static final Identifier ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "display_stand");
@@ -46,7 +48,9 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         return ID;
     }
 
-    /** Jade-style single-item row: item icon on the left and its name on the right. */
+    /**
+     * Jade-style single-item row: item icon on the left and its name on the right.
+     */
     private static final class DisplayedItemElement extends Element {
         private static final float ICON_SCALE = 0.75F;
         private final ItemStack item;
@@ -62,7 +66,7 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
             int x = this.getX();
             int y = this.getY();
             if (mouseX >= x && mouseX < x + 14 && mouseY >= y && mouseY < y + 14)
-                Element.setHoverEffect(graphics, new ShowItem(ItemStackTemplate.fromNonEmptyStack(this.item)));
+                setHoverEffect(graphics, new ShowItem(ItemStackTemplate.fromNonEmptyStack(this.item)));
             graphics.pose().pushMatrix();
             graphics.pose().translate(x + 1.0F, y + 1.0F);
             graphics.pose().scale(ICON_SCALE, ICON_SCALE);
@@ -77,7 +81,9 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         }
     }
 
-    /** Jade layout element with a real filled rectangle instead of a text-made bar. */
+    /**
+     * Jade layout element with a real filled rectangle instead of a text-made bar.
+     */
     private static final class ChargeBarElement extends Element {
         private static final int BAR_WIDTH = 100;
         private static final int BAR_HEIGHT = 8;

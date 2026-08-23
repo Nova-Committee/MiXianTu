@@ -32,17 +32,9 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     }
 
     public static final class Curios extends AutoInitConfigCategoryBase {
-        public final EnumEntry<BackMode> backMode = EnumEntry.builder(
-                        "config.mxt.server.curios.back_mode", BackMode.MANUAL)
-                .nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase()))
-                .build();
-        public final EnumEntry<BeltMode> beltMode = EnumEntry.builder(
-                        "config.mxt.server.curios.belt_mode", BeltMode.MANUAL)
-                .nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase()))
-                .build();
-        public final BooleanEntry forceRenderSlots = BooleanEntry.builder(
-                        "config.mxt.server.curios.force_render_slots", false)
-                .build();
+        public final EnumEntry<BackMode> backMode = EnumEntry.builder("config.mxt.server.curios.back_mode", BackMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
+        public final EnumEntry<BeltMode> beltMode = EnumEntry.builder("config.mxt.server.curios.belt_mode", BeltMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
+        public final BooleanEntry forceRenderSlots = BooleanEntry.builder("config.mxt.server.curios.force_render_slots", false).build();
 
         private Curios() {
             super("curios", "config.mxt.server.curios");

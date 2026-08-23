@@ -25,7 +25,9 @@ public final class CultivationAffinity {
     private CultivationAffinity() {
     }
 
-    /** Legacy attachment-only path; it retains element separation but has no zone-specific modifiers. */
+    /**
+     * Legacy attachment-only path; it retains element separation but has no zone-specific modifiers.
+     */
     public static double multiplier(SpiritComponent spirit, AuraChunkComponent aura, FormulaContext context,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {

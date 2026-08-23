@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.loot;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;

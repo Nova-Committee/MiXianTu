@@ -22,7 +22,9 @@ import snownee.jade.api.config.IPluginConfig;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Shows the aggregate contribution of every matching {@code block_aura} entry. */
+/**
+ * Shows the aggregate contribution of every matching {@code block_aura} entry.
+ */
 public enum BlockAuraComponentProvider implements IBlockComponentProvider {
     INSTANCE;
     private static final Identifier ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "block_aura");

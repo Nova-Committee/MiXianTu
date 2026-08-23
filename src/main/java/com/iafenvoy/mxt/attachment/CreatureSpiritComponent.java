@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.attachment;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.creature.CreatureProfile;

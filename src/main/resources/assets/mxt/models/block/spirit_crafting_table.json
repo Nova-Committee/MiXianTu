@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "mxt:block/spirit_crafting_table_side",
+    "down": "mxt:block/spirit_crafting_table_side",
+    "up": "mxt:block/spirit_crafting_table_top",
+    "north": "mxt:block/spirit_crafting_table_front",
+    "south": "mxt:block/spirit_crafting_table_side",
+    "west": "mxt:block/spirit_crafting_table_side",
+    "east": "mxt:block/spirit_crafting_table_side"
+  }
+}

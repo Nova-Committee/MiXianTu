@@ -6,7 +6,9 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-/** Formula-backed lower and upper bounds for one elemental aura pool. */
+/**
+ * Formula-backed lower and upper bounds for one elemental aura pool.
+ */
 public record AuraRequirement(NumberProvider min, NumberProvider max) {
     public static final Codec<AuraRequirement> CODEC = RecordCodecBuilder.create(i -> i.group(
             NumberProvider.CODEC.optionalFieldOf("min", new Constant(0.0D)).forGetter(AuraRequirement::min),

@@ -37,6 +37,7 @@ public record ChequeComponent(long value, String issuer) implements TooltipProvi
 
     @Override
     public void addToTooltip(@NonNull TooltipContext context, @NonNull Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
-        if (this.value > 0L) consumer.accept(Component.translatable("item.mxt.cheque.value", this.value).withStyle(ChatFormatting.GOLD));
+        if (this.value > 0L)
+            consumer.accept(Component.translatable("item.mxt.cheque.value", this.value).withStyle(ChatFormatting.GOLD));
     }
 }

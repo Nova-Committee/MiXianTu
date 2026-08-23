@@ -23,7 +23,9 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
 import java.util.function.Consumer;
 
-/** Adds data-driven weapon, pill, technique and item-action details. */
+/**
+ * Adds data-driven weapon, pill, technique and item-action details.
+ */
 @EventBusSubscriber(Dist.CLIENT)
 public final class ItemBindingTooltipAppender {
     private ItemBindingTooltipAppender() {
@@ -49,7 +51,8 @@ public final class ItemBindingTooltipAppender {
 
     private static void appendSpiritRoot(Consumer<Component> builder, TooltipFlag flag, GrantSpiritRootAction action) {
         builder.accept(Component.translatable("tooltip.mxt.item.spirit_root").withStyle(ChatFormatting.AQUA));
-        if (flag.isAdvanced()) builder.accept(Component.literal(action.spiritRoot().toString()).withStyle(ChatFormatting.DARK_GRAY));
+        if (flag.isAdvanced())
+            builder.accept(Component.literal(action.spiritRoot().toString()).withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon) {
@@ -66,10 +69,12 @@ public final class ItemBindingTooltipAppender {
             switch (attribute.modifier().operation()) {
                 case ADD_VALUE -> builder.accept(Component.translatable("tooltip.mxt.weapon.attribute.add",
                         TooltipText.signed(amount), name).withStyle(ChatFormatting.BLUE));
-                case ADD_MULTIPLIED_BASE -> builder.accept(Component.translatable("tooltip.mxt.weapon.attribute.multiply_base",
-                        TooltipText.signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
-                case ADD_MULTIPLIED_TOTAL -> builder.accept(Component.translatable("tooltip.mxt.weapon.attribute.multiply_total",
-                        TooltipText.signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
+                case ADD_MULTIPLIED_BASE ->
+                        builder.accept(Component.translatable("tooltip.mxt.weapon.attribute.multiply_base",
+                                TooltipText.signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
+                case ADD_MULTIPLIED_TOTAL ->
+                        builder.accept(Component.translatable("tooltip.mxt.weapon.attribute.multiply_total",
+                                TooltipText.signed(amount * 100.0D), name).withStyle(ChatFormatting.BLUE));
             }
         }
     }

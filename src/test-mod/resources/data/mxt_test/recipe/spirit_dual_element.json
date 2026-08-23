@@ -1,0 +1,14 @@
+{
+  "type": "mxt:spirit_shapeless",
+  "ingredients": [
+    "minecraft:blaze_powder",
+    "minecraft:prismarine_shard"
+  ],
+  "result": {
+    "id": "minecraft:sea_lantern"
+  },
+  "aura": {
+    "mxt_test:fire": 8,
+    "mxt_test:water": 8
+  }
+}

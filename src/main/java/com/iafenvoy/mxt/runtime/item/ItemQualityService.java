@@ -50,13 +50,15 @@ public final class ItemQualityService {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onItemUse(RightClickItem event) {
         if (!event.getEntity().level().isClientSide()
-                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) event.setCanceled(true);
+                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand())))
+            event.setCanceled(true);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onBlockUse(RightClickBlock event) {
         if (!event.getEntity().level().isClientSide()
-                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) event.setCanceled(true);
+                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand())))
+            event.setCanceled(true);
     }
 
     public static Optional<Holder<ItemQuality>> find(ItemStack stack) {
@@ -95,12 +97,16 @@ public final class ItemQualityService {
         stack.remove(MxtDataComponents.ITEM_QUALITY.get());
     }
 
-    /** Returns enabled qualities in the explicit tooltip-order tag, then all remaining entries. */
+    /**
+     * Returns enabled qualities in the explicit tooltip-order tag, then all remaining entries.
+     */
     public static List<Holder<ItemQuality>> ordered() {
         return ordered(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY));
     }
 
-    /** Client-safe counterpart of {@link #ordered()}. */
+    /**
+     * Client-safe counterpart of {@link #ordered()}.
+     */
     public static List<Holder<ItemQuality>> ordered(Provider access) {
         return ordered(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY));
     }
@@ -112,12 +118,16 @@ public final class ItemQualityService {
         return List.copyOf(values);
     }
 
-    /** Returns enabled qualities in a named group, preserving the tag's declared order. */
+    /**
+     * Returns enabled qualities in a named group, preserving the tag's declared order.
+     */
     public static List<Holder<ItemQuality>> group(Identifier group) {
         return group(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY), group);
     }
 
-    /** Client-safe counterpart of {@link #group(Identifier)}. */
+    /**
+     * Client-safe counterpart of {@link #group(Identifier)}.
+     */
     public static List<Holder<ItemQuality>> group(Provider access, Identifier group) {
         return group(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), group);
     }
@@ -128,12 +138,16 @@ public final class ItemQualityService {
                 .orElse(List.of());
     }
 
-    /** Lists all group tags. A group is any {@code group/<path>} tag on {@code item_quality}. */
+    /**
+     * Lists all group tags. A group is any {@code group/<path>} tag on {@code item_quality}.
+     */
     public static List<TagKey<ItemQuality>> groups() {
         return groups(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY));
     }
 
-    /** Client-safe counterpart of {@link #groups()}. */
+    /**
+     * Client-safe counterpart of {@link #groups()}.
+     */
     public static List<TagKey<ItemQuality>> groups(Provider access) {
         return groups(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY));
     }

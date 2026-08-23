@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
+
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
@@ -111,7 +112,8 @@ public final class CultivationActionService {
                                BooleanSupplier conditionsMet, double affinity) {
         if (spirit.cultivateAction().filter(action::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
-        if (!conditionsMet.getAsBoolean()) return stop(entity, spirit, action, definition, gameTime, Failure.CONDITIONS);
+        if (!conditionsMet.getAsBoolean())
+            return stop(entity, spirit, action, definition, gameTime, Failure.CONDITIONS);
         if (!CollectionHelper.containsAllFast(aura.auraKinds(), definition.auraKinds()))
             return Result.rejected(Failure.ENVIRONMENT, null);
         ItemAuraService.tick(entity, spirit, resources, context);
@@ -262,7 +264,9 @@ public final class CultivationActionService {
         return result;
     }
 
-    /** A multi-element cultivation tick proceeds at the limiting element's allocated ratio. */
+    /**
+     * A multi-element cultivation tick proceeds at the limiting element's allocated ratio.
+     */
     private static double allocationFactor(Map<Holder<Element>, Double> requested,
                                            Map<Holder<Element>, Double> allocated) {
         return requested.entrySet().stream()

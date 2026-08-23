@@ -16,7 +16,7 @@ import java.util.Optional;
  * provider replaces the modifier amount at runtime and is evaluated each tick.
  */
 public record AttributeEntry(Holder<Attribute> attribute, AttributeModifier modifier,
-                            Optional<NumberProvider> value) {
+                             Optional<NumberProvider> value) {
     public static final MapCodec<AttributeEntry> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Attribute.CODEC.fieldOf("attribute").forGetter(AttributeEntry::attribute),
             AttributeModifier.MAP_CODEC.forGetter(AttributeEntry::modifier),

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.screen.menu.ExchangeStationMenu;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu.Mode;
+import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
@@ -25,6 +26,7 @@ public final class MxtMenus {
     public static final DeferredHolder<MenuType<?>, MenuType<StationMenu>> TRADE_STATION_OWNER = station("trade_station_owner", Mode.TRADE_OWNER);
     public static final DeferredHolder<MenuType<?>, MenuType<StationMenu>> TRADE_STATION_CUSTOMER = station("trade_station_customer", Mode.TRADE_CUSTOMER);
     public static final DeferredHolder<MenuType<?>, MenuType<PlayerTradeMenu>> PLAYER_TRADE = REGISTRY.register("player_trade", () -> IMenuTypeExtension.create(PlayerTradeMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<SpiritCraftingMenu>> SPIRIT_CRAFTING_TABLE = REGISTRY.register("spirit_crafting_table", () -> new MenuType<>(SpiritCraftingMenu::new, FeatureFlags.VANILLA_SET));
 
     private static DeferredHolder<MenuType<?>, MenuType<StationMenu>> station(String name, Mode mode) {
         return REGISTRY.register(name, () -> new MenuType<>((containerId, inventory) -> new StationMenu(mode, containerId, inventory), FeatureFlags.VANILLA_SET));

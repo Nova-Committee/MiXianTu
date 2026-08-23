@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.item.block.DisplayStandBlock;
 import com.iafenvoy.mxt.item.block.ExchangeStationBlock;
 import com.iafenvoy.mxt.item.block.SystemStationBlock;
 import com.iafenvoy.mxt.item.block.TradeStationBlock;
+import com.iafenvoy.mxt.item.block.SpiritCraftingTableBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -37,6 +38,7 @@ public final class MxtBlocks {
             properties -> new DropExperienceBlock(ConstantInt.of(1), properties.strength(3.0F, 3.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
     public static final DeferredBlock<Block> SPIRIT_STONE_BLOCK = registerSolid("spirit_stone_block",
             properties -> new Block(properties.strength(5.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops()));
+    public static final DeferredBlock<SpiritCraftingTableBlock> SPIRIT_CRAFTING_TABLE = register("spirit_crafting_table", SpiritCraftingTableBlock::new);
     public static final DeferredBlock<DisplayStandBlock> OAK_DISPLAY_STAND = register("oak_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> BIRCH_DISPLAY_STAND = register("birch_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> SPRUCE_DISPLAY_STAND = register("spruce_display_stand", DisplayStandBlock::new);
@@ -51,7 +53,9 @@ public final class MxtBlocks {
         return block;
     }
 
-    /** Registers a full opaque cube without disabling neighbour face culling. */
+    /**
+     * Registers a full opaque cube without disabling neighbour face culling.
+     */
     private static <T extends Block> DeferredBlock<T> registerSolid(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
         DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.ofFullCopy(Blocks.IRON_BLOCK).setId(key)));

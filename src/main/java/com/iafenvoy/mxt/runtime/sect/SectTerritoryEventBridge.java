@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.sect;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;

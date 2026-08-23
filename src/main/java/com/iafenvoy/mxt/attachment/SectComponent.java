@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.attachment;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.Sect;
@@ -34,7 +35,7 @@ public final class SectComponent {
         this.contribution = contribution;
         this.completedTasks = new LinkedHashSet<>(completedTasks);
     }
-    
+
     public Optional<Holder<Sect>> sect() {
         return Optional.ofNullable(this.sect);
     }

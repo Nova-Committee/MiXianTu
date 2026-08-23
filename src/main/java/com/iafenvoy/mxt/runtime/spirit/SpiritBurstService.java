@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -15,27 +16,48 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEve
 import net.neoforged.neoforge.event.tick.PlayerTickEvent.Post;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
-/** Server-side hold-to-fire controller for resource-defined spirit bursts. */
+/**
+ * Server-side hold-to-fire controller for resource-defined spirit bursts.
+ */
 @EventBusSubscriber
 public final class SpiritBurstService {
     private static final long FIRE_INTERVAL_TICKS = 10L;
     private static final Map<UUID, Long> NEXT_FIRE_TICK = new HashMap<>();
+    private static final Map<UUID, Set<Identifier>> ACTIVE_RESOURCES = new HashMap<>();
 
     private SpiritBurstService() {
     }
 
-    public static void setFiring(ServerPlayer player, boolean firing) {
+    public static void setFiring(ServerPlayer player, Optional<Identifier> resourceId, boolean firing) {
         UUID playerId = player.getUUID();
-        if (!firing) {
-            NEXT_FIRE_TICK.remove(playerId);
+        if (resourceId.isEmpty()) {
+            if (!firing) {
+                ACTIVE_RESOURCES.remove(playerId);
+                NEXT_FIRE_TICK.remove(playerId);
+            }
             return;
         }
-        if (NEXT_FIRE_TICK.containsKey(playerId)) return;
-        fire(player);
-        NEXT_FIRE_TICK.put(playerId, player.level().getGameTime() + FIRE_INTERVAL_TICKS);
+        Optional<Identifier> valid = resourceId.filter(id -> MxtDatapackRegistries
+                .holder(MxtResourceKeys.RESOURCE, id).map(resource -> resource.value().auraType().isPresent()).orElse(false));
+        if (valid.isEmpty()) return;
+        Set<Identifier> active = ACTIVE_RESOURCES.computeIfAbsent(playerId, ignored -> new HashSet<>());
+        if (firing) {
+            boolean added = active.add(valid.get());
+            if (added && !NEXT_FIRE_TICK.containsKey(playerId)) {
+                fire(player);
+                NEXT_FIRE_TICK.put(playerId, player.level().getGameTime() + FIRE_INTERVAL_TICKS);
+            }
+        } else {
+            active.remove(valid.get());
+            if (active.isEmpty()) NEXT_FIRE_TICK.remove(playerId);
+        }
     }
 
     @SubscribeEvent
@@ -44,33 +66,42 @@ public final class SpiritBurstService {
         Long nextFireTick = NEXT_FIRE_TICK.get(player.getUUID());
         if (nextFireTick == null || player.level().getGameTime() < nextFireTick) return;
         fire(player);
-        NEXT_FIRE_TICK.put(player.getUUID(), player.level().getGameTime() + FIRE_INTERVAL_TICKS);
+        if (ACTIVE_RESOURCES.getOrDefault(player.getUUID(), Set.of()).isEmpty())
+            NEXT_FIRE_TICK.remove(player.getUUID());
+        else NEXT_FIRE_TICK.put(player.getUUID(), player.level().getGameTime() + FIRE_INTERVAL_TICKS);
     }
 
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
         NEXT_FIRE_TICK.remove(event.getEntity().getUUID());
+        ACTIVE_RESOURCES.remove(event.getEntity().getUUID());
     }
 
     private static void fire(ServerPlayer player) {
         ResourceHolderComponent holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
-                .filter(resource -> tryFire(player, holder, resource))
-                .findFirst();
+        Set<Identifier> active = ACTIVE_RESOURCES.get(player.getUUID());
+        if (active == null || active.isEmpty()) return;
+        active.removeIf(id -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
+                .map(resource -> resource.value().auraType().isEmpty()).orElse(true));
+        active.stream()
+                .map(id -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null))
+                .filter(Objects::nonNull)
+                .forEach(resource -> tryFire(player, holder, resource));
     }
 
     /**
-     * A positive {@code burst_amount} marks the resource used by the shortcut.
-     * Only the first matching resource fires, so datapacks should configure one default spirit-power resource.
+     * A positive {@code burst_amount} marks a resource that can be fired by the shortcut.
      */
     private static boolean tryFire(ServerPlayer player, ResourceHolderComponent holder, Holder<Resource> resource) {
         Resource definition = resource.value();
+        if (definition.auraType().isEmpty()) return false;
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
         int amount = asWholeAmount(definition.burstAmount().evaluate(context));
         if (amount <= 0) return false;
-        if (!ResourceService.initialize(holder, resource, context).valid() || holder.get(resource) < amount) return false;
+        if (!ResourceService.initialize(holder, resource, context).valid() || holder.get(resource) < amount)
+            return false;
         if (!ResourceService.change(holder, resource, -amount, context).valid()) return false;
-        player.level().addFreshEntity(new SpiritBurstEntity(player.level(), player, amount, definition.particleColor()));
+        player.level().addFreshEntity(new SpiritBurstEntity(player.level(), player, definition.auraType().get(), amount, definition.particleColor()));
         return true;
     }
 

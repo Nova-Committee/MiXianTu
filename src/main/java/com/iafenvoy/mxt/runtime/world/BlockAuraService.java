@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
+
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
@@ -56,7 +57,18 @@ public final class BlockAuraService {
     private static AuraValue merge(AuraValue first, AuraValue second) {
         double amount = first.amount() + second.amount();
         double maximum = first.max().resolve(first.amount()) + second.max().resolve(second.amount());
+        double firstWeight = Math.max(0.0D, first.amount());
+        double secondWeight = Math.max(0.0D, second.amount());
+        double totalWeight = firstWeight + secondWeight;
+        int color = totalWeight <= 0.0D ? first.color() : weightedColor(first.color(), firstWeight, second.color(), secondWeight, totalWeight);
         return new AuraValue(amount, new Fixed(maximum),
-                first.regenPerTick() + second.regenPerTick());
+                first.regenPerTick() + second.regenPerTick(), color);
+    }
+
+    private static int weightedColor(int first, double firstWeight, int second, double secondWeight, double totalWeight) {
+        int red = (int) Math.round((((first >>> 16) & 0xFF) * firstWeight + ((second >>> 16) & 0xFF) * secondWeight) / totalWeight);
+        int green = (int) Math.round((((first >>> 8) & 0xFF) * firstWeight + ((second >>> 8) & 0xFF) * secondWeight) / totalWeight);
+        int blue = (int) Math.round(((first & 0xFF) * firstWeight + (second & 0xFF) * secondWeight) / totalWeight);
+        return (red << 16) | (green << 8) | blue;
     }
 }

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.compat.kubejs;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.SpiritComponent;

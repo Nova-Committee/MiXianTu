@@ -6,7 +6,9 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import org.jspecify.annotations.NonNull;
 
-/** Particle type for the local, entity-tracked spirit-burst trail. */
+/**
+ * Particle type for the local, entity-tracked spirit-burst trail.
+ */
 public final class SpiritWispParticleType extends ParticleType<SpiritWispParticleOptions> {
     public SpiritWispParticleType() {
         super(false);

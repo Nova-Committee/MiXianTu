@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.recipe;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.mojang.serialization.MapCodec;
@@ -12,24 +11,29 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.*;
+import net.minecraft.world.item.crafting.PlacementInfo;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Recipe-manager bridge for refining one item into a declared artifact archetype.
+ * Native recipe entry containing the complete artifact archetype payload.
  */
-public record RefiningRecipeAdapter(Identifier input, Identifier archetype) implements Recipe<SingleRecipeInput> {
-    public static final MapCodec<RefiningRecipeAdapter> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("input").forGetter(RefiningRecipeAdapter::input),
-            Identifier.CODEC.fieldOf("archetype").forGetter(RefiningRecipeAdapter::archetype)
-    ).apply(i, RefiningRecipeAdapter::new));
-    public static final StreamCodec<RegistryFriendlyByteBuf, RefiningRecipeAdapter> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
+public record RefiningRecipe(Identifier input, ItemArchetype archetype) implements Recipe<SingleRecipeInput> {
+    public static final MapCodec<RefiningRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("input").forGetter(RefiningRecipe::input),
+            ItemArchetype.DIRECT_CODEC.fieldOf("archetype").forGetter(RefiningRecipe::archetype)
+    ).apply(i, RefiningRecipe::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, RefiningRecipe> PACKET_CODEC =
+            ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     @Override
-    public boolean matches(SingleRecipeInput input, @NonNull Level level) {
-        return !input.isEmpty() && MxtDatapackRegistries.get(MxtResourceKeys.ITEM_ARCHETYPE, this.archetype).isPresent()
-                && this.input.equals(BuiltInRegistries.ITEM.getKey(input.item().getItem()));
+    public boolean matches(SingleRecipeInput value, @NonNull Level level) {
+        return !value.isEmpty() && this.input.equals(BuiltInRegistries.ITEM.getKey(value.item().getItem()));
     }
 
     @Override

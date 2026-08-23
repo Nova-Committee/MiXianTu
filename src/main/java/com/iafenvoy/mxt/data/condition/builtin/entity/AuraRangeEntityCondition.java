@@ -13,7 +13,9 @@ import net.minecraft.core.Holder;
 
 import java.util.Map;
 
-/** Tests the server-resolved aura concentration at an entity's current position. */
+/**
+ * Tests the server-resolved aura concentration at an entity's current position.
+ */
 public record AuraRangeEntityCondition(Map<Holder<Element>, AuraRequirement> aura) implements EntityCondition {
     public static final MapCodec<AuraRangeEntityCondition> CODEC = CollectionCodecs.map(Element.CODEC, AuraRequirement.CODEC)
             .fieldOf("aura").xmap(AuraRangeEntityCondition::new, AuraRangeEntityCondition::aura);
