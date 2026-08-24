@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.compat.kubejs;
 
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -19,8 +19,8 @@ import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
-import com.iafenvoy.mxt.runtime.world.AuraWorldComponent.Area;
-import com.iafenvoy.mxt.runtime.world.AuraWorldComponent.Shape;
+import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Area;
+import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -59,7 +59,9 @@ public final class MxtKubeJsApi {
         Holder<Ability> ability = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null)
             return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
-        return AbilityService.use(ability, ability.value(), actor, actor.getData(MxtAttachments.ABILITY_HOLDER), actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
+        UseResult result = AbilityService.use(ability, ability.value(), actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
+                actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
+        return result;
     }
 
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, String source, FormulaContext context) {
@@ -72,8 +74,7 @@ public final class MxtKubeJsApi {
 
     public static boolean removeCurse(@NotNull Entity target, Identifier id) {
         return !target.level().isClientSide() && MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, id)
-                .map(curse -> CurseService.remove(target.getData(MxtAttachments.CURSE_HOLDER), curse,
-                        Reason.EXPLICIT, target.level().getGameTime()).isPresent()).orElse(false);
+                .map(curse -> CurseService.remove(target, curse, Reason.EXPLICIT, target.level().getGameTime()).isPresent()).orElse(false);
     }
 
     /**
@@ -88,7 +89,9 @@ public final class MxtKubeJsApi {
             return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
         if (MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, resource).isEmpty())
             return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
-        return CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA), entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context, () -> true);
+        BreakthroughResult result = CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA),
+                entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context, () -> true);
+        return result;
     }
 
     /**
@@ -96,7 +99,7 @@ public final class MxtKubeJsApi {
      */
     public static boolean addCultivation(LivingEntity entity, double amount) {
         if (entity == null || entity.level().isClientSide() || !Double.isFinite(amount) || amount < 0.0D) return false;
-        SpiritComponent spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         spirit.setCultivationProgress(spirit.cultivationProgress() + amount);
         return true;
     }
@@ -108,7 +111,8 @@ public final class MxtKubeJsApi {
         if (entity == null || entity.level().isClientSide())
             return new Result(false, null, Map.of());
         try {
-            return ResourceTransactions.tryConsume(entity.getData(MxtAttachments.RESOURCE_HOLDER), ResourceTransactions.evaluate(costs, context));
+            return ResourceTransactions.tryConsume(entity.getData(MxtAttachments.RESOURCE_HOLDER),
+                    ResourceTransactions.evaluate(costs, context));
         } catch (IllegalArgumentException exception) {
             return new Result(false, null, Map.of());
         }

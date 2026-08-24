@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.attachment.AuraChunkComponent;
+import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -69,7 +69,7 @@ public final class AuraChunkTicker {
             DIRTY.remove(level);
         }
         for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
-            AuraChunkComponent aura = chunk.getData(MxtAttachments.AURA_CHUNK);
+            AuraChunkAttachment aura = chunk.getData(MxtAttachments.AURA_CHUNK);
             if (!aura.initialized())
                 AuraService.getPositionAura(level, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
             aura.regenerateAuras(INTERVAL_TICKS);

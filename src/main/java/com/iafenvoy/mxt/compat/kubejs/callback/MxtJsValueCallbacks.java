@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -16,7 +16,7 @@ import java.util.function.BiFunction;
  */
 public final class MxtJsValueCallbacks {
     private static final Map<String, BiFunction<FormulaContext, JsonObject, Double>> NUMBER = new ConcurrentHashMap<>();
-    private static final Map<String, QuadFunction<ResourceHolderComponent, Holder<Resource>, FormulaContext, JsonObject, Double>> RESOURCE = new ConcurrentHashMap<>();
+    private static final Map<String, QuadFunction<ResourceHolderAttachment, Holder<Resource>, FormulaContext, JsonObject, Double>> RESOURCE = new ConcurrentHashMap<>();
 
     private MxtJsValueCallbacks() {
     }
@@ -25,7 +25,7 @@ public final class MxtJsValueCallbacks {
         NUMBER.put(id, callback);
     }
 
-    public static void registerResource(String id, QuadFunction<ResourceHolderComponent, Holder<Resource>, FormulaContext, JsonObject, Double> callback) {
+    public static void registerResource(String id, QuadFunction<ResourceHolderAttachment, Holder<Resource>, FormulaContext, JsonObject, Double> callback) {
         RESOURCE.put(id, callback);
     }
 
@@ -39,8 +39,8 @@ public final class MxtJsValueCallbacks {
         }
     }
 
-    public static double resource(String id, ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context, JsonObject params) {
-        QuadFunction<ResourceHolderComponent, Holder<Resource>, FormulaContext, JsonObject, Double> callback = RESOURCE.get(id);
+    public static double resource(String id, ResourceHolderAttachment holder, Holder<Resource> resource, FormulaContext context, JsonObject params) {
+        QuadFunction<ResourceHolderAttachment, Holder<Resource>, FormulaContext, JsonObject, Double> callback = RESOURCE.get(id);
         if (callback == null) return unknown("resource value provider", id);
         try {
             return finite("resource value provider", id, callback.apply(holder, resource, context, params));

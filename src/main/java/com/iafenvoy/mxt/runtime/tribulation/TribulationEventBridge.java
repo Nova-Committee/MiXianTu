@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
-import com.iafenvoy.mxt.attachment.TribulationComponent;
+import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
@@ -26,7 +26,7 @@ public final class TribulationEventBridge {
     @SubscribeEvent
     public static void onEntityTick(Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
-        TribulationComponent data = entity.getData(MxtAttachments.TRIBULATION);
+        TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
         data.tribulation().map(holder -> new Entry(holder, holder.value())).ifPresent(entry -> {
             TickResult result = TribulationService.tick(entity, data, entry.definition(), entity.level().getGameTime(), FormulaContexts.forEntity(entity));
             if (result.state() == State.COMPLETED && entity instanceof ServerPlayer player) {

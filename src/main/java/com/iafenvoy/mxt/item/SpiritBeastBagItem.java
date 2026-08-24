@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 
-import com.iafenvoy.mxt.attachment.ContractComponent;
+import com.iafenvoy.mxt.attachment.ContractAttachment;
 import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -45,7 +45,7 @@ public final class SpiritBeastBagItem extends Item {
             ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.occupied"));
             return InteractionResult.FAIL;
         }
-        ContractComponent contract = mob.getData(MxtAttachments.CONTRACT);
+        ContractAttachment contract = mob.getData(MxtAttachments.CONTRACT);
         if (!contract.bound() || contract.owner().filter(player.getUUID()::equals).isEmpty()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.not_owner"));
             return InteractionResult.FAIL;

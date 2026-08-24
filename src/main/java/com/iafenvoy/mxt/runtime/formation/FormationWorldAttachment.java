@@ -13,18 +13,18 @@ import java.util.Optional;
 /**
  * Persistable level-scoped index of active formations, keyed by their validated controller position.
  */
-public final class FormationWorldComponent {
-    public static final MapCodec<FormationWorldComponent> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.unboundedMap(Codec.LONG, Snapshot.CODEC).optionalFieldOf("formations", Map.of()).forGetter(FormationWorldComponent::encoded)
-    ).apply(i, FormationWorldComponent::new));
-    public static final Codec<FormationWorldComponent> CODEC = MAP_CODEC.codec();
+public final class FormationWorldAttachment {
+    public static final MapCodec<FormationWorldAttachment> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Codec.unboundedMap(Codec.LONG, Snapshot.CODEC).optionalFieldOf("formations", Map.of()).forGetter(FormationWorldAttachment::encoded)
+    ).apply(i, FormationWorldAttachment::new));
+    public static final Codec<FormationWorldAttachment> CODEC = MAP_CODEC.codec();
     private final Map<Long, Snapshot> formations;
 
-    public FormationWorldComponent() {
+    public FormationWorldAttachment() {
         this(Map.of());
     }
 
-    private FormationWorldComponent(Map<Long, Snapshot> formations) {
+    private FormationWorldAttachment(Map<Long, Snapshot> formations) {
         this.formations = new LinkedHashMap<>(formations);
     }
 

@@ -15,18 +15,18 @@ import java.util.UUID;
 /**
  * Persisted custom aura areas. Formation areas are derived live and are deliberately not stored here.
  */
-public final class AuraWorldComponent {
-    public static final MapCodec<AuraWorldComponent> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.unboundedMap(Codec.STRING, Area.CODEC).optionalFieldOf("areas", Map.of()).forGetter(AuraWorldComponent::encoded)
-    ).apply(i, AuraWorldComponent::new));
-    public static final Codec<AuraWorldComponent> CODEC = MAP_CODEC.codec();
+public final class AuraWorldAttachment {
+    public static final MapCodec<AuraWorldAttachment> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Codec.unboundedMap(Codec.STRING, Area.CODEC).optionalFieldOf("areas", Map.of()).forGetter(AuraWorldAttachment::encoded)
+    ).apply(i, AuraWorldAttachment::new));
+    public static final Codec<AuraWorldAttachment> CODEC = MAP_CODEC.codec();
     private final Map<String, Area> areas;
 
-    public AuraWorldComponent() {
+    public AuraWorldAttachment() {
         this(Map.of());
     }
 
-    private AuraWorldComponent(Map<String, Area> areas) {
+    private AuraWorldAttachment(Map<String, Area> areas) {
         this.areas = new LinkedHashMap<>(areas);
     }
 

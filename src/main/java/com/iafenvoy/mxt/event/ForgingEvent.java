@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
@@ -58,11 +58,11 @@ public abstract class ForgingEvent extends Event {
         private final ForgingSession session;
         private final Identifier method;
         private final ForgingMethod definition;
-        private final ResourceHolderComponent resources;
+        private final ResourceHolderAttachment resources;
         private final FormulaContext context;
         private List<ResourceCost> costs;
 
-        public StrikePre(ForgingSession session, Identifier method, ForgingMethod definition, ResourceHolderComponent resources, FormulaContext context) {
+        public StrikePre(ForgingSession session, Identifier method, ForgingMethod definition, ResourceHolderAttachment resources, FormulaContext context) {
             this.session = session;
             this.method = method;
             this.definition = definition;
@@ -83,7 +83,7 @@ public abstract class ForgingEvent extends Event {
             return this.definition;
         }
 
-        public ResourceHolderComponent resources() {
+        public ResourceHolderAttachment resources() {
             return this.resources;
         }
 

@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.attachment.SectComponent;
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.attachment.SectAttachment;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.Title;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
@@ -37,6 +38,7 @@ import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 import java.util.Optional;
+import java.util.List;
 
 import static net.minecraft.commands.Commands.literal;
 
@@ -49,6 +51,7 @@ public final class MxtTestCommands {
     private static final Identifier SPIRIT_POWER = id("spirit_power");
     private static final Identifier SOUL_POWER = id("soul_power");
     private static final Identifier ROOT = id("qingxiao_fire_root");
+    private static final Identifier WATER_ROOT = id("water_root");
     private static final Identifier PHYSIQUE = id("qingxiao_body");
     private static final Identifier TECHNIQUE = id("qingxiao_breathing_manual");
     private static final Identifier TITLE = id("qingxiao_outer_disciple");
@@ -58,6 +61,10 @@ public final class MxtTestCommands {
     private static final Identifier FORMATION = id("spirit_gathering");
     private static final Identifier REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
+    private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");
+    private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
+            id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence")
+    );
 
     private MxtTestCommands() {
     }
@@ -75,8 +82,8 @@ public final class MxtTestCommands {
     private static int giveKit(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
-        ResourceHolderComponent resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext context = FormulaContext.of(player);
 
         grantIdentity(player, spirit, context);
@@ -90,6 +97,11 @@ public final class MxtTestCommands {
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SOUL_POWER), 20.0D);
         joinSect(player);
 
+        // These attachments are mutable; reattaching makes the freshly built test state visible to the client.
+        player.setData(MxtAttachments.SPIRIT_DATA, spirit);
+        player.setData(MxtAttachments.RESOURCE_HOLDER, resources);
+        player.setData(MxtAttachments.ABILITY_HOLDER, player.getData(MxtAttachments.ABILITY_HOLDER));
+
         give(player, new ItemStack(MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.get(), 8));
         give(player, new ItemStack(MxtItems.SPIRIT_STONE.get(), 3));
         give(player, new ItemStack(Items.DIAMOND_SWORD));
@@ -102,17 +114,21 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static void grantIdentity(ServerPlayer player, SpiritComponent spirit, FormulaContext context) {
+    private static void grantIdentity(ServerPlayer player, SpiritAttachment spirit, FormulaContext context) {
         HolderLookup<SpiritRoot> root = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, ROOT);
+        HolderLookup<SpiritRoot> waterRoot = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, WATER_ROOT);
         HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
         HolderLookup<CultivationTechnique> technique = new HolderLookup<>(MxtResourceKeys.CULTIVATION_TECHNIQUE, TECHNIQUE);
         HolderLookup<Title> title = new HolderLookup<>(MxtResourceKeys.TITLE, TITLE);
         CultivationIdentityService.grantSpiritRoot(player, ROOT, root.value());
+        CultivationIdentityService.grantSpiritRoot(player, WATER_ROOT, waterRoot.value());
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
         TechniqueService.learn(player, spirit, TECHNIQUE, technique.value(), ignored -> Optional.empty(), context);
         TitleService.grant(player, spirit, TITLE, title.value(), ignored -> null, context);
         spirit.setActiveTechnique(technique.holder());
         CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
+        TEST_ACTIVE_ABILITIES.forEach(id -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)
+                .ifPresent(ability -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, TEST_ABILITY_SOURCE)));
     }
 
     private static int startCultivation(CommandSourceStack source) {
@@ -132,7 +148,7 @@ public final class MxtTestCommands {
     private static int completeSectTask(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        SectComponent data = player.getData(MxtAttachments.SECT);
+        SectAttachment data = player.getData(MxtAttachments.SECT);
         Result result = SectService.completeTask(data, require(MxtResourceKeys.SECT, SECT), SECT_TASK);
         if (!result.changed()) {
             source.sendFailure(Component.translatable("command.mxt_test.task.failed", result.failure().name()));
@@ -151,7 +167,7 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static void ensureResource(ServerPlayer player, ResourceHolderComponent resources, Holder<Resource> resource, double minimum) {
+    private static void ensureResource(ServerPlayer player, ResourceHolderAttachment resources, Holder<Resource> resource, double minimum) {
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
         ResourceService.initialize(resources, resource, context);
         double missing = minimum - resources.get(resource);
@@ -159,7 +175,7 @@ public final class MxtTestCommands {
     }
 
     private static void joinSect(ServerPlayer player) {
-        SectComponent data = player.getData(MxtAttachments.SECT);
+        SectAttachment data = player.getData(MxtAttachments.SECT);
         if (data.member()) return;
         SectService.join(data, require(MxtResourceKeys.SECT, SECT));
     }

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -62,7 +62,7 @@ public enum HotbarOverlay implements GuiLayer {
 
     private static void drawCastBar(GuiGraphicsExtractor graphics, Minecraft minecraft, Player player,
                                     int x, int y, List<ResolvedAbility> abilities, long gameTime) {
-        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         ResolvedAbility casting = abilities.stream().filter(value -> {
             Optional<Holder<Ability>> bound = holder.sources().keySet().stream().filter(ability -> ability.value() == value.definition()).findFirst();
             return bound.isPresent() && holder.componentState(bound.get(), "cast_ends_at")

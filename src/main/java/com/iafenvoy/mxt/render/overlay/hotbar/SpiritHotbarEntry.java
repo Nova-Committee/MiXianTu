@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
-import com.iafenvoy.mxt.attachment.SpiritBurstCooldownComponent;
+import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
 import com.iafenvoy.mxt.data.HotbarIcon;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -41,7 +41,7 @@ public record SpiritHotbarEntry(Identifier id) implements HotbarEntry {
         if (player == null) return 0.0F;
         Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, this.id).orElse(null);
         if (resource == null) return 0.0F;
-        SpiritBurstCooldownComponent cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
+        SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
         long remaining = cooldowns.cooldowns().getOrDefault(resource, -1L) - player.level().getGameTime();
         return remaining <= 0L ? 0.0F : Math.min(1.0F, remaining / (float) SpiritBurstService.FIRE_INTERVAL_TICKS);
     }

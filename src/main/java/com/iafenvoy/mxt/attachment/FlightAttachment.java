@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -12,28 +13,27 @@ import java.util.UUID;
 /**
  * Server-owned flight mount state.
  */
-public final class FlightComponent {
-    public static final MapCodec<FlightComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.BOOL.optionalFieldOf("active", false).forGetter(FlightComponent::active),
-            ItemArchetype.CODEC.optionalFieldOf("archetype").forGetter(FlightComponent::archetype),
-            Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(FlightComponent::startedAt),
-            Codec.BOOL.optionalFieldOf("previous_mayfly", false).forGetter(FlightComponent::previousMayfly),
-            Codec.BOOL.optionalFieldOf("previous_flying", false).forGetter(FlightComponent::previousFlying),
-            Codec.FLOAT.optionalFieldOf("previous_flying_speed", 0.05F).forGetter(FlightComponent::previousFlyingSpeed),
-            Codec.STRING.optionalFieldOf("vehicle").forGetter(FlightComponent::vehicleRaw)
-    ).apply(i, FlightComponent::new));
+public final class FlightAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<FlightAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Codec.BOOL.optionalFieldOf("active", false).forGetter(FlightAttachment::active),
+            ItemArchetype.CODEC.optionalFieldOf("archetype").forGetter(FlightAttachment::archetype),
+            Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(FlightAttachment::startedAt),
+            Codec.BOOL.optionalFieldOf("previous_mayfly", false).forGetter(FlightAttachment::previousMayfly),
+            Codec.BOOL.optionalFieldOf("previous_flying", false).forGetter(FlightAttachment::previousFlying),
+            Codec.FLOAT.optionalFieldOf("previous_flying_speed", 0.05F).forGetter(FlightAttachment::previousFlyingSpeed),
+            Codec.STRING.optionalFieldOf("vehicle").forGetter(FlightAttachment::vehicleRaw)
+    ).apply(i, FlightAttachment::new));
     private boolean active;
     private Holder<ItemArchetype> archetype;
     private long startedAt;
-    private boolean previousMayfly;
-    private boolean previousFlying;
+    private boolean previousMayfly, previousFlying;
     private float previousFlyingSpeed;
     private String vehicle;
 
-    public FlightComponent() {
+    public FlightAttachment() {
     }
 
-    private FlightComponent(boolean active, Optional<Holder<ItemArchetype>> archetype, long startedAt, boolean previousMayfly, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
+    private FlightAttachment(boolean active, Optional<Holder<ItemArchetype>> archetype, long startedAt, boolean previousMayfly, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
         this.active = active;
         this.archetype = archetype.orElse(null);
         this.startedAt = startedAt;
@@ -87,6 +87,7 @@ public final class FlightComponent {
         this.previousFlying = flying;
         this.previousFlyingSpeed = flyingSpeed;
         this.vehicle = vehicle.toString();
+        this.markDirty();
     }
 
     public void stop() {
@@ -96,5 +97,6 @@ public final class FlightComponent {
         this.previousFlying = false;
         this.previousFlyingSpeed = 0.05F;
         this.vehicle = null;
+        this.markDirty();
     }
 }

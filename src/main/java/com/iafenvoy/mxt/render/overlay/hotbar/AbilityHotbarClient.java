@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
-import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
 import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
@@ -51,7 +51,7 @@ public final class AbilityHotbarClient {
     }
 
     public static Optional<ResolvedAbility> resolve(Player player, String slot) {
-        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         return holder.sources().keySet().stream()
                 .filter(ability -> ability.value().type() instanceof ActiveAbilityType(
                         String slot1
@@ -60,7 +60,7 @@ public final class AbilityHotbarClient {
     }
 
     public static List<ResolvedAbility> all(Player player) {
-        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         return holder.sources().keySet().stream()
                 .filter(ability -> ability.value().type() instanceof ActiveAbilityType)
                 .map(ability -> new ResolvedAbility(HolderHelper.id(ability), ability.value()))
@@ -70,7 +70,7 @@ public final class AbilityHotbarClient {
     }
 
     public static boolean shouldCancel(Player player, Identifier id) {
-        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         Optional<Holder<Ability>> ability = holder.sources().keySet().stream().filter(value -> HolderHelper.id(value).equals(id)).findFirst();
         if (ability.isEmpty()) return false;
         if (holder.channelledAbility().filter(ability.get()::equals).isPresent()) return true;

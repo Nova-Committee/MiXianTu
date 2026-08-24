@@ -13,16 +13,16 @@ import java.util.Optional;
 /**
  * Per-chunk sect ownership. Permissions remain defined by the owner's datapack rank policy.
  */
-public final class SectTerritoryComponent {
-    public static final MapCodec<SectTerritoryComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.SECT).optionalFieldOf("owner").forGetter(SectTerritoryComponent::owner)
-    ).apply(i, SectTerritoryComponent::new));
+public final class SectTerritoryAttachment {
+    public static final MapCodec<SectTerritoryAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.SECT).optionalFieldOf("owner").forGetter(SectTerritoryAttachment::owner)
+    ).apply(i, SectTerritoryAttachment::new));
     private Holder<Sect> owner;
 
-    public SectTerritoryComponent() {
+    public SectTerritoryAttachment() {
     }
 
-    private SectTerritoryComponent(Optional<Holder<Sect>> owner) {
+    private SectTerritoryAttachment(Optional<Holder<Sect>> owner) {
         this.owner = owner.orElse(null);
     }
 

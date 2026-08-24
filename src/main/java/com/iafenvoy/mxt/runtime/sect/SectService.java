@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.sect;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.attachment.SectComponent;
-import com.iafenvoy.mxt.attachment.SectTerritoryComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.attachment.SectAttachment;
+import com.iafenvoy.mxt.attachment.SectTerritoryAttachment;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.Sect.Exchange;
 import com.iafenvoy.mxt.data.Sect.Rank;
@@ -31,7 +31,7 @@ public final class SectService {
     private SectService() {
     }
 
-    public static Result join(SectComponent data, Holder<Sect> sect) {
+    public static Result join(SectAttachment data, Holder<Sect> sect) {
         if (sect.value().ranks().isEmpty()) return Result.rejected(Failure.DISABLED);
         if (data.member()) return Result.rejected(Failure.ALREADY_MEMBER);
         if (NeoForge.EVENT_BUS.post(new JoinPre(data, sect)).isCanceled())
@@ -41,7 +41,7 @@ public final class SectService {
         return Result.changedResult();
     }
 
-    public static Result leave(SectComponent data) {
+    public static Result leave(SectAttachment data) {
         if (!data.member()) return Result.rejected(Failure.NOT_MEMBER);
         Holder<Sect> sect = data.sect().orElseThrow();
         if (NeoForge.EVENT_BUS.post(new LeavePre(data, sect)).isCanceled())
@@ -51,7 +51,7 @@ public final class SectService {
         return Result.changedResult();
     }
 
-    public static Result addContribution(SectComponent data, Holder<Sect> sect, int amount) {
+    public static Result addContribution(SectAttachment data, Holder<Sect> sect, int amount) {
         if (data.sect().filter(sect::equals).isEmpty()) return Result.rejected(Failure.NOT_MEMBER);
         if (amount <= 0) return Result.rejected(Failure.INVALID_CONTRIBUTION);
         data.addContribution(amount);
@@ -61,7 +61,7 @@ public final class SectService {
     /**
      * Promotes to the next strictly higher configured rank after atomically paying its declared costs.
      */
-    public static Result promote(SectComponent data, Holder<Sect> sect, ResourceHolderComponent resources, FormulaContext context) {
+    public static Result promote(SectAttachment data, Holder<Sect> sect, ResourceHolderAttachment resources, FormulaContext context) {
         if (data.sect().filter(sect::equals).isEmpty()) return Result.rejected(Failure.NOT_MEMBER);
         Sect definition = sect.value();
         Rank current = definition.ranks().stream().filter(rank -> rank.id().equals(data.rank())).findFirst().orElse(null);
@@ -84,7 +84,7 @@ public final class SectService {
         return Result.changedResult();
     }
 
-    public static boolean hasPermission(SectComponent data, Holder<Sect> sect, Identifier permission) {
+    public static boolean hasPermission(SectAttachment data, Holder<Sect> sect, Identifier permission) {
         if (data.sect().filter(sect::equals).isEmpty()) return false;
         return sect.value().ranks().stream().filter(rank -> rank.id().equals(data.rank())).findFirst()
                 .map(rank -> rank.permissions().contains(permission)).orElse(false);
@@ -93,7 +93,7 @@ public final class SectService {
     /**
      * Awards a declared task once, or repeatedly when its datapack definition explicitly permits it.
      */
-    public static Result completeTask(SectComponent data, Holder<Sect> sect, Identifier taskId) {
+    public static Result completeTask(SectAttachment data, Holder<Sect> sect, Identifier taskId) {
         if (data.sect().filter(sect::equals).isEmpty()) return Result.rejected(Failure.NOT_MEMBER);
         Task task = sect.value().tasks().stream().filter(value -> value.id().equals(taskId)).findFirst().orElse(null);
         if (task == null) return Result.rejected(Failure.UNKNOWN_TASK);
@@ -108,8 +108,8 @@ public final class SectService {
     /**
      * Validates all costs before deducting contribution and returns concrete item IDs for a server-owned inventory insertion.
      */
-    public static ExchangeResult exchange(SectComponent data, Holder<Sect> sect, Identifier exchangeId,
-                                          ResourceHolderComponent resources, FormulaContext context) {
+    public static ExchangeResult exchange(SectAttachment data, Holder<Sect> sect, Identifier exchangeId,
+                                          ResourceHolderAttachment resources, FormulaContext context) {
         if (data.sect().filter(sect::equals).isEmpty()) return ExchangeResult.rejected(Failure.NOT_MEMBER);
         Exchange exchange = sect.value().exchanges().stream().filter(value -> value.id().equals(exchangeId)).findFirst().orElse(null);
         if (exchange == null) return ExchangeResult.rejected(Failure.UNKNOWN_EXCHANGE);
@@ -133,7 +133,7 @@ public final class SectService {
     /**
      * Claims an unowned chunk for the member's sect after the rank permission is verified.
      */
-    public static Result claimTerritory(SectComponent data, Holder<Sect> sect, SectTerritoryComponent territory, Identifier permission) {
+    public static Result claimTerritory(SectAttachment data, Holder<Sect> sect, SectTerritoryAttachment territory, Identifier permission) {
         if (!sect.value().territoryPermissions().contains(permission) || !hasPermission(data, sect, permission))
             return Result.rejected(Failure.PERMISSION_DENIED);
         if (territory.claimed()) return Result.rejected(Failure.TERRITORY_CLAIMED);
@@ -144,14 +144,14 @@ public final class SectService {
     /**
      * A territory permits only its owning sect and its rank's declared permission.
      */
-    public static boolean canUseTerritory(SectComponent data, Holder<Sect> sect, SectTerritoryComponent territory, Identifier permission) {
+    public static boolean canUseTerritory(SectAttachment data, Holder<Sect> sect, SectTerritoryAttachment territory, Identifier permission) {
         return territory.owner().filter(sect::equals).isPresent() && hasPermission(data, sect, permission);
     }
 
     /**
      * Releases a claimed chunk only for the owning sect and an explicitly authorised rank.
      */
-    public static Result releaseTerritory(SectComponent data, Holder<Sect> sect, SectTerritoryComponent territory, Identifier permission) {
+    public static Result releaseTerritory(SectAttachment data, Holder<Sect> sect, SectTerritoryAttachment territory, Identifier permission) {
         if (territory.owner().filter(sect::equals).isEmpty()) return Result.rejected(Failure.NOT_TERRITORY_OWNER);
         if (!sect.value().territoryPermissions().contains(permission) || !hasPermission(data, sect, permission))
             return Result.rejected(Failure.PERMISSION_DENIED);

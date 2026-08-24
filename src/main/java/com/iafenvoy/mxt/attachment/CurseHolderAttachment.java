@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
@@ -13,17 +14,17 @@ import java.util.Map;
 /**
  * Persistent curse instances only; definitions are looked up from the reloadable curse registry.
  */
-public final class CurseHolderComponent {
-    public static final MapCodec<CurseHolderComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.map(Curse.CODEC, State.CODEC).optionalFieldOf("instances", Map.of()).forGetter(CurseHolderComponent::instances)
-    ).apply(i, CurseHolderComponent::new));
+public final class CurseHolderAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<CurseHolderAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            CollectionCodecs.map(Curse.CODEC, State.CODEC).optionalFieldOf("instances", Map.of()).forGetter(CurseHolderAttachment::instances)
+    ).apply(i, CurseHolderAttachment::new));
     private final Map<Holder<Curse>, State> instances;
 
-    public CurseHolderComponent() {
+    public CurseHolderAttachment() {
         this(Map.of());
     }
 
-    private CurseHolderComponent(Map<Holder<Curse>, State> instances) {
+    private CurseHolderAttachment(Map<Holder<Curse>, State> instances) {
         this.instances = new LinkedHashMap<>(instances);
     }
 
@@ -33,25 +34,35 @@ public final class CurseHolderComponent {
 
     public void put(Holder<Curse> curse, State state) {
         this.instances.put(curse, state);
+        this.markDirty();
     }
 
     public State remove(Holder<Curse> curse) {
-        return this.instances.remove(curse);
+        State state = this.instances.remove(curse);
+        if (state != null) this.markDirty();
+        return state;
     }
 
     public void replace(Map<Holder<Curse>, State> values) {
         this.instances.clear();
         this.instances.putAll(values);
+        this.markDirty();
     }
 
     public void markUnknown(Holder<Curse> curse) {
         State state = this.instances.get(curse);
-        if (state != null && !state.unknownDefinition()) this.instances.put(curse, state.markedUnknown());
+        if (state != null && !state.unknownDefinition()) {
+            this.instances.put(curse, state.markedUnknown());
+            this.markDirty();
+        }
     }
 
-    public void markKnown(Holder<Curse> curse) {
+    public boolean markKnown(Holder<Curse> curse) {
         State state = this.instances.get(curse);
-        if (state != null) this.instances.put(curse, state.markedKnown());
+        if (state == null || !state.unknownDefinition()) return false;
+        this.instances.put(curse, state.markedKnown());
+        this.markDirty();
+        return true;
     }
 
     public record State(int stacks, long appliedAt, long expiresAt, String source, Map<String, String> componentState,

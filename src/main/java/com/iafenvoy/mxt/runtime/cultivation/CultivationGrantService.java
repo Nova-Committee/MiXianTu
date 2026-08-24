@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -28,9 +28,10 @@ public final class CultivationGrantService {
     private CultivationGrantService() {
     }
 
-    public static Result recalculate(SpiritComponent spirit, AbilityHolderComponent abilities) {
+    public static Result recalculate(SpiritAttachment spirit, AbilityAttachment abilities) {
         int revoked = 0;
-        for (Entry<Holder<Ability>, Identifier> entry : abilities.sources().entries())
+        // Revocation mutates the multimap, so iterate a stable snapshot of its entries.
+        for (Entry<Holder<Ability>, Identifier> entry : List.copyOf(abilities.sources().entries()))
             if (isCultivationSource(entry.getValue()) && abilities.revoke(entry.getKey(), entry.getValue())) revoked++;
         int granted = 0;
         for (Holder<SpiritRoot> root : spirit.spiritRoots()) {
@@ -45,7 +46,7 @@ public final class CultivationGrantService {
         return new Result(granted, revoked);
     }
 
-    private static int grantAll(AbilityHolderComponent holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {
+    private static int grantAll(AbilityAttachment holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {
         int granted = 0;
         for (Holder<Ability> ability : RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
                 .distinct().toList())

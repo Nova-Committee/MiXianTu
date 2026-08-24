@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
-import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.HotbarIcon;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -38,7 +38,7 @@ public record AbilityHotbarEntry(Identifier id, Ability definition) implements H
     @Override
     public float cooldown(Player player) {
         if (player == null) return 0.0F;
-        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         Holder<Ability> ability = holder.sources().keySet().stream()
                 .filter(value -> HolderHelper.id(value).equals(this.id)).findFirst().orElse(null);
         if (ability == null) return 0.0F;

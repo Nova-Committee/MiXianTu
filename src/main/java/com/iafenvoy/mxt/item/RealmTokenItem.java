@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 
-import com.iafenvoy.mxt.attachment.RealmInstanceComponent;
-import com.iafenvoy.mxt.attachment.RealmTravelComponent;
+import com.iafenvoy.mxt.attachment.RealmInstanceAttachment;
+import com.iafenvoy.mxt.attachment.RealmTravelAttachment;
 import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.data.item.RealmTokenComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -34,9 +34,9 @@ public final class RealmTokenItem extends Item {
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.SUCCESS;
-        RealmTravelComponent travel = serverPlayer.getData(MxtAttachments.REALM_TRAVEL);
+        RealmTravelAttachment travel = serverPlayer.getData(MxtAttachments.REALM_TRAVEL);
         if (travel.active()) {
-            RealmInstanceComponent instance = hostInstance(serverPlayer, travel);
+            RealmInstanceAttachment instance = hostInstance(serverPlayer, travel);
             if (instance == null || !RealmInstanceService.exit(serverPlayer, instance).changed()) {
                 ItemFeedback.send(player, Component.translatable("item.mxt.realm_token.exit_failed"));
                 return InteractionResult.FAIL;
@@ -60,11 +60,11 @@ public final class RealmTokenItem extends Item {
         return InteractionResult.SUCCESS_SERVER;
     }
 
-    private static RealmInstanceComponent hostInstance(ServerPlayer player, RealmTravelComponent travel) {
+    private static RealmInstanceAttachment hostInstance(ServerPlayer player, RealmTravelAttachment travel) {
         Holder<RealmInstance> realm = travel.realm().orElse(null);
         if (realm == null) return null;
         for (ServerLevel candidate : player.level().getServer().getAllLevels()) {
-            RealmInstanceComponent data = candidate.getData(MxtAttachments.REALM_INSTANCE);
+            RealmInstanceAttachment data = candidate.getData(MxtAttachments.REALM_INSTANCE);
             if (data.definition().filter(realm::equals).isPresent() && data.members().contains(player.getUUID()))
                 return data;
         }

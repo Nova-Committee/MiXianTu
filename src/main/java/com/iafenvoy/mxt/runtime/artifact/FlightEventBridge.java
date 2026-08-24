@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.attachment.FlightComponent;
+import com.iafenvoy.mxt.attachment.FlightAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -17,7 +17,7 @@ public final class FlightEventBridge {
     @SubscribeEvent
     public static void onEntityTick(Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) return;
-        FlightComponent data = player.getData(MxtAttachments.FLIGHT);
+        FlightAttachment data = player.getData(MxtAttachments.FLIGHT);
         if (!data.active()) return;
         if (data.archetype().isEmpty()) {
             FlightService.dismount(player, Failure.NOT_FLYABLE);

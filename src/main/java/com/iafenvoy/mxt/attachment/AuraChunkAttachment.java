@@ -23,37 +23,35 @@ import java.util.Optional;
  * Authoritative chunk-local aura stock. Every value is independently keyed by
  * its resource; there is deliberately no aggregate aura pool.
  */
-public final class AuraChunkComponent {
-    public static final MapCodec<AuraChunkComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.BOOL.optionalFieldOf("initialized", false).forGetter(AuraChunkComponent::initialized),
-            AuraZone.CODEC.optionalFieldOf("template").forGetter(AuraChunkComponent::template),
-            CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("aura_kinds", Set.of()).forGetter(AuraChunkComponent::auraKinds),
-            CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("template_aura_kinds", Set.of()).forGetter(AuraChunkComponent::templateAuraKinds),
-            AuraValue.MAP_CODEC.optionalFieldOf("block_aura", Map.of()).forGetter(AuraChunkComponent::blockAura),
-            CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("block_aura_kinds", Set.of()).forGetter(AuraChunkComponent::blockAuraKinds),
-            AuraPool.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(AuraChunkComponent::auras)
-    ).apply(i, AuraChunkComponent::new));
+public final class AuraChunkAttachment {
+    public static final MapCodec<AuraChunkAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Codec.BOOL.optionalFieldOf("initialized", false).forGetter(AuraChunkAttachment::initialized),
+            AuraZone.CODEC.optionalFieldOf("template").forGetter(AuraChunkAttachment::template),
+            CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("aura_kinds", Set.of()).forGetter(AuraChunkAttachment::auraKinds),
+            CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("template_aura_kinds", Set.of()).forGetter(AuraChunkAttachment::templateAuraKinds),
+            CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("block_aura_kinds", Set.of()).forGetter(AuraChunkAttachment::blockAuraKinds),
+            AuraValue.MAP_CODEC.optionalFieldOf("block_aura", Map.of()).forGetter(AuraChunkAttachment::blockAura),
+            AuraPool.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(AuraChunkAttachment::auras)
+    ).apply(i, AuraChunkAttachment::new));
     private boolean initialized;
     private Optional<Holder<AuraZone>> template;
-    private final Set<Identifier> auraKinds;
-    private final Set<Identifier> templateAuraKinds;
+    private final Set<Identifier> auraKinds, templateAuraKinds, blockAuraKinds;
     private final Map<Holder<Resource>, AuraValue> blockAura;
-    private final Set<Identifier> blockAuraKinds;
     private final Map<Holder<Resource>, AuraPool> auras;
 
-    public AuraChunkComponent() {
-        this(false, Optional.empty(), Set.of(), Set.of(), Map.of(), Set.of(), Map.of());
+    public AuraChunkAttachment() {
+        this(false, Optional.empty(), Set.of(), Set.of(), Set.of(), Map.of(), Map.of());
     }
 
-    private AuraChunkComponent(boolean initialized, Optional<Holder<AuraZone>> template, Set<Identifier> auraKinds,
-                               Set<Identifier> templateAuraKinds, Map<Holder<Resource>, AuraValue> blockAura,
-                               Set<Identifier> blockAuraKinds, Map<Holder<Resource>, AuraPool> auras) {
+    private AuraChunkAttachment(boolean initialized, Optional<Holder<AuraZone>> template, Set<Identifier> auraKinds,
+                                Set<Identifier> templateAuraKinds, Set<Identifier> blockAuraKinds,
+                                Map<Holder<Resource>, AuraValue> blockAura, Map<Holder<Resource>, AuraPool> auras) {
         this.initialized = initialized;
         this.template = template;
         this.auraKinds = new LinkedHashSet<>(auraKinds);
         this.templateAuraKinds = new LinkedHashSet<>(templateAuraKinds.isEmpty() ? auraKinds : templateAuraKinds);
-        this.blockAura = new LinkedHashMap<>(blockAura);
         this.blockAuraKinds = new LinkedHashSet<>(blockAuraKinds);
+        this.blockAura = new LinkedHashMap<>(blockAura);
         this.auras = new LinkedHashMap<>(auras);
     }
 
@@ -81,12 +79,12 @@ public final class AuraChunkComponent {
         return this.templateAuraKinds;
     }
 
-    public Map<Holder<Resource>, AuraValue> blockAura() {
-        return this.blockAura;
-    }
-
     private Set<Identifier> blockAuraKinds() {
         return this.blockAuraKinds;
+    }
+
+    public Map<Holder<Resource>, AuraValue> blockAura() {
+        return this.blockAura;
     }
 
     public Map<Holder<Resource>, AuraPool> auras() {

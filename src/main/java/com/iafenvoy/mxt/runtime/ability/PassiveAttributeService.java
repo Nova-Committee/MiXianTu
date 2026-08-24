@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.cultivation.Physique;
@@ -88,7 +88,7 @@ public final class PassiveAttributeService {
             entries.add(new Entry("ability", value.ability(), index, value.modifier()));
         }
 
-        SpiritComponent spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         spirit.realmStage().ifPresent(realm -> addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers()));
         spirit.activeTechnique().ifPresent(technique -> addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers()));
         for (Holder<Physique> physique : spirit.physiques())

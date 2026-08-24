@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritComponent;
-import com.iafenvoy.mxt.attachment.AuraChunkComponent;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -30,7 +30,7 @@ public final class CultivationAffinity {
     /**
      * Legacy attachment-only path; it retains element separation but has no zone-specific modifiers.
      */
-    public static double multiplier(SpiritComponent spirit, AuraChunkComponent aura, FormulaContext context,
+    public static double multiplier(SpiritAttachment spirit, AuraChunkAttachment aura, FormulaContext context,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -55,7 +55,7 @@ public final class CultivationAffinity {
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 
-    public static double multiplier(SpiritComponent spirit, AuraResult aura, FormulaContext context,
+    public static double multiplier(SpiritAttachment spirit, AuraResult aura, FormulaContext context,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -81,7 +81,7 @@ public final class CultivationAffinity {
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 
-    public static double abilityMultiplier(SpiritComponent spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements, FormulaContext context,
+    public static double abilityMultiplier(SpiritAttachment spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements, FormulaContext context,
                                            Function<Identifier, Optional<SpiritRoot>> roots) {
         if (elements.isEmpty()) return 1.0D;
         double total = 0.0D;

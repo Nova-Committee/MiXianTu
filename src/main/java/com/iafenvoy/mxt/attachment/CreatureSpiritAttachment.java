@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
@@ -13,32 +14,31 @@ import net.minecraft.resources.RegistryFixedCodec;
 import java.util.Optional;
 
 /**
- * Persistent creature-profile state; it is separate from a creature's optional player-like SpiritComponent.
+ * Persistent creature-profile state; it is separate from a creature's optional player-like SpiritAttachment.
  */
-public final class CreatureSpiritComponent {
-    public static final MapCodec<CreatureSpiritComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE).optionalFieldOf("profile").forGetter(CreatureSpiritComponent::profile),
-            Codec.DOUBLE.optionalFieldOf("intelligence", 0.0D).forGetter(CreatureSpiritComponent::intelligence),
-            Identifier.CODEC.optionalFieldOf("inner_core").forGetter(CreatureSpiritComponent::innerCore),
-            Identifier.CODEC.optionalFieldOf("loot_table").forGetter(CreatureSpiritComponent::lootTable)
-    ).apply(i, CreatureSpiritComponent::new));
-
+public final class CreatureSpiritAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<CreatureSpiritAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE).optionalFieldOf("profile").forGetter(CreatureSpiritAttachment::profile),
+            Codec.DOUBLE.optionalFieldOf("intelligence", 0.0D).forGetter(CreatureSpiritAttachment::intelligence),
+            Identifier.CODEC.optionalFieldOf("inner_core").forGetter(CreatureSpiritAttachment::innerCore),
+            Identifier.CODEC.optionalFieldOf("loot_table").forGetter(CreatureSpiritAttachment::lootTable)
+    ).apply(i, CreatureSpiritAttachment::new));
     private Holder<CreatureProfile> profile;
     private double intelligence;
-    private Identifier innerCore;
-    private Identifier lootTable;
+    private Identifier innerCore, lootTable;
 
-    public CreatureSpiritComponent() {
+    public CreatureSpiritAttachment() {
         this(Optional.empty(), 0.0D, Optional.empty(), Optional.empty());
     }
 
-    private CreatureSpiritComponent(Optional<Holder<CreatureProfile>> profile, double intelligence, Optional<Identifier> innerCore, Optional<Identifier> lootTable) {
+    private CreatureSpiritAttachment(Optional<Holder<CreatureProfile>> profile, double intelligence, Optional<Identifier> innerCore, Optional<Identifier> lootTable) {
         this.profile = profile.orElse(null);
         if (!Double.isFinite(intelligence) || intelligence < 0.0D)
             throw new IllegalArgumentException("Creature intelligence must be finite and non-negative");
         this.intelligence = intelligence;
         this.innerCore = innerCore.orElse(null);
         this.lootTable = lootTable.orElse(null);
+        this.markDirty();
     }
 
     public Optional<Holder<CreatureProfile>> profile() {

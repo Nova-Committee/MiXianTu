@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsValueCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.callback.QuadFunction;
@@ -21,7 +21,7 @@ public final class MxtKubeJsValueBindings {
     }
 
     @Info("Registers a resource value provider. Datapack type: mxt:js")
-    public void resourceValue(String id, QuadFunction<ResourceHolderComponent, Holder<Resource>, FormulaContext, JsonObject, Double> callback) {
+    public void resourceValue(String id, QuadFunction<ResourceHolderAttachment, Holder<Resource>, FormulaContext, JsonObject, Double> callback) {
         MxtJsValueCallbacks.registerResource(id, callback);
     }
 }

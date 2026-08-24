@@ -168,9 +168,11 @@ public final class HotbarController {
             } else if (targetMode == 2) {
                 NUMBER_MODES[index] = 2;
             }
-            ACTIVE_ENTRIES[index] = entry(index);
-            if (ACTIVE_ENTRIES[index] != null)
-                ACTIVE_ENTRIES[index].onPress(Minecraft.getInstance().player);
+            HotbarEntry entry = entry(index);
+            if (entry != null && entry.canPress(Minecraft.getInstance().player)) {
+                ACTIVE_ENTRIES[index] = entry;
+                entry.onPress(Minecraft.getInstance().player);
+            }
             Minecraft minecraft = Minecraft.getInstance();
             if (MxtClientConfig.allowVanillaHotbarSelection() && minecraft.player != null)
                 minecraft.player.getInventory().setSelectedSlot(index);
@@ -218,7 +220,8 @@ public final class HotbarController {
         List<HotbarEntry> result = new ArrayList<>();
         if (mode == Mode.ABILITY) {
             List<ResolvedAbility> abilities = AbilityHotbarClient.all(player);
-            for (ResolvedAbility ability : abilities) result.add(new AbilityHotbarEntry(ability.id(), ability.definition()));
+            for (ResolvedAbility ability : abilities)
+                result.add(new AbilityHotbarEntry(ability.id(), ability.definition()));
         } else if (mode == Mode.SPIRIT) {
             List<Reference<Resource>> resources = SpiritBurstClient.resources(player);
             for (Reference<Resource> resource : resources) result.add(new SpiritHotbarEntry(HolderHelper.id(resource)));

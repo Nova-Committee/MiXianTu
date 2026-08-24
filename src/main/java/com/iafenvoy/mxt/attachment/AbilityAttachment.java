@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.google.common.collect.*;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
@@ -26,23 +27,23 @@ import java.util.stream.Collectors;
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability.
  */
-public final class AbilityHolderComponent {
-    public static final MapCodec<AbilityHolderComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.multiMap(Ability.CODEC, Identifier.CODEC).optionalFieldOf("sources", ImmutableMultimap.of()).forGetter(AbilityHolderComponent::sources),
-            CollectionCodecs.longMap(Ability.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityHolderComponent::cooldowns),
-            CollectionCodecs.map(Ability.CODEC, CollectionCodecs.map(Codec.STRING, AbilityComponentState.CODEC)).optionalFieldOf("component_states", Map.of()).forGetter(AbilityHolderComponent::componentStates),
-            Ability.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityHolderComponent::channelledAbility)
-    ).apply(i, AbilityHolderComponent::new));
+public final class AbilityAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<AbilityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            CollectionCodecs.multiMap(Ability.CODEC, Identifier.CODEC).optionalFieldOf("sources", ImmutableMultimap.of()).forGetter(AbilityAttachment::sources),
+            CollectionCodecs.longMap(Ability.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityAttachment::cooldowns),
+            CollectionCodecs.map(Ability.CODEC, CollectionCodecs.map(Codec.STRING, AbilityComponentState.CODEC)).optionalFieldOf("component_states", Map.of()).forGetter(AbilityAttachment::componentStates),
+            Ability.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility)
+    ).apply(i, AbilityAttachment::new));
     private final Multimap<Holder<Ability>, Identifier> sources;
     private final Object2LongMap<Holder<Ability>> cooldowns;
     private final Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates;
     private Optional<Holder<Ability>> channelledAbility;
 
-    public AbilityHolderComponent() {
+    public AbilityAttachment() {
         this(ArrayListMultimap.create(), Object2LongMaps.emptyMap(), Map.of(), Optional.empty());
     }
 
-    private AbilityHolderComponent(Multimap<Holder<Ability>, Identifier> sources, Object2LongMap<Holder<Ability>> cooldowns, Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates, Optional<Holder<Ability>> channelledAbility) {
+    private AbilityAttachment(Multimap<Holder<Ability>, Identifier> sources, Object2LongMap<Holder<Ability>> cooldowns, Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates, Optional<Holder<Ability>> channelledAbility) {
         this.sources = ArrayListMultimap.create(sources);
         this.cooldowns = new Object2LongOpenHashMap<>(cooldowns);
         this.componentStates = new LinkedHashMap<>();
@@ -76,11 +77,13 @@ public final class AbilityHolderComponent {
             this.sources.removeAll(ability);
             this.sources.putAll(ability, values);
         }
+        this.markDirty();
     }
 
     public boolean grant(Holder<Ability> ability, Identifier source) {
         if (this.sources.containsEntry(ability, source)) return false;
         this.sources.put(ability, source);
+        this.markDirty();
         return true;
     }
 
@@ -90,14 +93,21 @@ public final class AbilityHolderComponent {
             this.cooldowns.removeLong(ability);
             this.componentStates.remove(ability);
         }
+        this.markDirty();
         return true;
     }
 
-    public void reconcileSource(Identifier source, Collection<Holder<Ability>> desiredAbilities) {
+    public boolean reconcileSource(Identifier source, Collection<Holder<Ability>> desiredAbilities) {
         Set<Holder<Ability>> desired = new LinkedHashSet<>(desiredAbilities);
         Set<Holder<Ability>> previous = this.sources.entries().stream().filter(entry -> entry.getValue().equals(source)).map(Entry::getKey).collect(Collectors.toSet());
-        previous.stream().filter(ability -> !desired.contains(ability)).forEach(ability -> this.revoke(ability, source));
-        desired.stream().filter(ability -> !previous.contains(ability)).forEach(ability -> this.grant(ability, source));
+        boolean changed = false;
+        for (Holder<Ability> ability : previous) {
+            if (!desired.contains(ability)) changed |= this.revoke(ability, source);
+        }
+        for (Holder<Ability> ability : desired) {
+            if (!previous.contains(ability)) changed |= this.grant(ability, source);
+        }
+        return changed;
     }
 
     public boolean isOnCooldown(Holder<Ability> ability, long gameTime) {
@@ -106,6 +116,7 @@ public final class AbilityHolderComponent {
 
     public void setCooldownUntil(Holder<Ability> ability, long gameTime) {
         this.cooldowns.put(ability, gameTime);
+        this.markDirty();
     }
 
     public Optional<AbilityComponentState> componentState(Holder<Ability> ability, String key) {
@@ -116,33 +127,18 @@ public final class AbilityHolderComponent {
         Map<String, AbilityComponentState> values = new LinkedHashMap<>(this.componentStates.getOrDefault(ability, Map.of()));
         values.put(key, value);
         this.componentStates.put(ability, values);
+        this.markDirty();
     }
 
     public void setChannelledAbility(Holder<Ability> ability) {
         this.channelledAbility = Optional.ofNullable(ability);
+        this.markDirty();
     }
 
-    public Snapshot snapshot() {
-        return new Snapshot(this.sources, this.cooldowns, this.componentStates, this.channelledAbility);
-    }
-
-    public void restore(Snapshot snapshot) {
-        this.sources.clear();
-        this.sources.putAll(snapshot.sources());
-        this.cooldowns.clear();
-        this.cooldowns.putAll(snapshot.cooldowns());
-        this.componentStates.clear();
-        this.componentStates.putAll(snapshot.componentStates());
-        this.channelledAbility = snapshot.channelledAbility();
-    }
-
-    public record Snapshot(Multimap<Holder<Ability>, Identifier> sources, Map<Holder<Ability>, Long> cooldowns,
-                           Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates,
-                           Optional<Holder<Ability>> channelledAbility) {
-        public Snapshot {
-            sources = ArrayListMultimap.create(sources);
-            cooldowns = new LinkedHashMap<>(cooldowns);
-            componentStates = new LinkedHashMap<>(componentStates);
-        }
+    /**
+     * Creates a detached draft for validation. It is never installed on an entity or synchronised.
+     */
+    public AbilityAttachment copy() {
+        return new AbilityAttachment(this.sources, this.cooldowns, this.componentStates, this.channelledAbility);
     }
 }

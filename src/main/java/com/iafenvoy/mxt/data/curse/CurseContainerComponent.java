@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.curse;
 
-import com.iafenvoy.mxt.attachment.CurseHolderComponent.State;
+import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;

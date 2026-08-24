@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.runtime.sect;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.SectComponent;
-import com.iafenvoy.mxt.attachment.SectTerritoryComponent;
+import com.iafenvoy.mxt.attachment.SectAttachment;
+import com.iafenvoy.mxt.attachment.SectTerritoryAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -54,10 +54,10 @@ public final class SectTerritoryEventBridge {
      * An unclaimed chunk is public; a claimed chunk delegates the decision to the owner's rank policy.
      */
     public static boolean permitted(ServerPlayer player, ServerLevel level, BlockPos pos, Identifier permission) {
-        SectTerritoryComponent territory = level.getChunkAt(pos).getData(MxtAttachments.SECT_TERRITORY);
+        SectTerritoryAttachment territory = level.getChunkAt(pos).getData(MxtAttachments.SECT_TERRITORY);
         Identifier owner = territory.owner().map(HolderHelper::id).orElse(null);
         if (owner == null) return true;
-        SectComponent membership = player.getData(MxtAttachments.SECT);
+        SectAttachment membership = player.getData(MxtAttachments.SECT);
         return MxtDatapackRegistries.holder(MxtResourceKeys.SECT, owner)
                 .map(sect -> SectService.canUseTerritory(membership, sect, territory, permission))
                 .orElse(false);

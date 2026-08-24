@@ -36,7 +36,7 @@ public final class FormationWorldTicker {
     @SubscribeEvent
     public static void onLevelTick(Post event) {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 20L != 0L) return;
-        FormationWorldComponent world = level.getData(MxtAttachments.FORMATION_WORLD);
+        FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, Snapshot> entry : world.formations().entrySet()) {
             Optional<Formation> definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation());
             if (definition.isEmpty() || !VALIDATOR.matches(level, entry.getKey(), definition.get())) {

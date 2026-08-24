@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.item.ResourceContainerComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -41,7 +41,7 @@ public final class SpiritVesselItem extends Item {
         if (!(player instanceof ServerPlayer)) return InteractionResult.SUCCESS;
         ResourceContainerComponent container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY);
         Object2DoubleMap<Holder<Resource>> values = new Object2DoubleOpenHashMap<>(container.values());
-        ResourceHolderComponent holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         boolean changed = player.isShiftKeyDown() ? store(holder, values, player) : release(holder, values, player);
         if (!changed) {
             ItemFeedback.send(player, Component.translatable(player.isShiftKeyDown()
@@ -54,7 +54,7 @@ public final class SpiritVesselItem extends Item {
         return InteractionResult.SUCCESS_SERVER;
     }
 
-    private static boolean store(ResourceHolderComponent holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
+    private static boolean store(ResourceHolderAttachment holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
         boolean changed = false;
         for (Entry<Holder<Resource>, Double> entry : new LinkedHashMap<>(holder.values()).entrySet()) {
             double stored = values.getOrDefault(entry.getKey(), 0.0D);
@@ -70,7 +70,7 @@ public final class SpiritVesselItem extends Item {
         return changed;
     }
 
-    private static boolean release(ResourceHolderComponent holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
+    private static boolean release(ResourceHolderAttachment holder, Object2DoubleMap<Holder<Resource>> values, Player player) {
         boolean changed = false;
         for (Object2DoubleMap.Entry<Holder<Resource>> entry : values.object2DoubleEntrySet()) {
             double before = holder.get(entry.getKey());

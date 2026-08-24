@@ -21,7 +21,7 @@ public record RemoveCurseAction(Holder<Curse> curse) implements EntityAction {
 
     @Override
     public void execute(Entity entity, FormulaContext context) {
-        CurseService.remove(entity.getData(MxtAttachments.CURSE_HOLDER), this.curse, Reason.CLEANSED, entity.level().getGameTime());
+        CurseService.remove(entity, this.curse, Reason.CLEANSED, entity.level().getGameTime());
     }
 
     @Override

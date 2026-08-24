@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.RealmInstance;
@@ -15,29 +16,26 @@ import java.util.Optional;
 /**
  * Return location retained while a player is inside a temporary realm instance.
  */
-public final class RealmTravelComponent {
-    public static final MapCodec<RealmTravelComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTravelComponent::realm),
-            Identifier.CODEC.optionalFieldOf("origin_dimension").forGetter(RealmTravelComponent::originDimension),
-            Codec.DOUBLE.optionalFieldOf("origin_x", 0.0D).forGetter(RealmTravelComponent::originX),
-            Codec.DOUBLE.optionalFieldOf("origin_y", 0.0D).forGetter(RealmTravelComponent::originY),
-            Codec.DOUBLE.optionalFieldOf("origin_z", 0.0D).forGetter(RealmTravelComponent::originZ),
-            Codec.FLOAT.optionalFieldOf("origin_yaw", 0.0F).forGetter(RealmTravelComponent::originYaw),
-            Codec.FLOAT.optionalFieldOf("origin_pitch", 0.0F).forGetter(RealmTravelComponent::originPitch)
-    ).apply(i, RealmTravelComponent::new));
+public final class RealmTravelAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<RealmTravelAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTravelAttachment::realm),
+            Identifier.CODEC.optionalFieldOf("origin_dimension").forGetter(RealmTravelAttachment::originDimension),
+            Codec.DOUBLE.optionalFieldOf("origin_x", 0.0D).forGetter(RealmTravelAttachment::originX),
+            Codec.DOUBLE.optionalFieldOf("origin_y", 0.0D).forGetter(RealmTravelAttachment::originY),
+            Codec.DOUBLE.optionalFieldOf("origin_z", 0.0D).forGetter(RealmTravelAttachment::originZ),
+            Codec.FLOAT.optionalFieldOf("origin_yaw", 0.0F).forGetter(RealmTravelAttachment::originYaw),
+            Codec.FLOAT.optionalFieldOf("origin_pitch", 0.0F).forGetter(RealmTravelAttachment::originPitch)
+    ).apply(i, RealmTravelAttachment::new));
     private Optional<Holder<RealmInstance>> realm;
     private Optional<Identifier> originDimension;
-    private double originX;
-    private double originY;
-    private double originZ;
-    private float originYaw;
-    private float originPitch;
+    private double originX, originY, originZ;
+    private float originYaw, originPitch;
 
-    public RealmTravelComponent() {
+    public RealmTravelAttachment() {
         this(Optional.empty(), Optional.empty(), 0.0D, 0.0D, 0.0D, 0.0F, 0.0F);
     }
 
-    public RealmTravelComponent(Optional<Holder<RealmInstance>> realm, Optional<Identifier> originDimension, double originX, double originY, double originZ, float originYaw, float originPitch) {
+    public RealmTravelAttachment(Optional<Holder<RealmInstance>> realm, Optional<Identifier> originDimension, double originX, double originY, double originZ, float originYaw, float originPitch) {
         this.realm = realm;
         this.originDimension = originDimension;
         this.originX = originX;
@@ -87,6 +85,7 @@ public final class RealmTravelComponent {
         this.originZ = z;
         this.originYaw = yaw;
         this.originPitch = pitch;
+        this.markDirty();
     }
 
     public void clear() {
@@ -97,5 +96,6 @@ public final class RealmTravelComponent {
         this.originZ = 0.0D;
         this.originYaw = 0.0F;
         this.originPitch = 0.0F;
+        this.markDirty();
     }
 }

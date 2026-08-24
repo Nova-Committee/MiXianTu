@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.resource;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsValueCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -20,7 +20,7 @@ public record JsResourceValueProvider(String id, JsonObject params) implements R
     ).apply(i, JsResourceValueProvider::new));
 
     @Override
-    public double resolve(ResourceHolderComponent holder, Holder<Resource> resource, FormulaContext context) {
+    public double resolve(ResourceHolderAttachment holder, Holder<Resource> resource, FormulaContext context) {
         return MxtJsValueCallbacks.resource(this.id, holder, resource, context, this.params);
     }
 

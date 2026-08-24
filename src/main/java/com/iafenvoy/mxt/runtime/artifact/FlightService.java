@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 
-import com.iafenvoy.mxt.attachment.FlightComponent;
+import com.iafenvoy.mxt.attachment.FlightAttachment;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -32,7 +32,7 @@ public final class FlightService {
         if (!ownsEquippedArchetype(player, artifact, archetype)) {
             return Result.rejected(Failure.NOT_OWNED);
         }
-        FlightComponent data = player.getData(MxtAttachments.FLIGHT);
+        FlightAttachment data = player.getData(MxtAttachments.FLIGHT);
         if (data.active()) return Result.rejected(Failure.ALREADY_ACTIVE);
         double speed = definition.flightSpeed().evaluate(context);
         if (!Double.isFinite(speed) || speed <= 0.0D) return Result.rejected(Failure.INVALID_FORMULA);
@@ -55,7 +55,7 @@ public final class FlightService {
     }
 
     public static Result tick(ServerPlayer player, ItemArchetype definition, FormulaContext context) {
-        FlightComponent data = player.getData(MxtAttachments.FLIGHT);
+        FlightAttachment data = player.getData(MxtAttachments.FLIGHT);
         if (!data.active()) return Result.inactive();
         if (!(player.getVehicle() instanceof FlyingSwordEntity sword) || data.vehicle().filter(sword.getUUID()::equals).isEmpty()) {
             return dismount(player, Failure.MOUNT_LOST);
@@ -77,7 +77,7 @@ public final class FlightService {
     }
 
     public static Result dismount(ServerPlayer player, Failure reason) {
-        FlightComponent data = player.getData(MxtAttachments.FLIGHT);
+        FlightAttachment data = player.getData(MxtAttachments.FLIGHT);
         if (player.getVehicle() instanceof FlyingSwordEntity sword) {
             player.stopRiding();
             sword.discard();

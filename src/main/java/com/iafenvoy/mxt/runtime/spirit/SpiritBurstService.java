@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.attachment.SpiritBurstCooldownComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -57,12 +57,11 @@ public final class SpiritBurstService {
     public static void onPlayerTick(Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         Set<Identifier> active = ACTIVE_RESOURCES.get(player.getUUID());
-        SpiritBurstCooldownComponent cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
-        boolean changed = cooldowns.clearExpired(player.level().getGameTime());
+        SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
+        cooldowns.clearExpired(player.level().getGameTime());
         if (active != null && !active.isEmpty()) {
             for (Identifier resource : Set.copyOf(active)) fire(player, resource);
         }
-        if (changed) player.setData(MxtAttachments.SPIRIT_BURST_COOLDOWNS, cooldowns);
     }
 
     @SubscribeEvent
@@ -71,25 +70,24 @@ public final class SpiritBurstService {
     }
 
     private static void fire(ServerPlayer player, Identifier resourceId) {
-        ResourceHolderComponent holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         Set<Identifier> active = ACTIVE_RESOURCES.get(player.getUUID());
         if (active == null || !active.contains(resourceId)) return;
         active.removeIf(id -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> resource.value().auraType().isEmpty()).orElse(true));
         Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resourceId).orElse(null);
         if (resource == null) return;
-        SpiritBurstCooldownComponent cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
+        SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
         if (cooldowns.isOnCooldown(resource, player.level().getGameTime())) return;
         if (tryFire(player, holder, resource)) {
             cooldowns.setCooldownUntil(resource, Math.addExact(player.level().getGameTime(), FIRE_INTERVAL_TICKS));
-            player.setData(MxtAttachments.SPIRIT_BURST_COOLDOWNS, cooldowns);
         }
     }
 
     /**
      * A positive {@code burst_amount} marks a resource that can be fired by the shortcut.
      */
-    private static boolean tryFire(ServerPlayer player, ResourceHolderComponent holder, Holder<Resource> resource) {
+    private static boolean tryFire(ServerPlayer player, ResourceHolderAttachment holder, Holder<Resource> resource) {
         Resource definition = resource.value();
         if (definition.auraType().isEmpty()) return false;
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.creature.ContractType;
@@ -16,21 +17,21 @@ import java.util.UUID;
 /**
  * Contract state attached to the contracted creature; policy remains in contract_type definitions.
  */
-public final class ContractComponent {
-    public static final MapCodec<ContractComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractComponent::contractType), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(ContractComponent::owner),
-            Codec.LONG.optionalFieldOf("bound_at", -1L).forGetter(ContractComponent::boundAt), Codec.BOOL.optionalFieldOf("recalled", false).forGetter(ContractComponent::recalled)
-    ).apply(i, ContractComponent::new));
+public final class ContractAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<ContractAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractAttachment::contractType), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(ContractAttachment::owner),
+            Codec.LONG.optionalFieldOf("bound_at", -1L).forGetter(ContractAttachment::boundAt), Codec.BOOL.optionalFieldOf("recalled", false).forGetter(ContractAttachment::recalled)
+    ).apply(i, ContractAttachment::new));
     private Optional<Holder<ContractType>> contractType;
     private Optional<UUID> owner;
     private long boundAt;
     private boolean recalled;
 
-    public ContractComponent() {
+    public ContractAttachment() {
         this(Optional.empty(), Optional.empty(), -1L, false);
     }
 
-    private ContractComponent(Optional<Holder<ContractType>> contractType, Optional<UUID> owner, long boundAt, boolean recalled) {
+    private ContractAttachment(Optional<Holder<ContractType>> contractType, Optional<UUID> owner, long boundAt, boolean recalled) {
         this.contractType = contractType;
         this.owner = owner;
         this.boundAt = boundAt;
@@ -62,6 +63,7 @@ public final class ContractComponent {
         this.owner = Optional.of(owner);
         this.boundAt = gameTime;
         this.recalled = false;
+        this.markDirty();
     }
 
     public void clear() {
@@ -69,10 +71,12 @@ public final class ContractComponent {
         this.owner = Optional.empty();
         this.boundAt = -1L;
         this.recalled = false;
+        this.markDirty();
     }
 
     public void setRecalled(boolean value) {
         if (!this.bound()) throw new IllegalStateException("Cannot recall an unbound creature");
         this.recalled = value;
+        this.markDirty();
     }
 }

@@ -49,7 +49,8 @@ public final class CreatureProfileService {
         }
         if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
         MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id)
-                .ifPresent(profile -> creature.getData(MxtAttachments.CREATURE_SPIRIT).apply(profile, intelligence, definition.innerCore(), definition.lootTable()));
+                .ifPresent(profile -> creature.getData(MxtAttachments.CREATURE_SPIRIT)
+                        .apply(profile, intelligence, definition.innerCore(), definition.lootTable()));
         return true;
     }
 

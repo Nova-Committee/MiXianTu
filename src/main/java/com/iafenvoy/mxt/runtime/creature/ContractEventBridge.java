@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.creature;
 
-import com.iafenvoy.mxt.attachment.ContractComponent;
+import com.iafenvoy.mxt.attachment.ContractAttachment;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -27,7 +27,7 @@ public final class ContractEventBridge {
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof Mob pet) || pet.level().isClientSide()) return;
-        ContractComponent contract = pet.getData(MxtAttachments.CONTRACT);
+        ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
         ContractType definition = contract.contractType().map(Holder::value).orElse(null);
         if (!contract.bound() || definition == null) return;
         ServerPlayer owner = ((ServerLevel) pet.level()).getServer().getPlayerList().getPlayer(contract.owner().orElseThrow());
@@ -52,7 +52,7 @@ public final class ContractEventBridge {
     @SubscribeEvent
     public static void onLivingDamage(Post event) {
         if (event.getEntity().level().isClientSide() || !(event.getSource().getEntity() instanceof Mob pet)) return;
-        ContractComponent contract = pet.getData(MxtAttachments.CONTRACT);
+        ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
         contract.contractType().map(Holder::value).ifPresent(definition -> {
             FormulaContext context = FormulaContext.of(pet, Map.of("damage", (double) event.getInflictedDamage()));
             definition.combatAction().execute(pet, event.getEntity(), context);
@@ -65,7 +65,7 @@ public final class ContractEventBridge {
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Mob pet)) return;
-        ContractComponent contract = pet.getData(MxtAttachments.CONTRACT);
+        ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
         if (!contract.bound()) return;
         contract.contractType().map(Holder::value).ifPresent(definition -> {
             FormulaContext context = FormulaContext.of(pet);

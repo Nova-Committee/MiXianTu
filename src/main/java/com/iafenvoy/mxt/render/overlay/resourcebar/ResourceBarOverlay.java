@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.render.overlay.resourcebar;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent.Audit;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Bar;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientHud;
@@ -84,7 +84,7 @@ public enum ResourceBarOverlay implements GuiLayer {
 
     private static void collectResources(List<ResourceBarRenderState> result, Registry<Resource> resources,
                                          LivingEntity entity, ResourceBar.Context context) {
-        ResourceHolderComponent values = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment values = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
             Identifier id = HolderHelper.idOrNull(resource);

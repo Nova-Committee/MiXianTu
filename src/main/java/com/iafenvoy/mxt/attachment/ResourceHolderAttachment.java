@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
@@ -17,19 +18,19 @@ import java.util.Map;
  * Server-authoritative current values and resolved bounds. The bound snapshots are synchronised
  * with the attachment so clients never need to authoritatively evaluate a resource formula.
  */
-public final class ResourceHolderComponent {
-    public static final MapCodec<ResourceHolderComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.doubleMap(Resource.CODEC).fieldOf("values").forGetter(ResourceHolderComponent::values),
-            CollectionCodecs.map(Resource.CODEC, Audit.CODEC).fieldOf("audit").forGetter(ResourceHolderComponent::audit)
-    ).apply(i, ResourceHolderComponent::new));
+public final class ResourceHolderAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<ResourceHolderAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            CollectionCodecs.doubleMap(Resource.CODEC).fieldOf("values").forGetter(ResourceHolderAttachment::values),
+            CollectionCodecs.map(Resource.CODEC, Audit.CODEC).fieldOf("audit").forGetter(ResourceHolderAttachment::audit)
+    ).apply(i, ResourceHolderAttachment::new));
     private final Object2DoubleMap<Holder<Resource>> values;
     private final Map<Holder<Resource>, Audit> audit;
 
-    public ResourceHolderComponent() {
+    public ResourceHolderAttachment() {
         this(Object2DoubleMaps.emptyMap(), Map.of());
     }
 
-    private ResourceHolderComponent(Object2DoubleMap<Holder<Resource>> values, Map<Holder<Resource>, Audit> audit) {
+    private ResourceHolderAttachment(Object2DoubleMap<Holder<Resource>> values, Map<Holder<Resource>, Audit> audit) {
         this.values = new Object2DoubleOpenHashMap<>(values);
         this.audit = new LinkedHashMap<>(audit);
     }
@@ -46,6 +47,7 @@ public final class ResourceHolderComponent {
         if (!Double.isFinite(value)) throw new IllegalArgumentException("Resource value must be finite");
         this.values.put(resource, value);
         this.audit.putIfAbsent(resource, Audit.initial(value));
+        this.markDirty();
     }
 
     /**
@@ -58,12 +60,14 @@ public final class ResourceHolderComponent {
         }
         this.values.put(resource, value);
         this.audit.put(resource, new Audit(minSnapshot, maxSnapshot, changedAt, source));
+        this.markDirty();
     }
 
     public boolean remove(Holder<Resource> resource) {
         this.audit.remove(resource);
         boolean b = this.values.containsKey(resource);
         this.values.removeDouble(resource);
+        if (b) this.markDirty();
         return b;
     }
 
@@ -80,34 +84,10 @@ public final class ResourceHolderComponent {
     }
 
     /**
-     * Captures values and resolved bounds together for transactional rollback.
+     * Creates a detached draft for validation without changing a live attachment.
      */
-    public Snapshot snapshot() {
-        return new Snapshot(this.values, this.audit);
-    }
-
-    public void restore(Snapshot snapshot) {
-        this.values.clear();
-        this.audit.clear();
-        this.values.putAll(snapshot.values());
-        this.audit.putAll(snapshot.audit());
-    }
-
-    /**
-     * Restores legacy value-only state. Prefer {@link #snapshot()} and {@link #restore(Snapshot)}
-     * for transactions so resolved client-visible bounds are preserved.
-     */
-    public void restore(Map<Holder<Resource>, Double> snapshot) {
-        this.values.clear();
-        this.audit.clear();
-        snapshot.forEach(this::set);
-    }
-
-    public record Snapshot(Map<Holder<Resource>, Double> values, Map<Holder<Resource>, Audit> audit) {
-        public Snapshot {
-            values = new LinkedHashMap<>(values);
-            audit = new LinkedHashMap<>(audit);
-        }
+    public ResourceHolderAttachment copy() {
+        return new ResourceHolderAttachment(this.values, this.audit);
     }
 
     public record Audit(double minSnapshot, double maxSnapshot, long lastChangedTick, String source) {

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
@@ -13,19 +14,18 @@ import net.minecraft.core.Holder;
  * Server-authoritative cooldowns for the spirit-burst hotbar. The client receives this
  * attachment only to render the remaining fraction, following vanilla item cooldown semantics.
  */
-public final class SpiritBurstCooldownComponent {
-    public static final MapCodec<SpiritBurstCooldownComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+public final class SpiritBurstCooldownAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<SpiritBurstCooldownAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.longMap(Resource.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap())
-                    .forGetter(SpiritBurstCooldownComponent::cooldowns)
-    ).apply(i, SpiritBurstCooldownComponent::new));
-
+                    .forGetter(SpiritBurstCooldownAttachment::cooldowns)
+    ).apply(i, SpiritBurstCooldownAttachment::new));
     private final Object2LongMap<Holder<Resource>> cooldowns;
 
-    public SpiritBurstCooldownComponent() {
+    public SpiritBurstCooldownAttachment() {
         this(Object2LongMaps.emptyMap());
     }
 
-    private SpiritBurstCooldownComponent(Object2LongMap<Holder<Resource>> cooldowns) {
+    private SpiritBurstCooldownAttachment(Object2LongMap<Holder<Resource>> cooldowns) {
         this.cooldowns = new Object2LongOpenHashMap<>(cooldowns);
     }
 
@@ -39,6 +39,7 @@ public final class SpiritBurstCooldownComponent {
 
     public void setCooldownUntil(Holder<Resource> resource, long gameTime) {
         this.cooldowns.put(resource, gameTime);
+        this.markDirty();
     }
 
     /**
@@ -46,6 +47,8 @@ public final class SpiritBurstCooldownComponent {
      * not retain a key for every resource a player has ever fired.
      */
     public boolean clearExpired(long gameTime) {
-        return this.cooldowns.object2LongEntrySet().removeIf(entry -> entry.getLongValue() <= gameTime);
+        boolean changed = this.cooldowns.object2LongEntrySet().removeIf(entry -> entry.getLongValue() <= gameTime);
+        if (changed) this.markDirty();
+        return changed;
     }
 }

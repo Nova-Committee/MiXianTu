@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -28,19 +28,20 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
     public void execute(Entity actor, Entity target, FormulaContext context) {
         double requested = this.amount.evaluate(context);
         if (!Double.isFinite(requested) || requested <= 0.0D) return;
-        ResourceHolderComponent from = actor.getData(MxtAttachments.RESOURCE_HOLDER);
-        ResourceHolderComponent to = target.getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext targetContext = target instanceof LivingEntity living
                 ? ResourceService.formulaContext(living, this.resource, context)
                 : context;
-        if (!ResourceService.change(to, this.resource, 0.0D, targetContext).valid()) return;
-        Bounds bounds = ResourceService.resolveBounds(this.resource.value(), targetContext).orElse(null);
-        if (bounds == null) return;
-        double moved = Math.min(Math.min(from.get(this.resource), requested), Math.max(0.0D, bounds.max() - to.get(this.resource)));
-        if (moved <= 0.0D) return;
         FormulaContext sourceContext = actor instanceof LivingEntity living
                 ? ResourceService.formulaContext(living, this.resource, context)
                 : context;
+        ResourceHolderAttachment from = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment to = target.getData(MxtAttachments.RESOURCE_HOLDER);
+        if (!ResourceService.change(to, this.resource, 0.0D, targetContext).valid()) return;
+        Bounds bounds = ResourceService.resolveBounds(this.resource.value(), targetContext).orElse(null);
+        if (bounds == null) return;
+        double moved = Math.min(Math.min(from.get(this.resource), requested),
+                Math.max(0.0D, bounds.max() - to.get(this.resource)));
+        if (moved <= 0.0D) return;
         if (!ResourceService.change(from, this.resource, -moved, sourceContext).valid()) return;
         ResourceService.change(to, this.resource, moved, targetContext);
     }

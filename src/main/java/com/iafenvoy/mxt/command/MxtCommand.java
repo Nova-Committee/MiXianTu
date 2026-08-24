@@ -3,12 +3,12 @@ package com.iafenvoy.mxt.command;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
-import com.iafenvoy.mxt.attachment.CurseHolderComponent;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.attachment.SectComponent;
-import com.iafenvoy.mxt.attachment.SectTerritoryComponent;
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.attachment.SectAttachment;
+import com.iafenvoy.mxt.attachment.SectTerritoryAttachment;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -133,10 +133,10 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        AbilityHolderComponent abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
-        CurseHolderComponent curses = player.getData(MxtAttachments.CURSE_HOLDER);
-        ResourceHolderComponent resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
+        CurseHolderAttachment curses = player.getData(MxtAttachments.CURSE_HOLDER);
+        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
         source.sendSuccess(() -> Component.translatable("command.mxt.attachment.status", resources.values().size(), abilities.sources().size(),
                 abilities.cooldowns().size(), curses.instances().size(), spirit.spiritRoots().size(), spirit.physiques().size()), false);
         return 1;
@@ -168,7 +168,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
         Component action = spirit.cultivateAction().<Component>map(id -> DefinitionText.name(id, "cultivate_action")).orElseGet(() -> Component.translatable("command.mxt.none"));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, spirit.cultivationProgress(), spirit.nextCultivateTick()), false);
         return 1;
@@ -290,13 +290,13 @@ public final class MxtCommand {
     private static int claimTerritory(CommandSourceStack source, boolean release) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        SectComponent membership = player.getData(MxtAttachments.SECT);
+        SectAttachment membership = player.getData(MxtAttachments.SECT);
         Holder<Sect> sect = membership.sect().orElse(null);
         if (sect == null) {
             source.sendFailure(Component.translatable("command.mxt.sect.not_member"));
             return 0;
         }
-        SectTerritoryComponent territory = player.level().getChunkAt(player.blockPosition()).getData(MxtAttachments.SECT_TERRITORY);
+        SectTerritoryAttachment territory = player.level().getChunkAt(player.blockPosition()).getData(MxtAttachments.SECT_TERRITORY);
         Result result = release
                 ? SectService.releaseTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM)
                 : SectService.claimTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM);

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.ability;
 
-import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.ModifierAbilityType;
 import com.iafenvoy.mxt.data.AttributeEntry;
@@ -18,7 +18,7 @@ public final class AbilityModifierService {
     private AbilityModifierService() {
     }
 
-    public static List<ResolvedModifier> resolve(AbilityHolderComponent holder) {
+    public static List<ResolvedModifier> resolve(AbilityAttachment holder) {
         List<ResolvedModifier> result = new ArrayList<>();
         for (Holder<Ability> ability : holder.sources().keySet()) {
             Ability definition = ability.value();

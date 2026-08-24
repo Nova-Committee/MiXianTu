@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.attachment.SpiritComponent;
-import com.iafenvoy.mxt.attachment.FloatHoldingItemComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.FloatHoldingItemAttachment;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -93,8 +93,8 @@ public final class ItemAuraService {
      * first resumes the smallest partially consumed matching stack, then takes
      * one fresh matching item from the main hand or off hand.
      */
-    public static TickResult tick(LivingEntity entity, SpiritComponent spirit, ResourceHolderComponent resources, FormulaContext context) {
-        FloatHoldingItemComponent holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
+    public static TickResult tick(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources, FormulaContext context) {
+        FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         ItemStack item = holding.item();
         Holder<ItemAura> active = activeDefinition(entity, item);
         if (active == null) {
@@ -117,6 +117,7 @@ public final class ItemAuraService {
             return new TickResult(consumed, released, true, true);
         }
         item.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(remaining));
+        holding.markDirty();
         return new TickResult(consumed, released, false, true);
     }
 
@@ -155,7 +156,7 @@ public final class ItemAuraService {
             return ItemStack.EMPTY;
         }
         // Reserve the stack before assigning service-owned consumption state.
-        FloatHoldingItemComponent holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
+        FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         holding.set(item);
         if (item.get(MxtDataComponents.ITEM_AURA) == null) {
             double total = definition.value().aura().evaluate(context);
@@ -219,7 +220,7 @@ public final class ItemAuraService {
         active.value().exhaustedAction().execute(entity, context);
     }
 
-    private static double release(LivingEntity entity, SpiritComponent spirit, ResourceHolderComponent resources, double amount,
+    private static double release(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources, double amount,
                                   FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
         Holder<Resource> resource = spirit.realmStage().map(stage -> stage.value().resource()).orElse(null);

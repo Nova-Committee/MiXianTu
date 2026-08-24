@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.attachment.ContractComponent;
+import com.iafenvoy.mxt.attachment.ContractAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.ContractService.Result;
@@ -25,8 +25,7 @@ public final class BeastTamingBellItem extends Item {
     public @NotNull InteractionResult interactLivingEntity(@NotNull ItemStack stack, @NotNull Player player,
                                                            @NotNull LivingEntity target, @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
-        ContractComponent contract = target.getData(MxtAttachments.CONTRACT);
-        Result result = ContractService.setRecalled(contract, player.getUUID(), true, false);
+        Result result = ContractService.setRecalled(target.getData(MxtAttachments.CONTRACT), player.getUUID(), true, false);
         if (!result.changed()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.beast_taming_bell.failed"));
             return InteractionResult.FAIL;

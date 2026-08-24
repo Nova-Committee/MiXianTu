@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent.Snapshot;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
@@ -18,10 +17,10 @@ import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
-import com.iafenvoy.mxt.attachment.AuraChunkComponent;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
-import com.iafenvoy.mxt.attachment.SpiritComponent;
-import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -109,7 +108,7 @@ public final class MxtTestMod {
 
     private static void grantTestAbilities(PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        AbilityHolderComponent holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = Identifier.fromNamespaceAndPath(MOD_ID, "hotbar_test");
         for (String id : List.of("firebolt", "water_shield", "infuse_true_essence", "awaken_divine_sense")) {
             MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, Identifier.fromNamespaceAndPath(MOD_ID, id))
@@ -195,7 +194,7 @@ public final class MxtTestMod {
         if (matcherEntries.size() != 2 || !matcherEntries.get(1).matches(weapon)) {
             throw new IllegalStateException("Physical item matcher entries did not match the weapon stack");
         }
-        if (ResourceHolderComponent.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("""
+        if (ResourceHolderAttachment.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("""
                 {"values": {"mxt_test:spirit_power": 1.0}}
                 """)).result().isPresent()) {
             throw new IllegalStateException("Resource holder data must require its current audit structure");
@@ -303,7 +302,7 @@ public final class MxtTestMod {
                 || spiritPower.value().particleColor() != 0x66CCFF) {
             throw new IllegalStateException("Resource cultivation conversion settings were not decoded correctly");
         }
-        SpiritComponent spirit = new SpiritComponent();
+        SpiritAttachment spirit = new SpiritAttachment();
         spirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
         spirit.setCultivationProgress(40.0D);
         FormulaContext foundationContext = ResourceService.formulaContext(spirit, qi, FormulaContext.EMPTY);
@@ -312,7 +311,7 @@ public final class MxtTestMod {
         if (!same(foundationBounds.max(), 170.0D) || !same(qi.value().regen().evaluate(foundationContext), 0.35D)) {
             throw new IllegalStateException("Qi maximum and regeneration did not use foundation absorbed aura");
         }
-        ResourceHolderComponent holder = new ResourceHolderComponent();
+        ResourceHolderAttachment holder = new ResourceHolderAttachment();
         ResourceService.initialize(holder, qi, foundationContext);
         ResourceService.regenerate(holder, qi, 4L, foundationContext);
         if (!same(holder.get(qi), 1.4D)) {
@@ -330,22 +329,21 @@ public final class MxtTestMod {
                 || !same(holder.audit(qi).maxSnapshot(), 220.0D)) {
             throw new IllegalStateException("Qi resource changes did not clamp to its dynamic maximum");
         }
-        Snapshot snapshot = holder.snapshot();
-        holder.set(qi, 2.0D);
-        holder.restore(snapshot);
+        ResourceHolderAttachment draft = holder.copy();
+        draft.set(qi, 2.0D);
         if (!same(holder.get(qi), 220.0D) || !same(holder.audit(qi).minSnapshot(), 0.0D)
                 || !same(holder.audit(qi).maxSnapshot(), 220.0D)) {
-            throw new IllegalStateException("Resource rollback did not preserve server-resolved bounds");
+            throw new IllegalStateException("Resource validation draft modified live server-resolved bounds");
         }
 
         Identifier meditationId = Identifier.parse("mxt_test:fire_meditation");
         CultivateAction meditation = MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATE_ACTION, meditationId)
                 .orElseThrow(() -> new IllegalStateException("Cultivation restoration test action was not loaded"));
-        SpiritComponent absorbingSpirit = new SpiritComponent();
+        SpiritAttachment absorbingSpirit = new SpiritAttachment();
         absorbingSpirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
-        ResourceHolderComponent absorbingResources = new ResourceHolderComponent();
+        ResourceHolderAttachment absorbingResources = new ResourceHolderAttachment();
         absorbingResources.set(spiritPower, 5.0D);
-        AuraChunkComponent absorbingAura = new AuraChunkComponent();
+        AuraChunkAttachment absorbingAura = new AuraChunkAttachment();
         Holder<Resource> fire = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
         absorbingAura.initializeAuras(Map.of(fire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of(Identifier.parse("mxt_test:aura_kind/fire")));
         if (!CultivationActionService.start(absorbingSpirit, meditationId, meditation, 0L, () -> true).started()) {
@@ -411,9 +409,9 @@ public final class MxtTestMod {
         if (!same(ability.value().castTime().evaluate(FormulaContext.EMPTY), 0.0D)) {
             throw new IllegalStateException("Inline structured number providers did not evaluate correctly");
         }
-        AbilityHolderComponent abilities = new AbilityHolderComponent();
+        AbilityAttachment abilities = new AbilityAttachment();
         abilities.grant(ability, Identifier.fromNamespaceAndPath(MOD_ID, "test"));
-        ResourceHolderComponent abilityResources = new ResourceHolderComponent();
+        ResourceHolderAttachment abilityResources = new ResourceHolderAttachment();
         abilityResources.set(spiritPower, 20.0D);
         abilityResources.set(soulPower, 3.0D);
         PrepareResult prepared = AbilityService.prepare(ability, ability.value(), abilities, abilityResources, 0L, FormulaContext.EMPTY);
@@ -424,7 +422,7 @@ public final class MxtTestMod {
 
         Formation formation = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, Identifier.parse("mxt_test:spirit_gathering"))
                 .orElseThrow(() -> new IllegalStateException("Formation energy-cost test definition was not loaded"));
-        ResourceHolderComponent formationResources = new ResourceHolderComponent();
+        ResourceHolderAttachment formationResources = new ResourceHolderAttachment();
         formationResources.set(spiritPower, 20.0D);
         ActivateResult activation = FormationService.activate(Identifier.parse("mxt_test:spirit_gathering"), formation,
                 formationResources, FormulaContext.EMPTY);
@@ -530,7 +528,7 @@ public final class MxtTestMod {
                 || randomShares.stream().filter(value -> same(value, 10.0D)).count() != 1L) {
             throw new IllegalStateException("Shared aura distribution did not honor the configured allocation strategies");
         }
-        AuraChunkComponent capacity = new AuraChunkComponent();
+        AuraChunkAttachment capacity = new AuraChunkAttachment();
         Holder<Resource> capacityFire = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
         capacity.initializeAuras(Map.of(capacityFire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of());
         capacity.setBlockContribution(Map.of(capacityFire, new AuraValue(5.0D, new Fixed(5.0D), 1.0D, 0xFFFFFF)), List.of());

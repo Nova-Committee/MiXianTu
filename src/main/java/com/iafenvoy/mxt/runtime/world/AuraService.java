@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AuraChunkComponent;
+import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientHud;
@@ -47,7 +47,7 @@ public final class AuraService {
     }
 
     public static AuraResult getPositionAura(Level level, BlockPos pos) {
-        AuraChunkComponent chunk = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK);
+        AuraChunkAttachment chunk = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK);
         Resolved staticResolved = staticZone(level, pos);
         if (!chunk.initialized() || !chunk.template().equals(staticResolved.holder()))
             initialize(chunk, staticResolved, pos);
@@ -89,7 +89,7 @@ public final class AuraService {
         level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).change(amounts);
     }
 
-    public static void initialize(AuraChunkComponent chunk, Resolved resolved, BlockPos pos) {
+    public static void initialize(AuraChunkAttachment chunk, Resolved resolved, BlockPos pos) {
         AuraZone zone = resolved.definition();
         Map<Holder<Resource>, AuraPool> pools = pools(zone, pos, 0L);
         chunk.initializeAuras(pools, zone.auraKinds());

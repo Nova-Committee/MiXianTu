@@ -35,6 +35,13 @@ public interface HotbarEntry {
         return 0.0F;
     }
 
+    /**
+     * Prevents a cooldown-bound entry from becoming visually pressed or sending a use request.
+     */
+    default boolean canPress(Player player) {
+        return this.cooldown(player) <= 0.0F;
+    }
+
     default void onPress(Player player) {
     }
 

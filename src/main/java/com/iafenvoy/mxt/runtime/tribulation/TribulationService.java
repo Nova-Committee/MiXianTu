@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
-import com.iafenvoy.mxt.attachment.TribulationComponent;
+import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.Tribulation.Phase;
 import com.iafenvoy.mxt.event.TribulationEvent.Complete;
@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.event.TribulationEvent.StartPost;
 import com.iafenvoy.mxt.event.TribulationEvent.StartPre;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -22,7 +23,7 @@ public final class TribulationService {
     private TribulationService() {
     }
 
-    public static StartResult start(LivingEntity entity, TribulationComponent data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+    public static StartResult start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         Tribulation definition = tribulation.value();
         Identifier id = HolderHelper.id(tribulation);
         if (data.tribulation().isPresent()) return StartResult.rejected(Failure.ALREADY_ACTIVE);
@@ -38,7 +39,7 @@ public final class TribulationService {
         return StartResult.started(0);
     }
 
-    public static TickResult tick(LivingEntity entity, TribulationComponent data, Tribulation definition, long gameTime, FormulaContext context) {
+    public static TickResult tick(LivingEntity entity, TribulationAttachment data, Tribulation definition, long gameTime, FormulaContext context) {
         if (data.tribulation().isEmpty() || data.paused()) return TickResult.idle();
         if (gameTime < data.phaseEndsAt()) return TickResult.running(data.phase());
         int next = data.phase() + 1;

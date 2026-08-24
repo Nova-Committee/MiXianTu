@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent.Post;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -15,7 +15,7 @@ public final class LifeSpanService {
     }
 
     public static boolean tick(Entity entity) {
-        SpiritComponent spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         if (spirit.lifespanRemaining() < 0L) return false;
         if (spirit.lifespanRemaining() > 0L) spirit.setLifespanRemaining(spirit.lifespanRemaining() - 1L);
         if (spirit.lifespanRemaining() != 0L) return false;

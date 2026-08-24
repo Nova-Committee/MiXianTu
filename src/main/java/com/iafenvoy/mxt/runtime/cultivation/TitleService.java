@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -23,7 +23,7 @@ public final class TitleService {
     private TitleService() {
     }
 
-    public static Result grant(SpiritComponent spirit, Identifier id, Title definition,
+    public static Result grant(SpiritAttachment spirit, Identifier id, Title definition,
                                Function<Identifier, Title> lookup, BooleanSupplier unlockConditions) {
         Holder<Title> title = MxtDatapackRegistries.holder(MxtResourceKeys.TITLE, id).orElse(null);
         if (title == null) return Result.rejected(Failure.DISABLED);
@@ -42,13 +42,13 @@ public final class TitleService {
     /**
      * Evaluates every Java-owned condition declared by the title before changing ownership.
      */
-    public static Result grant(LivingEntity entity, SpiritComponent spirit, Identifier id, Title definition,
+    public static Result grant(LivingEntity entity, SpiritAttachment spirit, Identifier id, Title definition,
                                Function<Identifier, Title> lookup, FormulaContext context) {
         boolean allowed = definition.unlockCondition().test(entity, context);
         return allowed ? grant(spirit, id, definition, lookup, () -> true) : Result.rejected(Failure.CONDITIONS);
     }
 
-    public static boolean revoke(SpiritComponent spirit, Identifier id) {
+    public static boolean revoke(SpiritAttachment spirit, Identifier id) {
         Holder<Title> title = MxtDatapackRegistries.holder(MxtResourceKeys.TITLE, id).orElse(null);
         if (title == null) return false;
         List<Holder<Title>> titles = new LinkedList<>(spirit.titles());

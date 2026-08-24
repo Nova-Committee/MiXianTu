@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 
-import com.iafenvoy.mxt.attachment.ContractComponent;
+import com.iafenvoy.mxt.attachment.ContractAttachment;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
@@ -36,9 +36,9 @@ public final class ContractScrollItem extends Item {
             ItemFeedback.send(player, Component.translatable("item.mxt.contract_scroll.unbound"));
             return InteractionResult.FAIL;
         }
-        ContractComponent contract = target.getData(MxtAttachments.CONTRACT);
-        Result result = ContractService.bind(contract, scroll.contractType().orElseThrow(), player, target,
-                player.level().getGameTime(), FormulaContexts.forEntities(player, target, Map.of()));
+        Result result = ContractService.bind(target.getData(MxtAttachments.CONTRACT),
+                scroll.contractType().orElseThrow(), player, target, player.level().getGameTime(),
+                FormulaContexts.forEntities(player, target, Map.of()));
         if (!result.changed()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.contract_scroll.failed", result.failure().name()));
             return InteractionResult.FAIL;

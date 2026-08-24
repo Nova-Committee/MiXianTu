@@ -57,7 +57,10 @@ public record ItemCost(ItemMatcher matcher, NumberProvider amount) implements Co
         player.getInventory().setChanged();
     }
 
-    private int required(Player player) {
+    /**
+     * Resolves the requested item count without changing the inventory.
+     */
+    public int required(Player player) {
         double value = this.amount.evaluate(FormulaContext.of(player));
         return Double.isFinite(value) && value > 0.0D ? (int) Math.ceil(value) : 0;
     }

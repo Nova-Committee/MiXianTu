@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.forging;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
@@ -44,7 +44,7 @@ public final class ForgingService {
     }
 
     public static StrikeResult strike(ForgingSession session, Identifier methodId, ForgingMethod method,
-                                      ResourceHolderComponent resources, FormulaContext context, BooleanSupplier conditions) {
+                                      ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
         if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failure.CONDITIONS, null);
         if (!session.canStrike(methodId)) return StrikeResult.rejected(Failure.INVALID_STRIKE, null);
         StrikePre event = new StrikePre(session, methodId, method, resources, context);

@@ -14,21 +14,20 @@ import java.util.LinkedList;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class RealmInstanceComponent {
-    public static final MapCodec<RealmInstanceComponent> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("definition").forGetter(RealmInstanceComponent::definition), Codec.LONG.optionalFieldOf("started_at", -1L).forGetter(RealmInstanceComponent::startedAt), Codec.LONG.optionalFieldOf("expires_at", -1L).forGetter(RealmInstanceComponent::expiresAt),
-            UUIDUtilCodec.CODEC.listOf().optionalFieldOf("members", List.of()).forGetter(RealmInstanceComponent::members)
-    ).apply(i, RealmInstanceComponent::new));
+public final class RealmInstanceAttachment {
+    public static final MapCodec<RealmInstanceAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("definition").forGetter(RealmInstanceAttachment::definition), Codec.LONG.optionalFieldOf("started_at", -1L).forGetter(RealmInstanceAttachment::startedAt), Codec.LONG.optionalFieldOf("expires_at", -1L).forGetter(RealmInstanceAttachment::expiresAt),
+            UUIDUtilCodec.CODEC.listOf().optionalFieldOf("members", List.of()).forGetter(RealmInstanceAttachment::members)
+    ).apply(i, RealmInstanceAttachment::new));
     private Holder<RealmInstance> definition;
-    private long startedAt;
-    private long expiresAt;
+    private long startedAt, expiresAt;
     private final List<UUID> members;
 
-    public RealmInstanceComponent() {
+    public RealmInstanceAttachment() {
         this(Optional.empty(), -1L, -1L, List.of());
     }
 
-    private RealmInstanceComponent(Optional<Holder<RealmInstance>> definition, long startedAt, long expiresAt, List<UUID> members) {
+    private RealmInstanceAttachment(Optional<Holder<RealmInstance>> definition, long startedAt, long expiresAt, List<UUID> members) {
         this.definition = definition.orElse(null);
         this.startedAt = startedAt;
         this.expiresAt = expiresAt;

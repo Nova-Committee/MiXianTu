@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.event.FormationEvent.Activate;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -21,13 +21,13 @@ public final class FormationWorldService {
     }
 
     public static Result activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
-                                  ResourceHolderComponent resources, FormulaContext context) {
+                                  ResourceHolderAttachment resources, FormulaContext context) {
         return activate(level, controller, id, definition, resources, context, null);
     }
 
     public static Result activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
-                                  ResourceHolderComponent resources, FormulaContext context, UUID owner) {
-        FormationWorldComponent world = level.getData(MxtAttachments.FORMATION_WORLD);
+                                  ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
+        FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         if (world.get(controller).isPresent()) return Result.rejected(Failure.OCCUPIED, null);
         if (!FormationStructureValidator.TEMPLATE.matches(level, controller, definition))
             return Result.rejected(Failure.INVALID_STRUCTURE, null);
@@ -45,8 +45,8 @@ public final class FormationWorldService {
     }
 
     public static MaintainResult maintain(ServerLevel level, BlockPos controller, Formation definition,
-                                          ResourceHolderComponent resources, FormulaContext context) {
-        FormationWorldComponent world = level.getData(MxtAttachments.FORMATION_WORLD);
+                                          ResourceHolderAttachment resources, FormulaContext context) {
+        FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         FormationInstance instance = world.get(controller).map(FormationInstance::restore).orElse(null);
         if (instance == null) return MaintainResult.missingResult();
         FormationService.MaintainResult result = FormationService.maintain(instance, definition, resources, context);

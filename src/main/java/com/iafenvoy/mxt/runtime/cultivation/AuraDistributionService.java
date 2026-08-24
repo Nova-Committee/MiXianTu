@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.AuraChunkComponent;
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -47,7 +47,7 @@ public final class AuraDistributionService {
         ALLOCATIONS.entrySet().removeIf(entry -> entry.getValue().gameTime() != gameTime);
         Map<Long, List<Claim>> claimsByChunk = new HashMap<>();
         for (ServerPlayer player : level.players()) {
-            SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+            SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
             Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
             if (action == null || gameTime < spirit.nextCultivateTick()) continue;
             CultivateAction definition = action.value();
@@ -78,7 +78,7 @@ public final class AuraDistributionService {
     private static void reserve(ServerLevel level, long gameTime, List<Claim> claims) {
         claims.sort(Comparator.comparing(claim -> claim.player().getUUID()));
         LevelChunk chunk = level.getChunkAt(claims.getFirst().player().blockPosition());
-        AuraChunkComponent stored = chunk.getData(MxtAttachments.AURA_CHUNK);
+        AuraChunkAttachment stored = chunk.getData(MxtAttachments.AURA_CHUNK);
         // The shared pool is chunk-scoped. Its allocation policy follows the first active
         // claimant's resolved zone when overlapping dynamic zones provide different policies.
         Distribution distribution = claims.getFirst().aura().distribution();
@@ -168,7 +168,7 @@ public final class AuraDistributionService {
                 | ((long) (player.getBlockZ() >> 4) & 0xFFFFFFFFL) << 32;
     }
 
-    private static double shareWeight(SpiritComponent spirit, FormulaContext context) {
+    private static double shareWeight(SpiritAttachment spirit, FormulaContext context) {
         return spirit.realmStage().map(stage -> stage.value().auraShareWeight().evaluate(context))
                 .filter(value -> Double.isFinite(value) && value > 0.0D).orElse(1.0D);
     }

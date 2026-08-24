@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritComponent;
+import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -39,7 +39,7 @@ public final class CultivationActionEventBridge {
     }
 
     private static void tick(LivingEntity entity) {
-        SpiritComponent spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
         Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
         if (action == null) return;
         CultivateAction definition = action.value();
@@ -48,5 +48,6 @@ public final class CultivationActionEventBridge {
         AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
         CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
                 entity.level().getGameTime(), context, () -> mayContinue);
+        // Cultivation can change progress, active-state timing, and resource conversions in one tick.
     }
 }

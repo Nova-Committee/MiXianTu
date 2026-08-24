@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.forging;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.ForgingSessionComponent;
+import com.iafenvoy.mxt.attachment.ForgingSessionAttachment;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint.FailureSettlement;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
@@ -13,7 +13,7 @@ import com.iafenvoy.mxt.runtime.forging.ForgingService.Failure;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.FinishResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
-import com.iafenvoy.mxt.runtime.forging.ForgingWorldComponent.StationSession;
+import com.iafenvoy.mxt.runtime.forging.ForgingWorldAttachment.StationSession;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -41,7 +41,7 @@ public final class ForgingWorkstationService {
     public static boolean start(ServerPlayer player, BlockPos position, Identifier blueprintId, ForgingBlueprint blueprint) {
         ServerLevel level = player.level();
         if (!canUse(player, position, blueprint)) return false;
-        ForgingWorldComponent world = level.getData(MxtAttachments.FORGING_WORLD);
+        ForgingWorldAttachment world = level.getData(MxtAttachments.FORGING_WORLD);
         if (world.get(position).isPresent()) return false;
         ItemStack held = player.getMainHandItem();
         if (held.isEmpty() || !BuiltInRegistries.ITEM.getKey(held.getItem()).equals(blueprint.input())) return false;
@@ -49,7 +49,7 @@ public final class ForgingWorkstationService {
         if (!result.started()) return false;
         ItemStack input = held.copyWithCount(1);
         held.shrink(1);
-        ForgingSessionComponent data = new ForgingSessionComponent();
+        ForgingSessionAttachment data = new ForgingSessionAttachment();
         data.start(MxtDatapackRegistries.holder(MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElseThrow(), blueprint.plan(), result.session(), input, blueprint.result(), blueprint.qualityByExtraSteps(), blueprint.failureSettlement());
         if (!world.put(position, player.getUUID(), data)) {
             if (!player.getInventory().add(input)) player.drop(input, false);
@@ -76,7 +76,7 @@ public final class ForgingWorkstationService {
         StationSession station = stationForOwner(player, position).orElse(null);
         if (station == null || station.session().blueprint().map(HolderHelper::id).filter(blueprintId::equals).isEmpty() || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
-        ForgingSessionComponent data = station.session();
+        ForgingSessionAttachment data = station.session();
         ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
         FinishResult result = ForgingService.finish(blueprintId, session, data::qualityFor);
         if (!result.finished()) {
@@ -99,7 +99,7 @@ public final class ForgingWorkstationService {
     public static boolean cancel(ServerPlayer player, BlockPos position) {
         StationSession station = stationForOwner(player, position).orElse(null);
         if (station == null) return false;
-        ForgingSessionComponent data = station.session();
+        ForgingSessionAttachment data = station.session();
         if (data.plan().isEmpty() || data.session().isEmpty() || data.input().isEmpty()) return false;
         ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
         if (!ForgingService.cancel(session)) return false;
@@ -117,10 +117,10 @@ public final class ForgingWorkstationService {
     public static int cancelAllOwnedOnDeath(ServerPlayer player) {
         int cancelled = 0;
         for (ServerLevel level : player.level().getServer().getAllLevels()) {
-            ForgingWorldComponent world = level.getData(MxtAttachments.FORGING_WORLD);
+            ForgingWorldAttachment world = level.getData(MxtAttachments.FORGING_WORLD);
             for (Entry<BlockPos, StationSession> entry : world.sessions().entrySet()) {
                 if (!entry.getValue().owner().equals(player.getUUID())) continue;
-                ForgingSessionComponent data = entry.getValue().session();
+                ForgingSessionAttachment data = entry.getValue().session();
                 if (data.input().isEmpty()) continue;
                 data.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, id))
                         .ifPresent(blueprint -> blueprint.failAction().execute(player, FormulaContext.of(player)));
@@ -139,7 +139,7 @@ public final class ForgingWorkstationService {
                 Registries.BLOCK, block);
     }
 
-    private static void settleFailure(ServerPlayer player, BlockPos position, ForgingSessionComponent data) {
+    private static void settleFailure(ServerPlayer player, BlockPos position, ForgingSessionAttachment data) {
         FailureSettlement settlement = data.failureSettlement();
         if (player.getRandom().nextDouble() < settlement.inputReturnRatio()) {
             data.input().ifPresent(input -> give(player, input));
