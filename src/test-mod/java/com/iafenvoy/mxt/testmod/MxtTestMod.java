@@ -34,7 +34,7 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
-import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarRenderers.Origins;
+import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.PrepareResult;
@@ -455,7 +455,7 @@ public final class MxtTestMod {
         if (MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
                 .filter(resource -> MOD_ID.equals(resource.key().identifier().getNamespace()))
                 .flatMap(resource -> resource.value().bars().stream())
-                .anyMatch(bar -> !(bar.renderer() instanceof Origins))) {
+                .anyMatch(bar -> !(bar.renderer() instanceof OriginsRenderData))) {
             throw new IllegalStateException("All test resource bars must use the Origins renderer");
         }
         ResourceBar target = qi.bars().stream()

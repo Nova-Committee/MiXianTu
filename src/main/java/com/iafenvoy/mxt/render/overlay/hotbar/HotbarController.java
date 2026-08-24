@@ -218,7 +218,7 @@ public final class HotbarController {
         List<HotbarEntry> result = new ArrayList<>();
         if (mode == Mode.ABILITY) {
             List<ResolvedAbility> abilities = AbilityHotbarClient.all(player);
-            for (ResolvedAbility ability : abilities) result.add(new AbilityHotbarEntry(ability.id()));
+            for (ResolvedAbility ability : abilities) result.add(new AbilityHotbarEntry(ability.id(), ability.definition()));
         } else if (mode == Mode.SPIRIT) {
             List<Reference<Resource>> resources = SpiritBurstClient.resources(player);
             for (Reference<Resource> resource : resources) result.add(new SpiritHotbarEntry(HolderHelper.id(resource)));

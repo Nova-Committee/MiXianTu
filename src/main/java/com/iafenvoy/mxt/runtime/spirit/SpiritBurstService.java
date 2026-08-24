@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
+import com.iafenvoy.mxt.attachment.SpiritBurstCooldownComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -18,7 +19,6 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent.Post;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -28,8 +28,7 @@ import java.util.UUID;
  */
 @EventBusSubscriber
 public final class SpiritBurstService {
-    private static final long FIRE_INTERVAL_TICKS = 10L;
-    private static final Map<UUID, Long> NEXT_FIRE_TICK = new HashMap<>();
+    public static final long FIRE_INTERVAL_TICKS = 10L;
     private static final Map<UUID, Set<Identifier>> ACTIVE_RESOURCES = new HashMap<>();
 
     private SpiritBurstService() {
@@ -38,10 +37,7 @@ public final class SpiritBurstService {
     public static void setFiring(ServerPlayer player, Optional<Identifier> resourceId, boolean firing) {
         UUID playerId = player.getUUID();
         if (resourceId.isEmpty()) {
-            if (!firing) {
-                ACTIVE_RESOURCES.remove(playerId);
-                NEXT_FIRE_TICK.remove(playerId);
-            }
+            if (!firing) ACTIVE_RESOURCES.remove(playerId);
             return;
         }
         Optional<Identifier> valid = resourceId.filter(id -> MxtDatapackRegistries
@@ -50,43 +46,44 @@ public final class SpiritBurstService {
         Set<Identifier> active = ACTIVE_RESOURCES.computeIfAbsent(playerId, ignored -> new HashSet<>());
         if (firing) {
             boolean added = active.add(valid.get());
-            if (added && !NEXT_FIRE_TICK.containsKey(playerId)) {
-                fire(player);
-                NEXT_FIRE_TICK.put(playerId, player.level().getGameTime() + FIRE_INTERVAL_TICKS);
-            }
+            if (added) fire(player, valid.get());
         } else {
             active.remove(valid.get());
-            if (active.isEmpty()) NEXT_FIRE_TICK.remove(playerId);
+            if (active.isEmpty()) ACTIVE_RESOURCES.remove(playerId);
         }
     }
 
     @SubscribeEvent
     public static void onPlayerTick(Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        Long nextFireTick = NEXT_FIRE_TICK.get(player.getUUID());
-        if (nextFireTick == null || player.level().getGameTime() < nextFireTick) return;
-        fire(player);
-        if (ACTIVE_RESOURCES.getOrDefault(player.getUUID(), Set.of()).isEmpty())
-            NEXT_FIRE_TICK.remove(player.getUUID());
-        else NEXT_FIRE_TICK.put(player.getUUID(), player.level().getGameTime() + FIRE_INTERVAL_TICKS);
+        Set<Identifier> active = ACTIVE_RESOURCES.get(player.getUUID());
+        SpiritBurstCooldownComponent cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
+        boolean changed = cooldowns.clearExpired(player.level().getGameTime());
+        if (active != null && !active.isEmpty()) {
+            for (Identifier resource : Set.copyOf(active)) fire(player, resource);
+        }
+        if (changed) player.setData(MxtAttachments.SPIRIT_BURST_COOLDOWNS, cooldowns);
     }
 
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
-        NEXT_FIRE_TICK.remove(event.getEntity().getUUID());
         ACTIVE_RESOURCES.remove(event.getEntity().getUUID());
     }
 
-    private static void fire(ServerPlayer player) {
+    private static void fire(ServerPlayer player, Identifier resourceId) {
         ResourceHolderComponent holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         Set<Identifier> active = ACTIVE_RESOURCES.get(player.getUUID());
-        if (active == null || active.isEmpty()) return;
+        if (active == null || !active.contains(resourceId)) return;
         active.removeIf(id -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> resource.value().auraType().isEmpty()).orElse(true));
-        active.stream()
-                .map(id -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null))
-                .filter(Objects::nonNull)
-                .forEach(resource -> tryFire(player, holder, resource));
+        Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resourceId).orElse(null);
+        if (resource == null) return;
+        SpiritBurstCooldownComponent cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
+        if (cooldowns.isOnCooldown(resource, player.level().getGameTime())) return;
+        if (tryFire(player, holder, resource)) {
+            cooldowns.setCooldownUntil(resource, Math.addExact(player.level().getGameTime(), FIRE_INTERVAL_TICKS));
+            player.setData(MxtAttachments.SPIRIT_BURST_COOLDOWNS, cooldowns);
+        }
     }
 
     /**

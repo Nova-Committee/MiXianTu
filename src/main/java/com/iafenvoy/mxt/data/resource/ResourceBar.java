@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.resource;
 
-import com.iafenvoy.mxt.data.resourcebar.BuiltinResourceBarVisibilities.Always;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
+import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.AlwaysVisibility;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -14,7 +14,7 @@ import java.util.Locale;
  * A client-visible resource bar declaration. Renderer and visibility IDs select built-in typed implementations.
  */
 public record ResourceBar(Context context, Anchor anchor, int order,
-                          ResourceBarVisibility visibility, ResourceBarRenderer renderer, ValueDisplay valueDisplay,
+                          ResourceBarVisibility visibility, ResourceBarRenderData renderer, ValueDisplay valueDisplay,
                           boolean replaceDefault) {
     /**
      * Inline codec used by the owning {@link Resource} definition.
@@ -23,8 +23,8 @@ public record ResourceBar(Context context, Anchor anchor, int order,
             Context.CODEC.optionalFieldOf("context", Context.SELF_HUD).forGetter(ResourceBar::context),
             Anchor.CODEC.fieldOf("anchor").forGetter(ResourceBar::anchor),
             Codec.INT.optionalFieldOf("order", 0).forGetter(ResourceBar::order),
-            ResourceBarVisibility.CODEC.optionalFieldOf("visibility", Always.INSTANCE).forGetter(ResourceBar::visibility),
-            ResourceBarRenderer.CODEC.fieldOf("renderer").forGetter(ResourceBar::renderer),
+            ResourceBarVisibility.CODEC.optionalFieldOf("visibility", AlwaysVisibility.INSTANCE).forGetter(ResourceBar::visibility),
+            ResourceBarRenderData.CODEC.fieldOf("renderer").forGetter(ResourceBar::renderer),
             ValueDisplay.CODEC.optionalFieldOf("value_display", ValueDisplay.NONE).forGetter(ResourceBar::valueDisplay),
             Codec.BOOL.optionalFieldOf("replace_default", false).forGetter(ResourceBar::replaceDefault)
     ).apply(i, ResourceBar::new));

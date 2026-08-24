@@ -48,7 +48,7 @@ import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderer;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
@@ -90,7 +90,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends BlockCondition>>> BLOCK_CONDITION_TYPE = create("block_condition_type");
     public static final ResourceKey<Registry<MapCodec<? extends ItemCondition>>> ITEM_CONDITION_TYPE = create("item_condition_type");
     public static final ResourceKey<Registry<MapCodec<? extends DamageCondition>>> DAMAGE_CONDITION_TYPE = create("damage_condition_type");
-    public static final ResourceKey<Registry<MapCodec<? extends ResourceBarRenderer>>> RESOURCE_BAR_RENDERER_TYPE = create("resource_bar_renderer_type");
+    public static final ResourceKey<Registry<MapCodec<? extends ResourceBarRenderData>>> RESOURCE_BAR_RENDER_DATA_TYPE = create("resource_bar_render_data_type");
     public static final ResourceKey<Registry<MapCodec<? extends ResourceBarVisibility>>> RESOURCE_BAR_VISIBILITY_TYPE = create("resource_bar_visibility_type");
     public static final ResourceKey<Registry<MapCodec<? extends Badge>>> BADGE_TYPE = create("badge_type");
     public static final ResourceKey<Registry<MapCodec<? extends Entry>>> ITEM_MATCHER_ENTRY_TYPE = create("item_matcher_entry_type");

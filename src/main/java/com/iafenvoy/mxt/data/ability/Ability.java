@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.ability;
 
 import com.iafenvoy.mxt.data.AttributeEntry;
+import com.iafenvoy.mxt.data.HotbarIcon;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -34,6 +35,7 @@ import java.util.Optional;
  * A named ability. Behaviour is selected by the built-in type identifier.
  */
 public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTime, NumberProvider cooldown,
+                      Optional<HotbarIcon> icon,
                       List<AbilityComponent> components, List<AttributeEntry> modifiers,
                       DamageCondition damageCondition, EntityCondition condition, EntityAction entityAction,
                       TargetSelector targetSelector, BiEntityCondition targetCondition, BiEntityAction biEntityAction,
@@ -44,6 +46,7 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Ability::costs),
             NumberProvider.CODEC.optionalFieldOf("cast_time", new Constant(0.0D)).forGetter(Ability::castTime),
             NumberProvider.CODEC.optionalFieldOf("cooldown", new Constant(0.0D)).forGetter(Ability::cooldown),
+            HotbarIcon.CODEC.optionalFieldOf("icon").forGetter(Ability::icon),
             AbilityComponent.CODEC.listOf().optionalFieldOf("components", List.of()).forGetter(Ability::components),
             AttributeEntry.CODEC.listOf().optionalFieldOf("modifiers", List.of()).forGetter(Ability::modifiers),
             DamageCondition.CODEC.optionalFieldOf("damage_condition", AlwaysTrueDamageCondition.INSTANCE).forGetter(Ability::damageCondition),

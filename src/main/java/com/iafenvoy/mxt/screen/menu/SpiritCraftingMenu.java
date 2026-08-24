@@ -42,7 +42,7 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private static final int PLAYER_START = 10;
     private final Player player;
     private final Container grid;
-    private final Container result = new SimpleContainer(1);
+    private final Container result;
     private final ContainerLevelAccess access;
     private final SpiritCraftingTableBlockEntity table;
     private final BlockPos tablePos;
@@ -75,6 +75,7 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         this.access = access;
         this.table = table;
         this.tablePos = tablePos;
+        this.result = table == null ? new SimpleContainer(1) : table.result();
         for (int index = 0; index < MAX_PROGRESS_ENTRIES; index++) {
             this.progressTypes[index] = DataSlot.standalone();
             this.progressAmounts[index] = DataSlot.standalone();
@@ -92,7 +93,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(@NonNull Player player, @NonNull ItemStack stack) {
-                SpiritCraftingMenu.this.craft(player);
                 super.onTake(player, stack);
             }
         });
@@ -136,7 +136,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private void updateResult() {
         this.current = this.findRecipe();
         if (this.table != null) this.table.configureAuraCosts(this.current == null ? Map.of() : this.current.costs());
-        this.result.setItem(0, this.current != null && (this.table == null || this.table.hasAura(this.current.costs())) ? this.current.recipe().assemble(this.input()) : ItemStack.EMPTY);
         this.syncProgress();
     }
 
@@ -191,17 +190,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         return new SpiritCraftingInput(IntStream.range(0, 9).mapToObj(this.grid::getItem).toList());
     }
 
-    private void craft(Player player) {
-        RecipeMatch recipe = this.current;
-        if (recipe == null || this.table == null || !this.table.consumeAura(recipe.costs())) return;
-        for (int index = 0; index < this.grid.getContainerSize(); index++) {
-            ItemStack stack = this.grid.getItem(index);
-            if (!stack.isEmpty()) stack.shrink(1);
-        }
-        this.grid.setChanged();
-        this.updateResult();
-    }
-
     @Override
     public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
         Slot slot = this.slots.get(index);
@@ -229,7 +217,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     @Override
     public void removed(@NonNull Player player) {
         super.removed(player);
-        if (this.table != null) this.table.clearAura();
     }
 
     private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Resource>, Integer> costs) {

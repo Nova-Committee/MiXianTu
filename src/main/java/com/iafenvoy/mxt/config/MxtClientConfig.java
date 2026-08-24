@@ -14,6 +14,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public static final MxtClientConfig INSTANCE = new MxtClientConfig();
 
     public final Hotbar hotbar = new Hotbar();
+    public final ResourceBars resourceBars = new ResourceBars();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt-client.json");
@@ -27,6 +28,14 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
         return INSTANCE.hotbar.mode.getValue();
     }
 
+    public static ResourceBarIconLayout resourceBarIconLayout() {
+        return INSTANCE.resourceBars.iconLayout.getValue();
+    }
+
+    public static boolean showResourceBarNames() {
+        return INSTANCE.resourceBars.showNames.getValue();
+    }
+
     public static final class Hotbar extends AutoInitConfigCategoryBase {
         public final BooleanEntry allowVanillaHotbarSelection = BooleanEntry.builder("config.mxt.client.hotbar.allow_vanilla_selection", false).build();
         public final EnumEntry<HotbarMode> mode = EnumEntry.builder("config.mxt.client.hotbar.mode", HotbarMode.HOLD).nameProvider(value -> Component.translatable("config.mxt.client.hotbar.mode." + value.name().toLowerCase())).build();
@@ -38,5 +47,20 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
     public enum HotbarMode {
         HOLD, TOGGLE
+    }
+
+    public static final class ResourceBars extends AutoInitConfigCategoryBase {
+        public final BooleanEntry showNames = BooleanEntry.builder("config.mxt.client.resource_bars.show_names", false).build();
+        public final EnumEntry<ResourceBarIconLayout> iconLayout = EnumEntry.builder("config.mxt.client.resource_bars.icon_layout", ResourceBarIconLayout.SIDES)
+                .nameProvider(value -> Component.translatable("config.mxt.client.resource_bars.icon_layout." + value.name().toLowerCase()))
+                .build();
+
+        private ResourceBars() {
+            super("resource_bars", "config.mxt.client.resource_bars");
+        }
+    }
+
+    public enum ResourceBarIconLayout {
+        SIDES, CENTER
     }
 }

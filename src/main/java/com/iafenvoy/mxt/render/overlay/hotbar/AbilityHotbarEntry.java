@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
 import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
+import com.iafenvoy.mxt.data.HotbarIcon;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -12,17 +13,26 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
+import java.util.Optional;
+
 /**
  * Hotbar entry backed by one resolved, data-driven ability.
  */
-public record AbilityHotbarEntry(Identifier id, int accentColor) implements HotbarEntry {
-    public AbilityHotbarEntry(Identifier id) {
-        this(id, 0xFF7E8799);
-    }
+public record AbilityHotbarEntry(Identifier id, Ability definition) implements HotbarEntry {
 
     @Override
     public Component name() {
         return DefinitionText.name(this.id, "ability");
+    }
+
+    @Override
+    public Optional<HotbarIcon> icon() {
+        return this.definition.icon();
+    }
+
+    @Override
+    public int accentColor() {
+        return 0xFF7E8799;
     }
 
     @Override

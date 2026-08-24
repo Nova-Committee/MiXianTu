@@ -243,7 +243,7 @@ public final class CultivationActionService {
     }
 
     private static Map<Holder<Resource>, Double> evaluateAuraCosts(CultivateAction definition,
-                                                                  FormulaContext context) {
+                                                                   FormulaContext context) {
         Map<Holder<Resource>, Double> values = new LinkedHashMap<>();
         for (Entry<Holder<Resource>, NumberProvider> entry : definition.auraCosts().entrySet()) {
             double value = entry.getValue().evaluate(context);
@@ -258,7 +258,7 @@ public final class CultivationActionService {
     }
 
     private static Map<Holder<Resource>, Double> scaleAuraCosts(Map<Holder<Resource>, Double> values,
-                                                               double multiplier) {
+                                                                double multiplier) {
         Map<Holder<Resource>, Double> result = new LinkedHashMap<>();
         values.forEach((element, amount) -> result.put(element, amount * multiplier));
         return result;

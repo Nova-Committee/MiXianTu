@@ -3,6 +3,9 @@
   "min": 0,
   "max": "100 + level * 10",
   "regen": 1,
+  "icon": {
+    "texture": "mxt_test:textures/item/qingxiao_spirit_crystal.png"
+  },
   "burst_amount": 10,
   "particle_color": "#66CCFF",
   "aura_type": "mxt_test:fire",

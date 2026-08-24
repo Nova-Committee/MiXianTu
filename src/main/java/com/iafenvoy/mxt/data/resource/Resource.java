@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.resource;
 
+import com.iafenvoy.mxt.data.HotbarIcon;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -22,7 +23,7 @@ import java.util.Optional;
  * realm rank and absorbed aura through {@code ResourceService}.
  */
 public record Resource(NumberProvider defaultValue, NumberProvider min, NumberProvider max, NumberProvider regen,
-                       NumberProvider burstAmount,
+                       NumberProvider burstAmount, Optional<HotbarIcon> icon,
                        int particleColor, Optional<Holder<Element>> auraType,
                        ResourceConversion cultivationToResource, ResourceConversion resourceToCultivation,
                        List<ResourceBar> bars, Optional<Holder<RealmStage>> firstRealm) {
@@ -33,6 +34,7 @@ public record Resource(NumberProvider defaultValue, NumberProvider min, NumberPr
             NumberProvider.CODEC.fieldOf("max").forGetter(Resource::max),
             NumberProvider.CODEC.optionalFieldOf("regen", new Constant(0.0D)).forGetter(Resource::regen),
             NumberProvider.CODEC.optionalFieldOf("burst_amount", new Constant(0.0D)).forGetter(Resource::burstAmount),
+            HotbarIcon.CODEC.optionalFieldOf("icon").forGetter(Resource::icon),
             MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("particle_color", 0xFFFFFF).forGetter(Resource::particleColor),
             Element.CODEC.optionalFieldOf("aura_type").forGetter(Resource::auraType),
             ResourceConversion.CODEC.optionalFieldOf("cultivation_to_resource", ResourceConversion.DEFAULT).forGetter(Resource::cultivationToResource),

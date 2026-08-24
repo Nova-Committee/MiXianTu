@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
@@ -27,13 +28,18 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public final class ServerNetworkHandler {
     static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
         Player player = context.player();
+        AbilityHolderComponent abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         if (payload.cancel()) {
             MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability ->
-                    AbilityService.cancelCast(ability, player.getData(MxtAttachments.ABILITY_HOLDER), player.level().getGameTime()));
+                    AbilityService.cancelCast(ability, abilities, player.level().getGameTime()));
+            // Mutable attachments must be set again to schedule their sync to tracking clients.
+            player.setData(MxtAttachments.ABILITY_HOLDER, abilities);
             return;
         }
         MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability -> AbilityService.use(ability, ability.value(), player,
-                player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player)));
+                abilities, player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player)));
+        // Cooldown/cast states are computed only here on the server; the hotbar reads the synced snapshot.
+        player.setData(MxtAttachments.ABILITY_HOLDER, abilities);
     }
 
     static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {

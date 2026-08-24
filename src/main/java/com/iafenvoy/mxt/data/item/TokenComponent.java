@@ -23,7 +23,8 @@ import java.util.function.Consumer;
  * Generic identity and permission payload for sect, realm and trading tokens.
  */
 @EventBusSubscriber(Dist.CLIENT)
-public record TokenComponent(Optional<String> kind, Optional<String> value, Optional<String> owner) implements TooltipProvider {
+public record TokenComponent(Optional<String> kind, Optional<String> value,
+                             Optional<String> owner) implements TooltipProvider {
     public static final TokenComponent EMPTY = new TokenComponent(Optional.empty(), Optional.empty(), Optional.empty());
     public static final Codec<TokenComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.optionalFieldOf("kind").forGetter(TokenComponent::kind),

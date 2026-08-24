@@ -2,10 +2,8 @@ package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
-import com.iafenvoy.mxt.attachment.ResourceHolderComponent;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.render.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
 import com.iafenvoy.mxt.render.overlay.hotbar.HotbarController.Mode;
@@ -13,7 +11,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -26,7 +23,6 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -35,6 +31,8 @@ import java.util.Optional;
 @EventBusSubscriber(Dist.CLIENT)
 public enum HotbarOverlay implements GuiLayer {
     INSTANCE;
+
+    private static final int BOTTOM_OFFSET = 104;
 
     @Override
     public void render(@NotNull GuiGraphicsExtractor graphics, @NotNull DeltaTracker deltaTracker) {
@@ -47,21 +45,18 @@ public enum HotbarOverlay implements GuiLayer {
         if (entries.isEmpty()) return;
         int width = HotbarOverlayRenderer.width(entries.size());
         int x = minecraft.getWindow().getGuiScaledWidth() / 2 - width / 2;
-        int y = minecraft.getWindow().getGuiScaledHeight() - 72;
-        HotbarOverlayRenderer.drawSlots(graphics, minecraft.font, entries, x, y, HotbarController::isEntryActive, player);
+        int y = minecraft.getWindow().getGuiScaledHeight() - BOTTOM_OFFSET;
+        for (int index = 0; index < entries.size(); index++) {
+            HotbarEntry entry = entries.get(index);
+            entry.render(graphics, minecraft.font, player,
+                    x + index * (HotbarEntry.SLOT_SIZE + HotbarEntry.SLOT_GAP), y, index,
+                    HotbarController.isEntryActive(index));
+        }
 
         if (HotbarController.mode() == Mode.ABILITY) {
             List<ResolvedAbility> abilities = AbilityHotbarClient.all(player);
             long gameTime = player.level().getGameTime();
             drawCastBar(graphics, minecraft, player, x, y - 10, abilities, gameTime);
-        } else {
-            List<? extends Reference<Resource>> resources = SpiritBurstClient.resources(player);
-            if (!resources.isEmpty()) {
-                ResourceHolderComponent holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
-                Reference<Resource> selected = resources.get(Math.min(SpiritBurstClient.selectedIndex(), resources.size() - 1));
-                String value = String.format(Locale.ROOT, "%.1f", holder.get(selected));
-                graphics.text(minecraft.font, value, x, y - 10, 0xFFE0E5EF, false);
-            }
         }
     }
 

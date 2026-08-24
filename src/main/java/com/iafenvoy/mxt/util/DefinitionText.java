@@ -5,7 +5,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 
-/** Builds localized names for datapack definitions from their registry identifiers. */
+/**
+ * Builds localized names for datapack definitions from their registry identifiers.
+ */
 public final class DefinitionText {
     private DefinitionText() {
     }

@@ -30,6 +30,11 @@
       }
     ]
   },
+  "icon": {
+    "item": {
+      "id": "minecraft:fire_charge"
+    }
+  },
   "cooldown": 20,
   "element_affinity": ["mxt_test:fire", "#mxt_test:basic"]
 }

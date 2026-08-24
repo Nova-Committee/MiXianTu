@@ -27,6 +27,7 @@ public final class MxtAttachments {
      */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FloatHoldingItemComponent>> FLOAT_HOLDING_ITEM = REGISTRY.register("float_holding_item", () -> AttachmentType.builder(FloatHoldingItemComponent::new).serialize(FloatHoldingItemComponent.CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ResourceHolderComponent>> RESOURCE_HOLDER = entity("resource_holder", ResourceHolderComponent::new, ResourceHolderComponent.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritBurstCooldownComponent>> SPIRIT_BURST_COOLDOWNS = entity("spirit_burst_cooldowns", SpiritBurstCooldownComponent::new, SpiritBurstCooldownComponent.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AbilityHolderComponent>> ABILITY_HOLDER = entity("ability_holder", AbilityHolderComponent::new, AbilityHolderComponent.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CurseHolderComponent>> CURSE_HOLDER = entity("curse_holder", CurseHolderComponent::new, CurseHolderComponent.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TribulationComponent>> TRIBULATION = entity("tribulation", TribulationComponent::new, TribulationComponent.CODEC);
