@@ -5,7 +5,7 @@
   "regen": 0,
   "bars": [
     {
-      "context": "self_hud",
+      "context": "mxt:self_hud",
       "anchor": "left",
       "order": 3,
       "visibility": { "type": "mxt:always" },

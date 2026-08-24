@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.compat.jei;
 
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;

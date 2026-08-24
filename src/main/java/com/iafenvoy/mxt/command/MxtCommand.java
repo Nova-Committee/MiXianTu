@@ -220,8 +220,7 @@ public final class MxtCommand {
             case BIOME -> "biome";
             case DIMENSION -> "dimension";
             case FORMATION -> "formation";
-            case CUSTOM -> "aura_zone";
-            case CHUNK -> "aura_zone";
+            case CUSTOM, CHUNK -> "aura_zone";
         };
         return DefinitionText.name(aura.source(), category);
     }

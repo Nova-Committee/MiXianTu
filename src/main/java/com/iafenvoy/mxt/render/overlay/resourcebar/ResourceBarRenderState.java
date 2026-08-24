@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.overlay.resourcebar;
 
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
-import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import net.minecraft.network.chat.Component;
@@ -12,7 +12,7 @@ import java.util.Optional;
 /**
  * Per-frame presentation state for one resource bar.
  */
-public record ResourceBarRenderState(Context context, Anchor anchor, int order, Identifier id, int index,
+public record ResourceBarRenderState(ResourceBarContext context, Anchor anchor, int order, Identifier id, int index,
                                      double current, double minimum, double maximum, ResourceBarRenderData renderData,
                                      Optional<Component> name, ValueDisplay valueDisplay) {
     public double percentage() {

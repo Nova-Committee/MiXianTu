@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
@@ -56,6 +57,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends ItemCondition>> ITEM_CONDITION_TYPE = new DefaultedMappedRegistry<>("always_true", MxtResourceKeys.ITEM_CONDITION_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends DamageCondition>> DAMAGE_CONDITION_TYPE = new DefaultedMappedRegistry<>("always_true", MxtResourceKeys.DAMAGE_CONDITION_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarRenderData>> RESOURCE_BAR_RENDER_DATA_TYPE = new DefaultedMappedRegistry<>("missing", MxtResourceKeys.RESOURCE_BAR_RENDER_DATA_TYPE, Lifecycle.stable(), false);
+    public static final DefaultedRegistry<ResourceBarContext> RESOURCE_BAR_CONTEXT = new DefaultedMappedRegistry<>("self_hud", MxtResourceKeys.RESOURCE_BAR_CONTEXT, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = new DefaultedMappedRegistry<>("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends Badge>> BADGE_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.BADGE_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = new DefaultedMappedRegistry<>("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE, Lifecycle.stable(), false);
@@ -85,6 +87,7 @@ public final class MxtRegistries {
         event.register(ITEM_CONDITION_TYPE);
         event.register(DAMAGE_CONDITION_TYPE);
         event.register(RESOURCE_BAR_RENDER_DATA_TYPE);
+        event.register(RESOURCE_BAR_CONTEXT);
         event.register(RESOURCE_BAR_VISIBILITY_TYPE);
         event.register(BADGE_TYPE);
         event.register(ITEM_MATCHER_ENTRY_TYPE);

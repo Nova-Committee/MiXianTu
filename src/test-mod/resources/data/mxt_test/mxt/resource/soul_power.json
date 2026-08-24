@@ -5,7 +5,7 @@
   "regen": 0.25,
   "bars": [
     {
-      "context": "self_hud",
+      "context": "mxt:self_hud",
       "anchor": "right",
       "order": 1,
       "visibility": { "type": "mxt:non_full" },

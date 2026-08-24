@@ -10,7 +10,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.Level;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jspecify.annotations.NonNull;
@@ -28,9 +27,11 @@ public final class SpiritCraftingTableBlock extends EconomyWorkstationBlock impl
         return new SpiritCraftingTableBlockEntity(pos, state);
     }
 
+
+
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NonNull BlockState state, @NonNull BlockEntityType<T> type) {
         if (level.isClientSide() || type != MxtBlockEntities.SPIRIT_CRAFTING_TABLE.get()) return null;
         return (BlockEntityTicker<T>) (BlockEntityTicker<SpiritCraftingTableBlockEntity>) SpiritCraftingTableBlockEntity::serverTick;
     }

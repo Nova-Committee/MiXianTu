@@ -9,11 +9,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.Container;
-import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -39,6 +37,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 /**
@@ -106,7 +105,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
 
     private Map<Holder<Resource>, Integer> costs(Map<Holder<Resource>, NumberProvider> aura) {
         Map<Holder<Resource>, Integer> costs = new LinkedHashMap<>();
-        for (Map.Entry<Holder<Resource>, NumberProvider> entry : aura.entrySet()) {
+        for (Entry<Holder<Resource>, NumberProvider> entry : aura.entrySet()) {
             double value = entry.getValue().evaluate(FormulaContext.of(this.level));
             if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
             costs.put(entry.getKey(), (int) Math.ceil(value));
@@ -135,7 +134,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public void writeClientSideData(AbstractContainerMenu menu, RegistryFriendlyByteBuf buffer) {
+    public void writeClientSideData(@NonNull AbstractContainerMenu menu, @NonNull RegistryFriendlyByteBuf buffer) {
         BlockPos.STREAM_CODEC.encode(buffer, this.worldPosition);
     }
 
@@ -218,17 +217,17 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int[] getSlotsForFace(Direction side) {
+    public int @NonNull [] getSlotsForFace(@NonNull Direction side) {
         return side == Direction.DOWN ? new int[]{9} : new int[]{0, 1, 2, 3, 4, 5, 6, 7, 8};
     }
 
     @Override
-    public boolean canPlaceItemThroughFace(int slot, ItemStack stack, @Nullable Direction side) {
+    public boolean canPlaceItemThroughFace(int slot, @NonNull ItemStack stack, @Nullable Direction side) {
         return slot >= 0 && slot < 9 && this.canPlaceItem(slot, stack);
     }
 
     @Override
-    public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction side) {
+    public boolean canTakeItemThroughFace(int slot, @NonNull ItemStack stack, @NonNull Direction side) {
         return slot == 9 && side == Direction.DOWN;
     }
 

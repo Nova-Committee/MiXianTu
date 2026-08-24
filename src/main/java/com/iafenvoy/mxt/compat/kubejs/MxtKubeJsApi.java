@@ -59,9 +59,8 @@ public final class MxtKubeJsApi {
         Holder<Ability> ability = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null)
             return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
-        UseResult result = AbilityService.use(ability, ability.value(), actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
+        return AbilityService.use(ability, ability.value(), actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
                 actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
-        return result;
     }
 
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, String source, FormulaContext context) {
@@ -89,9 +88,8 @@ public final class MxtKubeJsApi {
             return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
         if (MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, resource).isEmpty())
             return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
-        BreakthroughResult result = CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA),
+        return CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA),
                 entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context, () -> true);
-        return result;
     }
 
     /**

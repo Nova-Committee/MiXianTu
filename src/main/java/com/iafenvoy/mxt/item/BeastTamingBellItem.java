@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.attachment.ContractAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.ContractService.Result;

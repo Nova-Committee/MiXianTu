@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SectAttachment;
 import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.data.Title;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;

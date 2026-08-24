@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

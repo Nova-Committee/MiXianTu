@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.event.TribulationEvent.StartPost;
 import com.iafenvoy.mxt.event.TribulationEvent.StartPre;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;

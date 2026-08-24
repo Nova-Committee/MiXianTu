@@ -9,11 +9,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Client-side copy of the server-resolved aura at the local player's position.
+ * Client-side copy of the server-resolved aura at the local player's position. Stored chunk
+ * inventory and sensed environmental concentration are kept as separate snapshots.
  */
 public final class AuraClientState {
     private static final Identifier EMPTY = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
-    private static volatile Snapshot current = new Snapshot(EMPTY, Map.of());
+    private static volatile Snapshot current = new Snapshot(EMPTY, Map.of(), Map.of());
     private static volatile Snapshot target = current;
     private static long lastNanos = System.nanoTime();
 
@@ -29,7 +30,12 @@ public final class AuraClientState {
         return current;
     }
 
-    public static void update(Identifier source, Map<Identifier, AuraPool> aura) {
+    public static void update(Identifier source, Map<Identifier, AuraPool> stored,
+                              Map<Identifier, AuraPool> sensed) {
+        target = new Snapshot(source, sanitize(stored), sanitize(sensed));
+    }
+
+    private static Map<Identifier, AuraPool> sanitize(Map<Identifier, AuraPool> aura) {
         Map<Identifier, AuraPool> sanitized = new LinkedHashMap<>();
         aura.forEach((id, pool) -> {
             if (id == null || pool == null) return;
@@ -39,29 +45,44 @@ public final class AuraClientState {
             double regen = Double.isFinite(pool.regenPerTick()) ? pool.regenPerTick() : 0.0D;
             sanitized.put(id, new AuraPool(amount, maximum, regen));
         });
-        target = new Snapshot(source, Map.copyOf(sanitized));
+        return Map.copyOf(sanitized);
     }
 
-    public record Snapshot(Identifier source, Map<Identifier, AuraPool> aura) {
-        public double concentration() {
-            return this.aura.values().stream().mapToDouble(AuraPool::amount).sum();
+    public record Snapshot(Identifier source, Map<Identifier, AuraPool> stored,
+                           Map<Identifier, AuraPool> sensed) {
+        public double storedConcentration() {
+            return this.stored.values().stream().mapToDouble(AuraPool::amount).sum();
         }
 
-        public double maximum() {
-            return this.aura.values().stream().mapToDouble(AuraPool::maximum).sum();
+        public double storedMaximum() {
+            return this.stored.values().stream().mapToDouble(AuraPool::maximum).sum();
         }
 
-        public AuraPool pool(Identifier id) {
-            return this.aura.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+        public double sensedConcentration() {
+            return this.sensed.values().stream().mapToDouble(AuraPool::amount).sum();
+        }
+
+        public double sensedMaximum() {
+            return this.sensed.values().stream().mapToDouble(AuraPool::maximum).sum();
+        }
+
+        public AuraPool sensedPool(Identifier id) {
+            return this.sensed.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
         }
 
         private static Snapshot interpolate(Snapshot from, Snapshot to, double factor) {
+            return new Snapshot(to.source, interpolateMap(from.stored, to.stored, factor),
+                    interpolateMap(from.sensed, to.sensed, factor));
+        }
+
+        private static Map<Identifier, AuraPool> interpolateMap(Map<Identifier, AuraPool> from,
+                                                                Map<Identifier, AuraPool> to, double factor) {
             Map<Identifier, AuraPool> values = new LinkedHashMap<>();
-            Set<Identifier> ids = new HashSet<>(from.aura.keySet());
-            ids.addAll(to.aura.keySet());
+            Set<Identifier> ids = new HashSet<>(from.keySet());
+            ids.addAll(to.keySet());
             ids.forEach(id -> {
-                AuraPool start = from.aura.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
-                AuraPool end = to.aura.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+                AuraPool start = from.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+                AuraPool end = to.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
                 double amount = lerp(start.amount(), end.amount(), factor);
                 double maximum = end.maximum() == Double.POSITIVE_INFINITY ? Double.POSITIVE_INFINITY
                         : lerp(start.maximum() == Double.POSITIVE_INFINITY ? end.maximum() : start.maximum(), end.maximum(), factor);
@@ -69,7 +90,7 @@ public final class AuraClientState {
                 if (amount > 0.0D || maximum > 0.0D || regen != 0.0D)
                     values.put(id, new AuraPool(amount, maximum, regen));
             });
-            return new Snapshot(to.source, Map.copyOf(values));
+            return Map.copyOf(values);
         }
 
         private static double lerp(double from, double to, double factor) {

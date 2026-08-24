@@ -55,9 +55,12 @@ public final class AuraZoneEventBridge {
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
             if (level.getGameTime() % 20L == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
-                Map<Identifier, AuraPool> values = new LinkedHashMap<>();
-                aura.aura().forEach((resource, pool) -> values.put(HolderHelper.id(resource), pool));
-                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), values));
+                AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
+                Map<Identifier, AuraPool> stored = new LinkedHashMap<>();
+                aura.aura().forEach((resource, pool) -> stored.put(HolderHelper.id(resource), pool));
+                Map<Identifier, AuraPool> sensedValues = new LinkedHashMap<>();
+                sensed.aura().forEach((resource, pool) -> sensedValues.put(HolderHelper.id(resource), pool));
+                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), stored, sensedValues));
             }
             zones.getOptional(aura.source()).flatMap(AuraZone::particle)
                     .ifPresent(effect -> effect.sendTo(level, player, player.position()));

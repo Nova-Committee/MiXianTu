@@ -14,10 +14,10 @@ title: resource：资源与资源条
   "regen": 0,
   "aura_type": "mxt:common",
   "bars": [{
-    "renderer": {"type": "origins", "bar_index": 0},
+    "renderer": {"type": "mxt:boss_bar", "bar_index": 0},
     "anchor": "left",
     "order": 0,
-    "context": "self_hud",
+    "context": "mxt:self_hud",
     "value_display": "current_and_maximum"
   }]
 }

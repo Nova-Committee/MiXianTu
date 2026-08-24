@@ -2,8 +2,6 @@ package com.iafenvoy.mxt.compat.jade;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;

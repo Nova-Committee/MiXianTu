@@ -67,6 +67,23 @@ public final class AuraService {
                 resolved.definition().cultivateCondition(), resolved.definition().distribution(), resolved.id(), resolved.kind());
     }
 
+    /**
+     * Resolves the environmental concentration at a position without exposing the mutable
+     * chunk stock. The chunk stock is deliberately kept separate so HUD and fog rendering cannot
+     * make stored aura appear to fluctuate with the environment.
+     */
+    public static AuraResult getSensedAura(Level level, BlockPos pos) {
+        AuraResult resolved = getPositionAura(level, pos);
+        AuraZone zone = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, resolved.source()).orElse(null);
+        if (zone == null) return new AuraResult(Map.of(), resolved.auraKinds(), resolved.rules(),
+                resolved.elementFitBonus(), resolved.elementConflictPenalty(), resolved.cultivateCondition(),
+                resolved.distribution(), resolved.source(), resolved.sourceKind());
+        Map<Holder<Resource>, AuraPool> pools = pools(zone, pos, level.getGameTime());
+        return new AuraResult(pools, resolved.auraKinds(), resolved.rules(), resolved.elementFitBonus(),
+                resolved.elementConflictPenalty(), resolved.cultivateCondition(), resolved.distribution(),
+                resolved.source(), resolved.sourceKind());
+    }
+
     private static AuraResult preview(Resolved resolved, Level level, BlockPos pos) {
         return new AuraResult(pools(resolved.definition(), pos, level.getGameTime()), resolved.definition().auraKinds(), resolved.definition().rules(),
                 resolved.definition().elementFitBonus(), resolved.definition().elementConflictPenalty(),

@@ -11,6 +11,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -62,7 +63,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillToxicityAttachment>> PILL_TOXICITY = entity("pill_toxicity", PillToxicityAttachment::new, PillToxicityAttachment.CODEC);
 
     @SubscribeEvent
-    public static void flushDirtyAttachments(EntityTickEvent.Post event) {
+    public static void flushDirtyAttachments(Post event) {
         Entity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
         for (Supplier<? extends AttachmentType<?>> type : SYNCED_ENTITY_ATTACHMENTS) {

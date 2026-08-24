@@ -63,7 +63,7 @@ public interface HotbarEntry {
         graphics.fill(x, y, x + SLOT_SIZE, y + 1, this.accentColor());
         graphics.fill(x, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, 0xFF303747);
         String key = Integer.toString(index + 1);
-        graphics.text(font, key, x + (SLOT_SIZE - font.width(key)) / 2, y - 9, 0xFFFFFFFF, false);
+        graphics.text(font, key, x + (SLOT_SIZE - font.width(key)) / 2, y - 9, 0xFFFFFFFF, true);
         this.icon().ifPresentOrElse(icon -> icon.item().ifPresentOrElse(
                 item -> graphics.item(item.create(), x + 3, y + 3),
                 () -> icon.texture().ifPresent(texture -> graphics.blit(RenderPipelines.GUI_TEXTURED, texture,
@@ -71,7 +71,7 @@ public interface HotbarEntry {
         ), () -> {
             String name = this.name().getString();
             if (name.length() > 3) name = name.substring(0, 3);
-            graphics.text(font, name, x + (SLOT_SIZE - font.width(name)) / 2, y + 10, 0xFFE0E5EF, false);
+            graphics.text(font, name, x + (SLOT_SIZE - font.width(name)) / 2, y + 10, 0xFFE0E5EF, true);
         });
         float cooldown = Math.max(0.0F, Math.min(1.0F, this.cooldown(player)));
         int height = (int) Math.ceil(cooldown * SLOT_SIZE);

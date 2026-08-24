@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -30,10 +31,11 @@ import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
-import com.iafenvoy.mxt.data.resource.ResourceBar.Context;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.SensedConcentrationContext;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.PrepareResult;
@@ -457,12 +459,12 @@ public final class MxtTestMod {
             throw new IllegalStateException("All test resource bars must use the Origins renderer");
         }
         ResourceBar target = qi.bars().stream()
-                .filter(bar -> bar.context() == Context.TARGET_OVERLAY && bar.replaceDefault())
+                .filter(bar -> bar.context().layout() == Layout.TARGET_OVERLAY)
                 .findFirst().orElseThrow(() -> new IllegalStateException("Target resource-bar test definition was not loaded"));
-        if (target.context() != Context.TARGET_OVERLAY || !target.replaceDefault()) {
+        if (target.context().layout() != Layout.TARGET_OVERLAY) {
             throw new IllegalStateException("Target resource-bar replacement configuration was not retained");
         }
-        ResourceBar qiHud = qi.bars().stream().filter(bar -> bar.context() == Context.SELF_HUD && !bar.replaceDefault())
+        ResourceBar qiHud = qi.bars().stream().filter(bar -> bar.context().layout() == Layout.SELF_HUD)
                 .findFirst().orElseThrow(() -> new IllegalStateException("Qi resource-bar test definition was not loaded"));
         if (qiHud.valueDisplay() != ValueDisplay.CURRENT_AND_MAXIMUM || qiHud.anchor() != Anchor.LEFT) {
             throw new IllegalStateException("Resource-bar left-column configuration was not retained");
@@ -471,10 +473,13 @@ public final class MxtTestMod {
         if (divineSenseHud.anchor() != Anchor.RIGHT || divineSenseHud.order() != 0) {
             throw new IllegalStateException("Resource-bar right-column order configuration was not retained");
         }
-        ResourceBar boss = spiritPower.bars().stream().filter(bar -> bar.context() == Context.BOSS_OVERLAY)
+        ResourceBar boss = spiritPower.bars().stream().filter(bar -> bar.context().layout() == Layout.BOSS_OVERLAY)
                 .findFirst().orElseThrow(() -> new IllegalStateException("Boss resource-bar test definition was not loaded"));
-        if (boss.context() != Context.BOSS_OVERLAY) {
+        if (boss.context().layout() != Layout.BOSS_OVERLAY) {
             throw new IllegalStateException("Boss resource-bar context was not retained");
+        }
+        if (spiritPower.bars().stream().noneMatch(bar -> bar.context() == SensedConcentrationContext.INSTANCE)) {
+            throw new IllegalStateException("Sensed-concentration resource-bar context was not retained");
         }
         AuraZone visuals = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:firelands"))
                 .orElseThrow(() -> new IllegalStateException("Aura visual test definition was not loaded"));

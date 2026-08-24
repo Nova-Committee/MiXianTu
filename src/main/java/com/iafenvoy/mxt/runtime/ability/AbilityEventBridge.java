@@ -203,8 +203,7 @@ public final class AbilityEventBridge {
         if (!(entity instanceof Player)) return false;
         return MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
                 .filter(resource -> !resource.value().bars().isEmpty())
-                .map(resource -> initializeResource(entity, holder, resource))
-                .anyMatch(Boolean::booleanValue);
+                .anyMatch(resource -> initializeResource(entity, holder, resource));
     }
 
     private static boolean initializeResource(LivingEntity entity, ResourceHolderAttachment holder, Reference<Resource> resource) {

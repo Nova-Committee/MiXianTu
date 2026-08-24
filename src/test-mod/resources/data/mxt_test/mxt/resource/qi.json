@@ -13,33 +13,17 @@
   },
   "bars": [
     {
-      "context": "self_hud",
+      "context": "mxt:self_hud",
       "anchor": "left",
       "order": 2,
       "value_display": "current_and_maximum",
       "visibility": { "type": "mxt:always" },
-      "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
-    },
-    {
-      "context": "self_hud",
-      "anchor": "left",
-      "order": 2,
-      "replace_default": true,
-      "visibility": { "type": "mxt:always" },
       "renderer": { "type": "mxt:boss_bar", "bar_index": 1, "icon_index": 1 }
     },
     {
-      "context": "target_overlay",
+      "context": "mxt:target_overlay",
       "anchor": "left",
       "order": 0,
-      "visibility": { "type": "mxt:always" },
-      "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
-    },
-    {
-      "context": "target_overlay",
-      "anchor": "left",
-      "order": 0,
-      "replace_default": true,
       "visibility": { "type": "mxt:always" },
       "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
     }

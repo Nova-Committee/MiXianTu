@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.quality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;

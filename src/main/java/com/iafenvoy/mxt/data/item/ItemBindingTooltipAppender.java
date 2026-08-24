@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.item;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;

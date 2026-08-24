@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.SegmentedRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TextOnlyRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
 import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.MissingResourceBarRenderer;
 import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.OriginsResourceBarRenderer;
 import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.RadialResourceBarRenderer;
@@ -38,7 +39,7 @@ public final class ResourceBarRendererDispatcher {
         RENDERERS.put(codec, renderer);
     }
 
-    public static void render(ResourceBarRenderer.Context context) {
+    public static void render(Context context) {
         ResourceBarRenderData data = context.state().renderData();
         ResourceBarRenderer<?> renderer = RENDERERS.get(data.codec());
         if (renderer == null)

@@ -58,6 +58,7 @@ public final class MiXianTu {
         MxtRecipeSerializers.REGISTRY.register(bus);
         MxtRecipeTypes.REGISTRY.register(bus);
         MxtResourceBarRenderers.REGISTRY.register(bus);
+        MxtResourceBarContexts.REGISTRY.register(bus);
         MxtResourceBarVisibilities.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
     }

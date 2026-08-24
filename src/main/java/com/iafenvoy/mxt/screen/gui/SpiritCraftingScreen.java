@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.screen.gui;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.RenderPipelines;

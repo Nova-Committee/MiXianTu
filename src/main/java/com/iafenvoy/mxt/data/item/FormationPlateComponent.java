@@ -8,7 +8,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.resources.RegistryFixedCodec;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item.TooltipContext;

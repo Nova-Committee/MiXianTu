@@ -1,20 +1,23 @@
 package com.iafenvoy.mxt.render.overlay.resourcebar;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Bar;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientHud;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
+import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -58,10 +61,10 @@ public enum ResourceBarOverlay implements GuiLayer {
 
         Map<LayoutKey, Integer> offsets = new HashMap<>();
         for (ResourceBarRenderState state : collect(player)) {
-            LayoutKey key = new LayoutKey(state.context(), state.anchor());
+            LayoutKey key = new LayoutKey(state.context().layout(), state.anchor());
             int offset = offsets.getOrDefault(key, 0);
             Position position = position(minecraft, player, state, offset);
-            ResourceBarRendererDispatcher.render(new ResourceBarRenderer.Context(graphics, minecraft, state, position.x(), position.y()));
+            ResourceBarRendererDispatcher.render(new Context(graphics, minecraft, state, position.x(), position.y()));
             offsets.put(key, offset + state.renderData().height() + BAR_GAP);
         }
     }
@@ -69,13 +72,13 @@ public enum ResourceBarOverlay implements GuiLayer {
     private static List<ResourceBarRenderState> collect(Player player) {
         Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
         List<ResourceBarRenderState> result = new ArrayList<>();
-        collectResources(result, resources, player, ResourceBar.Context.SELF_HUD);
+        collectResources(result, resources, player, Layout.SELF_HUD);
         if (Minecraft.getInstance().crosshairPickEntity instanceof LivingEntity target) {
-            collectResources(result, resources, target, ResourceBar.Context.TARGET_OVERLAY);
-            collectResources(result, resources, target, ResourceBar.Context.BOSS_OVERLAY);
+            collectResources(result, resources, target, Layout.TARGET_OVERLAY);
+            collectResources(result, resources, target, Layout.BOSS_OVERLAY);
         }
         collectAuraHud(result, player);
-        return result.stream().sorted(Comparator.comparing(ResourceBarRenderState::context)
+        return result.stream().sorted(Comparator.comparing((ResourceBarRenderState state) -> state.context().layout())
                 .thenComparing(ResourceBarRenderState::anchor)
                 .thenComparingInt(ResourceBarRenderState::order)
                 .thenComparing(state -> state.id().toString())
@@ -83,40 +86,41 @@ public enum ResourceBarOverlay implements GuiLayer {
     }
 
     private static void collectResources(List<ResourceBarRenderState> result, Registry<Resource> resources,
-                                         LivingEntity entity, ResourceBar.Context context) {
-        ResourceHolderAttachment values = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+                                         LivingEntity entity, Layout layout) {
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
             Identifier id = HolderHelper.idOrNull(resource);
-            if (id == null || !values.contains(resource)) continue;
+            if (id == null) continue;
             List<ResourceBar> definitions = resource.value().bars();
             for (int index = 0; index < definitions.size(); index++) {
                 ResourceBar bar = definitions.get(index);
-                if (bar.context() != context || replacedByCustomBar(bar, definitions)) continue;
-                Audit audit = values.audit(resource);
-                double minimum = audit.minSnapshot();
-                double maximum = audit.maxSnapshot();
-                double current = values.get(resource);
+                if (bar.context().layout() != layout) continue;
+                Optional<Values> extracted = bar.context().extract(entity, resource);
+                if (extracted.isEmpty()) continue;
+                Values values = extracted.get();
+                double minimum = values.minimum();
+                double maximum = values.maximum();
+                double current = values.current();
                 if (!validValues(minimum, maximum, current)) continue;
-                long changedAt = audit.lastChangedTick();
+                long changedAt = values.lastChangedTick();
                 long elapsed = changedAt < 0L ? Long.MAX_VALUE : Math.max(0L, gameTime - changedAt);
                 if (!bar.visibility().visible(new ResourceBarView(current, maximum, elapsed, entity != Minecraft.getInstance().player)))
                     continue;
                 result.add(new ResourceBarRenderState(
                         bar.context(), bar.anchor(), bar.order(), id, index, current, minimum, maximum, bar.renderer(),
-                        Optional.of(DefinitionText.name(id, "resource")), bar.valueDisplay()));
+                        Optional.of(bar.context().name(id)), bar.valueDisplay()));
             }
         }
     }
 
     private static void collectAuraHud(List<ResourceBarRenderState> result, Player player) {
-        AuraClientState.Snapshot snapshot = AuraClientState.current();
+        Snapshot snapshot = AuraClientState.current();
         ClientHud hud = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE)
                 .getOptional(snapshot.source()).map(AuraZone::clientHud).orElse(ClientHud.NONE);
-        hud.storedAura().ifPresent(bar -> addAuraEntry(result, "stored_aura", 0, bar, snapshot.concentration(),
-                resolvedMaximum(snapshot.maximum(), bar.maximum())));
+        hud.storedAura().ifPresent(bar -> addAuraEntry(result, "stored_aura", 0, bar, snapshot.storedConcentration(),
+                resolvedMaximum(snapshot.storedMaximum(), bar.maximum())));
         hud.sensedConcentration().ifPresent(bar -> addAuraEntry(result, "sensed_concentration", 1, bar,
-                snapshot.concentration(), bar.maximum()));
+                snapshot.sensedConcentration(), bar.maximum()));
     }
 
     private static void addAuraEntry(List<ResourceBarRenderState> result, String id, int index, Bar definition,
@@ -124,17 +128,12 @@ public enum ResourceBarOverlay implements GuiLayer {
         if (!Double.isFinite(current) || !Double.isFinite(maximum) || maximum <= 0.0D) return;
         Identifier identifier = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, id);
         String key = id.equals("stored_aura") ? "hud.mxt.resource_bar.stored_aura" : "hud.mxt.resource_bar.sensed_concentration";
-        result.add(new ResourceBarRenderState(ResourceBar.Context.SELF_HUD, definition.anchor(),
+        result.add(new ResourceBarRenderState(SelfHudContext.INSTANCE, definition.anchor(),
                 definition.order(), identifier, index, current, 0.0D, maximum,
                 new OriginsRenderData(
                         OriginsRenderData.DEFAULT_TEXTURE,
                         definition.barIndex(), Optional.of(definition.barIndex()), definition.inverted()),
-                Optional.of(Component.translatable(key)), ResourceBar.ValueDisplay.NONE));
-    }
-
-    private static boolean replacedByCustomBar(ResourceBar candidate, List<ResourceBar> definitions) {
-        return !candidate.replaceDefault() && definitions.stream().anyMatch(other -> other != candidate
-                && other.replaceDefault() && other.context() == candidate.context());
+                Optional.of(Component.translatable(key)), ValueDisplay.NONE));
     }
 
     private static boolean validValues(double minimum, double maximum, double current) {
@@ -148,9 +147,9 @@ public enum ResourceBarOverlay implements GuiLayer {
 
     private static Position position(Minecraft minecraft, Player player, ResourceBarRenderState state, int offset) {
         int width = minecraft.getWindow().getGuiScaledWidth();
-        if (state.context() == ResourceBar.Context.TARGET_OVERLAY)
+        if (state.context().layout() == Layout.TARGET_OVERLAY)
             return overlayPosition(width, 16 + offset, state.renderData().width(), state.anchor());
-        if (state.context() == ResourceBar.Context.BOSS_OVERLAY)
+        if (state.context().layout() == Layout.BOSS_OVERLAY)
             return overlayPosition(width, 48 + offset, state.renderData().width(), state.anchor());
         int y = minecraft.getWindow().getGuiScaledHeight() - 47;
         if (player.getVehicle() instanceof LivingEntity vehicle)
@@ -170,7 +169,7 @@ public enum ResourceBarOverlay implements GuiLayer {
         event.registerAbove(VanillaGuiLayers.HOTBAR, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "resource_bars"), INSTANCE);
     }
 
-    private record LayoutKey(ResourceBar.Context context, Anchor anchor) {
+    private record LayoutKey(Layout layout, Anchor anchor) {
     }
 
     private record Position(int x, int y) {

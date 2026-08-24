@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
 import net.minecraft.tags.TagKey;
@@ -17,6 +16,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -40,7 +40,7 @@ public final class CultivationAffinity {
             double base = root.cultivationMultiplier().evaluate(context);
             AuraPool pool = aura.auras().entrySet().stream()
                     .filter(entry -> entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
-                    .map(Map.Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
+                    .map(Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
             double concentration = pool == null ? 0.0D : pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
             total += base * Math.max(0.0D, 1.0D + concentration);
@@ -65,7 +65,7 @@ public final class CultivationAffinity {
             double base = root.cultivationMultiplier().evaluate(context);
             AuraPool pool = aura.aura().entrySet().stream()
                     .filter(entry -> entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
-                    .map(Map.Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
+                    .map(Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
             double modifier = Math.max(0.0D, 1.0D + concentration

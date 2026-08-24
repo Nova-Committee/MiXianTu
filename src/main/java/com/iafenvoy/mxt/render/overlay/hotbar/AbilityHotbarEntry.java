@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
+import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.HotbarIcon;
@@ -31,11 +32,6 @@ public record AbilityHotbarEntry(Identifier id, Ability definition) implements H
     }
 
     @Override
-    public int accentColor() {
-        return 0xFF7E8799;
-    }
-
-    @Override
     public float cooldown(Player player) {
         if (player == null) return 0.0F;
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
@@ -45,7 +41,7 @@ public record AbilityHotbarEntry(Identifier id, Ability definition) implements H
         long remaining = holder.cooldowns().getOrDefault(ability, -1L) - player.level().getGameTime();
         if (remaining <= 0L) return 0.0F;
         double duration = holder.componentState(ability, "cooldown_duration")
-                .map(state -> state.value()).orElse(0.0D);
+                .map(AbilityComponentState::value).orElse(0.0D);
         if (!Double.isFinite(duration) || duration <= 0.0D) return 0.0F;
         return (float) Math.max(0.0D, Math.min(1.0D, remaining / duration));
     }

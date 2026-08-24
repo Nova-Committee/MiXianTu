@@ -11,18 +11,25 @@
   "aura_type": "mxt_test:fire",
   "bars": [
     {
-      "context": "boss_overlay",
+      "context": "mxt:boss_overlay",
       "anchor": "right",
       "order": 0,
       "visibility": { "type": "mxt:always" },
       "renderer": { "type": "mxt:boss_bar", "bar_index": 1 }
     },
     {
-      "context": "self_hud",
+      "context": "mxt:self_hud",
       "anchor": "left",
       "order": 0,
       "visibility": { "type": "mxt:always" },
       "renderer": { "type": "mxt:boss_bar", "bar_index": 1 }
+    },
+    {
+      "context": "mxt:sensed_concentration",
+      "anchor": "right",
+      "order": 1,
+      "visibility": { "type": "mxt:always" },
+      "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
     }
   ]
 }
