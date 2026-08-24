@@ -27,6 +27,7 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.SpiritStoneVein;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -48,6 +49,7 @@ import net.minecraft.server.permissions.Permissions;
 import net.minecraft.ChatFormatting;
 
 import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -146,7 +148,7 @@ public final class MxtCommand {
         Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
         if (resource == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", id.toString(), value), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(id, "resource"), value), false);
         return 1;
     }
 
@@ -156,7 +158,7 @@ public final class MxtCommand {
         Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
         if (resource == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", id.toString(), value), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(id, "resource"), value), true);
         return 1;
     }
 
@@ -167,7 +169,7 @@ public final class MxtCommand {
             return 0;
         }
         SpiritComponent spirit = player.getData(MxtAttachments.SPIRIT_DATA);
-        Component action = spirit.cultivateAction().<Component>map(id -> Component.literal(id.toString())).orElseGet(() -> Component.translatable("command.mxt.none"));
+        Component action = spirit.cultivateAction().<Component>map(id -> DefinitionText.name(id, "cultivate_action")).orElseGet(() -> Component.translatable("command.mxt.none"));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, spirit.cultivationProgress(), spirit.nextCultivateTick()), false);
         return 1;
     }
@@ -195,8 +197,8 @@ public final class MxtCommand {
 
     private static Component auraReport(AuraResult aura, Map<? extends Holder<Resource>, AuraPool> pools) {
         MutableComponent report = Component.translatable("command.mxt.aura.query.header").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
-        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", aura.source().toString(), Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
-        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.kinds", aura.auraKinds().isEmpty() ? Component.translatable("command.mxt.none") : String.join(", ", aura.auraKinds().stream().map(Identifier::toString).toList())));
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", sourceName(aura), Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
+        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.kinds", aura.auraKinds().isEmpty() ? Component.translatable("command.mxt.none") : auraKinds(aura.auraKinds())));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.suppressed", aura.suppressCultivate()));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.elements").withStyle(ChatFormatting.GRAY));
         if (pools.isEmpty()) {
@@ -209,8 +211,28 @@ public final class MxtCommand {
     }
 
     private static Component resourceName(Holder<Resource> resource) {
-        MutableComponent base = Component.literal(HolderHelper.id(resource).toString());
-        return resource.value().auraType().map(type -> base.copy().append(" (").append(Component.translatable(type.value().translationKey())).append(")")).orElse(base);
+        MutableComponent base = DefinitionText.name(resource, "resource");
+        return resource.value().auraType().map(type -> base.copy().append(" (").append(DefinitionText.name(type, "element")).append(")")).orElse(base);
+    }
+
+    private static Component sourceName(AuraResult aura) {
+        String category = switch (aura.sourceKind()) {
+            case BIOME -> "biome";
+            case DIMENSION -> "dimension";
+            case FORMATION -> "formation";
+            case CUSTOM -> "aura_zone";
+            case CHUNK -> "aura_zone";
+        };
+        return DefinitionText.name(aura.source(), category);
+    }
+
+    private static Component auraKinds(List<Identifier> kinds) {
+        MutableComponent result = Component.empty();
+        for (int index = 0; index < kinds.size(); index++) {
+            if (index > 0) result.append(", ");
+            result.append(DefinitionText.name(kinds.get(index), "aura_kind"));
+        }
+        return result;
     }
 
     private static String auraNumber(double value) {
@@ -237,7 +259,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", id.toString()), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.name(id, "ability")), true);
         return 1;
     }
 
@@ -250,7 +272,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", id.toString()), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(id, "resource")), true);
         return 1;
     }
 
@@ -258,10 +280,10 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         if (!CultivationService.setRealm(player.getData(MxtAttachments.SPIRIT_DATA), realm)) {
-            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", realm.toString()));
+            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.name(realm, "realm_stage")));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", realm.toString()), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", DefinitionText.name(realm, "realm_stage")), true);
         return 1;
     }
 

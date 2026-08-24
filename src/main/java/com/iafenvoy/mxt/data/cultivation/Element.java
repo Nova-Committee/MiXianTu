@@ -18,12 +18,11 @@ import java.util.List;
  * Element relations and the display color used by aura-cost text are data driven;
  * tags classify elements but do not encode precedence.
  */
-public record Element(String translationKey, List<Either<Holder<Element>, TagKey<Element>>> overcomes,
+public record Element(List<Either<Holder<Element>, TagKey<Element>>> overcomes,
                       List<Either<Holder<Element>, TagKey<Element>>> adaptedTo, List<Identifier> auraKinds,
                       int color) {
     public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ELEMENT);
     public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            Codec.STRING.optionalFieldOf("translation_key", "").forGetter(Element::translationKey),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
             Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(Element::auraKinds),
@@ -36,7 +35,7 @@ public record Element(String translationKey, List<Either<Holder<Element>, TagKey
      */
     @Override
     public @NonNull String toString() {
-        return "Element[translationKey=" + this.translationKey + ", overcomes=" + this.overcomes.size()
+        return "Element[overcomes=" + this.overcomes.size()
                 + ", adaptedTo=" + this.adaptedTo.size() + ", auraKinds=" + this.auraKinds + "]";
     }
 }

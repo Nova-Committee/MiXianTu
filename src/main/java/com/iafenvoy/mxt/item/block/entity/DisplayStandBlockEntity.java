@@ -12,11 +12,15 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.NonNull;
+import org.jetbrains.annotations.Nullable;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 /**
  * Persistent displayed stack shared by every wooden display stand variant.
@@ -44,17 +48,24 @@ public final class DisplayStandBlockEntity extends BlockEntity implements Spirit
     }
 
     @Override
-    public int add(Holder<Resource> resource, int amount, boolean simulate) {
+    public Object2IntMap<Holder<Resource>> getCapacity(@Nullable LivingEntity entity) {
+        if (this.displayedItem.getItem() instanceof SpiritItemAccess access)
+            return access.getCapacity(entity, this.displayedItem);
+        return new Object2IntOpenHashMap<>();
+    }
+
+    @Override
+    public int add(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
         SpiritAccess.requireNonNegative(amount);
         if (!(this.displayedItem.getItem() instanceof SpiritItemAccess access)) return amount;
         if (this.level == null) return amount;
-        int remaining = access.add(this.displayedItem, resource, amount, simulate);
+        int remaining = access.add(entity, this.displayedItem, resource, amount, simulate);
         if (!simulate && remaining != amount) this.markChangedAndSync();
         return remaining;
     }
 
     @Override
-    public int extract(Holder<Resource> resource, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
         return SpiritAccess.requireNonNegative(amount);
     }
 

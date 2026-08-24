@@ -2,7 +2,10 @@ package com.iafenvoy.mxt.runtime.spirit;
 
 import com.iafenvoy.mxt.data.resource.Resource;
 import net.minecraft.core.Holder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * An item whose individual stack can exchange whole units of spirit power.
@@ -12,15 +15,15 @@ public interface SpiritItemAccess {
     /**
      * Returns this stack's current data-driven spirit capacity.
      */
-    int getCapacity(ItemStack stack);
+    Object2IntMap<Holder<Resource>> getCapacity(@Nullable LivingEntity entity, ItemStack stack);
 
     /**
      * Attempts to add one resource to this stack.
      */
-    int add(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate);
+    int add(@Nullable LivingEntity entity, ItemStack stack, Holder<Resource> resource, int amount, boolean simulate);
 
     /**
      * Attempts to extract one resource from this stack.
      */
-    int extract(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate);
+    int extract(@Nullable LivingEntity entity, ItemStack stack, Holder<Resource> resource, int amount, boolean simulate);
 }

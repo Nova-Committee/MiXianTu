@@ -10,6 +10,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.resources.RegistryFixedCodec;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.TooltipFlag;
@@ -41,6 +42,6 @@ public record ContractScrollComponent(Optional<Holder<ContractType>> contractTyp
 
     @Override
     public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
-        consumer.accept(Component.translatable("tooltip.mxt.contract_scroll.type", this.contractType.map(HolderHelper::id).map(Object::toString).orElse("-")));
+        consumer.accept(Component.translatable("tooltip.mxt.contract_scroll.type", this.contractType.map(value -> DefinitionText.name(value, "contract_type")).orElse(Component.literal("-"))));
     }
 }

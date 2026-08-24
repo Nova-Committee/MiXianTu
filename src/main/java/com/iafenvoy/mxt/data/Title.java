@@ -14,12 +14,11 @@ import java.util.List;
 /**
  * A displayable title with conflict groups and passive bonuses.
  */
-public record Title(EntityCondition unlockCondition, String translationKey, int priority,
+public record Title(EntityCondition unlockCondition, int priority,
                     List<AttributeEntry> passiveModifiers, List<Identifier> exclusiveTags, int maximumLevel) {
     public static final Codec<Holder<Title>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TITLE);
     public static final Codec<Title> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             EntityCondition.CODEC.optionalFieldOf("unlock_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Title::unlockCondition),
-            Codec.STRING.optionalFieldOf("translation_key", "").forGetter(Title::translationKey),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Title::priority),
             AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(Title::passiveModifiers),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Title::exclusiveTags),

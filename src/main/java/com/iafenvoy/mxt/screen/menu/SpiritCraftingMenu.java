@@ -7,15 +7,20 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import net.minecraft.core.Registry;
 import net.minecraft.core.Holder;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -31,6 +36,7 @@ import java.util.stream.IntStream;
  * Vanilla-sized crafting menu restricted to the two spirit recipe types.
  */
 public final class SpiritCraftingMenu extends AbstractContainerMenu {
+    private static final int MAX_PROGRESS_ENTRIES = 8;
     private static final int RESULT_SLOT = 0;
     private static final int GRID_START = 1;
     private static final int PLAYER_START = 10;
@@ -39,21 +45,45 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private final Container result = new SimpleContainer(1);
     private final ContainerLevelAccess access;
     private final SpiritCraftingTableBlockEntity table;
+    private final BlockPos tablePos;
+    private final DataSlot[] progressTypes = new DataSlot[MAX_PROGRESS_ENTRIES];
+    private final DataSlot[] progressAmounts = new DataSlot[MAX_PROGRESS_ENTRIES];
+    private final DataSlot[] progressRequirements = new DataSlot[MAX_PROGRESS_ENTRIES];
     private RecipeMatch current;
 
     /**
      * Client-side constructor: the server will immediately synchronise the contents.
      */
     public SpiritCraftingMenu(int id, Inventory inventory) {
-        this(id, inventory, new SimpleContainer(9), ContainerLevelAccess.NULL, null);
+        this(id, inventory, new SimpleContainer(9), ContainerLevelAccess.NULL, null, BlockPos.ZERO);
+    }
+
+    public SpiritCraftingMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buffer) {
+        this(id, inventory, new SimpleContainer(9), ContainerLevelAccess.NULL, null,
+                BlockPos.STREAM_CODEC.decode(buffer));
     }
 
     public SpiritCraftingMenu(int id, Inventory inventory, Container grid, ContainerLevelAccess access, SpiritCraftingTableBlockEntity table) {
+        this(id, inventory, grid, access, table, table == null ? BlockPos.ZERO : table.getBlockPos());
+    }
+
+    private SpiritCraftingMenu(int id, Inventory inventory, Container grid, ContainerLevelAccess access,
+                               SpiritCraftingTableBlockEntity table, BlockPos tablePos) {
         super(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), id);
         this.player = inventory.player;
         this.grid = grid;
         this.access = access;
         this.table = table;
+        this.tablePos = tablePos;
+        for (int index = 0; index < MAX_PROGRESS_ENTRIES; index++) {
+            this.progressTypes[index] = DataSlot.standalone();
+            this.progressAmounts[index] = DataSlot.standalone();
+            this.progressRequirements[index] = DataSlot.standalone();
+            this.progressTypes[index].set(-1);
+            this.addDataSlot(this.progressTypes[index]);
+            this.addDataSlot(this.progressAmounts[index]);
+            this.addDataSlot(this.progressRequirements[index]);
+        }
         this.addSlot(new Slot(this.result, RESULT_SLOT, 124, 35) {
             @Override
             public boolean mayPlace(@NonNull ItemStack stack) {
@@ -76,6 +106,22 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         this.updateResult();
     }
 
+    public Holder<Resource> progressResource(int index) {
+        if (index < 0 || index >= MAX_PROGRESS_ENTRIES) return null;
+        int rawId = this.progressTypes[index].get();
+        if (rawId < 0) return null;
+        Registry<Resource> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+        return registry.get(rawId).orElse(null);
+    }
+
+    public int progressAmount(int index) {
+        return index < 0 || index >= MAX_PROGRESS_ENTRIES ? 0 : this.progressAmounts[index].get();
+    }
+
+    public int progressRequirement(int index) {
+        return index < 0 || index >= MAX_PROGRESS_ENTRIES ? 0 : this.progressRequirements[index].get();
+    }
+
     @Override
     public void slotsChanged(@NonNull Container changed) {
         this.updateResult();
@@ -91,6 +137,28 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         this.current = this.findRecipe();
         if (this.table != null) this.table.configureAuraCosts(this.current == null ? Map.of() : this.current.costs());
         this.result.setItem(0, this.current != null && (this.table == null || this.table.hasAura(this.current.costs())) ? this.current.recipe().assemble(this.input()) : ItemStack.EMPTY);
+        this.syncProgress();
+    }
+
+    private void syncProgress() {
+        if (this.table == null) return;
+        Registry<Resource> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+        int index = 0;
+        if (this.current != null) {
+            for (Entry<Holder<Resource>, Integer> entry : this.current.costs().entrySet()) {
+                if (index >= MAX_PROGRESS_ENTRIES) break;
+                this.progressTypes[index].set(registry.getId(entry.getKey().value()));
+                this.progressAmounts[index].set(Math.clamp(this.table.aura(entry.getKey()), 0, Short.MAX_VALUE));
+                this.progressRequirements[index].set(Math.clamp(entry.getValue(), 0, Short.MAX_VALUE));
+                index++;
+            }
+        }
+        while (index < MAX_PROGRESS_ENTRIES) {
+            this.progressTypes[index].set(-1);
+            this.progressAmounts[index].set(0);
+            this.progressRequirements[index].set(0);
+            index++;
+        }
     }
 
     private RecipeMatch findRecipe() {

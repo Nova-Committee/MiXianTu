@@ -20,6 +20,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.tooltip.TooltipAppender;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import org.jspecify.annotations.NonNull;
 
@@ -59,6 +60,6 @@ public record ResourceContainerComponent(Object2DoubleMap<Holder<Resource>> valu
     @Override
     public void addToTooltip(@NonNull TooltipContext context, @NonNull Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
         this.values.forEach((resource, amount) -> consumer.accept(Component.translatable(
-                "tooltip.mxt.spirit_vessel.resource", HolderHelper.id(resource), TooltipText.number(amount))));
+                "tooltip.mxt.spirit_vessel.resource", DefinitionText.name(resource, "resource"), TooltipText.number(amount))));
     }
 }

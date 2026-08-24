@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.compat.jei;
 
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.Expression;
@@ -56,7 +57,7 @@ final class SpiritJeiText {
     }
 
     private static String resourceName(Holder<Resource> holder) {
-        return HolderHelper.id(holder).getPath();
+        return DefinitionText.name(holder, "resource").getString();
     }
 
     private static String providerName(NumberProvider provider) {

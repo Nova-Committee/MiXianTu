@@ -170,12 +170,12 @@ public final class MxtTestMod {
         SpiritItemAccess stoneAccess = (SpiritItemAccess) spiritStone.getItem();
         Holder<Resource> commonAura = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt:common"));
         spiritStone.set(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(101));
-        if (stoneAccess.getCapacity(spiritStone) != 100
-                || stoneAccess.add(spiritStone, commonAura, 0, false) != 0
+        if (stoneAccess.getCapacity(null, spiritStone).getInt(commonAura) != 100
+                || stoneAccess.add(null, spiritStone, commonAura, 0, false) != 0
                 || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 100
-                || stoneAccess.extract(spiritStone, commonAura, 100, false) != 0
+                || stoneAccess.extract(null, spiritStone, commonAura, 100, false) != 0
                 || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 0
-                || stoneAccess.add(spiritStone, commonAura, 100, false) != 0
+                || stoneAccess.add(null, spiritStone, commonAura, 100, false) != 0
                 || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 100) {
             throw new IllegalStateException("Spirit stone charging did not clamp overflow or preserve empty charge");
         }

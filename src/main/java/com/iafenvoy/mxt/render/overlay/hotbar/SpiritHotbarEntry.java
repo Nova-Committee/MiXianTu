@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
+import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -14,7 +15,7 @@ import java.util.Optional;
 public record SpiritHotbarEntry(Identifier id) implements HotbarEntry {
     @Override
     public Component name() {
-        return Component.literal(this.id.getPath());
+        return DefinitionText.name(this.id, "resource");
     }
 
     @Override

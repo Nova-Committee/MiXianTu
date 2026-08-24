@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -48,10 +49,7 @@ public enum SpiritCraftingTableComponentProvider implements IBlockComponentProvi
         elements.addAll(stored.keySet());
         for (String idText : elements) {
             Identifier id = Identifier.tryParse(idText);
-            Component element = id == null ? Component.literal(idText) : MxtDatapackRegistries
-                    .get(accessor.getLevel().registryAccess(), MxtResourceKeys.ELEMENT, id)
-                    .map(value -> Component.translatable(value.translationKey()))
-                    .orElse(Component.literal(idText));
+            Component element = id == null ? Component.literal(idText) : DefinitionText.name(id, "resource");
             int current = stored.getIntOr(idText, 0);
             int needed = required.getIntOr(idText, 0);
             tooltip.add(Component.translatable("jade.mxt.spirit_crafting.aura", element,

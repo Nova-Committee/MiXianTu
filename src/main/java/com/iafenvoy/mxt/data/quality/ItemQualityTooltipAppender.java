@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -48,7 +49,7 @@ public final class ItemQualityTooltipAppender {
         appendModifier(builder, value.forgingModifier());
         appendModifier(builder, value.alchemyModifier());
         if (flag.isAdvanced())
-            builder.accept(Component.literal(HolderHelper.id(quality).toString()).withStyle(ChatFormatting.DARK_GRAY));
+            builder.accept(DefinitionText.name(quality, "quality").withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private static void appendModifier(Consumer<Component> builder, Modifier modifier) {

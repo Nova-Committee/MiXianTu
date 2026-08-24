@@ -166,8 +166,9 @@ public final class ItemAuraService {
             }
             if (item.getItem() instanceof SpiritItemAccess access) {
                 int capacity = capacity(definition.value(), context);
-                access.extract(item, definition.value().type(), 0, false);
-                int unavailable = access.extract(item, definition.value().type(), access.getCapacity(item), true);
+                access.extract(entity, item, definition.value().type(), 0, false);
+                int unavailable = access.extract(entity, item, definition.value().type(),
+                        access.getCapacity(entity, item).getInt(definition.value().type()), true);
                 int available = capacity - unavailable;
                 if (available <= 0) {
                     holding.clear();
@@ -210,7 +211,7 @@ public final class ItemAuraService {
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof SpiritItemAccess access) {
-            access.extract(item, active.value().type(), Integer.MAX_VALUE, false);
+            access.extract(entity, item, active.value().type(), Integer.MAX_VALUE, false);
             giveItem(entity, item);
         } else {
             active.value().resultStack().ifPresent(template -> giveItem(entity, template.create()));

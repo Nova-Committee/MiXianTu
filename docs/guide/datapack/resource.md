@@ -8,10 +8,9 @@ title: resource：资源与资源条
 
 ```json
 {
-  "translation_key": "resource.mxt.spirit_power",
   "min": 0,
   "max": 100,
-  "initial": 0,
+  "default_value": 0,
   "regen": 0,
   "aura_type": "mxt:common",
   "bars": [{
@@ -25,3 +24,5 @@ title: resource：资源与资源条
 ```
 
 资源最大值可以由境界、已吸收灵气和 NumberProvider 计算。资源条是资源定义的内联字段，不再作为单独数据包注册表。
+
+资源、境界、元素、技能等数据驱动定义不再填写 `translation_key`。显示名称统一由定义文件的标识符通过原版 `Identifier.toLanguageKey` 自动生成，例如 `example:qi` 在 `resource` 类别下对应 `resource.example.qi`；路径中的 `/` 会转换为 `.`。数据包作者只需在语言文件中提供该键的翻译。

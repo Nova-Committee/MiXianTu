@@ -190,6 +190,8 @@
   "screen.mxt.player_trade.accept": "Accept",
   "screen.mxt.player_trade.accepted": "Accepted",
   "element.mxt.common": "Common Aura",
+  "aura_kind.mxt.common": "Common Aura Kind",
+  "resource.mxt.common": "Common Spirit Power",
   "screen.mxt.player_trade.waiting": "Waiting...",
   "screen.mxt.system_station": "System Trade Station",
   "screen.mxt.trade": "Trade",

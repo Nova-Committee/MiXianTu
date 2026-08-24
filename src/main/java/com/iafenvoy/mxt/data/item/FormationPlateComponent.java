@@ -9,6 +9,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.resources.RegistryFixedCodec;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.TooltipFlag;
@@ -40,6 +41,6 @@ public record FormationPlateComponent(Optional<Holder<Formation>> formation) imp
 
     @Override
     public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
-        consumer.accept(Component.translatable("tooltip.mxt.formation_plate.formation", this.formation.map(HolderHelper::id).map(Object::toString).orElse("-")));
+        consumer.accept(Component.translatable("tooltip.mxt.formation_plate.formation", this.formation.map(value -> DefinitionText.name(value, "formation")).orElse(Component.literal("-"))));
     }
 }

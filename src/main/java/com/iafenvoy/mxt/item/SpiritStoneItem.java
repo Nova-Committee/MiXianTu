@@ -7,8 +7,12 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import net.minecraft.core.Holder;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A chargeable spirit stone whose capacity is supplied by its {@code item_aura} definition.
@@ -19,13 +23,15 @@ public class SpiritStoneItem extends Item implements SpiritItemAccess {
     }
 
     @Override
-    public int getCapacity(ItemStack stack) {
-        return ItemAuraService.capacity(stack);
+    public Object2IntMap<Holder<Resource>> getCapacity(@Nullable LivingEntity entity, ItemStack stack) {
+        Object2IntMap<Holder<Resource>> result = new Object2IntOpenHashMap<>();
+        ItemAuraService.type(stack).ifPresent(resource -> result.put(resource, ItemAuraService.capacity(stack)));
+        return result;
     }
 
     @Override
-    public int add(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate) {
-        int capacity = this.getCapacity(stack);
+    public int add(@Nullable LivingEntity entity, ItemStack stack, Holder<Resource> resource, int amount, boolean simulate) {
+        int capacity = this.getCapacity(entity, stack).getInt(resource);
         SpiritAccess.requireNonNegative(capacity);
         SpiritAccess.requireNonNegative(amount);
         if (stack.getItem() != this || ItemAuraService.type(stack).filter(resource::equals).isEmpty()) return amount;
@@ -38,8 +44,8 @@ public class SpiritStoneItem extends Item implements SpiritItemAccess {
     }
 
     @Override
-    public int extract(ItemStack stack, Holder<Resource> resource, int amount, boolean simulate) {
-        int capacity = this.getCapacity(stack);
+    public int extract(@Nullable LivingEntity entity, ItemStack stack, Holder<Resource> resource, int amount, boolean simulate) {
+        int capacity = this.getCapacity(entity, stack).getInt(resource);
         SpiritAccess.requireNonNegative(capacity);
         SpiritAccess.requireNonNegative(amount);
         if (stack.getItem() != this || ItemAuraService.type(stack).filter(resource::equals).isEmpty()) return amount;

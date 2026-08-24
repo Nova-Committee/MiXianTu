@@ -190,6 +190,8 @@
   "screen.mxt.player_trade.accept": "确认",
   "screen.mxt.player_trade.accepted": "已确认",
   "element.mxt.common": "通用灵气",
+  "aura_kind.mxt.common": "通用灵气类型",
+  "resource.mxt.common": "通用灵力",
   "screen.mxt.player_trade.waiting": "等待确认",
   "screen.mxt.system_station": "系统交易站",
   "screen.mxt.trade": "交易",

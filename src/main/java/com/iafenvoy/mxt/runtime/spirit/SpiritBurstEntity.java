@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrowableProjectile;
 import net.minecraft.world.level.ClipContext;
@@ -88,7 +89,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
             BlockPos pos = hit.getBlockPos();
             BlockEntity blockEntity = this.level().getBlockEntity(pos);
             if (blockEntity instanceof SpiritAccess accessor) {
-                this.auraType().ifPresent(type -> accessor.add(type, this.amount(), false));
+                this.auraType().ifPresent(type -> accessor.add(this.ownerLivingEntity(), type, this.amount(), false));
             }
             this.discard();
         }
@@ -216,8 +217,12 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
         BlockEntity blockEntity = this.level().getBlockEntity(closestPos);
         if (!(blockEntity instanceof SpiritAccess accessor)) return false;
-        this.auraType().ifPresent(type -> accessor.add(type, this.amount(), false));
+        this.auraType().ifPresent(type -> accessor.add(this.ownerLivingEntity(), type, this.amount(), false));
         this.discard();
         return true;
+    }
+
+    private LivingEntity ownerLivingEntity() {
+        return this.getOwner() instanceof LivingEntity living ? living : null;
     }
 }

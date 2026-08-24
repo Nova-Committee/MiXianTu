@@ -6,10 +6,13 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -20,6 +23,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.NonNull;
+import org.jetbrains.annotations.Nullable;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +63,18 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
 
     public Map<Holder<Resource>, Integer> requiredAura() {
         return this.requiredAura;
+    }
+
+    @Override
+    public Object2IntMap<Holder<Resource>> getCapacity(@Nullable LivingEntity entity) {
+        Object2IntMap<Holder<Resource>> result = new Object2IntOpenHashMap<>();
+        result.putAll(this.requiredAura);
+        return result;
+    }
+
+    @Override
+    public void writeClientSideData(AbstractContainerMenu menu, RegistryFriendlyByteBuf buffer) {
+        BlockPos.STREAM_CODEC.encode(buffer, this.worldPosition);
     }
 
     /**
@@ -131,7 +149,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int add(Holder<Resource> resource, int amount, boolean simulate) {
+    public int add(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
         SpiritAccess.requireNonNegative(amount);
         int required = this.requiredAura.getOrDefault(resource, 0);
         int accepted = Math.min(amount, Math.max(0, required - this.aura(resource)));
@@ -143,7 +161,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int extract(Holder<Resource> resource, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
         SpiritAccess.requireNonNegative(amount);
         int extracted = Math.min(amount, this.aura(resource));
         if (!simulate && extracted > 0) {

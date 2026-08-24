@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
@@ -52,7 +53,7 @@ public final class ItemBindingTooltipAppender {
     private static void appendSpiritRoot(Consumer<Component> builder, TooltipFlag flag, GrantSpiritRootAction action) {
         builder.accept(Component.translatable("tooltip.mxt.item.spirit_root").withStyle(ChatFormatting.AQUA));
         if (flag.isAdvanced())
-            builder.accept(Component.literal(action.spiritRoot().toString()).withStyle(ChatFormatting.DARK_GRAY));
+            builder.accept(DefinitionText.name(action.spiritRoot(), "spirit_root").withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon) {
@@ -94,6 +95,6 @@ public final class ItemBindingTooltipAppender {
 
     private static void appendTechnique(Consumer<Component> builder, TechniqueBinding technique) {
         builder.accept(Component.translatable("tooltip.mxt.item.cultivation_technique",
-                HolderHelper.id(technique.technique()).toString()).withStyle(ChatFormatting.GREEN));
+                DefinitionText.name(technique.technique(), "cultivation_technique")).withStyle(ChatFormatting.GREEN));
     }
 }

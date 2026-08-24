@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.TooltipText;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -60,7 +61,7 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
             this.resources.entrySet().stream()
                     .filter(entry -> entry.getValue()[0] != 0.0D || entry.getValue()[1] != 0.0D)
                     .forEach(entry -> tooltip.add(Component.translatable("jade.mxt.block_aura.element",
-                            Component.literal(com.iafenvoy.mxt.util.HolderHelper.id(entry.getKey()).toString()),
+                            DefinitionText.name(entry.getKey(), "resource"),
                             TooltipText.signed(entry.getValue()[0])), ID));
         }
     }

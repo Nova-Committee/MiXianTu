@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.AbilityHolderComponent;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -21,7 +22,7 @@ public record AbilityHotbarEntry(Identifier id, int accentColor) implements Hotb
 
     @Override
     public Component name() {
-        return Component.literal(this.id.getPath());
+        return DefinitionText.name(this.id, "ability");
     }
 
     @Override
