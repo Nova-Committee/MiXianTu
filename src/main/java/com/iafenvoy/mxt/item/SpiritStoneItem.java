@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.item;
 
+import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -38,8 +39,11 @@ public class SpiritStoneItem extends Item implements SpiritItemAccess {
 
         int stored = this.normalizeStored(stack, capacity, simulate);
         int accepted = Math.min(amount, capacity - stored);
-        if (!simulate && accepted > 0)
+        if (!simulate && accepted > 0) {
             stack.set(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(stored + accepted));
+            ItemAuraComponent fuel = stack.get(MxtDataComponents.ITEM_AURA);
+            if (fuel != null && fuel.remain() <= 0.0D) stack.remove(MxtDataComponents.ITEM_AURA);
+        }
         return amount - accepted;
     }
 

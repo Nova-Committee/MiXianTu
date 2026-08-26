@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -82,6 +83,7 @@ public final class AbilityEventBridge {
         ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         initializeHudResources(entity, resourceHolder);
         for (Holder<Resource> resource : List.copyOf(resourceHolder.values().keySet())) {
+            if (CultivationActionService.handlesNaturalRegeneration(entity, resource)) continue;
             Identifier resourceId = HolderHelper.id(resource);
             Resource definition = resource.value();
             ResourceService.regenerate(resourceHolder, resourceId, definition, 1L,

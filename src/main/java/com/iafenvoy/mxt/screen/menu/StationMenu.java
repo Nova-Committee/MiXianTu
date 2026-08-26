@@ -175,5 +175,4 @@ public final class StationMenu extends AbstractContainerMenu {
             case TRADE_CUSTOMER -> MxtMenus.TRADE_STATION_CUSTOMER.get();
         };
     }
-
 }

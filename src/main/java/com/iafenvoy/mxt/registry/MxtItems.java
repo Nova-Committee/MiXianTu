@@ -54,7 +54,7 @@ public final class MxtItems {
     public static final DeferredItem<Item> SPIRIT_WOOD = register("spirit_wood", Item::new);
     public static final DeferredItem<Item> SPIRIT_WOOD_CORE = register("spirit_wood_core", Item::new);
     public static final DeferredItem<Item> SPIRIT_RING = register("spirit_ring", Item::new);
-    public static final DeferredItem<Item> STORAGE_BAG = register("storage_bag", Item::new);
+    public static final DeferredItem<Item> SPIRIT_STONE_BAG = register("spirit_stone_bag", Item::new);
     public static final DeferredItem<TokenItem> WOODEN_TOKEN = register("wooden_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenComponent.EMPTY)));
     public static final DeferredItem<TokenItem> STONE_TOKEN = register("stone_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenComponent.EMPTY)));
     public static final DeferredItem<Item> SPIRIT_ROOT = register("spirit_root", Item::new);

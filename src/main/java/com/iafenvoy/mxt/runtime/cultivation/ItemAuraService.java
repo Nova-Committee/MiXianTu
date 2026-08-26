@@ -91,7 +91,7 @@ public final class ItemAuraService {
     /**
      * Advances the currently held fuel by one server tick. A missing fuel item
      * first resumes the smallest partially consumed matching stack, then takes
-     * one fresh matching item from the main hand or off hand.
+     * a fresh matching item from the hands or the rest of the inventory.
      */
     public static TickResult tick(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources, FormulaContext context) {
         FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
@@ -111,7 +111,7 @@ public final class ItemAuraService {
 
         double consumed = Math.min(state.remain(), speed);
         double remaining = state.remain() - consumed;
-        double released = release(entity, spirit, resources, active.value().releaseSpeed().evaluate(context), context);
+        double released = release(entity, resources, active.value().type(), active.value().releaseSpeed().evaluate(context), context);
         if (remaining <= EPSILON) {
             exhaust(entity, item, active, context);
             return new TickResult(consumed, released, true, true);
@@ -148,6 +148,7 @@ public final class ItemAuraService {
     private static ItemStack loadNextItem(LivingEntity entity, FormulaContext context) {
         ItemStack item = takeSmallestPartialItem(entity);
         if (item.isEmpty()) item = takeFreshHeldItem(entity);
+        if (item.isEmpty()) item = takeFreshInventoryItem(entity);
         if (item.isEmpty()) return ItemStack.EMPTY;
 
         Holder<ItemAura> definition = find(entity, item).orElse(null);
@@ -209,6 +210,16 @@ public final class ItemAuraService {
         return ItemStack.EMPTY;
     }
 
+    private static ItemStack takeFreshInventoryItem(LivingEntity entity) {
+        if (!(entity instanceof Player player)) return ItemStack.EMPTY;
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.get(MxtDataComponents.ITEM_AURA) == null && find(entity, stack).isPresent())
+                return player.getInventory().removeItem(slot, 1);
+        }
+        return ItemStack.EMPTY;
+    }
+
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof SpiritItemAccess access) {
@@ -220,11 +231,9 @@ public final class ItemAuraService {
         active.value().exhaustedAction().execute(entity, context);
     }
 
-    private static double release(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources, double amount,
-                                  FormulaContext context) {
+    private static double release(LivingEntity entity, ResourceHolderAttachment resources, Holder<Resource> resource,
+                                  double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
-        Holder<Resource> resource = spirit.realmStage().map(stage -> stage.value().resource()).orElse(null);
-        if (resource == null) return 0.0D;
         double before = resources.get(resource);
         ResourceService.change(resources, resource, amount, ResourceService.formulaContext(entity, resource, context));
         return Math.max(0.0D, resources.get(resource) - before);

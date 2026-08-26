@@ -2,17 +2,10 @@ package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtClientConfig.HotbarMode;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
-import com.iafenvoy.mxt.registry.MxtKeyMappings;
-import com.iafenvoy.mxt.render.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.Holder.Reference;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -20,49 +13,26 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.neoforge.client.event.ClientTickEvent.Pre;
 import net.neoforged.neoforge.client.event.InputEvent.Key;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 
 /**
  * Owns the client input, state, and vanilla-input suppression for both Mxt hotbars.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class HotbarController {
-    public enum Mode {
-        NONE, ABILITY, SPIRIT
-    }
-
-    private static final Category CATEGORY = MxtKeyMappings.category();
-    private static final KeyMapping SPIRIT_BURST = new KeyMapping(
-            "key.mxt.spirit_burst", Type.KEYSYM, InputConstants.KEY_V, CATEGORY);
-    private static final KeyMapping ABILITY_MENU = new KeyMapping(
-            "key.mxt.ability_menu", Type.KEYSYM, InputConstants.KEY_LALT, CATEGORY);
     private static final int[] NUMBER_KEYS = {
             InputConstants.KEY_1, InputConstants.KEY_2, InputConstants.KEY_3,
             InputConstants.KEY_4, InputConstants.KEY_5, InputConstants.KEY_6,
             InputConstants.KEY_7, InputConstants.KEY_8, InputConstants.KEY_9
     };
     private static final boolean[] NUMBER_DOWN = new boolean[NUMBER_KEYS.length];
-    private static final byte[] NUMBER_MODES = new byte[NUMBER_KEYS.length];
-    private static boolean abilityMenuPressed;
-    private static boolean spiritBurstPressed;
-    private static Mode mode = Mode.NONE;
+    private static final Identifier[] NUMBER_MODES = new Identifier[NUMBER_KEYS.length];
+    private static Identifier mode;
     private static final HotbarEntry[] ACTIVE_ENTRIES = new HotbarEntry[NUMBER_KEYS.length];
     private static int numberReconcileTicks;
     private static boolean previousHotbarOpen;
-
-    private HotbarController() {
-    }
-
-    @SubscribeEvent
-    public static void register(RegisterKeyMappingsEvent event) {
-        event.register(ABILITY_MENU);
-        event.register(SPIRIT_BURST);
-    }
 
     @SubscribeEvent
     public static void onClientTickPre(Pre event) {
@@ -71,9 +41,6 @@ public final class HotbarController {
 
     @SubscribeEvent
     public static void onClientTickPost(Post event) {
-        tickHotbarKey(ABILITY_MENU, true);
-        tickHotbarKey(SPIRIT_BURST, false);
-
         boolean hotbarOpen = isHotbarOpen();
         if (hotbarOpen != previousHotbarOpen || hotbarOpen && ++numberReconcileTicks >= 5) {
             reconcileNumberKeys();
@@ -93,56 +60,28 @@ public final class HotbarController {
         }
     }
 
-    private static void tickHotbarKey(KeyMapping mapping, boolean ability) {
-        boolean pressed = mapping.isDown();
-        boolean wasPressed = ability ? abilityMenuPressed : spiritBurstPressed;
-        if (pressed != wasPressed) {
-            if (ability) handleAbilityMenuKey(pressed);
-            else handleSpiritBurstKey(pressed);
-            if (ability) abilityMenuPressed = pressed;
-            else spiritBurstPressed = pressed;
-        }
-    }
-
-    private static void handleAbilityMenuKey(boolean pressed) {
+    static void handleModeKey(Identifier id, boolean pressed) {
         if (MxtClientConfig.hotbarMode() == HotbarMode.TOGGLE && !pressed) return;
-        boolean open = MxtClientConfig.hotbarMode() == HotbarMode.TOGGLE
-                ? mode != Mode.ABILITY : pressed;
-        if (open) openAbilityHotbar();
-        else closeAbilityHotbar();
+        if (HotbarModeRegistry.get(id).isEmpty()) return;
+        boolean open = MxtClientConfig.hotbarMode() == HotbarMode.TOGGLE ? !isMode(id) : pressed;
+        if (open) openMode(id);
+        else closeMode(id);
     }
 
-    private static void handleSpiritBurstKey(boolean pressed) {
-        if (MxtClientConfig.hotbarMode() == HotbarMode.TOGGLE && !pressed) return;
-        boolean open = MxtClientConfig.hotbarMode() == HotbarMode.TOGGLE ? mode != Mode.SPIRIT : pressed;
-        if (open) openSpiritHotbar();
-        else closeSpiritHotbar();
+    private static void openMode(Identifier id) {
+        if (mode != null && !mode.equals(id)) closeMode(mode);
+        mode = id;
     }
 
-    private static void openAbilityHotbar() {
-        if (mode == Mode.SPIRIT) closeSpiritHotbar();
-        mode = Mode.ABILITY;
-    }
-
-    private static void closeAbilityHotbar() {
-        if (mode != Mode.ABILITY) return;
-        mode = Mode.NONE;
-    }
-
-    private static void openSpiritHotbar() {
-        if (mode == Mode.ABILITY) closeAbilityHotbar();
-        mode = Mode.SPIRIT;
-    }
-
-    private static void closeSpiritHotbar() {
-        if (mode != Mode.SPIRIT) return;
-        mode = Mode.NONE;
-        ClientPacketDistributor.sendToServer(new SpiritBurstC2SPayload(false, Optional.empty()));
+    private static void closeMode(Identifier id) {
+        if (!isMode(id)) return;
+        mode = null;
+        HotbarModeRegistry.close(id, Minecraft.getInstance().player);
     }
 
     private static void reconcileNumberKeys() {
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.player == null || minecraft.getWindow() == null) return;
+        if (minecraft.player == null) return;
         for (int index = 0; index < NUMBER_KEYS.length; index++) {
             boolean down = isHotbarOpen() && InputConstants.isKeyDown(minecraft.getWindow(), NUMBER_KEYS[index]);
             if (down != NUMBER_DOWN[index]) updateNumberKey(index, down);
@@ -153,21 +92,17 @@ public final class HotbarController {
         if (!isHotbarOpen()) {
             if (!down && NUMBER_DOWN[index]) releaseNumberKey(index);
             NUMBER_DOWN[index] = false;
-            NUMBER_MODES[index] = 0;
+            NUMBER_MODES[index] = null;
             return;
         }
-        int targetMode = mode == Mode.ABILITY ? 1 : (mode == Mode.SPIRIT ? 2 : 0);
-        if (down && NUMBER_DOWN[index] && NUMBER_MODES[index] != targetMode) {
+        Identifier targetMode = mode;
+        if (down && NUMBER_DOWN[index] && !Objects.equals(NUMBER_MODES[index], targetMode)) {
             releaseNumberKey(index);
             NUMBER_DOWN[index] = false;
         }
         if (down == NUMBER_DOWN[index]) return;
         if (down) {
-            if (targetMode == 1) {
-                NUMBER_MODES[index] = 1;
-            } else if (targetMode == 2) {
-                NUMBER_MODES[index] = 2;
-            }
+            NUMBER_MODES[index] = targetMode;
             HotbarEntry entry = entry(index);
             if (entry != null && entry.canPress(Minecraft.getInstance().player)) {
                 ACTIVE_ENTRIES[index] = entry;
@@ -184,17 +119,16 @@ public final class HotbarController {
         HotbarEntry entry = ACTIVE_ENTRIES[index];
         if (entry != null) entry.onRelease(Minecraft.getInstance().player);
         ACTIVE_ENTRIES[index] = null;
-        NUMBER_MODES[index] = 0;
+        NUMBER_MODES[index] = null;
     }
 
     private static boolean isHotbarOpen() {
-        return mode != Mode.NONE;
+        return mode != null;
     }
 
     private static void suppressVanillaHotbarKey(int index) {
         if (!isHotbarOpen() || MxtClientConfig.allowVanillaHotbarSelection()) return;
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.options == null) return;
         KeyMapping hotbarKey = minecraft.options.keyHotbarSlots[index];
         hotbarKey.setDown(false);
         while (hotbarKey.consumeClick()) {
@@ -207,8 +141,30 @@ public final class HotbarController {
         for (int index = 0; index < NUMBER_KEYS.length; index++) suppressVanillaHotbarKey(index);
     }
 
-    public static Mode mode() {
+    public static Identifier mode() {
         return mode;
+    }
+
+    public static boolean isOpen() {
+        return mode != null;
+    }
+
+    public static boolean isMode(Identifier id) {
+        return id != null && id.equals(mode);
+    }
+
+    /** Opens a registered mode without requiring a dedicated key mapping. */
+    public static boolean open(Identifier id) {
+        if (HotbarModeRegistry.get(id).isEmpty()) return false;
+        openMode(id);
+        return true;
+    }
+
+    /** Closes the currently active mode when it matches the supplied ID. */
+    public static boolean close(Identifier id) {
+        if (!isMode(id)) return false;
+        closeMode(id);
+        return true;
     }
 
     public static boolean isEntryActive(int index) {
@@ -217,16 +173,7 @@ public final class HotbarController {
 
     public static List<HotbarEntry> entries(Player player) {
         if (player == null) return List.of();
-        List<HotbarEntry> result = new ArrayList<>();
-        if (mode == Mode.ABILITY) {
-            List<ResolvedAbility> abilities = AbilityHotbarClient.all(player);
-            for (ResolvedAbility ability : abilities)
-                result.add(new AbilityHotbarEntry(ability.id(), ability.definition()));
-        } else if (mode == Mode.SPIRIT) {
-            List<Reference<Resource>> resources = SpiritBurstClient.resources(player);
-            for (Reference<Resource> resource : resources) result.add(new SpiritHotbarEntry(HolderHelper.id(resource)));
-        }
-        return result;
+        return HotbarModeRegistry.entries(mode, player);
     }
 
     private static HotbarEntry entry(int index) {

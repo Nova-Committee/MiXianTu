@@ -20,7 +20,6 @@
     { "max_extra_steps": 2147483647, "quality": "mxt_test:poor" }
   ],
   "result": "minecraft:iron_sword",
-  "workstation_blocks": ["minecraft:anvil"],
   "complete_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 5 },
   "fail_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 100 },
   "failure_settlement": { "result": "minecraft:iron_nugget", "input_return_ratio": 0.25, "material_loss_ratio": 0.75 }

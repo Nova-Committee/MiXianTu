@@ -9,8 +9,6 @@ import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -18,10 +16,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.tags.TagKey;
-import net.minecraft.world.level.block.Block;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,8 +27,7 @@ import java.util.Optional;
  */
 public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> allowedMethods, MeterBounds meter,
                                FinishPattern finishPattern, int maxSteps, List<QualityThreshold> qualityByExtraSteps,
-                               Identifier result, List<Either<Holder<Block>, TagKey<Block>>> workstationBlocks,
-                               EntityAction completeAction, EntityAction failAction,
+                               Identifier result, EntityAction completeAction, EntityAction failAction,
                                FailureSettlement failureSettlement) {
     public static final Codec<Holder<ForgingBlueprint>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORGING_BLUEPRINT);
     public static final Codec<ForgingBlueprint> DIRECT_CODEC = RecordCodecBuilder.<ForgingBlueprint>create(i -> i.group(
@@ -42,35 +35,24 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
             AutoIgnoreListCodec.create(ForgingMethod.CODEC).fieldOf("allowed_methods").forGetter(ForgingBlueprint::allowedMethods),
             MeterBounds.MAP_CODEC.forGetter(ForgingBlueprint::meter),
             FinishPattern.MAP_CODEC.codec().optionalFieldOf("finish_pattern", FinishPattern.none()).forGetter(ForgingBlueprint::finishPattern),
-            Codec.INT.optionalFieldOf("max_steps", 64).forGetter(ForgingBlueprint::maxSteps),
+            Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("max_steps", 64).forGetter(ForgingBlueprint::maxSteps),
             QualityThreshold.CODEC.listOf().fieldOf("quality_by_extra_steps").forGetter(ForgingBlueprint::qualityByExtraSteps),
             Identifier.CODEC.fieldOf("result").forGetter(ForgingBlueprint::result),
-            RegistryCodecs.holderOrTagList(Registries.BLOCK).optionalFieldOf("workstation_blocks", defaultWorkstationBlocks()).forGetter(ForgingBlueprint::workstationBlocks),
             EntityAction.CODEC.optionalFieldOf("complete_action", NoOpAction.INSTANCE).forGetter(ForgingBlueprint::completeAction),
             EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(ForgingBlueprint::failAction),
             FailureSettlement.CODEC.codec().optionalFieldOf("failure_settlement", FailureSettlement.destroyInput()).forGetter(ForgingBlueprint::failureSettlement)
     ).apply(i, ForgingBlueprint::new)).validate(ForgingBlueprint::validate);
 
     private static DataResult<ForgingBlueprint> validate(ForgingBlueprint definition) {
-        if (definition.allowedMethods.isEmpty() || definition.allowedMethods.stream().map(HolderHelper::id).distinct().count() != definition.allowedMethods.size()) {
+        if (definition.allowedMethods.isEmpty() || definition.allowedMethods.stream().map(HolderHelper::id).distinct().count() != definition.allowedMethods.size())
             return DataResult.error(() -> "allowed_methods must not be empty");
-        }
-        if (!definition.meter.valid()) {
+        if (!definition.meter.valid())
             return DataResult.error(() -> "Invalid forging meter or target range");
-        }
-        if (definition.maxSteps <= 0 || definition.workstationBlocks.isEmpty())
-            return DataResult.error(() -> "max_steps and workstation_blocks must not be empty");
         if (!definition.finishPattern.valid() || !CollectionHelper.containsAllFast(definition.allowedMethods.stream().map(HolderHelper::id).toList(), definition.finishPattern.steps().stream().map(HolderHelper::id).toList()))
             return DataResult.error(() -> "Invalid finish_pattern");
         if (!QualityThreshold.valid(definition.qualityByExtraSteps))
             return DataResult.error(() -> "quality_by_extra_steps must be ascending and end at Integer.MAX_VALUE");
         return DataResult.success(definition);
-    }
-
-    private static List<Either<Holder<Block>, TagKey<Block>>> defaultWorkstationBlocks() {
-        Identifier anvil = Identifier.fromNamespaceAndPath("minecraft", "anvil");
-        Block block = BuiltInRegistries.BLOCK.getOptional(anvil).orElseThrow();
-        return List.of(Either.left(BuiltInRegistries.BLOCK.wrapAsHolder(block)));
     }
 
     /**

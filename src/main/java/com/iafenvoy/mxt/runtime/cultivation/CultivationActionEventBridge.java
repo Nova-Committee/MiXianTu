@@ -15,6 +15,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 
 /**
  * Drives the one persisted cultivation action using the entity's current chunk aura.
@@ -38,8 +40,21 @@ public final class CultivationActionEventBridge {
         for (ServerPlayer player : level.players()) tick(player);
     }
 
+    @SubscribeEvent
+    public static void onLivingDamage(LivingDamageEvent.Post event) {
+        if (event.getInflictedDamage() <= 0.0F || !(event.getEntity() instanceof ServerPlayer player)) return;
+        CultivationModeService.stopIfCultivating(player);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player)
+            CultivationModeService.stopIfCultivating(player);
+    }
+
     private static void tick(LivingEntity entity) {
         SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        if (!spirit.cultivating()) return;
         Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
         if (action == null) return;
         CultivateAction definition = action.value();

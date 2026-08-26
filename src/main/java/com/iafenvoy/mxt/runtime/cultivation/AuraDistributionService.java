@@ -49,12 +49,11 @@ public final class AuraDistributionService {
         for (ServerPlayer player : level.players()) {
             SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
             Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
-            if (action == null || gameTime < spirit.nextCultivateTick()) continue;
+            if (!spirit.cultivating() || action == null || gameTime < spirit.nextCultivateTick()) continue;
             CultivateAction definition = action.value();
             FormulaContext context = FormulaContexts.forEntity(player);
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
-            if (aura.suppressCultivate() || !aura.cultivateCondition().test(player, context)
-                    || !CultivationActionService.realmCultivateCondition(spirit, player, context)
+            if (!CultivationActionService.canCultivateInEnvironment(spirit, player, aura, context)
                     || definition.stopCondition().test(player, context)
                     || !CollectionHelper.containsAllFast(aura.auraKinds(), definition.auraKinds())) continue;
             Map<Holder<Resource>, Double> requested = evaluateCosts(definition, context);

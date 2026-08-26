@@ -15,12 +15,10 @@ import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorldAttachment.StationSession;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -134,9 +132,7 @@ public final class ForgingWorkstationService {
 
     public static boolean canUse(ServerPlayer player, BlockPos position, ForgingBlueprint blueprint) {
         if (player.distanceToSqr(position.getCenter()) > MAX_DISTANCE_SQUARED) return false;
-        Identifier block = BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(position).getBlock());
-        return RegistryCodecs.matches(blueprint.workstationBlocks(), BuiltInRegistries.BLOCK,
-                Registries.BLOCK, block);
+        return true;
     }
 
     private static void settleFailure(ServerPlayer player, BlockPos position, ForgingSessionAttachment data) {

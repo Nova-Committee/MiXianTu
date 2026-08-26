@@ -121,6 +121,9 @@ dependencies {
     implementation jarJar("net.objecthunter:exp4j:0.4.8")
     implementation jarJar("top.theillusivec4.curios:curios-neoforge:$curios_version")
 
+    implementation jarJar("curse.maven:player-animation-library-1283899:8674772")
+    implementation jarJar("curse.maven:bendable-cuboids-1302303:7986578")
+
     compileOnly "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
 //    localRuntime "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
 

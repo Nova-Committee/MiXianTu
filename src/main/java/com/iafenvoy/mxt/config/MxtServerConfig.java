@@ -14,6 +14,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public static final MxtServerConfig INSTANCE = new MxtServerConfig();
 
     public final Curios curios = new Curios();
+    public final Cultivation cultivation = new Cultivation();
 
     private MxtServerConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "server"), "config.mxt.server", "./config/mxt-server.json");
@@ -31,6 +32,14 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         return INSTANCE.curios.forceRenderSlots.getValue();
     }
 
+    public static boolean forbidCultivationWithoutEligibleAura() {
+        return INSTANCE.cultivation.forbidWithoutEligibleAura.getValue();
+    }
+
+    public static boolean allowCultivationMovement() {
+        return INSTANCE.cultivation.allowMovement.getValue();
+    }
+
     public static final class Curios extends AutoInitConfigCategoryBase {
         public final EnumEntry<BackMode> backMode = EnumEntry.builder("config.mxt.server.curios.back_mode", BackMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
         public final EnumEntry<BeltMode> beltMode = EnumEntry.builder("config.mxt.server.curios.belt_mode", BeltMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
@@ -38,6 +47,17 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
         private Curios() {
             super("curios", "config.mxt.server.curios");
+        }
+    }
+
+    public static final class Cultivation extends AutoInitConfigCategoryBase {
+        public final BooleanEntry forbidWithoutEligibleAura = BooleanEntry.builder(
+                "config.mxt.server.cultivation.forbid_without_eligible_aura", false).build();
+        public final BooleanEntry allowMovement = BooleanEntry.builder(
+                "config.mxt.server.cultivation.allow_movement", false).build();
+
+        private Cultivation() {
+            super("cultivation", "config.mxt.server.cultivation");
         }
     }
 

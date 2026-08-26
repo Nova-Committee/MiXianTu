@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
@@ -97,6 +98,10 @@ public final class ServerNetworkHandler {
             stacks.setStackInSlot(0, hand.copy());
             player.getInventory().setSelectedItem(target);
         });
+    }
+
+    static void onCultivationToggle(CultivationToggleC2SPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) CultivationModeService.toggle(player);
     }
 
     static void onSpiritBurst(SpiritBurstC2SPayload payload, IPayloadContext context) {

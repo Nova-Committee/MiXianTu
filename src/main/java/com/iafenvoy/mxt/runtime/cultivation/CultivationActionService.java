@@ -5,10 +5,14 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.config.MxtServerConfig;
+import com.iafenvoy.mxt.data.aura.AuraRequirement;
+import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceGain;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
@@ -49,7 +53,7 @@ public final class CultivationActionService {
 
     public static Result start(SpiritAttachment spirit, @NotNull Holder<CultivateAction> action, CultivateAction definition,
                                long gameTime, BooleanSupplier conditionsMet) {
-        if (spirit.cultivateAction().isPresent()) return Result.rejected(Failure.ALREADY_ACTIVE, null);
+        if (spirit.cultivating()) return Result.rejected(Failure.ALREADY_ACTIVE, null);
         if (spirit.isCultivateActionOnCooldown(action, gameTime)) return Result.rejected(Failure.COOLDOWN, null);
         if (!conditionsMet.getAsBoolean()) return Result.rejected(Failure.CONDITIONS, null);
         spirit.startCultivateAction(action, gameTime, gameTime);
@@ -99,7 +103,7 @@ public final class CultivationActionService {
     public static Result tick(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<CultivateAction> action,
                               CultivateAction definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
         Identifier actionId = HolderHelper.id(action);
-        if (aura.suppressCultivate() || !aura.cultivateCondition().test(entity, context) || !realmCultivateCondition(spirit, entity, context))
+        if (!canCultivateInEnvironment(spirit, entity, aura, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.ENVIRONMENT);
         double affinity = CultivationAffinity.multiplier(spirit, aura, context, id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id),
                 id -> MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATION_TECHNIQUE, id));
@@ -109,22 +113,22 @@ public final class CultivationActionService {
     private static Result tick(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<CultivateAction> action,
                                CultivateAction definition, long gameTime, FormulaContext context,
                                BooleanSupplier conditionsMet, double affinity) {
-        if (spirit.cultivateAction().filter(action::equals).isEmpty())
+        if (!spirit.cultivating() || spirit.cultivateAction().filter(action::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
         if (!conditionsMet.getAsBoolean())
             return stop(entity, spirit, action, definition, gameTime, Failure.CONDITIONS);
         if (!CollectionHelper.containsAllFast(aura.auraKinds(), definition.auraKinds()))
             return Result.rejected(Failure.ENVIRONMENT, null);
         ItemAuraService.tick(entity, spirit, resources, context);
+        Recovery recovery = recover(entity, spirit, resources, aura, definition, affinity, context);
+        if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         if (gameTime < spirit.nextCultivateTick()) {
-            convert(activeResource(spirit), spirit, resources, context, entity);
             return Result.waitingResult();
         }
-        double baseGain = definition.absorbAmount().evaluate(context) * affinity;
         Map<Holder<Resource>, Double> auraCosts = evaluateAuraCosts(definition, context);
         if (auraCosts == null) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
-        if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(baseGain) || baseGain < 0.0D)
+        if (!Double.isFinite(affinity) || affinity < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         Evaluation costs;
         Map<Identifier, Double> gains;
@@ -139,27 +143,25 @@ public final class CultivationActionService {
             // The level prepass sets an upper bound from the shared chunk pool. Direct service
             // callers retain the normal full-cost behavior when no prepass exists.
             allocationFactor = AuraDistributionService.take(player).map(values -> allocationFactor(auraCosts, values)).orElse(1.0D);
-            if (allocationFactor <= 0.0D) return Result.rejected(Failure.INSUFFICIENT_AURA, null);
+            if (allocationFactor <= 0.0D && MxtServerConfig.forbidCultivationWithoutEligibleAura())
+                return stop(entity, spirit, action, definition, gameTime, Failure.INSUFFICIENT_AURA);
         }
         double speed = aura.cultivationSpeed() * allocationFactor;
-        double gain = baseGain * speed;
         gains.replaceAll((id, amount) -> amount * speed);
-        if (!Double.isFinite(speed) || speed < 0.0D || !Double.isFinite(gain) || gain < 0.0D)
+        if (!Double.isFinite(speed) || speed < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
         if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
-        if (!canApplyGains(entity, copyOf(resources), gains, context) || !canConvertAbsorption(entity, spirit, resources, gain, context))
+        if (!canApplyGains(entity, copyOf(resources), gains, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         if (!auraCosts.isEmpty() && !AuraService.consume(entity.level(), entity.blockPosition(), scaleAuraCosts(auraCosts, allocationFactor)))
             return Result.rejected(Failure.INSUFFICIENT_AURA, null);
         ResourceTransactions.Result payment = ResourceTransactions.tryConsume(resources, costs);
         if (!payment.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
-        restoreAbsorption(entity, spirit, resources, gain, context);
-        convert(activeResource(spirit), spirit, resources, context, entity);
         applyGains(entity, resources, gains, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
         definition.tickAction().execute(entity, context);
-        return Result.progressed(gain, payment.amounts());
+        return Result.progressed(recovery.cultivation(), payment.amounts());
     }
 
     private static Result tick(SpiritAttachment spirit, ResourceHolderAttachment resources, AuraChunkAttachment aura, Identifier actionId,
@@ -167,7 +169,7 @@ public final class CultivationActionService {
                                BooleanSupplier conditionsMet, double affinity) {
         Holder<CultivateAction> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATE_ACTION, actionId).orElse(null);
         if (action == null) return Result.rejected(Failure.DISABLED, null);
-        if (spirit.cultivateAction().filter(action::equals).isEmpty())
+        if (!spirit.cultivating() || spirit.cultivateAction().filter(action::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
         if (!conditionsMet.getAsBoolean()) return stop(spirit, actionId, definition, gameTime, Failure.CONDITIONS);
         if (!aura.hasAuraKinds(definition.auraKinds())) return Result.rejected(Failure.ENVIRONMENT, null);
@@ -264,14 +266,68 @@ public final class CultivationActionService {
     }
 
     /**
-     * A multi-element cultivation tick proceeds at the limiting element's allocated ratio.
+     * The active realm resource is regenerated by cultivation itself so its
+     * overflow can be committed to cultivation progress instead of discarded.
+     */
+    public static boolean handlesNaturalRegeneration(LivingEntity entity, Holder<Resource> resource) {
+        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        return spirit.cultivating() && spirit.realmStage()
+                .map(stage -> stage.value().resource().equals(resource)).orElse(false);
+    }
+
+    /**
+     * Keeps non-aura conditions strict while treating each aura-range entry as
+     * an independent eligible source. Servers may opt into requiring at least
+     * one eligible source through the cultivation configuration.
+     */
+    public static boolean canCultivateInEnvironment(SpiritAttachment spirit, LivingEntity entity,
+                                                    AuraResult aura, FormulaContext context) {
+        if (aura.suppressCultivate() || !realmCultivateCondition(spirit, entity, context)) return false;
+        if (!(aura.cultivateCondition() instanceof AuraRangeEntityCondition range))
+            return aura.cultivateCondition().test(entity, context);
+        boolean anyEligible = range.aura().isEmpty() || range.aura().entrySet().stream()
+                .anyMatch(entry -> entry.getValue().test(aura.pool(entry.getKey()).amount(), context));
+        return anyEligible || !MxtServerConfig.forbidCultivationWithoutEligibleAura();
+    }
+
+    /**
+     * Applies the active resource's normal regeneration at the cultivation
+     * multiplier. Resource capacity is filled first; only the overflow becomes
+     * the current realm's cultivation progress.
+     */
+    private static Recovery recover(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources,
+                                    AuraResult aura, CultivateAction action, double affinity, FormulaContext context) {
+        Holder<Resource> resource = spirit.realmStage().map(stage -> stage.value().resource()).orElse(null);
+        if (resource == null) return Recovery.NONE;
+        Resource definition = resource.value();
+        FormulaContext resourceContext = ResourceService.formulaContext(entity, resource, context);
+        double multiplier = action.absorbAmount().evaluate(context);
+        double regen = definition.regen().evaluate(resourceContext);
+        double recovered = regen * multiplier * affinity * aura.cultivationSpeed();
+        if (!Double.isFinite(multiplier) || multiplier < 0.0D || !Double.isFinite(regen)
+                || !Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(recovered))
+            return Recovery.INVALID;
+        if (recovered <= 0.0D) return Recovery.NONE;
+        if (!ResourceService.initialize(resources, resource, resourceContext).valid()) return Recovery.INVALID;
+        double before = resources.get(resource);
+        ResourceService.Result result = ResourceService.change(resources, resource, recovered, resourceContext);
+        if (!result.valid()) return Recovery.INVALID;
+        double stored = Math.max(0.0D, result.value() - before);
+        double overflow = Math.max(0.0D, recovered - stored);
+        if (overflow > 0.0D) spirit.setCultivationProgress(spirit.cultivationProgress() + overflow);
+        return new Recovery(stored, overflow, true);
+    }
+
+    /**
+     * Each requested aura source contributes independently. A missing source
+     * reduces only its own share instead of rejecting the entire cultivation tick.
      */
     private static double allocationFactor(Map<Holder<Resource>, Double> requested,
                                            Map<Holder<Resource>, Double> allocated) {
         return requested.entrySet().stream()
                 .filter(entry -> entry.getValue() > 0.0D)
                 .mapToDouble(entry -> Math.clamp(allocated.getOrDefault(entry.getKey(), 0.0D) / entry.getValue(), 0.0D, 1.0D))
-                .min().orElse(1.0D);
+                .average().orElse(1.0D);
     }
 
     private static boolean canApplyGains(ResourceHolderAttachment resources, Map<Identifier, Double> gains, FormulaContext context) {
@@ -415,6 +471,11 @@ public final class CultivationActionService {
     private record ActiveResource(Identifier id, Resource definition) {
     }
 
+    private record Recovery(double restored, double cultivation, boolean valid) {
+        private static final Recovery NONE = new Recovery(0.0D, 0.0D, true);
+        private static final Recovery INVALID = new Recovery(0.0D, 0.0D, false);
+    }
+
     private record Conversion(double cultivationToResource, double cultivationToResourceMaxPerTick,
                               double resourceToCultivation, double resourceToCultivationMaxPerTick) {
         private static final Conversion INVALID = new Conversion(Double.NaN, Double.NaN, Double.NaN, Double.NaN);
@@ -445,7 +506,7 @@ public final class CultivationActionService {
             return new Result(false, false, false, true, null, null, 0.0D, Map.of());
         }
 
-        private static Result rejected(Failure failure, Identifier resource) {
+        static Result rejected(Failure failure, Identifier resource) {
             return new Result(false, false, false, false, failure, resource, 0.0D, Map.of());
         }
     }

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.event.AuraZoneEvent.Enter;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -49,7 +50,7 @@ public final class AuraZoneEventBridge {
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 5L != 0L) return;
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
         Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         level.players().forEach(player -> {
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
@@ -62,7 +63,9 @@ public final class AuraZoneEventBridge {
                 sensed.aura().forEach((resource, pool) -> sensedValues.put(HolderHelper.id(resource), pool));
                 PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), stored, sensedValues));
             }
-            zones.getOptional(aura.source()).flatMap(AuraZone::particle)
+            boolean cultivating = player.getData(MxtAttachments.SPIRIT_DATA).cultivating();
+            boolean emitParticle = cultivating ? level.getGameTime() % 5L < 3L : level.getGameTime() % 5L == 0L;
+            if (emitParticle) zones.getOptional(aura.source()).flatMap(AuraZone::particle)
                     .ifPresent(effect -> effect.sendTo(level, player, player.position()));
         });
     }

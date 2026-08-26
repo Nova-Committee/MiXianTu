@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
 import com.iafenvoy.mxt.render.DisplayStandBlockEntityRenderer;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
+import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle.Provider;
 import com.iafenvoy.mxt.screen.gui.ChequeTableScreen;
 import com.iafenvoy.mxt.screen.gui.ExchangeStationScreen;
@@ -62,6 +63,7 @@ public final class MxtRenderers {
             if (renderer == null) continue;
             renderer.addLayer(new BackWeaponRenderer(renderer, event.getContext().getItemModelResolver()));
             renderer.addLayer(new BeltWeaponRenderer(renderer, event.getContext().getItemModelResolver()));
+            renderer.addLayer(new CultivationItemRenderer(renderer, event.getContext().getItemModelResolver()));
         }
     }
 }

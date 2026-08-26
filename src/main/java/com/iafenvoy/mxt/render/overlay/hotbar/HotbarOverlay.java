@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.render.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
-import com.iafenvoy.mxt.render.overlay.hotbar.HotbarController.Mode;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -39,7 +38,7 @@ public enum HotbarOverlay implements GuiLayer {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
         if (minecraft.options.hideGui || player == null || minecraft.level == null
-                || HotbarController.mode() == Mode.NONE) return;
+                || !HotbarController.isOpen()) return;
 
         List<HotbarEntry> entries = HotbarController.entries(player);
         if (entries.isEmpty()) return;
@@ -53,7 +52,7 @@ public enum HotbarOverlay implements GuiLayer {
                     HotbarController.isEntryActive(index));
         }
 
-        if (HotbarController.mode() == Mode.ABILITY) {
+        if (HotbarController.isMode(HotbarModeRegistry.ABILITY)) {
             List<ResolvedAbility> abilities = AbilityHotbarClient.all(player);
             long gameTime = player.level().getGameTime();
             drawCastBar(graphics, minecraft, player, x, y - 10, abilities, gameTime);

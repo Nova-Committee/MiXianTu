@@ -50,6 +50,7 @@ import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -155,6 +156,20 @@ public final class MxtTestMod {
                 || ItemBindingService.technique(event.getServer().registryAccess(), jadeSlip).isEmpty()) {
             throw new IllegalStateException("Technique binding did not retain its technique item configuration");
         }
+        Holder<CultivateAction> qingxiaoMeditation = requireHolder(MxtResourceKeys.CULTIVATE_ACTION, Identifier.parse("mxt_test:qingxiao_meditation"));
+        if (!qingxiaoMeditation.value().defaultAction()
+                || !same(qingxiaoMeditation.value().absorbAmount().evaluate(FormulaContext.EMPTY), 2.0D)) {
+            throw new IllegalStateException("Default cultivation action settings were not decoded");
+        }
+        SpiritAttachment cultivationMode = new SpiritAttachment();
+        if (CultivationModeService.resolveAction(cultivationMode).filter(qingxiaoMeditation::equals).isEmpty()) {
+            throw new IllegalStateException("Default cultivation action was not resolved without a technique");
+        }
+        cultivationMode.startCultivateAction(qingxiaoMeditation, 0L, 0L);
+        cultivationMode.stopCultivateAction(qingxiaoMeditation, 0L);
+        if (cultivationMode.cultivating() || cultivationMode.cultivateAction().filter(qingxiaoMeditation::equals).isEmpty()) {
+            throw new IllegalStateException("Cultivation mode did not preserve its selected action after stopping");
+        }
         ItemStack spiritStone = new ItemStack(MxtItems.SPIRIT_STONE.get());
         ItemAura itemAura = MxtDatapackRegistries.get(MxtResourceKeys.ITEM_AURA,
                         Identifier.parse("mxt_test:spirit_stone"))
@@ -179,6 +194,12 @@ public final class MxtTestMod {
                 || stoneAccess.add(null, spiritStone, commonAura, 100, false) != 0
                 || spiritStone.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, new SpiritStorageComponent(0)).amount() != 100) {
             throw new IllegalStateException("Spirit stone charging did not clamp overflow or preserve empty charge");
+        }
+        spiritStone.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(0.0D));
+        stoneAccess.extract(null, spiritStone, commonAura, 100, false);
+        stoneAccess.add(null, spiritStone, commonAura, 1, false);
+        if (spiritStone.get(MxtDataComponents.ITEM_AURA) != null) {
+            throw new IllegalStateException("Recharged spirit stones must become eligible for item-aura consumption again");
         }
         ItemStack qingxiaoCrystal = new ItemStack(MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.get());
         ItemAura qingxiaoAura = MxtDatapackRegistries.get(MxtResourceKeys.ITEM_AURA,

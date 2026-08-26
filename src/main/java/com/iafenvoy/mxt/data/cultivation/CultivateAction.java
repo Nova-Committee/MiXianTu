@@ -26,19 +26,20 @@ import java.util.Map;
 /**
  * A named cultivation activity with entity conditions and an interval action.
  */
-public record CultivateAction(EntityCondition startCondition, EntityCondition stopCondition, int tickInterval,
+public record CultivateAction(boolean defaultAction, EntityCondition startCondition, EntityCondition stopCondition, int tickInterval,
                               List<Identifier> auraKinds, List<ResourceCost> costs, NumberProvider absorbAmount,
                               Map<Holder<Resource>, NumberProvider> auraCosts, List<ResourceGain> auraGains,
                               int cooldownTicks,
                               EntityAction tickAction) {
     public static final Codec<Holder<CultivateAction>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CULTIVATE_ACTION);
     public static final Codec<CultivateAction> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+            Codec.BOOL.optionalFieldOf("default", false).forGetter(CultivateAction::defaultAction),
             EntityCondition.CODEC.optionalFieldOf("start_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(CultivateAction::startCondition),
             EntityCondition.CODEC.optionalFieldOf("stop_condition", NeverEntityCondition.INSTANCE).forGetter(CultivateAction::stopCondition),
             Codec.intRange(1, 72_000).optionalFieldOf("tick_interval", 20).forGetter(CultivateAction::tickInterval),
             Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(CultivateAction::auraKinds),
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(CultivateAction::costs),
-            NumberProvider.CODEC.optionalFieldOf("absorb_amount", new Constant(0.0D)).forGetter(CultivateAction::absorbAmount),
+            NumberProvider.CODEC.optionalFieldOf("absorb_amount", new Constant(1.0D)).forGetter(CultivateAction::absorbAmount),
             CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).optionalFieldOf("aura_costs", Map.of()).forGetter(CultivateAction::auraCosts),
             AutoIgnoreListCodec.create(ResourceGain.CODEC).optionalFieldOf("aura_gains", List.of()).forGetter(CultivateAction::auraGains),
             Codec.intRange(0, 72_000).optionalFieldOf("cooldown", 0).forGetter(CultivateAction::cooldownTicks),

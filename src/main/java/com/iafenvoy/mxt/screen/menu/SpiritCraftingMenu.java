@@ -12,8 +12,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Registry;
 import net.minecraft.core.Holder;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -24,7 +23,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.crafting.RecipeManager;
 import org.jspecify.annotations.NonNull;
 
 import java.util.LinkedHashMap;
@@ -45,36 +44,21 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private final Container result;
     private final ContainerLevelAccess access;
     private final SpiritCraftingTableBlockEntity table;
-    private final BlockPos tablePos;
     private final DataSlot[] progressTypes = new DataSlot[MAX_PROGRESS_ENTRIES];
     private final DataSlot[] progressAmounts = new DataSlot[MAX_PROGRESS_ENTRIES];
     private final DataSlot[] progressRequirements = new DataSlot[MAX_PROGRESS_ENTRIES];
     private RecipeMatch current;
 
-    /**
-     * Client-side constructor: the server will immediately synchronise the contents.
-     */
     public SpiritCraftingMenu(int id, Inventory inventory) {
-        this(id, inventory, new SimpleContainer(9), ContainerLevelAccess.NULL, null, BlockPos.ZERO);
-    }
-
-    public SpiritCraftingMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buffer) {
-        this(id, inventory, new SimpleContainer(9), ContainerLevelAccess.NULL, null,
-                BlockPos.STREAM_CODEC.decode(buffer));
+        this(id, inventory, new SimpleContainer(9), ContainerLevelAccess.NULL, null);
     }
 
     public SpiritCraftingMenu(int id, Inventory inventory, Container grid, ContainerLevelAccess access, SpiritCraftingTableBlockEntity table) {
-        this(id, inventory, grid, access, table, table == null ? BlockPos.ZERO : table.getBlockPos());
-    }
-
-    private SpiritCraftingMenu(int id, Inventory inventory, Container grid, ContainerLevelAccess access,
-                               SpiritCraftingTableBlockEntity table, BlockPos tablePos) {
         super(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), id);
         this.player = inventory.player;
         this.grid = grid;
         this.access = access;
         this.table = table;
-        this.tablePos = tablePos;
         this.result = table == null ? new SimpleContainer(1) : table.result();
         for (int index = 0; index < MAX_PROGRESS_ENTRIES; index++) {
             this.progressTypes[index] = DataSlot.standalone();
@@ -161,14 +145,12 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     }
 
     private RecipeMatch findRecipe() {
-        if (this.player.level().isClientSide()) return null;
-        Level level = this.player.level();
+        if (!(this.player.level() instanceof ServerLevel level)) return null;
         SpiritCraftingInput input = this.input();
-        RecipeHolder<? extends SpiritRecipe> shaped = level.getServer().getRecipeManager()
-                .getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPED.get(), input, level).orElse(null);
+        RecipeManager manager = level.getServer().getRecipeManager();
+        RecipeHolder<? extends SpiritRecipe> shaped = manager.getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPED.get(), input, level).orElse(null);
         if (shaped != null) return this.match(shaped.value());
-        RecipeHolder<? extends SpiritRecipe> shapeless = level.getServer().getRecipeManager()
-                .getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPELESS.get(), input, level).orElse(null);
+        RecipeHolder<? extends SpiritRecipe> shapeless = manager.getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPELESS.get(), input, level).orElse(null);
         return shapeless == null ? null : this.match(shapeless.value());
     }
 
@@ -211,12 +193,7 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(@NonNull Player player) {
-        return this.table == null || stillValid(this.access, player, MxtBlocks.SPIRIT_CRAFTING_TABLE.get());
-    }
-
-    @Override
-    public void removed(@NonNull Player player) {
-        super.removed(player);
+        return stillValid(this.access, player, MxtBlocks.SPIRIT_CRAFTING_TABLE.get());
     }
 
     private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Resource>, Integer> costs) {

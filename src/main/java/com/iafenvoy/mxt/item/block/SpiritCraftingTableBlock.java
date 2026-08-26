@@ -27,8 +27,6 @@ public final class SpiritCraftingTableBlock extends EconomyWorkstationBlock impl
         return new SpiritCraftingTableBlockEntity(pos, state);
     }
 
-
-
     @Override
     @SuppressWarnings("unchecked")
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NonNull BlockState state, @NonNull BlockEntityType<T> type) {
@@ -37,8 +35,7 @@ public final class SpiritCraftingTableBlock extends EconomyWorkstationBlock impl
     }
 
     @Override
-    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, Level level, @NonNull BlockPos pos,
-                                                        @NonNull Player player, @NonNull BlockHitResult hit) {
+    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table)
             player.openMenu(table);
         return InteractionResult.SUCCESS;

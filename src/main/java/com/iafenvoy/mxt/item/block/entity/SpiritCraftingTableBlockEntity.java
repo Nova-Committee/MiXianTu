@@ -133,11 +133,6 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         return result;
     }
 
-    @Override
-    public void writeClientSideData(@NonNull AbstractContainerMenu menu, @NonNull RegistryFriendlyByteBuf buffer) {
-        BlockPos.STREAM_CODEC.encode(buffer, this.worldPosition);
-    }
-
     /**
      * Opens a temporary intake window for one already-matched recipe. Changing the
      * grid or recipe invalidates any partially supplied aura instead of retaining it

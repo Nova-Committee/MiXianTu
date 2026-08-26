@@ -5,6 +5,9 @@
   "mixins": [
     "MinecraftServerRuntimeAccessor"
   ],
+  "client": [
+    "ClientInputAccessor"
+  ],
   "injectors": {
     "defaultRequire": 1
   },
