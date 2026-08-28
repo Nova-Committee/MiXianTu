@@ -21,8 +21,7 @@ public final class BeastTamingBellItem extends Item {
     }
 
     @Override
-    public @NotNull InteractionResult interactLivingEntity(@NotNull ItemStack stack, @NotNull Player player,
-                                                           @NotNull LivingEntity target, @NotNull InteractionHand hand) {
+    public @NotNull InteractionResult interactLivingEntity(@NotNull ItemStack stack, @NotNull Player player, @NotNull LivingEntity target, @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
         Result result = ContractService.setRecalled(target.getData(MxtAttachments.CONTRACT), player.getUUID(), true, false);
         if (!result.changed()) {

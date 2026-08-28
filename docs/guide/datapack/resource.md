@@ -4,6 +4,8 @@ title: resource：资源与资源条
 
 `resource` 是所有可增长、消耗、转换或显示的数值资源。资源可以绑定灵气类型、境界链、最大值公式、恢复速度和资源条。
 
+资源数值提供器 `mxt:environment_concentration` 只返回环境模板浓度，`mxt:actual_concentration` 返回包含库存、方块和阵法来源的最终浓度。两者均由服务端计算并同步给客户端。
+
 示例（字段以当前 Codec 为准）：
 
 ```json

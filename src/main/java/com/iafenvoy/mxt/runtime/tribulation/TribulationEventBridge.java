@@ -27,15 +27,11 @@ public final class TribulationEventBridge {
     public static void onEntityTick(Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
-        data.tribulation().map(holder -> new Entry(holder, holder.value())).ifPresent(entry -> {
-            TickResult result = TribulationService.tick(entity, data, entry.definition(), entity.level().getGameTime(), FormulaContexts.forEntity(entity));
+        data.tribulation().ifPresent(holder -> {
+            TickResult result = TribulationService.tick(entity, data, holder.value(), entity.level().getGameTime(), FormulaContexts.forEntity(entity));
             if (result.state() == State.COMPLETED && entity instanceof ServerPlayer player) {
-                MxtCriteriaTriggers.TRIBULATION.get().trigger(player, HolderHelper.id(entry.holder()));
+                MxtCriteriaTriggers.TRIBULATION.get().trigger(player, HolderHelper.id(holder));
             }
         });
-    }
-
-    private record Entry(Holder<Tribulation> holder,
-                         Tribulation definition) {
     }
 }

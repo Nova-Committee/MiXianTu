@@ -25,7 +25,7 @@
       "renderer": { "type": "mxt:boss_bar", "bar_index": 1 }
     },
     {
-      "context": "mxt:sensed_concentration",
+      "context": "mxt:actual_concentration",
       "anchor": "right",
       "order": 1,
       "visibility": { "type": "mxt:always" },

@@ -191,6 +191,8 @@
   "hud.mxt.resource_bar.sensed": "感受到的%s",
   "hud.mxt.resource_bar.stored_aura": "已存储灵气",
   "hud.mxt.resource_bar.sensed_concentration": "感受到的灵气浓度",
+  "hud.mxt.resource_bar.environment_concentration": "环境%s浓度",
+  "hud.mxt.resource_bar.actual_concentration": "实际%s浓度",
   "key.mxt.primary_active": "主技能激活状态",
   "key.mxt.ability_primary": "使用主技能",
   "key.mxt.ability_secondary": "使用副技能",

@@ -29,10 +29,8 @@ import org.jspecify.annotations.NonNull;
  */
 @JeiPlugin
 public final class MxtJeiPlugin implements IModPlugin {
-    public static final IRecipeHolderType<SpiritShapedRecipe> SHAPED =
-            IRecipeHolderType.create(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_shaped"));
-    public static final IRecipeHolderType<SpiritShapelessRecipe> SHAPELESS =
-            IRecipeHolderType.create(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_shapeless"));
+    public static final IRecipeHolderType<SpiritShapedRecipe> SHAPED = IRecipeHolderType.create(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_shaped"));
+    public static final IRecipeHolderType<SpiritShapelessRecipe> SHAPELESS = IRecipeHolderType.create(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_shapeless"));
 
     @Override
     public @NonNull Identifier getPluginUid() {
@@ -78,9 +76,7 @@ public final class MxtJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
-        registration.addRecipeTransferHandler(SpiritCraftingMenu.class, MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SHAPED,
-                1, 9, 10, 36);
-        registration.addRecipeTransferHandler(SpiritCraftingMenu.class, MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SHAPELESS,
-                1, 9, 10, 36);
+        registration.addRecipeTransferHandler(SpiritCraftingMenu.class, MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SHAPED, 1, 9, 10, 36);
+        registration.addRecipeTransferHandler(SpiritCraftingMenu.class, MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SHAPELESS, 1, 9, 10, 36);
     }
 }

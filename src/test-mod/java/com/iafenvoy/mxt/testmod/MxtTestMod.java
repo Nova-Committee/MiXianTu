@@ -35,7 +35,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.SensedConcentrationContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.PrepareResult;
@@ -499,8 +499,8 @@ public final class MxtTestMod {
         if (boss.context().layout() != Layout.BOSS_OVERLAY) {
             throw new IllegalStateException("Boss resource-bar context was not retained");
         }
-        if (spiritPower.bars().stream().noneMatch(bar -> bar.context() == SensedConcentrationContext.INSTANCE)) {
-            throw new IllegalStateException("Sensed-concentration resource-bar context was not retained");
+        if (spiritPower.bars().stream().noneMatch(bar -> bar.context() == ActualConcentrationContext.INSTANCE)) {
+            throw new IllegalStateException("Actual-concentration resource-bar context was not retained");
         }
         AuraZone visuals = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, Identifier.parse("mxt_test:firelands"))
                 .orElseThrow(() -> new IllegalStateException("Aura visual test definition was not loaded"));

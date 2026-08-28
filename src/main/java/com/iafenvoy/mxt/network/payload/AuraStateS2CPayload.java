@@ -14,8 +14,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Map;
 
 /**
- * Server-authoritative aura source, shared chunk inventory, and sensed environmental pools for
- * the local player.
+ * Server-authoritative aura source, fully resolved pools, and environmental pools for the local
+ * player.
  */
 public record AuraStateS2CPayload(Identifier source, Map<Identifier, AuraPool> stored,
                                   Map<Identifier, AuraPool> sensed) implements CustomPacketPayload {

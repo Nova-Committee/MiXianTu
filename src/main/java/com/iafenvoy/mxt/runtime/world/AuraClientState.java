@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  * Client-side copy of the server-resolved aura at the local player's position. Stored chunk
- * inventory and sensed environmental concentration are kept as separate snapshots.
+ * fully resolved concentration and environmental concentration are kept as separate snapshots.
  */
 public final class AuraClientState {
     private static final Identifier EMPTY = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
@@ -68,6 +68,16 @@ public final class AuraClientState {
 
         public AuraPool sensedPool(Identifier id) {
             return this.sensed.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+        }
+
+        /** Environmental template concentration, excluding stored and emitted aura. */
+        public AuraPool environmentPool(Identifier id) {
+            return sensedPool(id);
+        }
+
+        /** Fully resolved concentration synchronized by the server. */
+        public AuraPool actualPool(Identifier id) {
+            return this.stored.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
         }
 
         private static Snapshot interpolate(Snapshot from, Snapshot to, double factor) {

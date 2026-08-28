@@ -5,7 +5,8 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.BossOverlayContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.TargetOverlayContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.SensedConcentrationContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -18,8 +19,10 @@ public final class MxtResourceBarContexts {
             REGISTRY.register("target_overlay", () -> TargetOverlayContext.INSTANCE);
     public static final DeferredHolder<ResourceBarContext, BossOverlayContext> BOSS_OVERLAY =
             REGISTRY.register("boss_overlay", () -> BossOverlayContext.INSTANCE);
-    public static final DeferredHolder<ResourceBarContext, SensedConcentrationContext> SENSED_CONCENTRATION =
-            REGISTRY.register("sensed_concentration", () -> SensedConcentrationContext.INSTANCE);
+    public static final DeferredHolder<ResourceBarContext, EnvironmentConcentrationContext> ENVIRONMENT_CONCENTRATION =
+            REGISTRY.register("environment_concentration", () -> EnvironmentConcentrationContext.INSTANCE);
+    public static final DeferredHolder<ResourceBarContext, ActualConcentrationContext> ACTUAL_CONCENTRATION =
+            REGISTRY.register("actual_concentration", () -> ActualConcentrationContext.INSTANCE);
 
     private MxtResourceBarContexts() {
     }

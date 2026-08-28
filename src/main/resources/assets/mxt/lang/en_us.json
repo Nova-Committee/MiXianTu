@@ -191,6 +191,8 @@
   "hud.mxt.resource_bar.sensed": "Sensed %s",
   "hud.mxt.resource_bar.stored_aura": "Stored aura",
   "hud.mxt.resource_bar.sensed_concentration": "Sensed concentration",
+  "hud.mxt.resource_bar.environment_concentration": "Environmental %s concentration",
+  "hud.mxt.resource_bar.actual_concentration": "Actual %s concentration",
   "key.mxt.primary_active": "Primary active ability",
   "key.mxt.ability_primary": "Use Primary Ability",
   "key.mxt.ability_secondary": "Use Secondary Ability",
