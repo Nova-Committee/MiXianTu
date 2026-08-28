@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
@@ -25,7 +27,9 @@ public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
     ).apply(i, ApplyCurseAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         double resolvedStacks = this.stacks.evaluate(context);
         if (!Double.isFinite(resolvedStacks) || resolvedStacks < 1.0D || resolvedStacks > 256.0D) return;
         Optional<Long> duration = this.durationTicks.flatMap(provider -> {

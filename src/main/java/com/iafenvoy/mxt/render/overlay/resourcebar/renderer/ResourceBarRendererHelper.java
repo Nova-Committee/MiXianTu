@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderState;
-import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer;
 import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import net.minecraft.client.renderer.RenderPipelines;

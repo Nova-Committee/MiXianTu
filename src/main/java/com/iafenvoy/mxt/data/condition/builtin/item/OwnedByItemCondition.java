@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -12,7 +14,10 @@ public enum OwnedByItemCondition implements ItemCondition {
     public static final MapCodec<OwnedByItemCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
+    public boolean test(ItemConditionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         return ArtifactService.state(stack).ownerUuid().filter(value -> value.equals(holder.getUUID().toString())).isPresent();
     }
 

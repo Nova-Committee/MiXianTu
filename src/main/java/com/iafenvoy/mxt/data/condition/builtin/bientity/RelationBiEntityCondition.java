@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -15,7 +17,10 @@ public record RelationBiEntityCondition(boolean allied) implements BiEntityCondi
             .xmap(RelationBiEntityCondition::new, RelationBiEntityCondition::allied);
 
     @Override
-    public boolean test(Entity actor, Entity target, FormulaContext context) {
+    public boolean test(BiEntityConditionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
         return actor.isAlliedTo(target) == this.allied;
     }
 

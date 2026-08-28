@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity.meta;
 
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -18,9 +20,12 @@ public record IfElseAction(BiEntityCondition condition, BiEntityAction ifAction,
     ).apply(i, IfElseAction::new));
 
     @Override
-    public void execute(Entity actor, Entity target, FormulaContext context) {
-        if (this.condition.test(actor, target, context)) this.ifAction.execute(actor, target, context);
-        else this.elseAction.ifPresent(action -> action.execute(actor, target, context));
+    public void execute(BiEntityActionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
+        if (this.condition.test(actor, target, ctx)) this.ifAction.execute(actor, target, ctx);
+        else this.elseAction.ifPresent(action -> action.execute(actor, target, ctx));
     }
 
     @Override

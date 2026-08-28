@@ -131,8 +131,7 @@ public final class ForgingWorkstationService {
     }
 
     public static boolean canUse(ServerPlayer player, BlockPos position, ForgingBlueprint blueprint) {
-        if (player.distanceToSqr(position.getCenter()) > MAX_DISTANCE_SQUARED) return false;
-        return true;
+        return !(player.distanceToSqr(position.getCenter()) > MAX_DISTANCE_SQUARED);
     }
 
     private static void settleFailure(ServerPlayer player, BlockPos position, ForgingSessionAttachment data) {

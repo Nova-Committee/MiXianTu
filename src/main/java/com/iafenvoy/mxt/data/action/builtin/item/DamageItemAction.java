@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -11,7 +13,10 @@ public record DamageItemAction(NumberProvider amount) implements ItemAction {
     public static final MapCodec<DamageItemAction> CODEC = NumberProvider.CODEC.fieldOf("amount").xmap(DamageItemAction::new, DamageItemAction::amount);
 
     @Override
-    public void execute(Entity holder, ItemStack stack, FormulaContext context) {
+    public void execute(ItemActionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         if (!stack.isDamageableItem()) return;
         double amount = this.amount.evaluate(context);
         if (!Double.isFinite(amount) || amount <= 0.0D) return;

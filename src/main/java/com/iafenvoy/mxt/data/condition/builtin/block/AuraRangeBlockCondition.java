@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.block;
 
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -19,7 +21,10 @@ public record AuraRangeBlockCondition(Map<Holder<Resource>, AuraRequirement> aur
             .fieldOf("aura").xmap(AuraRangeBlockCondition::new, AuraRangeBlockCondition::aura);
 
     @Override
-    public boolean test(Level level, BlockPos pos, FormulaContext context) {
+    public boolean test(BlockConditionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         AuraResult resolved = AuraService.getPositionAura(level, pos);
         return this.aura.entrySet().stream().allMatch(entry -> entry.getValue().test(resolved.pool(entry.getKey()).amount(), context));
     }

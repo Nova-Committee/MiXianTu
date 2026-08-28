@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -12,7 +14,9 @@ public record RemoveEffectAction(MobEffect effect) implements EntityAction {
     public static final MapCodec<RemoveEffectAction> CODEC = BuiltInRegistries.MOB_EFFECT.byNameCodec().fieldOf("effect").xmap(RemoveEffectAction::new, RemoveEffectAction::effect);
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         if (entity instanceof LivingEntity living)
             living.removeEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(this.effect));
     }

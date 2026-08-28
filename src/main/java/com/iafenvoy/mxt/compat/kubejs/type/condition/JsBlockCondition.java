@@ -2,14 +2,12 @@ package com.iafenvoy.mxt.compat.kubejs.type.condition;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsConditionCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
 
 public record JsBlockCondition(String id, JsonObject params) implements BlockCondition {
     public static final MapCodec<JsBlockCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -18,8 +16,8 @@ public record JsBlockCondition(String id, JsonObject params) implements BlockCon
     ).apply(i, JsBlockCondition::new));
 
     @Override
-    public boolean test(Level level, BlockPos pos, FormulaContext context) {
-        return MxtJsConditionCallbacks.testBlock(this.id, level, pos, this.params);
+    public boolean test(BlockConditionContext context) {
+        return MxtJsConditionCallbacks.testBlock(this.id, context.level(), context.pos(), this.params);
     }
 
     @Override

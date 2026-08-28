@@ -1,13 +1,15 @@
 package com.iafenvoy.mxt.data.action;
 
 import com.iafenvoy.mxt.data.action.builtin.block.meta.SequenceBlockAction;
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+import com.iafenvoy.mxt.data.context.Context;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 
 import java.util.List;
 import java.util.function.Function;
@@ -24,7 +26,15 @@ public interface BlockAction {
             ) ? Either.right(actions) : Either.left(action)
     );
 
-    void execute(Level level, BlockPos pos, FormulaContext context);
+    void execute(BlockActionContext context);
+
+    default void execute(Level level, BlockPos pos, Context parent) {
+        this.execute(parent.copyTo(new BlockActionContext(level, pos, parent.formula())));
+    }
+
+    default void execute(Level level, BlockPos pos, FormulaContext formula) {
+        this.execute(new BlockActionContext(level, pos, formula));
+    }
 
     MapCodec<? extends BlockAction> codec();
 }

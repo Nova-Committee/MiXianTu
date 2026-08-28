@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block.meta;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -19,9 +21,12 @@ public record IfElseAction(BlockCondition condition, BlockAction ifAction,
     ).apply(i, IfElseAction::new));
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
-        if (this.condition.test(level, pos, context)) this.ifAction.execute(level, pos, context);
-        else this.elseAction.ifPresent(action -> action.execute(level, pos, context));
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
+        if (this.condition.test(level, pos, ctx)) this.ifAction.execute(level, pos, ctx);
+        else this.elseAction.ifPresent(action -> action.execute(level, pos, ctx));
     }
 
     @Override

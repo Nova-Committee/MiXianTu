@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block.meta;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.WeightedActionEntry;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -13,9 +15,12 @@ public record ChoiceAction(List<WeightedActionEntry<BlockAction>> actions) imple
     public static final MapCodec<ChoiceAction> CODEC = WeightedActionEntry.codec(BlockAction.CODEC).listOf().fieldOf("actions").xmap(ChoiceAction::new, ChoiceAction::actions);
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         WeightedActionEntry<BlockAction> entry = WeightedActionEntry.select(this.actions, level.getRandom());
-        if (entry != null) entry.element().execute(level, pos, context);
+        if (entry != null) entry.element().execute(level, pos, ctx);
     }
 
     @Override

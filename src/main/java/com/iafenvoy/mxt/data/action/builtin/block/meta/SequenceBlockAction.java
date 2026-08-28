@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block.meta;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -12,8 +14,11 @@ public record SequenceBlockAction(List<BlockAction> actions) implements BlockAct
     public static final MapCodec<SequenceBlockAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceBlockAction::new, SequenceBlockAction::actions);
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
-        this.actions.forEach(action -> action.execute(level, pos, context));
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
+        this.actions.forEach(action -> action.execute(level, pos, ctx));
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -14,7 +16,9 @@ public enum FormationMemberEntityCondition implements EntityCondition {
     public static final MapCodec<FormationMemberEntityCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         return entity.level().getData(MxtAttachments.FORMATION_WORLD).formations().values().stream()
                 .anyMatch(formation -> formation.active() && formation.owner().filter(entity.getUUID()::equals).isPresent());
     }

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.item.meta;
 
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -12,8 +14,11 @@ public record OrCondition(List<ItemCondition> conditions) implements ItemConditi
     public static final MapCodec<OrCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(OrCondition::new, OrCondition::conditions);
 
     @Override
-    public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
-        return this.conditions.stream().anyMatch(condition -> condition.test(holder, stack, context));
+    public boolean test(ItemConditionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
+        return this.conditions.stream().anyMatch(condition -> condition.test(holder, stack, ctx));
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -24,7 +26,10 @@ public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements B
     ).apply(i, CanSeeCondition::new));
 
     @Override
-    public boolean test(Entity actor, Entity target, FormulaContext context) {
+    public boolean test(BiEntityConditionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
         if (actor.level() != target.level()) return false;
         Vec3 from = actor.getEyePosition(), to = target.getEyePosition();
         return from.distanceTo(to) <= 128.0D && actor.level().clip(new ClipContext(from, to, this.shapeType, this.fluidHandling, actor)).getType() == Type.MISS;

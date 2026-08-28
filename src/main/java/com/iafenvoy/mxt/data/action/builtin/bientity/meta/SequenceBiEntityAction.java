@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity.meta;
 
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -11,8 +13,11 @@ public record SequenceBiEntityAction(List<BiEntityAction> actions) implements Bi
     public static final MapCodec<SequenceBiEntityAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceBiEntityAction::new, SequenceBiEntityAction::actions);
 
     @Override
-    public void execute(Entity actor, Entity target, FormulaContext context) {
-        this.actions.forEach(action -> action.execute(actor, target, context));
+    public void execute(BiEntityActionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
+        this.actions.forEach(action -> action.execute(actor, target, ctx));
     }
 
     @Override

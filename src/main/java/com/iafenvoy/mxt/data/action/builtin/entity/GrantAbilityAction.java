@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -20,7 +22,9 @@ public record GrantAbilityAction(Holder<Ability> ability, Identifier source) imp
     ).apply(i, GrantAbilityAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         entity.getData(MxtAttachments.ABILITY_HOLDER).grant(this.ability, this.source);
     }
 

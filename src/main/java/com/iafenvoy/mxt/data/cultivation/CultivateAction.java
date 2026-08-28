@@ -26,7 +26,8 @@ import java.util.Map;
 /**
  * A named cultivation activity with entity conditions and an interval action.
  */
-public record CultivateAction(boolean defaultAction, EntityCondition startCondition, EntityCondition stopCondition, int tickInterval,
+public record CultivateAction(boolean defaultAction, EntityCondition startCondition, EntityCondition stopCondition,
+                              int tickInterval,
                               List<Identifier> auraKinds, List<ResourceCost> costs, NumberProvider absorbAmount,
                               Map<Holder<Resource>, NumberProvider> auraCosts, List<ResourceGain> auraGains,
                               int cooldownTicks,

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.damage;
 
+import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
+
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
@@ -27,12 +29,15 @@ public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projecti
     ).apply(i, ProjectileDamageCondition::new));
 
     @Override
-    public boolean test(DamageSource source, float amount, FormulaContext context) {
+    public boolean test(DamageConditionContext ctx) {
+        DamageSource source = ctx.source();
+        float amount = ctx.amount();
+        FormulaContext context = ctx.formula();
         Entity entity = source.getDirectEntity();
         return source.is(DamageTypeTags.IS_PROJECTILE)
                 && entity != null
                 && this.projectile.map(holder -> holder.value() == entity.getType()).orElse(true)
-                && this.projectileCondition.test(entity, context);
+                && this.projectileCondition.test(entity, ctx);
     }
 
     @Override

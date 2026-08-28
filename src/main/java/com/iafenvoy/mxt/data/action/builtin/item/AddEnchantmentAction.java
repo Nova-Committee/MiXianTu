@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -27,7 +29,10 @@ public record AddEnchantmentAction(Object2IntMap<Holder<Enchantment>> enchantmen
     ).apply(i, AddEnchantmentAction::new));
 
     @Override
-    public void execute(Entity holder, ItemStack stack, FormulaContext context) {
+    public void execute(ItemActionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         Mutable enchantments = new Mutable(stack.getAllEnchantments(holder.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
         for (Entry<Holder<Enchantment>> entry : this.enchantments.object2IntEntrySet())
             if (this.override || enchantments.getLevel(entry.getKey()) < entry.getIntValue())

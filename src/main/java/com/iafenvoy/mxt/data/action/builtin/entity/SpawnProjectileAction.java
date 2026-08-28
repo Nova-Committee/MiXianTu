@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -24,7 +26,9 @@ public record SpawnProjectileAction(EntityType<?> entityType, NumberProvider vel
     ).apply(i, SpawnProjectileAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         double x = this.velocityX.evaluate(context), y = this.velocityY.evaluate(context), z = this.velocityZ.evaluate(context);
         if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z) || entity.level().isClientSide()) return;
         Entity created = this.entityType.create(entity.level(), EntitySpawnReason.TRIGGERED);

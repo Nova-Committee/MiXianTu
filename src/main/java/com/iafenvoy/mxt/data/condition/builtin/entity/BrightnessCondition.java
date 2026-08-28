@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -13,7 +15,9 @@ public record BrightnessCondition(Comparison comparison) implements EntityCondit
     public static final MapCodec<BrightnessCondition> CODEC = Comparison.CODEC.xmap(BrightnessCondition::new, BrightnessCondition::comparison);
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         BlockPos pos = BlockPos.containing(entity.getX(), entity.getEyeY(), entity.getZ());
         if (!entity.level().getChunkSource().hasChunk(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ())))
             return this.comparison.compare(0.0D);

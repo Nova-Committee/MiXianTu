@@ -57,11 +57,11 @@ public final class AuraZoneEventBridge {
             if (level.getGameTime() % 20L == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
                 AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
-                Map<Identifier, AuraPool> stored = new LinkedHashMap<>();
-                aura.aura().forEach((resource, pool) -> stored.put(HolderHelper.id(resource), pool));
-                Map<Identifier, AuraPool> sensedValues = new LinkedHashMap<>();
-                sensed.aura().forEach((resource, pool) -> sensedValues.put(HolderHelper.id(resource), pool));
-                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), stored, sensedValues));
+                Map<Identifier, AuraPool> actual = new LinkedHashMap<>();
+                aura.aura().forEach((resource, pool) -> actual.put(HolderHelper.id(resource), pool));
+                Map<Identifier, AuraPool> environment = new LinkedHashMap<>();
+                sensed.aura().forEach((resource, pool) -> environment.put(HolderHelper.id(resource), pool));
+                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), actual, environment));
             }
             boolean cultivating = player.getData(MxtAttachments.SPIRIT_DATA).cultivating();
             boolean emitParticle = cultivating ? level.getGameTime() % 5L < 3L : level.getGameTime() % 5L == 0L;

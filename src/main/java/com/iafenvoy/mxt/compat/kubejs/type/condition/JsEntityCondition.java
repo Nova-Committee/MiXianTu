@@ -2,13 +2,12 @@ package com.iafenvoy.mxt.compat.kubejs.type.condition;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsConditionCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 
 public record JsEntityCondition(String id, JsonObject params) implements EntityCondition {
     public static final MapCodec<JsEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -17,8 +16,8 @@ public record JsEntityCondition(String id, JsonObject params) implements EntityC
     ).apply(i, JsEntityCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
-        return MxtJsConditionCallbacks.testEntity(this.id, entity, this.params);
+    public boolean test(EntityConditionContext context) {
+        return MxtJsConditionCallbacks.testEntity(this.id, context.entity(), this.params);
     }
 
     @Override

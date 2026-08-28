@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity.meta;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -18,9 +20,11 @@ public record ChanceAction(EntityAction action, float chance,
     ).apply(i, ChanceAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
-        if (entity.getRandom().nextFloat() < this.chance) this.action.execute(entity, context);
-        else this.failAction.ifPresent(action -> action.execute(entity, context));
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
+        if (entity.getRandom().nextFloat() < this.chance) this.action.execute(entity, ctx);
+        else this.failAction.ifPresent(action -> action.execute(entity, ctx));
     }
 
     @Override

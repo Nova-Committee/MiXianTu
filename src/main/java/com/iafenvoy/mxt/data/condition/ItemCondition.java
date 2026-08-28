@@ -1,13 +1,15 @@
 package com.iafenvoy.mxt.data.condition;
 
 import com.iafenvoy.mxt.data.condition.builtin.item.meta.AndItemCondition;
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+import com.iafenvoy.mxt.data.context.Context;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 
 import java.util.List;
 import java.util.function.Function;
@@ -24,7 +26,15 @@ public interface ItemCondition {
             ) ? Either.right(conditions) : Either.left(condition)
     );
 
-    boolean test(Entity holder, ItemStack stack, FormulaContext context);
+    boolean test(ItemConditionContext context);
+
+    default boolean test(Entity holder, ItemStack stack, Context parent) {
+        return this.test(parent.copyTo(new ItemConditionContext(holder, stack, parent.formula())));
+    }
+
+    default boolean test(Entity holder, ItemStack stack, FormulaContext formula) {
+        return this.test(new ItemConditionContext(holder, stack, formula));
+    }
 
     MapCodec<? extends ItemCondition> codec();
 }

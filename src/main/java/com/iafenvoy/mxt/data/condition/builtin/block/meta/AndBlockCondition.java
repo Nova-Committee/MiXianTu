@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.block.meta;
 
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -12,8 +14,11 @@ public record AndBlockCondition(List<BlockCondition> conditions) implements Bloc
     public static final MapCodec<AndBlockCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndBlockCondition::new, AndBlockCondition::conditions);
 
     @Override
-    public boolean test(Level level, BlockPos pos, FormulaContext context) {
-        return this.conditions.stream().allMatch(condition -> condition.test(level, pos, context));
+    public boolean test(BlockConditionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
+        return this.conditions.stream().allMatch(condition -> condition.test(level, pos, ctx));
     }
 
     @Override

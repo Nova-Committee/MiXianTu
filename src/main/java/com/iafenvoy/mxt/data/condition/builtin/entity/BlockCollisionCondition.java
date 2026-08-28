@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -18,7 +20,9 @@ public record BlockCollisionCondition(float offsetX, float offsetY, float offset
     ).apply(i, BlockCollisionCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         AABB bounds = entity.getBoundingBox().move(this.offsetX, this.offsetY, this.offsetZ).deflate(0.001D);
         for (BlockPos pos : BlockPos.betweenClosed(BlockPos.containing(bounds.minX, bounds.minY, bounds.minZ), BlockPos.containing(bounds.maxX, bounds.maxY, bounds.maxZ))) {
             BlockState state = entity.level().getBlockState(pos);

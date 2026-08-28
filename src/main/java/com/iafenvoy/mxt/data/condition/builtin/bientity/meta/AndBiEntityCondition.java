@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity.meta;
 
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -11,8 +13,11 @@ public record AndBiEntityCondition(List<BiEntityCondition> conditions) implement
     public static final MapCodec<AndBiEntityCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndBiEntityCondition::new, AndBiEntityCondition::conditions);
 
     @Override
-    public boolean test(Entity actor, Entity target, FormulaContext context) {
-        return this.conditions.stream().allMatch(condition -> condition.test(actor, target, context));
+    public boolean test(BiEntityConditionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
+        return this.conditions.stream().allMatch(condition -> condition.test(actor, target, ctx));
     }
 
     @Override

@@ -6,6 +6,6 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public final class ClientNetworkHandler {
     static void onAuraState(AuraStateS2CPayload payload, IPayloadContext context) {
-        AuraClientState.update(payload.source(), payload.stored(), payload.sensed());
+        AuraClientState.update(payload.source(), payload.actual(), payload.environment());
     }
 }

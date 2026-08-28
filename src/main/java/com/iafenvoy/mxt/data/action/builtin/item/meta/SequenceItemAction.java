@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item.meta;
 
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -12,8 +14,11 @@ public record SequenceItemAction(List<ItemAction> actions) implements ItemAction
     public static final MapCodec<SequenceItemAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceItemAction::new, SequenceItemAction::actions);
 
     @Override
-    public void execute(Entity holder, ItemStack stack, FormulaContext context) {
-        this.actions.forEach(action -> action.execute(holder, stack, context));
+    public void execute(ItemActionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
+        this.actions.forEach(action -> action.execute(holder, stack, ctx));
     }
 
     @Override

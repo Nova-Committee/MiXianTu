@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -23,7 +25,10 @@ public record ChangeAuraBlockAction(Map<Holder<Resource>, NumberProvider> aura) 
             .fieldOf("aura").xmap(ChangeAuraBlockAction::new, ChangeAuraBlockAction::aura);
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         if (level.isClientSide()) return;
         Map<Holder<Resource>, Double> amounts = new LinkedHashMap<>();
         for (Entry<Holder<Resource>, NumberProvider> entry : this.aura.entrySet()) {

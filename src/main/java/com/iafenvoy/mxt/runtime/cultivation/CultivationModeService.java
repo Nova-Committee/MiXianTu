@@ -5,6 +5,8 @@ import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Failure;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -19,14 +21,15 @@ public final class CultivationModeService {
     private CultivationModeService() {
     }
 
-    public static CultivationActionService.Result toggle(ServerPlayer player) {
+    public static Result toggle(ServerPlayer player) {
         SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
         Holder<CultivateAction> action = resolveAction(spirit).orElse(null);
-        if (action == null) return CultivationActionService.Result.rejected(CultivationActionService.Failure.NOT_ACTIVE, null);
+        if (action == null)
+            return Result.rejected(Failure.NOT_ACTIVE, null);
         if (spirit.cultivating()) return stop(player, spirit, action);
 
         CultivateAction definition = action.value();
-        CultivationActionService.Result result = CultivationActionService.start(spirit, action, definition,
+        Result result = CultivationActionService.start(spirit, action, definition,
                 player.level().getGameTime(), () -> definition.startCondition().test(player, FormulaContexts.forEntity(player)));
         if (result.started()) {
             CultivationMovementService.reconcile(player);
@@ -43,7 +46,9 @@ public final class CultivationModeService {
         return true;
     }
 
-    /** Resolves the selected cultivation behavior without requiring a cultivation technique. */
+    /**
+     * Resolves the selected cultivation behavior without requiring a cultivation technique.
+     */
     public static Optional<Holder<CultivateAction>> resolveAction(SpiritAttachment spirit) {
         Optional<Holder<CultivateAction>> configured = MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATE_ACTION)
                 .filter(action -> action.value().defaultAction())
@@ -52,8 +57,8 @@ public final class CultivationModeService {
                 .map(action -> (Holder<CultivateAction>) action).findFirst());
     }
 
-    private static CultivationActionService.Result stop(ServerPlayer player, SpiritAttachment spirit, Holder<CultivateAction> action) {
-        CultivationActionService.Result result = CultivationActionService.stop(player, spirit, HolderHelper.id(action), action.value(), player.level().getGameTime());
+    private static Result stop(ServerPlayer player, SpiritAttachment spirit, Holder<CultivateAction> action) {
+        Result result = CultivationActionService.stop(player, spirit, HolderHelper.id(action), action.value(), player.level().getGameTime());
         if (result.stopped()) {
             CultivationMovementService.clear(player);
             player.refreshDimensions();

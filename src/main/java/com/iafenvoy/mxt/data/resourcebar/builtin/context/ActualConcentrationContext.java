@@ -13,7 +13,9 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
 
-/** Resource-bar context for the fully resolved concentration at the player's position. */
+/**
+ * Resource-bar context for the fully resolved concentration at the player's position.
+ */
 public enum ActualConcentrationContext implements ResourceBarContext {
     INSTANCE;
 

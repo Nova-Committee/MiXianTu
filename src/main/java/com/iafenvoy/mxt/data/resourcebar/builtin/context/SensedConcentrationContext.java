@@ -13,7 +13,9 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
 
-/** Resource-specific environmental concentration synchronized by the server. */
+/**
+ * Resource-specific environmental concentration synchronized by the server.
+ */
 public enum SensedConcentrationContext implements ResourceBarContext {
     INSTANCE;
 
@@ -22,7 +24,7 @@ public enum SensedConcentrationContext implements ResourceBarContext {
         if (!entity.level().isClientSide()) return Optional.empty();
         Identifier id = HolderHelper.idOrNull(resource);
         if (id == null) return Optional.empty();
-        AuraPool pool = AuraClientState.current().sensedPool(id);
+        AuraPool pool = AuraClientState.current().environmentPool(id);
         if (pool.maximum() <= 0.0D && pool.amount() <= 0.0D) return Optional.empty();
         return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));
     }

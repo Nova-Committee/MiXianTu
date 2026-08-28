@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -18,7 +20,9 @@ public record KnockbackAction(NumberProvider x, NumberProvider y, NumberProvider
     ).apply(i, KnockbackAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         double x = this.x.evaluate(context), y = this.y.evaluate(context), z = this.z.evaluate(context);
         if (Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z)) entity.push(x, y, z);
     }

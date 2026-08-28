@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block.meta;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -20,8 +22,11 @@ public record OffsetAction(BlockAction action, int x, int y, int z) implements B
     ).apply(i, OffsetAction::new));
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
-        this.action.execute(level, pos.offset(this.x, this.y, this.z), context);
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
+        this.action.execute(level, pos.offset(this.x, this.y, this.z), ctx);
     }
 
     @Override

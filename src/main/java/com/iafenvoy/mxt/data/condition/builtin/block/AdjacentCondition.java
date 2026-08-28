@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.block;
 
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -17,11 +19,14 @@ public record AdjacentCondition(BlockCondition adjacentCondition, Comparison com
     ).apply(i, AdjacentCondition::new));
 
     @Override
-    public boolean test(Level level, BlockPos pos, FormulaContext context) {
+    public boolean test(BlockConditionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         int matches = 0;
         for (Direction direction : Direction.values()) {
             BlockPos adjacent = pos.relative(direction);
-            if (level.getChunkSource().hasChunk(SectionPos.blockToSectionCoord(adjacent.getX()), SectionPos.blockToSectionCoord(adjacent.getZ())) && this.adjacentCondition.test(level, adjacent, context))
+            if (level.getChunkSource().hasChunk(SectionPos.blockToSectionCoord(adjacent.getX()), SectionPos.blockToSectionCoord(adjacent.getZ())) && this.adjacentCondition.test(level, adjacent, ctx))
                 matches++;
         }
         return this.comparison.compare(matches);

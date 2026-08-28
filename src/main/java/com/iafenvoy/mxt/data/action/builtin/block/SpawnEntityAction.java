@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
@@ -33,14 +35,17 @@ public record SpawnEntityAction(Holder<EntityType<?>> entityType, Optional<Compo
     ).apply(i, SpawnEntityAction::new));
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         if (!(level instanceof ServerLevel serverLevel) || !level.hasChunkAt(pos)) return;
         Entity entity = this.entityType.value().create(serverLevel, EntitySpawnReason.TRIGGERED);
         if (entity == null) return;
         this.tag.ifPresent(value -> entity.load(TagValueInput.create(ProblemReporter.DISCARDING, serverLevel.registryAccess(), value.copy())));
         entity.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
         serverLevel.addFreshEntity(entity);
-        this.entityAction.execute(entity, context);
+        this.entityAction.execute(entity, ctx);
     }
 
     @Override

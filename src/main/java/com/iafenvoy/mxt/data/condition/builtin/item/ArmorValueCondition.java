@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -15,7 +17,10 @@ public record ArmorValueCondition(Comparison comparison) implements ItemConditio
     public static final MapCodec<ArmorValueCondition> CODEC = Comparison.CODEC.xmap(ArmorValueCondition::new, ArmorValueCondition::comparison);
 
     @Override
-    public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
+    public boolean test(ItemConditionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
         if (equippable == null) return false;
         ItemAttributeModifiers modifiers = stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);

@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.event.AuraZoneEvent.Enter;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
-import com.iafenvoy.mxt.event.ResourceConsumeEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Post;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
 import dev.latvian.mods.kubejs.event.EventGroupRegistry;

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -26,7 +28,10 @@ public record RemoveEnchantmentAction(List<Holder<Enchantment>> enchantment, Opt
     ).apply(i, RemoveEnchantmentAction::new));
 
     @Override
-    public void execute(Entity holder, ItemStack stack, FormulaContext context) {
+    public void execute(ItemActionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         Mutable enchantments = new Mutable(stack.getAllEnchantments(holder.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
         for (Holder<Enchantment> entry : this.enchantment)
             if (this.level.isEmpty() || enchantments.getLevel(entry) == this.level.get()) enchantments.set(entry, 0);

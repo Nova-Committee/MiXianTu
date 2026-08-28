@@ -8,9 +8,13 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityEvent;
+import net.neoforged.neoforge.event.entity.EntityEvent.Size;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent.Post;
 
-/** Applies the physical restrictions while a player is cultivating. */
+/**
+ * Applies the physical restrictions while a player is cultivating.
+ */
 @EventBusSubscriber
 public final class CultivationModeEventBridge {
     private static final float CULTIVATION_HEIGHT_OFFSET = 10.0F / 16.0F;
@@ -19,9 +23,10 @@ public final class CultivationModeEventBridge {
     }
 
     @SubscribeEvent
-    public static void onEntitySize(EntityEvent.Size event) {
+    public static void onEntitySize(Size event) {
         if (!(event.getEntity() instanceof Player player)
-                || !player.getExistingData(MxtAttachments.SPIRIT_DATA).map(SpiritAttachment::cultivating).orElse(false)) return;
+                || !player.getExistingData(MxtAttachments.SPIRIT_DATA).map(SpiritAttachment::cultivating).orElse(false))
+            return;
         EntityDimensions size = event.getNewSize();
         float height = Math.max(0.1F, size.height() - CULTIVATION_HEIGHT_OFFSET);
         float eyeHeight = Math.clamp(size.eyeHeight() - CULTIVATION_HEIGHT_OFFSET, 0.0F, height);
@@ -29,10 +34,11 @@ public final class CultivationModeEventBridge {
     }
 
     @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
+    public static void onPlayerTick(Post event) {
         Player player = event.getEntity();
         if (player.level().isClientSide()
-                || !player.getExistingData(MxtAttachments.SPIRIT_DATA).map(SpiritAttachment::cultivating).orElse(false)) return;
+                || !player.getExistingData(MxtAttachments.SPIRIT_DATA).map(SpiritAttachment::cultivating).orElse(false))
+            return;
         CultivationMovementService.reconcile(player);
         if (!CultivationMovementService.isMovementAllowed(player)) {
             Vec3 velocity = player.getDeltaMovement();

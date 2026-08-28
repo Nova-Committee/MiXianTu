@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,7 +18,10 @@ public record ItemIdCondition(Item item) implements ItemCondition, ItemMatcher {
     public static final MapCodec<ItemIdCondition> CODEC = BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").xmap(ItemIdCondition::new, ItemIdCondition::item);
 
     @Override
-    public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
+    public boolean test(ItemConditionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         return this.entries().stream().anyMatch(entry -> entry.matches(stack));
     }
 

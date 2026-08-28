@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+
 import com.iafenvoy.mxt.data.aura.SpiritStorageTooltipAppender;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,7 +18,10 @@ public enum SpiritStorageNotFullCondition implements ItemCondition {
     public static final MapCodec<SpiritStorageNotFullCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
+    public boolean test(ItemConditionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         return SpiritStorageTooltipAppender.resolveCharge(holder.level().registryAccess(), stack, context)
                 .map(charge -> charge.stored() < charge.capacity()).orElse(false);
     }

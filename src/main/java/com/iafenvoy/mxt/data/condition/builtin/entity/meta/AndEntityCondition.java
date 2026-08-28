@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity.meta;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -11,8 +13,10 @@ public record AndEntityCondition(List<EntityCondition> conditions) implements En
     public static final MapCodec<AndEntityCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndEntityCondition::new, AndEntityCondition::conditions);
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
-        return this.conditions.stream().allMatch(condition -> condition.test(entity, context));
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
+        return this.conditions.stream().allMatch(condition -> condition.test(entity, ctx));
     }
 
     @Override

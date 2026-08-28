@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -30,7 +32,9 @@ public record RemoveCursesByTagAction(List<Identifier> tags) implements EntityAc
     }
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         List<Holder<Curse>> matches = entity.getData(MxtAttachments.CURSE_HOLDER).instances().keySet().stream()
                 .filter(curse -> this.tags.stream().anyMatch(tag -> MxtDatapackRegistries.isTagged(MxtResourceKeys.CURSE, curse, tag)))
                 .toList();

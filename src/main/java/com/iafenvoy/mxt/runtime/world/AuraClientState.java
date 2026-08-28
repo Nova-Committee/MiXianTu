@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Client-side copy of the server-resolved aura at the local player's position. Stored chunk
- * fully resolved concentration and environmental concentration are kept as separate snapshots.
+ * Client-side copy of the server-resolved aura at the local player's position. Fully resolved
+ * actual concentration and environmental concentration are kept as separate snapshots.
  */
 public final class AuraClientState {
     private static final Identifier EMPTY = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
@@ -30,9 +30,9 @@ public final class AuraClientState {
         return current;
     }
 
-    public static void update(Identifier source, Map<Identifier, AuraPool> stored,
-                              Map<Identifier, AuraPool> sensed) {
-        target = new Snapshot(source, sanitize(stored), sanitize(sensed));
+    public static void update(Identifier source, Map<Identifier, AuraPool> actual,
+                              Map<Identifier, AuraPool> environment) {
+        target = new Snapshot(source, sanitize(actual), sanitize(environment));
     }
 
     private static Map<Identifier, AuraPool> sanitize(Map<Identifier, AuraPool> aura) {
@@ -48,41 +48,35 @@ public final class AuraClientState {
         return Map.copyOf(sanitized);
     }
 
-    public record Snapshot(Identifier source, Map<Identifier, AuraPool> stored,
-                           Map<Identifier, AuraPool> sensed) {
-        public double storedConcentration() {
-            return this.stored.values().stream().mapToDouble(AuraPool::amount).sum();
+    public record Snapshot(Identifier source, Map<Identifier, AuraPool> actual,
+                           Map<Identifier, AuraPool> environment) {
+        public double actualConcentration() {
+            return this.actual.values().stream().mapToDouble(AuraPool::amount).sum();
         }
 
-        public double storedMaximum() {
-            return this.stored.values().stream().mapToDouble(AuraPool::maximum).sum();
+        public double actualMaximum() {
+            return this.actual.values().stream().mapToDouble(AuraPool::maximum).sum();
         }
 
-        public double sensedConcentration() {
-            return this.sensed.values().stream().mapToDouble(AuraPool::amount).sum();
+        public double environmentConcentration() {
+            return this.environment.values().stream().mapToDouble(AuraPool::amount).sum();
         }
 
-        public double sensedMaximum() {
-            return this.sensed.values().stream().mapToDouble(AuraPool::maximum).sum();
+        public double environmentMaximum() {
+            return this.environment.values().stream().mapToDouble(AuraPool::maximum).sum();
         }
 
-        public AuraPool sensedPool(Identifier id) {
-            return this.sensed.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
-        }
-
-        /** Environmental template concentration, excluding stored and emitted aura. */
         public AuraPool environmentPool(Identifier id) {
-            return sensedPool(id);
+            return this.environment.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
         }
 
-        /** Fully resolved concentration synchronized by the server. */
         public AuraPool actualPool(Identifier id) {
-            return this.stored.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+            return this.actual.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
         }
 
         private static Snapshot interpolate(Snapshot from, Snapshot to, double factor) {
-            return new Snapshot(to.source, interpolateMap(from.stored, to.stored, factor),
-                    interpolateMap(from.sensed, to.sensed, factor));
+            return new Snapshot(to.source, interpolateMap(from.actual, to.actual, factor),
+                    interpolateMap(from.environment, to.environment, factor));
         }
 
         private static Map<Identifier, AuraPool> interpolateMap(Map<Identifier, AuraPool> from,

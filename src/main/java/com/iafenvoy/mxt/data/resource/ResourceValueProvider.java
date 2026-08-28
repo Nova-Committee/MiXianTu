@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.resource;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Constant;
@@ -17,6 +18,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.function.Function;
@@ -35,7 +37,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
      * override this overload; attachment-backed providers keep the original implementation.
      */
     default double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-        return resolve(entity.getData(com.iafenvoy.mxt.registry.MxtAttachments.RESOURCE_HOLDER), resource, context);
+        return this.resolve(entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context);
     }
 
     MapCodec<? extends ResourceValueProvider> codec();
@@ -100,7 +102,9 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         }
     }
 
-    /** Only the environmental template contribution, excluding chunk storage and emitters. */
+    /**
+     * Only the environmental template contribution, excluding chunk storage and emitters.
+     */
     enum EnvironmentConcentration implements ResourceValueProvider {
         INSTANCE;
         public static final MapCodec<EnvironmentConcentration> CODEC = MapCodec.unit(INSTANCE);
@@ -112,7 +116,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
 
         @Override
         public double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-            var id = HolderHelper.idOrNull(resource);
+            Identifier id = HolderHelper.idOrNull(resource);
             if (id == null) return 0.0D;
             if (entity.level().isClientSide()) {
                 return AuraClientState.current().environmentPool(id).amount();
@@ -126,7 +130,9 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         }
     }
 
-    /** The complete resolved concentration, including stored and block/formation contributions. */
+    /**
+     * The complete resolved concentration, including stored and block/formation contributions.
+     */
     enum ActualConcentration implements ResourceValueProvider {
         INSTANCE;
         public static final MapCodec<ActualConcentration> CODEC = MapCodec.unit(INSTANCE);
@@ -138,7 +144,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
 
         @Override
         public double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-            var id = HolderHelper.idOrNull(resource);
+            Identifier id = HolderHelper.idOrNull(resource);
             if (id == null) return 0.0D;
             if (entity.level().isClientSide()) {
                 return AuraClientState.current().actualPool(id).amount();

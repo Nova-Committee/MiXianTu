@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.damage;
 
+import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
+
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -14,7 +16,10 @@ public record DamageAmountRangeCondition(NumberProvider min, NumberProvider max)
     ).apply(i, DamageAmountRangeCondition::new));
 
     @Override
-    public boolean test(DamageSource source, float amount, FormulaContext context) {
+    public boolean test(DamageConditionContext ctx) {
+        DamageSource source = ctx.source();
+        float amount = ctx.amount();
+        FormulaContext context = ctx.formula();
         double min = this.min.evaluate(context);
         double max = this.max.evaluate(context);
         return Double.isFinite(min) && Double.isFinite(max) && min <= max && amount >= min && amount <= max;

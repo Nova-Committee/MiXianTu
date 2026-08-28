@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -17,7 +19,10 @@ public record BonemealAction(boolean effect) implements BlockAction {
     public static final MapCodec<BonemealAction> CODEC = Codec.BOOL.optionalFieldOf("effect", true).xmap(BonemealAction::new, BonemealAction::effect);
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         if (BoneMealItem.growCrop(ItemStack.EMPTY, level, pos) && this.effect && !level.isClientSide())
             level.globalLevelEvent(LevelEvent.PARTICLES_AND_SOUND_PLANT_GROWTH, pos, 0);
     }

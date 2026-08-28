@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -18,8 +20,10 @@ public record PassengerCondition(Optional<BiEntityCondition> biEntityCondition,
     ).apply(i, PassengerCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
-        long matches = entity.getPassengers().stream().filter(passenger -> this.biEntityCondition.map(condition -> condition.test(passenger, entity, context)).orElse(true)).count();
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
+        long matches = entity.getPassengers().stream().filter(passenger -> this.biEntityCondition.map(condition -> condition.test(passenger, entity, ctx)).orElse(true)).count();
         return this.comparison.compare(matches);
     }
 

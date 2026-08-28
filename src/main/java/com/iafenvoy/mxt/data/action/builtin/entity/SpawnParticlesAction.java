@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -31,12 +33,14 @@ public record SpawnParticlesAction(ParticleOptions particle, Optional<BiEntityCo
     ).apply(i, SpawnParticlesAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         if (!(entity.level() instanceof ServerLevel level)) return;
         Vec3 delta = this.spread.multiply(entity.getBbWidth(), entity.getEyeHeight(), entity.getBbWidth());
         Vec3 position = entity.position().add(this.offsetX, this.offsetY, this.offsetZ);
         for (ServerPlayer player : level.players()) {
-            if (this.biEntityCondition.isEmpty() || this.biEntityCondition.get().test(entity, player, context))
+            if (this.biEntityCondition.isEmpty() || this.biEntityCondition.get().test(entity, player, ctx))
                 level.sendParticles(player, this.particle, this.force, false, position.x, position.y, position.z, this.count, delta.x, delta.y, delta.z, this.speed);
         }
     }

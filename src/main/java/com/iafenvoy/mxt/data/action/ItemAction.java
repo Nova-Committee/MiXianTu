@@ -1,13 +1,15 @@
 package com.iafenvoy.mxt.data.action;
 
 import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+import com.iafenvoy.mxt.data.context.Context;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 
 import java.util.List;
 import java.util.function.Function;
@@ -24,7 +26,15 @@ public interface ItemAction {
             ) ? Either.right(actions) : Either.left(action)
     );
 
-    void execute(Entity holder, ItemStack stack, FormulaContext context);
+    void execute(ItemActionContext context);
+
+    default void execute(Entity holder, ItemStack stack, Context parent) {
+        this.execute(parent.copyTo(new ItemActionContext(holder, stack, parent.formula())));
+    }
+
+    default void execute(Entity holder, ItemStack stack, FormulaContext formula) {
+        this.execute(new ItemActionContext(holder, stack, formula));
+    }
 
     MapCodec<? extends ItemAction> codec();
 }

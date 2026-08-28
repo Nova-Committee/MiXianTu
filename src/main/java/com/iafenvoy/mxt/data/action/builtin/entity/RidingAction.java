@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
@@ -24,13 +26,15 @@ public record RidingAction(Optional<EntityAction> action, Optional<BiEntityActio
     ).apply(i, RidingAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         Entity vehicle = entity.getVehicle();
         while (vehicle != null) {
-            boolean matches = this.biEntityCondition.isEmpty() || this.biEntityCondition.get().test(entity, vehicle, context);
+            boolean matches = this.biEntityCondition.isEmpty() || this.biEntityCondition.get().test(entity, vehicle, ctx);
             if (matches) {
-                if (this.action.isPresent()) this.action.get().execute(vehicle, context);
-                if (this.biEntityAction.isPresent()) this.biEntityAction.get().execute(entity, vehicle, context);
+                if (this.action.isPresent()) this.action.get().execute(vehicle, ctx);
+                if (this.biEntityAction.isPresent()) this.biEntityAction.get().execute(entity, vehicle, ctx);
             }
             if (!this.recursive) return;
             vehicle = vehicle.getVehicle();

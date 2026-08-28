@@ -35,7 +35,9 @@ public interface ResourceBarContext {
         SELF_HUD, TARGET_OVERLAY, BOSS_OVERLAY
     }
 
-    /** Common extraction for contexts backed by an entity's resource attachment. */
+    /**
+     * Common extraction for contexts backed by an entity's resource attachment.
+     */
     static Optional<Values> extractStored(LivingEntity entity, Holder<Resource> resource) {
         ResourceHolderAttachment holder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         if (!holder.contains(resource)) return Optional.empty();

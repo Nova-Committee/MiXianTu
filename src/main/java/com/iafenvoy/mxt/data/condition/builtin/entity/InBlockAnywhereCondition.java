@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -18,13 +20,15 @@ public record InBlockAnywhereCondition(BlockCondition blockCondition,
     ).apply(i, InBlockAnywhereCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         AABB bounds = entity.getBoundingBox();
         BlockPos min = BlockPos.containing(bounds.minX + 0.001D, bounds.minY + 0.001D, bounds.minZ + 0.001D);
         BlockPos max = BlockPos.containing(bounds.maxX - 0.001D, bounds.maxY - 0.001D, bounds.maxZ - 0.001D);
         int matches = 0;
         for (BlockPos pos : BlockPos.betweenClosed(min, max))
-            if (this.blockCondition.test(entity.level(), pos, context)) matches++;
+            if (this.blockCondition.test(entity.level(), pos, ctx)) matches++;
         return this.comparison.compare(matches);
     }
 

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -19,9 +21,11 @@ public record EquippedItemAction(EquipmentSlot slot, ItemAction action) implemen
     ).apply(i, EquippedItemAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         if (entity instanceof LivingEntity living)
-            this.action.execute(living, living.getItemBySlot(this.slot), context);
+            this.action.execute(living, living.getItemBySlot(this.slot), ctx);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,7 +18,10 @@ public record ArtifactEnergyRangeItemCondition(NumberProvider min, NumberProvide
     ).apply(i, ArtifactEnergyRangeItemCondition::new));
 
     @Override
-    public boolean test(Entity holder, ItemStack stack, FormulaContext context) {
+    public boolean test(ItemConditionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         double min = this.min.evaluate(context);
         double max = this.max.evaluate(context);
         double energy = ArtifactService.state(stack).spiritEnergy();

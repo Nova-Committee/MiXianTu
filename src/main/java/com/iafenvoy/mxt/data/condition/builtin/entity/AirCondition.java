@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -10,7 +12,9 @@ public record AirCondition(Comparison comparison) implements EntityCondition {
     public static final MapCodec<AirCondition> CODEC = Comparison.CODEC.xmap(AirCondition::new, AirCondition::comparison);
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         return this.comparison.compare(entity.getAirSupply());
     }
 

@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.compat.kubejs.callback;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
 
 import java.util.function.BiPredicate;
 import java.util.function.BooleanSupplier;
@@ -12,23 +11,13 @@ import java.util.function.BooleanSupplier;
  * Callback storage for direct-ID gameplay registries.
  */
 public final class MxtJsGameplayCallbacks {
-    private static volatile BiPredicate<Mob, FormulaContext> creatureSpawn;
     private static volatile BiPredicate<LivingEntity, FormulaContext> cultivation;
 
     private MxtJsGameplayCallbacks() {
     }
 
-    public static void registerCreatureSpawn(BiPredicate<Mob, FormulaContext> callback) {
-        creatureSpawn = callback;
-    }
-
     public static void registerCultivation(BiPredicate<LivingEntity, FormulaContext> callback) {
         cultivation = callback;
-    }
-
-    public static boolean testCreatureSpawn(Mob mob, FormulaContext context) {
-        BiPredicate<Mob, FormulaContext> callback = creatureSpawn;
-        return callback == null ? unknown("creature spawn condition") : test("creature spawn condition", () -> callback.test(mob, context));
     }
 
     public static boolean testCultivation(LivingEntity entity, FormulaContext context) {
@@ -37,7 +26,6 @@ public final class MxtJsGameplayCallbacks {
     }
 
     public static void clear() {
-        creatureSpawn = null;
         cultivation = null;
     }
 

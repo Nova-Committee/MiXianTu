@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -29,14 +31,16 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
     ).apply(i, ExplodeAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         Level level = entity.level();
         if (level.isClientSide() || !Float.isFinite(this.power) || this.power < 0.0F) return;
         ExplosionDamageCalculator calculator = this.indestructible.<ExplosionDamageCalculator>map(condition -> new ExplosionDamageCalculator() {
             @Override
             public @NonNull Optional<Float> getBlockExplosionResistance(@NonNull Explosion explosion, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull BlockState state, @NonNull FluidState fluid) {
                 Optional<Float> original = super.getBlockExplosionResistance(explosion, level, pos, state, fluid);
-                return condition.test(entity.level(), pos, context) ? Optional.of(Math.max(original.orElse(0.0F), 3_600_000.0F)) : original;
+                return condition.test(entity.level(), pos, ctx) ? Optional.of(Math.max(original.orElse(0.0F), 3_600_000.0F)) : original;
             }
         }).orElseGet(ExplosionDamageCalculator::new);
         level.explode(entity, level.damageSources().explosion(entity, null), calculator, entity.position(), this.power, this.createFire, this.interaction);

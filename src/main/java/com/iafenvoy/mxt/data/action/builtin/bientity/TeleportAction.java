@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity;
 
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -21,7 +23,10 @@ public record TeleportAction(boolean teleportActor, boolean teleportTarget, bool
     ).apply(i, TeleportAction::new));
 
     @Override
-    public void execute(Entity actor, Entity target, FormulaContext context) {
+    public void execute(BiEntityActionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
         if (actor.level().isClientSide() || (!this.teleportActor && !this.teleportTarget) || !(actor.level() instanceof ServerLevel actorLevel) || !(target.level() instanceof ServerLevel targetLevel))
             return;
         Position actorPosition = Position.of(actorLevel, actor);

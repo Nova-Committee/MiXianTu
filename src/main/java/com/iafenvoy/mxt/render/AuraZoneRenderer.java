@@ -57,7 +57,7 @@ public final class AuraZoneRenderer {
         if (entity == null) return Optional.empty();
         Snapshot snapshot = AuraClientState.current();
         Registry<AuraZone> zones = entity.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
-        return zones.getOptional(snapshot.source()).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.sensedConcentration(),
+        return zones.getOptional(snapshot.source()).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.environmentConcentration(),
                 zone.aura().values().stream().mapToDouble(AuraValue::amount).sum(), resolveColor(zone, snapshot)));
     }
 
@@ -68,7 +68,7 @@ public final class AuraZoneRenderer {
         double blue = 0.0D;
         boolean hasExplicitColor = false;
         for (Entry<Holder<Resource>, AuraValue> entry : zone.aura().entrySet()) {
-            double amount = snapshot.sensedPool(HolderHelper.id(entry.getKey())).amount();
+            double amount = snapshot.environmentPool(HolderHelper.id(entry.getKey())).amount();
             if (!Double.isFinite(amount) || amount <= 0.0D) continue;
             int color = entry.getValue().color();
             if (color == 0xFFFFFF) {

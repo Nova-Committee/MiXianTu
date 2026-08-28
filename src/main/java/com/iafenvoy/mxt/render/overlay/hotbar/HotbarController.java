@@ -153,14 +153,18 @@ public final class HotbarController {
         return id != null && id.equals(mode);
     }
 
-    /** Opens a registered mode without requiring a dedicated key mapping. */
+    /**
+     * Opens a registered mode without requiring a dedicated key mapping.
+     */
     public static boolean open(Identifier id) {
         if (HotbarModeRegistry.get(id).isEmpty()) return false;
         openMode(id);
         return true;
     }
 
-    /** Closes the currently active mode when it matches the supplied ID. */
+    /**
+     * Closes the currently active mode when it matches the supplied ID.
+     */
     public static boolean close(Identifier id) {
         if (!isMode(id)) return false;
         closeMode(id);

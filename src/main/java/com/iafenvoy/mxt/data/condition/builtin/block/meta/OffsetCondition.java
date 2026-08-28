@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.block.meta;
 
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -17,8 +19,11 @@ public record OffsetCondition(BlockCondition condition, int x, int y, int z) imp
     ).apply(i, OffsetCondition::new));
 
     @Override
-    public boolean test(Level level, BlockPos pos, FormulaContext context) {
-        return this.condition.test(level, pos.offset(this.x, this.y, this.z), context);
+    public boolean test(BlockConditionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
+        return this.condition.test(level, pos.offset(this.x, this.y, this.z), ctx);
     }
 
     @Override

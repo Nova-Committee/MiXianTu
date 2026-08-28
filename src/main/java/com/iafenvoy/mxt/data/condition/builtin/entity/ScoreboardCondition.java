@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -21,7 +23,9 @@ public record ScoreboardCondition(Optional<String> name, String objective,
     ).apply(i, ScoreboardCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         ScoreHolder holder = ScoreHolder.forNameOnly(this.name.orElse(entity.getScoreboardName()));
         return Optional.ofNullable(entity.level().getScoreboard().getObjective(this.objective))
                 .map(objective -> entity.level().getScoreboard().getPlayerScoreInfo(holder, objective))

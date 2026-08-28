@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -20,10 +22,12 @@ public record EquippedItemCondition(EquipmentSlot equipmentSlot,
     ).apply(i, EquippedItemCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         if (!(entity instanceof LivingEntity living)) return false;
         ItemStack stack = living.getItemBySlot(this.equipmentSlot);
-        return !stack.isEmpty() && this.itemCondition.map(condition -> condition.test(entity, stack, context)).orElse(true);
+        return !stack.isEmpty() && this.itemCondition.map(condition -> condition.test(entity, stack, ctx)).orElse(true);
     }
 
     @Override

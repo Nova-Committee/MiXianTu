@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -117,10 +116,10 @@ public enum ResourceBarOverlay implements GuiLayer {
         Snapshot snapshot = AuraClientState.current();
         ClientHud hud = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE)
                 .getOptional(snapshot.source()).map(AuraZone::clientHud).orElse(ClientHud.NONE);
-        hud.storedAura().ifPresent(bar -> addAuraEntry(result, "stored_aura", 0, bar, snapshot.storedConcentration(),
-                resolvedMaximum(snapshot.storedMaximum(), bar.maximum())));
+        hud.storedAura().ifPresent(bar -> addAuraEntry(result, "stored_aura", 0, bar, snapshot.actualConcentration(),
+                resolvedMaximum(snapshot.actualMaximum(), bar.maximum())));
         hud.sensedConcentration().ifPresent(bar -> addAuraEntry(result, "sensed_concentration", 1, bar,
-                snapshot.sensedConcentration(), bar.maximum()));
+                snapshot.environmentConcentration(), bar.maximum()));
     }
 
     private static void addAuraEntry(List<ResourceBarRenderState> result, String id, int index, Bar definition,

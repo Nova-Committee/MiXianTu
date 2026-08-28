@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity.meta;
 
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -10,8 +12,11 @@ public record TargetCondition(EntityCondition condition) implements BiEntityCond
     public static final MapCodec<TargetCondition> CODEC = EntityCondition.CODEC.fieldOf("condition").xmap(TargetCondition::new, TargetCondition::condition);
 
     @Override
-    public boolean test(Entity actor, Entity target, FormulaContext context) {
-        return this.condition.test(target, context);
+    public boolean test(BiEntityConditionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
+        return this.condition.test(target, ctx);
     }
 
     @Override

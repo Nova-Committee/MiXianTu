@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -12,7 +14,10 @@ public record CooldownAction(int ticks) implements ItemAction {
     public static final MapCodec<CooldownAction> CODEC = Codec.INT.fieldOf("ticks").xmap(CooldownAction::new, CooldownAction::ticks);
 
     @Override
-    public void execute(Entity holder, ItemStack stack, FormulaContext context) {
+    public void execute(ItemActionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         if (holder instanceof Player player && !stack.isEmpty() && this.ticks > 0)
             player.getCooldowns().addCooldown(stack, this.ticks);
     }

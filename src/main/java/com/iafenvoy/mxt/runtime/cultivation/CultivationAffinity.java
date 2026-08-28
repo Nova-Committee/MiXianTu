@@ -15,7 +15,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.resources.Identifier;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;

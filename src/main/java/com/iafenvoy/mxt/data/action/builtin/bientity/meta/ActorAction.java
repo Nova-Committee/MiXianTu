@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity.meta;
 
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -13,8 +15,11 @@ public record ActorAction(EntityAction action) implements BiEntityAction {
     public static final MapCodec<ActorAction> CODEC = EntityAction.CODEC.fieldOf("action").xmap(ActorAction::new, ActorAction::action);
 
     @Override
-    public void execute(Entity actor, Entity target, FormulaContext context) {
-        this.action.execute(actor, context);
+    public void execute(BiEntityActionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
+        this.action.execute(actor, ctx);
     }
 
     @Override

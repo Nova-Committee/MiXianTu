@@ -6,10 +6,13 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 
-/** Synchronizes the server-authoritative cultivation movement rule through vanilla attributes. */
+/**
+ * Synchronizes the server-authoritative cultivation movement rule through vanilla attributes.
+ */
 public final class CultivationMovementService {
     public static final Identifier MODIFIER_ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "cultivation/movement_speed");
     private static final double SPEED_MULTIPLIER = -0.75D;
@@ -17,7 +20,9 @@ public final class CultivationMovementService {
     private CultivationMovementService() {
     }
 
-    /** Applies or removes the temporary movement modifier from the server's current rule. */
+    /**
+     * Applies or removes the temporary movement modifier from the server's current rule.
+     */
     public static void reconcile(Player player) {
         AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (movementSpeed == null) return;
@@ -26,9 +31,9 @@ public final class CultivationMovementService {
         if (shouldAllowMovement) {
             AttributeModifier current = movementSpeed.getModifier(MODIFIER_ID);
             if (current == null || current.amount() != SPEED_MULTIPLIER
-                    || current.operation() != AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL) {
+                    || current.operation() != Operation.ADD_MULTIPLIED_TOTAL) {
                 movementSpeed.addOrUpdateTransientModifier(new AttributeModifier(MODIFIER_ID, SPEED_MULTIPLIER,
-                        AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+                        Operation.ADD_MULTIPLIED_TOTAL));
             }
         } else {
             movementSpeed.removeModifier(MODIFIER_ID);

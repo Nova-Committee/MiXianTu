@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity;
 
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -25,7 +27,10 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
     ).apply(i, TransferResourceBiEntityAction::new));
 
     @Override
-    public void execute(Entity actor, Entity target, FormulaContext context) {
+    public void execute(BiEntityActionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
         double requested = this.amount.evaluate(context);
         if (!Double.isFinite(requested) || requested <= 0.0D) return;
         FormulaContext targetContext = target instanceof LivingEntity living

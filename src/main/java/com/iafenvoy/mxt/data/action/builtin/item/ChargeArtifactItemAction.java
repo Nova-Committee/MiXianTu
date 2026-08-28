@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,7 +18,10 @@ public record ChargeArtifactItemAction(NumberProvider amount, NumberProvider cap
     ).apply(i, ChargeArtifactItemAction::new));
 
     @Override
-    public void execute(Entity holder, ItemStack stack, FormulaContext context) {
+    public void execute(ItemActionContext ctx) {
+        Entity holder = ctx.holder();
+        ItemStack stack = ctx.stack();
+        FormulaContext context = ctx.formula();
         ArtifactService.addEnergy(stack, this.amount.evaluate(context), this.capacity.evaluate(context));
     }
 

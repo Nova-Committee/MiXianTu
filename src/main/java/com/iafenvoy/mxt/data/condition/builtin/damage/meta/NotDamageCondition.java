@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.damage.meta;
 
+import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
+
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -15,8 +17,11 @@ public record NotDamageCondition(DamageCondition condition) implements DamageCon
     ).apply(i, NotDamageCondition::new));
 
     @Override
-    public boolean test(DamageSource source, float amount, FormulaContext context) {
-        return !this.condition.test(source, amount, context);
+    public boolean test(DamageConditionContext ctx) {
+        DamageSource source = ctx.source();
+        float amount = ctx.amount();
+        FormulaContext context = ctx.formula();
+        return !this.condition.test(source, amount, ctx);
     }
 
     @Override

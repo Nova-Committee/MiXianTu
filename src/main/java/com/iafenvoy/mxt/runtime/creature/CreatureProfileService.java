@@ -18,7 +18,7 @@ import java.util.Comparator;
 import java.util.Optional;
 
 /**
- * Selects and persists a tagged creature profile. Spawn conditions remain a caller-provided policy hook.
+ * Selects and persists a tagged creature profile after evaluating its entity condition.
  */
 public final class CreatureProfileService {
     private CreatureProfileService() {
@@ -31,7 +31,7 @@ public final class CreatureProfileService {
     }
 
     public static boolean apply(Mob creature, Identifier id, CreatureProfile definition, FormulaContext context) {
-        if (!definition.spawnConditions().stream().allMatch(condition -> condition.test(creature, context)))
+        if (!definition.condition().test(creature, context))
             return false;
         AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
         if (!definition.minimumAura().entrySet().stream().allMatch(entry -> {

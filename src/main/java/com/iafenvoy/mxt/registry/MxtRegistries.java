@@ -17,7 +17,6 @@ import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
-import com.iafenvoy.mxt.runtime.creature.CreatureSpawnCondition;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationCondition;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -61,7 +60,6 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = new DefaultedMappedRegistry<>("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends Badge>> BADGE_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.BADGE_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = new DefaultedMappedRegistry<>("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE, Lifecycle.stable(), false);
-    public static final DefaultedRegistry<CreatureSpawnCondition> CREATURE_SPAWN_CONDITION = new DefaultedMappedRegistry<>("always", MxtResourceKeys.CREATURE_SPAWN_CONDITION, Lifecycle.stable(), false);
     public static final DefaultedRegistry<CultivationCondition> CULTIVATION_CONDITION = new DefaultedMappedRegistry<>("always", MxtResourceKeys.CULTIVATION_CONDITION, Lifecycle.stable(), false);
 
     @SubscribeEvent
@@ -91,7 +89,6 @@ public final class MxtRegistries {
         event.register(RESOURCE_BAR_VISIBILITY_TYPE);
         event.register(BADGE_TYPE);
         event.register(ITEM_MATCHER_ENTRY_TYPE);
-        event.register(CREATURE_SPAWN_CONDITION);
         event.register(CULTIVATION_CONDITION);
     }
 

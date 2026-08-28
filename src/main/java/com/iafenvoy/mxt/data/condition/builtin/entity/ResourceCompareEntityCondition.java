@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -17,7 +19,9 @@ public record ResourceCompareEntityCondition(Holder<Resource> resource,
     ).apply(i, ResourceCompareEntityCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         return entity.getData(MxtAttachments.RESOURCE_HOLDER).get(this.resource) >= this.min.evaluate(context);
     }
 

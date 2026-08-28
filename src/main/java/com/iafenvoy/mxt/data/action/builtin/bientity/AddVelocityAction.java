@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity;
 
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Space;
@@ -29,7 +31,10 @@ public record AddVelocityAction(float x, float y, float z, Reference reference, 
     ).apply(i, AddVelocityAction::new));
 
     @Override
-    public void execute(Entity actor, Entity target, FormulaContext context) {
+    public void execute(BiEntityActionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
         if ((target.level().isClientSide() && !this.client) || (!target.level().isClientSide() && !this.server)) return;
         Vector3f value = new Vector3f(this.x, this.y, this.z);
         Space.transformVectorToBase(this.reference.apply(actor, target), value, actor.getYRot(), true);

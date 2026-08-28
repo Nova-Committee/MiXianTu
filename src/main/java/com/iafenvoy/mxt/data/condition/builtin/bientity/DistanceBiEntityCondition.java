@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -10,7 +12,10 @@ public record DistanceBiEntityCondition(NumberProvider maximum) implements BiEnt
     public static final MapCodec<DistanceBiEntityCondition> CODEC = NumberProvider.CODEC.fieldOf("maximum").xmap(DistanceBiEntityCondition::new, DistanceBiEntityCondition::maximum);
 
     @Override
-    public boolean test(Entity actor, Entity target, FormulaContext context) {
+    public boolean test(BiEntityConditionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
         double maximum = this.maximum.evaluate(context);
         return Double.isFinite(maximum) && maximum >= 0.0D && actor.distanceToSqr(target) <= maximum * maximum;
     }

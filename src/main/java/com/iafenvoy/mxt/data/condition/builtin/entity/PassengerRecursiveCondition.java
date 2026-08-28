@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.bientity.meta.ConstantCondition;
@@ -20,10 +22,12 @@ public record PassengerRecursiveCondition(BiEntityCondition bientityCondition,
     ).apply(i, PassengerRecursiveCondition::new));
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         long matches = entity.getPassengers().stream()
                 .flatMap(Entity::getPassengersAndSelf)
-                .filter(passenger -> this.bientityCondition.test(passenger, entity, context))
+                .filter(passenger -> this.bientityCondition.test(passenger, entity, ctx))
                 .count();
         return this.comparison.compare(matches);
     }

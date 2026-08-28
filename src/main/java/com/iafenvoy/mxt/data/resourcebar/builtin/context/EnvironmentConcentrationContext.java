@@ -13,7 +13,9 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
 
-/** Resource-bar context for the environmental aura template only. */
+/**
+ * Resource-bar context for the environmental aura template only.
+ */
 public enum EnvironmentConcentrationContext implements ResourceBarContext {
     INSTANCE;
 

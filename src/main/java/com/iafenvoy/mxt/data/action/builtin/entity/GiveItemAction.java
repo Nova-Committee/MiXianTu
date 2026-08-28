@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -21,10 +23,12 @@ public record GiveItemAction(ItemStack stack, Optional<ItemAction> itemAction,
     ).apply(i, GiveItemAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         if (!(entity instanceof Player player)) return;
         ItemStack result = this.stack.copy();
-        this.itemAction.ifPresent(action -> action.execute(player, result, context));
+        this.itemAction.ifPresent(action -> action.execute(player, result, ctx));
         if (result.isEmpty()) return;
         if (this.preferredSlot.isPresent() && player.getItemBySlot(this.preferredSlot.get()).isEmpty())
             player.setItemSlot(this.preferredSlot.get(), result);

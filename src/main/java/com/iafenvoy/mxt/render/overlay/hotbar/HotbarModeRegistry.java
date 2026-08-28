@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtKeyMappings.KeyMappingHolder;
 import com.iafenvoy.mxt.render.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.core.Holder.Reference;
@@ -16,6 +17,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jetbrains.annotations.Nullable;
@@ -41,8 +43,8 @@ public final class HotbarModeRegistry {
 
     private static final Category CATEGORY = new Category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "hotbar"));
     private static final Map<Identifier, ModeEntry> MODES = new LinkedHashMap<>();
-    private static final KeyMappingHolder ABILITY_KEY = KeyMappingHolder.standalone(new KeyMapping("key.mxt.ability_menu", InputConstants.Type.KEYSYM, InputConstants.KEY_LALT, CATEGORY));
-    private static final KeyMappingHolder SPIRIT_KEY = KeyMappingHolder.standalone(new KeyMapping("key.mxt.spirit_burst", InputConstants.Type.KEYSYM, InputConstants.KEY_V, CATEGORY));
+    private static final KeyMappingHolder ABILITY_KEY = KeyMappingHolder.standalone(new KeyMapping("key.mxt.ability_menu", Type.KEYSYM, InputConstants.KEY_LALT, CATEGORY));
+    private static final KeyMappingHolder SPIRIT_KEY = KeyMappingHolder.standalone(new KeyMapping("key.mxt.spirit_burst", Type.KEYSYM, InputConstants.KEY_V, CATEGORY));
 
     static {
         register(ABILITY, player -> {
@@ -109,7 +111,7 @@ public final class HotbarModeRegistry {
     }
 
     @SubscribeEvent
-    public static void tickKeyMappings(ClientTickEvent.Post event) {
+    public static void tickKeyMappings(Post event) {
         MODES.values().stream().map(ModeEntry::keyMapping).filter(Objects::nonNull)
                 .forEach(KeyMappingHolder::tick);
     }

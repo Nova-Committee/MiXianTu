@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.block;
 
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
+
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -28,7 +30,10 @@ public record LightLevelCondition(Optional<LightLayer> lightType, Comparison com
     ).apply(i, LightLevelCondition::new));
 
     @Override
-    public boolean test(Level level, BlockPos pos, FormulaContext context) {
+    public boolean test(BlockConditionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         int light = this.lightType.map(type -> level.getBrightness(type, pos)).orElseGet(() -> level.getMaxLocalRawBrightness(pos));
         return this.comparison.compare(light);
     }

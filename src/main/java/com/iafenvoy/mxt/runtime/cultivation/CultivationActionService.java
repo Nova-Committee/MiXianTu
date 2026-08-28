@@ -283,9 +283,11 @@ public final class CultivationActionService {
     public static boolean canCultivateInEnvironment(SpiritAttachment spirit, LivingEntity entity,
                                                     AuraResult aura, FormulaContext context) {
         if (aura.suppressCultivate() || !realmCultivateCondition(spirit, entity, context)) return false;
-        if (!(aura.cultivateCondition() instanceof AuraRangeEntityCondition range))
+        if (!(aura.cultivateCondition() instanceof AuraRangeEntityCondition(
+                Map<Holder<Resource>, AuraRequirement> aura1
+        )))
             return aura.cultivateCondition().test(entity, context);
-        boolean anyEligible = range.aura().isEmpty() || range.aura().entrySet().stream()
+        boolean anyEligible = aura1.isEmpty() || aura1.entrySet().stream()
                 .anyMatch(entry -> entry.getValue().test(aura.pool(entry.getKey()).amount(), context));
         return anyEligible || !MxtServerConfig.forbidCultivationWithoutEligibleAura();
     }

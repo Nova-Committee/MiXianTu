@@ -19,7 +19,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
- * Applies creature profiles once on server-side spawn and materializes an optional inner core at death.
+ * Applies creature profiles once when a mob joins the server level and materializes an optional inner core at death.
  */
 @EventBusSubscriber
 public final class CreatureProfileEventBridge {

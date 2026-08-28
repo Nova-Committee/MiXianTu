@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.block;
 
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
@@ -12,7 +14,10 @@ public record SetBlockAction(Block block) implements BlockAction {
     public static final MapCodec<SetBlockAction> CODEC = BuiltInRegistries.BLOCK.byNameCodec().fieldOf("block").xmap(SetBlockAction::new, SetBlockAction::block);
 
     @Override
-    public void execute(Level level, BlockPos pos, FormulaContext context) {
+    public void execute(BlockActionContext ctx) {
+        Level level = ctx.level();
+        BlockPos pos = ctx.pos();
+        FormulaContext context = ctx.formula();
         // Runtime actions must never load or mutate remote chunks, especially while world generation is active.
         if (level.isClientSide() || !level.hasChunkAt(pos)) return;
         level.setBlock(pos, this.block.defaultBlockState(), Block.UPDATE_ALL);

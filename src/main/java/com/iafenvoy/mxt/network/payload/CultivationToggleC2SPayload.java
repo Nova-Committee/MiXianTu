@@ -7,7 +7,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 
-/** Requests a server-authoritative cultivation-mode toggle. */
+/**
+ * Requests a server-authoritative cultivation-mode toggle.
+ */
 public enum CultivationToggleC2SPayload implements CustomPacketPayload {
     INSTANCE;
 

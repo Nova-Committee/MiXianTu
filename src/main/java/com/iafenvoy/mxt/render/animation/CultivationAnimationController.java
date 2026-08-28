@@ -19,13 +19,16 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** Client PAL layer and input suppression for the synchronized cultivation mode. */
+/**
+ * Client PAL layer and input suppression for the synchronized cultivation mode.
+ */
 @EventBusSubscriber(Dist.CLIENT)
 public final class CultivationAnimationController extends PlayerAnimationController {
     private static final Identifier LAYER_ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "cultivation");
@@ -51,7 +54,7 @@ public final class CultivationAnimationController extends PlayerAnimationControl
     }
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick(Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
             LAST_MODE.clear();

@@ -1,13 +1,11 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
-import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService.State;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService.TickResult;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import net.minecraft.core.Holder;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;

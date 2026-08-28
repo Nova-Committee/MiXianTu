@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
@@ -25,12 +27,14 @@ public record PassengerAction(Optional<EntityAction> action, Optional<BiEntityAc
     ).apply(i, PassengerAction::new));
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         for (Entity passenger : this.recursive ? entity.getIndirectPassengers() : entity.getPassengers()) {
-            if (this.biEntityCondition.isPresent() && !this.biEntityCondition.get().test(entity, passenger, context))
+            if (this.biEntityCondition.isPresent() && !this.biEntityCondition.get().test(entity, passenger, ctx))
                 continue;
-            this.action.ifPresent(action -> action.execute(passenger, context));
-            this.biEntityAction.ifPresent(action -> action.execute(entity, passenger, context));
+            this.action.ifPresent(action -> action.execute(passenger, ctx));
+            this.biEntityAction.ifPresent(action -> action.execute(entity, passenger, ctx));
         }
     }
 

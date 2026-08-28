@@ -12,6 +12,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
@@ -44,7 +45,7 @@ public final class MxtKeyMappings {
     }
 
     @SubscribeEvent
-    public static void tick(ClientTickEvent.Post event) {
+    public static void tick(Post event) {
         KeyMappingHolder.HOLDERS.forEach(KeyMappingHolder::tick);
     }
 
@@ -54,7 +55,7 @@ public final class MxtKeyMappings {
         private final List<Consumer<Boolean>> callbacks = new ArrayList<>();
         private boolean pressed;
 
-        public KeyMappingHolder(String name, InputConstants.Type type, int value, Category category) {
+        public KeyMappingHolder(String name, Type type, int value, Category category) {
             this(new KeyMapping(name, type, value, category));
         }
 

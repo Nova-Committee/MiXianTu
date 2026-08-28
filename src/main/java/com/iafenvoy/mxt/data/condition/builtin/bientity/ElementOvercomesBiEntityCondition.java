@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
+
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.attachment.SpiritAttachment;
@@ -25,7 +27,10 @@ public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
     public static final MapCodec<ElementOvercomesBiEntityCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(Entity actor, Entity target, FormulaContext context) {
+    public boolean test(BiEntityConditionContext ctx) {
+        Entity actor = ctx.actor();
+        Entity target = ctx.target();
+        FormulaContext context = ctx.formula();
         Set<Holder<Element>> actorElements = elements(actor.getData(MxtAttachments.SPIRIT_DATA));
         Set<Holder<Element>> targetElements = elements(target.getData(MxtAttachments.SPIRIT_DATA));
         return actorElements.stream().anyMatch(element -> targetElements.stream()

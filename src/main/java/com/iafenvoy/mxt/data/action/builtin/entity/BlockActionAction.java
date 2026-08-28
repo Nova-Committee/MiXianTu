@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -13,8 +15,10 @@ public record BlockActionAction(BlockAction action) implements EntityAction {
     public static final MapCodec<BlockActionAction> CODEC = BlockAction.CODEC.fieldOf("action").xmap(BlockActionAction::new, BlockActionAction::action);
 
     @Override
-    public void execute(Entity entity, FormulaContext context) {
-        this.action.execute(entity.level(), entity.blockPosition(), context);
+    public void execute(EntityActionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
+        this.action.execute(entity.level(), entity.blockPosition(), ctx);
     }
 
     @Override

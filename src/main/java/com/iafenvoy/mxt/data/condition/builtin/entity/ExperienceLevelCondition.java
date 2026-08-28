@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -11,7 +13,9 @@ public record ExperienceLevelCondition(Comparison comparison) implements EntityC
     public static final MapCodec<ExperienceLevelCondition> CODEC = Comparison.CODEC.xmap(ExperienceLevelCondition::new, ExperienceLevelCondition::comparison);
 
     @Override
-    public boolean test(Entity entity, FormulaContext context) {
+    public boolean test(EntityConditionContext ctx) {
+        Entity entity = ctx.entity();
+        FormulaContext context = ctx.formula();
         return entity instanceof Player player && this.comparison.compare(player.experienceLevel);
     }
 
