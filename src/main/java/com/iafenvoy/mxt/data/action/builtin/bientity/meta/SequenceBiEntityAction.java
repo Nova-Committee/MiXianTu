@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ public record SequenceBiEntityAction(List<BiEntityAction> actions) implements Bi
     public static final MapCodec<SequenceBiEntityAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceBiEntityAction::new, SequenceBiEntityAction::actions);
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record SequenceBiEntityAction(List<BiEntityAction> actions) implements Bi
     }
 
     @Override
-    public MapCodec<SequenceBiEntityAction> codec() {
+    public @NonNull MapCodec<SequenceBiEntityAction> codec() {
         return CODEC;
     }
 }

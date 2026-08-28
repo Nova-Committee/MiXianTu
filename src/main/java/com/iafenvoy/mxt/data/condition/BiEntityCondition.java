@@ -10,22 +10,21 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 
-import java.util.List;
 import java.util.function.Function;
 
-/**
- * Predicate with an actor and a candidate target.
- */
+import org.jetbrains.annotations.NotNull;
+
 public interface BiEntityCondition {
     Codec<BiEntityCondition> SINGLE_CODEC = MxtRegistries.BI_ENTITY_CONDITION_TYPE.byNameCodec().dispatch("type", BiEntityCondition::codec, Function.identity());
-    Codec<BiEntityCondition> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(condition -> condition, AndBiEntityCondition::new),
-            condition -> condition instanceof AndBiEntityCondition(
-                    List<BiEntityCondition> conditions
-            ) ? Either.right(conditions) : Either.left(condition)
-    );
+    Codec<BiEntityCondition> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(AndBiEntityCondition::new, Function.identity()), Either::right);
 
-    boolean test(BiEntityConditionContext context);
+    static MapCodec<BiEntityCondition> optionalCodec(String name) {
+        return CODEC.optionalFieldOf(name, AlwaysTrueCondition.INSTANCE);
+    }
+
+    @NotNull MapCodec<? extends BiEntityCondition> codec();
+
+    boolean test(@NotNull BiEntityConditionContext context);
 
     default boolean test(Entity actor, Entity target, Context parent) {
         return this.test(parent.copyTo(new BiEntityConditionContext(actor, target, parent.formula())));
@@ -34,6 +33,4 @@ public interface BiEntityCondition {
     default boolean test(Entity actor, Entity target, FormulaContext formula) {
         return this.test(new BiEntityConditionContext(actor, target, formula));
     }
-
-    MapCodec<? extends BiEntityCondition> codec();
 }

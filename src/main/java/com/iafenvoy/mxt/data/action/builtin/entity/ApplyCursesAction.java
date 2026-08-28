@@ -3,10 +3,10 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -23,14 +23,13 @@ public record ApplyCursesAction(List<ApplyCurseAction> curses) implements Entity
     }
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         this.curses.forEach(curse -> curse.execute(entity, ctx));
     }
 
     @Override
-    public MapCodec<ApplyCursesAction> codec() {
+    public @NonNull MapCodec<ApplyCursesAction> codec() {
         return CODEC;
     }
 }

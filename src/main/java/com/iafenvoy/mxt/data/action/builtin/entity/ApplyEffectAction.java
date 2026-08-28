@@ -13,6 +13,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Applies an ordinary vanilla status effect to a living entity.
@@ -26,7 +27,7 @@ public record ApplyEffectAction(MobEffect effect, NumberProvider durationTicks,
     ).apply(i, ApplyEffectAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         if (!(entity instanceof LivingEntity living)) return;
@@ -38,7 +39,7 @@ public record ApplyEffectAction(MobEffect effect, NumberProvider durationTicks,
     }
 
     @Override
-    public MapCodec<ApplyEffectAction> codec() {
+    public @NonNull MapCodec<ApplyEffectAction> codec() {
         return CODEC;
     }
 }

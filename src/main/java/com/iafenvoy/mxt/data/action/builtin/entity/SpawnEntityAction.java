@@ -11,6 +11,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Spawns a registered entity in the acting entity's current level.
@@ -25,7 +26,7 @@ public record SpawnEntityAction(EntityType<?> entityType, NumberProvider x, Numb
     ).apply(i, SpawnEntityAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double x = this.x.evaluate(context), y = this.y.evaluate(context), z = this.z.evaluate(context);
@@ -39,7 +40,7 @@ public record SpawnEntityAction(EntityType<?> entityType, NumberProvider x, Numb
     }
 
     @Override
-    public MapCodec<SpawnEntityAction> codec() {
+    public @NonNull MapCodec<SpawnEntityAction> codec() {
         return CODEC;
     }
 }

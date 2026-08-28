@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Adds a bounded velocity vector; collision and fall handling remain vanilla-owned.
@@ -20,7 +21,7 @@ public record KnockbackAction(NumberProvider x, NumberProvider y, NumberProvider
     ).apply(i, KnockbackAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double x = this.x.evaluate(context), y = this.y.evaluate(context), z = this.z.evaluate(context);
@@ -28,7 +29,7 @@ public record KnockbackAction(NumberProvider x, NumberProvider y, NumberProvider
     }
 
     @Override
-    public MapCodec<KnockbackAction> codec() {
+    public @NonNull MapCodec<KnockbackAction> codec() {
         return CODEC;
     }
 }

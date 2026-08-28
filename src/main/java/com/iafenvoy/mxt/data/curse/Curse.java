@@ -1,9 +1,7 @@
 package com.iafenvoy.mxt.data.curse;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -31,10 +29,10 @@ public record Curse(CurseType typedType, NumberProvider durationTicks, NumberPro
             NumberProvider.CODEC.optionalFieldOf("tick_interval", new Constant(20.0D)).forGetter(Curse::tickInterval),
             Codec.intRange(1, 256).optionalFieldOf("max_stacks", 1).forGetter(Curse::maxStacks),
             StackingMode.CODEC.optionalFieldOf("stacking_mode", StackingMode.IGNORE).forGetter(Curse::stackingMode),
-            EntityCondition.CODEC.optionalFieldOf("application_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Curse::applicationCondition),
-            EntityAction.CODEC.optionalFieldOf("on_apply", NoOpAction.INSTANCE).forGetter(Curse::onApply),
-            EntityAction.CODEC.optionalFieldOf("on_tick", NoOpAction.INSTANCE).forGetter(Curse::onTick),
-            EntityAction.CODEC.optionalFieldOf("on_remove", NoOpAction.INSTANCE).forGetter(Curse::onRemove),
+            EntityCondition.optionalCodec("application_condition").forGetter(Curse::applicationCondition),
+            EntityAction.optionalCodec("on_apply").forGetter(Curse::onApply),
+            EntityAction.optionalCodec("on_tick").forGetter(Curse::onTick),
+            EntityAction.optionalCodec("on_remove").forGetter(Curse::onRemove),
             Identifier.CODEC.listOf().optionalFieldOf("cleanse_tags", List.of()).forGetter(Curse::cleanseTags),
             Codec.BOOL.optionalFieldOf("allow_force_remove", false).forGetter(Curse::allowForceRemove)
     ).apply(i, Curse::new));

@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -17,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments.Mutable;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Adds or upgrades enchantments on the acted item stack.
@@ -29,10 +29,9 @@ public record AddEnchantmentAction(Object2IntMap<Holder<Enchantment>> enchantmen
     ).apply(i, AddEnchantmentAction::new));
 
     @Override
-    public void execute(ItemActionContext ctx) {
+    public void execute(@NonNull ItemActionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
         Mutable enchantments = new Mutable(stack.getAllEnchantments(holder.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
         for (Entry<Holder<Enchantment>> entry : this.enchantments.object2IntEntrySet())
             if (this.override || enchantments.getLevel(entry.getKey()) < entry.getIntValue())
@@ -41,7 +40,7 @@ public record AddEnchantmentAction(Object2IntMap<Holder<Enchantment>> enchantmen
     }
 
     @Override
-    public MapCodec<AddEnchantmentAction> codec() {
+    public @NonNull MapCodec<AddEnchantmentAction> codec() {
         return CODEC;
     }
 }

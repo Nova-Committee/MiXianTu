@@ -11,6 +11,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -18,7 +19,7 @@ public record ItemIdCondition(Item item) implements ItemCondition, ItemMatcher {
     public static final MapCodec<ItemIdCondition> CODEC = BuiltInRegistries.ITEM.byNameCodec().fieldOf("item").xmap(ItemIdCondition::new, ItemIdCondition::item);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -31,7 +32,7 @@ public record ItemIdCondition(Item item) implements ItemCondition, ItemMatcher {
     }
 
     @Override
-    public MapCodec<ItemIdCondition> codec() {
+    public @NonNull MapCodec<ItemIdCondition> codec() {
         return CODEC;
     }
 }

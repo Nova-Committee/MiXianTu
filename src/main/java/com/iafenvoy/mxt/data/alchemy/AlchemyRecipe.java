@@ -2,8 +2,6 @@ package com.iafenvoy.mxt.data.alchemy;
 
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.block.meta.NoOpBlockAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -35,9 +33,9 @@ public record AlchemyRecipe(List<Identifier> inputs, NumberProvider targetTemper
             CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(AlchemyRecipe::minimumAura),
             Identifier.CODEC.listOf(1, Integer.MAX_VALUE).fieldOf("success_outputs").forGetter(AlchemyRecipe::successOutputs),
             Identifier.CODEC.listOf().optionalFieldOf("failure_outputs", List.of()).forGetter(AlchemyRecipe::failureOutputs),
-            EntityAction.CODEC.optionalFieldOf("success_action", NoOpAction.INSTANCE).forGetter(AlchemyRecipe::successAction),
-            EntityAction.CODEC.optionalFieldOf("failure_action", NoOpAction.INSTANCE).forGetter(AlchemyRecipe::failureAction),
-            BlockAction.CODEC.optionalFieldOf("success_block_action", NoOpBlockAction.INSTANCE).forGetter(AlchemyRecipe::successBlockAction),
-            BlockAction.CODEC.optionalFieldOf("failure_block_action", NoOpBlockAction.INSTANCE).forGetter(AlchemyRecipe::failureBlockAction)
+            EntityAction.optionalCodec("success_action").forGetter(AlchemyRecipe::successAction),
+            EntityAction.optionalCodec("failure_action").forGetter(AlchemyRecipe::failureAction),
+            BlockAction.optionalCodec("success_block_action").forGetter(AlchemyRecipe::successBlockAction),
+            BlockAction.optionalCodec("failure_block_action").forGetter(AlchemyRecipe::failureBlockAction)
     ).apply(i, AlchemyRecipe::new));
 }

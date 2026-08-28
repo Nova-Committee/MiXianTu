@@ -7,13 +7,14 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 public enum ExposedToSunCondition implements EntityCondition {
     INSTANCE;
     public static final MapCodec<ExposedToSunCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         BlockPos pos = BlockPos.containing(entity.getX(), entity.getEyeY(), entity.getZ());
@@ -22,7 +23,7 @@ public enum ExposedToSunCondition implements EntityCondition {
     }
 
     @Override
-    public MapCodec<ExposedToSunCondition> codec() {
+    public @NonNull MapCodec<ExposedToSunCondition> codec() {
         return CODEC;
     }
 }

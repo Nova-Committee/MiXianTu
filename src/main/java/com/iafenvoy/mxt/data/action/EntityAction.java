@@ -10,22 +10,21 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 
-import java.util.List;
 import java.util.function.Function;
 
-/**
- * Java-owned entity action selected by a datapack {@code type} object.
- */
+import org.jetbrains.annotations.NotNull;
+
 public interface EntityAction {
     Codec<EntityAction> SINGLE_CODEC = MxtRegistries.ENTITY_ACTION_TYPE.byNameCodec().dispatch("type", EntityAction::codec, Function.identity());
-    Codec<EntityAction> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(action -> action, SequenceAction::new),
-            action -> action instanceof SequenceAction(
-                    List<EntityAction> actions
-            ) ? Either.right(actions) : Either.left(action)
-    );
+    Codec<EntityAction> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(SequenceAction::new, Function.identity()), Either::right);
 
-    void execute(EntityActionContext context);
+    static MapCodec<EntityAction> optionalCodec(String name) {
+        return CODEC.optionalFieldOf(name, NoOpAction.INSTANCE);
+    }
+
+    @NotNull MapCodec<? extends EntityAction> codec();
+
+    void execute(@NotNull EntityActionContext context);
 
     default void execute(Entity entity, Context parent) {
         this.execute(parent.copyTo(new EntityActionContext(entity, parent.formula())));
@@ -34,6 +33,4 @@ public interface EntityAction {
     default void execute(Entity entity, FormulaContext formula) {
         this.execute(new EntityActionContext(entity, formula));
     }
-
-    MapCodec<? extends EntityAction> codec();
 }

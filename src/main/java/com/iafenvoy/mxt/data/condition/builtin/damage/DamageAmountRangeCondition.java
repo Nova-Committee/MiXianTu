@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.damagesource.DamageSource;
+import org.jspecify.annotations.NonNull;
 
 public record DamageAmountRangeCondition(NumberProvider min, NumberProvider max) implements DamageCondition {
     public static final MapCodec<DamageAmountRangeCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -16,7 +17,7 @@ public record DamageAmountRangeCondition(NumberProvider min, NumberProvider max)
     ).apply(i, DamageAmountRangeCondition::new));
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -26,7 +27,7 @@ public record DamageAmountRangeCondition(NumberProvider min, NumberProvider max)
     }
 
     @Override
-    public MapCodec<DamageAmountRangeCondition> codec() {
+    public @NonNull MapCodec<DamageAmountRangeCondition> codec() {
         return CODEC;
     }
 }

@@ -8,9 +8,7 @@ import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -41,7 +39,7 @@ public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeig
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
             NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
-            EntityCondition.CODEC.optionalFieldOf("cultivate_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(RealmStage::cultivateCondition),
+            EntityCondition.optionalCodec("cultivate_condition").forGetter(RealmStage::cultivateCondition),
             RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
             NumberProvider.CODEC.fieldOf("progress_threshold").forGetter(RealmStage::progressThreshold),
             AutoIgnoreListCodec.create(EntityCondition.SINGLE_CODEC).optionalFieldOf("upgrade_conditions", List.of()).forGetter(RealmStage::upgradeConditions),
@@ -50,8 +48,8 @@ public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeig
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
             Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(RealmStage::tribulation),
             ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle").forGetter(RealmStage::breakthroughParticle),
-            EntityAction.CODEC.optionalFieldOf("success_action", NoOpAction.INSTANCE).forGetter(RealmStage::successAction),
-            EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(RealmStage::failAction)
+            EntityAction.optionalCodec("success_action").forGetter(RealmStage::successAction),
+            EntityAction.optionalCodec("fail_action").forGetter(RealmStage::failAction)
     ).apply(i, RealmStage::new));
 
     /**

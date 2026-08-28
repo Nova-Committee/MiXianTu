@@ -7,12 +7,13 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 public record ConstantCondition(boolean value) implements BiEntityCondition {
     public static final MapCodec<ConstantCondition> CODEC = Codec.BOOL.fieldOf("value").xmap(ConstantCondition::new, ConstantCondition::value);
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -20,7 +21,7 @@ public record ConstantCondition(boolean value) implements BiEntityCondition {
     }
 
     @Override
-    public MapCodec<ConstantCondition> codec() {
+    public @NonNull MapCodec<ConstantCondition> codec() {
         return CODEC;
     }
 }

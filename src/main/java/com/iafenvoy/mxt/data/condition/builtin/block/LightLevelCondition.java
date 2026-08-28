@@ -12,6 +12,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.Optional;
@@ -30,7 +31,7 @@ public record LightLevelCondition(Optional<LightLayer> lightType, Comparison com
     ).apply(i, LightLevelCondition::new));
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -39,7 +40,7 @@ public record LightLevelCondition(Optional<LightLayer> lightType, Comparison com
     }
 
     @Override
-    public MapCodec<LightLevelCondition> codec() {
+    public @NonNull MapCodec<LightLevelCondition> codec() {
         return CODEC;
     }
 }

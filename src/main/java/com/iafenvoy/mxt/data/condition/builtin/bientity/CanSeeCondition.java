@@ -14,6 +14,7 @@ import net.minecraft.world.level.ClipContext.Block;
 import net.minecraft.world.level.ClipContext.Fluid;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 
@@ -26,7 +27,7 @@ public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements B
     ).apply(i, CanSeeCondition::new));
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -36,7 +37,7 @@ public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements B
     }
 
     @Override
-    public MapCodec<CanSeeCondition> codec() {
+    public @NonNull MapCodec<CanSeeCondition> codec() {
         return CODEC;
     }
 

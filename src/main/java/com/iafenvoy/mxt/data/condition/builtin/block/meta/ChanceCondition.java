@@ -8,12 +8,13 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 public record ChanceCondition(double chance) implements BlockCondition {
     public static final MapCodec<ChanceCondition> CODEC = Codec.doubleRange(0.0D, 1.0D).fieldOf("chance").xmap(ChanceCondition::new, ChanceCondition::chance);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record ChanceCondition(double chance) implements BlockCondition {
     }
 
     @Override
-    public MapCodec<ChanceCondition> codec() {
+    public @NonNull MapCodec<ChanceCondition> codec() {
         return CODEC;
     }
 }

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.MiXianTu;
@@ -13,7 +14,6 @@ import com.iafenvoy.mxt.data.aura.AuraZone.Fluctuation;
 import com.iafenvoy.mxt.data.aura.AuraZone.Noise;
 import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -252,6 +252,6 @@ public final class AuraService {
 
     private static final AuraZone EMPTY_ZONE = new AuraZone(Map.of(), List.of(),
             List.of(), List.of(),
-            Fluctuation.NONE, Rules.DEFAULT, AlwaysTrueEntityCondition.INSTANCE, Distribution.EQUAL,
+            Fluctuation.NONE, Rules.DEFAULT, AlwaysTrueCondition.INSTANCE, Distribution.EQUAL,
             0, 0, Noise.NONE, Optional.empty(), ClientRender.DEFAULT, ClientHud.NONE);
 }

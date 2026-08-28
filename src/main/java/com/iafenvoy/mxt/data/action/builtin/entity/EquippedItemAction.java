@@ -4,12 +4,11 @@ import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Runs an item action against one equipped stack.
@@ -21,15 +20,13 @@ public record EquippedItemAction(EquipmentSlot slot, ItemAction action) implemen
     ).apply(i, EquippedItemAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
-        if (entity instanceof LivingEntity living)
+    public void execute(@NonNull EntityActionContext ctx) {
+        if (ctx.entity() instanceof LivingEntity living)
             this.action.execute(living, living.getItemBySlot(this.slot), ctx);
     }
 
     @Override
-    public MapCodec<EquippedItemAction> codec() {
+    public @NonNull MapCodec<EquippedItemAction> codec() {
         return CODEC;
     }
 }

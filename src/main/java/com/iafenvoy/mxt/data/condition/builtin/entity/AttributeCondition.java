@@ -11,6 +11,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
+import org.jspecify.annotations.NonNull;
 
 public record AttributeCondition(Holder<Attribute> attribute, Comparison comparison) implements EntityCondition {
     public static final MapCodec<AttributeCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -19,14 +20,14 @@ public record AttributeCondition(Holder<Attribute> attribute, Comparison compari
     ).apply(i, AttributeCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return entity instanceof LivingEntity living && this.comparison.compare(living.getAttributeValue(this.attribute));
     }
 
     @Override
-    public MapCodec<AttributeCondition> codec() {
+    public @NonNull MapCodec<AttributeCondition> codec() {
         return CODEC;
     }
 }

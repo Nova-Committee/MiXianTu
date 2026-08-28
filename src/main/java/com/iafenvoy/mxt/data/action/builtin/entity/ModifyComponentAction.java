@@ -14,6 +14,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Updates a declared ability-component state without allowing arbitrary NBT/component writes.
@@ -31,7 +32,7 @@ public record ModifyComponentAction(Holder<Ability> ability, String component,
     }
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double value = this.value.evaluate(context);
@@ -42,7 +43,7 @@ public record ModifyComponentAction(Holder<Ability> ability, String component,
     }
 
     @Override
-    public MapCodec<ModifyComponentAction> codec() {
+    public @NonNull MapCodec<ModifyComponentAction> codec() {
         return CODEC;
     }
 }

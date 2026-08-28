@@ -10,22 +10,21 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 
-import java.util.List;
 import java.util.function.Function;
 
-/**
- * Action with a source entity and a selected target entity.
- */
+import org.jetbrains.annotations.NotNull;
+
 public interface BiEntityAction {
     Codec<BiEntityAction> SINGLE_CODEC = MxtRegistries.BI_ENTITY_ACTION_TYPE.byNameCodec().dispatch("type", BiEntityAction::codec, Function.identity());
-    Codec<BiEntityAction> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(action -> action, SequenceBiEntityAction::new),
-            action -> action instanceof SequenceBiEntityAction(
-                    List<BiEntityAction> actions
-            ) ? Either.right(actions) : Either.left(action)
-    );
+    Codec<BiEntityAction> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(SequenceBiEntityAction::new, Function.identity()), Either::right);
 
-    void execute(BiEntityActionContext context);
+    static MapCodec<BiEntityAction> optionalCodec(String name) {
+        return CODEC.optionalFieldOf(name, NoOpAction.INSTANCE);
+    }
+
+    @NotNull MapCodec<? extends BiEntityAction> codec();
+
+    void execute(@NotNull BiEntityActionContext context);
 
     default void execute(Entity actor, Entity target, Context parent) {
         this.execute(parent.copyTo(new BiEntityActionContext(actor, target, parent.formula())));
@@ -34,6 +33,4 @@ public interface BiEntityAction {
     default void execute(Entity actor, Entity target, FormulaContext formula) {
         this.execute(new BiEntityActionContext(actor, target, formula));
     }
-
-    MapCodec<? extends BiEntityAction> codec();
 }

@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ public record SequenceItemAction(List<ItemAction> actions) implements ItemAction
     public static final MapCodec<SequenceItemAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceItemAction::new, SequenceItemAction::actions);
 
     @Override
-    public void execute(ItemActionContext ctx) {
+    public void execute(@NonNull ItemActionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -22,7 +23,7 @@ public record SequenceItemAction(List<ItemAction> actions) implements ItemAction
     }
 
     @Override
-    public MapCodec<SequenceItemAction> codec() {
+    public @NonNull MapCodec<SequenceItemAction> codec() {
         return CODEC;
     }
 }

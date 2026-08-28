@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Applies generic damage; source-specific damage belongs in a dedicated code-owned action type.
@@ -15,7 +16,7 @@ public record DamageAction(NumberProvider amount) implements EntityAction {
     public static final MapCodec<DamageAction> CODEC = NumberProvider.CODEC.fieldOf("amount").xmap(DamageAction::new, DamageAction::amount);
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
@@ -23,7 +24,7 @@ public record DamageAction(NumberProvider amount) implements EntityAction {
     }
 
     @Override
-    public MapCodec<DamageAction> codec() {
+    public @NonNull MapCodec<DamageAction> codec() {
         return CODEC;
     }
 }

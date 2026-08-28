@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import org.jspecify.annotations.NonNull;
 
 public record JsDamageCondition(String id, JsonObject params) implements DamageCondition {
     public static final MapCodec<JsDamageCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -16,12 +17,12 @@ public record JsDamageCondition(String id, JsonObject params) implements DamageC
     ).apply(i, JsDamageCondition::new));
 
     @Override
-    public boolean test(DamageConditionContext context) {
+    public boolean test(@NonNull DamageConditionContext context) {
         return MxtJsConditionCallbacks.testDamage(this.id, context.source(), context.amount(), this.params);
     }
 
     @Override
-    public MapCodec<JsDamageCondition> codec() {
+    public @NonNull MapCodec<JsDamageCondition> codec() {
         return CODEC;
     }
 }

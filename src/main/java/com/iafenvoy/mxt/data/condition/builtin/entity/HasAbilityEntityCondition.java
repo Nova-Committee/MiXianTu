@@ -9,19 +9,20 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 public record HasAbilityEntityCondition(Holder<Ability> ability) implements EntityCondition {
     public static final MapCodec<HasAbilityEntityCondition> CODEC = Ability.CODEC.fieldOf("ability").xmap(HasAbilityEntityCondition::new, HasAbilityEntityCondition::ability);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return entity.getData(MxtAttachments.ABILITY_HOLDER).has(this.ability);
     }
 
     @Override
-    public MapCodec<HasAbilityEntityCondition> codec() {
+    public @NonNull MapCodec<HasAbilityEntityCondition> codec() {
         return CODEC;
     }
 }

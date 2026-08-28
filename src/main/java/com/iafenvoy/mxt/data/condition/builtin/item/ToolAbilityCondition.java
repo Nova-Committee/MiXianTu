@@ -8,12 +8,13 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.ItemAbility;
+import org.jspecify.annotations.NonNull;
 
 public record ToolAbilityCondition(ItemAbility ability) implements ItemCondition {
     public static final MapCodec<ToolAbilityCondition> CODEC = ItemAbility.CODEC.fieldOf("ability").xmap(ToolAbilityCondition::new, ToolAbilityCondition::ability);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record ToolAbilityCondition(ItemAbility ability) implements ItemCondition
     }
 
     @Override
-    public MapCodec<ToolAbilityCondition> codec() {
+    public @NonNull MapCodec<ToolAbilityCondition> codec() {
         return CODEC;
     }
 }

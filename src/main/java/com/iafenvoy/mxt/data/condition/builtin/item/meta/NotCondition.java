@@ -7,12 +7,13 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public record NotCondition(ItemCondition condition) implements ItemCondition {
     public static final MapCodec<NotCondition> CODEC = ItemCondition.CODEC.fieldOf("condition").xmap(NotCondition::new, NotCondition::condition);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -20,7 +21,7 @@ public record NotCondition(ItemCondition condition) implements ItemCondition {
     }
 
     @Override
-    public MapCodec<NotCondition> codec() {
+    public @NonNull MapCodec<NotCondition> codec() {
         return CODEC;
     }
 }

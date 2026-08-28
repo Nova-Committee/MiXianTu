@@ -12,6 +12,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ public record ItemTagCondition(TagKey<Item> tag) implements ItemCondition, ItemM
     public static final MapCodec<ItemTagCondition> CODEC = TagKey.hashedCodec(Registries.ITEM).fieldOf("tag").xmap(ItemTagCondition::new, ItemTagCondition::tag);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -35,7 +36,7 @@ public record ItemTagCondition(TagKey<Item> tag) implements ItemCondition, ItemM
     }
 
     @Override
-    public MapCodec<ItemTagCondition> codec() {
+    public @NonNull MapCodec<ItemTagCondition> codec() {
         return CODEC;
     }
 }

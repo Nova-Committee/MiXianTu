@@ -10,12 +10,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 public record BrightnessCondition(Comparison comparison) implements EntityCondition {
     public static final MapCodec<BrightnessCondition> CODEC = Comparison.CODEC.xmap(BrightnessCondition::new, BrightnessCondition::comparison);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         BlockPos pos = BlockPos.containing(entity.getX(), entity.getEyeY(), entity.getZ());
@@ -27,7 +28,7 @@ public record BrightnessCondition(Comparison comparison) implements EntityCondit
     }
 
     @Override
-    public MapCodec<BrightnessCondition> codec() {
+    public @NonNull MapCodec<BrightnessCondition> codec() {
         return CODEC;
     }
 }

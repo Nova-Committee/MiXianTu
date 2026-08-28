@@ -11,22 +11,21 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 
-import java.util.List;
 import java.util.function.Function;
 
-/**
- * Code-owned predicate against one ItemStack.
- */
+import org.jetbrains.annotations.NotNull;
+
 public interface ItemCondition {
     Codec<ItemCondition> SINGLE_CODEC = MxtRegistries.ITEM_CONDITION_TYPE.byNameCodec().dispatch("type", ItemCondition::codec, Function.identity());
-    Codec<ItemCondition> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(condition -> condition, AndItemCondition::new),
-            condition -> condition instanceof AndItemCondition(
-                    List<ItemCondition> conditions
-            ) ? Either.right(conditions) : Either.left(condition)
-    );
+    Codec<ItemCondition> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(AndItemCondition::new, Function.identity()), Either::right);
 
-    boolean test(ItemConditionContext context);
+    static MapCodec<ItemCondition> optionalCodec(String name) {
+        return CODEC.optionalFieldOf(name, AlwaysTrueCondition.INSTANCE);
+    }
+
+    @NotNull MapCodec<? extends ItemCondition> codec();
+
+    boolean test(@NotNull ItemConditionContext context);
 
     default boolean test(Entity holder, ItemStack stack, Context parent) {
         return this.test(parent.copyTo(new ItemConditionContext(holder, stack, parent.formula())));
@@ -35,6 +34,4 @@ public interface ItemCondition {
     default boolean test(Entity holder, ItemStack stack, FormulaContext formula) {
         return this.test(new ItemConditionContext(holder, stack, formula));
     }
-
-    MapCodec<? extends ItemCondition> codec();
 }

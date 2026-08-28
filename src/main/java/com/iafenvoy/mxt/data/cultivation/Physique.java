@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -26,7 +25,7 @@ public record Physique(List<AttributeEntry> attributeModifiers,
     public static final Codec<Physique> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             AttributeEntry.CODEC.listOf().optionalFieldOf("attribute_modifiers", List.of()).forGetter(Physique::attributeModifiers),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
-            EntityCondition.CODEC.optionalFieldOf("holder_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Physique::holderCondition),
+            EntityCondition.optionalCodec("holder_condition").forGetter(Physique::holderCondition),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Physique::exclusiveTags),
             Codec.STRING.optionalFieldOf("rarity", "common").forGetter(Physique::rarity),
             Codec.BOOL.optionalFieldOf("allow_stacking", false).forGetter(Physique::allowStacking)

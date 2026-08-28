@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,7 +28,7 @@ public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
     public static final MapCodec<ElementOvercomesBiEntityCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -43,7 +44,7 @@ public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
     }
 
     @Override
-    public MapCodec<ElementOvercomesBiEntityCondition> codec() {
+    public @NonNull MapCodec<ElementOvercomesBiEntityCondition> codec() {
         return CODEC;
     }
 }

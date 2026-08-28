@@ -8,6 +8,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Randomly passes using the source entity's random stream when available.
@@ -16,7 +17,7 @@ public record ChanceDamageCondition(double chance) implements DamageCondition {
     public static final MapCodec<ChanceDamageCondition> CODEC = Codec.doubleRange(0.0D, 1.0D).fieldOf("chance").xmap(ChanceDamageCondition::new, ChanceDamageCondition::chance);
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -24,7 +25,7 @@ public record ChanceDamageCondition(double chance) implements DamageCondition {
     }
 
     @Override
-    public MapCodec<ChanceDamageCondition> codec() {
+    public @NonNull MapCodec<ChanceDamageCondition> codec() {
         return CODEC;
     }
 }

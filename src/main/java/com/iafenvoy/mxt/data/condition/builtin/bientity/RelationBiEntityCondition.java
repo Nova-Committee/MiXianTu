@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Relationship predicate kept distinct from the team predicate so each builtin
@@ -17,7 +18,7 @@ public record RelationBiEntityCondition(boolean allied) implements BiEntityCondi
             .xmap(RelationBiEntityCondition::new, RelationBiEntityCondition::allied);
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -25,7 +26,7 @@ public record RelationBiEntityCondition(boolean allied) implements BiEntityCondi
     }
 
     @Override
-    public MapCodec<RelationBiEntityCondition> codec() {
+    public @NonNull MapCodec<RelationBiEntityCondition> codec() {
         return CODEC;
     }
 }

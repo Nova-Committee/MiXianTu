@@ -10,6 +10,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Matches a block position against a vanilla or datapack block tag.
@@ -18,7 +19,7 @@ public record BlockTagCondition(TagKey<Block> tag) implements BlockCondition {
     public static final MapCodec<BlockTagCondition> CODEC = TagKey.hashedCodec(Registries.BLOCK).fieldOf("tag").xmap(BlockTagCondition::new, BlockTagCondition::tag);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -26,7 +27,7 @@ public record BlockTagCondition(TagKey<Block> tag) implements BlockCondition {
     }
 
     @Override
-    public MapCodec<BlockTagCondition> codec() {
+    public @NonNull MapCodec<BlockTagCondition> codec() {
         return CODEC;
     }
 }

@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Matches chargeable items whose stored spirit power is below their capacity.
@@ -18,7 +19,7 @@ public enum SpiritStorageNotFullCondition implements ItemCondition {
     public static final MapCodec<SpiritStorageNotFullCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -27,7 +28,7 @@ public enum SpiritStorageNotFullCondition implements ItemCondition {
     }
 
     @Override
-    public MapCodec<SpiritStorageNotFullCondition> codec() {
+    public @NonNull MapCodec<SpiritStorageNotFullCondition> codec() {
         return CODEC;
     }
 }

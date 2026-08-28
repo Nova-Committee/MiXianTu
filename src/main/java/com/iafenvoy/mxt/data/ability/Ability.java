@@ -6,14 +6,9 @@ import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
-import com.iafenvoy.mxt.data.action.builtin.bientity.meta.BiEntityNoOpAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.bientity.meta.AlwaysTrueBiEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.damage.AlwaysTrueDamageCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -49,12 +44,12 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
             HotbarIcon.CODEC.optionalFieldOf("icon").forGetter(Ability::icon),
             AbilityComponent.CODEC.listOf().optionalFieldOf("components", List.of()).forGetter(Ability::components),
             AttributeEntry.CODEC.listOf().optionalFieldOf("modifiers", List.of()).forGetter(Ability::modifiers),
-            DamageCondition.CODEC.optionalFieldOf("damage_condition", AlwaysTrueDamageCondition.INSTANCE).forGetter(Ability::damageCondition),
-            EntityCondition.CODEC.optionalFieldOf("condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Ability::condition),
-            EntityAction.CODEC.optionalFieldOf("entity_action", NoOpAction.INSTANCE).forGetter(Ability::entityAction),
+            DamageCondition.optionalCodec("damage_condition").forGetter(Ability::damageCondition),
+            EntityCondition.optionalCodec("condition").forGetter(Ability::condition),
+            EntityAction.optionalCodec("entity_action").forGetter(Ability::entityAction),
             TargetSelector.CODEC.optionalFieldOf("target_selector", SelfTargetSelector.INSTANCE).forGetter(Ability::targetSelector),
-            BiEntityCondition.CODEC.optionalFieldOf("target_condition", AlwaysTrueBiEntityCondition.INSTANCE).forGetter(Ability::targetCondition),
-            BiEntityAction.CODEC.optionalFieldOf("bi_entity_action", BiEntityNoOpAction.INSTANCE).forGetter(Ability::biEntityAction),
+            BiEntityCondition.optionalCodec("target_condition").forGetter(Ability::targetCondition),
+            BiEntityAction.optionalCodec("bi_entity_action").forGetter(Ability::biEntityAction),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_affinity", List.of()).forGetter(Ability::elementAffinity)
     ).apply(i, Ability::new));
 

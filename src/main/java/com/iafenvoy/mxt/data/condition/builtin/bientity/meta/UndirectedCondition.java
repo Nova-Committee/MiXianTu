@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Makes a directed bi-entity condition pass in either direction.
@@ -17,7 +18,7 @@ public record UndirectedCondition(BiEntityCondition condition) implements BiEnti
     ).apply(i, UndirectedCondition::new));
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -25,7 +26,7 @@ public record UndirectedCondition(BiEntityCondition condition) implements BiEnti
     }
 
     @Override
-    public MapCodec<UndirectedCondition> codec() {
+    public @NonNull MapCodec<UndirectedCondition> codec() {
         return CODEC;
     }
 }

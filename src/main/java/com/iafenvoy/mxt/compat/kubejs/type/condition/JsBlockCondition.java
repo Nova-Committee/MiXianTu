@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import org.jspecify.annotations.NonNull;
 
 public record JsBlockCondition(String id, JsonObject params) implements BlockCondition {
     public static final MapCodec<JsBlockCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -16,12 +17,12 @@ public record JsBlockCondition(String id, JsonObject params) implements BlockCon
     ).apply(i, JsBlockCondition::new));
 
     @Override
-    public boolean test(BlockConditionContext context) {
+    public boolean test(@NonNull BlockConditionContext context) {
         return MxtJsConditionCallbacks.testBlock(this.id, context.level(), context.pos(), this.params);
     }
 
     @Override
-    public MapCodec<JsBlockCondition> codec() {
+    public @NonNull MapCodec<JsBlockCondition> codec() {
         return CODEC;
     }
 }

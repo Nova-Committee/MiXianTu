@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import org.jspecify.annotations.NonNull;
 
 public record JsBiEntityAction(String id, JsonObject params) implements BiEntityAction {
     public static final MapCodec<JsBiEntityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -16,12 +17,12 @@ public record JsBiEntityAction(String id, JsonObject params) implements BiEntity
     ).apply(i, JsBiEntityAction::new));
 
     @Override
-    public void execute(BiEntityActionContext context) {
+    public void execute(@NonNull BiEntityActionContext context) {
         MxtJsActionCallbacks.executeBiEntity(this.id, context.actor(), context.target(), this.params);
     }
 
     @Override
-    public MapCodec<JsBiEntityAction> codec() {
+    public @NonNull MapCodec<JsBiEntityAction> codec() {
         return CODEC;
     }
 }

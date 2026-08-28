@@ -3,12 +3,12 @@ package com.iafenvoy.mxt.data.action.builtin.bientity;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 
 import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Set;
 
@@ -23,10 +23,9 @@ public record TeleportAction(boolean teleportActor, boolean teleportTarget, bool
     ).apply(i, TeleportAction::new));
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
         if (actor.level().isClientSide() || (!this.teleportActor && !this.teleportTarget) || !(actor.level() instanceof ServerLevel actorLevel) || !(target.level() instanceof ServerLevel targetLevel))
             return;
         Position actorPosition = Position.of(actorLevel, actor);
@@ -36,7 +35,7 @@ public record TeleportAction(boolean teleportActor, boolean teleportTarget, bool
     }
 
     @Override
-    public MapCodec<TeleportAction> codec() {
+    public @NonNull MapCodec<TeleportAction> codec() {
         return CODEC;
     }
 

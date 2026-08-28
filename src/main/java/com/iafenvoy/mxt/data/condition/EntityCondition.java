@@ -10,22 +10,21 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 
-import java.util.List;
 import java.util.function.Function;
 
-/**
- * Java-owned entity predicate selected by a datapack {@code type} object.
- */
+import org.jetbrains.annotations.NotNull;
+
 public interface EntityCondition {
     Codec<EntityCondition> SINGLE_CODEC = MxtRegistries.ENTITY_CONDITION_TYPE.byNameCodec().dispatch("type", EntityCondition::codec, Function.identity());
-    Codec<EntityCondition> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(condition -> condition, AndEntityCondition::new),
-            condition -> condition instanceof AndEntityCondition(
-                    List<EntityCondition> conditions
-            ) ? Either.right(conditions) : Either.left(condition)
-    );
+    Codec<EntityCondition> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(AndEntityCondition::new, Function.identity()), Either::right);
 
-    boolean test(EntityConditionContext context);
+    static MapCodec<EntityCondition> optionalCodec(String name) {
+        return CODEC.optionalFieldOf(name, AlwaysTrueCondition.INSTANCE);
+    }
+
+    @NotNull MapCodec<? extends EntityCondition> codec();
+
+    boolean test(@NotNull EntityConditionContext context);
 
     default boolean test(Entity entity, Context parent) {
         return this.test(parent.copyTo(new EntityConditionContext(entity, parent.formula())));
@@ -34,6 +33,4 @@ public interface EntityCondition {
     default boolean test(Entity entity, FormulaContext formula) {
         return this.test(new EntityConditionContext(entity, formula));
     }
-
-    MapCodec<? extends EntityCondition> codec();
 }

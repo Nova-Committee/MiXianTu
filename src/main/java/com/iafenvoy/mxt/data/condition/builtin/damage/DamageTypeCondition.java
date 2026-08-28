@@ -9,6 +9,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Objects;
 
@@ -21,7 +22,7 @@ public record DamageTypeCondition(Holder<DamageType> damageType) implements Dama
     ).apply(i, DamageTypeCondition::new));
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -29,7 +30,7 @@ public record DamageTypeCondition(Holder<DamageType> damageType) implements Dama
     }
 
     @Override
-    public MapCodec<DamageTypeCondition> codec() {
+    public @NonNull MapCodec<DamageTypeCondition> codec() {
         return CODEC;
     }
 }

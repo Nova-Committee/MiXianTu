@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.damagesource.DamageSource;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Negates a nested damage condition.
@@ -17,7 +18,7 @@ public record NotDamageCondition(DamageCondition condition) implements DamageCon
     ).apply(i, NotDamageCondition::new));
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -25,7 +26,7 @@ public record NotDamageCondition(DamageCondition condition) implements DamageCon
     }
 
     @Override
-    public MapCodec<NotDamageCondition> codec() {
+    public @NonNull MapCodec<NotDamageCondition> codec() {
         return CODEC;
     }
 }

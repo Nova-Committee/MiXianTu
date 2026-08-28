@@ -12,12 +12,13 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.equipment.Equippable;
+import org.jspecify.annotations.NonNull;
 
 public record ArmorValueCondition(Comparison comparison) implements ItemCondition {
     public static final MapCodec<ArmorValueCondition> CODEC = Comparison.CODEC.xmap(ArmorValueCondition::new, ArmorValueCondition::comparison);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -28,7 +29,7 @@ public record ArmorValueCondition(Comparison comparison) implements ItemConditio
     }
 
     @Override
-    public MapCodec<ArmorValueCondition> codec() {
+    public @NonNull MapCodec<ArmorValueCondition> codec() {
         return CODEC;
     }
 }

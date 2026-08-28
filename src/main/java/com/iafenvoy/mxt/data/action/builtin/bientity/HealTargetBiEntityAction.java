@@ -8,13 +8,13 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jspecify.annotations.NonNull;
 
 public record HealTargetBiEntityAction(NumberProvider amount) implements BiEntityAction {
     public static final MapCodec<HealTargetBiEntityAction> CODEC = NumberProvider.CODEC.fieldOf("amount").xmap(HealTargetBiEntityAction::new, HealTargetBiEntityAction::amount);
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
-        Entity actor = ctx.actor();
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
         if (target instanceof LivingEntity living) {
@@ -24,7 +24,7 @@ public record HealTargetBiEntityAction(NumberProvider amount) implements BiEntit
     }
 
     @Override
-    public MapCodec<HealTargetBiEntityAction> codec() {
+    public @NonNull MapCodec<HealTargetBiEntityAction> codec() {
         return CODEC;
     }
 }

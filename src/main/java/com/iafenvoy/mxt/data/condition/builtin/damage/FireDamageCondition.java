@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Checks whether the incoming damage belongs to Minecraft's fire damage tag.
@@ -19,7 +20,7 @@ public final class FireDamageCondition implements DamageCondition {
     }
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -27,7 +28,7 @@ public final class FireDamageCondition implements DamageCondition {
     }
 
     @Override
-    public MapCodec<FireDamageCondition> codec() {
+    public @NonNull MapCodec<FireDamageCondition> codec() {
         return CODEC;
     }
 }

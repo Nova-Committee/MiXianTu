@@ -3,8 +3,6 @@ package com.iafenvoy.mxt.data;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.block.meta.NoOpBlockAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -36,10 +34,10 @@ public record Formation(Identifier structureTemplate, NumberProvider radius,
             CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).optionalFieldOf("max_bonus", Map.of()).forGetter(Formation::maxBonus),
             ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
             ResourceCost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
-            BlockAction.CODEC.optionalFieldOf("activate_action", NoOpBlockAction.INSTANCE).forGetter(Formation::activateAction),
-            BlockAction.CODEC.optionalFieldOf("tick_action", NoOpBlockAction.INSTANCE).forGetter(Formation::tickAction),
-            BlockAction.CODEC.optionalFieldOf("deactivate_action", NoOpBlockAction.INSTANCE).forGetter(Formation::deactivateAction),
-            EntityAction.CODEC.optionalFieldOf("entity_tick_action", NoOpAction.INSTANCE).forGetter(Formation::entityTickAction),
+            BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
+            BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
+            BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
+            EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
             AuraZone.CODEC.optionalFieldOf("aura_zone").forGetter(Formation::auraZone)
     ).apply(i, Formation::new));
 }

@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.core.Holder;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public record AuraRangeEntityCondition(Map<Holder<Resource>, AuraRequirement> au
             .fieldOf("aura").xmap(AuraRangeEntityCondition::new, AuraRangeEntityCondition::aura);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         AuraResult resolved = AuraService.getPositionAura(entity.level(), entity.blockPosition());
@@ -31,7 +32,7 @@ public record AuraRangeEntityCondition(Map<Holder<Resource>, AuraRequirement> au
     }
 
     @Override
-    public MapCodec<AuraRangeEntityCondition> codec() {
+    public @NonNull MapCodec<AuraRangeEntityCondition> codec() {
         return CODEC;
     }
 }

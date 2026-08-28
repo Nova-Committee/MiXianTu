@@ -3,26 +3,21 @@ package com.iafenvoy.mxt.data.action.builtin.item;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public record ConsumeItemAction(NumberProvider count) implements ItemAction {
     public static final MapCodec<ConsumeItemAction> CODEC = NumberProvider.CODEC.fieldOf("count").xmap(ConsumeItemAction::new, ConsumeItemAction::count);
 
     @Override
-    public void execute(ItemActionContext ctx) {
-        Entity holder = ctx.holder();
-        ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
-        double count = this.count.evaluate(context);
-        if (Double.isFinite(count) && count > 0.0D) stack.shrink(Math.max(1, (int) Math.round(count)));
+    public void execute(@NonNull ItemActionContext ctx) {
+        double count = this.count.evaluate(ctx.formula());
+        if (Double.isFinite(count) && count > 0.0D) ctx.stack().shrink(Math.max(1, (int) Math.round(count)));
     }
 
     @Override
-    public MapCodec<ConsumeItemAction> codec() {
+    public @NonNull MapCodec<ConsumeItemAction> codec() {
         return CODEC;
     }
 }

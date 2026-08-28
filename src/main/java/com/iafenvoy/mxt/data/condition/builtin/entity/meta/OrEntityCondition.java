@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -13,14 +14,14 @@ public record OrEntityCondition(List<EntityCondition> conditions) implements Ent
     public static final MapCodec<OrEntityCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(OrEntityCondition::new, OrEntityCondition::conditions);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return this.conditions.stream().anyMatch(condition -> condition.test(entity, ctx));
     }
 
     @Override
-    public MapCodec<OrEntityCondition> codec() {
+    public @NonNull MapCodec<OrEntityCondition> codec() {
         return CODEC;
     }
 }

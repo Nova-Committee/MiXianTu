@@ -9,6 +9,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Matches an entity against a vanilla or datapack entity-type tag.
@@ -17,14 +18,14 @@ public record EntityTypeTagCondition(TagKey<EntityType<?>> tag) implements Entit
     public static final MapCodec<EntityTypeTagCondition> CODEC = TagKey.hashedCodec(Registries.ENTITY_TYPE).fieldOf("tag").xmap(EntityTypeTagCondition::new, EntityTypeTagCondition::tag);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return entity.is(this.tag);
     }
 
     @Override
-    public MapCodec<EntityTypeTagCondition> codec() {
+    public @NonNull MapCodec<EntityTypeTagCondition> codec() {
         return CODEC;
     }
 }

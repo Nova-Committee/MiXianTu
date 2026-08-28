@@ -12,6 +12,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -25,7 +26,7 @@ public record ChangeAuraBlockAction(Map<Holder<Resource>, NumberProvider> aura) 
             .fieldOf("aura").xmap(ChangeAuraBlockAction::new, ChangeAuraBlockAction::aura);
 
     @Override
-    public void execute(BlockActionContext ctx) {
+    public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -40,7 +41,7 @@ public record ChangeAuraBlockAction(Map<Holder<Resource>, NumberProvider> aura) 
     }
 
     @Override
-    public MapCodec<ChangeAuraBlockAction> codec() {
+    public @NonNull MapCodec<ChangeAuraBlockAction> codec() {
         return CODEC;
     }
 }

@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import org.jspecify.annotations.NonNull;
 
 public record BlockCollisionCondition(float offsetX, float offsetY, float offsetZ) implements EntityCondition {
     public static final MapCodec<BlockCollisionCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -20,7 +21,7 @@ public record BlockCollisionCondition(float offsetX, float offsetY, float offset
     ).apply(i, BlockCollisionCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         AABB bounds = entity.getBoundingBox().move(this.offsetX, this.offsetY, this.offsetZ).deflate(0.001D);
@@ -32,7 +33,7 @@ public record BlockCollisionCondition(float offsetX, float offsetY, float offset
     }
 
     @Override
-    public MapCodec<BlockCollisionCondition> codec() {
+    public @NonNull MapCodec<BlockCollisionCondition> codec() {
         return CODEC;
     }
 }

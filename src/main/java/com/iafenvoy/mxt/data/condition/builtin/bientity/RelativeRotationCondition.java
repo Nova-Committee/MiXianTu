@@ -34,7 +34,7 @@ public record RelativeRotationCondition(EnumSet<Axis> axis, RotationType actorRo
     ).apply(i, RelativeRotationCondition::new));
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -51,7 +51,7 @@ public record RelativeRotationCondition(EnumSet<Axis> axis, RotationType actorRo
     }
 
     @Override
-    public MapCodec<RelativeRotationCondition> codec() {
+    public @NonNull MapCodec<RelativeRotationCondition> codec() {
         return CODEC;
     }
 

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.damagesource.DamageSource;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -16,7 +17,7 @@ public record AndDamageCondition(List<DamageCondition> conditions) implements Da
     public static final MapCodec<AndDamageCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndDamageCondition::new, AndDamageCondition::conditions);
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -24,7 +25,7 @@ public record AndDamageCondition(List<DamageCondition> conditions) implements Da
     }
 
     @Override
-    public MapCodec<AndDamageCondition> codec() {
+    public @NonNull MapCodec<AndDamageCondition> codec() {
         return CODEC;
     }
 }

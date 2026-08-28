@@ -8,12 +8,13 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jspecify.annotations.NonNull;
 
 public record IngredientCondition(Ingredient ingredient) implements ItemCondition {
     public static final MapCodec<IngredientCondition> CODEC = Ingredient.CODEC.fieldOf("ingredient").xmap(IngredientCondition::new, IngredientCondition::ingredient);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record IngredientCondition(Ingredient ingredient) implements ItemConditio
     }
 
     @Override
-    public MapCodec<IngredientCondition> codec() {
+    public @NonNull MapCodec<IngredientCondition> codec() {
         return CODEC;
     }
 }

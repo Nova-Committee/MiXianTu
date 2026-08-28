@@ -12,6 +12,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Tests whether an item stack has a particular data component.
@@ -22,7 +23,7 @@ public record HasComponentCondition(Holder<DataComponentType<?>> component) impl
     ).apply(i, HasComponentCondition::new));
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -30,7 +31,7 @@ public record HasComponentCondition(Holder<DataComponentType<?>> component) impl
     }
 
     @Override
-    public MapCodec<HasComponentCondition> codec() {
+    public @NonNull MapCodec<HasComponentCondition> codec() {
         return CODEC;
     }
 }

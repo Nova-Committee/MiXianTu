@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Strictly requires a non-null common scoreboard team.
@@ -15,7 +16,7 @@ public enum SameTeamCondition implements BiEntityCondition {
     public static final MapCodec<SameTeamCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -23,7 +24,7 @@ public enum SameTeamCondition implements BiEntityCondition {
     }
 
     @Override
-    public MapCodec<SameTeamCondition> codec() {
+    public @NonNull MapCodec<SameTeamCondition> codec() {
         return CODEC;
     }
 }

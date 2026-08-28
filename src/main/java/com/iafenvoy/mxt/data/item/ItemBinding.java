@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -22,6 +21,6 @@ public record ItemBinding(List<Entry> entries, List<EntityAction> actions, Optio
             ENTRIES_CODEC.fieldOf("items").forGetter(ItemBinding::entries),
             EntityAction.SINGLE_CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(ItemBinding::actions),
             TagKey.hashedCodec(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality_group").forGetter(ItemBinding::qualityGroup),
-            EntityCondition.CODEC.optionalFieldOf("condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(ItemBinding::condition)
+            EntityCondition.optionalCodec("condition").forGetter(ItemBinding::condition)
     ).apply(i, ItemBinding::new));
 }

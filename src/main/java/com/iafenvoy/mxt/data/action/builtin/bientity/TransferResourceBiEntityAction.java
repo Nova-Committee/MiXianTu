@@ -15,6 +15,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Moves no more than the actor currently owns, so values never become negative.
@@ -27,7 +28,7 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
     ).apply(i, TransferResourceBiEntityAction::new));
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -52,7 +53,7 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
     }
 
     @Override
-    public MapCodec<TransferResourceBiEntityAction> codec() {
+    public @NonNull MapCodec<TransferResourceBiEntityAction> codec() {
         return CODEC;
     }
 }

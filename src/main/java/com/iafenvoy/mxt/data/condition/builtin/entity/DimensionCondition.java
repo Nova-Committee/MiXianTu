@@ -11,6 +11,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 public record DimensionCondition(ResourceKey<Level> dimension, boolean inverted) implements EntityCondition {
     public static final MapCodec<DimensionCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -19,14 +20,14 @@ public record DimensionCondition(ResourceKey<Level> dimension, boolean inverted)
     ).apply(i, DimensionCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return entity.level().dimension().equals(this.dimension) ^ this.inverted;
     }
 
     @Override
-    public MapCodec<DimensionCondition> codec() {
+    public @NonNull MapCodec<DimensionCondition> codec() {
         return CODEC;
     }
 }

@@ -12,6 +12,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.projectile.Projectile;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Creates a projectile entity, assigns the actor as owner and gives it a formula-driven velocity.
@@ -26,7 +27,7 @@ public record SpawnProjectileAction(EntityType<?> entityType, NumberProvider vel
     ).apply(i, SpawnProjectileAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double x = this.velocityX.evaluate(context), y = this.velocityY.evaluate(context), z = this.velocityZ.evaluate(context);
@@ -42,7 +43,7 @@ public record SpawnProjectileAction(EntityType<?> entityType, NumberProvider vel
     }
 
     @Override
-    public MapCodec<SpawnProjectileAction> codec() {
+    public @NonNull MapCodec<SpawnProjectileAction> codec() {
         return CODEC;
     }
 }

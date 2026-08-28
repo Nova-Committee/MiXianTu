@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
 
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,6 +14,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
@@ -25,11 +25,11 @@ public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projecti
                                         EntityCondition projectileCondition) implements DamageCondition {
     public static final MapCodec<ProjectileDamageCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(Registries.ENTITY_TYPE).optionalFieldOf("projectile").forGetter(ProjectileDamageCondition::projectile),
-            EntityCondition.CODEC.optionalFieldOf("projectile_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(ProjectileDamageCondition::projectileCondition)
+            EntityCondition.optionalCodec("projectile_condition").forGetter(ProjectileDamageCondition::projectileCondition)
     ).apply(i, ProjectileDamageCondition::new));
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -41,7 +41,7 @@ public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projecti
     }
 
     @Override
-    public MapCodec<ProjectileDamageCondition> codec() {
+    public @NonNull MapCodec<ProjectileDamageCondition> codec() {
         return CODEC;
     }
 }

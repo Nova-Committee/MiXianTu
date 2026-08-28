@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.forging;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.util.CollectionHelper;
@@ -38,8 +37,8 @@ public record ForgingBlueprint(Identifier input, List<Holder<ForgingMethod>> all
             Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("max_steps", 64).forGetter(ForgingBlueprint::maxSteps),
             QualityThreshold.CODEC.listOf().fieldOf("quality_by_extra_steps").forGetter(ForgingBlueprint::qualityByExtraSteps),
             Identifier.CODEC.fieldOf("result").forGetter(ForgingBlueprint::result),
-            EntityAction.CODEC.optionalFieldOf("complete_action", NoOpAction.INSTANCE).forGetter(ForgingBlueprint::completeAction),
-            EntityAction.CODEC.optionalFieldOf("fail_action", NoOpAction.INSTANCE).forGetter(ForgingBlueprint::failAction),
+            EntityAction.optionalCodec("complete_action").forGetter(ForgingBlueprint::completeAction),
+            EntityAction.optionalCodec("fail_action").forGetter(ForgingBlueprint::failAction),
             FailureSettlement.CODEC.codec().optionalFieldOf("failure_settlement", FailureSettlement.destroyInput()).forGetter(ForgingBlueprint::failureSettlement)
     ).apply(i, ForgingBlueprint::new)).validate(ForgingBlueprint::validate);
 

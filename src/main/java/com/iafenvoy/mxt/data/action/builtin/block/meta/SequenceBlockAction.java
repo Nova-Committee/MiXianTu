@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ public record SequenceBlockAction(List<BlockAction> actions) implements BlockAct
     public static final MapCodec<SequenceBlockAction> CODEC = SINGLE_CODEC.listOf().fieldOf("actions").xmap(SequenceBlockAction::new, SequenceBlockAction::actions);
 
     @Override
-    public void execute(BlockActionContext ctx) {
+    public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -22,7 +23,7 @@ public record SequenceBlockAction(List<BlockAction> actions) implements BlockAct
     }
 
     @Override
-    public MapCodec<SequenceBlockAction> codec() {
+    public @NonNull MapCodec<SequenceBlockAction> codec() {
         return CODEC;
     }
 }

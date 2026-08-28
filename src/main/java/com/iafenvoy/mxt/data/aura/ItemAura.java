@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -30,7 +29,7 @@ public record ItemAura(List<Entry> items, Holder<Resource> type, NumberProvider 
             NumberProvider.CODEC.fieldOf("consume_speed").forGetter(ItemAura::consumeSpeed),
             NumberProvider.CODEC.fieldOf("release_speed").forGetter(ItemAura::releaseSpeed),
             ItemStackTemplate.CODEC.optionalFieldOf("result_stack").forGetter(ItemAura::resultStack),
-            EntityAction.CODEC.optionalFieldOf("exhausted_action", NoOpAction.INSTANCE).forGetter(ItemAura::exhaustedAction)
+            EntityAction.optionalCodec("exhausted_action").forGetter(ItemAura::exhaustedAction)
     ).apply(i, ItemAura::new));
 
     @Override

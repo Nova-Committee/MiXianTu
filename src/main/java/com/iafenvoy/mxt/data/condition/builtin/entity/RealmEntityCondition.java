@@ -14,6 +14,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 
@@ -25,7 +26,7 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
     ).apply(i, RealmEntityCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         Identifier required = HolderHelper.id(this.realm);
@@ -39,7 +40,7 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
     }
 
     @Override
-    public MapCodec<RealmEntityCondition> codec() {
+    public @NonNull MapCodec<RealmEntityCondition> codec() {
         return CODEC;
     }
 

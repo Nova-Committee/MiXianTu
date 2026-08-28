@@ -9,12 +9,13 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jspecify.annotations.NonNull;
 
 public record HealAction(NumberProvider amount) implements EntityAction {
     public static final MapCodec<HealAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(NumberProvider.CODEC.fieldOf("amount").forGetter(HealAction::amount)).apply(i, HealAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         if (entity instanceof LivingEntity living) {
@@ -24,7 +25,7 @@ public record HealAction(NumberProvider amount) implements EntityAction {
     }
 
     @Override
-    public MapCodec<HealAction> codec() {
+    public @NonNull MapCodec<HealAction> codec() {
         return CODEC;
     }
 }

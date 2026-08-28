@@ -11,22 +11,21 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 
-import java.util.List;
 import java.util.function.Function;
 
-/**
- * Code-owned action against one ItemStack, always initiated by the server-side holder.
- */
+import org.jetbrains.annotations.NotNull;
+
 public interface ItemAction {
     Codec<ItemAction> SINGLE_CODEC = MxtRegistries.ITEM_ACTION_TYPE.byNameCodec().dispatch("type", ItemAction::codec, Function.identity());
-    Codec<ItemAction> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(action -> action, SequenceItemAction::new),
-            action -> action instanceof SequenceItemAction(
-                    List<ItemAction> actions
-            ) ? Either.right(actions) : Either.left(action)
-    );
+    Codec<ItemAction> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(SequenceItemAction::new, Function.identity()), Either::right);
 
-    void execute(ItemActionContext context);
+    static MapCodec<ItemAction> optionalCodec(String name) {
+        return CODEC.optionalFieldOf(name, NoOpAction.INSTANCE);
+    }
+
+    @NotNull MapCodec<? extends ItemAction> codec();
+
+    void execute(@NotNull ItemActionContext context);
 
     default void execute(Entity holder, ItemStack stack, Context parent) {
         this.execute(parent.copyTo(new ItemActionContext(holder, stack, parent.formula())));
@@ -35,6 +34,4 @@ public interface ItemAction {
     default void execute(Entity holder, ItemStack stack, FormulaContext formula) {
         this.execute(new ItemActionContext(holder, stack, formula));
     }
-
-    MapCodec<? extends ItemAction> codec();
 }

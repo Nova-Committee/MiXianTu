@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -15,7 +16,7 @@ public record ChoiceAction(List<WeightedActionEntry<BlockAction>> actions) imple
     public static final MapCodec<ChoiceAction> CODEC = WeightedActionEntry.codec(BlockAction.CODEC).listOf().fieldOf("actions").xmap(ChoiceAction::new, ChoiceAction::actions);
 
     @Override
-    public void execute(BlockActionContext ctx) {
+    public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -24,7 +25,7 @@ public record ChoiceAction(List<WeightedActionEntry<BlockAction>> actions) imple
     }
 
     @Override
-    public MapCodec<ChoiceAction> codec() {
+    public @NonNull MapCodec<ChoiceAction> codec() {
         return CODEC;
     }
 }

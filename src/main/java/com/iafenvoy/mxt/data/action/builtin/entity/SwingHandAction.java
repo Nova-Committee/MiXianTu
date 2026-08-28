@@ -3,12 +3,11 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 
@@ -20,14 +19,12 @@ public record SwingHandAction(InteractionHand hand) implements EntityAction {
     public static final MapCodec<SwingHandAction> CODEC = HAND_CODEC.fieldOf("hand").xmap(SwingHandAction::new, SwingHandAction::hand);
 
     @Override
-    public void execute(EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
-        if (entity instanceof LivingEntity living) living.swing(this.hand, true);
+    public void execute(@NonNull EntityActionContext ctx) {
+        if (ctx.entity() instanceof LivingEntity living) living.swing(this.hand, true);
     }
 
     @Override
-    public MapCodec<SwingHandAction> codec() {
+    public @NonNull MapCodec<SwingHandAction> codec() {
         return CODEC;
     }
 }

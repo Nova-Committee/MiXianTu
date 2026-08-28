@@ -11,6 +11,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.equipment.Equippable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
@@ -20,7 +21,7 @@ public record IsEquipableCondition(Optional<EquipmentSlot> slot) implements Item
     ).apply(i, IsEquipableCondition::new));
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -29,7 +30,7 @@ public record IsEquipableCondition(Optional<EquipmentSlot> slot) implements Item
     }
 
     @Override
-    public MapCodec<IsEquipableCondition> codec() {
+    public @NonNull MapCodec<IsEquipableCondition> codec() {
         return CODEC;
     }
 }

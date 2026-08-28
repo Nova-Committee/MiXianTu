@@ -12,6 +12,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
@@ -27,7 +28,7 @@ public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
     ).apply(i, ApplyCurseAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double resolvedStacks = this.stacks.evaluate(context);
@@ -40,7 +41,7 @@ public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
     }
 
     @Override
-    public MapCodec<ApplyCurseAction> codec() {
+    public @NonNull MapCodec<ApplyCurseAction> codec() {
         return CODEC;
     }
 }

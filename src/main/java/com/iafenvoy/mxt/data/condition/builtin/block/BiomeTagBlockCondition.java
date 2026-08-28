@@ -10,6 +10,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Matches the biome at a block position against a datapack biome tag.
@@ -18,7 +19,7 @@ public record BiomeTagBlockCondition(TagKey<Biome> tag) implements BlockConditio
     public static final MapCodec<BiomeTagBlockCondition> CODEC = TagKey.hashedCodec(Registries.BIOME).fieldOf("tag").xmap(BiomeTagBlockCondition::new, BiomeTagBlockCondition::tag);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -26,7 +27,7 @@ public record BiomeTagBlockCondition(TagKey<Biome> tag) implements BlockConditio
     }
 
     @Override
-    public MapCodec<BiomeTagBlockCondition> codec() {
+    public @NonNull MapCodec<BiomeTagBlockCondition> codec() {
         return CODEC;
     }
 }

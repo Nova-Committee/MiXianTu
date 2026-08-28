@@ -9,28 +9,27 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 
 public record IfElseAction(ItemCondition condition, ItemAction ifAction,
-                           Optional<ItemAction> elseAction) implements ItemAction {
+                           ItemAction elseAction) implements ItemAction {
     public static final MapCodec<IfElseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ItemCondition.CODEC.fieldOf("condition").forGetter(IfElseAction::condition),
             ItemAction.CODEC.fieldOf("if_action").forGetter(IfElseAction::ifAction),
-            ItemAction.CODEC.optionalFieldOf("else_action").forGetter(IfElseAction::elseAction)
+            ItemAction.optionalCodec("else_action").forGetter(IfElseAction::elseAction)
     ).apply(i, IfElseAction::new));
 
     @Override
-    public void execute(ItemActionContext ctx) {
+    public void execute(@NonNull ItemActionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
         if (this.condition.test(holder, stack, ctx)) this.ifAction.execute(holder, stack, ctx);
-        else this.elseAction.ifPresent(action -> action.execute(holder, stack, ctx));
+        else this.elseAction.execute(holder, stack, ctx);
     }
 
     @Override
-    public MapCodec<IfElseAction> codec() {
+    public @NonNull MapCodec<IfElseAction> codec() {
         return CODEC;
     }
 }

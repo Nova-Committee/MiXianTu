@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.*;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.*;
 import com.iafenvoy.mxt.compat.kubejs.type.action.JsEntityAction;
@@ -9,11 +10,18 @@ import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import static com.iafenvoy.mxt.data.action.SimpleActions.createEntity;
+
+@SuppressWarnings("unused")
 public final class MxtEntityActions {
     public static final DeferredRegister<MapCodec<? extends EntityAction>> REGISTRY = DeferredRegister.create(MxtRegistries.ENTITY_ACTION_TYPE, MiXianTu.MOD_ID);
+
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<NoOpAction>> NO_OP = REGISTRY.register("no_op", () -> NoOpAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<JsEntityAction>> JS = REGISTRY.register("js", () -> JsEntityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SequenceAction>> SEQUENCE = REGISTRY.register("sequence", () -> SequenceAction.CODEC);
+
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<? extends EntityAction>> DISMOUNT = REGISTRY.register("dismount", () -> createEntity(ctx -> ctx.entity().stopRiding()));
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<? extends EntityAction>> EXTINGUISH = REGISTRY.register("extinguish", () -> createEntity(ctx -> ctx.entity().clearFire()));
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<HealAction>> HEAL = REGISTRY.register("heal", () -> HealAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<DamageAction>> DAMAGE = REGISTRY.register("damage", () -> DamageAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<AddResourceAction>> ADD_RESOURCE = REGISTRY.register("add_resource", () -> AddResourceAction.CODEC);

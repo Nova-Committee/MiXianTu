@@ -9,6 +9,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Applies a nested action at a relative block offset.
@@ -22,7 +23,7 @@ public record OffsetAction(BlockAction action, int x, int y, int z) implements B
     ).apply(i, OffsetAction::new));
 
     @Override
-    public void execute(BlockActionContext ctx) {
+    public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -30,7 +31,7 @@ public record OffsetAction(BlockAction action, int x, int y, int z) implements B
     }
 
     @Override
-    public MapCodec<OffsetAction> codec() {
+    public @NonNull MapCodec<OffsetAction> codec() {
         return CODEC;
     }
 }

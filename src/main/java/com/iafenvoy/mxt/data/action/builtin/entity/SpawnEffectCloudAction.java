@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -13,6 +12,7 @@ import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -29,9 +29,8 @@ public record SpawnEffectCloudAction(float radius, float radiusOnUse, int waitTi
     ).apply(i, SpawnEffectCloudAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         if (!(entity.level() instanceof ServerLevel level)) return;
         AreaEffectCloud cloud = EntityType.AREA_EFFECT_CLOUD.create(level, EntitySpawnReason.TRIGGERED);
         if (cloud == null) return;
@@ -44,7 +43,7 @@ public record SpawnEffectCloudAction(float radius, float radiusOnUse, int waitTi
     }
 
     @Override
-    public MapCodec<SpawnEffectCloudAction> codec() {
+    public @NonNull MapCodec<SpawnEffectCloudAction> codec() {
         return CODEC;
     }
 }

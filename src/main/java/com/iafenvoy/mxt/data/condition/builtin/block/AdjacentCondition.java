@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 public record AdjacentCondition(BlockCondition adjacentCondition, Comparison comparison) implements BlockCondition {
     public static final MapCodec<AdjacentCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -19,7 +20,7 @@ public record AdjacentCondition(BlockCondition adjacentCondition, Comparison com
     ).apply(i, AdjacentCondition::new));
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -33,7 +34,7 @@ public record AdjacentCondition(BlockCondition adjacentCondition, Comparison com
     }
 
     @Override
-    public MapCodec<AdjacentCondition> codec() {
+    public @NonNull MapCodec<AdjacentCondition> codec() {
         return CODEC;
     }
 }

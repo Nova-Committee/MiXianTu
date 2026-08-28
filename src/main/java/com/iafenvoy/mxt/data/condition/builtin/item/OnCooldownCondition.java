@@ -8,13 +8,14 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public enum OnCooldownCondition implements ItemCondition {
     INSTANCE;
     public static final MapCodec<OnCooldownCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -22,7 +23,7 @@ public enum OnCooldownCondition implements ItemCondition {
     }
 
     @Override
-    public MapCodec<OnCooldownCondition> codec() {
+    public @NonNull MapCodec<OnCooldownCondition> codec() {
         return CODEC;
     }
 }

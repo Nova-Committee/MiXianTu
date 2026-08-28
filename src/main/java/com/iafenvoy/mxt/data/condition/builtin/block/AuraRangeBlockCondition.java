@@ -13,6 +13,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public record AuraRangeBlockCondition(Map<Holder<Resource>, AuraRequirement> aur
             .fieldOf("aura").xmap(AuraRangeBlockCondition::new, AuraRangeBlockCondition::aura);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -30,7 +31,7 @@ public record AuraRangeBlockCondition(Map<Holder<Resource>, AuraRequirement> aur
     }
 
     @Override
-    public MapCodec<AuraRangeBlockCondition> codec() {
+    public @NonNull MapCodec<AuraRangeBlockCondition> codec() {
         return CODEC;
     }
 }

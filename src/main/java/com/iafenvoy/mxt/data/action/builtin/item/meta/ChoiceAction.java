@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -15,7 +16,7 @@ public record ChoiceAction(List<WeightedActionEntry<ItemAction>> actions) implem
     public static final MapCodec<ChoiceAction> CODEC = WeightedActionEntry.codec(ItemAction.CODEC).listOf().fieldOf("actions").xmap(ChoiceAction::new, ChoiceAction::actions);
 
     @Override
-    public void execute(ItemActionContext ctx) {
+    public void execute(@NonNull ItemActionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -24,7 +25,7 @@ public record ChoiceAction(List<WeightedActionEntry<ItemAction>> actions) implem
     }
 
     @Override
-    public MapCodec<ChoiceAction> codec() {
+    public @NonNull MapCodec<ChoiceAction> codec() {
         return CODEC;
     }
 }

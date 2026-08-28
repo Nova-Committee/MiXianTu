@@ -8,6 +8,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.scores.PlayerTeam;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
@@ -15,7 +16,7 @@ public record TeamCondition(Optional<String> team) implements EntityCondition {
     public static final MapCodec<TeamCondition> CODEC = Codec.STRING.optionalFieldOf("team").xmap(TeamCondition::new, TeamCondition::team);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         PlayerTeam current = entity.getTeam();
@@ -23,7 +24,7 @@ public record TeamCondition(Optional<String> team) implements EntityCondition {
     }
 
     @Override
-    public MapCodec<TeamCondition> codec() {
+    public @NonNull MapCodec<TeamCondition> codec() {
         return CODEC;
     }
 }

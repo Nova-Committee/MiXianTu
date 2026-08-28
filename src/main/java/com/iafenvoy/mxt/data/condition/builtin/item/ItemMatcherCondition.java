@@ -9,6 +9,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -26,7 +27,7 @@ public record ItemMatcherCondition(List<Entry> entries) implements ItemCondition
     }
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -34,7 +35,7 @@ public record ItemMatcherCondition(List<Entry> entries) implements ItemCondition
     }
 
     @Override
-    public MapCodec<ItemMatcherCondition> codec() {
+    public @NonNull MapCodec<ItemMatcherCondition> codec() {
         return CODEC;
     }
 }

@@ -5,36 +5,33 @@ import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
-
-import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Executes nested actions for a matching vehicle, optionally through the full riding chain.
  */
-public record RidingAction(Optional<EntityAction> action, Optional<BiEntityAction> biEntityAction,
-                           Optional<BiEntityCondition> biEntityCondition, boolean recursive) implements EntityAction {
+public record RidingAction(EntityAction action, BiEntityAction biEntityAction,
+                           BiEntityCondition biEntityCondition, boolean recursive) implements EntityAction {
     public static final MapCodec<RidingAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            EntityAction.CODEC.optionalFieldOf("action").forGetter(RidingAction::action),
-            BiEntityAction.CODEC.optionalFieldOf("bientity_action").forGetter(RidingAction::biEntityAction),
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(RidingAction::biEntityCondition),
+            EntityAction.optionalCodec("action").forGetter(RidingAction::action),
+            BiEntityAction.optionalCodec("bientity_action").forGetter(RidingAction::biEntityAction),
+            BiEntityCondition.optionalCodec("bientity_condition").forGetter(RidingAction::biEntityCondition),
             Codec.BOOL.optionalFieldOf("recursive", false).forGetter(RidingAction::recursive)
     ).apply(i, RidingAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         Entity vehicle = entity.getVehicle();
         while (vehicle != null) {
-            boolean matches = this.biEntityCondition.isEmpty() || this.biEntityCondition.get().test(entity, vehicle, ctx);
+            boolean matches = this.biEntityCondition.test(entity, vehicle, ctx);
             if (matches) {
-                if (this.action.isPresent()) this.action.get().execute(vehicle, ctx);
-                if (this.biEntityAction.isPresent()) this.biEntityAction.get().execute(entity, vehicle, ctx);
+                this.action.execute(vehicle, ctx);
+                this.biEntityAction.execute(entity, vehicle, ctx);
             }
             if (!this.recursive) return;
             vehicle = vehicle.getVehicle();
@@ -42,7 +39,7 @@ public record RidingAction(Optional<EntityAction> action, Optional<BiEntityActio
     }
 
     @Override
-    public MapCodec<RidingAction> codec() {
+    public @NonNull MapCodec<RidingAction> codec() {
         return CODEC;
     }
 }

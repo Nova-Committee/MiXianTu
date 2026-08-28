@@ -9,28 +9,27 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-
-import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 
 public record IfElseAction(BlockCondition condition, BlockAction ifAction,
-                           Optional<BlockAction> elseAction) implements BlockAction {
+                           BlockAction elseAction) implements BlockAction {
     public static final MapCodec<IfElseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BlockCondition.CODEC.fieldOf("condition").forGetter(IfElseAction::condition),
             BlockAction.CODEC.fieldOf("if_action").forGetter(IfElseAction::ifAction),
-            BlockAction.CODEC.optionalFieldOf("else_action").forGetter(IfElseAction::elseAction)
+            BlockAction.optionalCodec("else_action").forGetter(IfElseAction::elseAction)
     ).apply(i, IfElseAction::new));
 
     @Override
-    public void execute(BlockActionContext ctx) {
+    public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
         if (this.condition.test(level, pos, ctx)) this.ifAction.execute(level, pos, ctx);
-        else this.elseAction.ifPresent(action -> action.execute(level, pos, ctx));
+        else this.elseAction.execute(level, pos, ctx);
     }
 
     @Override
-    public MapCodec<IfElseAction> codec() {
+    public @NonNull MapCodec<IfElseAction> codec() {
         return CODEC;
     }
 }

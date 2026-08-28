@@ -4,17 +4,16 @@ import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments.Mutable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,11 +27,9 @@ public record RemoveEnchantmentAction(List<Holder<Enchantment>> enchantment, Opt
     ).apply(i, RemoveEnchantmentAction::new));
 
     @Override
-    public void execute(ItemActionContext ctx) {
-        Entity holder = ctx.holder();
+    public void execute(@NonNull ItemActionContext ctx) {
         ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
-        Mutable enchantments = new Mutable(stack.getAllEnchantments(holder.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
+        Mutable enchantments = new Mutable(stack.getAllEnchantments(ctx.holder().registryAccess().lookupOrThrow(Registries.ENCHANTMENT)));
         for (Holder<Enchantment> entry : this.enchantment)
             if (this.level.isEmpty() || enchantments.getLevel(entry) == this.level.get()) enchantments.set(entry, 0);
         stack.set(DataComponents.ENCHANTMENTS, enchantments.toImmutable());
@@ -40,7 +37,7 @@ public record RemoveEnchantmentAction(List<Holder<Enchantment>> enchantment, Opt
     }
 
     @Override
-    public MapCodec<RemoveEnchantmentAction> codec() {
+    public @NonNull MapCodec<RemoveEnchantmentAction> codec() {
         return CODEC;
     }
 }

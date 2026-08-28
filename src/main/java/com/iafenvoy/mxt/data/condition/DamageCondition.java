@@ -11,21 +11,20 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 
 import java.util.function.Function;
-import java.util.List;
 
-/**
- * Code-owned predicate over an incoming damage event.
- */
+import org.jetbrains.annotations.NotNull;
+
 public interface DamageCondition {
     Codec<DamageCondition> SINGLE_CODEC = MxtRegistries.DAMAGE_CONDITION_TYPE.byNameCodec().dispatch("type", DamageCondition::codec, Function.identity());
-    Codec<DamageCondition> CODEC = Codec.either(SINGLE_CODEC, SINGLE_CODEC.listOf()).xmap(
-            value -> value.map(condition -> condition, AndDamageCondition::new),
-            condition -> condition instanceof AndDamageCondition(
-                    List<DamageCondition> conditions
-            ) ? Either.right(conditions) : Either.left(condition)
-    );
+    Codec<DamageCondition> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(AndDamageCondition::new, Function.identity()), Either::right);
 
-    boolean test(DamageConditionContext context);
+    static MapCodec<DamageCondition> optionalCodec(String name) {
+        return CODEC.optionalFieldOf(name, AlwaysTrueCondition.INSTANCE);
+    }
+
+    @NotNull MapCodec<? extends DamageCondition> codec();
+
+    boolean test(@NotNull DamageConditionContext context);
 
     default boolean test(DamageSource source, float amount, Context parent) {
         return this.test(parent.copyTo(new DamageConditionContext(source, amount, parent.formula())));
@@ -34,6 +33,4 @@ public interface DamageCondition {
     default boolean test(DamageSource source, float amount, FormulaContext formula) {
         return this.test(new DamageConditionContext(source, amount, formula));
     }
-
-    MapCodec<? extends DamageCondition> codec();
 }

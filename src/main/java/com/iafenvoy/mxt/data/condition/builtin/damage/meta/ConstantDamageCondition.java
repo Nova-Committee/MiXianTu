@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.damagesource.DamageSource;
+import org.jspecify.annotations.NonNull;
 
 /**
  * A constant damage-condition result.
@@ -15,7 +16,7 @@ public record ConstantDamageCondition(boolean value) implements DamageCondition 
     public static final MapCodec<ConstantDamageCondition> CODEC = Codec.BOOL.fieldOf("value").xmap(ConstantDamageCondition::new, ConstantDamageCondition::value);
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -23,7 +24,7 @@ public record ConstantDamageCondition(boolean value) implements DamageCondition 
     }
 
     @Override
-    public MapCodec<ConstantDamageCondition> codec() {
+    public @NonNull MapCodec<ConstantDamageCondition> codec() {
         return CODEC;
     }
 }

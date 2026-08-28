@@ -8,12 +8,13 @@ import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 public record SlipperinessCondition(Comparison comparison) implements BlockCondition {
     public static final MapCodec<SlipperinessCondition> CODEC = Comparison.CODEC.xmap(SlipperinessCondition::new, SlipperinessCondition::comparison);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record SlipperinessCondition(Comparison comparison) implements BlockCondi
     }
 
     @Override
-    public MapCodec<SlipperinessCondition> codec() {
+    public @NonNull MapCodec<SlipperinessCondition> codec() {
         return CODEC;
     }
 }

@@ -12,6 +12,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
+import org.jspecify.annotations.NonNull;
 
 public record BaseEnchantmentCondition(Holder<Enchantment> enchantment,
                                        Comparison comparison) implements ItemCondition {
@@ -21,7 +22,7 @@ public record BaseEnchantmentCondition(Holder<Enchantment> enchantment,
     ).apply(i, BaseEnchantmentCondition::new));
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -29,7 +30,7 @@ public record BaseEnchantmentCondition(Holder<Enchantment> enchantment,
     }
 
     @Override
-    public MapCodec<BaseEnchantmentCondition> codec() {
+    public @NonNull MapCodec<BaseEnchantmentCondition> codec() {
         return CODEC;
     }
 }

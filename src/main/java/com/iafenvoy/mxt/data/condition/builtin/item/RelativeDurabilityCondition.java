@@ -8,12 +8,13 @@ import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public record RelativeDurabilityCondition(Comparison comparison) implements ItemCondition {
     public static final MapCodec<RelativeDurabilityCondition> CODEC = Comparison.CODEC.xmap(RelativeDurabilityCondition::new, RelativeDurabilityCondition::comparison);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record RelativeDurabilityCondition(Comparison comparison) implements Item
     }
 
     @Override
-    public MapCodec<RelativeDurabilityCondition> codec() {
+    public @NonNull MapCodec<RelativeDurabilityCondition> codec() {
         return CODEC;
     }
 }

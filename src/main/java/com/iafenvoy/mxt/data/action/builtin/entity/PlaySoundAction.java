@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -11,6 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.Optional;
@@ -29,14 +29,13 @@ public record PlaySoundAction(SoundEvent sound, Optional<SoundSource> category, 
     ).apply(i, PlaySoundAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), this.sound, this.category.orElse(entity.getSoundSource()), this.volume, this.pitch);
     }
 
     @Override
-    public MapCodec<PlaySoundAction> codec() {
+    public @NonNull MapCodec<PlaySoundAction> codec() {
         return CODEC;
     }
 }

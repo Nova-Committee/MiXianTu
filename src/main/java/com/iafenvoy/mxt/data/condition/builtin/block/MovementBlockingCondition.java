@@ -8,13 +8,14 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jspecify.annotations.NonNull;
 
 public enum MovementBlockingCondition implements BlockCondition {
     INSTANCE;
     public static final MapCodec<MovementBlockingCondition> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -23,7 +24,7 @@ public enum MovementBlockingCondition implements BlockCondition {
     }
 
     @Override
-    public MapCodec<MovementBlockingCondition> codec() {
+    public @NonNull MapCodec<MovementBlockingCondition> codec() {
         return CODEC;
     }
 }

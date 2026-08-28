@@ -9,30 +9,29 @@ import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
-import java.util.Optional;
-
-public record RidingRecursiveCondition(Optional<BiEntityCondition> biEntityCondition,
+public record RidingRecursiveCondition(BiEntityCondition biEntityCondition,
                                        Comparison comparison) implements EntityCondition {
     public static final MapCodec<RidingRecursiveCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            BiEntityCondition.CODEC.optionalFieldOf("bientity_condition").forGetter(RidingRecursiveCondition::biEntityCondition),
+            BiEntityCondition.optionalCodec("bientity_condition").forGetter(RidingRecursiveCondition::biEntityCondition),
             Comparison.CODEC.forGetter(RidingRecursiveCondition::comparison)
     ).apply(i, RidingRecursiveCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         int matches = 0;
         for (Entity vehicle = entity.getVehicle(); vehicle != null; vehicle = vehicle.getVehicle()) {
-            boolean matchesCondition = this.biEntityCondition.isEmpty() || this.biEntityCondition.get().test(entity, vehicle, ctx);
+            boolean matchesCondition = this.biEntityCondition.test(entity, vehicle, ctx);
             if (matchesCondition) matches++;
         }
         return this.comparison.compare(matches);
     }
 
     @Override
-    public MapCodec<RidingRecursiveCondition> codec() {
+    public @NonNull MapCodec<RidingRecursiveCondition> codec() {
         return CODEC;
     }
 }

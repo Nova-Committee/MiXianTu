@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.mojang.serialization.MapCodec;
@@ -11,6 +10,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Grants an ability using an explicit persistent source identity.
@@ -22,14 +22,13 @@ public record GrantAbilityAction(Holder<Ability> ability, Identifier source) imp
     ).apply(i, GrantAbilityAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         entity.getData(MxtAttachments.ABILITY_HOLDER).grant(this.ability, this.source);
     }
 
     @Override
-    public MapCodec<GrantAbilityAction> codec() {
+    public @NonNull MapCodec<GrantAbilityAction> codec() {
         return CODEC;
     }
 }

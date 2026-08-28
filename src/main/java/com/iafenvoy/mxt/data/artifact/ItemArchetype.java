@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.data.action.builtin.item.meta.NoOpItemAction;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -30,6 +29,6 @@ public record ItemArchetype(String itemType, NumberProvider spiritCapacity, Numb
             NumberProvider.CODEC.optionalFieldOf("flight_speed", new Constant(0.0D)).forGetter(ItemArchetype::flightSpeed),
             ResourceCost.LIST_CODEC.optionalFieldOf("flight_costs", List.of()).forGetter(ItemArchetype::flightCosts),
             AutoIgnoreListCodec.create(Ability.CODEC).optionalFieldOf("granted_abilities", List.of()).forGetter(ItemArchetype::grantedAbilities),
-            ItemAction.CODEC.optionalFieldOf("refine_action", NoOpItemAction.INSTANCE).forGetter(ItemArchetype::refineAction)
+            ItemAction.optionalCodec("refine_action").forGetter(ItemArchetype::refineAction)
     ).apply(i, ItemArchetype::new));
 }

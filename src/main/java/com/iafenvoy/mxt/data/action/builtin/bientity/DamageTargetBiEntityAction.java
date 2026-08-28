@@ -7,13 +7,13 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 public record DamageTargetBiEntityAction(NumberProvider amount) implements BiEntityAction {
     public static final MapCodec<DamageTargetBiEntityAction> CODEC = NumberProvider.CODEC.fieldOf("amount").xmap(DamageTargetBiEntityAction::new, DamageTargetBiEntityAction::amount);
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
-        Entity actor = ctx.actor();
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
@@ -21,7 +21,7 @@ public record DamageTargetBiEntityAction(NumberProvider amount) implements BiEnt
     }
 
     @Override
-    public MapCodec<DamageTargetBiEntityAction> codec() {
+    public @NonNull MapCodec<DamageTargetBiEntityAction> codec() {
         return CODEC;
     }
 }

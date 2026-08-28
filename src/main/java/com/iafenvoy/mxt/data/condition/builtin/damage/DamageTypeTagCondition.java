@@ -10,6 +10,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Matches a damage source against a damage-type tag.
@@ -20,7 +21,7 @@ public record DamageTypeTagCondition(TagKey<DamageType> tag) implements DamageCo
     ).apply(i, DamageTypeTagCondition::new));
 
     @Override
-    public boolean test(DamageConditionContext ctx) {
+    public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
         float amount = ctx.amount();
         FormulaContext context = ctx.formula();
@@ -28,7 +29,7 @@ public record DamageTypeTagCondition(TagKey<DamageType> tag) implements DamageCo
     }
 
     @Override
-    public MapCodec<DamageTypeTagCondition> codec() {
+    public @NonNull MapCodec<DamageTypeTagCondition> codec() {
         return CODEC;
     }
 }

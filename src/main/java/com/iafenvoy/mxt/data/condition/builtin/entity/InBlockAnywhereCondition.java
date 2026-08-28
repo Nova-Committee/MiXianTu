@@ -11,6 +11,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
+import org.jspecify.annotations.NonNull;
 
 public record InBlockAnywhereCondition(BlockCondition blockCondition,
                                        Comparison comparison) implements EntityCondition {
@@ -20,7 +21,7 @@ public record InBlockAnywhereCondition(BlockCondition blockCondition,
     ).apply(i, InBlockAnywhereCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         AABB bounds = entity.getBoundingBox();
@@ -33,7 +34,7 @@ public record InBlockAnywhereCondition(BlockCondition blockCondition,
     }
 
     @Override
-    public MapCodec<InBlockAnywhereCondition> codec() {
+    public @NonNull MapCodec<InBlockAnywhereCondition> codec() {
         return CODEC;
     }
 }

@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ public record OrCondition(List<BlockCondition> conditions) implements BlockCondi
     public static final MapCodec<OrCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(OrCondition::new, OrCondition::conditions);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -22,7 +23,7 @@ public record OrCondition(List<BlockCondition> conditions) implements BlockCondi
     }
 
     @Override
-    public MapCodec<OrCondition> codec() {
+    public @NonNull MapCodec<OrCondition> codec() {
         return CODEC;
     }
 }

@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.mojang.datafixers.util.Either;
@@ -47,7 +46,7 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
             RegistryCodecs.holderOrTagList(Registries.BIOME).optionalFieldOf("biomes", List.of()).forGetter(Core::biomes),
             Fluctuation.CODEC.optionalFieldOf("fluctuation", Fluctuation.NONE).forGetter(Core::fluctuation),
             Rules.CODEC.optionalFieldOf("rules", Rules.DEFAULT).forGetter(Core::rules),
-            EntityCondition.CODEC.optionalFieldOf("cultivate_condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(Core::cultivateCondition),
+            EntityCondition.optionalCodec("cultivate_condition").forGetter(Core::cultivateCondition),
             Distribution.CODEC.optionalFieldOf("distribution", Distribution.EQUAL).forGetter(Core::distribution)
     ).apply(i, Core::from));
     private static final MapCodec<Visual> VISUAL_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

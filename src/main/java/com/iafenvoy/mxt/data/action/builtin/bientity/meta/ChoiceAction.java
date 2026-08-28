@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.action.WeightedActionEntry;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ public record ChoiceAction(List<WeightedActionEntry<BiEntityAction>> actions) im
     public static final MapCodec<ChoiceAction> CODEC = WeightedActionEntry.codec(BiEntityAction.CODEC).listOf().fieldOf("actions").xmap(ChoiceAction::new, ChoiceAction::actions);
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -23,7 +24,7 @@ public record ChoiceAction(List<WeightedActionEntry<BiEntityAction>> actions) im
     }
 
     @Override
-    public MapCodec<ChoiceAction> codec() {
+    public @NonNull MapCodec<ChoiceAction> codec() {
         return CODEC;
     }
 }

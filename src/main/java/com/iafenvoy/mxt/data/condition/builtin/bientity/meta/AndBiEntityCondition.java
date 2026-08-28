@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ public record AndBiEntityCondition(List<BiEntityCondition> conditions) implement
     public static final MapCodec<AndBiEntityCondition> CODEC = SINGLE_CODEC.listOf().fieldOf("conditions").xmap(AndBiEntityCondition::new, AndBiEntityCondition::conditions);
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record AndBiEntityCondition(List<BiEntityCondition> conditions) implement
     }
 
     @Override
-    public MapCodec<AndBiEntityCondition> codec() {
+    public @NonNull MapCodec<AndBiEntityCondition> codec() {
         return CODEC;
     }
 }

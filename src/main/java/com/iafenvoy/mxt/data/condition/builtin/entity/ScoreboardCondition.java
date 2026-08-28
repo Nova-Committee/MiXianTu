@@ -11,6 +11,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreHolder;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
@@ -23,7 +24,7 @@ public record ScoreboardCondition(Optional<String> name, String objective,
     ).apply(i, ScoreboardCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         ScoreHolder holder = ScoreHolder.forNameOnly(this.name.orElse(entity.getScoreboardName()));
@@ -33,7 +34,7 @@ public record ScoreboardCondition(Optional<String> name, String objective,
     }
 
     @Override
-    public MapCodec<ScoreboardCondition> codec() {
+    public @NonNull MapCodec<ScoreboardCondition> codec() {
         return CODEC;
     }
 }

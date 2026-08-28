@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.quality;
 
 import com.iafenvoy.mxt.data.badge.BadgeCodecs;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -29,7 +28,7 @@ public record ItemQuality(Component displayName, Modifier valueMultiplier,
             Modifier.CODEC.optionalFieldOf("value_multiplier", Modifier.DEFAULT).forGetter(ItemQuality::valueMultiplier),
             Modifier.CODEC.optionalFieldOf("forging_modifier", Modifier.DEFAULT).forGetter(ItemQuality::forgingModifier),
             Modifier.CODEC.optionalFieldOf("alchemy_modifier", Modifier.DEFAULT).forGetter(ItemQuality::alchemyModifier),
-            EntityCondition.CODEC.optionalFieldOf("condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(ItemQuality::condition)
+            EntityCondition.optionalCodec("condition").forGetter(ItemQuality::condition)
     ).apply(i, ItemQuality::new));
 
     public record Modifier(Component description, NumberProvider modifier) {

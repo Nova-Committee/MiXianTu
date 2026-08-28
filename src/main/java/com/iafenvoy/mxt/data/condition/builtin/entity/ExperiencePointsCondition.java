@@ -8,19 +8,20 @@ import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import org.jspecify.annotations.NonNull;
 
 public record ExperiencePointsCondition(Comparison comparison) implements EntityCondition {
     public static final MapCodec<ExperiencePointsCondition> CODEC = Comparison.CODEC.xmap(ExperiencePointsCondition::new, ExperiencePointsCondition::comparison);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return entity instanceof Player player && this.comparison.compare(player.totalExperience);
     }
 
     @Override
-    public MapCodec<ExperiencePointsCondition> codec() {
+    public @NonNull MapCodec<ExperiencePointsCondition> codec() {
         return CODEC;
     }
 }

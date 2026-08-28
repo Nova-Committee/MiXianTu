@@ -8,28 +8,27 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
-
-import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 
 public record IfElseAction(BiEntityCondition condition, BiEntityAction ifAction,
-                           Optional<BiEntityAction> elseAction) implements BiEntityAction {
+                           BiEntityAction elseAction) implements BiEntityAction {
     public static final MapCodec<IfElseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             BiEntityCondition.CODEC.fieldOf("condition").forGetter(IfElseAction::condition),
             BiEntityAction.CODEC.fieldOf("if_action").forGetter(IfElseAction::ifAction),
-            BiEntityAction.CODEC.optionalFieldOf("else_action").forGetter(IfElseAction::elseAction)
+            BiEntityAction.optionalCodec("else_action").forGetter(IfElseAction::elseAction)
     ).apply(i, IfElseAction::new));
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
         if (this.condition.test(actor, target, ctx)) this.ifAction.execute(actor, target, ctx);
-        else this.elseAction.ifPresent(action -> action.execute(actor, target, ctx));
+        else this.elseAction.execute(actor, target, ctx);
     }
 
     @Override
-    public MapCodec<IfElseAction> codec() {
+    public @NonNull MapCodec<IfElseAction> codec() {
         return CODEC;
     }
 }

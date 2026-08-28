@@ -10,6 +10,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public record ArtifactEnergyRangeItemCondition(NumberProvider min, NumberProvider max) implements ItemCondition {
     public static final MapCodec<ArtifactEnergyRangeItemCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -18,7 +19,7 @@ public record ArtifactEnergyRangeItemCondition(NumberProvider min, NumberProvide
     ).apply(i, ArtifactEnergyRangeItemCondition::new));
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -29,7 +30,7 @@ public record ArtifactEnergyRangeItemCondition(NumberProvider min, NumberProvide
     }
 
     @Override
-    public MapCodec<ArtifactEnergyRangeItemCondition> codec() {
+    public @NonNull MapCodec<ArtifactEnergyRangeItemCondition> codec() {
         return CODEC;
     }
 }

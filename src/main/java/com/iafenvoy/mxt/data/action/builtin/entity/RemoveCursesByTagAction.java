@@ -10,12 +10,12 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -32,9 +32,8 @@ public record RemoveCursesByTagAction(List<Identifier> tags) implements EntityAc
     }
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         List<Holder<Curse>> matches = entity.getData(MxtAttachments.CURSE_HOLDER).instances().keySet().stream()
                 .filter(curse -> this.tags.stream().anyMatch(tag -> MxtDatapackRegistries.isTagged(MxtResourceKeys.CURSE, curse, tag)))
                 .toList();
@@ -42,7 +41,7 @@ public record RemoveCursesByTagAction(List<Identifier> tags) implements EntityAc
     }
 
     @Override
-    public MapCodec<RemoveCursesByTagAction> codec() {
+    public @NonNull MapCodec<RemoveCursesByTagAction> codec() {
         return CODEC;
     }
 }

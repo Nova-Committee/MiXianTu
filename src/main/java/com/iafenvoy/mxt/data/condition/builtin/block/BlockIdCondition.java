@@ -9,12 +9,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import org.jspecify.annotations.NonNull;
 
 public record BlockIdCondition(Block block) implements BlockCondition {
     public static final MapCodec<BlockIdCondition> CODEC = BuiltInRegistries.BLOCK.byNameCodec().fieldOf("block").xmap(BlockIdCondition::new, BlockIdCondition::block);
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -22,7 +23,7 @@ public record BlockIdCondition(Block block) implements BlockCondition {
     }
 
     @Override
-    public MapCodec<BlockIdCondition> codec() {
+    public @NonNull MapCodec<BlockIdCondition> codec() {
         return CODEC;
     }
 }

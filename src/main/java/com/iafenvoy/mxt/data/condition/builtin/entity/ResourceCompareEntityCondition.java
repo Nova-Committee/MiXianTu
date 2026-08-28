@@ -11,6 +11,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 public record ResourceCompareEntityCondition(Holder<Resource> resource,
                                              NumberProvider min) implements EntityCondition {
@@ -19,14 +20,14 @@ public record ResourceCompareEntityCondition(Holder<Resource> resource,
     ).apply(i, ResourceCompareEntityCondition::new));
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return entity.getData(MxtAttachments.RESOURCE_HOLDER).get(this.resource) >= this.min.evaluate(context);
     }
 
     @Override
-    public MapCodec<ResourceCompareEntityCondition> codec() {
+    public @NonNull MapCodec<ResourceCompareEntityCondition> codec() {
         return CODEC;
     }
 }

@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -31,9 +30,8 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
     ).apply(i, ExplodeAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         Level level = entity.level();
         if (level.isClientSide() || !Float.isFinite(this.power) || this.power < 0.0F) return;
         ExplosionDamageCalculator calculator = this.indestructible.<ExplosionDamageCalculator>map(condition -> new ExplosionDamageCalculator() {
@@ -47,7 +45,7 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
     }
 
     @Override
-    public MapCodec<ExplodeAction> codec() {
+    public @NonNull MapCodec<ExplodeAction> codec() {
         return CODEC;
     }
 }

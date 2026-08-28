@@ -8,12 +8,13 @@ import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public record AmountCondition(Comparison comparison) implements ItemCondition {
     public static final MapCodec<AmountCondition> CODEC = Comparison.CODEC.xmap(AmountCondition::new, AmountCondition::comparison);
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record AmountCondition(Comparison comparison) implements ItemCondition {
     }
 
     @Override
-    public MapCodec<AmountCondition> codec() {
+    public @NonNull MapCodec<AmountCondition> codec() {
         return CODEC;
     }
 }

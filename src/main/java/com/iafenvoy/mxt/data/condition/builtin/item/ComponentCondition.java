@@ -16,6 +16,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Matches the serialized value of a data component using partial NBT comparison.
@@ -27,7 +28,7 @@ public record ComponentCondition(Holder<DataComponentType<?>> component, Compoun
     ).apply(i, ComponentCondition::new));
 
     @Override
-    public boolean test(ItemConditionContext ctx) {
+    public boolean test(@NonNull ItemConditionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
@@ -42,7 +43,7 @@ public record ComponentCondition(Holder<DataComponentType<?>> component, Compoun
     }
 
     @Override
-    public MapCodec<ComponentCondition> codec() {
+    public @NonNull MapCodec<ComponentCondition> codec() {
         return CODEC;
     }
 }

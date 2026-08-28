@@ -15,6 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Adds a finite signed amount to a server-owned resource attachment.
@@ -27,7 +28,7 @@ public record AddResourceAction(Holder<Resource> resource,
     ).apply(i, AddResourceAction::new));
 
     @Override
-    public void execute(EntityActionContext ctx) {
+    public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
@@ -40,7 +41,7 @@ public record AddResourceAction(Holder<Resource> resource,
     }
 
     @Override
-    public MapCodec<AddResourceAction> codec() {
+    public @NonNull MapCodec<AddResourceAction> codec() {
         return CODEC;
     }
 }

@@ -9,6 +9,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.NonNull;
 
 public record OffsetCondition(BlockCondition condition, int x, int y, int z) implements BlockCondition {
     public static final MapCodec<OffsetCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -19,7 +20,7 @@ public record OffsetCondition(BlockCondition condition, int x, int y, int z) imp
     ).apply(i, OffsetCondition::new));
 
     @Override
-    public boolean test(BlockConditionContext ctx) {
+    public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         FormulaContext context = ctx.formula();
@@ -27,7 +28,7 @@ public record OffsetCondition(BlockCondition condition, int x, int y, int z) imp
     }
 
     @Override
-    public MapCodec<OffsetCondition> codec() {
+    public @NonNull MapCodec<OffsetCondition> codec() {
         return CODEC;
     }
 }

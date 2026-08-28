@@ -4,8 +4,6 @@ import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.meta.NoOpAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -20,6 +18,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.TagValueInput;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
@@ -31,14 +30,13 @@ public record SpawnEntityAction(Holder<EntityType<?>> entityType, Optional<Compo
     public static final MapCodec<SpawnEntityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(Registries.ENTITY_TYPE).fieldOf("entity_type").forGetter(SpawnEntityAction::entityType),
             CompoundTag.CODEC.optionalFieldOf("tag").forGetter(SpawnEntityAction::tag),
-            EntityAction.CODEC.optionalFieldOf("entity_action", NoOpAction.INSTANCE).forGetter(SpawnEntityAction::entityAction)
+            EntityAction.optionalCodec("entity_action").forGetter(SpawnEntityAction::entityAction)
     ).apply(i, SpawnEntityAction::new));
 
     @Override
-    public void execute(BlockActionContext ctx) {
+    public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
-        FormulaContext context = ctx.formula();
         if (!(level instanceof ServerLevel serverLevel) || !level.hasChunkAt(pos)) return;
         Entity entity = this.entityType.value().create(serverLevel, EntitySpawnReason.TRIGGERED);
         if (entity == null) return;
@@ -49,7 +47,7 @@ public record SpawnEntityAction(Holder<EntityType<?>> entityType, Optional<Compo
     }
 
     @Override
-    public MapCodec<SpawnEntityAction> codec() {
+    public @NonNull MapCodec<SpawnEntityAction> codec() {
         return CODEC;
     }
 }

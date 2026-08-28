@@ -8,8 +8,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.NonNull;
 
 public record ChargeArtifactItemAction(NumberProvider amount, NumberProvider capacity) implements ItemAction {
     public static final MapCodec<ChargeArtifactItemAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -18,15 +17,13 @@ public record ChargeArtifactItemAction(NumberProvider amount, NumberProvider cap
     ).apply(i, ChargeArtifactItemAction::new));
 
     @Override
-    public void execute(ItemActionContext ctx) {
-        Entity holder = ctx.holder();
-        ItemStack stack = ctx.stack();
+    public void execute(@NonNull ItemActionContext ctx) {
         FormulaContext context = ctx.formula();
-        ArtifactService.addEnergy(stack, this.amount.evaluate(context), this.capacity.evaluate(context));
+        ArtifactService.addEnergy(ctx.stack(), this.amount.evaluate(context), this.capacity.evaluate(context));
     }
 
     @Override
-    public MapCodec<ChargeArtifactItemAction> codec() {
+    public @NonNull MapCodec<ChargeArtifactItemAction> codec() {
         return CODEC;
     }
 }

@@ -7,12 +7,13 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import org.jspecify.annotations.NonNull;
 
 public record DistanceBiEntityCondition(NumberProvider maximum) implements BiEntityCondition {
     public static final MapCodec<DistanceBiEntityCondition> CODEC = NumberProvider.CODEC.fieldOf("maximum").xmap(DistanceBiEntityCondition::new, DistanceBiEntityCondition::maximum);
 
     @Override
-    public boolean test(BiEntityConditionContext ctx) {
+    public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
@@ -21,7 +22,7 @@ public record DistanceBiEntityCondition(NumberProvider maximum) implements BiEnt
     }
 
     @Override
-    public MapCodec<DistanceBiEntityCondition> codec() {
+    public @NonNull MapCodec<DistanceBiEntityCondition> codec() {
         return CODEC;
     }
 }

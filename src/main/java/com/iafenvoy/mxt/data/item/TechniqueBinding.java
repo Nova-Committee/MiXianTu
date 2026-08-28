@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AlwaysTrueEntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -24,7 +23,7 @@ public record TechniqueBinding(List<Entry> entries, Holder<CultivationTechnique>
             ENTRIES_CODEC.fieldOf("items").forGetter(TechniqueBinding::entries),
             CultivationTechnique.CODEC.fieldOf("technique").forGetter(TechniqueBinding::technique),
             TagKey.hashedCodec(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality_group").forGetter(TechniqueBinding::qualityGroup),
-            EntityCondition.CODEC.optionalFieldOf("condition", AlwaysTrueEntityCondition.INSTANCE).forGetter(TechniqueBinding::condition),
+            EntityCondition.optionalCodec("condition").forGetter(TechniqueBinding::condition),
             Codec.BOOL.optionalFieldOf("set_active", true).forGetter(TechniqueBinding::setActive)
     ).apply(i, TechniqueBinding::new));
 }

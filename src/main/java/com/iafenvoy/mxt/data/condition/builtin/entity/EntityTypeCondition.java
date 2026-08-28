@@ -8,19 +8,20 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import org.jspecify.annotations.NonNull;
 
 public record EntityTypeCondition(EntityType<?> entityType) implements EntityCondition {
     public static final MapCodec<EntityTypeCondition> CODEC = BuiltInRegistries.ENTITY_TYPE.byNameCodec().fieldOf("entity_type").xmap(EntityTypeCondition::new, EntityTypeCondition::entityType);
 
     @Override
-    public boolean test(EntityConditionContext ctx) {
+    public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         return entity.getType() == this.entityType;
     }
 
     @Override
-    public MapCodec<EntityTypeCondition> codec() {
+    public @NonNull MapCodec<EntityTypeCondition> codec() {
         return CODEC;
     }
 }

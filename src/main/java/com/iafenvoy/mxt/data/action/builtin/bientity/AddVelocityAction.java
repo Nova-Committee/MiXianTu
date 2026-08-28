@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.action.builtin.bientity;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 
 import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Space;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -14,6 +13,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.function.BiFunction;
@@ -31,10 +31,9 @@ public record AddVelocityAction(float x, float y, float z, Reference reference, 
     ).apply(i, AddVelocityAction::new));
 
     @Override
-    public void execute(BiEntityActionContext ctx) {
+    public void execute(@NonNull BiEntityActionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
         if ((target.level().isClientSide() && !this.client) || (!target.level().isClientSide() && !this.server)) return;
         Vector3f value = new Vector3f(this.x, this.y, this.z);
         Space.transformVectorToBase(this.reference.apply(actor, target), value, actor.getYRot(), true);
@@ -44,7 +43,7 @@ public record AddVelocityAction(float x, float y, float z, Reference reference, 
     }
 
     @Override
-    public MapCodec<AddVelocityAction> codec() {
+    public @NonNull MapCodec<AddVelocityAction> codec() {
         return CODEC;
     }
 
