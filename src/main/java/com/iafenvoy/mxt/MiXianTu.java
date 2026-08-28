@@ -36,7 +36,6 @@ public final class MiXianTu {
         MxtBlocks.REGISTRY.register(bus);
         MxtCreativeTabs.REGISTRY.register(bus);
         MxtCriteriaTriggers.REGISTRY.register(bus);
-        MxtCultivationConditions.REGISTRY.register(bus);
         MxtCurseTypes.REGISTRY.register(bus);
         MxtDamageConditions.REGISTRY.register(bus);
         MxtDataComponents.REGISTRY.register(bus);

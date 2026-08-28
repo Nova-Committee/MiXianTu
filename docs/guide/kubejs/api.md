@@ -2,7 +2,7 @@
 title: KubeJS API 与边界
 ---
 
-根对象为 `Mxt`，API 通过 `Mxt.api()` 暴露；回调注册通过 `Mxt.actions()`、`Mxt.conditions()`、`Mxt.values()` 和 `Mxt.gameplay()` 暴露。
+根对象为 `Mxt`，API 通过 `Mxt.api()` 暴露；回调注册通过 `Mxt.actions()`、`Mxt.conditions()` 和 `Mxt.values()` 暴露。修炼条件使用通用实体条件的 `mxt:js` 类型，不再提供独立的 `cultivation_condition` 注册表或 KubeJS 入口。
 
 可使用的扩展方向：
 

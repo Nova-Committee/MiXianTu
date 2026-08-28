@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.compat.kubejs;
 import com.iafenvoy.mxt.compat.kubejs.binding.MxtKubeJsActionBindings;
 import com.iafenvoy.mxt.compat.kubejs.binding.MxtKubeJsConditionBindings;
 import com.iafenvoy.mxt.compat.kubejs.binding.MxtKubeJsValueBindings;
-import com.iafenvoy.mxt.compat.kubejs.binding.MxtKubeJsGameplayBindings;
 
 /**
  * Root object exposed as {@code Mxt} to KubeJS scripts.
@@ -14,7 +13,6 @@ public final class MxtKubeJsBindings {
     private final MxtKubeJsActionBindings actions = new MxtKubeJsActionBindings();
     private final MxtKubeJsConditionBindings conditions = new MxtKubeJsConditionBindings();
     private final MxtKubeJsValueBindings values = new MxtKubeJsValueBindings();
-    private final MxtKubeJsGameplayBindings gameplay = new MxtKubeJsGameplayBindings();
 
     private MxtKubeJsBindings() {
     }
@@ -47,10 +45,4 @@ public final class MxtKubeJsBindings {
         return this.values;
     }
 
-    /**
-     * Registers callbacks used by direct-ID server gameplay extension points.
-     */
-    public MxtKubeJsGameplayBindings gameplay() {
-        return this.gameplay;
-    }
 }

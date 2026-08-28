@@ -11,6 +11,5 @@ public final class MxtJsCallbacks {
         MxtJsActionCallbacks.clear();
         MxtJsConditionCallbacks.clear();
         MxtJsValueCallbacks.clear();
-        MxtJsGameplayCallbacks.clear();
     }
 }
