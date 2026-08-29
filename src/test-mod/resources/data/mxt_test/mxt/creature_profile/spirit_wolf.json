@@ -1,7 +1,7 @@
 {
   "realm_stage": "mxt_test:foundation",
   "intelligence": 12,
-  "condition": { "type": "always_true" },
+  "condition": { "type": "mxt:always_true" },
   "inner_core": "minecraft:amethyst_shard",
   "contract_tags": ["mxt_test:contract/master_servant"],
   "entity_type_tags": ["minecraft:wolf", "#mxt_test:spirit_wolves"],

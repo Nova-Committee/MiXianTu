@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
+import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
@@ -27,6 +28,7 @@ public final class MxtKeyMappings {
 
     public static final KeyMappingHolder SWAP_BACK = new KeyMappingHolder("key.mxt.swap_back", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder CULTIVATE = new KeyMappingHolder("key.mxt.cultivate", Type.KEYSYM, InputConstants.KEY_C, CATEGORY);
+    public static final KeyMappingHolder INFORMATION_PANEL = new KeyMappingHolder("key.mxt.information_panel", Type.KEYSYM, InputConstants.KEY_Z, CATEGORY);
 
     static {
         SWAP_BACK.onStateChange(pressed -> {
@@ -34,6 +36,10 @@ public final class MxtKeyMappings {
         });
         CULTIVATE.onStateChange(pressed -> {
             if (pressed) ClientPacketDistributor.sendToServer(CultivationToggleC2SPayload.INSTANCE);
+        });
+        INFORMATION_PANEL.onStateChange(pressed -> {
+            if (pressed && net.minecraft.client.Minecraft.getInstance().screen == null)
+                net.minecraft.client.Minecraft.getInstance().setScreen(new InformationPanelScreen());
         });
     }
 
