@@ -20,7 +20,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
@@ -151,7 +151,6 @@ public final class MxtTestMod {
         TechniqueBinding techniqueBinding = ItemBindingService.technique(jadeSlip)
                 .orElseThrow(() -> new IllegalStateException("Technique binding did not resolve its existing item"));
         if (!HolderHelper.id(techniqueBinding.technique()).equals(Identifier.parse("mxt_test:qingxiao_breathing_manual"))
-                || !techniqueBinding.setActive()
                 || ItemBindingService.technique(event.getServer().registryAccess(), jadeSlip).isEmpty()) {
             throw new IllegalStateException("Technique binding did not retain its technique item configuration");
         }
@@ -160,7 +159,7 @@ public final class MxtTestMod {
                 || !same(qingxiaoMeditation.value().absorbAmount().evaluate(FormulaContext.EMPTY), 2.0D)) {
             throw new IllegalStateException("Default cultivation action settings were not decoded");
         }
-        SpiritAttachment cultivationMode = new SpiritAttachment();
+        CultivationAttachment cultivationMode = new CultivationAttachment();
         if (CultivationModeService.resolveAction(cultivationMode).filter(qingxiaoMeditation::equals).isEmpty()) {
             throw new IllegalStateException("Default cultivation action was not resolved without a technique");
         }
@@ -324,9 +323,19 @@ public final class MxtTestMod {
                 || spiritPower.value().particleColor() != 0x66CCFF) {
             throw new IllegalStateException("Resource cultivation conversion settings were not decoded correctly");
         }
-        SpiritAttachment spirit = new SpiritAttachment();
+        CultivationAttachment spirit = new CultivationAttachment();
         spirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
-        spirit.setCultivationProgress(40.0D);
+        spirit.setCultivationProgress(qi, 40.0D);
+        Holder<RealmStage> spiritPowerRealm = requireHolder(MxtResourceKeys.REALM_STAGE,
+                Identifier.parse("mxt_test:spirit_power_refining"));
+        CultivationAttachment multiChain = new CultivationAttachment();
+        multiChain.setRealmStages(List.of(requireHolder(MxtResourceKeys.REALM_STAGE, foundation), spiritPowerRealm));
+        multiChain.setCultivationProgress(qi, 12.0D);
+        multiChain.setCultivationProgress(spiritPower, 7.0D);
+        if (multiChain.realmStages().size() != 2 || !same(multiChain.cultivationProgress(qi), 12.0D)
+                || !same(multiChain.cultivationProgress(spiritPower), 7.0D)) {
+            throw new IllegalStateException("Multiple realm chains must retain independent resources and progress");
+        }
         FormulaContext foundationContext = ResourceService.formulaContext(spirit, qi, FormulaContext.EMPTY);
         Bounds foundationBounds = ResourceService.resolveBounds(qi.value(), foundationContext)
                 .orElseThrow(() -> new IllegalStateException("Foundation qi bounds were invalid"));
@@ -361,7 +370,7 @@ public final class MxtTestMod {
         Identifier meditationId = Identifier.parse("mxt_test:fire_meditation");
         CultivateAction meditation = MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATE_ACTION, meditationId)
                 .orElseThrow(() -> new IllegalStateException("Cultivation restoration test action was not loaded"));
-        SpiritAttachment absorbingSpirit = new SpiritAttachment();
+        CultivationAttachment absorbingSpirit = new CultivationAttachment();
         absorbingSpirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
         ResourceHolderAttachment absorbingResources = new ResourceHolderAttachment();
         absorbingResources.set(spiritPower, 5.0D);
@@ -373,13 +382,13 @@ public final class MxtTestMod {
         }
         Result absorbed = CultivationActionService.tick(absorbingSpirit, absorbingResources,
                 absorbingAura, meditationId, meditation, 0L, FormulaContext.EMPTY, () -> true);
-        if (!absorbed.progressed() || !same(absorbingSpirit.cultivationProgress(), 0.375D)
+        if (!absorbed.progressed() || !same(absorbingSpirit.cultivationProgress(qi), 0.375D)
                 || !same(absorbingResources.get(qi), 2.25D) || !same(absorbingResources.get(spiritPower), 4.0D)) {
             throw new IllegalStateException("Cultivation did not apply source-side resource conversion limits correctly");
         }
         Result convertedWhileWaiting = CultivationActionService.tick(absorbingSpirit, absorbingResources,
                 absorbingAura, meditationId, meditation, 1L, FormulaContext.EMPTY, () -> true);
-        if (!convertedWhileWaiting.waiting() || !same(absorbingSpirit.cultivationProgress(), 0.75D)
+        if (!convertedWhileWaiting.waiting() || !same(absorbingSpirit.cultivationProgress(qi), 0.75D)
                 || !same(absorbingResources.get(qi), 1.5D) || !same(absorbingAura.auras().get(fire).amount(), 9.0D)) {
             throw new IllegalStateException("Cultivation conversion did not use its source-side limit every game tick");
         }

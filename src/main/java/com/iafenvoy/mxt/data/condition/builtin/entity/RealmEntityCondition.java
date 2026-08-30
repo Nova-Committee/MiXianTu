@@ -30,13 +30,13 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         Identifier required = HolderHelper.id(this.realm);
-        return entity.getData(MxtAttachments.SPIRIT_DATA).realmStage().map(current -> switch (this.comparison) {
+        return entity.getData(MxtAttachments.CULTIVATION).realmStages().stream().anyMatch(current -> switch (this.comparison) {
             case EXACT -> current.equals(this.realm);
             case AT_LEAST ->
                     ServerCache.get().map(cache -> cache.isRealmAtLeast(HolderHelper.id(current), required)).orElse(false);
             case AT_MOST ->
                     ServerCache.get().map(cache -> cache.isRealmAtLeast(required, HolderHelper.id(current))).orElse(false);
-        }).orElse(false);
+        });
     }
 
     @Override

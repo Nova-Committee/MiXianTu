@@ -9,6 +9,7 @@
   "burst_amount": 10,
   "particle_color": "#66CCFF",
   "aura_type": "mxt_test:fire",
+  "first_realm": "mxt_test:spirit_power_refining",
   "bars": [
     {
       "context": "mxt:boss_overlay",

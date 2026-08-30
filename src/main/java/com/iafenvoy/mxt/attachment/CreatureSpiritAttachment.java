@@ -14,7 +14,7 @@ import net.minecraft.resources.RegistryFixedCodec;
 import java.util.Optional;
 
 /**
- * Persistent creature-profile state; it is separate from a creature's optional player-like SpiritAttachment.
+ * Persistent creature-profile state; it is separate from player cultivation and identity attachments.
  */
 public final class CreatureSpiritAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CreatureSpiritAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

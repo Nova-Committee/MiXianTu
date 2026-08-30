@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -28,7 +28,7 @@ public final class CultivationGrantService {
     private CultivationGrantService() {
     }
 
-    public static Result recalculate(SpiritAttachment spirit, AbilityAttachment abilities) {
+    public static Result recalculate(SpiritIdentityAttachment spirit, AbilityAttachment abilities) {
         int revoked = 0;
         // Revocation mutates the multimap, so iterate a stable snapshot of its entries.
         for (Entry<Holder<Ability>, Identifier> entry : List.copyOf(abilities.sources().entries()))

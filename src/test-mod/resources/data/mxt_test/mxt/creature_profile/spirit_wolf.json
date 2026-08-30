@@ -1,5 +1,5 @@
 {
-  "realm_stage": "mxt_test:foundation",
+  "realm_stages": ["mxt_test:foundation"],
   "intelligence": 12,
   "condition": { "type": "mxt:always_true" },
   "inner_core": "minecraft:amethyst_shard",

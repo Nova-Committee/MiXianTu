@@ -26,7 +26,7 @@ public final class CultivationMovementService {
     public static void reconcile(Player player) {
         AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (movementSpeed == null) return;
-        boolean shouldAllowMovement = player.getData(MxtAttachments.SPIRIT_DATA).cultivating()
+        boolean shouldAllowMovement = player.getData(MxtAttachments.CULTIVATION).cultivating()
                 && MxtServerConfig.allowCultivationMovement();
         if (shouldAllowMovement) {
             AttributeModifier current = movementSpeed.getModifier(MODIFIER_ID);

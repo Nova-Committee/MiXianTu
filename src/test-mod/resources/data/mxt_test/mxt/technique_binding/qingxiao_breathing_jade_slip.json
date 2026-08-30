@@ -4,6 +4,5 @@
   "quality_group": "#mxt_test:group/forged",
   "condition": {
     "type": "mxt:always_true"
-  },
-  "set_active": true
+  }
 }

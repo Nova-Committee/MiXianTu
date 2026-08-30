@@ -61,8 +61,7 @@ StartupEvents.registry('item', event => {
 {
   "items": "kubejs:fire_manual",
   "technique": "example:fire_manual",
-  "quality_group": "#example:group/manual",
-  "set_active": true
+  "quality_group": "#example:group/manual"
 }
 ```
 

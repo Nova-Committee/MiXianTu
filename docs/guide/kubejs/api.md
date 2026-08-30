@@ -14,7 +14,7 @@ title: KubeJS API 与边界
 常用 API：
 
 ```js
-Mxt.api().addCultivation(entity, 10)
+Mxt.api().addCultivation(entity, 'mxt:qi', 10)
 Mxt.api().useAbility(entity, 'example:fireball')
 Mxt.api().tryBreakthrough(entity, 'example:spirit_power')
 Mxt.api().applyCurse(entity, 'example:weakness', 1, 'example:source')

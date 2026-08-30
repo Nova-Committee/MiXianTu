@@ -69,7 +69,7 @@ public final class CultivationAnimationController extends PlayerAnimationControl
     }
 
     private static boolean isCultivating(Player player) {
-        return player.getData(MxtAttachments.SPIRIT_DATA).cultivating();
+        return player.getData(MxtAttachments.CULTIVATION).cultivating();
     }
 
     private void update(boolean active) {

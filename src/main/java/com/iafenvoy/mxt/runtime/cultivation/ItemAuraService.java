@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
 import com.iafenvoy.mxt.attachment.FloatHoldingItemAttachment;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
@@ -93,7 +92,7 @@ public final class ItemAuraService {
      * first resumes the smallest partially consumed matching stack, then takes
      * a fresh matching item from the hands or the rest of the inventory.
      */
-    public static TickResult tick(LivingEntity entity, SpiritAttachment spirit, ResourceHolderAttachment resources, FormulaContext context) {
+    public static TickResult tick(LivingEntity entity, ResourceHolderAttachment resources, FormulaContext context) {
         FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         ItemStack item = holding.item();
         Holder<ItemAura> active = activeDefinition(entity, item);

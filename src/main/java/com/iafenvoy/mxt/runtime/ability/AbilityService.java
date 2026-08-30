@@ -436,7 +436,7 @@ public final class AbilityService {
 
     private static FormulaContext withElementAffinity(LivingEntity actor, Ability definition, FormulaContext context) {
         if (definition.elementAffinity().isEmpty()) return context;
-        double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_DATA), definition.elementAffinity(), context,
+        double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY), definition.elementAffinity(), context,
                 id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id));
         LinkedHashMap<String, Double> variables = new LinkedHashMap<>(context.variables());
         variables.put("element_modifier", modifier);

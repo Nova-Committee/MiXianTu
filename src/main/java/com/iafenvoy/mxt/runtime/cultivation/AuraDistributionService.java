@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -47,7 +47,7 @@ public final class AuraDistributionService {
         ALLOCATIONS.entrySet().removeIf(entry -> entry.getValue().gameTime() != gameTime);
         Map<Long, List<Claim>> claimsByChunk = new HashMap<>();
         for (ServerPlayer player : level.players()) {
-            SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+            CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
             Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
             if (!spirit.cultivating() || action == null || gameTime < spirit.nextCultivateTick()) continue;
             CultivateAction definition = action.value();
@@ -167,9 +167,11 @@ public final class AuraDistributionService {
                 | ((long) (player.getBlockZ() >> 4) & 0xFFFFFFFFL) << 32;
     }
 
-    private static double shareWeight(SpiritAttachment spirit, FormulaContext context) {
-        return spirit.realmStage().map(stage -> stage.value().auraShareWeight().evaluate(context))
-                .filter(value -> Double.isFinite(value) && value > 0.0D).orElse(1.0D);
+    private static double shareWeight(CultivationAttachment spirit, FormulaContext context) {
+        return spirit.realmStages().stream()
+                .map(stage -> stage.value().auraShareWeight().evaluate(context))
+                .filter(value -> Double.isFinite(value) && value > 0.0D)
+                .max(Double::compareTo).orElse(1.0D);
     }
 
     private static Map<Holder<Resource>, Double> evaluateCosts(CultivateAction action, FormulaContext context) {

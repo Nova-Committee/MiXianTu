@@ -1,20 +1,13 @@
 package com.iafenvoy.mxt.screen.information;
 
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Player;
 
 import java.util.List;
 import java.util.Optional;
 
 public final class InformationHelper {
-    public static SpiritAttachment spirit(Player player) {
-        return player.getData(MxtAttachments.SPIRIT_DATA);
-    }
-
     public static Optional<InformationEntry> line(String key, String value) {
         return line(key, Component.literal(value));
     }

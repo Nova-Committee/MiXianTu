@@ -13,7 +13,7 @@
 ```js
 // 查询与受校验的状态修改；返回 Java 结果对象或布尔成功状态
 Mxt.api().tryBreakthrough(entity, "example:foundation")
-Mxt.api().addCultivation(entity, 10)
+Mxt.api().addCultivation(entity, 'mxt:qi', 10)
 Mxt.api().useAbility(entity, "example:fire_ball")
 Mxt.api().applyCurse(entity, "example:heart_demon", 1, "quest:trial")
 Mxt.api().removeCurse(entity, "example:heart_demon")

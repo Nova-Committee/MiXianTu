@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.player.Player;
@@ -23,7 +23,7 @@ public final class CultivationModeEventBridge {
     @SubscribeEvent
     public static void onEntitySize(Size event) {
         if (!(event.getEntity() instanceof Player player)
-                || !player.getExistingData(MxtAttachments.SPIRIT_DATA).map(SpiritAttachment::cultivating).orElse(false))
+                || !player.getExistingData(MxtAttachments.CULTIVATION).map(CultivationAttachment::cultivating).orElse(false))
             return;
         EntityDimensions size = event.getNewSize();
         float height = Math.max(0.1F, size.height() - CULTIVATION_HEIGHT_OFFSET);
@@ -35,7 +35,7 @@ public final class CultivationModeEventBridge {
     public static void onPlayerTick(Post event) {
         Player player = event.getEntity();
         if (player.level().isClientSide()
-                || !player.getExistingData(MxtAttachments.SPIRIT_DATA).map(SpiritAttachment::cultivating).orElse(false))
+                || !player.getExistingData(MxtAttachments.CULTIVATION).map(CultivationAttachment::cultivating).orElse(false))
             return;
         CultivationMovementService.reconcile(player);
         if (!CultivationMovementService.isMovementAllowed(player)) {

@@ -8,7 +8,8 @@ import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SectAttachment;
 import com.iafenvoy.mxt.attachment.SectTerritoryAttachment;
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -136,9 +137,9 @@ public final class MxtCommand {
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         CurseHolderAttachment curses = player.getData(MxtAttachments.CURSE_HOLDER);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         source.sendSuccess(() -> Component.translatable("command.mxt.attachment.status", resources.values().size(), abilities.sources().size(),
-                abilities.cooldowns().size(), curses.instances().size(), spirit.spiritRoots().size(), spirit.physiques().size()), false);
+                abilities.cooldowns().size(), curses.instances().size(), identity.spiritRoots().size(), identity.physiques().size()), false);
         return 1;
     }
 
@@ -168,9 +169,14 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
         Component action = spirit.cultivateAction().<Component>map(id -> DefinitionText.name(id, "cultivate_action")).orElseGet(() -> Component.translatable("command.mxt.none"));
-        source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, spirit.cultivationProgress(), spirit.nextCultivateTick()), false);
+        Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.none")
+                : Component.literal(spirit.cultivationProgresses().object2DoubleEntrySet().stream()
+                .map(entry -> DefinitionText.name(entry.getKey(), "resource").getString() + "="
+                        + String.format(Locale.ROOT, "%.2f", entry.getDoubleValue()))
+                .collect(Collectors.joining(", ")));
+        source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, progress, spirit.nextCultivateTick()), false);
         return 1;
     }
 
@@ -266,7 +272,7 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null || MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id).isEmpty())
             return 0;
-        BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.SPIRIT_DATA), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true);
+        BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
             return 0;
@@ -278,7 +284,7 @@ public final class MxtCommand {
     private static int setRealm(CommandSourceStack source, Identifier realm) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        if (!CultivationService.setRealm(player.getData(MxtAttachments.SPIRIT_DATA), realm)) {
+        if (!CultivationService.setRealm(player.getData(MxtAttachments.CULTIVATION), realm)) {
             source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.name(realm, "realm_stage")));
             return 0;
         }

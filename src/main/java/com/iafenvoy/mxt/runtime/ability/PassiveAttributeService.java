@@ -1,10 +1,13 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.Title;
+import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityModifierService.ResolvedModifier;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -88,9 +91,12 @@ public final class PassiveAttributeService {
             entries.add(new Entry("ability", value.ability(), index, value.modifier()));
         }
 
-        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
-        spirit.realmStage().ifPresent(realm -> addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers()));
-        spirit.activeTechnique().ifPresent(technique -> addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers()));
+        CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
+        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
+        for (Holder<RealmStage> realm : cultivation.realmStages())
+            addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers());
+        for (Holder<CultivationTechnique> technique : spirit.learnedTechniques())
+            addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers());
         for (Holder<Physique> physique : spirit.physiques())
             addAll(entries, "physique", HolderHelper.id(physique), physique.value().attributeModifiers());
         for (Holder<Title> title : spirit.titles())

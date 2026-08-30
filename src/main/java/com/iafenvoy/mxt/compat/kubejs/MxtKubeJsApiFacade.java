@@ -18,8 +18,8 @@ import java.util.List;
  * Instance API exposed to KubeJS as {@code Mxt.api()}.
  */
 public final class MxtKubeJsApiFacade {
-    public boolean addCultivation(LivingEntity entity, double amount) {
-        return MxtKubeJsApi.addCultivation(entity, amount);
+    public boolean addCultivation(LivingEntity entity, String resource, double amount) {
+        return MxtKubeJsApi.addCultivation(entity, id(resource), amount);
     }
 
     public boolean reclaimSoul(Entity entity) {

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
@@ -40,10 +40,9 @@ public final class TechniqueItemService {
         if (binding.isEmpty()) return false;
         if (!ItemQualityService.canUse(entity, stack)) return true;
         TechniqueBinding value = binding.orElseThrow();
-        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         Result result = TechniqueService.learn(entity, spirit, HolderHelper.id(value.technique()),
                 value.technique().value(), ignored -> Optional.empty(), FormulaContext.of(entity));
-        if (result.learned() && value.setActive()) spirit.setActiveTechnique(value.technique());
         return true;
     }
 }

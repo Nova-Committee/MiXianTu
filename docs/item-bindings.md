@@ -13,7 +13,7 @@ KubeJS / mod item registry
 - `mxt:item_binding` maps existing items to an ordered generic action list, executed after vanilla consumption finishes.
 - `mxt:weapon_binding` maps one existing item to weapon-only fields.
 - `mxt:pill_binding` maps one existing item to pill-only fields.
-- `mxt:technique_binding` maps an existing book, jade slip, or other item to one `cultivation_technique`. Right-clicking it attempts to learn the technique; `set_active` defaults to `true` and makes a newly learned technique active.
+- `mxt:technique_binding` maps an existing book, jade slip, or other item to one `cultivation_technique`. Right-clicking it attempts to learn the technique; every learned technique remains enabled and contributes its passive effects.
 - All four bindings may declare an optional `quality_group` reference to an `mxt:item_quality` tag. It selects the permitted quality group for that physical item; the tag's member order defines quality order, while an explicit stack component or forge result still determines the current quality.
 - `condition` is optional on every binding. Every matching binding condition and the current quality's condition must pass before the item can be used. The check blocks right-click use, block interaction, attacks, data-driven item effects, weapon tick effects, technique learning, and binding-added weapon attributes.
 
@@ -24,7 +24,7 @@ Every binding uses the `items` matcher. It accepts one item ID, one item tag (su
 {
   "items": "kubejs:fire_root_pellet",
   "quality_group": "#example:group/pellet",
-  "condition": {"type": "mxt:realm", "realm": "example:foundation"},
+  "condition": {"type": "mxt:realm", "realm": "example:foundation"}
   "actions": [
     {
       "type": "mxt:grant_spirit_root",
@@ -68,7 +68,6 @@ Every binding uses the `items` matcher. It accepts one item ID, one item tag (su
   "technique": "example:fire_manual",
   "quality_group": "#example:group/manual",
   "condition": {"type": "mxt:realm", "realm": "example:foundation"},
-  "set_active": true
 }
 ```
 

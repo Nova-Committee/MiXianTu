@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -88,17 +89,19 @@ public final class MxtKubeJsApi {
             return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
         if (MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, resource).isEmpty())
             return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
-        return CultivationService.attempt(entity, entity.getData(MxtAttachments.SPIRIT_DATA),
+        return CultivationService.attempt(entity, entity.getData(MxtAttachments.CULTIVATION),
                 entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context, () -> true);
     }
 
     /**
      * Adds non-negative cultivation only; content scripts cannot set arbitrary negative or non-finite state.
      */
-    public static boolean addCultivation(LivingEntity entity, double amount) {
+    public static boolean addCultivation(LivingEntity entity, Identifier resource, double amount) {
         if (entity == null || entity.level().isClientSide() || !Double.isFinite(amount) || amount < 0.0D) return false;
-        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
-        spirit.setCultivationProgress(spirit.cultivationProgress() + amount);
+        Holder<Resource> holder = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource).orElse(null);
+        if (holder == null) return false;
+        CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
+        spirit.setCultivationProgress(holder, spirit.cultivationProgress(holder) + amount);
         return true;
     }
 

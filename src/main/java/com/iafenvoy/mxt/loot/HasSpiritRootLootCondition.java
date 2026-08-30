@@ -29,6 +29,6 @@ public record HasSpiritRootLootCondition(EntityTarget target,
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        return entity != null && entity.getData(MxtAttachments.SPIRIT_DATA).spiritRoots().contains(this.spiritRoot);
+        return entity != null && entity.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().contains(this.spiritRoot);
     }
 }

@@ -1,9 +1,12 @@
 package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.screen.information.InformationManager.Side;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
+import net.minecraft.client.gui.components.ObjectSelectionList.Entry;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
@@ -78,7 +81,7 @@ public final class InformationPanelScreen extends Screen {
         int rightListHeight = Math.max(1, contentHeight - 16);
         if (this.list == null) {
             this.list = new InformationList(this.minecraft, rightX, rightListTop, rightWidth, rightListHeight);
-            this.list.replaceEntries(buildEntries(InformationManager.Side.CULTIVATION));
+            this.list.replaceEntries(this.buildEntries(Side.CULTIVATION));
         } else {
             this.list.updateSizeAndPosition(rightWidth, rightListHeight, rightX, rightListTop);
         }
@@ -88,7 +91,7 @@ public final class InformationPanelScreen extends Screen {
         int basicWidth = Math.max(1, this.playerWidth);
         if (this.basicList == null) {
             this.basicList = new InformationList(this.minecraft, this.panelLeft + 20, basicListTop, basicWidth, basicHeight);
-            this.basicList.replaceEntries(buildEntries(InformationManager.Side.BASIC));
+            this.basicList.replaceEntries(this.buildEntries(Side.BASIC));
         } else {
             this.basicList.updateSizeAndPosition(basicWidth, basicHeight, this.panelLeft + 20, basicListTop);
         }
@@ -99,7 +102,7 @@ public final class InformationPanelScreen extends Screen {
         this.layoutWidgets();
     }
 
-    private List<InformationList.LineEntry> buildEntries(InformationManager.Side side) {
+    private List<InformationList.LineEntry> buildEntries(Side side) {
         List<InformationEntry> information = this.minecraft.player == null
                 ? List.of() : InformationManager.entries(this.minecraft.player, side);
         int nameWidth = information.stream()
@@ -189,7 +192,7 @@ public final class InformationPanelScreen extends Screen {
             return Math.max(1, this.getWidth() - 8);
         }
 
-        private static final class LineEntry extends ObjectSelectionList.Entry<LineEntry> {
+        private static final class LineEntry extends Entry<LineEntry> {
             private final InformationEntry entry;
             private final int nameWidth;
             private boolean overflowReported;
@@ -204,7 +207,7 @@ public final class InformationPanelScreen extends Screen {
                 int color = 0xFFE0E4EC;
                 if (hovered || this.isFocused())
                     graphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x503F6A91);
-                var font = Minecraft.getInstance().font;
+                Font font = Minecraft.getInstance().font;
                 int availableWidth = Math.max(1, this.getWidth() - 16);
                 int valueX = this.getX() + 8 + this.nameWidth + 8;
                 int nameAvailableWidth = Math.max(1, Math.min(this.nameWidth, availableWidth));
@@ -227,14 +230,14 @@ public final class InformationPanelScreen extends Screen {
                     graphics.setTooltipForNextFrame(font, this.entry.name().copy().append(": ").append(this.entry.value()), mouseX, mouseY);
             }
 
-            private static String abbreviate(net.minecraft.client.gui.Font font, String text, int width) {
+            private static String abbreviate(Font font, String text, int width) {
                 if (font.width(text) <= width) return text;
                 String suffix = "...";
                 return font.plainSubstrByWidth(text, Math.max(0, width - font.width(suffix))) + suffix;
             }
 
             @Override
-            public Component getNarration() {
+            public @NonNull Component getNarration() {
                 return this.entry.name().copy().append(": ").append(this.entry.value());
             }
         }

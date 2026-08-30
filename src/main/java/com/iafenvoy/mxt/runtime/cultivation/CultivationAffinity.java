@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -29,7 +29,7 @@ public final class CultivationAffinity {
     /**
      * Legacy attachment-only path; it retains element separation but has no zone-specific modifiers.
      */
-    public static double multiplier(SpiritAttachment spirit, AuraChunkAttachment aura, FormulaContext context,
+    public static double multiplier(SpiritIdentityAttachment spirit, AuraChunkAttachment aura, FormulaContext context,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -46,15 +46,15 @@ public final class CultivationAffinity {
             count++;
         }
         double result = count == 0 ? 1.0D : total / count;
-        if (spirit.activeTechnique().isPresent()) {
-            double modifier = spirit.activeTechnique().orElseThrow().value().cultivationModifier().evaluate(context);
+        for (Holder<CultivationTechnique> techniqueHolder : spirit.learnedTechniques()) {
+            double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
             if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
             result *= modifier;
         }
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 
-    public static double multiplier(SpiritAttachment spirit, AuraResult aura, FormulaContext context,
+    public static double multiplier(SpiritIdentityAttachment spirit, AuraResult aura, FormulaContext context,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -73,14 +73,15 @@ public final class CultivationAffinity {
             count++;
         }
         double result = count == 0 ? 1.0D : total / count;
-        if (spirit.activeTechnique().isPresent()) {
-            CultivationTechnique technique = spirit.activeTechnique().orElseThrow().value();
-            result *= technique.cultivationModifier().evaluate(context);
+        for (Holder<CultivationTechnique> techniqueHolder : spirit.learnedTechniques()) {
+            double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
+            if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
+            result *= modifier;
         }
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 
-    public static double abilityMultiplier(SpiritAttachment spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements, FormulaContext context,
+    public static double abilityMultiplier(SpiritIdentityAttachment spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements, FormulaContext context,
                                            Function<Identifier, Optional<SpiritRoot>> roots) {
         if (elements.isEmpty()) return 1.0D;
         double total = 0.0D;

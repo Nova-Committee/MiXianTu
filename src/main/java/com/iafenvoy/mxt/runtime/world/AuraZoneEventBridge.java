@@ -63,7 +63,7 @@ public final class AuraZoneEventBridge {
                 sensed.aura().forEach((resource, pool) -> environment.put(HolderHelper.id(resource), pool));
                 PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), actual, environment));
             }
-            boolean cultivating = player.getData(MxtAttachments.SPIRIT_DATA).cultivating();
+            boolean cultivating = player.getData(MxtAttachments.CULTIVATION).cultivating();
             boolean emitParticle = cultivating ? level.getGameTime() % 5L < 3L : level.getGameTime() % 5L == 0L;
             if (emitParticle) zones.getOptional(aura.source()).flatMap(AuraZone::particle)
                     .ifPresent(effect -> effect.sendTo(level, player, player.position()));

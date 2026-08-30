@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
@@ -19,6 +20,7 @@ import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +28,8 @@ import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+import java.util.Locale;
 
 public final class ServerNetworkHandler {
     static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
@@ -101,7 +105,12 @@ public final class ServerNetworkHandler {
     }
 
     static void onCultivationToggle(CultivationToggleC2SPayload payload, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer player) CultivationModeService.toggle(player);
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        CultivationActionService.Result result = CultivationModeService.toggle(player);
+        if (!result.started() && !result.stopped() && result.failure() != null) {
+            String reasonKey = "chat.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
+            player.sendSystemMessage(Component.translatable("chat.mxt.cultivation.failed", Component.translatable(reasonKey)));
+        }
     }
 
     static void onSpiritBurst(SpiritBurstC2SPayload payload, IPayloadContext context) {

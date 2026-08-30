@@ -28,6 +28,6 @@ public record HasPhysiqueLootCondition(EntityTarget target, Holder<Physique> phy
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        return entity != null && entity.getData(MxtAttachments.SPIRIT_DATA).physiques().contains(this.physique);
+        return entity != null && entity.getData(MxtAttachments.SPIRIT_IDENTITY).physiques().contains(this.physique);
     }
 }

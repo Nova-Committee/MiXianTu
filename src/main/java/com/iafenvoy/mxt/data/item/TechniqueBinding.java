@@ -17,13 +17,11 @@ import java.util.Optional;
  * Binds an existing physical item to a learnable cultivation technique.
  */
 public record TechniqueBinding(List<Entry> entries, Holder<CultivationTechnique> technique,
-                               Optional<TagKey<ItemQuality>> qualityGroup, EntityCondition condition,
-                               boolean setActive) implements ItemMatcher {
+                               Optional<TagKey<ItemQuality>> qualityGroup, EntityCondition condition) implements ItemMatcher {
     public static final Codec<TechniqueBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(TechniqueBinding::entries),
             CultivationTechnique.CODEC.fieldOf("technique").forGetter(TechniqueBinding::technique),
             TagKey.hashedCodec(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality_group").forGetter(TechniqueBinding::qualityGroup),
-            EntityCondition.optionalCodec("condition").forGetter(TechniqueBinding::condition),
-            Codec.BOOL.optionalFieldOf("set_active", true).forGetter(TechniqueBinding::setActive)
+            EntityCondition.optionalCodec("condition").forGetter(TechniqueBinding::condition)
     ).apply(i, TechniqueBinding::new));
 }

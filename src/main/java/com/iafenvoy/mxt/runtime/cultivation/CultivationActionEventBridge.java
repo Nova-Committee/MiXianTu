@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -53,7 +53,7 @@ public final class CultivationActionEventBridge {
     }
 
     private static void tick(LivingEntity entity) {
-        SpiritAttachment spirit = entity.getData(MxtAttachments.SPIRIT_DATA);
+        CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         if (!spirit.cultivating()) return;
         Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
         if (action == null) return;

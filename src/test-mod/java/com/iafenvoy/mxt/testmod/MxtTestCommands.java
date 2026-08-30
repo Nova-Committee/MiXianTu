@@ -3,7 +3,8 @@ package com.iafenvoy.mxt.testmod;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SectAttachment;
-import com.iafenvoy.mxt.attachment.SpiritAttachment;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
@@ -81,23 +82,23 @@ public final class MxtTestCommands {
     private static int giveKit(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        SpiritAttachment spirit = player.getData(MxtAttachments.SPIRIT_DATA);
+        CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
+        SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext context = FormulaContext.of(player);
 
-        grantIdentity(player, spirit, context);
+        grantIdentity(player, identity, context);
         if (!CultivationService.setRealm(spirit, QI_REFINING)) {
             source.sendFailure(Component.translatable("command.mxt_test.kit.realm_failed"));
             return 0;
         }
-        spirit.setCultivationProgress(80.0D);
+        spirit.setCultivationProgress(require(MxtResourceKeys.RESOURCE, QI), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, QI), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SOUL_POWER), 20.0D);
         joinSect(player);
 
-        // These attachments are mutable; reattaching makes the freshly built test state visible to the client.
-        player.setData(MxtAttachments.SPIRIT_DATA, spirit);
+        // These attachments are mutable; explicit sync is handled by the attachment dispatcher.
         player.setData(MxtAttachments.RESOURCE_HOLDER, resources);
         player.setData(MxtAttachments.ABILITY_HOLDER, player.getData(MxtAttachments.ABILITY_HOLDER));
 
@@ -113,7 +114,7 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static void grantIdentity(ServerPlayer player, SpiritAttachment spirit, FormulaContext context) {
+    private static void grantIdentity(ServerPlayer player, SpiritIdentityAttachment spirit, FormulaContext context) {
         HolderLookup<SpiritRoot> root = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, ROOT);
         HolderLookup<SpiritRoot> waterRoot = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, WATER_ROOT);
         HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
@@ -124,7 +125,7 @@ public final class MxtTestCommands {
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
         TechniqueService.learn(player, spirit, TECHNIQUE, technique.value(), ignored -> Optional.empty(), context);
         TitleService.grant(player, spirit, TITLE, title.value(), ignored -> null, context);
-        spirit.setActiveTechnique(technique.holder());
+        spirit.addLearnedTechnique(technique.holder());
         CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
         TEST_ACTIVE_ABILITIES.forEach(id -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)
                 .ifPresent(ability -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, TEST_ABILITY_SOURCE)));
@@ -134,7 +135,7 @@ public final class MxtTestCommands {
         ServerPlayer player = player(source);
         if (player == null) return 0;
         CultivateAction action = require(MxtResourceKeys.CULTIVATE_ACTION, CULTIVATE).value();
-        CultivationActionService.Result result = CultivationActionService.start(player, player.getData(MxtAttachments.SPIRIT_DATA),
+        CultivationActionService.Result result = CultivationActionService.start(player, player.getData(MxtAttachments.CULTIVATION),
                 CULTIVATE, action, player.level().getGameTime(), FormulaContext.of(player));
         if (!result.started()) {
             source.sendFailure(Component.translatable("command.mxt_test.cultivate.failed", result.failure().name()));

@@ -8,6 +8,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.KeyMapping.Category;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -38,8 +39,8 @@ public final class MxtKeyMappings {
             if (pressed) ClientPacketDistributor.sendToServer(CultivationToggleC2SPayload.INSTANCE);
         });
         INFORMATION_PANEL.onStateChange(pressed -> {
-            if (pressed && net.minecraft.client.Minecraft.getInstance().screen == null)
-                net.minecraft.client.Minecraft.getInstance().setScreen(new InformationPanelScreen());
+            if (pressed && Minecraft.getInstance().screen == null)
+                Minecraft.getInstance().setScreen(new InformationPanelScreen());
         });
     }
 
