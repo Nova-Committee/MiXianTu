@@ -93,7 +93,7 @@ public final class PassiveAttributeService {
 
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        for (Holder<RealmStage> realm : cultivation.realmStages())
+        for (Holder<RealmStage> realm : cultivation.realmStages().values())
             addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers());
         for (Holder<CultivationTechnique> technique : spirit.learnedTechniques())
             addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers());

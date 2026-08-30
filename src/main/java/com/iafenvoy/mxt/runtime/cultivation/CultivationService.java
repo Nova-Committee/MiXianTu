@@ -115,7 +115,7 @@ public final class CultivationService {
     }
 
     private static Optional<Next> next(CultivationAttachment spirit, Identifier resource) {
-        Holder<RealmStage> current = spirit.realmStages().stream()
+        Holder<RealmStage> current = spirit.realmStages().values().stream()
                 .filter(value -> HolderHelper.id(value.value().resource()).equals(resource)).findFirst().orElse(null);
         if (current != null) {
             return current.value().nextRealm().filter(value -> HolderHelper.id(value.value().resource()).equals(resource)).map(Next::new);
@@ -133,7 +133,7 @@ public final class CultivationService {
         ServerCache cache = ServerCache.get().orElse(null);
         Identifier resource = cache == null ? null : cache.resourceForRealm(target).orElse(null);
         if (resource == null) return false;
-        Holder<RealmStage> current = spirit.realmStages().stream()
+        Holder<RealmStage> current = spirit.realmStages().values().stream()
                 .filter(stage -> cache.resourceForRealm(HolderHelper.id(stage)).filter(resource::equals).isPresent())
                 .findFirst().orElse(null);
         Holder<RealmStage> targetHolder = MxtDatapackRegistries.holder(MxtResourceKeys.REALM_STAGE, target).orElse(null);
@@ -144,7 +144,7 @@ public final class CultivationService {
     }
 
     private static Holder<Resource> activeResource(CultivationAttachment spirit, RealmStage target) {
-        return spirit.realmStages().stream().filter(stage -> stage.value().resource().equals(target.resource()))
+        return spirit.realmStages().values().stream().filter(stage -> stage.value().resource().equals(target.resource()))
                 .findFirst().map(Holder::value).map(RealmStage::resource).orElseGet(target::resource);
     }
 

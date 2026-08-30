@@ -103,7 +103,7 @@ public enum ResourceBarOverlay implements GuiLayer {
                 if (!validValues(minimum, maximum, current)) continue;
                 long changedAt = values.lastChangedTick();
                 long elapsed = changedAt < 0L ? Long.MAX_VALUE : Math.max(0L, gameTime - changedAt);
-                if (!bar.visibility().visible(new ResourceBarView(current, maximum, elapsed, entity != Minecraft.getInstance().player)))
+                if (!bar.visibility().visible(new ResourceBarView(current, minimum, maximum, elapsed, entity != Minecraft.getInstance().player)))
                     continue;
                 result.add(new ResourceBarRenderState(
                         bar.context(), bar.anchor(), bar.order(), id, index, current, minimum, maximum, bar.renderer(),

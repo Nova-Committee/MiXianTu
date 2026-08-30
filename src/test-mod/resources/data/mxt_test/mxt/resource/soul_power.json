@@ -8,7 +8,7 @@
       "context": "mxt:self_hud",
       "anchor": "right",
       "order": 1,
-      "visibility": { "type": "mxt:non_full" },
+      "visibility": { "type": "mxt:non_zero" },
       "renderer": { "type": "mxt:boss_bar", "bar_index": 4 }
     }
   ]

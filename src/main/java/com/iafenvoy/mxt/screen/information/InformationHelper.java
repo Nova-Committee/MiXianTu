@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 public final class InformationHelper {
@@ -16,11 +16,11 @@ public final class InformationHelper {
         return Optional.of(new InformationEntry(Component.translatable(key), value));
     }
 
-    public static Optional<InformationEntry> lineWithDefinitions(String key, List<? extends Holder<?>> values, String category) {
+    public static Optional<InformationEntry> lineWithDefinitions(String key, Collection<? extends Holder<?>> values, String category) {
         return values.isEmpty() ? Optional.empty() : line(key, Component.literal(joinDefinitions(values, category)));
     }
 
-    public static String joinDefinitions(List<? extends Holder<?>> values, String category) {
+    public static String joinDefinitions(Collection<? extends Holder<?>> values, String category) {
         return values.stream().map(holder -> DefinitionText.name(holder, category).getString()).reduce((a, b) -> a + ", " + b).orElse("-");
     }
 }

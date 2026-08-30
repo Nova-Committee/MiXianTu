@@ -6,6 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,7 +30,7 @@ public final class FormulaContexts {
         extra.forEach((key, value) -> {
             if (value != null && Double.isFinite(value)) values.put(key, value);
         });
-        return new FormulaContext(values, entity.getRandom());
+        return new FormulaContext(values, entity.getRandom(), entity instanceof Player player ? player : null);
     }
 
     public static FormulaContext forEntities(@NotNull LivingEntity caster, @NotNull LivingEntity target, Map<String, Double> extra) {
@@ -39,7 +40,9 @@ public final class FormulaContexts {
         extra.forEach((key, value) -> {
             if (value != null && Double.isFinite(value)) values.put(key, value);
         });
-        return new FormulaContext(values, caster.getRandom());
+        Player player = caster instanceof Player casterPlayer ? casterPlayer
+                : target instanceof Player targetPlayer ? targetPlayer : null;
+        return new FormulaContext(values, caster.getRandom(), player);
     }
 
     private static void populate(Map<String, Double> target, String prefix, LivingEntity entity) {

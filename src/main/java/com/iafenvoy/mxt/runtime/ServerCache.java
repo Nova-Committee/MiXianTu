@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime;
 
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -62,6 +61,7 @@ public final class ServerCache {
 
     /**
      * Rebuilds validated linear cultivation chains after datapack data is available.
+     * Invalid chains are rejected so no partial cache can become authoritative.
      */
     private void rebuild() {
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
@@ -109,18 +109,15 @@ public final class ServerCache {
         int rank = 0;
         while (current != null) {
             if (!visited.add(current)) {
-                MiXianTu.LOGGER.error("Ignoring cyclic cultivation chain for resource {} at realm {}", resource, current);
-                return;
+                throw new IllegalStateException("Cyclic cultivation realm chain for resource " + resource + " at realm " + current);
             }
             RealmStage stage = MxtDatapackRegistries.get(MxtResourceKeys.REALM_STAGE, current).orElse(null);
             if (stage == null || !HolderHelper.id(stage.resource()).equals(resource)) {
-                MiXianTu.LOGGER.error("Ignoring invalid cultivation chain for resource {} at realm {}", resource, current);
-                return;
+                throw new IllegalStateException("Invalid cultivation realm chain for resource " + resource + " at realm " + current);
             }
             Identifier previous = resolved.get(current);
             if (previous != null && !previous.equals(resource)) {
-                MiXianTu.LOGGER.error("Realm {} belongs to both {} and {}", current, previous, resource);
-                return;
+                throw new IllegalStateException("Realm " + current + " belongs to both resources " + previous + " and " + resource);
             }
             chain.put(current, resource);
             chainRanks.put(current, rank++);

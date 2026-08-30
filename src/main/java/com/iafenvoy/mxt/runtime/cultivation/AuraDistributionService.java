@@ -168,7 +168,7 @@ public final class AuraDistributionService {
     }
 
     private static double shareWeight(CultivationAttachment spirit, FormulaContext context) {
-        return spirit.realmStages().stream()
+        return spirit.realmStages().values().stream()
                 .map(stage -> stage.value().auraShareWeight().evaluate(context))
                 .filter(value -> Double.isFinite(value) && value > 0.0D)
                 .max(Double::compareTo).orElse(1.0D);

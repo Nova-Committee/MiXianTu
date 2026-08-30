@@ -440,7 +440,7 @@ public final class AbilityService {
                 id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id));
         LinkedHashMap<String, Double> variables = new LinkedHashMap<>(context.variables());
         variables.put("element_modifier", modifier);
-        return new FormulaContext(variables, context.random());
+        return new FormulaContext(variables, context.random(), context.player());
     }
 
     private static <T extends AbilityComponent> Optional<T> component(Ability definition, Class<T> type) {

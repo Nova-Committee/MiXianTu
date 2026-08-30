@@ -1,0 +1,9 @@
+{
+  "items": "minecraft:carrot",
+  "conditions": [
+    {
+      "condition": {"type": "mxt:constant", "value": false},
+      "description": "condition.mxt_test.locked_carrot"
+    }
+  ]
+}

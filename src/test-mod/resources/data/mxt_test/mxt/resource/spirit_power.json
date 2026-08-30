@@ -1,7 +1,16 @@
 {
   "default_value": 100,
   "min": 0,
-  "max": "100 + level * 10",
+  "max": {
+    "type": "mxt:conditional",
+    "branches": [
+      {
+        "condition": { "type": "mxt:realm", "realm": "mxt_test:spirit_power_refining" },
+        "value": "100 + level * 10"
+      }
+    ],
+    "fallback": 0
+  },
   "regen": 1,
   "icon": {
     "texture": "mxt_test:textures/item/qingxiao_spirit_crystal.png"

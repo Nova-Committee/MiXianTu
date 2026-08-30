@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Binomial;
+import com.iafenvoy.mxt.util.formula.number.Conditional;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.ContextVariable;
 import com.iafenvoy.mxt.util.formula.number.Expression;
@@ -29,6 +30,7 @@ public final class MxtNumberProviders {
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Uniform>> UNIFORM = REGISTRY.register("uniform", () -> Uniform.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Binomial>> BINOMIAL = REGISTRY.register("binomial", () -> Binomial.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<WeightedList>> WEIGHTED_LIST = REGISTRY.register("weighted_list", () -> WeightedList.MAP_CODEC);
+    public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Conditional>> CONDITIONAL = REGISTRY.register("conditional", () -> Conditional.MAP_CODEC);
 
     private MxtNumberProviders() {
     }

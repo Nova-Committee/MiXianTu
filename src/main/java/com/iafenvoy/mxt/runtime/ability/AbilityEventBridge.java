@@ -190,7 +190,7 @@ public final class AbilityEventBridge {
     public static void onBreakthrough(LivingEntity entity, Identifier target, FormulaContext context) {
         Map<String, Double> values = new LinkedHashMap<>(context.variables());
         values.put("breakthrough", 1.0D);
-        dispatch("breakthrough", entity, new FormulaContext(values, context.random()), definition -> true);
+        dispatch("breakthrough", entity, new FormulaContext(values, context.random(), context.player()), definition -> true);
     }
 
     private static FormulaContext blockContext(Entity entity, BlockPos pos) {

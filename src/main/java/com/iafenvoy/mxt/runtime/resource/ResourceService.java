@@ -91,7 +91,7 @@ public final class ResourceService {
         values.put("level", (double) resolvedRank);
         values.put("absorbed_aura", absorbedAura);
         values.put("cultivation_progress", absorbedAura);
-        return new FormulaContext(values, base.random());
+        return new FormulaContext(values, base.random(), base.player());
     }
 
     public static FormulaContext formulaContext(CultivationAttachment spirit, Identifier resource, Resource definition, FormulaContext base) {
@@ -124,7 +124,7 @@ public final class ResourceService {
 
     private static int realmRank(CultivationAttachment spirit, Holder<Resource> resource, Resource definition) {
         int best = -1;
-        for (Holder<RealmStage> current : spirit.realmStages()) {
+        for (Holder<RealmStage> current : spirit.realmStages().values()) {
             if (!current.value().resource().equals(resource)) continue;
             Identifier currentId = HolderHelper.id(current);
             Optional<Integer> cached = ServerCache.get()

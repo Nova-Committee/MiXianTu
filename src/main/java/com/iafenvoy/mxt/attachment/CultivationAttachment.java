@@ -15,9 +15,9 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMaps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.core.Holder;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,7 +25,7 @@ import java.util.Optional;
 public final class CultivationAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CultivationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.doubleMap(Resource.CODEC).optionalFieldOf("cultivation_progress", Object2DoubleMaps.emptyMap()).forGetter(CultivationAttachment::cultivationProgresses),
-            CollectionCodecs.list(RealmStage.CODEC).optionalFieldOf("realm_stages", List.of()).forGetter(CultivationAttachment::realmStages),
+            CollectionCodecs.map(Resource.CODEC, RealmStage.CODEC).optionalFieldOf("realm_stages", Map.of()).forGetter(CultivationAttachment::realmStages),
             CultivateAction.CODEC.optionalFieldOf("cultivate_action").forGetter(CultivationAttachment::cultivateAction),
             Codec.BOOL.optionalFieldOf("cultivating", false).forGetter(CultivationAttachment::cultivating),
             Codec.LONG.optionalFieldOf("cultivate_started_at", 0L).forGetter(CultivationAttachment::cultivateStartedAt),
@@ -34,23 +34,22 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
     ).apply(i, CultivationAttachment::new));
 
     private final Object2DoubleMap<Holder<Resource>> cultivationProgresses;
-    private final List<Holder<RealmStage>> realmStages;
+    private final Map<Holder<Resource>, Holder<RealmStage>> realmStages;
     private Optional<Holder<CultivateAction>> cultivateAction;
     private boolean cultivating;
     private long cultivateStartedAt, nextCultivateTick;
     private final Object2LongMap<Holder<CultivateAction>> cultivateCooldowns;
 
     public CultivationAttachment() {
-        this(Object2DoubleMaps.emptyMap(), List.of(), Optional.empty(), false, 0L, 0L, Object2LongMaps.emptyMap());
+        this(Object2DoubleMaps.emptyMap(), Map.of(), Optional.empty(), false, 0L, 0L, Object2LongMaps.emptyMap());
     }
 
-    private CultivationAttachment(Object2DoubleMap<Holder<Resource>> cultivationProgresses, List<Holder<RealmStage>> realmStages,
+    private CultivationAttachment(Object2DoubleMap<Holder<Resource>> cultivationProgresses, Map<Holder<Resource>, Holder<RealmStage>> realmStages,
                                   Optional<Holder<CultivateAction>> cultivateAction, boolean cultivating,
                                   long cultivateStartedAt, long nextCultivateTick,
                                   Map<Holder<CultivateAction>, Long> cultivateCooldowns) {
         this.cultivationProgresses = new Object2DoubleOpenHashMap<>(cultivationProgresses);
-        this.realmStages = new LinkedList<>();
-        realmStages.forEach(this::replaceRealmStage);
+        this.realmStages = new LinkedHashMap<>(realmStages);
         this.cultivateAction = cultivateAction;
         this.cultivating = cultivating;
         this.cultivateStartedAt = cultivateStartedAt;
@@ -60,7 +59,12 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
 
     public Object2DoubleMap<Holder<Resource>> cultivationProgresses() { return this.cultivationProgresses; }
     public double cultivationProgress(Holder<Resource> resource) { return this.cultivationProgresses.getDouble(resource); }
-    public List<Holder<RealmStage>> realmStages() { return this.realmStages; }
+    public Map<Holder<Resource>, Holder<RealmStage>> realmStages() { return this.realmStages; }
+    /**
+     * Returns the stage currently associated with the resource, or {@code null}
+     * when the player has not entered a realm chain for that resource yet.
+     */
+    public @Nullable Holder<RealmStage> realmStage(Holder<Resource> resource) { return this.realmStages.get(resource); }
     public Optional<Holder<CultivateAction>> cultivateAction() { return this.cultivateAction; }
     public boolean cultivating() { return this.cultivating; }
     public long cultivateStartedAt() { return this.cultivateStartedAt; }
@@ -75,20 +79,14 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
 
     public void setRealmStage(Holder<RealmStage> value) {
         if (value == null) return;
-        this.replaceRealmStage(value);
+        this.realmStages.put(value.value().resource(), value);
         this.markDirty();
     }
 
-    public void setRealmStages(List<Holder<RealmStage>> values) {
+    public void setRealmStages(Map<Holder<Resource>, Holder<RealmStage>> values) {
         this.realmStages.clear();
-        values.forEach(this::replaceRealmStage);
+        this.realmStages.putAll(values);
         this.markDirty();
-    }
-
-    private void replaceRealmStage(Holder<RealmStage> value) {
-        if (value == null) return;
-        this.realmStages.removeIf(existing -> existing.value().resource().equals(value.value().resource()));
-        this.realmStages.add(value);
     }
 
     public void startCultivateAction(Holder<CultivateAction> action, long gameTime, long nextTick) {

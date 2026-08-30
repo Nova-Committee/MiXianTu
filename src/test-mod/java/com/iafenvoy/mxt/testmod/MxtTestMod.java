@@ -35,6 +35,7 @@ import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NonZeroVisibility;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.PrepareResult;
@@ -135,22 +136,39 @@ public final class MxtTestMod {
                 .orElseThrow(() -> new IllegalStateException("Weapon binding did not resolve its existing item"));
         if (!same(weaponBinding.attackDamage().evaluate(FormulaContext.EMPTY), 6.0D)
                 || !same(weaponBinding.attackSpeed().evaluate(FormulaContext.EMPTY), -2.4D)
+                || weaponBinding.conditions().size() != 1
+                || weaponBinding.conditions().getFirst().description().isPresent()
                 || ItemBindingService.weapon(event.getServer().registryAccess(), weapon).isEmpty()) {
             throw new IllegalStateException("Weapon binding did not retain its combat values on both registry sides");
         }
         ItemStack pill = new ItemStack(Items.HONEY_BOTTLE);
-        if (ItemBindingService.pill(pill).filter(value -> same(value.toxicityGain().evaluate(FormulaContext.EMPTY), 25.0D)).isEmpty()
+        if (ItemBindingService.pill(pill).filter(value -> same(value.toxicityGain().evaluate(FormulaContext.EMPTY), 25.0D)
+                        && value.conditions().size() == 1
+                        && value.conditions().getFirst().description().isPresent()).isEmpty()
                 || ItemBindingService.pill(event.getServer().registryAccess(), pill).isEmpty()) {
             throw new IllegalStateException("Pill binding did not resolve its existing item");
         }
         ItemStack root = new ItemStack(Items.APPLE);
-        if (ItemBindingService.actions(root).stream().noneMatch(GrantSpiritRootAction.class::isInstance)) {
+        if (ItemBindingService.actions(root).stream().noneMatch(GrantSpiritRootAction.class::isInstance)
+                || ItemBindingService.resolve(event.getServer().registryAccess(), root).item()
+                .filter(value -> value.conditions().size() == 1 && value.conditions().getFirst().description().isPresent())
+                .isEmpty()) {
             throw new IllegalStateException("Generic item binding did not resolve its grant-spirit-root action");
+        }
+        ItemStack lockedCarrot = new ItemStack(Items.CARROT);
+        if (ItemBindingService.resolve(event.getServer().registryAccess(), lockedCarrot).item()
+                .filter(value -> value.conditions().size() == 1
+                        && value.conditions().getFirst().description().isPresent()
+                        && !value.conditions().getFirst().condition().test(null, FormulaContext.EMPTY))
+                .isEmpty()) {
+            throw new IllegalStateException("Unsatisfied item condition test binding was not loaded");
         }
         ItemStack jadeSlip = new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get());
         TechniqueBinding techniqueBinding = ItemBindingService.technique(jadeSlip)
                 .orElseThrow(() -> new IllegalStateException("Technique binding did not resolve its existing item"));
         if (!HolderHelper.id(techniqueBinding.technique()).equals(Identifier.parse("mxt_test:qingxiao_breathing_manual"))
+                || techniqueBinding.conditions().size() != 1
+                || techniqueBinding.conditions().getFirst().description().isPresent()
                 || ItemBindingService.technique(event.getServer().registryAccess(), jadeSlip).isEmpty()) {
             throw new IllegalStateException("Technique binding did not retain its technique item configuration");
         }
@@ -320,6 +338,7 @@ public final class MxtTestMod {
                 || !same(spiritPower.value().resourceToCultivation().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(spiritPower.value().resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(spiritPower.value().burstAmount().evaluate(FormulaContext.EMPTY), 10.0D)
+                || !same(spiritPower.value().max().evaluate(FormulaContext.EMPTY), 0.0D)
                 || spiritPower.value().particleColor() != 0x66CCFF) {
             throw new IllegalStateException("Resource cultivation conversion settings were not decoded correctly");
         }
@@ -329,12 +348,17 @@ public final class MxtTestMod {
         Holder<RealmStage> spiritPowerRealm = requireHolder(MxtResourceKeys.REALM_STAGE,
                 Identifier.parse("mxt_test:spirit_power_refining"));
         CultivationAttachment multiChain = new CultivationAttachment();
-        multiChain.setRealmStages(List.of(requireHolder(MxtResourceKeys.REALM_STAGE, foundation), spiritPowerRealm));
+        Holder<RealmStage> foundationHolder = requireHolder(MxtResourceKeys.REALM_STAGE, foundation);
+        multiChain.setRealmStages(Map.of(foundationHolder.value().resource(), foundationHolder,
+                spiritPowerRealm.value().resource(), spiritPowerRealm));
         multiChain.setCultivationProgress(qi, 12.0D);
         multiChain.setCultivationProgress(spiritPower, 7.0D);
         if (multiChain.realmStages().size() != 2 || !same(multiChain.cultivationProgress(qi), 12.0D)
                 || !same(multiChain.cultivationProgress(spiritPower), 7.0D)) {
             throw new IllegalStateException("Multiple realm chains must retain independent resources and progress");
+        }
+        if (spirit.realmStage(spiritPower) != null) {
+            throw new IllegalStateException("A resource without a realm must resolve to null");
         }
         FormulaContext foundationContext = ResourceService.formulaContext(spirit, qi, FormulaContext.EMPTY);
         Bounds foundationBounds = ResourceService.resolveBounds(qi.value(), foundationContext)
@@ -481,6 +505,8 @@ public final class MxtTestMod {
                 .orElseThrow(() -> new IllegalStateException("Divine-sense resource test definition was not loaded"));
         Resource spiritPower = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))
                 .orElseThrow(() -> new IllegalStateException("Spirit-power resource test definition was not loaded"));
+        Resource soulPower = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:soul_power"))
+                .orElseThrow(() -> new IllegalStateException("Soul-power resource test definition was not loaded"));
         if (MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
                 .filter(resource -> MOD_ID.equals(resource.key().identifier().getNamespace()))
                 .flatMap(resource -> resource.value().bars().stream())
@@ -501,6 +527,12 @@ public final class MxtTestMod {
         ResourceBar divineSenseHud = divineSense.bars().getFirst();
         if (divineSenseHud.anchor() != Anchor.RIGHT || divineSenseHud.order() != 0) {
             throw new IllegalStateException("Resource-bar right-column order configuration was not retained");
+        }
+        ResourceBar soulPowerHud = soulPower.bars().stream()
+                .filter(bar -> bar.context().layout() == Layout.SELF_HUD)
+                .findFirst().orElseThrow(() -> new IllegalStateException("Soul-power resource-bar test definition was not loaded"));
+        if (!(soulPowerHud.visibility() instanceof NonZeroVisibility)) {
+            throw new IllegalStateException("Non-zero resource-bar visibility was not decoded");
         }
         ResourceBar boss = spiritPower.bars().stream().filter(bar -> bar.context().layout() == Layout.BOSS_OVERLAY)
                 .findFirst().orElseThrow(() -> new IllegalStateException("Boss resource-bar test definition was not loaded"));

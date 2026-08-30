@@ -10,9 +10,11 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
+import java.util.Locale;
 
 /**
  * Owns the player-controlled cultivation mode around a selected cultivation action.
@@ -44,6 +46,13 @@ public final class CultivationModeService {
         if (!spirit.cultivating() || action == null) return false;
         stop(player, spirit, action);
         return true;
+    }
+
+    /** Sends the user-facing reason for a failed cultivation-mode transition. */
+    public static void notifyFailure(ServerPlayer player, Result result) {
+        if (result == null || result.failure() == null) return;
+        String reasonKey = "chat.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
+        player.sendSystemMessage(Component.translatable("chat.mxt.cultivation.failed", Component.translatable(reasonKey)));
     }
 
     /**

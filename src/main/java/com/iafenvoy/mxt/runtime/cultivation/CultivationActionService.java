@@ -273,7 +273,7 @@ public final class CultivationActionService {
      */
     public static boolean handlesNaturalRegeneration(LivingEntity entity, Holder<Resource> resource) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        return spirit.cultivating() && spirit.realmStages().stream()
+        return spirit.cultivating() && spirit.realmStages().values().stream()
                 .filter(stage -> stage.value().resource().equals(resource))
                 .anyMatch(stage -> stage.value().cultivateCondition().test(entity, FormulaContexts.forEntity(entity)));
     }
@@ -287,7 +287,7 @@ public final class CultivationActionService {
                                                     AuraResult aura, FormulaContext context) {
         if (aura.suppressCultivate()) return false;
         boolean realmEligible = spirit.realmStages().isEmpty()
-                || spirit.realmStages().stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
+                || spirit.realmStages().values().stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
         if (!realmEligible && MxtServerConfig.forbidCultivationWithoutEligibleAura()) return false;
         if (!(aura.cultivateCondition() instanceof AuraRangeEntityCondition(
                 Map<Holder<Resource>, AuraRequirement> aura1
@@ -475,19 +475,19 @@ public final class CultivationActionService {
     }
 
     private static List<Holder<Resource>> realmResources(CultivationAttachment spirit) {
-        return spirit.realmStages().stream().map(stage -> stage.value().resource()).distinct().toList();
+        return spirit.realmStages().values().stream().map(stage -> stage.value().resource()).distinct().toList();
     }
 
     private static List<Holder<Resource>> eligibleRealmResources(CultivationAttachment spirit, LivingEntity entity,
                                                                   FormulaContext context) {
-        return spirit.realmStages().stream()
+        return spirit.realmStages().values().stream()
                 .filter(stage -> stage.value().cultivateCondition().test(entity, context))
                 .map(stage -> stage.value().resource()).distinct().toList();
     }
 
     public static boolean realmCultivateCondition(CultivationAttachment spirit, LivingEntity entity, FormulaContext context) {
         return spirit.realmStages().isEmpty()
-                || spirit.realmStages().stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
+                || spirit.realmStages().values().stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
     }
 
     private record ActiveResource(Identifier id, Resource definition) {

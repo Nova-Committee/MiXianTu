@@ -64,5 +64,8 @@
   "command.mxt_test.guide.1": "青霄试炼：1. 执行 /mxt_test kit 领取身份、资源与道具。",
   "command.mxt_test.guide.2": "2. 主手持有青霄灵晶，执行 /mxt_test cultivate；随后可用 /mxt breakthrough mxt_test:qi 尝试突破。",
   "command.mxt_test.guide.3": "3. 金块上使用阵盘激活聚灵阵；契约卷轴可绑定狼，秘境令牌可进入末地试炼。",
-  "command.mxt_test.guide.4": "4. 使用 /mxt ability cast mxt_test:qingxiao_firebolt、/mxt_test task 和 /mxt sect claim 验证技能、宗门与领地。"
+  "command.mxt_test.guide.4": "4. 使用 /mxt ability cast mxt_test:qingxiao_firebolt、/mxt_test task 和 /mxt sect claim 验证技能、宗门与领地。",
+  "condition.mxt_test.fire_root_item": "需要满足火灵根物品条件",
+  "condition.mxt_test.toxicity_pill": "丹药使用条件满足",
+  "condition.mxt_test.locked_carrot": "该物品当前不可使用"
 }

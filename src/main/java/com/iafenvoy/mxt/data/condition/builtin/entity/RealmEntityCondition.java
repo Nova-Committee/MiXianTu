@@ -30,7 +30,7 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         Identifier required = HolderHelper.id(this.realm);
-        return entity.getData(MxtAttachments.CULTIVATION).realmStages().stream().anyMatch(current -> switch (this.comparison) {
+        return entity.getData(MxtAttachments.CULTIVATION).realmStages().values().stream().anyMatch(current -> switch (this.comparison) {
             case EXACT -> current.equals(this.realm);
             case AT_LEAST ->
                     ServerCache.get().map(cache -> cache.isRealmAtLeast(HolderHelper.id(current), required)).orElse(false);

@@ -25,6 +25,6 @@ public record RealmLootCondition(EntityTarget target, Holder<RealmStage> realm) 
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        return entity != null && entity.getData(MxtAttachments.CULTIVATION).realmStages().stream().anyMatch(this.realm::equals);
+        return entity != null && entity.getData(MxtAttachments.CULTIVATION).realmStages().values().stream().anyMatch(this.realm::equals);
     }
 }

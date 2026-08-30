@@ -49,6 +49,7 @@ public final class MxtTestCommands {
     private static final Identifier QI = id("qi");
     private static final Identifier QI_REFINING = id("qi_refining");
     private static final Identifier SPIRIT_POWER = id("spirit_power");
+    private static final Identifier SPIRIT_POWER_REFINING = id("spirit_power_refining");
     private static final Identifier SOUL_POWER = id("soul_power");
     private static final Identifier ROOT = id("qingxiao_fire_root");
     private static final Identifier WATER_ROOT = id("water_root");
@@ -88,7 +89,8 @@ public final class MxtTestCommands {
         FormulaContext context = FormulaContext.of(player);
 
         grantIdentity(player, identity, context);
-        if (!CultivationService.setRealm(spirit, QI_REFINING)) {
+        if (!CultivationService.setRealm(spirit, QI_REFINING)
+                || !CultivationService.setRealm(spirit, SPIRIT_POWER_REFINING)) {
             source.sendFailure(Component.translatable("command.mxt_test.kit.realm_failed"));
             return 0;
         }

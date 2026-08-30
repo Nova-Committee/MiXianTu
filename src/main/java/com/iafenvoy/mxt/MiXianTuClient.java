@@ -17,7 +17,6 @@ public final class MiXianTuClient {
     public static void init(FMLClientSetupEvent event) {
         ConfigManager.getInstance().registerConfigHandler(MxtClientConfig.INSTANCE);
         CultivationAnimationController.register();
-        event.getContainer().registerExtensionPoint(IConfigScreenFactory.class, (container, parent) -> ConfigSelectScreen.builder("config.mxt.title", parent)
-                .client(MxtClientConfig.INSTANCE).server(MxtServerConfig.INSTANCE).build());
+        event.getContainer().registerExtensionPoint(IConfigScreenFactory.class, (_, parent) -> ConfigSelectScreen.builder("config.mxt.title", parent).client(MxtClientConfig.INSTANCE).server(MxtServerConfig.INSTANCE).build());
     }
 }

@@ -64,5 +64,8 @@
   "command.mxt_test.guide.1": "Qingxiao Trial: 1. Run /mxt_test kit to receive the identity, resources, and tools.",
   "command.mxt_test.guide.2": "2. Hold a Qingxiao Spirit Crystal and run /mxt_test cultivate. Then use /mxt breakthrough mxt_test:qi to test advancement.",
   "command.mxt_test.guide.3": "3. Use the formation plate on a gold block, bind a wolf with the contract scroll, and enter the End trial using the realm token.",
-  "command.mxt_test.guide.4": "4. Use /mxt ability cast mxt_test:qingxiao_firebolt, /mxt_test task, and /mxt sect claim to test abilities, sects, and territory."
+  "command.mxt_test.guide.4": "4. Use /mxt ability cast mxt_test:qingxiao_firebolt, /mxt_test task, and /mxt sect claim to test abilities, sects, and territory.",
+  "condition.mxt_test.fire_root_item": "Fire-root item condition required",
+  "condition.mxt_test.toxicity_pill": "Pill usage condition passed",
+  "condition.mxt_test.locked_carrot": "This item cannot be used right now"
 }

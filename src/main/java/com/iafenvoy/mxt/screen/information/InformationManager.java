@@ -2,14 +2,17 @@ package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.DefinitionText;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.iafenvoy.mxt.screen.information.InformationHelper.*;
 
@@ -23,7 +26,7 @@ public final class InformationManager {
         register("position", Side.BASIC, p -> line("info.mxt.position", String.format("%d, %d, %d", p.getBlockX(), p.getBlockY(), p.getBlockZ())));
         register("dimension", Side.BASIC, p -> line("info.mxt.dimension", p.level().dimension().identifier().getPath()));
 
-        register("realm", Side.CULTIVATION, p -> line("info.mxt.realm", joinDefinitions(p.getData(MxtAttachments.CULTIVATION).realmStages(), "realm_stage")));
+        register("realm", Side.CULTIVATION, p -> line("info.mxt.realm", formatRealms(p.getData(MxtAttachments.CULTIVATION))));
         register("cultivation_progress", Side.CULTIVATION, p -> line("info.mxt.cultivation_progress", formatProgress(p.getData(MxtAttachments.CULTIVATION))));
         register("cultivating", Side.CULTIVATION, p -> line("info.mxt.cultivating", Component.translatable(p.getData(MxtAttachments.CULTIVATION).cultivating() ? "info.mxt.yes" : "info.mxt.no")));
         register("spirit_roots", Side.CULTIVATION, p -> lineWithDefinitions("info.mxt.spirit_roots", p.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots(), "spirit_root"));
@@ -67,6 +70,20 @@ public final class InformationManager {
         return spirit.cultivationProgresses().object2DoubleEntrySet().stream()
                 .map(entry -> DefinitionText.name(entry.getKey(), "resource").getString() + ": " + String.format("%.2f", entry.getDoubleValue()))
                 .reduce((a, b) -> a + ", " + b).orElse("-");
+    }
+
+    /** Displays every resource tracked by the player, using Mortal when no realm is assigned. */
+    private static String formatRealms(CultivationAttachment cultivation) {
+        Set<Holder<Resource>> resources = new LinkedHashSet<>(cultivation.cultivationProgresses().keySet());
+        resources.addAll(cultivation.realmStages().keySet());
+        if (resources.isEmpty()) return Component.translatable("info.mxt.mortal").getString();
+        String formatted = resources.stream().map(resource -> {
+            Holder<?> realm = cultivation.realmStage(resource);
+            String realmName = realm == null ? Component.translatable("info.mxt.mortal").getString()
+                    : DefinitionText.name(realm, "realm_stage").getString();
+            return DefinitionText.name(resource, "resource").getString() + ": " + realmName;
+        }).collect(Collectors.joining(", "));
+        return formatted.isEmpty() ? Component.translatable("info.mxt.mortal").getString() : formatted;
     }
 
     private record RegisteredInformation(Side side, InformationProvider supplier) {

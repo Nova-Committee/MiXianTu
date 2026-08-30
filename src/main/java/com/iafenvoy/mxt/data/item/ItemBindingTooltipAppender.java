@@ -3,12 +3,14 @@ package com.iafenvoy.mxt.data.item;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item.TooltipContext;
@@ -22,6 +24,7 @@ import net.neoforged.neoforge.common.tooltip.TooltipLocation;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
 import java.util.function.Consumer;
+import java.util.List;
 
 /**
  * Adds data-driven weapon, pill, technique and item-action details.
@@ -40,13 +43,33 @@ public final class ItemBindingTooltipAppender {
                                        Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
-        ItemBindingService.weapon(registries, stack).ifPresent(weapon -> appendWeapon(builder, weapon));
-        ItemBindingService.pill(registries, stack).ifPresent(pill -> appendPill(builder, pill));
-        ItemBindingService.technique(registries, stack).ifPresent(technique -> appendTechnique(builder, technique));
-        ItemBindingService.actions(registries, stack).stream()
+        ResolvedBindings bindings = ItemBindingService.resolve(registries, stack);
+        bindings.weapon().ifPresent(weapon -> appendWeapon(builder, weapon));
+        bindings.pill().ifPresent(pill -> appendPill(builder, pill));
+        bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
+        bindings.item().map(ItemBinding::actions).orElse(List.of()).stream()
                 .filter(GrantSpiritRootAction.class::isInstance)
                 .map(GrantSpiritRootAction.class::cast)
                 .forEach(action -> appendSpiritRoot(builder, flag, action));
+        if (player != null) {
+            FormulaContext formula = FormulaContext.of(player);
+            bindings.item().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
+            bindings.weapon().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
+            bindings.pill().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
+            bindings.technique().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
+        }
+    }
+
+    private static void appendConditions(Consumer<Component> builder, List<ConditionEntry> conditions,
+                                         Player player, FormulaContext formula) {
+        for (ConditionEntry entry : conditions) {
+            entry.description().ifPresent(description -> {
+                boolean met = entry.condition().test(player, formula);
+                MutableComponent marker = Component.literal(met ? "✔ " : "✖ ")
+                        .withStyle(met ? ChatFormatting.GREEN : ChatFormatting.RED);
+                builder.accept(marker.append(Component.translatable(description)));
+            });
+        }
     }
 
     private static void appendSpiritRoot(Consumer<Component> builder, TooltipFlag flag, GrantSpiritRootAction action) {

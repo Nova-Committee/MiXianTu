@@ -1,8 +1,11 @@
 {
   "items": ["minecraft:apple", "#mxt_test:spirit_herbs"],
-  "condition": {
-    "type": "mxt:always_true"
-  },
+  "conditions": [
+    {
+      "condition": {"type": "mxt:always_true"},
+      "description": "condition.mxt_test.fire_root_item"
+    }
+  ],
   "actions": [
     {
       "type": "mxt:grant_spirit_root",

@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -55,14 +56,17 @@ public final class CultivationActionEventBridge {
     private static void tick(LivingEntity entity) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         if (!spirit.cultivating()) return;
+        boolean wasCultivating = true;
         Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
         if (action == null) return;
         CultivateAction definition = action.value();
         FormulaContext context = FormulaContexts.forEntity(entity);
         boolean mayContinue = !definition.stopCondition().test(entity, context);
         AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
+        Result result = CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
                 entity.level().getGameTime(), context, () -> mayContinue);
+        if (entity instanceof ServerPlayer player && wasCultivating && !spirit.cultivating() && result.failure() != null)
+            CultivationModeService.notifyFailure(player, result);
         // Cultivation can change progress, active-state timing, and resource conversions in one tick.
     }
 }

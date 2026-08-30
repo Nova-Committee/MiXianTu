@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -20,7 +19,7 @@ import java.util.Optional;
 public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberProvider toxicityGain,
                           NumberProvider toxicityThreshold, EntityAction onOverdose,
                           NumberProvider toxicityAfterOverdose, Optional<TagKey<ItemQuality>> qualityGroup,
-                          EntityCondition condition) implements ItemMatcher {
+                          List<ConditionEntry> conditions) implements ItemMatcher {
     public static final Codec<PillBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(PillBinding::entries),
             EntityAction.optionalCodec("on_consume").forGetter(PillBinding::onConsume),
@@ -29,6 +28,6 @@ public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberPro
             EntityAction.optionalCodec("on_overdose").forGetter(PillBinding::onOverdose),
             NumberProvider.CODEC.optionalFieldOf("toxicity_after_overdose", new Constant(0.0D)).forGetter(PillBinding::toxicityAfterOverdose),
             TagKey.hashedCodec(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality_group").forGetter(PillBinding::qualityGroup),
-            EntityCondition.optionalCodec("condition").forGetter(PillBinding::condition)
+            ConditionEntry.CODEC.listOf().optionalFieldOf("conditions", List.of()).forGetter(PillBinding::conditions)
     ).apply(i, PillBinding::new));
 }
