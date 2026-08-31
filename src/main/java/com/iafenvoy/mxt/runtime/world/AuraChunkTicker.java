@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
@@ -27,7 +28,6 @@ import java.util.Set;
  */
 @EventBusSubscriber
 public final class AuraChunkTicker {
-    private static final long INTERVAL_TICKS = 20L;
     private static final Map<ServerLevel, Set<LevelChunk>> LOADED = Collections.synchronizedMap(new IdentityHashMap<>());
     private static final Map<ServerLevel, Set<LevelChunk>> DIRTY = Collections.synchronizedMap(new IdentityHashMap<>());
     private static final Map<ServerLevel, Map<LevelChunk, Long>> NEXT_REFRESH = Collections.synchronizedMap(new IdentityHashMap<>());
@@ -68,6 +68,21 @@ public final class AuraChunkTicker {
     }
 
     /**
+     * Rebuilds queued block-aura caches once. Queries use this hook so a
+     * placement becomes visible immediately without scanning the chunk for
+     * every individual block event.
+     */
+    public static void flushDirty(ServerLevel level) {
+        Set<LevelChunk> dirty = DIRTY.get(level);
+        if (dirty == null || dirty.isEmpty()) return;
+        for (LevelChunk chunk : new LinkedHashSet<>(dirty)) {
+            if (chunk.getLevel() == level) BlockAuraService.rebuild(level, chunk);
+        }
+        dirty.clear();
+        DIRTY.remove(level);
+    }
+
+    /**
      * Clears and immediately rebuilds the persisted block-aura subsection
      * caches in the loaded chunks around a position.
      *
@@ -93,15 +108,12 @@ public final class AuraChunkTicker {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % INTERVAL_TICKS != 0L) return;
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        long interval = Math.max(1L, MxtServerConfig.blockAuraTickInterval());
+        if (level.getGameTime() % interval != 0L) return;
         Set<LevelChunk> chunks = LOADED.get(level);
         if (chunks == null) return;
-        Set<LevelChunk> dirty = DIRTY.get(level);
-        if (dirty != null) {
-            for (LevelChunk chunk : new LinkedHashSet<>(dirty)) BlockAuraService.rebuild(level, chunk);
-            dirty.clear();
-            DIRTY.remove(level);
-        }
+        flushDirty(level);
         refreshAuraVisitors(level);
         for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
             AuraChunkAttachment aura = chunk.getData(MxtAttachments.AURA_CHUNK);
@@ -112,7 +124,7 @@ public final class AuraChunkTicker {
             }
             if (!aura.initialized())
                 AuraService.getPositionAura(level, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
-            aura.regenerateAuras(INTERVAL_TICKS);
+            aura.regenerateAuras(interval);
         }
     }
 

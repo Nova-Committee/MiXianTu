@@ -12,8 +12,14 @@ import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.resource.ResourceBar;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
@@ -55,6 +61,7 @@ import net.minecraft.ChatFormatting;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -78,6 +85,14 @@ public final class MxtCommand {
                                 .then(literal("set").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                                         .then(argument("value", DoubleArgumentType.doubleArg()).executes(ctx -> setResource(ctx.getSource(),
                                                 IdentifierArgument.getId(ctx, "id"), DoubleArgumentType.getDouble(ctx, "value")))))))
+                .then(literal("resourcebar")
+                        .executes(ctx -> listResourceBars(ctx.getSource(), null, null))
+                        .then(argument("resource", IdentifierArgument.id())
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.RESOURCE))
+                                .executes(ctx -> listResourceBars(ctx.getSource(), IdentifierArgument.getId(ctx, "resource"), null))
+                                .then(argument("index", IntegerArgumentType.integer(0, 255))
+                                        .executes(ctx -> listResourceBars(ctx.getSource(), IdentifierArgument.getId(ctx, "resource"),
+                                                IntegerArgumentType.getInteger(ctx, "index"))))))
                 .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
                 .then(literal("aura").then(literal("query")
                                 .executes(ctx -> queryAura(ctx.getSource(), null))
@@ -169,6 +184,82 @@ public final class MxtCommand {
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
         source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(id, "resource"), value), true);
         return 1;
+    }
+
+    private static int listResourceBars(CommandSourceStack source, Identifier resourceId, Integer index) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        List<Reference<Resource>> resources = MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE)
+                .filter(holder -> resourceId == null || HolderHelper.id(holder).equals(resourceId)).toList();
+        if (resources.isEmpty()) {
+            source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_resource",
+                    resourceId == null ? "null" : resourceId.toString()));
+            return 0;
+        }
+        int shown = 0;
+        for (Reference<Resource> resource : resources) {
+            List<ResourceBar> bars = resource.value().bars();
+            if (index != null && index >= bars.size()) {
+                source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_index",
+                        resourceId == null ? "null" : resourceId.toString(), index, bars.size()));
+                return 0;
+            }
+            for (int barIndex = 0; barIndex < bars.size(); barIndex++) {
+                if (index != null && barIndex != index) continue;
+                sendResourceBar(source, player, resource, barIndex, bars.get(barIndex));
+                shown++;
+            }
+        }
+        if (shown == 0) {
+            source.sendFailure(Component.translatable("command.mxt.resourcebar.empty",
+                    resourceId == null ? "all" : resourceId.toString()));
+            return 0;
+        }
+        return shown;
+    }
+
+    private static void sendResourceBar(CommandSourceStack source, ServerPlayer player, Reference<Resource> resource,
+                                        int index, ResourceBar bar) {
+        Identifier resourceId = HolderHelper.id(resource);
+        String contextId = String.valueOf(MxtRegistries.RESOURCE_BAR_CONTEXT.getKey(bar.context()));
+        Component displayName = bar.context().name(resourceId);
+        Optional<Values> extracted = extractResourceBarValues(player, resource, bar.context());
+        if (extracted.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.unavailable",
+                    DefinitionText.name(resourceId, "resource"), index, displayName, contextId), false);
+            return;
+        }
+        Values values = extracted.get();
+        double maximum = bar.maximum().orElse(values.maximum());
+        double percentage = maximum == values.minimum() ? 100.0D
+                : (values.current() - values.minimum()) / (maximum - values.minimum()) * 100.0D;
+        source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.entry",
+                DefinitionText.name(resourceId, "resource"), index, displayName, contextId,
+                formatRaw(values.current()), formatRaw(values.minimum()), formatRaw(maximum), formatRaw(percentage),
+                bar.anchor().getSerializedName(), bar.order()), false);
+    }
+
+    private static Optional<Values> extractResourceBarValues(ServerPlayer player, Reference<Resource> resource,
+                                                              ResourceBarContext context) {
+        if (context == ActualConcentrationContext.INSTANCE) {
+            AuraPool pool = AuraService.getPositionAura(player.level(), player.blockPosition()).pool(resource);
+            return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));
+        }
+        if (context == EnvironmentConcentrationContext.INSTANCE) {
+            AuraPool pool = AuraService.getSensedAura(player.level(), player.blockPosition()).pool(resource);
+            return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));
+        }
+        return context.extract(player, resource);
+    }
+
+    private static String formatRaw(double value) {
+        if (Double.isNaN(value)) return "NaN";
+        if (value == Double.POSITIVE_INFINITY) return "∞";
+        if (value == Double.NEGATIVE_INFINITY) return "-∞";
+        return Double.toString(value);
     }
 
     private static int cultivateStatus(CommandSourceStack source) {

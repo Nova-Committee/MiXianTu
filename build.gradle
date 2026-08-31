@@ -104,7 +104,13 @@ neoForge {
 }
 
 tasks.named('runTestClient').configure {
-    dependsOn(testModSourceSet.classesTaskName)
+    // The run task does not reliably pull in the test source set's resource
+    // processing, so make both build phases explicit before launching.
+    dependsOn(
+            testModSourceSet.compileJavaTaskName,
+            testModSourceSet.processResourcesTaskName,
+            testModSourceSet.classesTaskName
+    )
 }
 
 tasks.named('runTestServer').configure {

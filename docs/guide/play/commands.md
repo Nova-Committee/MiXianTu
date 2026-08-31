@@ -11,6 +11,7 @@ title: 命令
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
 | `/mxt resource <id>` | 查询资源值。 |
 | `/mxt resource <id> set <value>` | 设置资源值。 |
+| `/mxt resourcebar [resource] [index]` | 查看资源条的原始当前值、上下限、未截断百分比、上下文、位置和顺序；不填参数时列出全部资源条。 |
 | `/mxt cultivate status` | 查看修炼状态。 |
 | `/mxt aura query [type]` | 查询当前位置灵气；`type` 是资源 ID，不填时显示全部资源，并附带资源的元素标记。 |
 | `/mxt aura vein` | 查询当前位置灵石矿脉等级。 |

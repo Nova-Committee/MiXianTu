@@ -49,6 +49,7 @@ public final class AuraService {
     }
 
     public static AuraResult getPositionAura(Level level, BlockPos pos) {
+        if (level instanceof ServerLevel server) AuraChunkTicker.flushDirty(server);
         AuraChunkAttachment chunk = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK);
         Resolved staticResolved = staticZone(level, pos);
         if (!chunk.initialized() || !chunk.template().equals(staticResolved.holder()))
