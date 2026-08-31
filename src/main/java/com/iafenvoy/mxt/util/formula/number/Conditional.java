@@ -37,11 +37,9 @@ public record Conditional(List<Branch> branches, Optional<NumberProvider> fallba
     @Override
     public double evaluate(FormulaContext context) {
         Player player = context.player();
-        if (player != null) {
-            for (Branch branch : this.branches) {
+        if (player != null)
+            for (Branch branch : this.branches)
                 if (branch.condition().test(player, context)) return branch.value().evaluate(context);
-            }
-        }
         return this.fallback.map(value -> value.evaluate(context)).orElse(0.0D);
     }
 
@@ -53,7 +51,7 @@ public record Conditional(List<Branch> branches, Optional<NumberProvider> fallba
     public record Branch(EntityCondition condition, NumberProvider value) {
         public static final MapCodec<Branch> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 EntityCondition.CODEC.fieldOf("condition").forGetter(Branch::condition),
-                NumberProvider.CODEC.fieldOf("value").forGetter(Branch::value)
+                CODEC.fieldOf("value").forGetter(Branch::value)
         ).apply(i, Branch::new));
     }
 }

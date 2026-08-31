@@ -14,7 +14,10 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.HolderLookup.RegistryLookup;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.LivingEntity;
@@ -24,6 +27,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Start;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,22 +48,54 @@ public final class ItemQualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onAttack(AttackEntityEvent event) {
-        if (!event.getEntity().level().isClientSide()
-                && !canUse(event.getEntity(), event.getEntity().getMainHandItem())) event.setCanceled(true);
+        if (!canUseForEvent(event.getEntity(), event.getEntity().getMainHandItem())) {
+            event.setCanceled(true);
+            notifyCannotUse(event.getEntity());
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onItemUse(RightClickItem event) {
-        if (!event.getEntity().level().isClientSide()
-                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand())))
+        if (!canUseForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) {
             event.setCanceled(true);
+            notifyCannotUse(event.getEntity());
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onBlockUse(RightClickBlock event) {
-        if (!event.getEntity().level().isClientSide()
-                && !canUse(event.getEntity(), event.getEntity().getItemInHand(event.getHand())))
+        if (!canUseForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) {
             event.setCanceled(true);
+            notifyCannotUse(event.getEntity());
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onUseStart(Start event) {
+        if (!canUseForEvent(event.getEntity(), event.getItem())) {
+            event.setCanceled(true);
+            notifyCannotUse(event.getEntity());
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onUseTick(Tick event) {
+        if (!canUseForEvent(event.getEntity(), event.getItem())) {
+            event.setCanceled(true);
+            notifyCannotUse(event.getEntity());
+        }
+    }
+
+    private static void notifyCannotUse(LivingEntity entity) {
+        if (entity instanceof ServerPlayer player)
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.item.cannot_use")
+                    .withStyle(ChatFormatting.RED), true);
+    }
+
+    private static boolean canUseForEvent(LivingEntity user, ItemStack stack) {
+        if (user.level().isClientSide())
+            return canUse(user.level().registryAccess(), user, stack);
+        return canUse(user, stack);
     }
 
     public static Optional<Holder<ItemQuality>> find(ItemStack stack) {
@@ -83,6 +120,18 @@ public final class ItemQualityService {
         FormulaContext context = FormulaContext.of(user);
         if (!bindings.conditionsMet(user, context)) return false;
         Optional<Holder<ItemQuality>> quality = find(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY), stack, bindings);
+        if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context)) return false;
+        return bindings.qualityGroup()
+                .map(group -> quality.map(value -> value.is(group)).orElse(false))
+                .orElse(true);
+    }
+
+    static boolean canUse(Provider access, LivingEntity user, ItemStack stack) {
+        if (stack.isEmpty()) return true;
+        ResolvedBindings bindings = ItemBindingService.resolve(access, stack);
+        FormulaContext context = FormulaContext.of(user);
+        if (!bindings.conditionsMet(user, context)) return false;
+        Optional<Holder<ItemQuality>> quality = find(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), stack, bindings, access);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context)) return false;
         return bindings.qualityGroup()
                 .map(group -> quality.map(value -> value.is(group)).orElse(false))

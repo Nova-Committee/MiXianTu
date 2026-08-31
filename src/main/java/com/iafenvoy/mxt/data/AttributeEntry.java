@@ -17,12 +17,11 @@ import java.util.Optional;
  */
 public record AttributeEntry(Holder<Attribute> attribute, AttributeModifier modifier,
                              Optional<NumberProvider> value) {
-    public static final MapCodec<AttributeEntry> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final Codec<AttributeEntry> CODEC = RecordCodecBuilder.create(i -> i.group(
             Attribute.CODEC.fieldOf("attribute").forGetter(AttributeEntry::attribute),
             AttributeModifier.MAP_CODEC.forGetter(AttributeEntry::modifier),
             NumberProvider.CODEC.optionalFieldOf("value").forGetter(AttributeEntry::value)
     ).apply(i, AttributeEntry::new));
-    public static final Codec<AttributeEntry> CODEC = MAP_CODEC.codec();
 
     public double amount(FormulaContext context) {
         return this.value.map(provider -> provider.evaluate(context)).orElse(this.modifier.amount());

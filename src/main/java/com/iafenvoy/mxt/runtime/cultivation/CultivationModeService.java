@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -51,8 +52,11 @@ public final class CultivationModeService {
     /** Sends the user-facing reason for a failed cultivation-mode transition. */
     public static void notifyFailure(ServerPlayer player, Result result) {
         if (result == null || result.failure() == null) return;
-        String reasonKey = "chat.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
-        player.sendSystemMessage(Component.translatable("chat.mxt.cultivation.failed", Component.translatable(reasonKey)));
+        String reasonKey = "actionbar.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
+        Component reason = result.failure() == Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
+                ? Component.translatable(reasonKey, DefinitionText.name(result.failedResource(), "resource"))
+                : Component.translatable(reasonKey);
+        player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
     }
 
     /**

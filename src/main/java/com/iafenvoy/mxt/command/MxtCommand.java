@@ -25,6 +25,7 @@ import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
 import com.iafenvoy.mxt.runtime.world.SpiritStoneVein;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -32,6 +33,7 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
@@ -45,6 +47,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.ChatFormatting;
@@ -83,7 +86,12 @@ public final class MxtCommand {
                                                 MxtDatapackRegistries.holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.ELEMENT)
                                                         .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder))
                                         .executes(ctx -> queryAura(ctx.getSource(), IdentifierArgument.getId(ctx, "type")))))
-                        .then(literal("vein").executes(ctx -> queryVein(ctx.getSource()))))
+                        .then(literal("vein").executes(ctx -> queryVein(ctx.getSource())))
+                        .then(literal("cache")
+                                .then(literal("clear").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                                        .executes(ctx -> clearAuraCache(ctx.getSource(), 3))
+                                        .then(argument("radius", IntegerArgumentType.integer(0, 32))
+                                                .executes(ctx -> clearAuraCache(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius")))))))
                 .then(literal("ability").then(literal("cast").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(argument("id", IdentifierArgument.id())
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.ABILITY))
@@ -253,6 +261,18 @@ public final class MxtCommand {
         SpiritStoneVein.Result vein = SpiritStoneVein.inspect(player.level(), player.blockPosition());
         source.sendSuccess(() -> Component.translatable("command.mxt.aura.vein", vein.blocks(), vein.grade().name().toLowerCase(Locale.ROOT)), false);
         return vein.blocks();
+    }
+
+    private static int clearAuraCache(CommandSourceStack source, int radius) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        if (!(player.level() instanceof ServerLevel level)) return 0;
+        int cleared = AuraChunkTicker.clearBlockAuraCachesAround(level, player.blockPosition(), radius);
+        source.sendSuccess(() -> Component.translatable("command.mxt.aura.cache.cleared", cleared, radius), false);
+        return cleared;
     }
 
     private static int castAbility(CommandSourceStack source, Identifier id) {

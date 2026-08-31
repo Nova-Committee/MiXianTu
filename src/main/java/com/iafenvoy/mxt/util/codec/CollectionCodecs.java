@@ -3,9 +3,12 @@ package com.iafenvoy.mxt.util.codec;
 import com.google.common.collect.ImmutableListMultimap.Builder;
 import com.google.common.collect.Multimaps;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimap;
 import it.unimi.dsi.fastutil.objects.*;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,5 +52,16 @@ public final class CollectionCodecs {
 
     public static <K> Codec<Object2LongMap<K>> longMap(Codec<K> keyCodec) {
         return map(keyCodec, Codec.LONG).xmap(Object2LongOpenHashMap::new, Function.identity());
+    }
+
+    public static <V> Codec<Int2ObjectMap<V>> intObjectMap(Codec<V> valueCodec) {
+        Codec<Integer> stringInteger = Codec.STRING.comapFlatMap(value -> {
+            try {
+                return DataResult.success(Integer.parseInt(value));
+            } catch (NumberFormatException exception) {
+                return DataResult.error(() -> "Invalid integer map key: " + value);
+            }
+        }, String::valueOf);
+        return map(stringInteger, valueCodec).xmap(Int2ObjectOpenHashMap::new, Function.identity());
     }
 }

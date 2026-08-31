@@ -18,7 +18,7 @@ public record AuraPool(double amount, double maximum, double regenPerTick) {
             Codec.DOUBLE.optionalFieldOf("maximum", 0.0D).forGetter(AuraPool::maximum),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraPool::regenPerTick)
     ).apply(i, AuraPool::new)).validate(AuraPool::validate);
-    public static final Codec<Map<Holder<Resource>, AuraPool>> MAP_CODEC = CollectionCodecs.map(Resource.CODEC, CODEC);
+    public static final Codec<Map<Holder<Resource>, AuraPool>> GROUPED_CODEC = CollectionCodecs.map(Resource.CODEC, CODEC);
 
     public AuraPool {
         if (!Double.isFinite(amount) || amount < 0.0D || (!Double.isFinite(maximum) && maximum != Double.POSITIVE_INFINITY)

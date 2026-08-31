@@ -11,12 +11,14 @@ import net.minecraft.util.StringRepresentable;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * A client-visible resource bar declaration. Renderer and visibility IDs select built-in typed implementations.
  */
 public record ResourceBar(ResourceBarContext context, Anchor anchor, int order,
-                          ResourceBarVisibility visibility, ResourceBarRenderData renderer, ValueDisplay valueDisplay) {
+                          ResourceBarVisibility visibility, ResourceBarRenderData renderer, ValueDisplay valueDisplay,
+                          Optional<Double> maximum) {
     /**
      * Inline codec used by the owning {@link Resource} definition.
      */
@@ -26,8 +28,13 @@ public record ResourceBar(ResourceBarContext context, Anchor anchor, int order,
             Codec.INT.optionalFieldOf("order", 0).forGetter(ResourceBar::order),
             ResourceBarVisibility.CODEC.optionalFieldOf("visibility", AlwaysVisibility.INSTANCE).forGetter(ResourceBar::visibility),
             ResourceBarRenderData.CODEC.fieldOf("renderer").forGetter(ResourceBar::renderer),
-            ValueDisplay.CODEC.optionalFieldOf("value_display", ValueDisplay.NONE).forGetter(ResourceBar::valueDisplay)
+            ValueDisplay.CODEC.optionalFieldOf("value_display", ValueDisplay.NONE).forGetter(ResourceBar::valueDisplay),
+            Codec.DOUBLE.optionalFieldOf("maximum").forGetter(ResourceBar::maximum)
     ).apply(i, ResourceBar::new));
+
+    public ResourceBar {
+        maximum = maximum.filter(value -> Double.isFinite(value) && value > 0.0D);
+    }
 
     public enum Anchor implements StringRepresentable {
         LEFT, RIGHT;

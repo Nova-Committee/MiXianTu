@@ -54,7 +54,7 @@ public final class AuraDistributionService {
             FormulaContext context = FormulaContexts.forEntity(player);
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
             if (!CultivationActionService.canCultivateInEnvironment(spirit, player, aura, context)
-                    || definition.stopCondition().test(player, context)
+                    || !definition.condition().test(player, context)
                     || !CollectionHelper.containsAllFast(aura.auraKinds(), definition.auraKinds())) continue;
             Map<Holder<Resource>, Double> requested = evaluateCosts(definition, context);
             if (requested == null || requested.isEmpty()) continue;

@@ -19,7 +19,6 @@
   "particle": { "particle": { "type": "minecraft:glow" }, "count": 2 },
   "client_render": { "fog_color": "#88ccff", "render_distance": 64 },
   "client_hud": {
-    "stored_aura": { "maximum": 100.0, "bar_index": 1, "anchor": "left", "order": 4 },
-    "sensed_concentration": { "maximum": 100.0, "bar_index": 2, "anchor": "left", "order": 5 }
+    "sensed_concentration": { "maximum": 1000.0, "bar_index": 2, "anchor": "left", "order": 5 }
   }
 }

@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.data.aura.AuraZone.Fluctuation;
 import com.iafenvoy.mxt.data.aura.AuraZone.Noise;
 import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
+import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -25,6 +26,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -61,6 +63,7 @@ public final class AuraService {
         }
         Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
         if (pools.isEmpty()) pools = pools(resolved.definition(), pos, level.getGameTime());
+        applyBlockDistance(level, pools, chunk, resolved.definition(), pos, level.getGameTime());
         applyMaximumBonus(pools, resolved.maxBonus());
         return new AuraResult(pools, resolved.definition().auraKinds(),
                 resolved.definition().rules(), resolved.definition().elementFitBonus(), resolved.definition().elementConflictPenalty(),
@@ -196,6 +199,147 @@ public final class AuraService {
     private static void applyMaximumBonus(Map<Holder<Resource>, AuraPool> pools, Map<Holder<Resource>, Double> bonuses) {
         bonuses.forEach((resource, bonus) -> pools.computeIfPresent(resource, (ignored, pool) ->
                 pool.maximum() == Double.POSITIVE_INFINITY ? pool : pool.withMaximum(pool.maximum() + bonus)));
+    }
+
+    /**
+     * The chunk stock is shared, but a block source is local. Replace the
+     * aggregate block portion with its distance-weighted contribution for this
+     * query position. Inverse-square falloff keeps nearby sources useful while
+     * preventing every block in a chunk from contributing at full strength.
+     */
+    private static final int BLOCK_SEARCH_RADIUS = 3;
+    private static final int BLOCK_EXACT_RADIUS = 1;
+
+    /**
+     * Resolves block emitters using the same bounded subchunk algorithm as the
+     * research model. Nearby (3x3x3) sections use real source positions; the
+     * remaining sections use their centre and inverse-square falloff. A source
+     * section is only read when its chunk is already loaded, so querying aura
+     * never forces a large new area to load.
+     */
+    private static void applyBlockDistance(Level level, Map<Holder<Resource>, AuraPool> pools,
+                                           AuraChunkAttachment currentChunk, AuraZone zone,
+                                           BlockPos query, long gameTime) {
+        SectionPos querySection = SectionPos.of(query);
+        Map<Holder<Resource>, double[]> weighted = new LinkedHashMap<>();
+        int queryChunkX = querySection.x();
+        int queryChunkZ = querySection.z();
+
+        for (int dx = -BLOCK_SEARCH_RADIUS; dx <= BLOCK_SEARCH_RADIUS; dx++) {
+            for (int dz = -BLOCK_SEARCH_RADIUS; dz <= BLOCK_SEARCH_RADIUS; dz++) {
+                int chunkX = queryChunkX + dx;
+                int chunkZ = queryChunkZ + dz;
+                if (!level.getChunkSource().hasChunk(chunkX, chunkZ)) continue;
+                LevelChunk sourceChunk = level.getChunkAt(new BlockPos(chunkX << 4, query.getY(), chunkZ << 4));
+                AuraChunkAttachment sourceAttachment = sourceChunk.getData(MxtAttachments.AURA_CHUNK);
+                if (sourceAttachment.blockAuraSections().isEmpty()) continue;
+
+                for (var sectionEntry : sourceAttachment.blockAuraSections().int2ObjectEntrySet()) {
+                    int sectionY = sectionEntry.getIntKey();
+                    BlockAuraSectionCache section = sectionEntry.getValue();
+                    SectionPos sectionPosition = SectionPos.of(sourceChunk.getPos().x(), sectionY, sourceChunk.getPos().z());
+                    int sectionDx = sectionPosition.x() - querySection.x();
+                    int sectionDy = sectionPosition.y() - querySection.y();
+                    int sectionDz = sectionPosition.z() - querySection.z();
+                    boolean exact = Math.abs(sectionDx) <= BLOCK_EXACT_RADIUS
+                            && Math.abs(sectionDy) <= BLOCK_EXACT_RADIUS
+                            && Math.abs(sectionDz) <= BLOCK_EXACT_RADIUS;
+                    if (exact) {
+                        for (BlockAuraContribution source : section.sources()) {
+                            double falloff = 1.0D / Math.max(1.0D,
+                                    distanceSquaredToBlockCenters(source.position(), query));
+                            addWeighted(weighted, sourceAttachment, source.aura(), source.position(),
+                                    falloff, level, gameTime);
+                        }
+                    } else {
+                        double falloff = 1.0D / Math.max(1.0D,
+                                distanceSquaredToSectionCenter(sectionPosition, query));
+                        BlockPos sectionCenter = new BlockPos(SectionPos.sectionToBlockCoord(sectionPosition.x()) + 8,
+                                SectionPos.sectionToBlockCoord(sectionPosition.y()) + 8,
+                                SectionPos.sectionToBlockCoord(sectionPosition.z()) + 8);
+                        addWeighted(weighted, sourceAttachment, section.aura(), sectionCenter,
+                                falloff, level, gameTime);
+                    }
+                }
+            }
+        }
+
+        // The current chunk's stored stock includes its unweighted block portion.
+        // Remove that portion first, then add the spatially weighted view.
+        Map<Holder<Resource>, AuraValue> currentBlock = currentChunk.blockAura();
+        Set<Holder<Resource>> resources = new LinkedHashSet<>(currentBlock.keySet());
+        resources.addAll(weighted.keySet());
+        if (resources.isEmpty()) return;
+        Map<Holder<Resource>, AuraPool> environment = pools(zone, query, gameTime);
+        for (Holder<Resource> resource : resources) {
+            AuraPool shared = pools.get(resource);
+            AuraValue aggregate = currentBlock.getOrDefault(resource, AuraValue.ZERO);
+            double aggregateAmount = aggregate.amount();
+            double aggregateMaximum = aggregate.max().resolve(aggregate.amount());
+            double baseAmount = shared == null ? environment.getOrDefault(resource, zeroPool()).amount()
+                    : Math.max(0.0D, shared.amount() - aggregateAmount);
+            double baseMaximum = shared == null ? environment.getOrDefault(resource, zeroPool()).maximum()
+                    : subtractMaximum(shared.maximum(), aggregateMaximum);
+            double baseRegen = shared == null ? environment.getOrDefault(resource, zeroPool()).regenPerTick()
+                    : Math.max(0.0D, shared.regenPerTick() - aggregate.regenPerTick());
+            double[] contribution = weighted.getOrDefault(resource, new double[3]);
+            double maximum = baseMaximum == Double.POSITIVE_INFINITY || Double.isInfinite(contribution[1])
+                    ? Double.POSITIVE_INFINITY : baseMaximum + contribution[1];
+            pools.put(resource, new AuraPool(baseAmount + contribution[0], maximum, baseRegen + contribution[2]));
+        }
+    }
+
+    private static AuraPool zeroPool() {
+        return new AuraPool(0.0D, 0.0D, 0.0D);
+    }
+
+    private static double subtractMaximum(double maximum, double amount) {
+        return maximum == Double.POSITIVE_INFINITY ? maximum : Math.max(0.0D, maximum - amount);
+    }
+
+    private static double distanceSquaredToSectionCenter(SectionPos section, BlockPos query) {
+        double centerX = SectionPos.sectionToBlockCoord(section.x()) + 8.0D;
+        double centerY = SectionPos.sectionToBlockCoord(section.y()) + 8.0D;
+        double centerZ = SectionPos.sectionToBlockCoord(section.z()) + 8.0D;
+        double dx = query.getX() + 0.5D - centerX;
+        double dy = query.getY() + 0.5D - centerY;
+        double dz = query.getZ() + 0.5D - centerZ;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    private static double distanceSquaredToBlockCenters(BlockPos source, BlockPos query) {
+        double dx = source.getX() - query.getX();
+        double dy = source.getY() - query.getY();
+        double dz = source.getZ() - query.getZ();
+        return dx * dx + dy * dy + dz * dz;
+    }
+
+    private static void addWeighted(Map<Holder<Resource>, double[]> weighted,
+                                    AuraChunkAttachment attachment,
+                                    Map<Holder<Resource>, AuraValue> values,
+                                    BlockPos sourcePosition, double falloff,
+                                    Level level, long gameTime) {
+        values.forEach((resource, value) -> {
+            double availability = sourceAvailability(level, attachment, resource, sourcePosition, gameTime);
+            if (availability <= 0.0D) return;
+            double[] contribution = weighted.computeIfAbsent(resource, ignored -> new double[3]);
+            contribution[0] += value.amount() * availability * falloff;
+            contribution[1] += value.max().resolve(value.amount()) * availability * falloff;
+            contribution[2] += value.regenPerTick() * availability * falloff;
+        });
+    }
+
+    private static double sourceAvailability(Level level, AuraChunkAttachment attachment,
+                                             Holder<Resource> resource, BlockPos sourcePosition, long gameTime) {
+        AuraValue aggregate = attachment.blockAura().get(resource);
+        AuraPool shared = attachment.auras().get(resource);
+        if (aggregate == null || shared == null || aggregate.amount() <= 0.0D) return 0.0D;
+        Resolved staticZone = staticZone(level, sourcePosition);
+        double environmental = pools(staticZone.definition(), sourcePosition, gameTime)
+                .getOrDefault(resource, zeroPool()).amount();
+        double available = Math.clamp((shared.amount() - environmental) / aggregate.amount(), 0.0D, 1.0D);
+        int visitors = attachment.auraVisitors(SectionPos.of(sourcePosition));
+        return available / Math.max(1, visitors);
     }
 
     private static double factor(AuraZone zone, long time) {

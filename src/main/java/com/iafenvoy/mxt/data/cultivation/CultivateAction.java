@@ -23,7 +23,7 @@ import java.util.Map;
 /**
  * A named cultivation activity with entity conditions and an interval action.
  */
-public record CultivateAction(boolean defaultAction, EntityCondition startCondition, EntityCondition stopCondition,
+public record CultivateAction(boolean defaultAction, EntityCondition startCondition, EntityCondition condition,
                               int tickInterval,
                               List<Identifier> auraKinds, List<ResourceCost> costs, NumberProvider absorbAmount,
                               Map<Holder<Resource>, NumberProvider> auraCosts, List<ResourceGain> auraGains,
@@ -33,7 +33,7 @@ public record CultivateAction(boolean defaultAction, EntityCondition startCondit
     public static final Codec<CultivateAction> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.BOOL.optionalFieldOf("default", false).forGetter(CultivateAction::defaultAction),
             EntityCondition.optionalCodec("start_condition").forGetter(CultivateAction::startCondition),
-            EntityCondition.optionalCodec("stop_condition").forGetter(CultivateAction::stopCondition),
+            EntityCondition.optionalCodec("condition").forGetter(CultivateAction::condition),
             Codec.intRange(1, 72_000).optionalFieldOf("tick_interval", 20).forGetter(CultivateAction::tickInterval),
             Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(CultivateAction::auraKinds),
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(CultivateAction::costs),

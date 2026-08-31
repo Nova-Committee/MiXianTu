@@ -98,7 +98,7 @@ public enum ResourceBarOverlay implements GuiLayer {
                 if (extracted.isEmpty()) continue;
                 Values values = extracted.get();
                 double minimum = values.minimum();
-                double maximum = values.maximum();
+                double maximum = bar.maximum().orElse(values.maximum());
                 double current = values.current();
                 if (!validValues(minimum, maximum, current)) continue;
                 long changedAt = values.lastChangedTick();
