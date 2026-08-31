@@ -3,12 +3,14 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -90,6 +92,6 @@ public final class CultivationActionEventBridge {
         // Cultivation can change progress, active-state timing, and resource conversions in one tick.
     }
 
-    private record FailureNotice(CultivationActionService.Failure failure, net.minecraft.resources.Identifier resource) {
+    private record FailureNotice(Failure failure, Identifier resource) {
     }
 }

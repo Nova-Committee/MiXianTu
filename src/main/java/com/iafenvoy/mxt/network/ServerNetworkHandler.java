@@ -5,12 +5,12 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.attachment.HotbarLayoutAttachment;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
@@ -112,5 +112,12 @@ public final class ServerNetworkHandler {
     static void onSpiritBurst(SpiritBurstC2SPayload payload, IPayloadContext context) {
         if (context.player() instanceof ServerPlayer player)
             SpiritBurstService.setFiring(player, payload.resource(), payload.firing());
+    }
+
+    static void onHotbarLayout(HotbarLayoutC2SPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player) || payload.mode() == null) return;
+        HotbarLayoutAttachment attachment = player.getData(MxtAttachments.HOTBAR_LAYOUT);
+        if (payload.slots().size() > 9) return;
+        attachment.setSlots(payload.mode(), payload.slots());
     }
 }

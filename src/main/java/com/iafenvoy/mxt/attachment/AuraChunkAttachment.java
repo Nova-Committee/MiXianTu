@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -37,7 +38,7 @@ public final class AuraChunkAttachment {
             CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("aura_kinds", Set.of()).forGetter(AuraChunkAttachment::auraKinds),
             CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("template_aura_kinds", Set.of()).forGetter(AuraChunkAttachment::templateAuraKinds),
             CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("block_aura_kinds", Set.of()).forGetter(AuraChunkAttachment::blockAuraKinds),
-            CollectionCodecs.intObjectMap(BlockAuraSectionCache.CODEC).optionalFieldOf("block_aura_sections", new Int2ObjectOpenHashMap<BlockAuraSectionCache>()).forGetter(AuraChunkAttachment::blockAuraSections),
+            CollectionCodecs.intObjectMap(BlockAuraSectionCache.CODEC).optionalFieldOf("block_aura_sections", new Int2ObjectOpenHashMap<>()).forGetter(AuraChunkAttachment::blockAuraSections),
             AuraPool.GROUPED_CODEC.optionalFieldOf("aura", Map.of()).forGetter(AuraChunkAttachment::auras)
     ).apply(i, AuraChunkAttachment::new));
     private boolean initialized;
@@ -211,7 +212,7 @@ public final class AuraChunkAttachment {
         double secondWeight = Math.max(0.0D, second.amount());
         double totalWeight = firstWeight + secondWeight;
         int color = totalWeight <= 0.0D ? first.color() : weightedColor(first.color(), firstWeight, second.color(), secondWeight, totalWeight);
-        return new AuraValue(amount, new com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed(maximum),
+        return new AuraValue(amount, new Fixed(maximum),
                 first.regenPerTick() + second.regenPerTick(), color);
     }
 

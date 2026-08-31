@@ -20,6 +20,9 @@ public final class NetworkManager {
                 .playToServer(BackSlotSwapC2SPayload.TYPE, BackSlotSwapC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onBackSlotSwap))
                 .playToServer(CultivationToggleC2SPayload.TYPE, CultivationToggleC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onCultivationToggle))
                 .playToServer(SpiritBurstC2SPayload.TYPE, SpiritBurstC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onSpiritBurst))
-                .playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onAuraState));
+                .playToServer(HotbarLayoutC2SPayload.TYPE, HotbarLayoutC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onHotbarLayout))
+                .playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onAuraState))
+                .playToClient(HotbarConfigurationS2CPayload.TYPE, HotbarConfigurationS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onHotbarConfiguration));
     }
 }

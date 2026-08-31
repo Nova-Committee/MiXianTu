@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -54,7 +55,8 @@ public final class AuraZoneEventBridge {
         Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         level.players().forEach(player -> {
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
-            if (level.getGameTime() % 20L == 0L) {
+            long syncInterval = Math.max(1L, MxtServerConfig.auraSyncInterval());
+            if (level.getGameTime() % syncInterval == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
                 AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
                 Map<Identifier, AuraPool> actual = new LinkedHashMap<>();

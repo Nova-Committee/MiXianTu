@@ -27,10 +27,14 @@ public final class SpiritBurstClient {
     }
 
     public static List<Reference<Resource>> resources(Player player) {
+        return resourcesAvailable(player).stream().limit(MAX_SLOTS).toList();
+    }
+
+    /** Returns every resource available for selection; the runtime hotbar still uses nine. */
+    public static List<Reference<Resource>> resourcesAvailable(Player player) {
         return MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE)
                 .filter(resource -> resource.value().auraType().isPresent())
                 .sorted(Comparator.comparing(resource -> HolderHelper.id(resource).toString()))
-                .limit(MAX_SLOTS)
                 .toList();
     }
 

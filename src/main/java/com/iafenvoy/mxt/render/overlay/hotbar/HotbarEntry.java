@@ -6,6 +6,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
@@ -17,6 +18,11 @@ public interface HotbarEntry {
     int SLOT_GAP = 2;
 
     Component name();
+
+    /** Stable option ID used by configurable hotbar layouts. */
+    default Identifier id() {
+        return null;
+    }
 
     default Optional<HotbarIcon> icon() {
         return Optional.empty();

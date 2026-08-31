@@ -60,12 +60,16 @@ public final class AbilityHotbarClient {
     }
 
     public static List<ResolvedAbility> all(Player player) {
+        return allAvailable(player).stream().limit(MAX_SLOTS).toList();
+    }
+
+    /** Returns every active ability; configuration screens may scroll this list. */
+    public static List<ResolvedAbility> allAvailable(Player player) {
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         return holder.sources().keySet().stream()
                 .filter(ability -> ability.value().type() instanceof ActiveAbilityType)
                 .map(ability -> new ResolvedAbility(HolderHelper.id(ability), ability.value()))
                 .sorted(Comparator.comparing(value -> value.id().toString()))
-                .limit(MAX_SLOTS)
                 .toList();
     }
 

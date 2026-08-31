@@ -46,6 +46,10 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         return INSTANCE.aura.blockAuraTickInterval.getValue();
     }
 
+    public static int auraSyncInterval() {
+        return INSTANCE.aura.auraSyncInterval.getValue();
+    }
+
     public static final class Curios extends AutoInitConfigCategoryBase {
         public final EnumEntry<BackMode> backMode = EnumEntry.builder("config.mxt.server.curios.back_mode", BackMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
         public final EnumEntry<BeltMode> beltMode = EnumEntry.builder("config.mxt.server.curios.belt_mode", BeltMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
@@ -70,6 +74,8 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public static final class Aura extends AutoInitConfigCategoryBase {
         public final IntegerEntry blockAuraTickInterval = IntegerEntry.builder(
                 "config.mxt.server.aura.block_aura_tick_interval", 10).range(1, 1200).build();
+        public final IntegerEntry auraSyncInterval = IntegerEntry.builder(
+                "config.mxt.server.aura.sync_interval", 5).range(1, 1200).build();
 
         private Aura() {
             super("aura", "config.mxt.server.aura");

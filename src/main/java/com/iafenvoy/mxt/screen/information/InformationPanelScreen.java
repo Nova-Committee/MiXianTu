@@ -41,7 +41,6 @@ public final class InformationPanelScreen extends Screen {
     private int panelHeight;
     private int playerWidth;
     private int playerPreviewHeight;
-    private int headerHeight;
     private int equipmentLeft;
     private int playerRenderLeft;
     private int playerRenderRight;
@@ -70,8 +69,7 @@ public final class InformationPanelScreen extends Screen {
         this.equipmentLeft = this.panelLeft + 20;
         this.playerRenderLeft = this.equipmentLeft + EQUIPMENT_SLOT_SIZE + 8;
         this.playerRenderRight = this.playerRenderLeft + playerRenderWidth;
-        this.headerHeight = Math.min(HEADER_HEIGHT, Math.max(18, this.panelHeight / 8));
-        int contentTop = this.panelTop + this.headerHeight + 2;
+        int contentTop = this.panelTop + HEADER_HEIGHT + 2;
         int contentBottom = this.panelTop + this.panelHeight - 12;
         int contentHeight = Math.max(1, contentBottom - contentTop);
         this.playerPreviewHeight = EQUIPMENT_SLOT_SIZE * EQUIPMENT_SLOT_COUNT;
@@ -120,7 +118,7 @@ public final class InformationPanelScreen extends Screen {
         graphics.fill(this.panelLeft, this.panelTop, this.panelLeft + this.panelWidth, this.panelTop + this.panelHeight, 0xF0101018);
         graphics.outline(this.panelLeft, this.panelTop, this.panelWidth, this.panelHeight, 0xFF6F7C92);
         graphics.text(this.font, this.title, this.panelLeft + 18, this.panelTop + 10, 0xFFFFFFFF, true);
-        int contentTop = this.panelTop + this.headerHeight + 2;
+        int contentTop = this.panelTop + HEADER_HEIGHT + 2;
         graphics.text(this.font, Component.translatable("info.mxt.cultivation"), this.playerRenderRight + 12, contentTop, 0xFF8EC7FF, true);
         int basicTop = contentTop + this.playerPreviewHeight + PLAYER_TO_BASIC_GAP;
         graphics.text(this.font, Component.translatable("info.mxt.basic"), this.panelLeft + 20, basicTop, 0xFF8EC7FF, true);
@@ -145,7 +143,7 @@ public final class InformationPanelScreen extends Screen {
         if (this.minecraft.player != null) {
             int x1 = this.playerRenderLeft;
             int x2 = this.playerRenderRight;
-            int y1 = this.panelTop + this.headerHeight + 2;
+            int y1 = this.panelTop + HEADER_HEIGHT + 2;
             int y2 = y1 + this.playerPreviewHeight;
             for (int index = 0; index < EQUIPMENT_SLOT_COUNT; index++) {
                 ItemStack stack = this.minecraft.player.getItemBySlot(EQUIPMENT_SLOTS[index]);

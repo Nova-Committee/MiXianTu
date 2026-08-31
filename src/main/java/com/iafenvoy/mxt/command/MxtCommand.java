@@ -33,6 +33,7 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
 import com.iafenvoy.mxt.runtime.world.SpiritStoneVein;
+import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -56,6 +57,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.ChatFormatting;
 
 import java.util.Locale;
@@ -72,6 +74,9 @@ import static net.minecraft.commands.Commands.literal;
  * Minimal server-only diagnostic surface; it never accepts client attachment payloads.
  */
 public final class MxtCommand {
+    private static final Identifier SPIRIT_HOTBAR_MODE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit");
+    private static final Identifier ABILITY_HOTBAR_MODE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "ability");
+
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(literal(MiXianTu.MOD_ID)
                 .then(literal("registries")
@@ -94,7 +99,7 @@ public final class MxtCommand {
                                         .executes(ctx -> listResourceBars(ctx.getSource(), IdentifierArgument.getId(ctx, "resource"),
                                                 IntegerArgumentType.getInteger(ctx, "index"))))))
                 .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
-                .then(literal("aura").then(literal("query")
+                .then(literal("aura").executes(ctx -> openHotbarConfiguration(ctx.getSource(), SPIRIT_HOTBAR_MODE)).then(literal("query")
                                 .executes(ctx -> queryAura(ctx.getSource(), null))
                                 .then(argument("type", IdentifierArgument.id())
                                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
@@ -107,7 +112,7 @@ public final class MxtCommand {
                                         .executes(ctx -> clearAuraCache(ctx.getSource(), 3))
                                         .then(argument("radius", IntegerArgumentType.integer(0, 32))
                                                 .executes(ctx -> clearAuraCache(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius")))))))
-                .then(literal("ability").then(literal("cast").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .then(literal("ability").executes(ctx -> openHotbarConfiguration(ctx.getSource(), ABILITY_HOTBAR_MODE)).then(literal("cast").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(argument("id", IdentifierArgument.id())
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.ABILITY))
                                 .executes(ctx -> castAbility(ctx.getSource(), IdentifierArgument.getId(ctx, "id"))))))
@@ -297,6 +302,16 @@ public final class MxtCommand {
             return 1;
         }
         source.sendSuccess(() -> auraReport(aura, aura.aura()), false);
+        return 1;
+    }
+
+    private static int openHotbarConfiguration(CommandSourceStack source, Identifier mode) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        PacketDistributor.sendToPlayer(player, new HotbarConfigurationS2CPayload(mode));
         return 1;
     }
 

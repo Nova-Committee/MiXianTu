@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.event.level.ChunkEvent.Load;
@@ -143,7 +144,7 @@ public final class AuraChunkTicker {
         for (LevelChunk chunk : new LinkedHashSet<>(chunks))
             chunk.getData(MxtAttachments.AURA_CHUNK).clearAuraVisitors();
 
-        for (var player : level.players()) {
+        for (ServerPlayer player : level.players()) {
             SectionPos center = SectionPos.of(player.blockPosition());
             for (int dx = -3; dx <= 3; dx++) {
                 for (int dy = -3; dy <= 3; dy++) {

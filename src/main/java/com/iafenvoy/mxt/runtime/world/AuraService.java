@@ -23,6 +23,8 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -235,7 +237,7 @@ public final class AuraService {
                 AuraChunkAttachment sourceAttachment = sourceChunk.getData(MxtAttachments.AURA_CHUNK);
                 if (sourceAttachment.blockAuraSections().isEmpty()) continue;
 
-                for (var sectionEntry : sourceAttachment.blockAuraSections().int2ObjectEntrySet()) {
+                for (Entry<BlockAuraSectionCache> sectionEntry : sourceAttachment.blockAuraSections().int2ObjectEntrySet()) {
                     int sectionY = sectionEntry.getIntKey();
                     BlockAuraSectionCache section = sectionEntry.getValue();
                     SectionPos sectionPosition = SectionPos.of(sourceChunk.getPos().x(), sectionY, sourceChunk.getPos().z());

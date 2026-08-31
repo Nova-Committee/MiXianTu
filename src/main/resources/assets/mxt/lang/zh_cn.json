@@ -97,6 +97,7 @@
   "config.mxt.server.cultivation.forbid_without_eligible_aura": "没有满足条件的灵气时禁止修炼",
   "config.mxt.server.aura": "灵气",
   "config.mxt.server.aura.block_aura_tick_interval": "方块灵气 tick 周期",
+  "config.mxt.server.aura.sync_interval": "灵气同步周期",
   "config.mxt.server.mode.all": "所有物品",
   "config.mxt.server.mode.manual": "手动",
   "config.mxt.server.mode.weapons": "所有注册的武器",
@@ -277,5 +278,6 @@
   "info.mxt.physiques": "体质",
   "info.mxt.techniques": "功法",
   "info.mxt.yes": "是",
-  "info.mxt.no": "否"
+  "info.mxt.no": "否",
+  "screen.mxt.hotbar_configuration": "配置快捷栏"
 }
