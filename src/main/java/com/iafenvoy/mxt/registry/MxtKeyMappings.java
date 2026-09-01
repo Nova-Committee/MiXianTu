@@ -20,9 +20,6 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import java.util.*;
 import java.util.function.Consumer;
 
-/**
- * Registers key mappings that are not owned by a client overlay.
- */
 @EventBusSubscriber(Dist.CLIENT)
 public final class MxtKeyMappings {
     private static final Category CATEGORY = new Category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "general"));

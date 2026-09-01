@@ -37,7 +37,4 @@ public final class MxtBiEntityConditions {
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<? extends BiEntityCondition>> SAME_TEAM = REGISTRY.register("same_team", () -> createBiEntity(ctx -> ctx.actor().getTeam() != null && ctx.actor().isAlliedTo(ctx.target())));
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<RelativeRotationCondition>> RELATIVE_ROTATION = REGISTRY.register("relative_rotation", () -> RelativeRotationCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<UndirectedCondition>> UNDIRECTED = REGISTRY.register("undirected", () -> UndirectedCondition.CODEC);
-
-    private MxtBiEntityConditions() {
-    }
 }

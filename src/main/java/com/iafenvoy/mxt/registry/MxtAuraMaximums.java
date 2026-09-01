@@ -9,9 +9,7 @@ import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Built-in algorithms selected by {@code aura_zone.max.type}.
- */
+@SuppressWarnings("unused")
 public final class MxtAuraMaximums {
     public static final DeferredRegister<MapCodec<? extends AuraMaximum>> REGISTRY = DeferredRegister.create(MxtRegistries.AURA_MAXIMUM_TYPE, MiXianTu.MOD_ID);
 

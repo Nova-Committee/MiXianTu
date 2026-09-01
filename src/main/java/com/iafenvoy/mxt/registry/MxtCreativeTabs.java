@@ -20,11 +20,10 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * Code-owned items and physical items selected by datapack bindings.
- */
+@SuppressWarnings("unused")
 public final class MxtCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> REGISTRY = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MiXianTu.MOD_ID);
+
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.mxt.main"))
             .icon(() -> new ItemStack(MxtItems.CHEQUE.get()))
@@ -50,8 +49,5 @@ public final class MxtCreativeTabs {
         List<T> bindings = MxtDatapackRegistries.holders(holders, registry).map(Reference::value).toList();
         return BuiltInRegistries.ITEM.stream().filter(item -> bindings.stream()
                 .anyMatch(binding -> binding.entries().stream().anyMatch(entry -> entry.matches(new ItemStack(item)))));
-    }
-
-    private MxtCreativeTabs() {
     }
 }

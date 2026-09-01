@@ -30,7 +30,4 @@ public final class MxtBlockActions {
     public static final DeferredHolder<MapCodec<? extends BlockAction>, MapCodec<OffsetAction>> OFFSET = REGISTRY.register("offset", () -> OffsetAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends BlockAction>, MapCodec<ExplodeAction>> EXPLODE = REGISTRY.register("explode", () -> ExplodeAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends BlockAction>, MapCodec<SpawnEntityAction>> SPAWN_ENTITY = REGISTRY.register("spawn_entity", () -> SpawnEntityAction.CODEC);
-
-    private MxtBlockActions() {
-    }
 }

@@ -1,40 +1,18 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.util.formula.SimpleFunction;
+import net.minecraft.util.Mth;
 import net.objecthunter.exp4j.function.Function;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Built-in exp4j functions. Other code may register additional functions in this intrinsic registry.
- */
+@SuppressWarnings("unused")
 public final class MxtFormulaFunctions {
     public static final DeferredRegister<Function> REGISTRY = DeferredRegister.create(MxtRegistries.FORMULA_FUNCTION, MiXianTu.MOD_ID);
-    public static final DeferredHolder<Function, Function> ROUND = REGISTRY.register("round", () -> new Function("round", 1) {
-        @Override
-        public double apply(double... arguments) {
-            return Math.round(arguments[0]);
-        }
-    });
-    public static final DeferredHolder<Function, Function> CLAMP = REGISTRY.register("clamp", () -> new Function("clamp", 3) {
-        @Override
-        public double apply(double... arguments) {
-            return Math.max(arguments[1], Math.min(arguments[0], arguments[2]));
-        }
-    });
-    public static final DeferredHolder<Function, Function> MIN = REGISTRY.register("min", () -> new Function("min", 2) {
-        @Override
-        public double apply(double... arguments) {
-            return Math.min(arguments[0], arguments[1]);
-        }
-    });
-    public static final DeferredHolder<Function, Function> MAX = REGISTRY.register("max", () -> new Function("max", 2) {
-        @Override
-        public double apply(double... arguments) {
-            return Math.max(arguments[0], arguments[1]);
-        }
-    });
 
-    private MxtFormulaFunctions() {
-    }
+    public static final DeferredHolder<Function, Function> ROUND = REGISTRY.register("round", () -> new SimpleFunction("round", 1, args -> Math.round(args[0])));
+    public static final DeferredHolder<Function, Function> CLAMP = REGISTRY.register("clamp", () -> new SimpleFunction("clamp", 3, args -> Mth.clamp(args[0], args[1], args[2])));
+    public static final DeferredHolder<Function, Function> MIN = REGISTRY.register("min", () -> new SimpleFunction("min", 2, args -> Math.min(args[0], args[1])));
+    public static final DeferredHolder<Function, Function> MAX = REGISTRY.register("max", () -> new SimpleFunction("max", 2, args -> Math.max(args[0], args[1])));
 }

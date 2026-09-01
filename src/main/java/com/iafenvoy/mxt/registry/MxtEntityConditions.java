@@ -67,7 +67,4 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RidingRecursiveCondition>> RIDING_RECURSIVE = REGISTRY.register("riding_recursive", () -> RidingRecursiveCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PassengerRecursiveCondition>> PASSENGER_RECURSIVE = REGISTRY.register("passenger_recursive", () -> PassengerRecursiveCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RidingRootCondition>> RIDING_ROOT = REGISTRY.register("riding_root", () -> RidingRootCondition.CODEC);
-
-    private MxtEntityConditions() {
-    }
 }

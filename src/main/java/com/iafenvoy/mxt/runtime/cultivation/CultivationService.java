@@ -75,10 +75,7 @@ public final class CultivationService {
             });
             target.successAction().execute(entity, context);
             FormulaContext tribulationContext = context.with("aura_tribulation_modifier", AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
-            target.tribulation().ifPresent(tribulation -> {
-                StartResult tribulationResult = TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation,
-                        entity.level().getGameTime(), tribulationContext);
-            });
+            target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), tribulationContext));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
         } else {
             target.failAction().execute(entity, context);

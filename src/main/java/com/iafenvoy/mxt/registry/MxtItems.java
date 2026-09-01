@@ -24,21 +24,20 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.DeferredRegister.Items;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/**
- * Code-owned framework items. Currency denominations and gameplay bindings remain datapack-owned.
- */
+@SuppressWarnings("unused")
 public final class MxtItems {
-    public static final Items REGISTRY = DeferredRegister.createItems(MiXianTu.MOD_ID);
-    private static final List<DeferredItem<? extends Item>> REGISTERED_ITEMS = new ArrayList<>();
+    public static final DeferredRegister.Items REGISTRY = DeferredRegister.createItems(MiXianTu.MOD_ID);
+
     public static final DeferredItem<Item> COPPER_COIN = register("copper_coin", Item::new);
     public static final DeferredItem<Item> IRON_COIN = register("iron_coin", Item::new);
     public static final DeferredItem<Item> GOLD_COIN = register("gold_coin", Item::new);
@@ -75,32 +74,20 @@ public final class MxtItems {
     public static final DeferredItem<Item> TALISMAN_INK = register("talisman_ink", Item::new);
     public static final DeferredItem<ChequeItem> CHEQUE = register("cheque", ChequeItem::new);
 
-    /**
-     * Creates properties with the final item key before the item constructor
-     * runs. NeoForge requires every item to declare this key.
-     */
     public static <T extends Item> DeferredItem<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
-        DeferredItem<T> item = REGISTRY.register(path, () -> factory.apply(new Properties().setId(key)));
-        REGISTERED_ITEMS.add(item);
-        return item;
+        return REGISTRY.register(path, () -> factory.apply(new Properties().setId(key)));
     }
 
-    /**
-     * Registers a block item that intentionally shares its block's display name.
-     */
     public static DeferredItem<BlockItem> registerBlockItem(String path, Supplier<? extends Block> block) {
         return register(path, properties -> new BlockItem(block.get(), properties.useBlockDescriptionPrefix()));
     }
 
-    public static List<DeferredItem<? extends Item>> registeredItems() {
-        return REGISTERED_ITEMS;
+    public static Collection<DeferredHolder<Item, ? extends Item>> registeredItems() {
+        return REGISTRY.getEntries();
     }
 
     public static List<DeferredItem<SpiritStoneItem>> spiritStones() {
         return List.of(SPIRIT_STONE, MEDIUM_SPIRIT_STONE, HIGH_SPIRIT_STONE, SUPREME_SPIRIT_STONE);
-    }
-
-    private MxtItems() {
     }
 }

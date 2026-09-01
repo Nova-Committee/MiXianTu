@@ -15,13 +15,10 @@ import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Built-in numeric algorithms selected by an inline {@code type} field.
- * Java Edition 26.3 adds a vanilla writable registry named {@code number_provider};
- * this remains an intrinsic type registry until the project migrates to that version.
- */
+@SuppressWarnings("unused")
 public final class MxtNumberProviders {
     public static final DeferredRegister<MapCodec<? extends NumberProvider>> REGISTRY = DeferredRegister.create(MxtRegistries.NUMBER_PROVIDER_TYPE, MiXianTu.MOD_ID);
+
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Constant>> CONSTANT = REGISTRY.register("constant", () -> Constant.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<JsNumberProvider>> JS = REGISTRY.register("js", () -> JsNumberProvider.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Expression>> EXPRESSION = REGISTRY.register("expression", () -> Expression.MAP_CODEC);
@@ -31,7 +28,4 @@ public final class MxtNumberProviders {
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Binomial>> BINOMIAL = REGISTRY.register("binomial", () -> Binomial.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<WeightedList>> WEIGHTED_LIST = REGISTRY.register("weighted_list", () -> WeightedList.MAP_CODEC);
     public static final DeferredHolder<MapCodec<? extends NumberProvider>, MapCodec<Conditional>> CONDITIONAL = REGISTRY.register("conditional", () -> Conditional.MAP_CODEC);
-
-    private MxtNumberProviders() {
-    }
 }

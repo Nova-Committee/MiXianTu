@@ -40,7 +40,4 @@ public final class MxtBlockConditions {
     public static final DeferredHolder<MapCodec<? extends BlockCondition>, MapCodec<OrCondition>> OR = REGISTRY.register("or", () -> OrCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BlockCondition>, MapCodec<AdjacentCondition>> ADJACENT = REGISTRY.register("adjacent", () -> AdjacentCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BlockCondition>, MapCodec<OffsetCondition>> OFFSET = REGISTRY.register("offset", () -> OffsetCondition.CODEC);
-
-    private MxtBlockConditions() {
-    }
 }

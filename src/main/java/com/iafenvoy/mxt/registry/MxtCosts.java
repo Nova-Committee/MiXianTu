@@ -8,17 +8,10 @@ import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Built-in expenditure algorithms selected by ability datapacks.
- */
+@SuppressWarnings("unused")
 public final class MxtCosts {
-    public static final DeferredRegister<MapCodec<? extends Cost>> REGISTRY =
-            DeferredRegister.create(MxtRegistries.COST_TYPE, MiXianTu.MOD_ID);
-    public static final DeferredHolder<MapCodec<? extends Cost>, MapCodec<ResourceCost>> RESOURCE =
-            REGISTRY.register("resource", () -> ResourceCost.CODEC);
-    public static final DeferredHolder<MapCodec<? extends Cost>, MapCodec<ItemCost>> ITEM =
-            REGISTRY.register("item", () -> ItemCost.CODEC);
+    public static final DeferredRegister<MapCodec<? extends Cost>> REGISTRY = DeferredRegister.create(MxtRegistries.COST_TYPE, MiXianTu.MOD_ID);
 
-    private MxtCosts() {
-    }
+    public static final DeferredHolder<MapCodec<? extends Cost>, MapCodec<ResourceCost>> RESOURCE = REGISTRY.register("resource", () -> ResourceCost.CODEC);
+    public static final DeferredHolder<MapCodec<? extends Cost>, MapCodec<ItemCost>> ITEM = REGISTRY.register("item", () -> ItemCost.CODEC);
 }

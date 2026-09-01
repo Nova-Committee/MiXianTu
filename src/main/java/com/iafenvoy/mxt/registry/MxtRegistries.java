@@ -29,9 +29,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
 
-/**
- * Java-owned registries of codecs. Datapacks may select entries but can never extend these registries.
- */
 @EventBusSubscriber
 public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends AbilityType>> ABILITY_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.ABILITY_TYPE, Lifecycle.stable(), false);
@@ -88,5 +85,4 @@ public final class MxtRegistries {
         event.register(BADGE_TYPE);
         event.register(ITEM_MATCHER_ENTRY_TYPE);
     }
-
 }

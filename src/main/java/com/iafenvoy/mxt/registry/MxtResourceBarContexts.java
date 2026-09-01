@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationCont
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+@SuppressWarnings("unused")
 public final class MxtResourceBarContexts {
     public static final DeferredRegister<ResourceBarContext> REGISTRY = DeferredRegister.create(MxtRegistries.RESOURCE_BAR_CONTEXT, MiXianTu.MOD_ID);
 

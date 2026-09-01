@@ -12,6 +12,7 @@ import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+@SuppressWarnings("unused")
 public final class MxtResourceBarRenderers {
     public static final DeferredRegister<MapCodec<? extends ResourceBarRenderData>> REGISTRY = DeferredRegister.create(MxtRegistries.RESOURCE_BAR_RENDER_DATA_TYPE, MiXianTu.MOD_ID);
 
@@ -21,7 +22,4 @@ public final class MxtResourceBarRenderers {
     public static final DeferredHolder<MapCodec<? extends ResourceBarRenderData>, MapCodec<TextOnlyRenderData>> TEXT_ONLY = REGISTRY.register("text_only", () -> TextOnlyRenderData.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceBarRenderData>, MapCodec<OriginsRenderData>> ORIGINS = REGISTRY.register("boss_bar", () -> OriginsRenderData.CODEC);
     public static final DeferredHolder<MapCodec<? extends ResourceBarRenderData>, MapCodec<MissingRenderData>> MISSING = REGISTRY.register("missing", () -> MissingRenderData.CODEC);
-
-    private MxtResourceBarRenderers() {
-    }
 }

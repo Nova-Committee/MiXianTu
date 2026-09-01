@@ -14,24 +14,10 @@ import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Code-owned entities needed by framework physics rather than by datapack-only content.
- */
 public final class MxtEntityTypes {
-    public static final DeferredRegister<EntityType<?>> REGISTRY = DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, MiXianTu.MOD_ID);
-    public static final DeferredHolder<EntityType<?>, EntityType<FlyingSwordEntity>> FLYING_SWORD = REGISTRY.register("flying_sword", () ->
-            Builder.of(FlyingSwordEntity::new, MobCategory.MISC).noLootTable().sized(0.35F, 0.12F)
-                    .passengerAttachments(0.35F).clientTrackingRange(10).updateInterval(1)
-                    .build(ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "flying_sword"))));
-    public static final DeferredHolder<EntityType<?>, EntityType<SoulEntity>> SOUL = REGISTRY.register("soul", () ->
-            Builder.of(SoulEntity::new, MobCategory.MISC).noLootTable().sized(0.3F, 0.5F)
-                    .clientTrackingRange(8).updateInterval(20)
-                    .build(ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "soul"))));
-    public static final DeferredHolder<EntityType<?>, EntityType<SpiritBurstEntity>> SPIRIT_BURST = REGISTRY.register("spirit_burst", () ->
-            Builder.<SpiritBurstEntity>of(SpiritBurstEntity::new, MobCategory.MISC).noLootTable().sized(0.0F, 0.0F)
-                    .clientTrackingRange(8).updateInterval(1)
-                    .build(ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_burst"))));
+    public static final DeferredRegister.Entities REGISTRY = DeferredRegister.createEntities(MiXianTu.MOD_ID);
 
-    private MxtEntityTypes() {
-    }
+    public static final DeferredHolder<EntityType<?>, EntityType<FlyingSwordEntity>> FLYING_SWORD = REGISTRY.registerEntityType("flying_sword", FlyingSwordEntity::new, MobCategory.MISC, b -> b.noLootTable().sized(0.35F, 0.12F).passengerAttachments(0.35F).clientTrackingRange(10).updateInterval(1));
+    public static final DeferredHolder<EntityType<?>, EntityType<SoulEntity>> SOUL = REGISTRY.registerEntityType("soul", SoulEntity::new, MobCategory.MISC, b -> b.noLootTable().sized(0.3F, 0.5F).clientTrackingRange(8).updateInterval(20));
+    public static final DeferredHolder<EntityType<?>, EntityType<SpiritBurstEntity>> SPIRIT_BURST = REGISTRY.registerEntityType("spirit_burst", SpiritBurstEntity::new, MobCategory.MISC, b -> b.noLootTable().sized(0.0F, 0.0F).clientTrackingRange(8).updateInterval(1));
 }

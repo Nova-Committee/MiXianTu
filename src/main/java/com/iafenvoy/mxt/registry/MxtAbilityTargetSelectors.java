@@ -8,17 +8,10 @@ import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Built-in target selection algorithms used by datapack abilities.
- */
+@SuppressWarnings("unused")
 public final class MxtAbilityTargetSelectors {
-    public static final DeferredRegister<MapCodec<? extends TargetSelector>> REGISTRY =
-            DeferredRegister.create(MxtRegistries.ABILITY_TARGET_SELECTOR_TYPE, MiXianTu.MOD_ID);
-    public static final DeferredHolder<MapCodec<? extends TargetSelector>, MapCodec<SelfTargetSelector>> SELF =
-            REGISTRY.register("self", () -> SelfTargetSelector.CODEC);
-    public static final DeferredHolder<MapCodec<? extends TargetSelector>, MapCodec<AreaTargetSelector>> AREA =
-            REGISTRY.register("area", () -> AreaTargetSelector.CODEC);
+    public static final DeferredRegister<MapCodec<? extends TargetSelector>> REGISTRY = DeferredRegister.create(MxtRegistries.ABILITY_TARGET_SELECTOR_TYPE, MiXianTu.MOD_ID);
 
-    private MxtAbilityTargetSelectors() {
-    }
+    public static final DeferredHolder<MapCodec<? extends TargetSelector>, MapCodec<SelfTargetSelector>> SELF = REGISTRY.register("self", () -> SelfTargetSelector.CODEC);
+    public static final DeferredHolder<MapCodec<? extends TargetSelector>, MapCodec<AreaTargetSelector>> AREA = REGISTRY.register("area", () -> AreaTargetSelector.CODEC);
 }

@@ -36,7 +36,4 @@ public final class MxtDamageConditions {
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ConstantDamageCondition>> CONSTANT = REGISTRY.register("constant", () -> ConstantDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<NotDamageCondition>> NOT = REGISTRY.register("not", () -> NotDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<OrDamageCondition>> OR = REGISTRY.register("or", () -> OrDamageCondition.CODEC);
-
-    private MxtDamageConditions() {
-    }
 }
