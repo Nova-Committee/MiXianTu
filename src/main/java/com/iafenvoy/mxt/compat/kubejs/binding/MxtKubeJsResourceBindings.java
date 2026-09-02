@@ -10,7 +10,9 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 
-/** Common resource operations exposed as {@code MxtResources}. */
+/**
+ * Common resource operations exposed as {@code MxtResources}.
+ */
 public final class MxtKubeJsResourceBindings {
     @Info("Consumes a datapack-format resource-cost array through the normal atomic transaction path.")
     public Object consume(Entity entity, JsonElement costs) {

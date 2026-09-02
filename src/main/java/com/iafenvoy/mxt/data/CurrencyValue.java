@@ -1,17 +1,17 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
-import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.badge.BadgeCodecs;
+import com.iafenvoy.mxt.data.condition.ItemCondition;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStackTemplate;
 
 import java.util.List;
 import java.util.Optional;

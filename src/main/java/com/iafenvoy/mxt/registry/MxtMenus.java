@@ -1,12 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
-import com.iafenvoy.mxt.screen.menu.ExchangeStationMenu;
-import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
-import com.iafenvoy.mxt.screen.menu.StationMenu;
+import com.iafenvoy.mxt.screen.menu.*;
 import com.iafenvoy.mxt.screen.menu.StationMenu.Mode;
-import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;

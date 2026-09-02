@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.loot;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;

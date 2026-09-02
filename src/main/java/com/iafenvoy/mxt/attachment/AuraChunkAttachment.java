@@ -11,21 +11,14 @@ import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.Identifier;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * Authoritative chunk-local aura stock. Every value is independently keyed by
@@ -47,7 +40,9 @@ public final class AuraChunkAttachment {
     private final Map<Holder<Resource>, AuraValue> blockAura;
     private final Int2ObjectMap<BlockAuraSectionCache> blockAuraSections;
     private final Map<Holder<Resource>, AuraPool> auras;
-    /** Runtime-only number of players whose bounded aura query includes a section. */
+    /**
+     * Runtime-only number of players whose bounded aura query includes a section.
+     */
     private final Map<SectionPos, Integer> auraVisitors = new LinkedHashMap<>();
 
     public AuraChunkAttachment() {

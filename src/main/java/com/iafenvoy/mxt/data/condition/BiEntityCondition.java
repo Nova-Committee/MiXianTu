@@ -1,18 +1,17 @@
 package com.iafenvoy.mxt.data.condition;
 
 import com.iafenvoy.mxt.data.condition.builtin.bientity.meta.AndBiEntityCondition;
-import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
 import com.iafenvoy.mxt.data.context.Context;
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 
 public interface BiEntityCondition {
     Codec<BiEntityCondition> SINGLE_CODEC = MxtRegistries.BI_ENTITY_CONDITION_TYPE.byNameCodec().dispatch("type", BiEntityCondition::codec, Function.identity());

@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.economy.ChequeComponent;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
@@ -9,13 +8,8 @@ import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.curse.CurseContainerComponent;
-import com.iafenvoy.mxt.data.item.ContractScrollComponent;
-import com.iafenvoy.mxt.data.item.FormationPlateComponent;
-import com.iafenvoy.mxt.data.item.IdentificationComponent;
-import com.iafenvoy.mxt.data.item.RealmTokenComponent;
-import com.iafenvoy.mxt.data.item.ResourceContainerComponent;
-import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
-import com.iafenvoy.mxt.data.item.TokenComponent;
+import com.iafenvoy.mxt.data.economy.ChequeComponent;
+import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;

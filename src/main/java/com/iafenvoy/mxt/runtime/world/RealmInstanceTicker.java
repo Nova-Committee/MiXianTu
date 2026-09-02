@@ -2,9 +2,9 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
 @EventBusSubscriber
 public final class RealmInstanceTicker {

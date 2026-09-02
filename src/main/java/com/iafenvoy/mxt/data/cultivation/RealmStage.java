@@ -1,18 +1,18 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ParticleEffect;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.data.Tribulation;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

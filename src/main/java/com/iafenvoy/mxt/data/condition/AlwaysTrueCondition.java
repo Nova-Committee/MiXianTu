@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.data.context.condition.*;
 import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.NotNull;
 
-public enum AlwaysTrueCondition implements BiEntityCondition,BlockCondition,DamageCondition,EntityCondition,ItemCondition {
+public enum AlwaysTrueCondition implements BiEntityCondition, BlockCondition, DamageCondition, EntityCondition, ItemCondition {
     INSTANCE;
     public static final MapCodec<AlwaysTrueCondition> CODEC = MapCodec.unit(INSTANCE);
 

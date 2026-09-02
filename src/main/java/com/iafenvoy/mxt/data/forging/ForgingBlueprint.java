@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.forging;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.HolderHelper;

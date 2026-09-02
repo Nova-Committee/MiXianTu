@@ -1,16 +1,14 @@
 package com.iafenvoy.mxt.data.condition;
 
-import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
-import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
-import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+import com.iafenvoy.mxt.data.context.condition.*;
 import com.mojang.serialization.MapCodec;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Predicate;
 
-/** Utility factories for registering simple context-based conditions without a dedicated class. */
+/**
+ * Utility factories for registering simple context-based conditions without a dedicated class.
+ */
 public final class SimpleConditions {
     private SimpleConditions() {
     }

@@ -1,20 +1,18 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
-import com.iafenvoy.mxt.event.AbilityUseEvent;
-import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
-import com.iafenvoy.mxt.event.CurseApplyEvent;
-import com.iafenvoy.mxt.event.ResourceConsumeEvent;
-import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
-import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsEvents.Dispatcher;
+import com.iafenvoy.mxt.event.*;
+import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
+import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
+import com.iafenvoy.mxt.util.HolderHelper;
 import dev.latvian.mods.kubejs.event.EventGroup;
 import dev.latvian.mods.kubejs.event.EventHandler;
 import dev.latvian.mods.kubejs.event.EventResult;
 import dev.latvian.mods.kubejs.event.KubeEvent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
-import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 
 import java.util.Locale;
 import java.util.Map;
@@ -31,7 +29,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     private static final EventHandler CURSE_APPLY = EVENTS.server("curseApply", () -> CurseApplyKubeEvent.class);
     private static final EventHandler RESOURCE_CONSUME = EVENTS.server("resourceConsume", () -> ResourceConsumeKubeEvent.class);
     private static final EventHandler AURA_ZONE = EVENTS.server("auraZone", () -> AuraZoneKubeEvent.class);
-    private static final EventHandler ABILITY_TRIGGER = EVENTS.server("abilityTrigger", () -> GenericKubeEvent.class);
+    private static final EventHandler ABILITY_TRIGGERED = EVENTS.server("abilityTriggered", () -> GenericKubeEvent.class);
     private static final EventHandler CURSE_REMOVE = EVENTS.server("curseRemove", () -> GenericKubeEvent.class);
     private static final EventHandler CULTIVATION_BREAK = EVENTS.server("cultivationBreak", () -> GenericKubeEvent.class);
     private static final EventHandler TECHNIQUE_LEARN = EVENTS.server("techniqueLearn", () -> GenericKubeEvent.class);
@@ -73,7 +71,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     @Override
     public void post(String type, Event event) {
         EventHandler handler = switch (type) {
-            case "abilityTrigger" -> ABILITY_TRIGGER;
+            case "abilityTriggered" -> ABILITY_TRIGGERED;
             case "curseRemove" -> CURSE_REMOVE;
             case "cultivationBreak" -> CULTIVATION_BREAK;
             case "techniqueLearn" -> TECHNIQUE_LEARN;
@@ -250,6 +248,20 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
 
         public Event getEvent() {
             return this.event;
+        }
+
+        public String getSignalType() {
+            return this.event instanceof AbilityTriggeredEvent trigger
+                    ? trigger.signalType().toString() : "";
+        }
+
+        public String getAbility() {
+            return this.event instanceof AbilityTriggeredEvent trigger
+                    ? HolderHelper.id(trigger.ability()).toString() : "";
+        }
+
+        public Object getContext() {
+            return this.event instanceof AbilityTriggeredEvent trigger ? trigger.context() : null;
         }
     }
 }

@@ -1,29 +1,27 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.data.CurrencyValue;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.OptionalLong;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.stream.Stream;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Server-side read API for item-backed currency definitions.

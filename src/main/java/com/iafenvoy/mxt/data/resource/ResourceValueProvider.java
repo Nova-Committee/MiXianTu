@@ -1,20 +1,14 @@
 package com.iafenvoy.mxt.data.resource;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.resource.ResourceValueProvider.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Constant;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Current;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Maximum;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Missing;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Regen;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.EnvironmentConcentration;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.ActualConcentration;
-import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;

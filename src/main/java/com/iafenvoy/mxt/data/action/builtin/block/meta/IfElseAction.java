@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.action.builtin.block.meta;
 
-import com.iafenvoy.mxt.data.context.action.BlockActionContext;
-
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

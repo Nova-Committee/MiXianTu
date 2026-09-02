@@ -44,6 +44,7 @@ import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.formation.FormationStructureValidator;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
@@ -119,6 +120,7 @@ public final class MxtTestMod {
             MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, Identifier.fromNamespaceAndPath(MOD_ID, id))
                     .ifPresent(ability -> holder.grant(ability, source));
         }
+        AbilityEventBridge.rebuildTriggerSubscriptions(player);
     }
 
     private static void verifyItemBindings(ServerStartedEvent event) {
@@ -230,7 +232,7 @@ public final class MxtTestMod {
         if (matcherEntries.stream().noneMatch(entry -> entry.matches(weapon))) {
             throw new IllegalStateException("Physical item matcher entries did not match the weapon stack");
         }
-        if (ResourceHolderAttachment.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("""
+        if (ResourceHolderAttachment.CODEC.codec().parse(RegistryOps.create(JsonOps.INSTANCE, event.getServer().registryAccess()), JsonParser.parseString("""
                 {"values": {"mxt_test:spirit_power": 1.0}}
                 """)).result().isPresent()) {
             throw new IllegalStateException("Resource holder data must require its current audit structure");

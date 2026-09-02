@@ -2,9 +2,9 @@ package com.iafenvoy.mxt.data.resourcebar.builtin.renderdata;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.Codec;
 import net.minecraft.resources.Identifier;
 
 import java.util.Optional;

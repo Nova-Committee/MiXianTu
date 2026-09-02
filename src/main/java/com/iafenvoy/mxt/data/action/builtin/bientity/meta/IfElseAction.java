@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity.meta;
 
-import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
-
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

@@ -2,14 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.AbilityType;
-import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
-import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
-import com.iafenvoy.mxt.data.ability.type.ChannelledAbilityType;
-import com.iafenvoy.mxt.data.ability.type.CompositeAbilityType;
-import com.iafenvoy.mxt.data.ability.type.EmptyAbilityType;
-import com.iafenvoy.mxt.data.ability.type.ModifierAbilityType;
-import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
-import com.iafenvoy.mxt.data.ability.type.WordAbilityType;
+import com.iafenvoy.mxt.data.ability.type.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

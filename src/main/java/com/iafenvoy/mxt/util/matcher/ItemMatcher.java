@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.util.matcher;
 
-import com.iafenvoy.mxt.util.codec.CombinedCodecs;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.codec.CombinedCodecs;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
-import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -15,7 +15,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 

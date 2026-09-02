@@ -1,15 +1,9 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Constant;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Current;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Maximum;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Missing;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.Regen;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.EnvironmentConcentration;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider.ActualConcentration;
 import com.iafenvoy.mxt.data.resource.JsResourceValueProvider;
+import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
+import com.iafenvoy.mxt.data.resource.ResourceValueProvider.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
 import com.iafenvoy.mxt.event.AbilityUseEvent;
+import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent;
-import com.iafenvoy.mxt.event.AuraZoneEvent;
 import net.neoforged.bus.api.Event;
 
 import java.util.List;
@@ -67,7 +67,9 @@ public final class MxtKubeJsEvents {
         if (current != null) current.postAura(event);
     }
 
-    /** Forwards a published MXT lifecycle event that has no specialised Java listener API. */
+    /**
+     * Forwards a published MXT lifecycle event that has no specialised Java listener API.
+     */
     public static void post(String type, Event event) {
         Dispatcher current = dispatcher;
         if (current != null) current.post(type, event);

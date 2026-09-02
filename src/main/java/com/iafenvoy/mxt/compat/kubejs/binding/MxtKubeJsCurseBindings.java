@@ -6,7 +6,9 @@ import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
-/** Runtime curse operations exposed as {@code MxtCurses}. */
+/**
+ * Runtime curse operations exposed as {@code MxtCurses}.
+ */
 public final class MxtKubeJsCurseBindings {
     @Info("Applies a curse through the standard transactional service.")
     public Object apply(Entity entity, String curse, int stacks, String source) {

@@ -1,13 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.MissingRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.RadialRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.SegmentedRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TextOnlyRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
+import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

@@ -7,7 +7,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 
-/** Requests that the client open the configuration screen for a hotbar mode. */
+/**
+ * Requests that the client open the configuration screen for a hotbar mode.
+ */
 public record HotbarConfigurationS2CPayload(Identifier mode) implements CustomPacketPayload {
     public static final Type<HotbarConfigurationS2CPayload> TYPE = new Type<>(
             Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "hotbar_configuration_s2c"));

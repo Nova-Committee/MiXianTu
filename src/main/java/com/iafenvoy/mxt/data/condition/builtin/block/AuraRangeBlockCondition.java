@@ -1,14 +1,13 @@
 package com.iafenvoy.mxt.data.condition.builtin.block;
 
-import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
-
+import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.data.aura.AuraRequirement;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;

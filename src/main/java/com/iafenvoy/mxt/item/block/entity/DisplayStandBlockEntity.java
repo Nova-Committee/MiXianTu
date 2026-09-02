@@ -1,9 +1,11 @@
 package com.iafenvoy.mxt.item.block.entity;
 
-import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -11,16 +13,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.jspecify.annotations.NonNull;
 import org.jetbrains.annotations.Nullable;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Persistent displayed stack shared by every wooden display stand variant.

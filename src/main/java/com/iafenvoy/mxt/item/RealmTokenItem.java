@@ -1,12 +1,11 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-
 import com.iafenvoy.mxt.attachment.RealmInstanceAttachment;
 import com.iafenvoy.mxt.attachment.RealmTravelAttachment;
 import com.iafenvoy.mxt.data.RealmInstance;
 import com.iafenvoy.mxt.data.item.RealmTokenComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.world.RealmInstanceService;
 import com.iafenvoy.mxt.runtime.world.RealmInstanceService.Result;
 import com.iafenvoy.mxt.util.HolderHelper;

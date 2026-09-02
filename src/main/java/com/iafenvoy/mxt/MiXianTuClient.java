@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt;
 
-import com.iafenvoy.jupiter.render.screen.ConfigSelectScreen;
 import com.iafenvoy.jupiter.ConfigManager;
+import com.iafenvoy.jupiter.render.screen.ConfigSelectScreen;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.render.animation.CultivationAnimationController;

@@ -1,13 +1,13 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
-import com.iafenvoy.mxt.data.ability.AbilityComponentState;
-import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.HotbarIcon;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.AbilityComponentState;
+import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;

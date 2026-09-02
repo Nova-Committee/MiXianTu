@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity.meta;
 
-import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;

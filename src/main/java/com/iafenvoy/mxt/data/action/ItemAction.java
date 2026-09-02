@@ -1,19 +1,18 @@
 package com.iafenvoy.mxt.data.action;
 
 import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
-import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.data.context.Context;
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 
 public interface ItemAction {
     Codec<ItemAction> SINGLE_CODEC = MxtRegistries.ITEM_ACTION_TYPE.byNameCodec().dispatch("type", ItemAction::codec, Function.identity());

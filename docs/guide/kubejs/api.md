@@ -309,7 +309,7 @@ MxtEvents.resourceConsume(event => {
 
 | KubeJS 事件 | 阶段类名 | `native` 的主要 accessor / 语义 |
 | --- | --- | --- |
-| `abilityTrigger` | `Pre`、`Post` | `getEntity()`、`ability()`、`definition()`、`trigger()`、`context()`；`Pre` 可取消触发的技能。 |
+| `abilityTriggered` | `Pre`、`Post` | `getEntity()`、`getAbility()`、`signalType()`、`context()`；`Pre` 可取消触发的技能。原生事件的 `ability()` 返回 `Holder<Ability>`，需要 ID 时使用 `HolderHelper.id(...)` 或 KubeJS 包装器的 `getAbility()`。 |
 | `curseRemove` | `Pre`、`Post` | `curse()`、`state()`、`reason()`、`gameTime()`、`holder()`；`Pre` 可取消移除。reason 为 `EXPLICIT`、`EXPIRED`、`CLEANSED`、`REPLACED`、`CONTENT_ACTION`、`ADMIN`。 |
 | `cultivationBreak` | `Pre`、`Post` | `target()`、`definition()`、`threshold()`、`context()`、`spirit()`、`resources()`；`Pre` 另有 `originalCosts()`、`costs()`、`setCost(resource, amount)`，可取消；`Post` 有 `paidCosts()`。 |
 | `techniqueLearn` | `Pre`、`Post` | `technique()`、`definition()`、`spirit()`；`Pre` 可取消。 |
@@ -337,5 +337,17 @@ MxtEvents.cultivationBreak(event => {
 ## 返回值与错误
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
+
+### 自定义 Trigger 信号
+
+`MxtKubeJsApi.publishTrigger(entity, signal, values)` 可从服务端脚本发布自定义触发器信号：
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `entity` | `Entity` | 信号主体，同时作为订阅分派目标；客户端实体会被拒绝。 |
+| `signal` | `Identifier` | 带命名空间的信号 ID，例如 `example:pill_taken`。 |
+| `values` | `Map<String,Object>` | 写入 `TriggerContext` 扩展字段的键值；可为 `null`。 |
+
+触发器订阅不会保存到存档。脚本若需要跨重启等待事件，应自行保存稳定 ID/阶段状态，并在实体加入世界或数据包重载后重新调用注册逻辑。
 
 完整组合示例见 [KubeJS 综合示例](examples.md)。

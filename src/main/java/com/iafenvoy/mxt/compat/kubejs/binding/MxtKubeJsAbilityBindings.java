@@ -6,7 +6,9 @@ import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
-/** Runtime ability operations exposed as {@code MxtAbilities}. */
+/**
+ * Runtime ability operations exposed as {@code MxtAbilities}.
+ */
 public final class MxtKubeJsAbilityBindings {
     @Info("Uses a granted ability through the server-authoritative ability service.")
     public Object use(Entity entity, String ability) {

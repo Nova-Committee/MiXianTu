@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.context;
 
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 
 public class Context {
     private final Map<String, Object> data;

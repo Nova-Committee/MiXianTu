@@ -1,14 +1,14 @@
 package com.iafenvoy.mxt.util.codec;
 
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableListMultimap.Builder;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.Multimap;
-import it.unimi.dsi.fastutil.objects.*;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.*;
 
 import java.util.LinkedHashMap;
 import java.util.List;

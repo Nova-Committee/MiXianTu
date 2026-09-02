@@ -10,7 +10,9 @@ import net.minecraft.core.Holder;
 import java.util.List;
 import java.util.Map;
 
-/** Persistent aggregate and source positions for one vertical chunk section. */
+/**
+ * Persistent aggregate and source positions for one vertical chunk section.
+ */
 public record BlockAuraSectionCache(Map<Holder<Resource>, AuraValue> aura,
                                     List<BlockAuraContribution> sources) {
     public static final Codec<BlockAuraSectionCache> CODEC = RecordCodecBuilder.create(i -> i.group(

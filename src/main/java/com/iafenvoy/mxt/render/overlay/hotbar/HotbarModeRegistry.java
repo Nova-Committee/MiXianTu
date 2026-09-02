@@ -2,21 +2,21 @@ package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.HotbarLayoutAttachment;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.network.payload.HotbarLayoutC2SPayload;
-import com.iafenvoy.mxt.screen.hotbar.HotbarConfigurationScreen;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.network.payload.HotbarLayoutC2SPayload;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtKeyMappings.KeyMappingHolder;
 import com.iafenvoy.mxt.render.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
+import com.iafenvoy.mxt.screen.hotbar.HotbarConfigurationScreen;
 import com.iafenvoy.mxt.screen.hotbar.HotbarConfigurationScreen.HotbarAccess;
 import com.iafenvoy.mxt.screen.hotbar.HotbarConfigurationScreen.Option;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping.Category;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -29,14 +29,7 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -149,7 +142,9 @@ public final class HotbarModeRegistry {
         return mode == null ? Optional.empty() : Optional.ofNullable(mode.keyMapping());
     }
 
-    /** Opens the generic editor for one registered mode using its current entries. */
+    /**
+     * Opens the generic editor for one registered mode using its current entries.
+     */
     public static boolean openConfiguration(Identifier id) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;

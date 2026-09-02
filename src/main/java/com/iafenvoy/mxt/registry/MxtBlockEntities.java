@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.item.block.entity.SystemStationBlockEntity;
-import com.iafenvoy.mxt.item.block.entity.TradeStationBlockEntity;
 import com.iafenvoy.mxt.item.block.entity.DisplayStandBlockEntity;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
+import com.iafenvoy.mxt.item.block.entity.SystemStationBlockEntity;
+import com.iafenvoy.mxt.item.block.entity.TradeStationBlockEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.registries.DeferredHolder;

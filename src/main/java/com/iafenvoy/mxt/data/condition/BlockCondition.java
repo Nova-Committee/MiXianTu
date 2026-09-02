@@ -1,19 +1,18 @@
 package com.iafenvoy.mxt.data.condition;
 
 import com.iafenvoy.mxt.data.condition.builtin.block.meta.AndBlockCondition;
-import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
 import com.iafenvoy.mxt.data.context.Context;
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 
 public interface BlockCondition {
     Codec<BlockCondition> SINGLE_CODEC = MxtRegistries.BLOCK_CONDITION_TYPE.byNameCodec().dispatch("type", BlockCondition::codec, Function.identity());

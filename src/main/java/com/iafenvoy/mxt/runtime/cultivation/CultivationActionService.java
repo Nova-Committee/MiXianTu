@@ -1,10 +1,8 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
@@ -12,29 +10,31 @@ import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceGain;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.CollectionHelper;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.runtime.world.AuraResult;
-import com.iafenvoy.mxt.runtime.world.AuraService;
-import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
@@ -72,7 +72,9 @@ public final class CultivationActionService {
         return start(spirit, actionId, definition, gameTime, () -> conditions);
     }
 
-    /** Checks resource-level conflicts and other rules before entering cultivation mode. */
+    /**
+     * Checks resource-level conflicts and other rules before entering cultivation mode.
+     */
     public static boolean canStartCultivation(LivingEntity entity, FormulaContext context) {
         return MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
                 .filter(resource -> resource.value().firstRealm().isPresent())
@@ -239,6 +241,9 @@ public final class CultivationActionService {
     private static Result stop(LivingEntity entity, CultivationAttachment spirit, Holder<CultivateAction> action, CultivateAction definition,
                                long gameTime, Failure reason) {
         ItemAuraService.returnFloatingItem(entity);
+        // Breakthrough listeners are derived runtime state and must disappear as
+        // soon as cultivation stops, including failure paths inside the tick.
+        CultivationTriggerService.clear(entity);
         return stop(spirit, action, definition, gameTime, reason);
     }
 
@@ -491,7 +496,7 @@ public final class CultivationActionService {
     }
 
     private static List<Holder<Resource>> eligibleRealmResources(CultivationAttachment spirit, LivingEntity entity,
-                                                                  FormulaContext context) {
+                                                                 FormulaContext context) {
         return cultivationStages(spirit).stream()
                 .filter(stage -> stage.value().cultivateCondition().test(entity, context))
                 .map(stage -> stage.value().resource()).distinct().toList();
@@ -501,7 +506,9 @@ public final class CultivationActionService {
         return cultivationStages(spirit).stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
     }
 
-    /** Returns the active stage, falling back to a resource's first realm for mortals. */
+    /**
+     * Returns the active stage, falling back to a resource's first realm for mortals.
+     */
     private static Holder<RealmStage> stageFor(CultivationAttachment spirit, Holder<Resource> resource) {
         Holder<RealmStage> current = spirit.realmStage(resource);
         if (current != null) return current;

@@ -6,7 +6,9 @@ import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 
-/** Resolves the optional resource use gate for entity-driven interactions. */
+/**
+ * Resolves the optional resource use gate for entity-driven interactions.
+ */
 public final class ResourceUseService {
     private ResourceUseService() {
     }

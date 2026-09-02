@@ -1,10 +1,9 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
 import com.iafenvoy.mxt.util.HolderHelper;

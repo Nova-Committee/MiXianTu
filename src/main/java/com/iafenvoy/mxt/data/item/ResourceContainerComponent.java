@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
@@ -18,8 +20,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.tooltip.TooltipAppender;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.TooltipText;
 import org.jspecify.annotations.NonNull;
 
 import java.util.function.Consumer;

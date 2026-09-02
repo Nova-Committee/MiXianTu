@@ -1,23 +1,23 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
-import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
+import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Failure;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Snapshot;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.StartResult;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.TickResult.State;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.core.BlockPos;
-import com.iafenvoy.mxt.runtime.world.AuraService;
 
 import java.util.ArrayList;
 import java.util.LinkedList;

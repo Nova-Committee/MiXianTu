@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.gameevent.GameEvent;

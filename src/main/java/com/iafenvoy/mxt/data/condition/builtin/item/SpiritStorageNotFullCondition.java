@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
-import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
-
 import com.iafenvoy.mxt.data.aura.SpiritStorageTooltipAppender;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
+import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;

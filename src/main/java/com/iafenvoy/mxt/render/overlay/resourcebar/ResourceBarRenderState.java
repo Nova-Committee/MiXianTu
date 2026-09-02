@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.render.overlay.resourcebar;
 
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;

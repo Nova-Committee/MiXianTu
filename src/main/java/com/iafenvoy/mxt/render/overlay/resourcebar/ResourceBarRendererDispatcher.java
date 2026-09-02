@@ -1,20 +1,10 @@
 package com.iafenvoy.mxt.render.overlay.resourcebar;
 
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.MissingRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.RadialRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.SegmentedRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TextOnlyRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
+import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.*;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
-import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.MissingResourceBarRenderer;
-import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.OriginsResourceBarRenderer;
-import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.RadialResourceBarRenderer;
-import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.SegmentedResourceBarRenderer;
-import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.TextOnlyResourceBarRenderer;
-import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.TexturedResourceBarRenderer;
+import com.iafenvoy.mxt.render.overlay.resourcebar.renderer.*;
 import com.mojang.serialization.MapCodec;
 
 import java.util.HashMap;

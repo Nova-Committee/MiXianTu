@@ -1,12 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.item.block.ChequeTableBlock;
-import com.iafenvoy.mxt.item.block.DisplayStandBlock;
-import com.iafenvoy.mxt.item.block.ExchangeStationBlock;
-import com.iafenvoy.mxt.item.block.SystemStationBlock;
-import com.iafenvoy.mxt.item.block.TradeStationBlock;
-import com.iafenvoy.mxt.item.block.SpiritCraftingTableBlock;
+import com.iafenvoy.mxt.item.block.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;

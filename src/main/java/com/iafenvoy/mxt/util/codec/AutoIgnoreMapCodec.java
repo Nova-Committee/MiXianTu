@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.util.codec;
 
+import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.datafixers.util.Unit;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.*;
 import com.mojang.serialization.codecs.BaseMapCodec;
-import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;
 
 import java.util.LinkedHashMap;

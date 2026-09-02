@@ -1,14 +1,14 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
@@ -19,19 +19,20 @@ import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
+import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Area;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
-import com.iafenvoy.mxt.runtime.world.AuraResult;
-import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -120,6 +121,21 @@ public final class MxtKubeJsApi {
 
     public static AuraResult aura(Level level, BlockPos position) {
         return AuraService.getPositionAura(level, position);
+    }
+
+    /**
+     * Publishes a server-authoritative custom trigger signal for the supplied
+     * entity. Values are copied into the extensible TriggerContext map; the
+     * actor and level are always populated by the API and cannot be spoofed.
+     */
+    public static boolean publishTrigger(@NotNull Entity actor, @NotNull Identifier signal,
+                                         Map<String, Object> values) {
+        if (actor.level().isClientSide()) return false;
+        TriggerContext context = new TriggerContext().actor(actor).level(actor.level())
+                .formula(FormulaContext.of(actor));
+        if (values != null) values.forEach(context::set);
+        TriggerDispatcher.publish(signal, context, actor.level().getGameTime());
+        return true;
     }
 
     public static String addAuraBox(Level level, Identifier zone, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int priority) {

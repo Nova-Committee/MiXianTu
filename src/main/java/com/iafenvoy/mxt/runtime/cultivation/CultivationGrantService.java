@@ -3,18 +3,20 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
-import net.minecraft.tags.TagKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
 import java.util.Map.Entry;
@@ -44,6 +46,15 @@ public final class CultivationGrantService {
             granted += grantAll(abilities, technique.value().grantedAbilities(), source("technique", HolderHelper.id(technique)));
         }
         return new Result(granted, revoked);
+    }
+
+    /**
+     * Recalculates identity-granted abilities and immediately rehydrates their runtime triggers.
+     */
+    public static Result recalculate(LivingEntity entity, SpiritIdentityAttachment spirit, AbilityAttachment abilities) {
+        Result result = recalculate(spirit, abilities);
+        AbilityEventBridge.rebuildTriggerSubscriptions(entity);
+        return result;
     }
 
     private static int grantAll(AbilityAttachment holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {

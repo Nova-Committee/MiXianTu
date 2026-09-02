@@ -1,28 +1,24 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.neoforged.neoforge.event.level.ChunkEvent.Load;
-import net.neoforged.neoforge.event.level.ChunkEvent.Unload;
-import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent.Load;
+import net.neoforged.neoforge.event.level.ChunkEvent.Unload;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Regenerates aura only for chunks observed as loaded, without scanning a whole level each tick.

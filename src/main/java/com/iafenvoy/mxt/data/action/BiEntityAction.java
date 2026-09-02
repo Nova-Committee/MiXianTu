@@ -1,18 +1,17 @@
 package com.iafenvoy.mxt.data.action;
 
 import com.iafenvoy.mxt.data.action.builtin.bientity.meta.SequenceBiEntityAction;
-import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.Context;
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 
 public interface BiEntityAction {
     Codec<BiEntityAction> SINGLE_CODEC = MxtRegistries.BI_ENTITY_ACTION_TYPE.byNameCodec().dispatch("type", BiEntityAction::codec, Function.identity());

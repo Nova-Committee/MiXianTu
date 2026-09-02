@@ -6,7 +6,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
-/** World aura operations exposed as {@code MxtAura}. */
+/**
+ * World aura operations exposed as {@code MxtAura}.
+ */
 public final class MxtKubeJsAuraBindings {
     @Info("Gets the resolved multi-resource aura result at a world position.")
     public Object get(Level level, BlockPos position) {

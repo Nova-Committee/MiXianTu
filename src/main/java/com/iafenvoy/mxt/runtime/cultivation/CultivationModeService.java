@@ -2,21 +2,22 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
+import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.Optional;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * Owns the player-controlled cultivation mode around a selected cultivation action.
@@ -52,7 +53,9 @@ public final class CultivationModeService {
         return true;
     }
 
-    /** Sends the user-facing reason for a failed cultivation-mode transition. */
+    /**
+     * Sends the user-facing reason for a failed cultivation-mode transition.
+     */
     public static void notifyFailure(ServerPlayer player, Result result) {
         if (result == null || result.failure() == null) return;
         String reasonKey = "actionbar.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
@@ -78,6 +81,7 @@ public final class CultivationModeService {
         if (result.stopped()) {
             CultivationMovementService.clear(player);
             player.refreshDimensions();
+            CultivationTriggerService.clear(player);
         }
         return result;
     }

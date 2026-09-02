@@ -9,7 +9,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
 
-/** Utility factories for registering simple context-based actions without a dedicated class. */
+/**
+ * Utility factories for registering simple context-based actions without a dedicated class.
+ */
 public final class SimpleActions {
     private SimpleActions() {
     }

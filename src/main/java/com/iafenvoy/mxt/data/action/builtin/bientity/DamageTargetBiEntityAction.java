@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity;
 
-import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
-
 import com.iafenvoy.mxt.data.action.BiEntityAction;
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;

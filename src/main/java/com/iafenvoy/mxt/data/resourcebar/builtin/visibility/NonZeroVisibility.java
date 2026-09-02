@@ -4,7 +4,9 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.mojang.serialization.MapCodec;
 
-/** Shows a bar only when its configured range has a positive size. */
+/**
+ * Shows a bar only when its configured range has a positive size.
+ */
 public enum NonZeroVisibility implements ResourceBarVisibility {
     INSTANCE;
 

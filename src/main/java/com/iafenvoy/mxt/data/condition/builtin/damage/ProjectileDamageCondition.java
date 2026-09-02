@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.condition.builtin.damage;
 
-import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
-
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

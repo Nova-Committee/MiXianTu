@@ -1,12 +1,11 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.NonNull;
 
 public record RemoveEffectAction(MobEffect effect) implements EntityAction {

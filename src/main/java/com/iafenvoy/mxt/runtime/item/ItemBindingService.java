@@ -1,7 +1,5 @@
 package com.iafenvoy.mxt.runtime.item;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -11,9 +9,10 @@ import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.PillService;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -28,8 +27,8 @@ import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
@@ -295,13 +294,13 @@ public final class ItemBindingService {
 
         public boolean conditionsMet(LivingEntity entity, FormulaContext context) {
             return this.weapon.map(value -> value.conditions().stream()
-                            .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
+                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
                     && this.pill.map(value -> value.conditions().stream()
-                            .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
+                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
                     && this.technique.map(value -> value.conditions().stream()
-                            .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
+                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
                     && this.item.map(value -> value.conditions().stream()
-                            .allMatch(condition -> condition.condition().test(entity, context))).orElse(true);
+                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true);
         }
     }
 }

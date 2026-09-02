@@ -6,7 +6,9 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.world.entity.player.Player;
 
-/** Complete data-driven cost operations exposed as {@code MxtCosts}. */
+/**
+ * Complete data-driven cost operations exposed as {@code MxtCosts}.
+ */
 public final class MxtKubeJsCostBindings {
     @Info("Checks one complete MXT cost definition without changing player state.")
     public boolean check(Player player, JsonElement definition) {

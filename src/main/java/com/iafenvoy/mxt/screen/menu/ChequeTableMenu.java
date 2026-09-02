@@ -1,10 +1,9 @@
 package com.iafenvoy.mxt.screen.menu;
 
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-
 import com.iafenvoy.mxt.data.economy.ChequeComponent;
 import com.iafenvoy.mxt.item.ChequeItem;
 import com.iafenvoy.mxt.registry.MxtBlocks;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;

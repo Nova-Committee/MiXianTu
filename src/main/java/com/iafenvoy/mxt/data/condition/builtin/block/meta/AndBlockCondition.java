@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.block.meta;
 
-import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
-
 import com.iafenvoy.mxt.data.condition.BlockCondition;
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;

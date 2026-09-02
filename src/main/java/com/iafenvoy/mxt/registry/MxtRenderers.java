@@ -1,19 +1,15 @@
 package com.iafenvoy.mxt.registry;
 
-import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
 import com.iafenvoy.mxt.render.DisplayStandBlockEntityRenderer;
+import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle.Provider;
-import com.iafenvoy.mxt.screen.gui.ChequeTableScreen;
-import com.iafenvoy.mxt.screen.gui.ExchangeStationScreen;
-import com.iafenvoy.mxt.screen.gui.PlayerTradeScreen;
-import com.iafenvoy.mxt.screen.gui.StationScreen;
-import com.iafenvoy.mxt.screen.gui.SpiritCraftingScreen;
+import com.iafenvoy.mxt.screen.gui.*;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.world.entity.player.PlayerModelType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;

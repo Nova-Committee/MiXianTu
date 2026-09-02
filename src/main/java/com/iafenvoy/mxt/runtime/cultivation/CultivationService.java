@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -10,22 +10,22 @@ import com.iafenvoy.mxt.event.CultivationBreakEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
@@ -141,7 +141,9 @@ public final class CultivationService {
                 .map(value -> Transition.mortal(definition, value));
     }
 
-    /** Adds cultivation progress while respecting the active transition's upper bound. */
+    /**
+     * Adds cultivation progress while respecting the active transition's upper bound.
+     */
     public static double addProgress(LivingEntity entity, Holder<Resource> resource, double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
@@ -162,7 +164,9 @@ public final class CultivationService {
         return accepted;
     }
 
-    /** Context-only variant used by server-side service paths without an entity reference. */
+    /**
+     * Context-only variant used by server-side service paths without an entity reference.
+     */
     public static double addProgress(CultivationAttachment spirit, Holder<Resource> resource, double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
         Transition transition = next(spirit, HolderHelper.id(resource)).orElse(null);
@@ -181,7 +185,9 @@ public final class CultivationService {
         return accepted;
     }
 
-    /** Returns remaining legal progress for this resource's current transition. */
+    /**
+     * Returns remaining legal progress for this resource's current transition.
+     */
     public static double remainingProgressCapacity(CultivationAttachment spirit, Holder<Resource> resource, FormulaContext context) {
         Transition transition = next(spirit, HolderHelper.id(resource)).orElse(null);
         if (transition == null) return 0.0D;
@@ -211,6 +217,16 @@ public final class CultivationService {
         boolean conditions = reached && transition.conditions().test(entity, context);
         return new BreakthroughStatus(reached, conditions, transition.autoBreakthrough(),
                 threshold.breakthroughExp(), threshold.maxExperience());
+    }
+
+    /**
+     * Returns the conditions belonging to the currently pending transition.
+     * The returned value is datapack state; runtime trigger subscriptions are
+     * rebuilt separately and are never stored in the attachment.
+     */
+    public static Optional<CultivateConditions> pendingConditions(LivingEntity entity, Holder<Resource> resource) {
+        Transition transition = next(entity.getData(MxtAttachments.CULTIVATION), HolderHelper.id(resource)).orElse(null);
+        return transition == null ? Optional.empty() : Optional.of(transition.conditions());
     }
 
     /**

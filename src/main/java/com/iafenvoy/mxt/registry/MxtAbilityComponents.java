@@ -2,13 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.AbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.ChargesAbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.CooldownAbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.EmptyAbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.ResourceAbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.TargetLockAbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.TimerAbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.ToggleAbilityComponent;
+import com.iafenvoy.mxt.data.ability.component.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

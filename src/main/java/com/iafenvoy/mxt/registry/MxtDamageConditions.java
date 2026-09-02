@@ -1,15 +1,11 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.type.condition.JsDamageCondition;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
-import com.iafenvoy.mxt.data.condition.builtin.damage.DamageAmountRangeCondition;
-import com.iafenvoy.mxt.data.condition.builtin.damage.DirectDamageCondition;
-import com.iafenvoy.mxt.data.condition.builtin.damage.DamageTypeCondition;
-import com.iafenvoy.mxt.data.condition.builtin.damage.DamageTypeTagCondition;
-import com.iafenvoy.mxt.data.condition.builtin.damage.ProjectileDamageCondition;
+import com.iafenvoy.mxt.data.condition.builtin.damage.*;
 import com.iafenvoy.mxt.data.condition.builtin.damage.meta.*;
-import com.iafenvoy.mxt.compat.kubejs.type.condition.JsDamageCondition;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.tags.DamageTypeTags;
 import net.neoforged.neoforge.registries.DeferredHolder;

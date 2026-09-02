@@ -1,12 +1,11 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
-import com.iafenvoy.mxt.data.resource.ResourceCost;
-import com.iafenvoy.mxt.data.resource.ResourceGain;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.resource.ResourceGain;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;

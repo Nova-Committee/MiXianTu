@@ -2,14 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.AlwaysVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.AndVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NonFullVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NonZeroVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NotVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.OrVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.RangeVisibility;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.RecentlyChangedVisibility;
+import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

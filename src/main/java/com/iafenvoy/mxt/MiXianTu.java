@@ -2,9 +2,11 @@ package com.iafenvoy.mxt;
 
 import com.iafenvoy.jupiter.ConfigManager;
 import com.iafenvoy.jupiter.ServerConfigManager.PermissionChecker;
-import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.*;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -19,9 +21,11 @@ public final class MiXianTu {
         ConfigManager.getInstance().registerServerConfigHandler(MxtServerConfig.INSTANCE, PermissionChecker.IS_OPERATOR);
 
         CuriosIntegration.registerPredicates();
+        AbilityEventBridge.initialize();
+        CultivationTriggerService.initialize();
 
         MxtAbilityComponents.REGISTRY.register(bus);
-        MxtAbilityTriggers.REGISTRY.register(bus);
+        MxtTriggers.REGISTRY.register(bus);
         MxtAbilityTypes.REGISTRY.register(bus);
         MxtAbilityTargetSelectors.REGISTRY.register(bus);
         MxtCosts.REGISTRY.register(bus);

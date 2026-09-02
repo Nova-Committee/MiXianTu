@@ -1,11 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.recipe.AlchemyRecipe;
-import com.iafenvoy.mxt.recipe.FormationRecipe;
-import com.iafenvoy.mxt.recipe.RefiningRecipe;
-import com.iafenvoy.mxt.recipe.SpiritShapedRecipe;
-import com.iafenvoy.mxt.recipe.SpiritShapelessRecipe;
+import com.iafenvoy.mxt.recipe.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.neoforged.neoforge.registries.DeferredHolder;

@@ -24,7 +24,8 @@ public record Conditional(List<Branch> branches, Optional<NumberProvider> fallba
                     .orElseGet(() -> DataResult.error(() -> "Invalid number expression: " + expression))),
             value -> {
                 if (value instanceof Constant(double value1)) return DataResult.success(Either.left(value1));
-                if (value instanceof Expression expression) return DataResult.success(Either.right(expression.source()));
+                if (value instanceof Expression expression)
+                    return DataResult.success(Either.right(expression.source()));
                 return DataResult.error(() -> "Conditional fallback must be a number or expression string");
             }
     );

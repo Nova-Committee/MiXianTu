@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.FloatHoldingItemAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -14,8 +14,8 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -66,7 +66,9 @@ public final class ItemAuraService {
         return server == null ? Optional.empty() : type(server.registryAccess(), stack);
     }
 
-    /** Resolves the total spirit capacity of the supplied stack. */
+    /**
+     * Resolves the total spirit capacity of the supplied stack.
+     */
     public static int capacity(Provider access, ItemStack stack, FormulaContext context) {
         return find(access, stack)
                 .map(holder -> saturatingMultiply(capacity(holder.value(), context), stack.getCount()))

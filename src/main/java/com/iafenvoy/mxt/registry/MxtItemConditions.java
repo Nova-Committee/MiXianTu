@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.type.condition.JsItemCondition;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.*;
 import com.iafenvoy.mxt.data.condition.builtin.item.meta.*;
-import com.iafenvoy.mxt.compat.kubejs.type.condition.JsItemCondition;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.registries.DeferredHolder;

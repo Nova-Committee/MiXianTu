@@ -4,10 +4,10 @@ import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.Trio;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.Expression;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
-import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
 import java.util.function.Function;

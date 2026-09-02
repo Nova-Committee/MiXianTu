@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import net.minecraft.core.Holder;
 
 import java.util.Map;

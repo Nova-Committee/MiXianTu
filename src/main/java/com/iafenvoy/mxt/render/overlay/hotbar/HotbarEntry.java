@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.data.HotbarIcon;
-import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.Optional;
 
@@ -19,7 +19,9 @@ public interface HotbarEntry {
 
     Component name();
 
-    /** Stable option ID used by configurable hotbar layouts. */
+    /**
+     * Stable option ID used by configurable hotbar layouts.
+     */
     default Identifier id() {
         return null;
     }

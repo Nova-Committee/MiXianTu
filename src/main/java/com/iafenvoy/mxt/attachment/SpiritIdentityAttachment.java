@@ -13,7 +13,9 @@ import net.minecraft.core.Holder;
 import java.util.LinkedList;
 import java.util.List;
 
-/** Persisted roots, physiques, learned techniques and titles. */
+/**
+ * Persisted roots, physiques, learned techniques and titles.
+ */
 public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritIdentityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.list(SpiritRoot.CODEC).optionalFieldOf("spirit_roots", List.of()).forGetter(SpiritIdentityAttachment::spiritRoots),
@@ -27,7 +29,9 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     private final List<Holder<CultivationTechnique>> learnedTechniques;
     private final List<Holder<Title>> titles;
 
-    public SpiritIdentityAttachment() { this(List.of(), List.of(), List.of(), List.of()); }
+    public SpiritIdentityAttachment() {
+        this(List.of(), List.of(), List.of(), List.of());
+    }
 
     private SpiritIdentityAttachment(List<Holder<SpiritRoot>> spiritRoots, List<Holder<Physique>> physiques,
                                      List<Holder<CultivationTechnique>> learnedTechniques, List<Holder<Title>> titles) {
@@ -37,16 +41,50 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
         this.titles = new LinkedList<>(titles);
     }
 
-    public List<Holder<SpiritRoot>> spiritRoots() { return this.spiritRoots; }
-    public List<Holder<Physique>> physiques() { return this.physiques; }
-    public List<Holder<CultivationTechnique>> learnedTechniques() { return this.learnedTechniques; }
-    public List<Holder<Title>> titles() { return this.titles; }
-
-    public void setSpiritRoots(List<Holder<SpiritRoot>> values) { this.spiritRoots.clear(); this.spiritRoots.addAll(values); this.markDirty(); }
-    public void setPhysiques(List<Holder<Physique>> values) { this.physiques.clear(); this.physiques.addAll(values); this.markDirty(); }
-    public void setLearnedTechniques(List<Holder<CultivationTechnique>> values) { this.learnedTechniques.clear(); this.learnedTechniques.addAll(values); this.markDirty(); }
-    public void addLearnedTechnique(Holder<CultivationTechnique> value) {
-        if (value != null && !this.learnedTechniques.contains(value)) { this.learnedTechniques.add(value); this.markDirty(); }
+    public List<Holder<SpiritRoot>> spiritRoots() {
+        return this.spiritRoots;
     }
-    public void setTitles(List<Holder<Title>> values) { this.titles.clear(); this.titles.addAll(values); this.markDirty(); }
+
+    public List<Holder<Physique>> physiques() {
+        return this.physiques;
+    }
+
+    public List<Holder<CultivationTechnique>> learnedTechniques() {
+        return this.learnedTechniques;
+    }
+
+    public List<Holder<Title>> titles() {
+        return this.titles;
+    }
+
+    public void setSpiritRoots(List<Holder<SpiritRoot>> values) {
+        this.spiritRoots.clear();
+        this.spiritRoots.addAll(values);
+        this.markDirty();
+    }
+
+    public void setPhysiques(List<Holder<Physique>> values) {
+        this.physiques.clear();
+        this.physiques.addAll(values);
+        this.markDirty();
+    }
+
+    public void setLearnedTechniques(List<Holder<CultivationTechnique>> values) {
+        this.learnedTechniques.clear();
+        this.learnedTechniques.addAll(values);
+        this.markDirty();
+    }
+
+    public void addLearnedTechnique(Holder<CultivationTechnique> value) {
+        if (value != null && !this.learnedTechniques.contains(value)) {
+            this.learnedTechniques.add(value);
+            this.markDirty();
+        }
+    }
+
+    public void setTitles(List<Holder<Title>> values) {
+        this.titles.clear();
+        this.titles.addAll(values);
+        this.markDirty();
+    }
 }

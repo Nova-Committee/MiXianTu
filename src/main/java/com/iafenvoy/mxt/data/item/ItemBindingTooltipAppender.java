@@ -23,8 +23,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.tooltip.TooltipLocation;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
-import java.util.function.Consumer;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Adds data-driven weapon, pill, technique and item-action details.

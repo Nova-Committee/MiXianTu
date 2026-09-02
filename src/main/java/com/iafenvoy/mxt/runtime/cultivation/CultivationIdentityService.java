@@ -1,15 +1,14 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.HashSet;
@@ -32,7 +31,7 @@ public final class CultivationIdentityService {
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
         roots.add(root);
         spirit.setSpiritRoots(roots);
-        CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return Result.changedResult();
     }
 
@@ -51,7 +50,7 @@ public final class CultivationIdentityService {
         List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
         physiques.add(physique);
         spirit.setPhysiques(physiques);
-        CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return Result.changedResult();
     }
 
@@ -62,7 +61,7 @@ public final class CultivationIdentityService {
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
         if (!roots.remove(root)) return false;
         spirit.setSpiritRoots(roots);
-        CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return true;
     }
 
@@ -73,7 +72,7 @@ public final class CultivationIdentityService {
         List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
         if (!physiques.remove(physique)) return false;
         spirit.setPhysiques(physiques);
-        CultivationGrantService.recalculate(spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return true;
     }
 

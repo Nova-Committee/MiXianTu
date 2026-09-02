@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.data.cost;
 
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.datafixers.util.Either;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.List;

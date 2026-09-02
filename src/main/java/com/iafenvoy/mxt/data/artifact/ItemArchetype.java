@@ -1,10 +1,9 @@
 package com.iafenvoy.mxt.data.artifact;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.action.ItemAction;
+import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;

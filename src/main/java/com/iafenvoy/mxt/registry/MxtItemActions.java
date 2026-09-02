@@ -1,11 +1,14 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.type.action.JsItemAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.item.*;
-import com.iafenvoy.mxt.data.action.builtin.item.meta.*;
-import com.iafenvoy.mxt.compat.kubejs.type.action.JsItemAction;
+import com.iafenvoy.mxt.data.action.builtin.item.meta.ChanceAction;
+import com.iafenvoy.mxt.data.action.builtin.item.meta.ChoiceAction;
+import com.iafenvoy.mxt.data.action.builtin.item.meta.IfElseAction;
+import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

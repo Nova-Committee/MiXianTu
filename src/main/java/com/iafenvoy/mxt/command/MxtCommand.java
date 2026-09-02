@@ -1,15 +1,7 @@
 package com.iafenvoy.mxt.command;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SectAttachment;
-import com.iafenvoy.mxt.attachment.SectTerritoryAttachment;
-import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
@@ -17,9 +9,11 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
+import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
@@ -28,23 +22,18 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
 import com.iafenvoy.mxt.runtime.sect.SectService;
 import com.iafenvoy.mxt.runtime.sect.SectService.Result;
 import com.iafenvoy.mxt.runtime.sect.SectTerritoryEventBridge;
-import com.iafenvoy.mxt.runtime.world.AuraPool;
-import com.iafenvoy.mxt.runtime.world.SoulService;
-import com.iafenvoy.mxt.runtime.world.AuraResult;
-import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
-import com.iafenvoy.mxt.runtime.world.SpiritStoneVein;
-import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.runtime.world.*;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.IdentifierArgument;
@@ -58,10 +47,9 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.minecraft.ChatFormatting;
 
-import java.util.Locale;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -248,7 +236,7 @@ public final class MxtCommand {
     }
 
     private static Optional<Values> extractResourceBarValues(ServerPlayer player, Reference<Resource> resource,
-                                                              ResourceBarContext context) {
+                                                             ResourceBarContext context) {
         if (context == ActualConcentrationContext.INSTANCE) {
             AuraPool pool = AuraService.getPositionAura(player.level(), player.blockPosition()).pool(resource);
             return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));

@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.curse;
 
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
 /**
  * Registers loaded cursed entities and services only their due lifecycle work.

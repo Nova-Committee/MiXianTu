@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.resourcebar;
 
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;

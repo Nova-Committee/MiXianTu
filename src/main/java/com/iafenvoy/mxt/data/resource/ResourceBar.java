@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.resource;
 
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.AlwaysVisibility;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.AlwaysVisibility;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.StringRepresentable;

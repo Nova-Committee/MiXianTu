@@ -1,33 +1,33 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.data.ability.AbilityComponent;
-import com.iafenvoy.mxt.data.ability.AbilityTrigger;
 import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.TargetSelector;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
+import com.iafenvoy.mxt.data.aura.AuraMaximum;
+import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.condition.*;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
-import com.iafenvoy.mxt.data.aura.AuraMaximum;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
+import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
+import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.MapCodec;
-import net.objecthunter.exp4j.function.Function;
 import net.minecraft.core.DefaultedMappedRegistry;
 import net.minecraft.core.DefaultedRegistry;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.NewRegistryEvent;
+import net.objecthunter.exp4j.function.Function;
 
 @EventBusSubscriber
 public final class MxtRegistries {
@@ -36,7 +36,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends Cost>> COST_TYPE = new DefaultedMappedRegistry<>("resource", MxtResourceKeys.COST_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends CurseType>> CURSE_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.CURSE_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends AbilityComponent>> ABILITY_COMPONENT_TYPE = new DefaultedMappedRegistry<>("empty", MxtResourceKeys.ABILITY_COMPONENT_TYPE, Lifecycle.stable(), false);
-    public static final DefaultedRegistry<MapCodec<? extends AbilityTrigger>> ABILITY_TRIGGER_TYPE = new DefaultedMappedRegistry<>("use", MxtResourceKeys.ABILITY_TRIGGER_TYPE, Lifecycle.stable(), false);
+    public static final DefaultedRegistry<MapCodec<? extends Trigger>> TRIGGER_TYPE = new DefaultedMappedRegistry<>("use", MxtResourceKeys.TRIGGER_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends NumberProvider>> NUMBER_PROVIDER_TYPE = new DefaultedMappedRegistry<>("constant", MxtResourceKeys.NUMBER_PROVIDER_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<MapCodec<? extends AuraMaximum>> AURA_MAXIMUM_TYPE = new DefaultedMappedRegistry<>("initial_multiplier", MxtResourceKeys.AURA_MAXIMUM_TYPE, Lifecycle.stable(), false);
     public static final DefaultedRegistry<Function> FORMULA_FUNCTION = new DefaultedMappedRegistry<>("round", MxtResourceKeys.FORMULA_FUNCTION, Lifecycle.stable(), false);
@@ -64,7 +64,7 @@ public final class MxtRegistries {
         event.register(COST_TYPE);
         event.register(CURSE_TYPE);
         event.register(ABILITY_COMPONENT_TYPE);
-        event.register(ABILITY_TRIGGER_TYPE);
+        event.register(TRIGGER_TYPE);
         event.register(NUMBER_PROVIDER_TYPE);
         event.register(AURA_MAXIMUM_TYPE);
         event.register(FORMULA_FUNCTION);

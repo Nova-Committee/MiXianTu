@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.action.builtin.item.meta;
 
-import com.iafenvoy.mxt.data.context.action.ItemActionContext;
-
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

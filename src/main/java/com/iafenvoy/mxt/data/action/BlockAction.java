@@ -1,21 +1,20 @@
 package com.iafenvoy.mxt.data.action;
 
 import com.iafenvoy.mxt.data.action.builtin.block.meta.SequenceBlockAction;
-import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.data.context.Context;
+import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 
 public interface BlockAction {
     Codec<BlockAction> SINGLE_CODEC = MxtRegistries.BLOCK_ACTION_TYPE.byNameCodec().dispatch("type", BlockAction::codec, Function.identity());

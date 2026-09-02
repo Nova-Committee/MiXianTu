@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.action.builtin.entity.meta;
 
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.WeightedActionEntry;
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;

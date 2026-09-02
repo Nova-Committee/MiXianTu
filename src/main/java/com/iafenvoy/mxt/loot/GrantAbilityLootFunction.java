@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.loot;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
@@ -47,7 +48,11 @@ public final class GrantAbilityLootFunction extends LootItemConditionalFunction 
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
         if (entity != null) MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, this.ability)
-                .ifPresent(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, this.source));
+                .ifPresent(ability -> {
+                    if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, this.source)
+                            && entity instanceof LivingEntity living)
+                        AbilityEventBridge.rebuildTriggerSubscriptions(living);
+                });
         return stack;
     }
 }

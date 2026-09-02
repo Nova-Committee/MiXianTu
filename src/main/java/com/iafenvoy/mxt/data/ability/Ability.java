@@ -2,15 +2,16 @@ package com.iafenvoy.mxt.data.ability;
 
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.HotbarIcon;
+import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -53,8 +54,8 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_affinity", List.of()).forGetter(Ability::elementAffinity)
     ).apply(i, Ability::new));
 
-    public Optional<AbilityTrigger> trigger() {
-        return this.type instanceof TriggeredAbilityType triggered ? Optional.of(triggered.trigger()) : Optional.empty();
+    public List<Trigger> triggers() {
+        return this.type instanceof TriggeredAbilityType triggered ? triggered.triggers() : List.of();
     }
 
     /**

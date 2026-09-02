@@ -1,11 +1,10 @@
 package com.iafenvoy.mxt.render;
 
 import com.iafenvoy.mxt.data.aura.AuraValue;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import com.iafenvoy.mxt.util.HolderHelper;

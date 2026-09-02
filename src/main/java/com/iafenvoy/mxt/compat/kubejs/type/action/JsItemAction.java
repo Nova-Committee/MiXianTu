@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.type.action;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsActionCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
+import com.iafenvoy.mxt.data.action.ItemAction;
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

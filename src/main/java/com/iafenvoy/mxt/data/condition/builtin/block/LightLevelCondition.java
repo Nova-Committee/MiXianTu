@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.block;
 
-import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
-
 import com.iafenvoy.mxt.data.condition.BlockCondition;
+import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.Codec;

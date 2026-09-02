@@ -2,11 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.BossOverlayContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.TargetOverlayContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.context.*;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 

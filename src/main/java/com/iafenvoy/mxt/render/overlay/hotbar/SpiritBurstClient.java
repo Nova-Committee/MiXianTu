@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -33,7 +33,9 @@ public final class SpiritBurstClient {
         return resourcesAvailable(player).stream().limit(MAX_SLOTS).toList();
     }
 
-    /** Returns every resource available for selection; the runtime hotbar still uses nine. */
+    /**
+     * Returns every resource available for selection; the runtime hotbar still uses nine.
+     */
     public static List<Reference<Resource>> resourcesAvailable(Player player) {
         return MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE)
                 .filter(resource -> canBurst(player, resource))

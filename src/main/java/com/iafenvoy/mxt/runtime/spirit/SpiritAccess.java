@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
 import com.iafenvoy.mxt.data.resource.Resource;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.jetbrains.annotations.Nullable;
 
 /**

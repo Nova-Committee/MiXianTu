@@ -2,15 +2,15 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsValueCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.callback.QuadFunction;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;

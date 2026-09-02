@@ -9,7 +9,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;
 
-/** Matches entities that have entered a realm chain for the specified resource. */
+/**
+ * Matches entities that have entered a realm chain for the specified resource.
+ */
 public record HasRealmEntityCondition(Holder<Resource> resource) implements EntityCondition {
     public static final MapCodec<HasRealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(HasRealmEntityCondition::resource)

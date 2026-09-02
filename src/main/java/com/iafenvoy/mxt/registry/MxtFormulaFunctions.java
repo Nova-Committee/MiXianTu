@@ -3,9 +3,9 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.formula.SimpleFunction;
 import net.minecraft.util.Mth;
-import net.objecthunter.exp4j.function.Function;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.objecthunter.exp4j.function.Function;
 
 @SuppressWarnings("unused")
 public final class MxtFormulaFunctions {

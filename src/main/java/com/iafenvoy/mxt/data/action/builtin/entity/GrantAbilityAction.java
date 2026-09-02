@@ -1,15 +1,16 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -24,7 +25,9 @@ public record GrantAbilityAction(Holder<Ability> ability, Identifier source) imp
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        entity.getData(MxtAttachments.ABILITY_HOLDER).grant(this.ability, this.source);
+        if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(this.ability, this.source)
+                && entity instanceof LivingEntity living)
+            AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }
 
     @Override

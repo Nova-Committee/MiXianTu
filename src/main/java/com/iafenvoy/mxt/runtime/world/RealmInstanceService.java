@@ -1,7 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.attachment.RealmInstanceAttachment;
 import com.iafenvoy.mxt.attachment.RealmTravelAttachment;
 import com.iafenvoy.mxt.data.RealmInstance;
@@ -10,6 +8,7 @@ import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.Exit;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;

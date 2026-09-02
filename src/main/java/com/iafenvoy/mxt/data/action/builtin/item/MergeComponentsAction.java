@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
-import com.iafenvoy.mxt.data.context.action.ItemActionContext;
-
 import com.iafenvoy.mxt.data.action.ItemAction;
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.component.DataComponentPatch;
 import org.jspecify.annotations.NonNull;

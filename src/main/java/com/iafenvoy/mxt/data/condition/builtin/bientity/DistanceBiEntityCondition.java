@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
-import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
+import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;

@@ -1,17 +1,16 @@
 package com.iafenvoy.mxt.runtime.resource;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -136,7 +135,10 @@ public final class ResourceService {
             }
             Holder<RealmStage> stage = definition.firstRealm().orElse(null);
             for (int rank = 0; stage != null && rank < 1024; rank++) {
-                if (stage.equals(current)) { best = Math.max(best, rank); break; }
+                if (stage.equals(current)) {
+                    best = Math.max(best, rank);
+                    break;
+                }
                 stage = stage.value().nextRealm().orElse(null);
             }
         }

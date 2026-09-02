@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.function.Consumer;
 
-import static com.iafenvoy.mxt.screen.information.InformationHelper.*;
+import static com.iafenvoy.mxt.screen.information.InformationHelper.lineWithDefinitions;
 
 public final class InformationManager {
     private static final Map<Identifier, RegisteredInformation> INFORMATION = new LinkedHashMap<>();

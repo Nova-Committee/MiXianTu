@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.type.condition;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.data.condition.DamageCondition;
-import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsConditionCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
+import com.iafenvoy.mxt.data.condition.DamageCondition;
+import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

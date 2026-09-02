@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.runtime;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -13,11 +12,7 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Global server-lifetime cache for derived datapack data. It is absent on the
@@ -40,6 +35,10 @@ public final class ServerCache {
      */
     public static Optional<ServerCache> get() {
         return Optional.ofNullable(INSTANCE);
+    }
+
+    public MinecraftServer server() {
+        return this.server;
     }
 
     @SubscribeEvent

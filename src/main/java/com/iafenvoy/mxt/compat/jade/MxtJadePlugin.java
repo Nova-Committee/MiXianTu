@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.compat.jade;
 
-import net.minecraft.world.level.block.Block;
 import com.iafenvoy.mxt.item.block.DisplayStandBlock;
 import com.iafenvoy.mxt.item.block.SpiritCraftingTableBlock;
+import net.minecraft.world.level.block.Block;
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.IWailaPlugin;
 import snownee.jade.api.WailaPlugin;

@@ -2,11 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.badge.Badge;
-import com.iafenvoy.mxt.data.badge.builtin.CraftingRecipeBadge;
-import com.iafenvoy.mxt.data.badge.builtin.EmptyBadge;
-import com.iafenvoy.mxt.data.badge.builtin.KeybindBadge;
-import com.iafenvoy.mxt.data.badge.builtin.SpriteBadge;
-import com.iafenvoy.mxt.data.badge.builtin.TooltipBadge;
+import com.iafenvoy.mxt.data.badge.builtin.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

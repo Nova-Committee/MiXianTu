@@ -6,7 +6,9 @@ import com.mojang.serialization.JsonOps;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.RegistryOps;
 
-/** Decodes KubeJS JSON through the same registry-aware codecs used by datapacks. */
+/**
+ * Decodes KubeJS JSON through the same registry-aware codecs used by datapacks.
+ */
 public final class MxtKubeJsDataCodec {
     private MxtKubeJsDataCodec() {
     }

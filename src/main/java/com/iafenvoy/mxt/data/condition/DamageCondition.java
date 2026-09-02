@@ -1,18 +1,17 @@
 package com.iafenvoy.mxt.data.condition;
 
-import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.data.condition.builtin.damage.meta.AndDamageCondition;
-import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
 import com.iafenvoy.mxt.data.context.Context;
+import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
+import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.damagesource.DamageSource;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.mojang.datafixers.util.Either;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 
 public interface DamageCondition {
     Codec<DamageCondition> SINGLE_CODEC = MxtRegistries.DAMAGE_CONDITION_TYPE.byNameCodec().dispatch("type", DamageCondition::codec, Function.identity());

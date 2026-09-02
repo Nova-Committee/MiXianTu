@@ -6,7 +6,9 @@ import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
-/** Runtime cultivation operations exposed as {@code MxtCultivation}. */
+/**
+ * Runtime cultivation operations exposed as {@code MxtCultivation}.
+ */
 public final class MxtKubeJsCultivationBindings {
     @Info("Adds a finite, non-negative cultivation amount for a resource.")
     public boolean add(LivingEntity entity, String resource, double amount) {

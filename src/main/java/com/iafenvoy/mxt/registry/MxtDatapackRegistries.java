@@ -1,12 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.CurrencyValue;
-import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.data.RealmInstance;
-import com.iafenvoy.mxt.data.Sect;
-import com.iafenvoy.mxt.data.Title;
-import com.iafenvoy.mxt.data.Tribulation;
+import com.iafenvoy.mxt.data.*;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
@@ -16,12 +11,7 @@ import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
-import com.iafenvoy.mxt.data.cultivation.CultivateAction;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
-import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.cultivation.Physique;
-import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.cultivation.*;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;

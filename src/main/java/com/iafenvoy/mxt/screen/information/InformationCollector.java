@@ -7,8 +7,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public final class InformationCollector {
     private final Player player;

@@ -1,22 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.item.ChequeItem;
-import com.iafenvoy.mxt.item.BeastTamingBellItem;
-import com.iafenvoy.mxt.item.ContractScrollItem;
-import com.iafenvoy.mxt.item.FormationPlateItem;
-import com.iafenvoy.mxt.item.IdentificationMirrorItem;
-import com.iafenvoy.mxt.item.RealmTokenItem;
-import com.iafenvoy.mxt.item.SpiritBeastBagItem;
-import com.iafenvoy.mxt.item.SpiritStoneItem;
-import com.iafenvoy.mxt.item.SpiritVesselItem;
-import com.iafenvoy.mxt.item.TokenItem;
-import com.iafenvoy.mxt.data.item.ContractScrollComponent;
-import com.iafenvoy.mxt.data.item.FormationPlateComponent;
-import com.iafenvoy.mxt.data.item.RealmTokenComponent;
-import com.iafenvoy.mxt.data.item.ResourceContainerComponent;
-import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
-import com.iafenvoy.mxt.data.item.TokenComponent;
+import com.iafenvoy.mxt.data.item.*;
+import com.iafenvoy.mxt.item.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;

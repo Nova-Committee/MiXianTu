@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.data.action.builtin.bientity;
 
-import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
-
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
+import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;

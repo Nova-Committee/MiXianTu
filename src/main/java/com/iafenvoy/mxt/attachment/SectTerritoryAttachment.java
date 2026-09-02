@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-
 import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
