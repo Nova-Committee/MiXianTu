@@ -23,7 +23,6 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;

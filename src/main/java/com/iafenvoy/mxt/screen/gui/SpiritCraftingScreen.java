@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -17,9 +18,12 @@ import org.jspecify.annotations.NonNull;
  */
 public final class SpiritCraftingScreen extends AbstractContainerScreen<SpiritCraftingMenu> {
     private static final Identifier BACKGROUND = Identifier.withDefaultNamespace("textures/gui/container/crafting_table.png");
-    private static final int PANEL_WIDTH = 108;
+    private static final Identifier PROGRESS_BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/spirit_crafting_progress.png");
+    private static final Identifier PROGRESS_BAR = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/progress_bar.png");
+    private static final int PANEL_WIDTH = 132;
     private static final int PANEL_HEIGHT = 122;
-    private static final int BAR_WIDTH = 94;
+    private static final int PANEL_PADDING = 10;
+    private static final int BAR_WIDTH = PANEL_WIDTH - PANEL_PADDING * 2;
     private static final int BAR_HEIGHT = 7;
 
     public SpiritCraftingScreen(SpiritCraftingMenu menu, Inventory inventory, Component title) {
@@ -36,8 +40,8 @@ public final class SpiritCraftingScreen extends AbstractContainerScreen<SpiritCr
     private void extractProgress(GuiGraphicsExtractor graphics) {
         int panelX = this.leftPos + 176;
         int panelY = this.topPos + 8;
-        graphics.fill(panelX, panelY, panelX + PANEL_WIDTH, panelY + PANEL_HEIGHT, 0xE0101010);
-        graphics.outline(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 0xFF303030);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, PROGRESS_BACKGROUND, panelX, panelY, 0.0F, 0.0F,
+                PANEL_WIDTH, PANEL_HEIGHT, PANEL_WIDTH, PANEL_HEIGHT);
         int row = 0;
         for (int index = 0; index < 8; index++) {
             Holder<Resource> resource = this.menu.progressResource(index);
@@ -45,14 +49,17 @@ public final class SpiritCraftingScreen extends AbstractContainerScreen<SpiritCr
             int required = this.menu.progressRequirement(index);
             int amount = Math.min(this.menu.progressAmount(index), required);
             int color = 0xFF000000 | resource.value().particleColor();
-            int y = panelY + 7 + row * 26;
+            int y = panelY + PANEL_PADDING + row * 26;
             Component name = DefinitionText.name(resource, "resource");
-            graphics.text(this.font, name, panelX + 7, y, color, false);
-            graphics.fill(panelX + 7, y + 11, panelX + 7 + BAR_WIDTH, y + 11 + BAR_HEIGHT, 0xFF303030);
+            Component progress = Component.literal(amount + " / " + required);
+            int progressX = panelX + PANEL_WIDTH - PANEL_PADDING - this.font.width(progress);
+            graphics.text(this.font, name, panelX + PANEL_PADDING, y, color, true);
+            graphics.text(this.font, progress, progressX, y, 0xFF404040, false);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, PROGRESS_BAR, panelX + PANEL_PADDING, y + 11, 0.0F, 0.0F,
+                    BAR_WIDTH, BAR_HEIGHT, BAR_WIDTH, BAR_HEIGHT);
             int filled = required <= 0 ? 0 : Math.round(BAR_WIDTH * amount / (float) required);
-            if (filled > 0) graphics.fill(panelX + 7, y + 11, panelX + 7 + filled, y + 11 + BAR_HEIGHT, color);
-            graphics.outline(panelX + 7, y + 11, BAR_WIDTH, BAR_HEIGHT, 0xFF000000);
-            graphics.text(this.font, Component.literal(amount + " / " + required), panelX + 7, y + 20, 0xFFAAAAAA, false);
+            if (filled > 0) graphics.fill(panelX + PANEL_PADDING + 2, y + 13,
+                    panelX + PANEL_PADDING + 2 + Math.max(0, filled - 4), y + 16, color);
             row++;
         }
     }

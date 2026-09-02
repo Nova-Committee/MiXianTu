@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -28,7 +29,7 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
     @Override
     public boolean check(Player player) {
         double value = this.evaluate(player);
-        return Double.isFinite(value) && value > 0.0D
+        return ResourceUseService.canUse(player, this.resource) && Double.isFinite(value) && value > 0.0D
                 && player.getData(MxtAttachments.RESOURCE_HOLDER).get(this.resource) >= value;
     }
 
@@ -47,7 +48,7 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
     public void consume(Player player) {
         double value = this.evaluate(player);
         if (!Double.isFinite(value) || value <= 0.0D) return;
-        ResourceTransactions.tryConsume(player.getData(MxtAttachments.RESOURCE_HOLDER),
+        ResourceTransactions.tryConsume(player, player.getData(MxtAttachments.RESOURCE_HOLDER),
                 new Evaluation(Map.of(HolderHelper.id(this.resource), value)));
     }
 

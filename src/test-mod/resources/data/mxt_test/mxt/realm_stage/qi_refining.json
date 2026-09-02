@@ -2,7 +2,8 @@
   "resource": "mxt_test:qi",
   "aura_share_weight": 1,
   "next_realm": "mxt_test:foundation",
-  "progress_threshold": 100,
+  "breakthrough_exp": 100,
+  "max_experience": 100,
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
   "breakthrough_particle": {
     "particle": { "type": "minecraft:enchant" },

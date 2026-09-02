@@ -28,6 +28,7 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasAbilityEntityCondition>> HAS_ABILITY = REGISTRY.register("has_ability", () -> HasAbilityEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasCurseEntityCondition>> HAS_CURSE = REGISTRY.register("has_curse", () -> HasCurseEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RealmEntityCondition>> REALM = REGISTRY.register("realm", () -> RealmEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasRealmEntityCondition>> HAS_REALM = REGISTRY.register("has_realm", () -> HasRealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraRangeEntityCondition>> AURA_RANGE = REGISTRY.register("aura_range", () -> AuraRangeEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ResourceCompareEntityCondition>> RESOURCE_COMPARE = REGISTRY.register("resource_compare", () -> ResourceCompareEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<EntityTypeTagCondition>> ENTITY_TAG = REGISTRY.register("entity_tag", () -> EntityTypeTagCondition.CODEC);

@@ -24,6 +24,7 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
 import com.iafenvoy.mxt.runtime.sect.SectService;
 import com.iafenvoy.mxt.runtime.sect.SectService.Result;
 import com.iafenvoy.mxt.runtime.sect.SectTerritoryEventBridge;
@@ -54,7 +55,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -375,8 +375,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        if (!(player.level() instanceof ServerLevel level)) return 0;
-        int cleared = AuraChunkTicker.clearBlockAuraCachesAround(level, player.blockPosition(), radius);
+        int cleared = AuraChunkTicker.clearBlockAuraCachesAround(player.level(), player.blockPosition(), radius);
         source.sendSuccess(() -> Component.translatable("command.mxt.aura.cache.cleared", cleared, radius), false);
         return cleared;
     }
@@ -400,7 +399,13 @@ public final class MxtCommand {
             return 0;
         BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
-            source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", result == null ? "unknown_definition" : result.failure()));
+            Component reason = result == null || result.failure() == null
+                    ? Component.translatable("command.mxt.breakthrough.failure.unknown")
+                    : result.failure() == Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
+                    ? Component.translatable("command.mxt.breakthrough.failure.insufficient_resource",
+                    DefinitionText.name(result.failedResource(), "resource"))
+                    : Component.translatable("command.mxt.breakthrough.failure." + result.failure().name().toLowerCase(Locale.ROOT));
+            source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(id, "resource")), true);

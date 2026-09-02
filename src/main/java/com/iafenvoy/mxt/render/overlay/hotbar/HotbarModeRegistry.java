@@ -31,6 +31,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,8 +112,9 @@ public final class HotbarModeRegistry {
         if (id == null || player == null) return List.of();
         ModeEntry mode = MODES.get(id);
         if (mode == null) return List.of();
-        Function<Player, List<HotbarEntry>> source = mode.configurationProvider() == null ? mode.provider() : mode.configurationProvider();
-        List<HotbarEntry> available = source.apply(player);
+        // A configuration provider only supplies selectable candidates for the
+        // editor. The live hotbar must always be resolved from its runtime provider.
+        List<HotbarEntry> available = mode.provider().apply(player);
         List<Identifier> saved = player.getData(MxtAttachments.HOTBAR_LAYOUT).slots(id);
         if (saved.isEmpty()) return available.stream().limit(MAX_SLOTS).toList();
         Map<Identifier, HotbarEntry> byId = new LinkedHashMap<>();
@@ -124,11 +126,21 @@ public final class HotbarModeRegistry {
             if (HotbarLayoutAttachment.EMPTY_SLOT.equals(slot)) result.add(EmptyHotbarEntry.INSTANCE);
             else {
                 HotbarEntry entry = byId.remove(slot);
-                result.add(entry == null ? EmptyHotbarEntry.INSTANCE : entry);
+                // An unavailable saved ID is stale datapack state, not an explicit
+                // empty slot. Keep explicit empty markers intact, then backfill this
+                // position from the current runtime entries below.
+                result.add(entry);
             }
         }
-        if (result.size() < 9)
-            byId.values().stream().limit(9 - result.size()).forEach(result::add);
+        Iterator<HotbarEntry> remaining = byId.values().iterator();
+        for (int index = 0; index < result.size() && remaining.hasNext(); index++) {
+            if (result.get(index) == null) {
+                result.set(index, remaining.next());
+                remaining.remove();
+            }
+        }
+        result.replaceAll(entry -> entry == null ? EmptyHotbarEntry.INSTANCE : entry);
+        if (result.size() < 9) byId.values().stream().limit(9 - result.size()).forEach(result::add);
         return result;
     }
 
@@ -153,8 +165,16 @@ public final class HotbarModeRegistry {
                 new HotbarAccess() {
                     @Override
                     public List<Identifier> read() {
+                        List<Identifier> saved = player.getData(MxtAttachments.HOTBAR_LAYOUT).slots(id);
+                        if (saved.isEmpty()) {
+                            return mode.provider().apply(player).stream()
+                                    .map(HotbarEntry::id)
+                                    .filter(Objects::nonNull)
+                                    .limit(MAX_SLOTS)
+                                    .toList();
+                        }
                         List<Identifier> result = new ArrayList<>();
-                        player.getData(MxtAttachments.HOTBAR_LAYOUT).slots(id).forEach(slot ->
+                        saved.forEach(slot ->
                                 result.add(HotbarLayoutAttachment.EMPTY_SLOT.equals(slot) ? null : slot));
                         return result;
                     }

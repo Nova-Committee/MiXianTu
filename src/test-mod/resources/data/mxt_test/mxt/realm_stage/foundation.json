@@ -3,7 +3,17 @@
   "aura_share_weight": 2,
   "cultivate_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:spirit_power": { "min": 0, "max": 100 } } },
   "next_realm": "mxt_test:core_forming",
-  "progress_threshold": 100,
+  "breakthrough_exp": 100,
+  "max_experience": 250,
+  "breakthrough": {
+    "conditions": [
+      {
+        "type": "mxt:realm",
+        "realm": "mxt_test:foundation",
+        "comparison": "at_least"
+      }
+    ]
+  },
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
   "tribulation": "mxt_test:three_thunders",
   "breakthrough_particle": {

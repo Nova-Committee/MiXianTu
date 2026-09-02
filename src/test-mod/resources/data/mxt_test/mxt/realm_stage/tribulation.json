@@ -1,0 +1,6 @@
+{
+  "resource": "mxt_test:qi",
+  "aura_share_weight": 256,
+  "breakthrough_exp": 50000,
+  "max_experience": 50000
+}

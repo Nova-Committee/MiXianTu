@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceGain;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -66,8 +68,15 @@ public final class CultivationActionService {
      */
     public static Result start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, CultivateAction definition,
                                long gameTime, FormulaContext context) {
-        boolean conditions = definition.startCondition().test(entity, context);
+        boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
         return start(spirit, actionId, definition, gameTime, () -> conditions);
+    }
+
+    /** Checks resource-level conflicts and other rules before entering cultivation mode. */
+    public static boolean canStartCultivation(LivingEntity entity, FormulaContext context) {
+        return MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
+                .filter(resource -> resource.value().firstRealm().isPresent())
+                .allMatch(resource -> resource.value().startCultivateConditions().test(entity, context));
     }
 
     /**
@@ -273,9 +282,9 @@ public final class CultivationActionService {
      */
     public static boolean handlesNaturalRegeneration(LivingEntity entity, Holder<Resource> resource) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        return spirit.cultivating() && spirit.realmStages().values().stream()
-                .filter(stage -> stage.value().resource().equals(resource))
-                .anyMatch(stage -> stage.value().cultivateCondition().test(entity, FormulaContexts.forEntity(entity)));
+        Holder<RealmStage> stage = stageFor(spirit, resource);
+        return spirit.cultivating() && stage != null
+                && stage.value().cultivateCondition().test(entity, FormulaContexts.forEntity(entity));
     }
 
     /**
@@ -286,8 +295,8 @@ public final class CultivationActionService {
     public static boolean canCultivateInEnvironment(CultivationAttachment spirit, LivingEntity entity,
                                                     AuraResult aura, FormulaContext context) {
         if (aura.suppressCultivate()) return false;
-        boolean realmEligible = spirit.realmStages().isEmpty()
-                || spirit.realmStages().values().stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
+        boolean realmEligible = cultivationStages(spirit).stream()
+                .anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
         if (!realmEligible && MxtServerConfig.forbidCultivationWithoutEligibleAura()) return false;
         if (!(aura.cultivateCondition() instanceof AuraRangeEntityCondition(
                 Map<Holder<Resource>, AuraRequirement> aura1
@@ -323,7 +332,7 @@ public final class CultivationActionService {
             if (!result.valid()) return Recovery.INVALID;
             double stored = Math.max(0.0D, result.value() - before);
             double overflow = Math.max(0.0D, recovered - stored);
-            if (overflow > 0.0D) spirit.setCultivationProgress(resource, spirit.cultivationProgress(resource) + overflow);
+            if (overflow > 0.0D) CultivationService.addProgress(entity, resource, overflow, resourceContext);
             restored += stored;
             cultivation += overflow;
         }
@@ -455,10 +464,13 @@ public final class CultivationActionService {
         // If it is depleted, the reverse conversion can restore a usable resource amount.
         if (conversion.resourceToCultivation() > 0.0D) {
             double available = Math.max(0.0D, resources.get(resource) - bounds.min());
-            double consumed = Math.min(conversion.resourceToCultivationMaxPerTick(), available);
+            double remainingProgress = CultivationService.remainingProgressCapacity(spirit, resource, context);
+            if (remainingProgress <= 0.0D) return;
+            double consumed = Math.min(conversion.resourceToCultivationMaxPerTick(),
+                    Math.min(available, remainingProgress / conversion.resourceToCultivation()));
             if (consumed > 0.0D) {
                 ResourceService.change(resources, active.id(), definition, -consumed, context);
-                spirit.setCultivationProgress(resource, spirit.cultivationProgress(resource) + consumed * conversion.resourceToCultivation());
+                CultivationService.addProgress(spirit, resource, consumed * conversion.resourceToCultivation(), context);
                 return;
             }
         }
@@ -468,7 +480,7 @@ public final class CultivationActionService {
             double extracted = Math.min(conversion.cultivationToResourceMaxPerTick(),
                     Math.min(spirit.cultivationProgress(resource), capacity / conversion.cultivationToResource()));
             if (extracted > 0.0D) {
-                spirit.setCultivationProgress(resource, spirit.cultivationProgress(resource) - extracted);
+                spirit.setCultivationProgress(resource, Math.max(0.0D, spirit.cultivationProgress(resource) - extracted));
                 ResourceService.change(resources, active.id(), definition, extracted * conversion.cultivationToResource(), context);
             }
         }
@@ -480,14 +492,28 @@ public final class CultivationActionService {
 
     private static List<Holder<Resource>> eligibleRealmResources(CultivationAttachment spirit, LivingEntity entity,
                                                                   FormulaContext context) {
-        return spirit.realmStages().values().stream()
+        return cultivationStages(spirit).stream()
                 .filter(stage -> stage.value().cultivateCondition().test(entity, context))
                 .map(stage -> stage.value().resource()).distinct().toList();
     }
 
     public static boolean realmCultivateCondition(CultivationAttachment spirit, LivingEntity entity, FormulaContext context) {
-        return spirit.realmStages().isEmpty()
-                || spirit.realmStages().values().stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
+        return cultivationStages(spirit).stream().anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
+    }
+
+    /** Returns the active stage, falling back to a resource's first realm for mortals. */
+    private static Holder<RealmStage> stageFor(CultivationAttachment spirit, Holder<Resource> resource) {
+        Holder<RealmStage> current = spirit.realmStage(resource);
+        if (current != null) return current;
+        return resource.value().firstRealm().orElse(null);
+    }
+
+    private static List<Holder<RealmStage>> cultivationStages(CultivationAttachment spirit) {
+        Map<Holder<Resource>, Holder<RealmStage>> stages = new LinkedHashMap<>(spirit.realmStages());
+        MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE).forEach(resource ->
+                stages.putIfAbsent(resource, resource.value().firstRealm().orElse(null)));
+        stages.values().removeIf(Objects::isNull);
+        return List.copyOf(stages.values());
     }
 
     private record ActiveResource(Identifier id, Resource definition) {

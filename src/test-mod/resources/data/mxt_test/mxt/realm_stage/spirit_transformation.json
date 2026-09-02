@@ -1,0 +1,7 @@
+{
+  "resource": "mxt_test:qi",
+  "aura_share_weight": 16,
+  "next_realm": "mxt_test:void_refining",
+  "breakthrough_exp": 2000,
+  "max_experience": 2000
+}

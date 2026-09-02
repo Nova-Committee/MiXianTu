@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.compat.kubejs;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 
-import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -100,8 +99,7 @@ public final class MxtKubeJsApi {
         if (entity == null || entity.level().isClientSide() || !Double.isFinite(amount) || amount < 0.0D) return false;
         Holder<Resource> holder = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource).orElse(null);
         if (holder == null) return false;
-        CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        spirit.setCultivationProgress(holder, spirit.cultivationProgress(holder) + amount);
+        CultivationService.addProgress(entity, holder, amount, FormulaContext.of(entity));
         return true;
     }
 
@@ -112,7 +110,8 @@ public final class MxtKubeJsApi {
         if (entity == null || entity.level().isClientSide())
             return new Result(false, null, Map.of());
         try {
-            return ResourceTransactions.tryConsume(entity.getData(MxtAttachments.RESOURCE_HOLDER),
+            return ResourceTransactions.tryConsume(entity instanceof LivingEntity living ? living : null,
+                    entity.getData(MxtAttachments.RESOURCE_HOLDER),
                     ResourceTransactions.evaluate(costs, context));
         } catch (IllegalArgumentException exception) {
             return new Result(false, null, Map.of());

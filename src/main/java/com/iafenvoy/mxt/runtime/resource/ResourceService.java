@@ -140,6 +140,14 @@ public final class ResourceService {
                 stage = stage.value().nextRealm().orElse(null);
             }
         }
+        // A null realm stage represents a mortal, whose formulas still use the
+        // resource chain's first realm as the pending cultivation stage.
+        if (best < 0) {
+            Holder<RealmStage> first = definition.firstRealm().orElse(null);
+            if (first != null) {
+                best = ServerCache.get().flatMap(cache -> cache.rankForRealm(HolderHelper.id(first))).orElse(0);
+            }
+        }
         return best;
     }
 

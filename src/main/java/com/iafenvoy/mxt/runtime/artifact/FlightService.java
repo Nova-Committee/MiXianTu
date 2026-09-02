@@ -66,7 +66,7 @@ public final class FlightService {
         if (sword.horizontalCollision || sword.verticalCollision) return dismount(player, Failure.COLLISION);
         ResourceTransactions.Result payment;
         try {
-            payment = ResourceTransactions.tryConsume(player.getData(MxtAttachments.RESOURCE_HOLDER),
+            payment = ResourceTransactions.tryConsume(player, player.getData(MxtAttachments.RESOURCE_HOLDER),
                     ResourceTransactions.evaluate(player, definition.flightCosts(), context));
         } catch (IllegalArgumentException exception) {
             return dismount(player, Failure.INVALID_FORMULA);

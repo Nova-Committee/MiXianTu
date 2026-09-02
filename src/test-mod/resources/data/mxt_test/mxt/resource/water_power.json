@@ -3,5 +3,6 @@
   "min": 0,
   "max": 100,
   "regen": 0,
+  "burst_amount": 10,
   "aura_type": "mxt_test:water"
 }

@@ -1,14 +1,9 @@
 {
   "resource": "mxt_test:qi",
   "aura_share_weight": 4,
-  "progress_threshold": 250,
-  "upgrade_conditions": [
-    {
-      "type": "mxt:realm",
-      "realm": "mxt_test:foundation",
-      "comparison": "at_least"
-    }
-  ],
+  "next_realm": "mxt_test:nascent_soul",
+  "breakthrough_exp": 500,
+  "max_experience": 500,
   "costs": [{ "id": "mxt_test:qi", "amount": 50 }],
   "success_action": { "type": "mxt:apply_effect", "effect": "minecraft:strength", "duration_ticks": 200 }
 }

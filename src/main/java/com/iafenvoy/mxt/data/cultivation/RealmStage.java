@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -30,19 +29,30 @@ import java.util.Optional;
  */
 public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeight, EntityCondition cultivateCondition,
                          Optional<Holder<RealmStage>> nextRealm,
-                         NumberProvider progressThreshold, List<EntityCondition> upgradeConditions,
+                         NumberProvider breakthroughExp, NumberProvider maxExperience,
+                         CultivateConditions breakthrough,
+                         boolean autoBreakthrough,
                          List<AttributeEntry> passiveModifiers, List<ResourceCost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          Optional<Holder<Tribulation>> tribulation, Optional<ParticleEffect> breakthroughParticle,
                          EntityAction successAction, EntityAction failAction) {
+    public RealmStage {
+        if (breakthroughExp instanceof Constant(double value) && maxExperience instanceof Constant(
+                double value1
+        ) && value > value1)
+            throw new IllegalArgumentException("Realm breakthrough minimum experience cannot exceed maximum experience");
+    }
+
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
             NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
             EntityCondition.optionalCodec("cultivate_condition").forGetter(RealmStage::cultivateCondition),
             RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
-            NumberProvider.CODEC.fieldOf("progress_threshold").forGetter(RealmStage::progressThreshold),
-            AutoIgnoreListCodec.create(EntityCondition.SINGLE_CODEC).optionalFieldOf("upgrade_conditions", List.of()).forGetter(RealmStage::upgradeConditions),
+            NumberProvider.CODEC.optionalFieldOf("breakthrough_exp", new Constant(0.0D)).forGetter(RealmStage::breakthroughExp),
+            NumberProvider.CODEC.optionalFieldOf("max_experience", new Constant(Double.MAX_VALUE)).forGetter(RealmStage::maxExperience),
+            CultivateConditions.CODEC.optionalFieldOf("breakthrough", CultivateConditions.EMPTY).forGetter(RealmStage::breakthrough),
+            Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
             AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(RealmStage::passiveModifiers),
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
@@ -58,7 +68,7 @@ public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeig
     @Override
     public @NonNull String toString() {
         return "RealmStage[resource=" + HolderHelper.id(this.resource) + ", hasNextRealm=" + this.nextRealm.isPresent()
-                + ", upgradeConditions=" + this.upgradeConditions.size() + ", costs=" + this.breakthroughCosts.size()
+                + ", breakthroughConditions=" + this.breakthrough.conditions().size() + ", costs=" + this.breakthroughCosts.size()
                 + ", abilityRequirements=" + this.abilityRequirements.size() + ", hasTribulation=" + this.tribulation.isPresent() + "]";
     }
 }

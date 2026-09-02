@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -32,8 +33,10 @@ public final class CultivationModeService {
         if (spirit.cultivating()) return stop(player, spirit, action);
 
         CultivateAction definition = action.value();
+        FormulaContext context = FormulaContexts.forEntity(player);
         Result result = CultivationActionService.start(spirit, action, definition,
-                player.level().getGameTime(), () -> definition.startCondition().test(player, FormulaContexts.forEntity(player)));
+                player.level().getGameTime(), () -> definition.startCondition().test(player, context)
+                        && CultivationActionService.canStartCultivation(player, context));
         if (result.started()) {
             CultivationMovementService.reconcile(player);
             player.refreshDimensions();

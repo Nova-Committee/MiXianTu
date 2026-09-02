@@ -17,6 +17,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
+import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -88,6 +89,7 @@ public enum ResourceBarOverlay implements GuiLayer {
                                          LivingEntity entity, Layout layout) {
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
+            if (!ResourceUseService.canUse(entity, resource)) continue;
             Identifier id = HolderHelper.idOrNull(resource);
             if (id == null) continue;
             List<ResourceBar> definitions = resource.value().bars();

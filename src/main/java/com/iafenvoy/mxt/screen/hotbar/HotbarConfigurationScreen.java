@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.hotbar;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.render.overlay.hotbar.HotbarEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -26,8 +27,14 @@ public final class HotbarConfigurationScreen extends Screen {
     private static final int COLUMNS = 9;
     private static final int MAX_SLOTS = 9;
     private static final int GRID_STEP = SLOT_SIZE + SLOT_GAP;
-    private static final int HOTBAR_HEIGHT = SLOT_SIZE + 12;
+    private static final int HOTBAR_HEIGHT = SLOT_SIZE + 16;
+    private static final int KEY_LABEL_HEIGHT = 9;
+    private static final int KEY_LABEL_GAP = 3;
+    private static final int DIVIDER_GAP = 4;
     private static final int PANEL_MARGIN = 12;
+    private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/hotbar_configuration.png");
+    private static final Identifier SLOT = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/slot_22.png");
+    private static final Identifier SELECTED_SLOT = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/slot_22_selected.png");
 
     private final List<Option> options;
     private final HotbarAccess access;
@@ -72,12 +79,9 @@ public final class HotbarConfigurationScreen extends Screen {
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         this.extractTransparentBackground(graphics);
-        graphics.fill(this.panelLeft, this.panelTop, this.panelLeft + this.panelWidth,
-                this.panelTop + this.panelHeight, 0xF0101018);
-        graphics.outline(this.panelLeft, this.panelTop, this.panelWidth, this.panelHeight, 0xFF6F7C92);
-        graphics.text(this.font, this.title, this.panelLeft + 10, this.panelTop + 10, 0xFFFFFFFF, true);
-        graphics.fill(this.optionsLeft - 4, this.optionsTop - 4, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4,
-                this.optionsBottom + 4, 0x50101824);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, this.panelLeft, this.panelTop, 0.0F, 0.0F,
+                this.panelWidth, this.panelHeight, 232, 260);
+        graphics.text(this.font, this.title, this.panelLeft + 10, this.panelTop + 10, 0xFF404040, false);
         int contentHeight = Math.max(1, this.optionsBottom - this.optionsTop);
         int rows = this.options.size() / COLUMNS + (this.options.size() % COLUMNS == 0 ? 0 : 1);
         int maxScroll = Math.max(0, rows * GRID_STEP - contentHeight);
@@ -85,23 +89,21 @@ public final class HotbarConfigurationScreen extends Screen {
             int barX = this.optionsLeft + COLUMNS * GRID_STEP + 2;
             int thumbHeight = Math.max(12, (int) ((double) contentHeight * contentHeight / (rows * GRID_STEP)));
             int thumbY = this.optionsTop + (int) ((contentHeight - thumbHeight) * (this.scroll / maxScroll));
-            graphics.fill(barX, this.optionsTop, barX + 3, this.optionsBottom, 0x66343B4A);
-            graphics.fill(barX, thumbY, barX + 3, thumbY + thumbHeight, 0xFF9AA6BA);
+            graphics.fill(barX, this.optionsTop, barX + 3, this.optionsBottom, 0xFF555555);
+            graphics.fill(barX, thumbY, barX + 3, thumbY + thumbHeight, 0xFF8B8B8B);
         }
-        int hotbarTop = this.panelTop + this.panelHeight - HOTBAR_HEIGHT;
-        // Keep the divider above the key labels; the labels are drawn at
-        // hotbarTop - 10 and use a font-height-sized glyph box.
-        int separatorY = hotbarTop - 18;
-        graphics.fill(this.optionsLeft - 4, separatorY, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4,
-                separatorY + 1, 0xFF6F7C92);
-        graphics.fill(this.optionsLeft - 4, hotbarTop - 4, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4,
-                hotbarTop + SLOT_SIZE + 4, 0x50101824);
+        int hotbarTop = this.hotbarTop();
+        int keyLabelTop = hotbarTop - KEY_LABEL_GAP - KEY_LABEL_HEIGHT;
+        int dividerY = keyLabelTop - DIVIDER_GAP;
+        graphics.fill(this.optionsLeft - 4, dividerY, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4,
+                dividerY + 1, 0xFF555555);
+        graphics.fill(this.optionsLeft - 4, dividerY + 1, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4,
+                dividerY + 2, 0xFFFFFFFF);
         for (int i = 0; i < MAX_SLOTS; i++) {
             int x = this.optionsLeft + i * GRID_STEP;
-            graphics.fill(x, hotbarTop, x + SLOT_SIZE, hotbarTop + SLOT_SIZE, 0xCC10131D);
-            graphics.outline(x, hotbarTop, SLOT_SIZE, SLOT_SIZE, 0xFF4C566A);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, SLOT, x, hotbarTop, 0.0F, 0.0F, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE);
             String key = Integer.toString(i + 1);
-            graphics.text(this.font, key, x + (SLOT_SIZE - this.font.width(key)) / 2, hotbarTop - 10, 0xFFFFFFFF, true);
+            graphics.text(this.font, key, x + (SLOT_SIZE - this.font.width(key)) / 2, keyLabelTop, 0xFF404040, true);
         }
     }
 
@@ -119,13 +121,14 @@ public final class HotbarConfigurationScreen extends Screen {
                 if (y < this.optionsTop || y + SLOT_SIZE > this.optionsBottom) continue;
                 Option option = this.options.get(index);
                 boolean hovered = mouseX >= x && mouseX < x + SLOT_SIZE && mouseY >= y && mouseY < y + SLOT_SIZE;
-                graphics.fill(x, y, x + SLOT_SIZE, y + SLOT_SIZE,
-                        index == this.selectedOption ? 0xEE385B78 : hovered ? 0xDD26364A : 0xCC10131D);
-                graphics.outline(x, y, SLOT_SIZE, SLOT_SIZE, option.entry().accentColor());
+                graphics.blit(RenderPipelines.GUI_TEXTURED, index == this.selectedOption ? SELECTED_SLOT : SLOT,
+                        x, y, 0.0F, 0.0F, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE);
+                if (hovered && index != this.selectedOption)
+                    graphics.outline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFFFFFFFF);
                 renderIcon(graphics, option.entry(), x + 3, y + 3);
             }
         }
-        int hotbarTop = this.panelTop + this.panelHeight - HOTBAR_HEIGHT;
+        int hotbarTop = this.hotbarTop();
         for (int i = 0; i < MAX_SLOTS; i++) {
             Identifier id = this.slots.get(i);
             if (id == null) continue;
@@ -171,7 +174,7 @@ public final class HotbarConfigurationScreen extends Screen {
             this.selectedOption = this.selectedOption == index ? -1 : index;
             return true;
         }
-        int hotbarTop = this.panelTop + this.panelHeight - HOTBAR_HEIGHT;
+        int hotbarTop = this.hotbarTop();
         if (event.y() >= hotbarTop && event.y() < hotbarTop + SLOT_SIZE) {
             int slot = (int) ((event.x() - this.optionsLeft) / GRID_STEP);
             int offset = (int) (event.x() - this.optionsLeft) - slot * GRID_STEP;
@@ -208,6 +211,10 @@ public final class HotbarConfigurationScreen extends Screen {
         int rows = this.options.size() / COLUMNS + (this.options.size() % COLUMNS == 0 ? 0 : 1);
         double max = Math.max(0, rows * GRID_STEP - Math.max(0, this.optionsBottom - this.optionsTop));
         this.scroll = Math.max(0, Math.min(max, this.scroll));
+    }
+
+    private int hotbarTop() {
+        return this.panelTop + this.panelHeight - HOTBAR_HEIGHT;
     }
 
     @Override

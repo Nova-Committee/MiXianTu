@@ -36,18 +36,25 @@ public final class ItemAuraTooltipAppender {
                                        Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
-        ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(builder, itemAura.value()));
+        ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(builder, stack, itemAura.value()));
     }
 
-    private static void appendItemAura(Consumer<Component> builder, ItemAura itemAura) {
-        double total = itemAura.aura().evaluate(FormulaContext.EMPTY);
-        double speed = itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY);
-        double releaseSpeed = itemAura.releaseSpeed().evaluate(FormulaContext.EMPTY);
+    private static void appendItemAura(Consumer<Component> builder, ItemStack stack, ItemAura itemAura) {
+        int count = Math.max(1, stack.getCount());
+        double total = scale(itemAura.aura().evaluate(FormulaContext.EMPTY), count);
+        double speed = scale(itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY), count);
+        double releaseSpeed = scale(itemAura.releaseSpeed().evaluate(FormulaContext.EMPTY), count);
         builder.accept(Component.translatable("tooltip.mxt.item.item_aura").withStyle(ChatFormatting.AQUA));
         builder.accept(Component.translatable("tooltip.mxt.item_aura.total", TooltipText.number(total)).withStyle(ChatFormatting.BLUE));
         builder.accept(Component.translatable("tooltip.mxt.item_aura.speed", TooltipText.number(speed)).withStyle(ChatFormatting.BLUE));
         builder.accept(Component.translatable("tooltip.mxt.item_aura.release_speed", TooltipText.number(releaseSpeed)).withStyle(ChatFormatting.BLUE));
         itemAura.resultStack().ifPresent(template -> builder.accept(Component.translatable(
                 "tooltip.mxt.item_aura.result", template.create().getHoverName()).withStyle(ChatFormatting.BLUE)));
+    }
+
+    private static double scale(double value, int count) {
+        if (!Double.isFinite(value) || value <= 0.0D || count <= 0) return value;
+        double result = value * count;
+        return Double.isFinite(result) ? result : Double.MAX_VALUE;
     }
 }

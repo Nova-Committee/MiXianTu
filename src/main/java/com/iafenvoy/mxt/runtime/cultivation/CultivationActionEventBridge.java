@@ -2,11 +2,15 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -88,8 +92,20 @@ public final class CultivationActionEventBridge {
                     CultivationModeService.notifyFailure(player, result);
                 if (!spirit.cultivating()) LAST_FAILURES.remove(player.getUUID());
             }
+            attemptAutomaticBreakthrough(player, spirit);
         }
         // Cultivation can change progress, active-state timing, and resource conversions in one tick.
+    }
+
+    private static void attemptAutomaticBreakthrough(ServerPlayer player, CultivationAttachment spirit) {
+        if (!spirit.cultivating()) return;
+        FormulaContext context = FormulaContexts.forEntity(player);
+        MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE).forEach(resource -> {
+            BreakthroughStatus status = CultivationService.breakthroughStatus(player, resource, context);
+            if (!status.automatic() || !status.reached() || !status.conditionsMet()) return;
+            CultivationService.attempt(player, spirit, player.getData(MxtAttachments.RESOURCE_HOLDER),
+                    HolderHelper.id(resource), context, () -> true);
+        });
     }
 
     private record FailureNotice(Failure failure, Identifier resource) {

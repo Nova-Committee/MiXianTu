@@ -40,7 +40,7 @@ public final class CultivationAffinity {
             AuraPool pool = aura.auras().entrySet().stream()
                     .filter(entry -> entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
                     .map(Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
-            double concentration = pool == null ? 0.0D : pool.amount() / Math.max(1.0D, pool.maximum());
+            double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
             total += base * Math.max(0.0D, 1.0D + concentration);
             count++;

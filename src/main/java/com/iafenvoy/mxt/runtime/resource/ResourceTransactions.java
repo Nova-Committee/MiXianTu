@@ -58,11 +58,21 @@ public final class ResourceTransactions {
     }
 
     public static Result tryConsume(ResourceHolderAttachment holder, Evaluation evaluation) {
+        return tryConsume(null, holder, evaluation);
+    }
+
+    /**
+     * Performs an entity-driven transaction. The optional entity enables a resource's
+     * use gate; server systems without an entity retain value-only accounting.
+     */
+    public static Result tryConsume(LivingEntity entity, ResourceHolderAttachment holder, Evaluation evaluation) {
         // The holder is intentionally a value-only attachment.  A cost may never create a
         // negative balance, even when a caller has not resolved the optional datapack bounds.
         for (Entry<Identifier, Double> entry : evaluation.amounts.entrySet()) {
             Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, entry.getKey()).orElse(null);
             if (resource == null) return Result.rejected(entry.getKey(), evaluation.amounts);
+            if (entity != null && !ResourceUseService.canUse(entity, resource))
+                return Result.rejected(entry.getKey(), evaluation.amounts);
             double amount = entry.getValue();
             double current = holder.get(resource);
             if (!Double.isFinite(amount) || amount <= 0.0D || !Double.isFinite(current)

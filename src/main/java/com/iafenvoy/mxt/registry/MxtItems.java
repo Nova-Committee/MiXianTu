@@ -27,8 +27,8 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.DeferredRegister.Items;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
@@ -36,7 +36,7 @@ import java.util.function.Supplier;
 
 @SuppressWarnings("unused")
 public final class MxtItems {
-    public static final DeferredRegister.Items REGISTRY = DeferredRegister.createItems(MiXianTu.MOD_ID);
+    public static final Items REGISTRY = DeferredRegister.createItems(MiXianTu.MOD_ID);
 
     public static final DeferredItem<Item> COPPER_COIN = register("copper_coin", Item::new);
     public static final DeferredItem<Item> IRON_COIN = register("iron_coin", Item::new);

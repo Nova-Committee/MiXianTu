@@ -14,6 +14,7 @@ import dev.latvian.mods.kubejs.event.KubeEvent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.ICancellableEvent;
+import net.neoforged.bus.api.Event;
 
 import java.util.Locale;
 import java.util.Map;
@@ -30,6 +31,20 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     private static final EventHandler CURSE_APPLY = EVENTS.server("curseApply", () -> CurseApplyKubeEvent.class);
     private static final EventHandler RESOURCE_CONSUME = EVENTS.server("resourceConsume", () -> ResourceConsumeKubeEvent.class);
     private static final EventHandler AURA_ZONE = EVENTS.server("auraZone", () -> AuraZoneKubeEvent.class);
+    private static final EventHandler ABILITY_TRIGGER = EVENTS.server("abilityTrigger", () -> GenericKubeEvent.class);
+    private static final EventHandler CURSE_REMOVE = EVENTS.server("curseRemove", () -> GenericKubeEvent.class);
+    private static final EventHandler CULTIVATION_BREAK = EVENTS.server("cultivationBreak", () -> GenericKubeEvent.class);
+    private static final EventHandler TECHNIQUE_LEARN = EVENTS.server("techniqueLearn", () -> GenericKubeEvent.class);
+    private static final EventHandler ALCHEMY_CRAFT = EVENTS.server("alchemyCraft", () -> GenericKubeEvent.class);
+    private static final EventHandler ARTIFACT_REFINE = EVENTS.server("artifactRefine", () -> GenericKubeEvent.class);
+    private static final EventHandler FORGING = EVENTS.server("forging", () -> GenericKubeEvent.class);
+    private static final EventHandler FORMATION = EVENTS.server("formation", () -> GenericKubeEvent.class);
+    private static final EventHandler LIFESPAN_END = EVENTS.server("lifespanEnd", () -> GenericKubeEvent.class);
+    private static final EventHandler REALM_INSTANCE = EVENTS.server("realmInstance", () -> GenericKubeEvent.class);
+    private static final EventHandler SECT = EVENTS.server("sect", () -> GenericKubeEvent.class);
+    private static final EventHandler SOUL = EVENTS.server("soul", () -> GenericKubeEvent.class);
+    private static final EventHandler SPIRIT_CONTRACT = EVENTS.server("spiritContract", () -> GenericKubeEvent.class);
+    private static final EventHandler TRIBULATION = EVENTS.server("tribulation", () -> GenericKubeEvent.class);
 
     @Override
     public void postAbility(AbilityUseEvent event) {
@@ -52,6 +67,30 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     @Override
     public void postAura(AuraZoneEvent event) {
         EventResult result = AURA_ZONE.post(new AuraZoneKubeEvent(event));
+        if (event instanceof ICancellableEvent cancellable) result.applyCancel(cancellable);
+    }
+
+    @Override
+    public void post(String type, Event event) {
+        EventHandler handler = switch (type) {
+            case "abilityTrigger" -> ABILITY_TRIGGER;
+            case "curseRemove" -> CURSE_REMOVE;
+            case "cultivationBreak" -> CULTIVATION_BREAK;
+            case "techniqueLearn" -> TECHNIQUE_LEARN;
+            case "alchemyCraft" -> ALCHEMY_CRAFT;
+            case "artifactRefine" -> ARTIFACT_REFINE;
+            case "forging" -> FORGING;
+            case "formation" -> FORMATION;
+            case "lifespanEnd" -> LIFESPAN_END;
+            case "realmInstance" -> REALM_INSTANCE;
+            case "sect" -> SECT;
+            case "soul" -> SOUL;
+            case "spiritContract" -> SPIRIT_CONTRACT;
+            case "tribulation" -> TRIBULATION;
+            default -> null;
+        };
+        if (handler == null) return;
+        EventResult result = handler.post(new GenericKubeEvent(type, event));
         if (event instanceof ICancellableEvent cancellable) result.applyCancel(cancellable);
     }
 
@@ -181,6 +220,36 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
 
         public String getOverrideZone() {
             return this.event instanceof AuraZoneEvent.Override override ? override.zone().toString() : "";
+        }
+    }
+
+    /**
+     * Stable common surface for every remaining lifecycle event. The original
+     * event remains available for its domain-specific getters and mutable pre-event fields.
+     */
+    public static final class GenericKubeEvent implements KubeEvent {
+        private final String type;
+        private final Event event;
+
+        GenericKubeEvent(String type, Event event) {
+            this.type = type;
+            this.event = event;
+        }
+
+        public String getType() {
+            return this.type;
+        }
+
+        public String getPhase() {
+            return this.event.getClass().getSimpleName();
+        }
+
+        public boolean isCancellable() {
+            return this.event instanceof ICancellableEvent;
+        }
+
+        public Event getEvent() {
+            return this.event;
         }
     }
 }

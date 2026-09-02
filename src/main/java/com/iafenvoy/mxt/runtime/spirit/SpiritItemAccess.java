@@ -13,7 +13,8 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface SpiritItemAccess {
     /**
-     * Returns this stack's current data-driven spirit capacity.
+     * Returns this stack's current data-driven spirit capacity, including all
+     * items in the stack.
      */
     Object2IntMap<Holder<Resource>> getCapacity(@Nullable LivingEntity entity, ItemStack stack);
 

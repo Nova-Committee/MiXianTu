@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.config;
 import com.iafenvoy.jupiter.config.container.AutoInitConfigContainer;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.iafenvoy.jupiter.config.entry.EnumEntry;
+import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -15,6 +16,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
     public final Hotbar hotbar = new Hotbar();
     public final ResourceBars resourceBars = new ResourceBars();
+    public final Information information = new Information();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt-client.json");
@@ -34,6 +36,10 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
     public static boolean showResourceBarNames() {
         return INSTANCE.resourceBars.showNames.getValue();
+    }
+
+    public static int informationRefreshInterval() {
+        return Math.max(1, INSTANCE.information.refreshInterval.getValue());
     }
 
     public static final class Hotbar extends AutoInitConfigCategoryBase {
@@ -62,5 +68,14 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
     public enum ResourceBarIconLayout {
         SIDES, CENTER
+    }
+
+    public static final class Information extends AutoInitConfigCategoryBase {
+        public final IntegerEntry refreshInterval = IntegerEntry.builder(
+                "config.mxt.client.information.refresh_interval", 20).range(1, 1200).build();
+
+        private Information() {
+            super("information", "config.mxt.client.information");
+        }
     }
 }

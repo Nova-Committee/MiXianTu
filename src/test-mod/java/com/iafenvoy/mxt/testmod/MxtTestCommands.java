@@ -50,6 +50,7 @@ public final class MxtTestCommands {
     private static final Identifier QI_REFINING = id("qi_refining");
     private static final Identifier SPIRIT_POWER = id("spirit_power");
     private static final Identifier SPIRIT_POWER_REFINING = id("spirit_power_refining");
+    private static final Identifier WATER_POWER = id("water_power");
     private static final Identifier SOUL_POWER = id("soul_power");
     private static final Identifier ROOT = id("qingxiao_fire_root");
     private static final Identifier WATER_ROOT = id("water_root");
@@ -97,6 +98,7 @@ public final class MxtTestCommands {
         spirit.setCultivationProgress(require(MxtResourceKeys.RESOURCE, QI), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, QI), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 80.0D);
+        ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, WATER_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SOUL_POWER), 20.0D);
         joinSect(player);
 

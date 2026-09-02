@@ -50,6 +50,7 @@ import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
@@ -125,7 +126,10 @@ public final class MxtTestMod {
         ServerCache cache = ServerCache.get().orElseThrow(() -> new IllegalStateException("Server cache was not created"));
         Identifier foundation = Identifier.parse("mxt_test:foundation");
         Identifier coreForming = Identifier.parse("mxt_test:core_forming");
-        if (!cache.isRealmAtLeast(coreForming, foundation) || cache.isRealmAtLeast(foundation, coreForming)) {
+        Identifier tribulation = Identifier.parse("mxt_test:tribulation");
+        if (!cache.isRealmAtLeast(coreForming, foundation) || cache.isRealmAtLeast(foundation, coreForming)
+                || !cache.isRealmAtLeast(tribulation, foundation)
+                || cache.rankForRealm(tribulation).filter(rank -> rank == 8).isEmpty()) {
             throw new IllegalStateException("Realm cache did not preserve linear realm ordering");
         }
         verifyDynamicResourceValues(foundation, coreForming);
@@ -320,11 +324,19 @@ public final class MxtTestMod {
                 || !same(spiritPower.value().resourceToCultivation().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(spiritPower.value().resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
                 || !same(spiritPower.value().burstAmount().evaluate(FormulaContext.EMPTY), 10.0D)
+                || !same(qi.value().startExp().evaluate(FormulaContext.EMPTY), 100.0D)
+                || !same(spiritPower.value().startExp().evaluate(FormulaContext.EMPTY), 10.0D)
                 || !same(spiritPower.value().max().evaluate(FormulaContext.EMPTY), 0.0D)
                 || spiritPower.value().particleColor() != 0x66CCFF) {
             throw new IllegalStateException("Resource cultivation conversion settings were not decoded correctly");
         }
         CultivationAttachment spirit = new CultivationAttachment();
+        CultivationAttachment mortal = new CultivationAttachment();
+        if (!same(CultivationService.addProgress(mortal, qi, 120.0D, FormulaContext.EMPTY), 100.0D)
+                || !same(CultivationService.addProgress(mortal, qi, 1.0D, FormulaContext.EMPTY), 0.0D)
+                || !same(mortal.cultivationProgress(qi), 100.0D)) {
+            throw new IllegalStateException("Mortal cultivation progress must stop at resource start_exp");
+        }
         spirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
         spirit.setCultivationProgress(qi, 40.0D);
         Holder<RealmStage> spiritPowerRealm = requireHolder(MxtResourceKeys.REALM_STAGE,

@@ -20,11 +20,18 @@ ServerEvents.recipes(event => {
 ```js
 // kubejs/server_scripts/mxt_events.js
 MxtEvents.abilityUse(event => {
-  if (event.isPre && event.getAbility() === 'example:forbidden') event.cancel()
+  if (event.isPre() && event.getAbility() === 'example:forbidden') event.cancel()
 })
 
 MxtEvents.resourceConsume(event => {
-  if (event.isPre) event.setAmount('example:spirit_power', event.getAmounts()['example:spirit_power'] || 0)
+  if (event.isPre()) event.setAmount('example:spirit_power', event.getAmounts()['example:spirit_power'] || 0)
+})
+
+MxtEvents.cultivationBreak(event => {
+  if (event.getPhase() === 'Pre') {
+    // event.getEvent() is the native CultivationBreakEvent.Pre.
+    event.getEvent().setCost('example:spirit_power', 20)
+  }
 })
 ```
 

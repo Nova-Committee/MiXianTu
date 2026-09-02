@@ -19,6 +19,11 @@
   "particle_color": "#66CCFF",
   "aura_type": "mxt_test:fire",
   "first_realm": "mxt_test:spirit_power_refining",
+  "start_exp": 10,
+  "use_condition": {
+    "type": "mxt:has_realm",
+    "resource": "mxt_test:spirit_power"
+  },
   "bars": [
     {
       "context": "mxt:boss_overlay",

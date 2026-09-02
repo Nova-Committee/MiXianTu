@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.data.resource;
 
 import com.iafenvoy.mxt.data.HotbarIcon;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
@@ -26,7 +28,9 @@ public record Resource(NumberProvider defaultValue, NumberProvider min, NumberPr
                        NumberProvider burstAmount, Optional<HotbarIcon> icon,
                        int particleColor, Optional<Holder<Element>> auraType,
                        ResourceConversion cultivationToResource, ResourceConversion resourceToCultivation,
-                       List<ResourceBar> bars, Optional<Holder<RealmStage>> firstRealm) {
+                       List<ResourceBar> bars, Optional<Holder<RealmStage>> firstRealm,
+                       NumberProvider startExp, CultivateConditions startCultivateConditions,
+                       EntityCondition useCondition, boolean showCultivationInfo) {
     public static final Codec<Holder<Resource>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.RESOURCE);
     public static final Codec<Resource> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             NumberProvider.CODEC.fieldOf("default_value").forGetter(Resource::defaultValue),
@@ -40,7 +44,11 @@ public record Resource(NumberProvider defaultValue, NumberProvider min, NumberPr
             ResourceConversion.CODEC.optionalFieldOf("cultivation_to_resource", ResourceConversion.DEFAULT).forGetter(Resource::cultivationToResource),
             ResourceConversion.CODEC.optionalFieldOf("resource_to_cultivation", ResourceConversion.DEFAULT).forGetter(Resource::resourceToCultivation),
             ResourceBar.CODEC.listOf().optionalFieldOf("bars", List.of()).forGetter(Resource::bars),
-            RealmStage.CODEC.optionalFieldOf("first_realm").forGetter(Resource::firstRealm)
+            RealmStage.CODEC.optionalFieldOf("first_realm").forGetter(Resource::firstRealm),
+            NumberProvider.CODEC.optionalFieldOf("start_exp", new Constant(0.0D)).forGetter(Resource::startExp),
+            CultivateConditions.CODEC.optionalFieldOf("start_cultivate_conditions", CultivateConditions.EMPTY).forGetter(Resource::startCultivateConditions),
+            EntityCondition.optionalCodec("use_condition").forGetter(Resource::useCondition),
+            Codec.BOOL.optionalFieldOf("show_cultivation_info", true).forGetter(Resource::showCultivationInfo)
     ).apply(i, Resource::new));
 
     @Override

@@ -233,8 +233,7 @@ public final class AbilityEventBridge {
                 double distanceSquared = actor.distanceToSqr(target);
                 FormulaContext context = FormulaContext.of(actor, Map.of("aura_radius", radius, "distance", Math.sqrt(distanceSquared)));
                 if (distanceSquared <= radiusSquared) {
-                    FormulaContext targetContext = actor instanceof LivingEntity caster && target instanceof LivingEntity livingTarget
-                            ? FormulaContexts.forEntities(caster, livingTarget, context.variables()) : context;
+                    FormulaContext targetContext = target instanceof LivingEntity livingTarget ? FormulaContexts.forEntities(actor, livingTarget, context.variables()) : context;
                     AbilityService.executeTargetAction(definition, actor, target, targetContext);
                 }
             }

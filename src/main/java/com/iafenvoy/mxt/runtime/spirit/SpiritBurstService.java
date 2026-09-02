@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -41,7 +42,8 @@ public final class SpiritBurstService {
             return;
         }
         Optional<Identifier> valid = resourceId.filter(id -> MxtDatapackRegistries
-                .holder(MxtResourceKeys.RESOURCE, id).map(resource -> resource.value().auraType().isPresent()).orElse(false));
+                .holder(MxtResourceKeys.RESOURCE, id)
+                .map(resource -> resource.value().auraType().isPresent() && ResourceUseService.canUse(player, resource)).orElse(false));
         if (valid.isEmpty()) return;
         Set<Identifier> active = ACTIVE_RESOURCES.computeIfAbsent(playerId, ignored -> new HashSet<>());
         if (firing) {
@@ -74,7 +76,7 @@ public final class SpiritBurstService {
         Set<Identifier> active = ACTIVE_RESOURCES.get(player.getUUID());
         if (active == null || !active.contains(resourceId)) return;
         active.removeIf(id -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
-                .map(resource -> resource.value().auraType().isEmpty()).orElse(true));
+                .map(resource -> resource.value().auraType().isEmpty() || !ResourceUseService.canUse(player, resource)).orElse(true));
         Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resourceId).orElse(null);
         if (resource == null) return;
         SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
@@ -89,7 +91,7 @@ public final class SpiritBurstService {
      */
     private static boolean tryFire(ServerPlayer player, ResourceHolderAttachment holder, Holder<Resource> resource) {
         Resource definition = resource.value();
-        if (definition.auraType().isEmpty()) return false;
+        if (definition.auraType().isEmpty() || !ResourceUseService.canUse(player, resource)) return false;
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
         int amount = asWholeAmount(definition.burstAmount().evaluate(context));
         if (amount <= 0) return false;

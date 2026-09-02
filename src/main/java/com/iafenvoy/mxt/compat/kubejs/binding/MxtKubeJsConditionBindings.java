@@ -3,6 +3,9 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsConditionCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.callback.TriPredicate;
+import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
+import com.iafenvoy.mxt.data.condition.*;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.damagesource.DamageSource;
@@ -39,5 +42,36 @@ public final class MxtKubeJsConditionBindings {
     @Info("Registers a damage condition. Datapack type: mxt:js")
     public void damage(String id, TriPredicate<DamageSource, Float, JsonObject> callback) {
         MxtJsConditionCallbacks.registerDamage(id, callback);
+    }
+
+    @Info("Decodes and evaluates any registered entity condition definition.")
+    public boolean testEntity(Entity entity, JsonObject definition) {
+        return MxtKubeJsDataCodec.decode(EntityCondition.CODEC, definition, entity.level().registryAccess())
+                .test(entity, FormulaContext.of(entity));
+    }
+
+    @Info("Decodes and evaluates any registered bi-entity condition definition.")
+    public boolean testBiEntity(Entity actor, Entity target, JsonObject definition) {
+        return MxtKubeJsDataCodec.decode(BiEntityCondition.CODEC, definition, actor.level().registryAccess())
+                .test(actor, target, FormulaContext.of(actor));
+    }
+
+    @Info("Decodes and evaluates any registered block condition definition.")
+    public boolean testBlock(Level level, BlockPos pos, JsonObject definition) {
+        return MxtKubeJsDataCodec.decode(BlockCondition.CODEC, definition, level.registryAccess())
+                .test(level, pos, FormulaContext.of(level));
+    }
+
+    @Info("Decodes and evaluates any registered item condition definition.")
+    public boolean testItem(Entity holder, ItemStack stack, JsonObject definition) {
+        return MxtKubeJsDataCodec.decode(ItemCondition.CODEC, definition, holder.level().registryAccess())
+                .test(holder, stack, FormulaContext.of(holder));
+    }
+
+    @Info("Decodes and evaluates any registered damage condition definition.")
+    public boolean testDamage(Level level, DamageSource source, float amount, JsonObject definition) {
+        FormulaContext context = source.getEntity() == null ? FormulaContext.EMPTY : FormulaContext.of(source.getEntity());
+        return MxtKubeJsDataCodec.decode(DamageCondition.CODEC, definition, level.registryAccess())
+                .test(source, amount, context);
     }
 }

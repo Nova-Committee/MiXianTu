@@ -28,5 +28,10 @@
       "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
     }
   ],
-  "first_realm": "mxt_test:qi_refining"
+  "first_realm": "mxt_test:qi_refining",
+  "start_exp": 100,
+  "use_condition": {
+    "type": "mxt:has_realm",
+    "resource": "mxt_test:qi"
+  }
 }

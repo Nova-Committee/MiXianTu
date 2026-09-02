@@ -1,0 +1,7 @@
+{
+  "resource": "mxt_test:qi",
+  "aura_share_weight": 8,
+  "next_realm": "mxt_test:spirit_transformation",
+  "breakthrough_exp": 1000,
+  "max_experience": 1000
+}

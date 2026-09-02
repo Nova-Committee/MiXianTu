@@ -1,15 +1,18 @@
 package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.config.MxtClientConfig;
+import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ObjectSelectionList;
-import net.minecraft.client.gui.components.ObjectSelectionList.Entry;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -17,6 +20,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Expandable player information screen with a scrollable, selectable list.
@@ -30,6 +34,9 @@ public final class InformationPanelScreen extends Screen {
     private static final int EQUIPMENT_SLOT_COUNT = 4;
     private static final int PLAYER_TO_BASIC_GAP = 14;
     private static final int PLAYER_RENDER_SCALE = 30;
+    private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/information_panel.png");
+    private static final Identifier PLAYER_PREVIEW = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/player_preview.png");
+    private static final Identifier SLOT = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/slot_24.png");
     private static final EquipmentSlot[] EQUIPMENT_SLOTS = {
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
     };
@@ -44,6 +51,7 @@ public final class InformationPanelScreen extends Screen {
     private int equipmentLeft;
     private int playerRenderLeft;
     private int playerRenderRight;
+    private int refreshTicks;
 
     public InformationPanelScreen() {
         super(Component.translatable("screen.mxt.information_panel"));
@@ -100,11 +108,31 @@ public final class InformationPanelScreen extends Screen {
         this.layoutWidgets();
     }
 
+    @Override
+    public void tick() {
+        super.tick();
+        int interval = MxtClientConfig.informationRefreshInterval();
+        if (++this.refreshTicks < interval) return;
+        this.refreshTicks = 0;
+        this.refreshInformation();
+    }
+
+    private void refreshInformation() {
+        if (this.minecraft.player == null) return;
+        double cultivationScroll = this.list == null ? 0.0D : this.list.scrollAmount();
+        double basicScroll = this.basicList == null ? 0.0D : this.basicList.scrollAmount();
+        if (this.list != null) this.list.replaceEntries(this.buildEntries(Side.CULTIVATION));
+        if (this.basicList != null) this.basicList.replaceEntries(this.buildEntries(Side.BASIC));
+        if (this.list != null) this.list.setScrollAmount(cultivationScroll);
+        if (this.basicList != null) this.basicList.setScrollAmount(basicScroll);
+    }
+
     private List<InformationList.LineEntry> buildEntries(Side side) {
-        List<InformationEntry> information = this.minecraft.player == null
-                ? List.of() : InformationManager.entries(this.minecraft.player, side);
+        List<InformationEntry> information = this.minecraft.player == null ? List.of() : InformationManager.collectEntries(this.minecraft.player, side);
         int nameWidth = information.stream()
-                .mapToInt(entry -> this.font.width(entry.name()))
+                .map(InformationEntry::name)
+                .filter(Objects::nonNull)
+                .mapToInt(this.font::width)
                 .max().orElse(0);
         List<InformationList.LineEntry> entries = new ArrayList<>(information.size());
         for (InformationEntry entry : information)
@@ -115,25 +143,24 @@ public final class InformationPanelScreen extends Screen {
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         this.extractTransparentBackground(graphics);
-        graphics.fill(this.panelLeft, this.panelTop, this.panelLeft + this.panelWidth, this.panelTop + this.panelHeight, 0xF0101018);
-        graphics.outline(this.panelLeft, this.panelTop, this.panelWidth, this.panelHeight, 0xFF6F7C92);
-        graphics.text(this.font, this.title, this.panelLeft + 18, this.panelTop + 10, 0xFFFFFFFF, true);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, this.panelLeft, this.panelTop, 0.0F, 0.0F,
+                this.panelWidth, this.panelHeight, PANEL_WIDTH, PANEL_HEIGHT);
+        graphics.text(this.font, this.title, this.panelLeft + 18, this.panelTop + 10, 0xFF404040, false);
         int contentTop = this.panelTop + HEADER_HEIGHT + 2;
-        graphics.text(this.font, Component.translatable("info.mxt.cultivation"), this.playerRenderRight + 12, contentTop, 0xFF8EC7FF, true);
+        graphics.text(this.font, Component.translatable("info.mxt.cultivation"), this.playerRenderRight + 12, contentTop, 0xFF404040, false);
         int basicTop = contentTop + this.playerPreviewHeight + PLAYER_TO_BASIC_GAP;
-        graphics.text(this.font, Component.translatable("info.mxt.basic"), this.panelLeft + 20, basicTop, 0xFF8EC7FF, true);
+        graphics.text(this.font, Component.translatable("info.mxt.basic"), this.panelLeft + 20, basicTop, 0xFF404040, false);
         if (this.minecraft.player != null) {
             int x1 = this.playerRenderLeft;
             int x2 = this.playerRenderRight;
             int y1 = contentTop;
             int y2 = y1 + this.playerPreviewHeight;
-            graphics.fill(x1, y1, x2, y2, 0x402A3344);
-            graphics.outline(x1, y1, x2 - x1, y2 - y1, 0xFF4C566A);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, PLAYER_PREVIEW, x1, y1, 0.0F, 0.0F,
+                    x2 - x1, y2 - y1, PLAYER_RENDER_WIDTH, EQUIPMENT_SLOT_SIZE * EQUIPMENT_SLOT_COUNT);
             for (int index = 0; index < EQUIPMENT_SLOT_COUNT; index++) {
                 int slotTop = contentTop + index * EQUIPMENT_SLOT_SIZE;
-                graphics.fill(this.equipmentLeft, slotTop, this.equipmentLeft + EQUIPMENT_SLOT_SIZE,
-                        slotTop + EQUIPMENT_SLOT_SIZE, 0x402A3344);
-                graphics.outline(this.equipmentLeft, slotTop, EQUIPMENT_SLOT_SIZE, EQUIPMENT_SLOT_SIZE, 0xFF4C566A);
+                graphics.blit(RenderPipelines.GUI_TEXTURED, SLOT, this.equipmentLeft, slotTop, 0.0F, 0.0F,
+                        EQUIPMENT_SLOT_SIZE, EQUIPMENT_SLOT_SIZE, EQUIPMENT_SLOT_SIZE, EQUIPMENT_SLOT_SIZE);
             }
         }
     }
@@ -202,7 +229,7 @@ public final class InformationPanelScreen extends Screen {
 
             @Override
             public void extractContent(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float partialTick) {
-                int color = 0xFFE0E4EC;
+                int color = this.entry.color();
                 if (hovered || this.isFocused())
                     graphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x503F6A91);
                 Font font = Minecraft.getInstance().font;
@@ -210,22 +237,31 @@ public final class InformationPanelScreen extends Screen {
                 int valueX = this.getX() + 8 + this.nameWidth + 8;
                 int nameAvailableWidth = Math.max(1, Math.min(this.nameWidth, availableWidth));
                 int valueAvailableWidth = Math.max(1, this.getX() + this.getWidth() - valueX - 8);
-                int nameLineCount = font.split(this.entry.name(), nameAvailableWidth).size();
+                Component name = this.entry.name();
+                int nameLineCount = name == null ? 0 : font.split(name, nameAvailableWidth).size();
                 int valueLineCount = font.split(this.entry.value(), valueAvailableWidth).size();
                 if ((nameLineCount > 1 || valueLineCount > 1) && !this.overflowReported) {
                     this.overflowReported = true;
                     if (!FMLEnvironment.isProduction())
                         MiXianTu.LOGGER.error("Information entry contains more than one line (width={}): {} = {}",
-                                availableWidth, this.entry.name().getString(), this.entry.value().getString());
+                                availableWidth, name == null ? "" : name.getString(), this.entry.value().getString());
                 }
-                String fullName = this.entry.name().getString();
+                String fullName = name == null ? "" : name.getString();
                 String fullValue = this.entry.value().getString();
                 String renderedName = abbreviate(font, fullName, nameAvailableWidth);
                 String renderedValue = abbreviate(font, fullValue, valueAvailableWidth);
-                graphics.text(font, renderedName, this.getX() + 8, this.getY() + 4, color, false);
+                if (name != null)
+                    graphics.text(font, renderedName, this.getX() + 8, this.getY() + 4, color, false);
                 graphics.text(font, renderedValue, valueX, this.getY() + 4, color, false);
-                if (hovered && (!renderedName.equals(fullName) || !renderedValue.equals(fullValue)))
-                    graphics.setTooltipForNextFrame(font, this.entry.name().copy().append(": ").append(this.entry.value()), mouseX, mouseY);
+                if (hovered) {
+                    this.entry.tooltip().ifPresentOrElse(
+                            tooltip -> graphics.setTooltipForNextFrame(font, tooltip, mouseX, mouseY),
+                            () -> {
+                                if (!renderedName.equals(fullName) || !renderedValue.equals(fullValue))
+                                    graphics.setTooltipForNextFrame(font, name == null ? this.entry.value()
+                                            : name.copy().append(": ").append(this.entry.value()), mouseX, mouseY);
+                            });
+                }
             }
 
             private static String abbreviate(Font font, String text, int width) {
@@ -236,7 +272,8 @@ public final class InformationPanelScreen extends Screen {
 
             @Override
             public @NonNull Component getNarration() {
-                return this.entry.name().copy().append(": ").append(this.entry.value());
+                return this.entry.name() == null ? this.entry.value()
+                        : this.entry.name().copy().append(": ").append(this.entry.value());
             }
         }
     }
