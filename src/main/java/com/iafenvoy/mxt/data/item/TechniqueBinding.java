@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.data.item;
 
+import com.iafenvoy.mxt.data.DescribedEntry;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -17,11 +19,11 @@ import java.util.Optional;
  */
 public record TechniqueBinding(List<Entry> entries, Holder<CultivationTechnique> technique,
                                Optional<TagKey<ItemQuality>> qualityGroup,
-                               List<ConditionEntry> conditions) implements ItemMatcher {
+                               List<DescribedEntry<EntityCondition>> conditions) implements ItemMatcher {
     public static final Codec<TechniqueBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(TechniqueBinding::entries),
             CultivationTechnique.CODEC.fieldOf("technique").forGetter(TechniqueBinding::technique),
             TagKey.hashedCodec(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality_group").forGetter(TechniqueBinding::qualityGroup),
-            ConditionEntry.CODEC.listOf().optionalFieldOf("conditions", List.of()).forGetter(TechniqueBinding::conditions)
+            DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(TechniqueBinding::conditions)
     ).apply(i, TechniqueBinding::new));
 }

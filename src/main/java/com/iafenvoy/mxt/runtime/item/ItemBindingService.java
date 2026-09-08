@@ -294,13 +294,13 @@ public final class ItemBindingService {
 
         public boolean conditionsMet(LivingEntity entity, FormulaContext context) {
             return this.weapon.map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
+                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
                     && this.pill.map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
+                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
                     && this.technique.map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true)
+                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
                     && this.item.map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.condition().test(entity, context))).orElse(true);
+                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true);
         }
     }
 }

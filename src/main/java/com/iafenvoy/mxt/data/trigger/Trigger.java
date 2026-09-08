@@ -11,8 +11,7 @@ import java.util.function.Function;
  * Data-driven matcher for a runtime {@link TriggerSignal}.
  */
 public interface Trigger {
-    Codec<Trigger> CODEC = MxtRegistries.TRIGGER_TYPE.byNameCodec()
-            .dispatch("type", Trigger::codec, Function.identity());
+    Codec<Trigger> CODEC = MxtRegistries.TRIGGER_TYPE.byNameCodec().dispatch("type", Trigger::codec, Function.identity());
 
     MapCodec<? extends Trigger> codec();
 

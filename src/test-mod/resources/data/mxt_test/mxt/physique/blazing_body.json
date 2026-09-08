@@ -1,0 +1,16 @@
+{
+  "holder_condition": {
+    "type": "mxt:has_spirit_root",
+    "spirit_root": "mxt_test:fire_root"
+  },
+  "attribute_modifiers": [
+    {
+      "attribute": "minecraft:max_health",
+      "id": "mxt_test:physique/blazing_body",
+      "amount": 2,
+      "operation": "add_value"
+    }
+  ],
+  "granted_abilities": [],
+  "rarity": "uncommon"
+}

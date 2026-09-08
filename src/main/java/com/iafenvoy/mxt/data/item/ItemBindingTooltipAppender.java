@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.AttributeEntry;
+import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -60,11 +62,11 @@ public final class ItemBindingTooltipAppender {
         }
     }
 
-    private static void appendConditions(Consumer<Component> builder, List<ConditionEntry> conditions,
+    private static void appendConditions(Consumer<Component> builder, List<DescribedEntry<EntityCondition>> conditions,
                                          Player player, FormulaContext formula) {
-        for (ConditionEntry entry : conditions) {
+        for (DescribedEntry<EntityCondition> entry : conditions) {
             entry.description().ifPresent(description -> {
-                boolean met = entry.condition().test(player, formula);
+                boolean met = entry.value().test(player, formula);
                 MutableComponent marker = Component.literal(met ? "✔ " : "✖ ")
                         .withStyle(met ? ChatFormatting.GREEN : ChatFormatting.RED);
                 builder.accept(marker.append(Component.translatable(description)));

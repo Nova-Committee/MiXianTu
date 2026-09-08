@@ -25,7 +25,13 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
+import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.GrantPhysiqueAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.RemovePhysiqueAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.RemoveSpiritRootAction;
+import com.iafenvoy.mxt.data.condition.builtin.entity.HasPhysiqueEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.HasSpiritRootEntityCondition;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -157,10 +163,26 @@ public final class MxtTestMod {
                 .isEmpty()) {
             throw new IllegalStateException("Generic item binding did not resolve its grant-spirit-root action");
         }
+        ItemStack physiqueGiver = new ItemStack(Items.MELON_SLICE);
+        ItemStack physiqueRemover = new ItemStack(Items.BREAD);
+        ItemStack rootRemover = new ItemStack(Items.COOKIE);
+        if (ItemBindingService.actions(physiqueGiver).stream().noneMatch(GrantPhysiqueAction.class::isInstance)
+                || ItemBindingService.actions(physiqueRemover).stream().noneMatch(RemovePhysiqueAction.class::isInstance)
+                || ItemBindingService.actions(rootRemover).stream().noneMatch(RemoveSpiritRootAction.class::isInstance)) {
+            throw new IllegalStateException("Physique or spirit-root grant/remove item bindings were not loaded");
+        }
+        Physique blazing = MxtDatapackRegistries.get(MxtResourceKeys.PHYSIQUE, Identifier.parse("mxt_test:blazing_body"))
+                .orElseThrow(() -> new IllegalStateException("Physique holder-condition test definition was not loaded"));
+        Physique swordMaster = MxtDatapackRegistries.get(MxtResourceKeys.PHYSIQUE, Identifier.parse("mxt_test:sword_master_body"))
+                .orElseThrow(() -> new IllegalStateException("Physique stacking-condition test definition was not loaded"));
+        if (!(blazing.holderCondition() instanceof HasSpiritRootEntityCondition)
+                || !(swordMaster.holderCondition() instanceof HasPhysiqueEntityCondition)) {
+            throw new IllegalStateException("Physique holder conditions did not decode their identity predicates");
+        }
         ItemStack lockedCarrot = new ItemStack(Items.CARROT);
         if (ItemBindingService.resolve(event.getServer().registryAccess(), lockedCarrot).item()
                 .filter(value -> value.conditions().stream().anyMatch(condition -> condition.description().isPresent()
-                        && !condition.condition().test(null, FormulaContext.EMPTY)))
+                        && !condition.value().test(null, FormulaContext.EMPTY)))
                 .isEmpty()) {
             throw new IllegalStateException("Unsatisfied item condition test binding was not loaded");
         }

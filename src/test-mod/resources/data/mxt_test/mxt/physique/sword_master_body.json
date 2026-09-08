@@ -1,0 +1,16 @@
+{
+  "holder_condition": {
+    "type": "mxt:has_physique",
+    "physique": "mxt_test:sword_bone"
+  },
+  "attribute_modifiers": [
+    {
+      "attribute": "minecraft:attack_damage",
+      "id": "mxt_test:physique/sword_master_body",
+      "amount": 1,
+      "operation": "add_value"
+    }
+  ],
+  "granted_abilities": [],
+  "rarity": "rare"
+}

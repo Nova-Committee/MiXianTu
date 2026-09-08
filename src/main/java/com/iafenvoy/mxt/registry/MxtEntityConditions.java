@@ -27,6 +27,8 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<? extends EntityCondition>> SNEAKING = REGISTRY.register("sneaking", () -> createEntity(ctx -> ctx.entity().isShiftKeyDown()));
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasAbilityEntityCondition>> HAS_ABILITY = REGISTRY.register("has_ability", () -> HasAbilityEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasCurseEntityCondition>> HAS_CURSE = REGISTRY.register("has_curse", () -> HasCurseEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasSpiritRootEntityCondition>> HAS_SPIRIT_ROOT = REGISTRY.register("has_spirit_root", () -> HasSpiritRootEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasPhysiqueEntityCondition>> HAS_PHYSIQUE = REGISTRY.register("has_physique", () -> HasPhysiqueEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RealmEntityCondition>> REALM = REGISTRY.register("realm", () -> RealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasRealmEntityCondition>> HAS_REALM = REGISTRY.register("has_realm", () -> HasRealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraRangeEntityCondition>> AURA_RANGE = REGISTRY.register("aura_range", () -> AuraRangeEntityCondition.CODEC);

@@ -3,6 +3,5 @@
   "cultivation_multiplier": 1.35,
   "element_ability_modifier": 1.15,
   "rarity": "rare",
-  "granted_abilities": ["mxt_test:qingxiao_firebolt"],
-  "compatibility_tags": ["mxt_test:root/fire"]
+  "granted_abilities": ["mxt_test:qingxiao_firebolt"]
 }

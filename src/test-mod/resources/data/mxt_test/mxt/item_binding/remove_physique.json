@@ -1,0 +1,9 @@
+{
+  "items": "minecraft:bread",
+  "actions": [
+    {
+      "type": "mxt:remove_physique",
+      "physique": "mxt_test:sword_bone"
+    }
+  ]
+}

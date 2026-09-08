@@ -9,7 +9,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
@@ -20,15 +19,13 @@ import java.util.List;
  */
 public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMultiplier,
                          NumberProvider elementAbilityModifier, String rarity,
-                         List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
-                         List<Identifier> compatibilityTags) {
+                         List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities) {
     public static final Codec<Holder<SpiritRoot>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SPIRIT_ROOT);
     public static final Codec<SpiritRoot> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Element.CODEC.fieldOf("element").forGetter(SpiritRoot::element),
             NumberProvider.CODEC.optionalFieldOf("cultivation_multiplier", new Constant(1.0D)).forGetter(SpiritRoot::cultivationMultiplier),
             NumberProvider.CODEC.optionalFieldOf("element_ability_modifier", new Constant(1.0D)).forGetter(SpiritRoot::elementAbilityModifier),
             Codec.STRING.optionalFieldOf("rarity", "common").forGetter(SpiritRoot::rarity),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(SpiritRoot::grantedAbilities),
-            Identifier.CODEC.listOf().optionalFieldOf("compatibility_tags", List.of()).forGetter(SpiritRoot::compatibilityTags)
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(SpiritRoot::grantedAbilities)
     ).apply(i, SpiritRoot::new));
 }
