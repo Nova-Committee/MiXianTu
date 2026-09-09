@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.ICancellableEvent;
@@ -14,23 +15,17 @@ import java.util.Map;
  * Authoritative ability-use events. Only the server calls the ability service.
  */
 public abstract class AbilityUseEvent extends EntityEvent {
-    private final Identifier ability;
-    private final Ability definition;
+    private final Holder<Ability> ability;
     private final FormulaContext context;
 
-    protected AbilityUseEvent(Entity entity, Identifier ability, Ability definition, FormulaContext context) {
+    protected AbilityUseEvent(Entity entity, Holder<Ability> ability, FormulaContext context) {
         super(entity);
         this.ability = ability;
-        this.definition = definition;
         this.context = context;
     }
 
-    public Identifier ability() {
+    public Holder<Ability> ability() {
         return this.ability;
-    }
-
-    public Ability definition() {
-        return this.definition;
     }
 
     public FormulaContext context() {
@@ -38,16 +33,16 @@ public abstract class AbilityUseEvent extends EntityEvent {
     }
 
     public static final class Pre extends AbilityUseEvent implements ICancellableEvent {
-        public Pre(Entity entity, Identifier ability, Ability definition, FormulaContext context) {
-            super(entity, ability, definition, context);
+        public Pre(Entity entity, Holder<Ability> ability, FormulaContext context) {
+            super(entity, ability, context);
         }
     }
 
     public static final class Post extends AbilityUseEvent {
         private final Map<Identifier, Double> paidCosts;
 
-        public Post(Entity entity, Identifier ability, Ability definition, FormulaContext context, Map<Identifier, Double> paidCosts) {
-            super(entity, ability, definition, context);
+        public Post(Entity entity, Holder<Ability> ability, FormulaContext context, Map<Identifier, Double> paidCosts) {
+            super(entity, ability, context);
             this.paidCosts = new LinkedHashMap<>(paidCosts);
         }
 

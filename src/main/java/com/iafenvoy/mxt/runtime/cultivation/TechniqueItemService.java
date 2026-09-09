@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -41,8 +40,7 @@ public final class TechniqueItemService {
         if (!ItemQualityService.canUse(entity, stack)) return true;
         TechniqueBinding value = binding.orElseThrow();
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        Result result = TechniqueService.learn(entity, spirit, HolderHelper.id(value.technique()),
-                value.technique().value(), ignored -> Optional.empty(), FormulaContext.of(entity));
+        Result result = TechniqueService.learn(entity, spirit, value.technique(), FormulaContext.of(entity));
         return true;
     }
 }

@@ -13,7 +13,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Learning transaction with exclusive-tag conflict checks and a single post grant rebuild.
@@ -22,39 +25,35 @@ public final class TechniqueService {
     private TechniqueService() {
     }
 
-    public static Result learn(SpiritIdentityAttachment spirit, Identifier id, CultivationTechnique definition, Lookup lookup) {
-        Holder<CultivationTechnique> technique = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION_TECHNIQUE, id).orElse(null);
-        if (technique == null) return Result.rejected(Failure.DISABLED);
+    public static Result learn(SpiritIdentityAttachment spirit, Holder<CultivationTechnique> technique) {
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.CULTIVATION_TECHNIQUE, technique))
+            return Result.rejected(Failure.DISABLED);
+        CultivationTechnique definition = technique.value();
         if (spirit.learnedTechniques().contains(technique)) return Result.rejected(Failure.ALREADY_LEARNED);
         Set<Identifier> existing = new HashSet<>();
         for (Holder<CultivationTechnique> known : spirit.learnedTechniques())
             existing.addAll(known.value().exclusiveTags());
         if (definition.exclusiveTags().stream().anyMatch(existing::contains)) return Result.rejected(Failure.CONFLICT);
-        if (NeoForge.EVENT_BUS.post(new Pre(spirit, id, definition)).isCanceled())
+        if (NeoForge.EVENT_BUS.post(new Pre(spirit, technique)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
         List<Holder<CultivationTechnique>> values = new LinkedList<>(spirit.learnedTechniques());
         values.add(technique);
         spirit.setLearnedTechniques(values);
-        NeoForge.EVENT_BUS.post(new Post(spirit, id, definition));
+        NeoForge.EVENT_BUS.post(new Post(spirit, technique));
         return Result.learnedResult();
     }
 
     /**
      * Entity-aware learning entry point that evaluates every declared fixed cultivation condition.
      */
-    public static Result learn(LivingEntity entity, SpiritIdentityAttachment spirit, Identifier id, CultivationTechnique definition, Lookup lookup, FormulaContext context) {
-        boolean allowed = definition.learnCondition().test(entity, context);
+    public static Result learn(LivingEntity entity, SpiritIdentityAttachment spirit, Holder<CultivationTechnique> technique, FormulaContext context) {
+        boolean allowed = technique.value().learnCondition().test(entity, context);
         if (!allowed) return Result.rejected(Failure.CONDITIONS);
-        Result result = learn(spirit, id, definition, lookup);
+        Result result = learn(spirit, technique);
         if (result.learned()) {
             CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         }
         return result;
-    }
-
-    @FunctionalInterface
-    public interface Lookup {
-        Optional<CultivationTechnique> get(Identifier id);
     }
 
     public enum Failure {DISABLED, ALREADY_LEARNED, CONFLICT, CONDITIONS, CANCELLED}

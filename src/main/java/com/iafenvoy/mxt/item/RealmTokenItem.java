@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.world.RealmInstanceService;
 import com.iafenvoy.mxt.runtime.world.RealmInstanceService.Result;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -50,7 +49,7 @@ public final class RealmTokenItem extends Item {
         }
         Holder<RealmInstance> realm = token.realm().orElseThrow();
         Result result = RealmInstanceService.enter(serverPlayer,
-                level.getData(MxtAttachments.REALM_INSTANCE), HolderHelper.id(realm), realm.value());
+                level.getData(MxtAttachments.REALM_INSTANCE), realm);
         if (!result.changed()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.realm_token.enter_failed", result.failure().name()));
             return InteractionResult.FAIL;

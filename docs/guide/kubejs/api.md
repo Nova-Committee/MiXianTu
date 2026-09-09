@@ -310,19 +310,19 @@ MxtEvents.resourceConsume(event => {
 | KubeJS 事件 | 阶段类名 | `native` 的主要 accessor / 语义 |
 | --- | --- | --- |
 | `abilityTriggered` | `Pre`、`Post` | `getEntity()`、`getAbility()`、`signalType()`、`context()`；`Pre` 可取消触发的技能。原生事件的 `ability()` 返回 `Holder<Ability>`，需要 ID 时使用 `HolderHelper.id(...)` 或 KubeJS 包装器的 `getAbility()`。 |
-| `curseRemove` | `Pre`、`Post` | `curse()`、`state()`、`reason()`、`gameTime()`、`holder()`；`Pre` 可取消移除。reason 为 `EXPLICIT`、`EXPIRED`、`CLEANSED`、`REPLACED`、`CONTENT_ACTION`、`ADMIN`。 |
-| `cultivationBreak` | `Pre`、`Post` | `target()`、`definition()`、`threshold()`、`context()`、`spirit()`、`resources()`；`Pre` 另有 `originalCosts()`、`costs()`、`setCost(resource, amount)`，可取消；`Post` 有 `paidCosts()`。 |
-| `techniqueLearn` | `Pre`、`Post` | `technique()`、`definition()`、`spirit()`；`Pre` 可取消。 |
-| `alchemyCraft` | `Pre`、`Post` | `recipe()`、`definition()`；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |
+| `curseRemove` | `Pre`、`Post` | `curse()`（`Holder<Curse>`）、`state()`、`reason()`、`gameTime()`、`holder()`；`Pre` 可取消移除。reason 为 `EXPLICIT`、`EXPIRED`、`CLEANSED`、`REPLACED`、`CONTENT_ACTION`、`ADMIN`。 |
+| `cultivationBreak` | `Pre`、`Post` | `target()`（`Holder<RealmStage>`）、`threshold()`、`context()`、`spirit()`、`resources()`；`Pre` 另有 `originalCosts()`、`costs()`、`setCost(resource, amount)`，可取消；`Post` 有 `paidCosts()`。 |
+| `techniqueLearn` | `Pre`、`Post` | `technique()`（`Holder<CultivationTechnique>`）、`spirit()`；`Pre` 可取消。 |
+| `alchemyCraft` | `Pre`、`Post` | `recipe()`（`RecipeHolder<AlchemyRecipe>`）；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
-| `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 共同按阶段读取：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`、`definition()`、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
-| `formation` | `Activate`、`Deactivate`、`Tick` | `level()`、`controller()`、`definition()`、`instance()`；`Activate` 与 `Tick` 可取消。 |
+| `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 共同按阶段读取：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
+| `formation` | `Activate`、`Deactivate`、`Tick` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate` 与 `Tick` 可取消。 |
 | `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Pre` 可取消结束，取消后寿元会被设为不受限。 |
-| `realmInstance` | `EnterPre`、`EnterPost`、`Exit` | `level()`、`definition()`、`member()`；只有 `EnterPre` 可取消。 |
+| `realmInstance` | `EnterPre`、`EnterPost`、`Exit` | `level()`、`definition()`（`Holder<RealmInstance>`）、`member()`；只有 `EnterPre` 可取消。 |
 | `sect` | `JoinPre`、`JoinPost`、`LeavePre`、`LeavePost`、`PromotePre`、`PromotePost` | `sect()`、`data()`；所有 `*Pre` 可取消。 |
 | `soul` | `TransferPre`、`TransferPost`、`ReclaimPre`、`ReclaimPost` | `entity()`、`soul()`；所有 `*Pre` 可取消。 |
-| `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Identifier>`，`action()` 为 `BIND`、`BREAK`、`RECALL`、`RELEASE`；`Pre` 可取消。 |
-| `tribulation` | `StartPre`、`StartPost`、`PhasePre`、`PhasePost`、`Complete` | `tribulation()`、`definition()`、`phase()`、`data()`；`StartPre`、`PhasePre` 可取消。 |
+| `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`BREAK`、`RECALL`、`RELEASE`；`Pre` 可取消。 |
+| `tribulation` | `StartPre`、`StartPost`、`PhasePre`、`PhasePost`、`Complete` | `tribulation()`（`Holder<Tribulation>`）、`phase()`、`data()`；`StartPre`、`PhasePre` 可取消。 |
 
 例如调整突破消耗：
 

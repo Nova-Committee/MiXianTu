@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
@@ -56,31 +56,25 @@ public abstract class ForgingEvent extends Event {
 
     public static final class StrikePre extends ForgingEvent implements ICancellableEvent {
         private final ForgingSession session;
-        private final Identifier method;
-        private final ForgingMethod definition;
+        private final Holder<ForgingMethod> method;
         private final ResourceHolderAttachment resources;
         private final FormulaContext context;
         private List<ResourceCost> costs;
 
-        public StrikePre(ForgingSession session, Identifier method, ForgingMethod definition, ResourceHolderAttachment resources, FormulaContext context) {
+        public StrikePre(ForgingSession session, Holder<ForgingMethod> method, ResourceHolderAttachment resources, FormulaContext context) {
             this.session = session;
             this.method = method;
-            this.definition = definition;
             this.resources = resources;
             this.context = context;
-            this.costs = new LinkedList<>(definition.costs());
+            this.costs = new LinkedList<>(method.value().costs());
         }
 
         public ForgingSession session() {
             return this.session;
         }
 
-        public Identifier method() {
+        public Holder<ForgingMethod> method() {
             return this.method;
-        }
-
-        public ForgingMethod definition() {
-            return this.definition;
         }
 
         public ResourceHolderAttachment resources() {
@@ -113,15 +107,15 @@ public abstract class ForgingEvent extends Event {
     }
 
     public static final class CompletePre extends ForgingEvent implements ICancellableEvent {
-        private final Identifier blueprint;
+        private final Holder<ForgingBlueprint> blueprint;
         private final ForgingSession session;
 
-        public CompletePre(Identifier blueprint, ForgingSession session) {
+        public CompletePre(Holder<ForgingBlueprint> blueprint, ForgingSession session) {
             this.blueprint = blueprint;
             this.session = session;
         }
 
-        public Identifier blueprint() {
+        public Holder<ForgingBlueprint> blueprint() {
             return this.blueprint;
         }
 
@@ -131,17 +125,17 @@ public abstract class ForgingEvent extends Event {
     }
 
     public static final class CompletePost extends ForgingEvent {
-        private final Identifier blueprint;
+        private final Holder<ForgingBlueprint> blueprint;
         private final ForgingSession session;
         private final ForgingResultComponent result;
 
-        public CompletePost(Identifier blueprint, ForgingSession session, ForgingResultComponent result) {
+        public CompletePost(Holder<ForgingBlueprint> blueprint, ForgingSession session, ForgingResultComponent result) {
             this.blueprint = blueprint;
             this.session = session;
             this.result = result;
         }
 
-        public Identifier blueprint() {
+        public Holder<ForgingBlueprint> blueprint() {
             return this.blueprint;
         }
 

@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.event;
 
+import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.Event;
@@ -67,14 +68,14 @@ public abstract class AuraZoneEvent extends Event {
     }
 
     public static final class Override extends AuraZoneEvent implements ICancellableEvent {
-        private final Identifier zone;
+        private final Holder<AuraZone> zone;
 
-        public Override(ServerLevel l, BlockPos p, AuraResult r, Identifier zone) {
+        public Override(ServerLevel l, BlockPos p, AuraResult r, Holder<AuraZone> zone) {
             super(l, p, r);
             this.zone = zone;
         }
 
-        public Identifier zone() {
+        public Holder<AuraZone> zone() {
             return this.zone;
         }
     }

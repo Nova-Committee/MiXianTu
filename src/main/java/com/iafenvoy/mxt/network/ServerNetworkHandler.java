@@ -51,8 +51,8 @@ public final class ServerNetworkHandler {
             case START ->
                     MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, definition).ifPresent(blueprint ->
                             ForgingWorkstationService.start(player, payload.position(), definition, blueprint));
-            case STRIKE -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_METHOD, definition).ifPresent(method ->
-                    ForgingWorkstationService.strike(player, payload.position(), definition, method));
+            case STRIKE -> MxtDatapackRegistries.holder(MxtResourceKeys.FORGING_METHOD, definition).ifPresent(method ->
+                    ForgingWorkstationService.strike(player, payload.position(), method));
             case FINISH -> ForgingWorkstationService.finish(player, payload.position(), definition);
             case CANCEL -> ForgingWorkstationService.cancel(player, payload.position());
         }

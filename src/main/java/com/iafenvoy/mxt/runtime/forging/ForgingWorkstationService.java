@@ -55,14 +55,14 @@ public final class ForgingWorkstationService {
         return true;
     }
 
-    public static boolean strike(ServerPlayer player, BlockPos position, Identifier methodId, ForgingMethod method) {
+    public static boolean strike(ServerPlayer player, BlockPos position, Holder<ForgingMethod> method) {
         StationSession station = stationForOwner(player, position).orElse(null);
         if (station == null || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
         ForgingSession session = ForgingSession.restore(station.session().plan().orElseThrow(), station.session().session().orElseThrow());
         FormulaContext context = FormulaContext.of(player);
-        boolean conditionsMet = method.condition().test(player, context);
-        StrikeResult result = ForgingService.strike(session, methodId, method,
+        boolean conditionsMet = method.value().condition().test(player, context);
+        StrikeResult result = ForgingService.strike(session, method,
                 player.getData(MxtAttachments.RESOURCE_HOLDER), context, () -> conditionsMet);
         if (!result.struck()) return false;
         station.session().update(session);
@@ -71,11 +71,14 @@ public final class ForgingWorkstationService {
 
     public static boolean finish(ServerPlayer player, BlockPos position, Identifier blueprintId) {
         StationSession station = stationForOwner(player, position).orElse(null);
-        if (station == null || station.session().blueprint().map(HolderHelper::id).filter(blueprintId::equals).isEmpty() || station.session().plan().isEmpty() || station.session().session().isEmpty())
+        if (station == null || station.session().blueprint().map(HolderHelper::id).filter(blueprintId::equals).isEmpty()
+                || station.session().plan().isEmpty() || station.session().session().isEmpty())
             return false;
         ForgingSessionAttachment data = station.session();
         ForgingSession session = ForgingSession.restore(data.plan().orElseThrow(), data.session().orElseThrow());
-        FinishResult result = ForgingService.finish(blueprintId, session, data::qualityFor);
+        Holder<ForgingBlueprint> blueprintHolder = data.blueprint().orElse(null);
+        if (blueprintHolder == null) return false;
+        FinishResult result = ForgingService.finish(blueprintHolder, session, data::qualityFor);
         if (!result.finished()) {
             if (result.failure() == Failure.CANCELLED) return false;
             settleFailure(player, position, data);

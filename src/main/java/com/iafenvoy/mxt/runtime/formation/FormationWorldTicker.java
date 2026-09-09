@@ -41,7 +41,7 @@ public final class FormationWorldTicker {
             if (definition.isEmpty() || !VALIDATOR.matches(level, entry.getKey(), definition.get())) {
                 world.remove(entry.getKey());
                 definition.ifPresent(value -> value.deactivateAction().execute(level, entry.getKey(), FormulaContext.of(level)));
-                NeoForge.EVENT_BUS.post(new Deactivate(level, entry.getKey(), entry.getValue().formation(), FormationInstance.restore(entry.getValue())));
+                NeoForge.EVENT_BUS.post(new Deactivate(level, entry.getKey(), FormationInstance.restore(entry.getValue())));
                 continue;
             }
             FormationInstance instance = FormationInstance.restore(entry.getValue());
@@ -50,11 +50,11 @@ public final class FormationWorldTicker {
                 if (payer == null || !FormationService.maintain(instance, definition.get(), payer.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.of(payer)).maintained()) {
                     world.remove(entry.getKey());
                     definition.get().deactivateAction().execute(level, entry.getKey(), FormulaContext.of(level));
-                    NeoForge.EVENT_BUS.post(new Deactivate(level, entry.getKey(), entry.getValue().formation(), instance));
+                    NeoForge.EVENT_BUS.post(new Deactivate(level, entry.getKey(), instance));
                     continue;
                 }
             }
-            if (!NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), entry.getValue().formation(), instance)).isCanceled()) {
+            if (!NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance)).isCanceled()) {
                 definition.get().tickAction().execute(level, entry.getKey(), FormulaContext.of(level));
                 executeEntityTickAction(level, entry.getKey(), instance, definition.get());
                 world.replace(entry.getKey(), instance);

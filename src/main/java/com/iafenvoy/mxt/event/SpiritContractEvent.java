@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.ContractAttachment;
-import net.minecraft.resources.Identifier;
+import com.iafenvoy.mxt.data.creature.ContractType;
+import net.minecraft.core.Holder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.NotNull;
@@ -14,11 +15,11 @@ import java.util.UUID;
  */
 public abstract class SpiritContractEvent extends Event {
     private final ContractAttachment contract;
-    private final Optional<Identifier> contractType;
+    private final Optional<Holder<ContractType>> contractType;
     private final UUID requester;
     private final Action action;
 
-    protected SpiritContractEvent(@NotNull ContractAttachment contract, @NotNull Optional<Identifier> contractType, @NotNull UUID requester, @NotNull Action action) {
+    protected SpiritContractEvent(@NotNull ContractAttachment contract, @NotNull Optional<Holder<ContractType>> contractType, @NotNull UUID requester, @NotNull Action action) {
         this.contract = contract;
         this.contractType = contractType;
         this.requester = requester;
@@ -29,7 +30,7 @@ public abstract class SpiritContractEvent extends Event {
         return this.contract;
     }
 
-    public Optional<Identifier> contractType() {
+    public Optional<Holder<ContractType>> contractType() {
         return this.contractType;
     }
 
@@ -42,13 +43,13 @@ public abstract class SpiritContractEvent extends Event {
     }
 
     public static final class Pre extends SpiritContractEvent implements ICancellableEvent {
-        public Pre(ContractAttachment contract, Optional<Identifier> contractType, UUID requester, Action action) {
+        public Pre(ContractAttachment contract, Optional<Holder<ContractType>> contractType, UUID requester, Action action) {
             super(contract, contractType, requester, action);
         }
     }
 
     public static final class Post extends SpiritContractEvent {
-        public Post(ContractAttachment contract, Optional<Identifier> contractType, UUID requester, Action action) {
+        public Post(ContractAttachment contract, Optional<Holder<ContractType>> contractType, UUID requester, Action action) {
             super(contract, contractType, requester, action);
         }
     }

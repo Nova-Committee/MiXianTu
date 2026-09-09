@@ -127,7 +127,7 @@ public final class MxtTestCommands {
         CultivationIdentityService.grantSpiritRoot(player, ROOT, root.value());
         CultivationIdentityService.grantSpiritRoot(player, WATER_ROOT, waterRoot.value());
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
-        TechniqueService.learn(player, spirit, TECHNIQUE, technique.value(), ignored -> Optional.empty(), context);
+        TechniqueService.learn(player, spirit, technique.holder(), context);
         TitleService.grant(player, spirit, TITLE, title.value(), ignored -> null, context);
         spirit.addLearnedTechnique(technique.holder());
         CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));

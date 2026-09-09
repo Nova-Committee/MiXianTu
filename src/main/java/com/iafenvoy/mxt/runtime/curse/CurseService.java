@@ -8,10 +8,8 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
@@ -47,14 +45,13 @@ public final class CurseService {
                                     long gameTime, FormulaContext context, String source, IEventBus eventBus,
                                     Optional<Long> durationOverride) {
         Curse definition = curse.value();
-        Identifier id = HolderHelper.id(curse);
-        CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, id, definition, stacks, gameTime, context, source);
+        CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
         if (eventBus.post(event).isCanceled()) return ApplyResult.cancelledResult();
         CurseLedger ledger = read(data);
         CurseInstance result = ledger.apply(curse, event.stacks(), gameTime, context, event.source(), durationOverride);
         write(data, ledger);
         data.markKnown(curse);
-        eventBus.post(new CurseApplyEvent.Post(data, id, definition, gameTime, context, result));
+        eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result));
         return ApplyResult.applied(result);
     }
 
@@ -104,15 +101,14 @@ public final class CurseService {
      * Variant for integrations that own a dedicated event bus.
      */
     public static Optional<CurseInstance> remove(CurseHolderAttachment data, Holder<Curse> curse, Reason reason, long gameTime, @NotNull IEventBus eventBus) {
-        Identifier id = HolderHelper.id(curse);
         State state = data.instances().get(curse);
-        if (state == null || eventBus.post(new Pre(data, id, state, reason, gameTime)).isCanceled()) {
+        if (state == null || eventBus.post(new Pre(data, curse, state, reason, gameTime)).isCanceled()) {
             return Optional.empty();
         }
         CurseLedger ledger = read(data);
         Optional<CurseInstance> result = ledger.remove(curse);
         write(data, ledger);
-        result.ifPresent(removed -> eventBus.post(new Post(data, id, state, reason, gameTime)));
+        result.ifPresent(removed -> eventBus.post(new Post(data, curse, state, reason, gameTime)));
         return result;
     }
 

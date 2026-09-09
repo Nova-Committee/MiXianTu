@@ -100,7 +100,6 @@ public final class CultivationService {
     private static BreakthroughResult commit(CultivationAttachment spirit, ResourceHolderAttachment resources, @NotNull Transition transition,
                                              FormulaContext context, BooleanSupplier conditionsMet, @NotNull IEventBus eventBus) {
         Holder<RealmStage> targetHolder = transition.target();
-        Identifier targetId = HolderHelper.id(targetHolder);
         RealmStage target = targetHolder.value();
         Threshold threshold = threshold(transition, context);
         if (threshold == null)
@@ -117,14 +116,14 @@ public final class CultivationService {
         } catch (IllegalArgumentException exception) {
             return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
         }
-        Pre event = new Pre(spirit, resources, targetId, target, context, minimum, costs.amounts());
+        Pre event = new Pre(spirit, resources, targetHolder, context, minimum, costs.amounts());
         if (eventBus.post(event).isCanceled()) return BreakthroughResult.rejected(Failure.CANCELLED, null);
         Result payment = ResourceTransactions.tryConsume(resources, new Evaluation(event.costs()));
         if (!payment.committed())
             return BreakthroughResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         spirit.setRealmStage(targetHolder);
         spirit.setCultivationProgress(targetResource, 0.0D);
-        eventBus.post(new Post(spirit, resources, targetId, target, context, minimum, payment.amounts()));
+        eventBus.post(new Post(spirit, resources, targetHolder, context, minimum, payment.amounts()));
         return BreakthroughResult.committed(payment.amounts());
     }
 

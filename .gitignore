@@ -34,3 +34,5 @@ run-test-server/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+.codex-ldlib-src

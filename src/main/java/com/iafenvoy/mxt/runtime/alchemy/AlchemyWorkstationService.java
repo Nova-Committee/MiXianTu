@@ -17,6 +17,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
@@ -25,15 +26,17 @@ import java.util.List;
 
 /**
  * Server-side material locking and completion adapter for {@link AlchemyWorkstationState}.
+ * Callers already hold a resolved vanilla {@link RecipeHolder}; it is passed straight through
+ * to the session so craft events can expose the holder instead of a duplicated id/definition pair.
  */
 public final class AlchemyWorkstationService {
     private AlchemyWorkstationService() {
     }
 
-    public static StartResult start(AlchemyWorkstationState state, Identifier recipeId,
-                                    AlchemyRecipe recipe, int furnaceTier, FormulaContext context) {
+    public static StartResult start(AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
+                                    int furnaceTier, FormulaContext context) {
         if (state.active()) return StartResult.rejected(Failure.INPUTS);
-        StartResult result = AlchemySession.start(recipeId, recipe, furnaceTier, itemIds(state.inputs()), context);
+        StartResult result = AlchemySession.start(holder, furnaceTier, itemIds(state.inputs()), context);
         if (result.started()) state.lock(result.session());
         return result;
     }
@@ -41,8 +44,9 @@ public final class AlchemyWorkstationService {
     /**
      * Position-aware variant for concrete alchemy blocks.
      */
-    public static StartResult start(Level level, BlockPos pos, AlchemyWorkstationState state, Identifier recipeId,
-                                    AlchemyRecipe recipe, int furnaceTier, FormulaContext context) {
+    public static StartResult start(Level level, BlockPos pos, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
+                                    int furnaceTier, FormulaContext context) {
+        AlchemyRecipe recipe = holder.value().definition();
         AuraResult aura = AuraService.getPositionAura(level, pos);
         boolean auraMet = recipe.minimumAura().entrySet().stream().allMatch(entry -> {
             double minimum = entry.getValue().evaluate(context);
@@ -50,17 +54,17 @@ public final class AlchemyWorkstationService {
         });
         if (!auraMet || !CollectionHelper.containsAllFast(aura.auraKinds(), recipe.auraKinds()))
             return StartResult.rejected(Failure.ENVIRONMENT);
-        return start(state, recipeId, recipe, furnaceTier, context);
+        return start(state, holder, furnaceTier, context);
     }
 
     /**
      * Restores the saved session, advances it once, and appends produced stacks exactly once.
      */
-    public static TickResult tick(AlchemyWorkstationState state, AlchemyRecipe recipe,
+    public static TickResult tick(AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                   double temperature, FormulaContext context) {
         Snapshot snapshot = state.session().orElse(null);
         if (snapshot == null || snapshot.complete()) return TickResult.idle();
-        AlchemySession session = AlchemySession.restore(snapshot, recipe);
+        AlchemySession session = AlchemySession.restore(snapshot, holder);
         AlchemySession.TickResult result = session.tick(temperature, context);
         state.update(session);
         if (!result.finished()) return TickResult.running(result.remainingTicks(), result.spoiled());
@@ -73,10 +77,11 @@ public final class AlchemyWorkstationService {
     /**
      * Completes an alchemy tick and applies the recipe's block-side behavior at the workstation.
      */
-    public static TickResult tick(Level level, BlockPos pos, AlchemyWorkstationState state, AlchemyRecipe recipe,
+    public static TickResult tick(Level level, BlockPos pos, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                   double temperature, FormulaContext context) {
-        TickResult result = tick(state, recipe, temperature, context);
+        TickResult result = tick(state, holder, temperature, context);
         if (result.state() == State.FINISHED) {
+            AlchemyRecipe recipe = holder.value().definition();
             BlockAction action = result.spoiled() ? recipe.failureBlockAction() : recipe.successBlockAction();
             action.execute(level, pos, context);
         }
@@ -86,16 +91,16 @@ public final class AlchemyWorkstationService {
     /**
      * Owner-aware adapter for workstation block entities that can attribute a successful batch.
      */
-    public static TickResult tick(ServerPlayer owner, AlchemyWorkstationState state, AlchemyRecipe recipe,
+    public static TickResult tick(ServerPlayer owner, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                   double temperature, FormulaContext context) {
-        Identifier recipeId = state.session().map(Snapshot::recipe).orElse(null);
-        TickResult result = tick(state, recipe, temperature, context);
+        AlchemyRecipe recipe = holder.value().definition();
+        TickResult result = tick(state, holder, temperature, context);
         if (result.state() == State.FINISHED) {
             EntityAction action = result.spoiled() ? recipe.failureAction() : recipe.successAction();
             action.execute(owner, context);
         }
-        if (result.state() == State.FINISHED && !result.spoiled() && recipeId != null) {
-            MxtCriteriaTriggers.ALCHEMY.get().trigger(owner, recipeId);
+        if (result.state() == State.FINISHED && !result.spoiled()) {
+            MxtCriteriaTriggers.ALCHEMY.get().trigger(owner, holder.id().identifier());
         }
         return result;
     }

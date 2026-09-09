@@ -34,7 +34,7 @@ public final class FormationWorldService {
         double radius = definition.radius().evaluate(context);
         if (!Double.isFinite(radius) || radius <= 0.0D) return Result.rejected(Failure.ACTIVATION_FAILED, null);
         FormationInstance preview = owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner);
-        if (NeoForge.EVENT_BUS.post(new Activate(level, controller, id, preview)).isCanceled())
+        if (NeoForge.EVENT_BUS.post(new Activate(level, controller, preview)).isCanceled())
             return Result.rejected(Failure.CANCELLED, null);
         ActivateResult activated = FormationService.activate(id, definition, resources, context, owner);
         if (!activated.active()) return Result.rejected(Failure.ACTIVATION_FAILED, activated.failedResource());

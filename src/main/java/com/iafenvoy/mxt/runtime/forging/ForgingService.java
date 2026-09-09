@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.NeoForge;
@@ -37,11 +38,12 @@ public final class ForgingService {
         }
     }
 
-    public static StrikeResult strike(ForgingSession session, Identifier methodId, ForgingMethod method,
+    public static StrikeResult strike(ForgingSession session, Holder<ForgingMethod> method,
                                       ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
         if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failure.CONDITIONS, null);
+        Identifier methodId = HolderHelper.id(method);
         if (!session.canStrike(methodId)) return StrikeResult.rejected(Failure.INVALID_STRIKE, null);
-        StrikePre event = new StrikePre(session, methodId, method, resources, context);
+        StrikePre event = new StrikePre(session, method, resources, context);
         if (NeoForge.EVENT_BUS.post(event).isCanceled()) return StrikeResult.rejected(Failure.CANCELLED, null);
         Evaluation costs;
         try {
@@ -57,19 +59,19 @@ public final class ForgingService {
         return StrikeResult.struck(session.value(), session.steps(), payment.amounts());
     }
 
-    public static FinishResult finish(Identifier blueprintId, ForgingBlueprint blueprint, ForgingSession session) {
-        return finish(blueprintId, session, blueprint::qualityFor);
+    public static FinishResult finish(Holder<ForgingBlueprint> blueprint, ForgingSession session) {
+        return finish(blueprint, session, blueprint.value()::qualityFor);
     }
 
-    public static FinishResult finish(Identifier blueprintId, ForgingSession session, IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
-        if (NeoForge.EVENT_BUS.post(new CompletePre(blueprintId, session)).isCanceled())
+    public static FinishResult finish(Holder<ForgingBlueprint> blueprint, ForgingSession session, IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
+        if (NeoForge.EVENT_BUS.post(new CompletePre(blueprint, session)).isCanceled())
             return FinishResult.rejected(Failure.CANCELLED);
         if (!session.canComplete()) return FinishResult.rejected(Failure.NOT_COMPLETE);
         int extra = session.extraSteps();
         Holder<ItemQuality> quality = qualityForExtraSteps.apply(extra);
         if (quality == null) return FinishResult.rejected(Failure.INVALID_BLUEPRINT);
-        ForgingResultComponent result = new ForgingResultComponent(blueprintId, session.value(), session.steps(), session.optimalSteps(), extra, quality);
-        NeoForge.EVENT_BUS.post(new CompletePost(blueprintId, session, result));
+        ForgingResultComponent result = new ForgingResultComponent(HolderHelper.id(blueprint), session.value(), session.steps(), session.optimalSteps(), extra, quality);
+        NeoForge.EVENT_BUS.post(new CompletePost(blueprint, session, result));
         return FinishResult.finished(result);
     }
 

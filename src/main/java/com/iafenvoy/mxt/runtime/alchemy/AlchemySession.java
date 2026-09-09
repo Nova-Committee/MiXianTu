@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Post;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Pre;
@@ -8,6 +7,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.ArrayList;
@@ -16,48 +16,47 @@ import java.util.List;
 
 /**
  * Server-side furnace session. UI and block inventory adapt to this state instead of owning recipe logic.
+ * The session keeps the vanilla {@link RecipeHolder} for event reporting while snapshots only persist the id.
  */
 public final class AlchemySession {
-    private final Identifier recipeId;
-    private final AlchemyRecipe recipe;
+    private final RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder;
     private long remainingTicks;
     private boolean spoiled;
     private boolean complete;
 
-    private AlchemySession(Identifier recipeId, AlchemyRecipe recipe, long remainingTicks, boolean spoiled, boolean complete) {
-        this.recipeId = recipeId;
-        this.recipe = recipe;
+    private AlchemySession(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, long remainingTicks, boolean spoiled, boolean complete) {
+        this.holder = holder;
         this.remainingTicks = remainingTicks;
         this.spoiled = spoiled;
         this.complete = complete;
     }
 
-    public static StartResult start(AlchemyRecipe recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
-        return start(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "unknown"), recipe, furnaceTier, inputs, context);
-    }
-
-    public static StartResult start(Identifier recipeId, AlchemyRecipe recipe, int furnaceTier, List<Identifier> inputs, FormulaContext context) {
-        if (NeoForge.EVENT_BUS.post(new Pre(recipeId, recipe, inputs)).isCanceled())
+    public static StartResult start(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, int furnaceTier,
+                                    List<Identifier> inputs, FormulaContext context) {
+        AlchemyRecipe recipe = holder.value().definition();
+        if (NeoForge.EVENT_BUS.post(new Pre(holder, inputs)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         if (furnaceTier < recipe.minimumFurnaceTier()) return StartResult.rejected(Failure.FURNACE_TIER);
         if (!sameMultiset(recipe.inputs(), inputs)) return StartResult.rejected(Failure.INPUTS);
         double duration = recipe.duration().evaluate(context);
         if (!Double.isFinite(duration) || duration <= 0.0D || duration > Long.MAX_VALUE)
             return StartResult.rejected(Failure.INVALID_FORMULA);
-        return StartResult.started(new AlchemySession(recipeId, recipe, Math.max(1L, Math.round(duration)), false, false));
+        return StartResult.started(new AlchemySession(holder, Math.max(1L, Math.round(duration)), false, false));
     }
 
     /**
-     * Restores only the runtime state; the caller must resolve the datapack recipe by its snapshot ID.
+     * Restores only the runtime state; the caller must resolve the recipe holder by its snapshot id.
      */
-    public static AlchemySession restore(Snapshot snapshot, AlchemyRecipe recipe) {
+    public static AlchemySession restore(Snapshot snapshot, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder) {
         if (snapshot.remainingTicks() < 0L)
             throw new IllegalArgumentException("Alchemy snapshot has negative remaining ticks");
-        return new AlchemySession(snapshot.recipe(), recipe, snapshot.remainingTicks(), snapshot.spoiled(), snapshot.complete());
+        if (!holder.id().identifier().equals(snapshot.recipe()))
+            throw new IllegalArgumentException("Alchemy snapshot recipe does not match the resolved recipe holder");
+        return new AlchemySession(holder, snapshot.remainingTicks(), snapshot.spoiled(), snapshot.complete());
     }
 
     public Snapshot snapshot() {
-        return new Snapshot(this.recipeId, this.remainingTicks, this.spoiled, this.complete);
+        return new Snapshot(this.holder.id().identifier(), this.remainingTicks, this.spoiled, this.complete);
     }
 
     /**
@@ -65,8 +64,9 @@ public final class AlchemySession {
      */
     public TickResult tick(double temperature, FormulaContext context) {
         if (this.complete) return TickResult.idle();
-        double target = this.recipe.targetTemperature().evaluate(context);
-        double tolerance = this.recipe.temperatureTolerance().evaluate(context);
+        AlchemyRecipe recipe = this.holder.value().definition();
+        double target = recipe.targetTemperature().evaluate(context);
+        double tolerance = recipe.temperatureTolerance().evaluate(context);
         if (!Double.isFinite(target) || !Double.isFinite(tolerance) || tolerance < 0.0D) {
             this.spoiled = true;
         } else if (Math.abs(temperature - target) > tolerance) {
@@ -75,8 +75,8 @@ public final class AlchemySession {
         this.remainingTicks--;
         if (this.remainingTicks > 0L) return TickResult.running(this.remainingTicks, this.spoiled);
         this.complete = true;
-        List<Identifier> outputs = this.spoiled ? this.recipe.failureOutputs() : this.recipe.successOutputs();
-        NeoForge.EVENT_BUS.post(new Post(this.recipeId, this.recipe, this.spoiled, outputs));
+        List<Identifier> outputs = this.spoiled ? recipe.failureOutputs() : recipe.successOutputs();
+        NeoForge.EVENT_BUS.post(new Post(this.holder, this.spoiled, outputs));
         return TickResult.finished(outputs, this.spoiled);
     }
 

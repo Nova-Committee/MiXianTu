@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
+import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
@@ -9,27 +10,21 @@ import java.util.LinkedList;
 import java.util.List;
 
 public abstract class AlchemyCraftEvent extends Event {
-    private final Identifier recipe;
-    private final AlchemyRecipe definition;
+    private final RecipeHolder<AlchemyRecipe> recipe;
 
-    protected AlchemyCraftEvent(Identifier recipe, AlchemyRecipe definition) {
+    protected AlchemyCraftEvent(RecipeHolder<AlchemyRecipe> recipe) {
         this.recipe = recipe;
-        this.definition = definition;
     }
 
-    public Identifier recipe() {
+    public RecipeHolder<AlchemyRecipe> recipe() {
         return this.recipe;
-    }
-
-    public AlchemyRecipe definition() {
-        return this.definition;
     }
 
     public static final class Pre extends AlchemyCraftEvent implements ICancellableEvent {
         private final List<Identifier> inputs;
 
-        public Pre(Identifier recipe, AlchemyRecipe definition, List<Identifier> inputs) {
-            super(recipe, definition);
+        public Pre(RecipeHolder<AlchemyRecipe> recipe, List<Identifier> inputs) {
+            super(recipe);
             this.inputs = new LinkedList<>(inputs);
         }
 
@@ -42,8 +37,8 @@ public abstract class AlchemyCraftEvent extends Event {
         private final boolean spoiled;
         private final List<Identifier> outputs;
 
-        public Post(Identifier recipe, AlchemyRecipe definition, boolean spoiled, List<Identifier> outputs) {
-            super(recipe, definition);
+        public Post(RecipeHolder<AlchemyRecipe> recipe, boolean spoiled, List<Identifier> outputs) {
+            super(recipe);
             this.spoiled = spoiled;
             this.outputs = new LinkedList<>(outputs);
         }

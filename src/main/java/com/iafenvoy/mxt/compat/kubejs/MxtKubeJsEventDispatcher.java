@@ -107,7 +107,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getAbility() {
-            return this.event.ability().toString();
+            return HolderHelper.id(this.event.ability()).toString();
         }
 
         public boolean isPre() {
@@ -131,7 +131,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getCurse() {
-            return this.event.curse().toString();
+            return HolderHelper.id(this.event.curse()).toString();
         }
 
         public boolean isPre() {
@@ -217,7 +217,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getOverrideZone() {
-            return this.event instanceof AuraZoneEvent.Override override ? override.zone().toString() : "";
+            return this.event instanceof AuraZoneEvent.Override override ? HolderHelper.id(override.zone()).toString() : "";
         }
     }
 

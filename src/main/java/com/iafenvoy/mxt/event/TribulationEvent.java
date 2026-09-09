@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.NotNull;
@@ -12,14 +12,12 @@ import org.jetbrains.annotations.NotNull;
  */
 public abstract class TribulationEvent extends Event {
     private final TribulationAttachment data;
-    private final Identifier tribulation;
-    private final Tribulation definition;
+    private final Holder<Tribulation> tribulation;
     private final int phase;
 
-    protected TribulationEvent(@NotNull TribulationAttachment data, @NotNull Identifier tribulation, @NotNull Tribulation definition, int phase) {
+    protected TribulationEvent(@NotNull TribulationAttachment data, @NotNull Holder<Tribulation> tribulation, int phase) {
         this.data = data;
         this.tribulation = tribulation;
-        this.definition = definition;
         this.phase = phase;
     }
 
@@ -27,12 +25,8 @@ public abstract class TribulationEvent extends Event {
         return this.data;
     }
 
-    public Identifier tribulation() {
+    public Holder<Tribulation> tribulation() {
         return this.tribulation;
-    }
-
-    public Tribulation definition() {
-        return this.definition;
     }
 
     public int phase() {
@@ -40,32 +34,32 @@ public abstract class TribulationEvent extends Event {
     }
 
     public static final class StartPre extends TribulationEvent implements ICancellableEvent {
-        public StartPre(TribulationAttachment d, Identifier i, Tribulation f) {
-            super(d, i, f, 0);
+        public StartPre(TribulationAttachment data, Holder<Tribulation> tribulation) {
+            super(data, tribulation, 0);
         }
     }
 
     public static final class StartPost extends TribulationEvent {
-        public StartPost(TribulationAttachment d, Identifier i, Tribulation f) {
-            super(d, i, f, 0);
+        public StartPost(TribulationAttachment data, Holder<Tribulation> tribulation) {
+            super(data, tribulation, 0);
         }
     }
 
     public static final class PhasePre extends TribulationEvent implements ICancellableEvent {
-        public PhasePre(TribulationAttachment d, Identifier i, Tribulation f, int p) {
-            super(d, i, f, p);
+        public PhasePre(TribulationAttachment data, Holder<Tribulation> tribulation, int phase) {
+            super(data, tribulation, phase);
         }
     }
 
     public static final class PhasePost extends TribulationEvent {
-        public PhasePost(TribulationAttachment d, Identifier i, Tribulation f, int p) {
-            super(d, i, f, p);
+        public PhasePost(TribulationAttachment data, Holder<Tribulation> tribulation, int phase) {
+            super(data, tribulation, phase);
         }
     }
 
     public static final class Complete extends TribulationEvent {
-        public Complete(TribulationAttachment d, Identifier i, Tribulation f, int p) {
-            super(d, i, f, p);
+        public Complete(TribulationAttachment data, Holder<Tribulation> tribulation, int phase) {
+            super(data, tribulation, phase);
         }
     }
 }

@@ -53,7 +53,7 @@ public final class AuraService {
         resolved = customZone(level, pos).orElse(resolved);
         Resolved formation = formationZone(level, pos).orElse(null);
         if (formation != null && level instanceof ServerLevel server
-                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(lower, level, pos), formation.id())).isCanceled()) {
+                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(lower, level, pos), formation.holder().orElseThrow())).isCanceled()) {
             resolved = formation;
         }
         Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());

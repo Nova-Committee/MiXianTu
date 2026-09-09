@@ -4,10 +4,8 @@ import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.Tribulation.Phase;
 import com.iafenvoy.mxt.event.TribulationEvent.*;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -20,32 +18,30 @@ public final class TribulationService {
 
     public static StartResult start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         Tribulation definition = tribulation.value();
-        Identifier id = HolderHelper.id(tribulation);
         if (data.tribulation().isPresent()) return StartResult.rejected(Failure.ALREADY_ACTIVE);
         if (definition.phases().isEmpty()) return StartResult.rejected(Failure.INVALID_FORMULA);
         if (!definition.triggerCondition().test(entity, context)) return StartResult.rejected(Failure.CONDITIONS);
         long duration = duration(definition.phases().getFirst(), definition, context);
         if (duration < 0L) return StartResult.rejected(Failure.INVALID_FORMULA);
-        if (NeoForge.EVENT_BUS.post(new StartPre(data, id, definition)).isCanceled())
+        if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         data.start(tribulation, 0, Math.addExact(gameTime, duration));
         definition.phases().getFirst().startAction().execute(entity, context);
-        NeoForge.EVENT_BUS.post(new StartPost(data, id, definition));
+        NeoForge.EVENT_BUS.post(new StartPost(data, tribulation));
         return StartResult.started(0);
     }
 
     public static TickResult tick(LivingEntity entity, TribulationAttachment data, Tribulation definition, long gameTime, FormulaContext context) {
         if (data.tribulation().isEmpty() || data.paused()) return TickResult.idle();
         if (gameTime < data.phaseEndsAt()) return TickResult.running(data.phase());
-        int next = data.phase() + 1;
         Holder<Tribulation> tribulation = data.tribulation().orElseThrow();
-        Identifier id = HolderHelper.id(tribulation);
+        int next = data.phase() + 1;
         if (next >= definition.phases().size()) {
             int previous = data.phase();
             definition.phases().get(previous).endAction().execute(entity, context);
             data.clear();
             definition.successAction().execute(entity, context);
-            NeoForge.EVENT_BUS.post(new Complete(data, id, definition, previous));
+            NeoForge.EVENT_BUS.post(new Complete(data, tribulation, previous));
             return TickResult.completed();
         }
         long duration = duration(definition.phases().get(next), definition, context);
@@ -54,12 +50,12 @@ public final class TribulationService {
             definition.failAction().execute(entity, context);
             return TickResult.paused(Failure.INVALID_FORMULA);
         }
-        if (NeoForge.EVENT_BUS.post(new PhasePre(data, id, definition, next)).isCanceled())
+        if (NeoForge.EVENT_BUS.post(new PhasePre(data, tribulation, next)).isCanceled())
             return TickResult.running(data.phase());
         data.start(tribulation, next, Math.addExact(gameTime, duration));
         definition.phases().get(next - 1).endAction().execute(entity, context);
         definition.phases().get(next).startAction().execute(entity, context);
-        NeoForge.EVENT_BUS.post(new PhasePost(data, id, definition, next));
+        NeoForge.EVENT_BUS.post(new PhasePost(data, tribulation, next));
         return TickResult.advanced(next);
     }
 

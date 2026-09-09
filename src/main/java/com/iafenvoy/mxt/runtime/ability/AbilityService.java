@@ -140,7 +140,7 @@ public final class AbilityService {
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
-        if (NeoForge.EVENT_BUS.post(new AbilityUseEvent.Pre(actor, HolderHelper.id(ability), definition, context)).isCanceled()) {
+        if (NeoForge.EVENT_BUS.post(new AbilityUseEvent.Pre(actor, ability, context)).isCanceled()) {
             return UseResult.rejected(Failure.CANCELLED, null);
         }
         if (!definition.condition().test(actor, context)) {
@@ -201,7 +201,7 @@ public final class AbilityService {
             executeEffects(definition, actor, context);
         }
         NeoForge.EVENT_BUS.post(new Post(resources, committed.amounts()));
-        NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, HolderHelper.id(preparedUse.ability()), definition, context, committed.amounts()));
+        NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, preparedUse.ability(), context, committed.amounts()));
         if (actor instanceof ServerPlayer player)
             MxtCriteriaTriggers.ABILITY.get().trigger(player, HolderHelper.id(preparedUse.ability()));
         return UseResult.committed(committed.amounts());
@@ -348,7 +348,7 @@ public final class AbilityService {
                 if (!child.elementAffinity().isEmpty() && childContext.value("element_modifier") <= 0.0D)
                     return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
             }
-            if (NeoForge.EVENT_BUS.post(new AbilityUseEvent.Pre(actor, HolderHelper.id(childHolder), child, childContext)).isCanceled())
+            if (NeoForge.EVENT_BUS.post(new AbilityUseEvent.Pre(actor, childHolder, childContext)).isCanceled())
                 return UseResult.rejected(Failure.CANCELLED, null);
             if (!child.condition().test(actor, childContext)) return UseResult.rejected(Failure.CONDITION_FAILED, null);
             if (!validateWord(child, actor, childContext)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
@@ -385,7 +385,7 @@ public final class AbilityService {
                 executeEffects(step.definition(), actor, step.context());
             }
             NeoForge.EVENT_BUS.post(new Post(resources, step.use().costs().amounts()));
-            NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, HolderHelper.id(step.ability()), step.definition(), step.context(), step.use().costs().amounts()));
+            NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, step.ability(), step.context(), step.use().costs().amounts()));
             if (actor instanceof ServerPlayer serverPlayer)
                 MxtCriteriaTriggers.ABILITY.get().trigger(serverPlayer, HolderHelper.id(step.ability()));
         }

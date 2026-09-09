@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
@@ -18,16 +19,14 @@ import java.util.Map;
 public abstract class CultivationBreakEvent extends Event {
     private final CultivationAttachment spirit;
     private final ResourceHolderAttachment resources;
-    private final Identifier target;
-    private final RealmStage definition;
+    private final Holder<RealmStage> target;
     private final FormulaContext context;
     private final double threshold;
 
-    protected CultivationBreakEvent(@NotNull CultivationAttachment spirit, @NotNull ResourceHolderAttachment resources, @NotNull Identifier target, @NotNull RealmStage definition, @NotNull FormulaContext context, double threshold) {
+    protected CultivationBreakEvent(@NotNull CultivationAttachment spirit, @NotNull ResourceHolderAttachment resources, @NotNull Holder<RealmStage> target, @NotNull FormulaContext context, double threshold) {
         this.spirit = spirit;
         this.resources = resources;
         this.target = target;
-        this.definition = definition;
         this.context = context;
         this.threshold = threshold;
     }
@@ -40,12 +39,8 @@ public abstract class CultivationBreakEvent extends Event {
         return this.resources;
     }
 
-    public Identifier target() {
+    public Holder<RealmStage> target() {
         return this.target;
-    }
-
-    public RealmStage definition() {
-        return this.definition;
     }
 
     public FormulaContext context() {
@@ -60,8 +55,8 @@ public abstract class CultivationBreakEvent extends Event {
         private final Map<Identifier, Double> originalCosts;
         private final Map<Identifier, Double> costs;
 
-        public Pre(CultivationAttachment spirit, ResourceHolderAttachment resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> costs) {
-            super(spirit, resources, target, definition, context, threshold);
+        public Pre(CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<RealmStage> target, FormulaContext context, double threshold, Map<Identifier, Double> costs) {
+            super(spirit, resources, target, context, threshold);
             this.originalCosts = new LinkedHashMap<>(costs);
             this.costs = new LinkedHashMap<>(costs);
         }
@@ -84,8 +79,8 @@ public abstract class CultivationBreakEvent extends Event {
     public static final class Post extends CultivationBreakEvent {
         private final Map<Identifier, Double> paidCosts;
 
-        public Post(CultivationAttachment spirit, ResourceHolderAttachment resources, Identifier target, RealmStage definition, FormulaContext context, double threshold, Map<Identifier, Double> paidCosts) {
-            super(spirit, resources, target, definition, context, threshold);
+        public Post(CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<RealmStage> target, FormulaContext context, double threshold, Map<Identifier, Double> paidCosts) {
+            super(spirit, resources, target, context, threshold);
             this.paidCosts = new LinkedHashMap<>(paidCosts);
         }
 

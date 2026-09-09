@@ -2,7 +2,8 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
-import net.minecraft.resources.Identifier;
+import com.iafenvoy.mxt.data.curse.Curse;
+import net.minecraft.core.Holder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.NotNull;
@@ -12,12 +13,12 @@ import org.jetbrains.annotations.NotNull;
  */
 public abstract class CurseRemoveEvent extends Event {
     private final CurseHolderAttachment holder;
-    private final Identifier curse;
+    private final Holder<Curse> curse;
     private final State state;
     private final Reason reason;
     private final long gameTime;
 
-    protected CurseRemoveEvent(@NotNull CurseHolderAttachment holder, @NotNull Identifier curse, @NotNull State state, @NotNull Reason reason, long gameTime) {
+    protected CurseRemoveEvent(@NotNull CurseHolderAttachment holder, @NotNull Holder<Curse> curse, @NotNull State state, @NotNull Reason reason, long gameTime) {
         this.holder = holder;
         this.curse = curse;
         this.state = state;
@@ -29,7 +30,7 @@ public abstract class CurseRemoveEvent extends Event {
         return this.holder;
     }
 
-    public Identifier curse() {
+    public Holder<Curse> curse() {
         return this.curse;
     }
 
@@ -46,13 +47,13 @@ public abstract class CurseRemoveEvent extends Event {
     }
 
     public static final class Pre extends CurseRemoveEvent implements ICancellableEvent {
-        public Pre(CurseHolderAttachment holder, Identifier curse, State state, Reason reason, long gameTime) {
+        public Pre(CurseHolderAttachment holder, Holder<Curse> curse, State state, Reason reason, long gameTime) {
             super(holder, curse, state, reason, gameTime);
         }
     }
 
     public static final class Post extends CurseRemoveEvent {
-        public Post(CurseHolderAttachment holder, Identifier curse, State state, Reason reason, long gameTime) {
+        public Post(CurseHolderAttachment holder, Holder<Curse> curse, State state, Reason reason, long gameTime) {
             super(holder, curse, state, reason, gameTime);
         }
     }
