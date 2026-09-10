@@ -34,8 +34,13 @@ public final class ServerNetworkHandler {
         Player player = context.player();
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         if (payload.cancel()) {
-            MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability ->
-                    AbilityService.cancelCast(ability, abilities, player.level().getGameTime()));
+            MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability -> {
+                // Releasing the input cancels either a pending cast or an active channel. Both
+                // states are independent, so both are cleared before returning.
+                AbilityService.cancelCast(ability, abilities, player.level().getGameTime());
+                if (abilities.channelledAbility().filter(ability::equals).isPresent())
+                    AbilityService.stopChannel(abilities);
+            });
             return;
         }
         MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability -> {

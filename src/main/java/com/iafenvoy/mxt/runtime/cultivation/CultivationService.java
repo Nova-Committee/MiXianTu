@@ -18,7 +18,6 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
-import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -88,8 +87,9 @@ public final class CultivationService {
                     effect.send(level, entity.position().add(0.0D, entity.getBbHeight() * 0.5D, 0.0D));
             });
             target.successAction().execute(entity, context);
-            FormulaContext tribulationContext = context.with("aura_tribulation_modifier", AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
-            target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), tribulationContext));
+            // TribulationService samples the aura influence itself so every phase is scaled by the
+            // current environment, not only the phase that starts at breakthrough.
+            target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
         } else {
             target.failAction().execute(entity, context);

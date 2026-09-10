@@ -1,0 +1,6 @@
+{
+  "aura": { "mxt_test:spirit_power": { "amount": 5.0, "max": 5.0, "regen_per_tick": 0.0 } },
+  "aura_kinds": ["mxt_test:aura_kind/common"],
+  "dimensions": ["minecraft:overworld"],
+  "priority": 100
+}

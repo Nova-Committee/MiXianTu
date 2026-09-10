@@ -197,9 +197,10 @@ public final class AbilityService {
         if (definition.type() instanceof ChannelledAbilityType) {
             abilities.setChannelledAbility(preparedUse.ability());
             abilities.setComponentState(preparedUse.ability(), "channel_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, adjustedUse.channelIntervalTicks()), gameTime));
-        } else {
-            executeEffects(definition, actor, context);
         }
+        // A channel owns the ability until it is released, so it never runs the one-shot entity
+        // action. Its target action still fires on activation and then once per upkeep pulse.
+        executeEffects(definition, actor, context);
         NeoForge.EVENT_BUS.post(new Post(resources, committed.amounts()));
         NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, preparedUse.ability(), context, committed.amounts()));
         if (actor instanceof ServerPlayer player)
@@ -292,9 +293,16 @@ public final class AbilityService {
         }
     }
 
+    /**
+     * Applies the effect payload of one ability activation.
+     *
+     * <p>The one-shot entity action runs for every activation, including a channelled ability:
+     * {@link #tickChannel} calls this once on activation and then once per upkeep pulse, and a
+     * channelled ability has no other way to apply its effect. Only {@link WordAbilityType} is
+     * terminal, because its payload replaces the whole effect pipeline.</p>
+     */
     private static void executeEffects(Ability definition, Entity actor, FormulaContext context) {
         try {
-            if (definition.type() instanceof ChannelledAbilityType) return;
             if (definition.type() instanceof WordAbilityType word) {
                 executeWord(word, actor, context);
                 return;

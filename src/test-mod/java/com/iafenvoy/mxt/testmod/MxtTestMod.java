@@ -62,12 +62,17 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
+import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
 import com.iafenvoy.mxt.runtime.world.BlockAuraContribution;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.InventoryUtil;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -75,8 +80,10 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.Expression;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
+import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
@@ -87,11 +94,24 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.level.dimension.LevelStem;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.bus.api.IEventBus;
@@ -99,8 +119,11 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -277,7 +300,179 @@ public final class MxtTestMod {
                 .map(HolderHelper::id).filter(Identifier.parse("mxt_test:spirit_iron")::equals).isEmpty()) {
             throw new IllegalStateException("Spirit herb quality did not resolve through the shared item-quality system");
         }
+        verifyAuraZonePriority(event);
+        verifyChannelAbility(event);
+        verifyWeaponAttributeMerge(event);
+        verifyInventoryUtilAtomicity();
         LOGGER.info("MiXianTu server audit passed");
+    }
+
+    /**
+     * The station, cheque and player-trade menus prove a transaction with a preview container before
+     * they touch the real one, so a failed {@code InventoryUtil} mutation must leave the target
+     * untouched. A partial write here would corrupt a real inventory that the caller believes was
+     * never modified.
+     */
+    private static void verifyInventoryUtilAtomicity() {
+        ItemStack initial = new ItemStack(Items.DIAMOND, 10);
+
+        Container target = new SimpleContainer(2);
+        target.setItem(0, initial.copy());
+        Container tooMany = new SimpleContainer(1);
+        tooMany.setItem(0, new ItemStack(Items.DIAMOND, 64));
+        if (InventoryUtil.removeItems(target, tooMany))
+            throw new IllegalStateException("InventoryUtil audit expected removeItems to fail when the requirement exceeds the stock");
+        if (target.getItem(0).getCount() != initial.getCount() || !target.getItem(1).isEmpty())
+            throw new IllegalStateException("InventoryUtil audit found removeItems partially applied on failure: "
+                    + target.getItem(0) + " / " + target.getItem(1));
+
+        Container half = new SimpleContainer(1);
+        half.setItem(0, new ItemStack(Items.DIAMOND, 4));
+        if (!InventoryUtil.removeItems(target, half))
+            throw new IllegalStateException("InventoryUtil audit expected removeItems to succeed within the stock");
+        if (target.getItem(0).getCount() != 6)
+            throw new IllegalStateException("InventoryUtil audit found removeItems did not apply fully: " + target.getItem(0));
+
+        Container full = new SimpleContainer(1);
+        full.setItem(0, new ItemStack(Items.STONE, 1));
+        Container overflow = new SimpleContainer(1);
+        overflow.setItem(0, new ItemStack(Items.STONE, 64));
+        if (InventoryUtil.insertItems(full, overflow))
+            throw new IllegalStateException("InventoryUtil audit expected insertItems to fail when the target is full");
+        if (!full.getItem(0).is(Items.STONE) || full.getItem(0).getCount() != 1)
+            throw new IllegalStateException("InventoryUtil audit found insertItems partially applied on failure: " + full.getItem(0));
+
+        Container empty = new SimpleContainer(1);
+        Container fitting = new SimpleContainer(1);
+        fitting.setItem(0, new ItemStack(Items.STONE, 5));
+        if (!InventoryUtil.insertItems(empty, fitting) || empty.getItem(0).getCount() != 5)
+            throw new IllegalStateException("InventoryUtil audit found insertItems did not apply fully: " + empty.getItem(0));
+    }
+
+    /**
+     * A weapon binding must add its own attribute modifiers on top of the item's vanilla ones
+     * instead of replacing the component. The check drives the real entity-tick refresh on a
+     * temporary entity holding a bound diamond sword and asserts that the vanilla +7 attack damage
+     * modifier survives next to the binding's contribution.
+     */
+    private static void verifyWeaponAttributeMerge(ServerStartedEvent event) {
+        ServerLevel overworld = event.getServer().overworld();
+        Pig actor = new Pig(EntityType.PIG, overworld);
+        actor.setPos(BlockPos.ZERO.getX() + 0.5D, BlockPos.ZERO.getY(), BlockPos.ZERO.getZ() + 0.5D);
+        overworld.addFreshEntity(actor);
+        try {
+            List<AttributeModifier> vanillaDamage = damageModifiers(new ItemStack(Items.DIAMOND_SWORD));
+            if (vanillaDamage.isEmpty())
+                throw new IllegalStateException("Weapon binding audit needs a vanilla sword with an attack damage modifier");
+            ItemStack bound = new ItemStack(Items.DIAMOND_SWORD);
+            actor.setItemInHand(InteractionHand.MAIN_HAND, bound);
+            // The real refresh path: ItemBindingService refreshes equipment from the post entity tick.
+            ItemBindingService.onEntityTick(new Post(actor));
+
+            ItemAttributeModifiers merged = actor.getMainHandItem().get(DataComponents.ATTRIBUTE_MODIFIERS);
+            if (merged == null)
+                throw new IllegalStateException("Weapon binding audit expected the attribute component to exist after the refresh");
+            List<AttributeModifier> mergedDamage = damageModifiers(actor.getMainHandItem());
+            for (AttributeModifier modifier : vanillaDamage) {
+                if (mergedDamage.stream().noneMatch(candidate -> candidate.id().equals(modifier.id())
+                        && Double.compare(candidate.amount(), modifier.amount()) == 0)) {
+                    throw new IllegalStateException("Weapon binding audit lost the vanilla attack damage modifier "
+                            + modifier.id() + " (" + modifier.amount() + "); merged component is " + merged.modifiers());
+                }
+            }
+            if (mergedDamage.stream().noneMatch(modifier -> MxtTestMod.MOD_ID.equals(modifier.id().getNamespace())
+                    || "mxt".equals(modifier.id().getNamespace())))
+                throw new IllegalStateException("Weapon binding audit did not add a binding attack damage modifier; merged component is "
+                        + merged.modifiers());
+        } finally {
+            actor.discard();
+        }
+    }
+
+    /**
+     * Returns the attack damage modifiers of a stack. The component may be absent, in which case the
+     * item prototype still supplies the vanilla values.
+     */
+    private static List<AttributeModifier> damageModifiers(ItemStack stack) {
+        ItemAttributeModifiers modifiers = stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        return modifiers.modifiers().stream()
+                .filter(entry -> entry.attribute().is(Attributes.ATTACK_DAMAGE))
+                .map(ItemAttributeModifiers.Entry::modifier)
+                .toList();
+    }
+
+    private static Identifier bindingIdOf(ItemStack stack) {
+        return ItemBindingService.resolve(stack).weapon()
+                .flatMap(binding -> MxtDatapackRegistries.holders(MxtResourceKeys.WEAPON_BINDING)
+                        .filter(holder -> holder.value() == binding).findFirst())
+                .map(HolderHelper::id).orElse(null);
+    }
+
+    /**
+     * Runs the channelled ability assertion on a temporary entity. The lifecycle only needs a
+     * {@link LivingEntity}, so spawning one keeps the check runnable on a dedicated server without
+     * a connected player. The entity is discarded immediately afterwards.
+     */
+    private static void verifyChannelAbility(ServerStartedEvent event) {
+        ServerLevel overworld = event.getServer().overworld();
+        Pig actor = new Pig(EntityType.PIG, overworld);
+        actor.setPos(BlockPos.ZERO.getX() + 0.5D, BlockPos.ZERO.getY(), BlockPos.ZERO.getZ() + 0.5D);
+        overworld.addFreshEntity(actor);
+        String failure;
+        try {
+            failure = ChannelProbe.verify(actor);
+        } finally {
+            ChannelProbe.clear(actor);
+            actor.discard();
+        }
+        if (failure != null) throw new IllegalStateException("Channelled ability audit failed: " + failure);
+    }
+
+    /**
+     * Proves the documented aura tier rule with the test datapack content. The biome tier holds the
+     * highest priority in the whole registry (150) while the highest dimension priority is 100, so a
+     * dimension result proves the dimension tier is compared before any biome priority. Same-tier
+     * ordering is then taken from the production ordering helper, so the check also fails if the
+     * priority-then-ID rule changes.
+     */
+    private static void verifyAuraZonePriority(ServerStartedEvent event) {
+        ServerLevel overworld = event.getServer().overworld();
+        Identifier overworldId = Identifier.parse("minecraft:overworld");
+        List<Reference<AuraZone>> biomeZones = new ArrayList<>();
+        List<Reference<AuraZone>> dimensionZones = new ArrayList<>();
+        for (Reference<AuraZone> holder : MxtDatapackRegistries.holders(event.getServer().registryAccess(), MxtResourceKeys.AURA_ZONE).toList()) {
+            AuraZone zone = holder.value();
+            if (!zone.biomes().isEmpty()) biomeZones.add(holder);
+            for (Either<ResourceKey<LevelStem>, TagKey<LevelStem>> entry : zone.dimensions()) {
+                if (entry.left().map(key -> key.identifier().equals(overworldId)).orElse(false)) dimensionZones.add(holder);
+            }
+        }
+        if (biomeZones.isEmpty() || dimensionZones.isEmpty())
+            throw new IllegalStateException("Aura zone priority audit needs both a biome binding and a dimension binding");
+        Reference<AuraZone> highestBiome = biomeZones.stream()
+                .max(Comparator.comparingInt(holder -> holder.value().priority())).orElseThrow();
+        int highestDimensionPriority = dimensionZones.stream()
+                .mapToInt(holder -> holder.value().priority()).max().orElseThrow();
+        if (highestBiome.value().priority() <= highestDimensionPriority)
+            throw new IllegalStateException("Aura zone priority audit needs a biome binding above the highest dimension priority, but the highest biome priority is "
+                    + highestBiome.value().priority() + " and the highest dimension priority is " + highestDimensionPriority);
+        // The biome tier holds the highest priority in the whole registry, so a dimension result
+        // proves the dimension tier is compared before any biome priority is considered.
+        AuraResult resolved = AuraService.getPositionAura(overworld, BlockPos.ZERO);
+        if (resolved.sourceKind() != SourceKind.DIMENSION)
+            throw new IllegalStateException("Aura zone priority audit expected the dimension binding to outrank a higher-priority biome binding, but resolved "
+                    + resolved.sourceKind() + " as " + resolved.source() + " while the highest biome priority is "
+                    + highestBiome.value().priority() + " (" + HolderHelper.id(highestBiome) + ")");
+        // Two definitions of one tier must resolve by priority, then by ascending registry ID.
+        for (List<Reference<AuraZone>> candidates : List.of(biomeZones, dimensionZones)) {
+            if (candidates.size() < 2) continue;
+            int highest = candidates.stream().mapToInt(holder -> holder.value().priority()).max().orElseThrow();
+            Identifier expected = candidates.stream().filter(holder -> holder.value().priority() == highest)
+                    .map(HolderHelper::id).min(Comparator.naturalOrder()).orElseThrow();
+            Identifier winner = AuraZonePriorityProbe.select(candidates).orElseThrow();
+            if (!expected.equals(winner))
+                throw new IllegalStateException("Aura zone priority audit expected " + expected + " but the ordering helper returned " + winner);
+        }
     }
 
     private static void verifyItemQualities(ServerStartedEvent event) {

@@ -32,6 +32,8 @@ import net.minecraft.world.level.dimension.LevelStem;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 /**
  * Central aura resolver. Its precedence is biome, dimension, custom area, then active formation.
@@ -112,17 +114,42 @@ public final class AuraService {
         chunk.setInitialized(true);
     }
 
+    /**
+     * Resolves the static environment template. The tier order is fixed and documented: a
+     * dimension binding replaces a biome binding and is never outranked by a biome entry. Within
+     * one tier the highest {@code priority} wins, and the registry ID breaks remaining ties so two
+     * same-priority definitions cannot resolve differently between reloads.
+     */
     private static Resolved staticZone(Level level, BlockPos pos) {
         Identifier dimension = level.dimension().identifier();
         Identifier biome = HolderHelper.id(level.getBiome(pos));
-        Resolved fallback = new Resolved(Optional.empty(), EMPTY_ZONE, SourceKind.CHUNK, Map.of());
         Registry<Biome> biomeRegistry = level.registryAccess().lookupOrThrow(Registries.BIOME);
-        Resolved biomeResult = MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.AURA_ZONE)
-                .filter(holder -> RegistryCodecs.matches(holder.value().biomes(), biomeRegistry, Registries.BIOME, biome))
-                .findFirst().map(holder -> resolved(holder, SourceKind.BIOME)).orElse(fallback);
-        return MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.AURA_ZONE)
-                .filter(holder -> matchesDimension(level, holder.value(), dimension))
-                .findFirst().map(holder -> resolved(holder, SourceKind.DIMENSION)).orElse(biomeResult);
+        Resolved biomeResult = best(level, holder -> RegistryCodecs.matches(holder.value().biomes(), biomeRegistry, Registries.BIOME, biome))
+                .map(holder -> resolved(holder, SourceKind.BIOME)).orElseGet(AuraService::fallbackZone);
+        return best(level, holder -> matchesDimension(level, holder.value(), dimension))
+                .map(holder -> resolved(holder, SourceKind.DIMENSION)).orElse(biomeResult);
+    }
+
+    /**
+     * Selects the highest-priority template among every zone matching the current tier.
+     */
+    private static Optional<Reference<AuraZone>> best(Level level, Predicate<Reference<AuraZone>> matches) {
+        return pickHighestPriority(MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.AURA_ZONE)
+                .filter(matches));
+    }
+
+    /**
+     * The deterministic zone ordering used by {@link #best}. The highest {@code priority} wins and
+     * the registry ID ascending breaks remaining ties, so two zones that declare the same priority
+     * cannot resolve differently between reloads.
+     */
+    static Optional<Reference<AuraZone>> pickHighestPriority(Stream<Reference<AuraZone>> candidates) {
+        return candidates.max(Comparator.<Reference<AuraZone>>comparingInt(holder -> holder.value().priority())
+                .thenComparing(holder -> holder.key().identifier(), Comparator.reverseOrder()));
+    }
+
+    private static Resolved fallbackZone() {
+        return new Resolved(Optional.empty(), EMPTY_ZONE, SourceKind.CHUNK, Map.of());
     }
 
     /**
@@ -392,5 +419,5 @@ public final class AuraService {
     private static final AuraZone EMPTY_ZONE = new AuraZone(Map.of(), List.of(),
             List.of(), List.of(),
             Fluctuation.NONE, Rules.DEFAULT, AlwaysTrueCondition.INSTANCE, Distribution.EQUAL,
-            0, 0, Noise.NONE, Optional.empty(), ClientRender.DEFAULT, ClientHud.NONE);
+            0, 0, Noise.NONE, Optional.empty(), ClientRender.DEFAULT, ClientHud.NONE, Integer.MIN_VALUE);
 }

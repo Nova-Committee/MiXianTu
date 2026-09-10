@@ -1,0 +1,6 @@
+{
+  "aura": { "mxt_test:spirit_power": { "amount": 10.0, "max": 10.0, "regen_per_tick": 0.0 } },
+  "aura_kinds": ["mxt_test:aura_kind/common"],
+  "biomes": ["#minecraft:is_overworld"],
+  "priority": 150
+}

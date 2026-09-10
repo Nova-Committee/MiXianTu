@@ -1,0 +1,5 @@
+{
+  "type": "mxt:channelled",
+  "tick_interval": 1,
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt_test:channel_probe", "amount": 1 }
+}

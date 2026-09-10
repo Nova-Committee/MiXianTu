@@ -67,6 +67,11 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
         this.markDirty();
     }
 
+    /**
+     * Retained for save compatibility. The runtime no longer pauses a tribulation: every phase
+     * duration is validated before it starts, so a paused attachment can only be read from an
+     * older save.
+     */
     public void setPaused(boolean value) {
         this.paused = value;
         this.markDirty();

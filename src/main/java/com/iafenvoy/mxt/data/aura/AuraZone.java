@@ -37,7 +37,7 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
                        EntityCondition cultivateCondition, Distribution distribution,
                        double elementFitBonus, double elementConflictPenalty, Noise noise,
                        Optional<ParticleEffect> particle, ClientRender clientRender,
-                       ClientHud clientHud) {
+                       ClientHud clientHud, int priority) {
     public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.AURA_ZONE);
     private static final MapCodec<Core> CORE_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(Core::aura),
@@ -47,7 +47,8 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
             Fluctuation.CODEC.optionalFieldOf("fluctuation", Fluctuation.NONE).forGetter(Core::fluctuation),
             Rules.CODEC.optionalFieldOf("rules", Rules.DEFAULT).forGetter(Core::rules),
             EntityCondition.optionalCodec("cultivate_condition").forGetter(Core::cultivateCondition),
-            Distribution.CODEC.optionalFieldOf("distribution", Distribution.EQUAL).forGetter(Core::distribution)
+            Distribution.CODEC.optionalFieldOf("distribution", Distribution.EQUAL).forGetter(Core::distribution),
+            Codec.INT.optionalFieldOf("priority", 0).forGetter(Core::priority)
     ).apply(i, Core::from));
     private static final MapCodec<Visual> VISUAL_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.DOUBLE.optionalFieldOf("element_fit_bonus", 0.0D).forGetter(Visual::elementFitBonus),
@@ -64,7 +65,7 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
 
     private Core core() {
         return new Core(this.aura, this.auraKinds, this.dimensions,
-                this.biomes, this.fluctuation, this.rules, this.cultivateCondition, this.distribution);
+                this.biomes, this.fluctuation, this.rules, this.cultivateCondition, this.distribution, this.priority);
     }
 
     private Visual visual() {
@@ -74,19 +75,19 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
     private static AuraZone from(Core core, Visual visual) {
         return new AuraZone(core.aura, core.auraKinds, core.dimensions,
                 core.biomes, core.fluctuation, core.rules, core.cultivateCondition, core.distribution, visual.elementFitBonus,
-                visual.elementConflictPenalty, visual.noise, visual.particle, visual.clientRender, visual.clientHud);
+                visual.elementConflictPenalty, visual.noise, visual.particle, visual.clientRender, visual.clientHud, core.priority);
     }
 
     private record Core(Map<Holder<Resource>, AuraValue> aura,
                         List<Identifier> auraKinds, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                         List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
-                        EntityCondition cultivateCondition, Distribution distribution) {
+                        EntityCondition cultivateCondition, Distribution distribution, int priority) {
         private static Core from(Map<Holder<Resource>, AuraValue> aura,
                                  List<Identifier> auraKinds, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                                  List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
-                                 EntityCondition cultivateCondition, Distribution distribution) {
+                                 EntityCondition cultivateCondition, Distribution distribution, int priority) {
             return new Core(aura, auraKinds, dimensions, biomes, fluctuation, rules,
-                    cultivateCondition, distribution);
+                    cultivateCondition, distribution, priority);
         }
     }
 

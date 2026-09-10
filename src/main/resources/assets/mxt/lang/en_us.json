@@ -93,6 +93,7 @@
   "command.mxt.trade.busy": "One of the players is already trading.",
   "command.mxt.trade.cancel": "%s cancelled the trade.",
   "command.mxt.trade.no_space": "Not enough inventory space to complete the trade.",
+  "command.mxt.trade.partner_left": "The other player left, so the trade was cancelled.",
   "command.mxt.trade.request": "%s sent you a trade request. Click here to begin trading.",
   "command.mxt.trade.request_sent": "Trade request sent.",
   "command.mxt.trade.self": "You cannot trade with yourself.",

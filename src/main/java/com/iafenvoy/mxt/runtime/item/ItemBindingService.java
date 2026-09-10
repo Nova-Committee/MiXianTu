@@ -242,19 +242,48 @@ public final class ItemBindingService {
     private static void refreshWeapon(LivingEntity entity, ItemStack stack) {
         ResolvedBindings bindings = resolve(stack);
         bindings.weapon().ifPresent(weapon -> {
-            if (!ItemQualityService.canUse(entity, stack, bindings)) {
-                stack.remove(DataComponents.ATTRIBUTE_MODIFIERS);
-                return;
-            }
-            ItemAttributeModifiers modifiers = weaponModifiers(stack.getItem(), weapon, entity);
+            ItemAttributeModifiers baseline = baselineModifiers(stack);
+            ItemAttributeModifiers modifiers = ItemQualityService.canUse(entity, stack, bindings)
+                    ? weaponModifiers(stack, baseline, weapon, entity)
+                    : baseline;
             if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {
                 stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
             }
         });
     }
 
-    private static ItemAttributeModifiers weaponModifiers(Item item, WeaponBinding weapon, LivingEntity entity) {
+    /**
+     * The stack attributes that do not come from a weapon binding: the item's own modifiers plus
+     * any attribute another system applied. Binding modifiers are re-derived on every refresh, so
+     * they are stripped here and never accumulated.
+     */
+    private static ItemAttributeModifiers baselineModifiers(ItemStack stack) {
+        ItemAttributeModifiers current = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
+        if (current == null) return stack.getPrototype().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
         Builder builder = ItemAttributeModifiers.builder();
+        current.modifiers().forEach(entry -> {
+            if (!isBindingModifier(entry.modifier().id())) builder.add(entry.attribute(), entry.modifier(), entry.slot());
+        });
+        return builder.build();
+    }
+
+    /**
+     * A binding modifier lives in the mod namespace, which no vanilla or third-party attribute
+     * modifier uses.
+     */
+    private static boolean isBindingModifier(Identifier id) {
+        return id != null && MiXianTu.MOD_ID.equals(id.getNamespace());
+    }
+
+    /**
+     * Item's own modifiers with the binding's current values layered on top. An unavailable item
+     * therefore keeps its vanilla attributes instead of losing them.
+     */
+    private static ItemAttributeModifiers weaponModifiers(ItemStack stack, ItemAttributeModifiers baseline,
+                                                          WeaponBinding weapon, LivingEntity entity) {
+        Builder builder = ItemAttributeModifiers.builder();
+        baseline.modifiers().forEach(entry -> builder.add(entry.attribute(), entry.modifier(), entry.slot()));
+        Item item = stack.getItem();
         FormulaContext context = FormulaContext.of(entity);
         add(builder, Attributes.ATTACK_DAMAGE, modifierId(item, "attack_damage"),
                 weapon.attackDamage().evaluate(context), Operation.ADD_VALUE);

@@ -17,6 +17,7 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -31,7 +32,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @EventBusSubscriber
 public final class AuraZoneEventBridge {
-    private static final Map<UUID, AuraResult> LAST = new ConcurrentHashMap<>();
+    /**
+     * Last resolved aura per entity, keyed by level and UUID. The level is part of the key so a
+     * dimension change never compares a player against another level's snapshot.
+     */
+    private static final Map<Key, AuraResult> LAST = new ConcurrentHashMap<>();
 
     private AuraZoneEventBridge() {
     }
@@ -39,13 +44,23 @@ public final class AuraZoneEventBridge {
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
-        if (!(entity.level() instanceof ServerLevel)) return;
-        AuraResult current = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        AuraResult previous = LAST.put(entity.getUUID(), current);
+        if (!(entity.level() instanceof ServerLevel level)) return;
+        AuraResult current = AuraService.getPositionAura(level, entity.blockPosition());
+        AuraResult previous = LAST.put(new Key(level.dimension().identifier(), entity.getUUID()), current);
         if (previous == null || !previous.source().equals(current.source()) || previous.sourceKind() != current.sourceKind()) {
             if (previous != null) NeoForge.EVENT_BUS.post(new Leave(entity, previous));
             NeoForge.EVENT_BUS.post(new Enter(entity, current));
         }
+    }
+
+    /**
+     * Forgets the tracked aura when an entity leaves a level, so the map cannot grow with
+     * entities that are unloaded, despawned or dead.
+     */
+    @SubscribeEvent
+    public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        LAST.remove(new Key(level.dimension().identifier(), event.getEntity().getUUID()));
     }
 
     @SubscribeEvent(priority = EventPriority.LOW)
@@ -69,5 +84,8 @@ public final class AuraZoneEventBridge {
             if (emitParticle) zones.getOptional(aura.source()).flatMap(AuraZone::particle)
                     .ifPresent(effect -> effect.sendTo(level, player, player.position()));
         });
+    }
+
+    private record Key(Identifier level, UUID entity) {
     }
 }

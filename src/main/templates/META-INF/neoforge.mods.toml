@@ -21,7 +21,7 @@ displayName="${mod_name}" #mandatory
 authors="IAFEnvoy"
 
 description='''
-Example mod description.
+MiXianTu is a data-driven cultivation framework. It provides native datapack registries, entity and world attachments, action/condition dispatch, number formulas, and a server-authoritative runtime for cultivation, aura, formations, abilities and economy. Concrete content is supplied by datapacks, KubeJS or other mods.
 '''
 
 [[mixins]]

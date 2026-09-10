@@ -93,6 +93,7 @@
   "command.mxt.trade.busy": "其中一名玩家正在交易中。",
   "command.mxt.trade.cancel": "%s 取消了交易！",
   "command.mxt.trade.no_space": "物品栏空间不足，无法完成交易。",
+  "command.mxt.trade.partner_left": "对方已离开，交易已取消。",
   "command.mxt.trade.request": "%s 向你发送了交易请求！点击此处开始交易。",
   "command.mxt.trade.request_sent": "已发送交易请求。",
   "command.mxt.trade.self": "不能与自己交易。",

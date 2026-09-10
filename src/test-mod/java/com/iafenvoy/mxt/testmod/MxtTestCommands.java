@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.attachment.SectAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.Title;
+import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
@@ -23,10 +24,16 @@ import com.iafenvoy.mxt.runtime.cultivation.TitleService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.sect.SectService;
 import com.iafenvoy.mxt.runtime.sect.SectService.Result;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
+import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -37,8 +44,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 import static net.minecraft.commands.Commands.literal;
 
@@ -63,8 +72,7 @@ public final class MxtTestCommands {
     private static final Identifier FORMATION = id("spirit_gathering");
     private static final Identifier REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
-    private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");
-    private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
+    private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");    private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
             id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence")
     );
 
@@ -78,7 +86,97 @@ public final class MxtTestCommands {
                 .then(literal("kit").executes(context -> giveKit(context.getSource())))
                 .then(literal("cultivate").executes(context -> startCultivation(context.getSource())))
                 .then(literal("task").executes(context -> completeSectTask(context.getSource())))
+                .then(literal("verify").executes(context -> verify(context.getSource())))
                 .then(literal("guide").executes(context -> showGuide(context.getSource()))));
+    }
+
+    /**
+     * Re-checks the two behaviours that have no other observable entry point: the aura zone
+     * priority selection and the channelled ability upkeep pulse.
+     */
+    private static int verify(CommandSourceStack source) {
+        ServerPlayer player = player(source);
+        if (player == null) return 0;
+        int checked = 0;
+        String auraFailure = verifyAuraPriority(player);
+        if (auraFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.aura_failed", auraFailure));
+        } else {
+            source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.aura_ok"), false);
+            checked++;
+        }
+        String channelFailure = verifyChannel(player);
+        if (channelFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.channel_failed", channelFailure));
+        } else {
+            source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.channel_ok"), false);
+            checked++;
+        }
+        return checked;
+    }
+
+    /**
+     * Asserts the documented rule: the highest priority wins inside a tier, the registry ID
+     * breaks ties, and a dimension binding is never outranked by a biome binding.
+     */
+    private static String verifyAuraPriority(ServerPlayer player) {
+        Identifier level = player.level().dimension().identifier();
+        List<Reference<AuraZone>> biomeZones = new ArrayList<>();
+        List<Reference<AuraZone>> dimensionZones = new ArrayList<>();
+        for (Reference<AuraZone> holder : MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.AURA_ZONE).toList()) {
+            if (declaresDimension(holder.value(), level)) dimensionZones.add(holder);
+            if (!holder.value().biomes().isEmpty()) biomeZones.add(holder);
+        }
+        String tieBreak = verifyPriorityOrdering(biomeZones, dimensionZones);
+        if (tieBreak != null) return tieBreak;
+        AuraResult resolved = AuraService.getPositionAura(player.level(), player.blockPosition());
+        if (!dimensionZones.isEmpty()) {
+            Identifier expected = AuraZonePriorityProbe.select(dimensionZones).orElseThrow();
+            if (resolved.sourceKind() != SourceKind.DIMENSION)
+                return "expected a dimension binding but resolved " + resolved.sourceKind();
+            return expected.equals(resolved.source()) ? null
+                    : "dimension winner mismatch: expected " + expected + " but resolved " + resolved.source();
+        }
+        if (biomeZones.isEmpty()) return "no aura zone declares this level, so the rule cannot be checked";
+        Identifier expected = AuraZonePriorityProbe.select(biomeZones).orElseThrow();
+        if (resolved.sourceKind() != SourceKind.BIOME)
+            return "expected a biome binding but resolved " + resolved.sourceKind();
+        return expected.equals(resolved.source()) ? null
+                : "biome winner mismatch: expected " + expected + " but resolved " + resolved.source();
+    }
+
+    /**
+     * The production ordering helper must return the maximum priority and, for equal priorities,
+     * the ascending registry ID. This is asserted through the same helper the runtime uses.
+     */
+    private static String verifyPriorityOrdering(List<Reference<AuraZone>> biomeZones,
+                                                 List<Reference<AuraZone>> dimensionZones) {
+        for (List<Reference<AuraZone>> candidates : List.of(biomeZones, dimensionZones)) {
+            if (candidates.isEmpty()) continue;
+            int highest = candidates.stream().mapToInt(holder -> holder.value().priority()).max().orElseThrow();
+            Identifier expected = candidates.stream()
+                    .filter(holder -> holder.value().priority() == highest)
+                    .map(HolderHelper::id)
+                    .min(Comparator.naturalOrder())
+                    .orElseThrow();
+            Identifier winner = AuraZonePriorityProbe.select(candidates).orElse(null);
+            if (!expected.equals(winner))
+                return "priority ordering mismatch: expected " + expected + " but resolved " + winner;
+        }
+        return null;
+    }
+
+    private static boolean declaresDimension(AuraZone zone, Identifier level) {
+        return zone.dimensions().stream().anyMatch(value -> value.left()
+                .map(key -> key.identifier().equals(level)).orElse(false));
+    }
+
+    /**
+     * Asserts that a channelled child of a composite ability starts a channel and applies its
+     * effect on every due upkeep pulse.
+     */
+    private static String verifyChannel(ServerPlayer player) {
+        return ChannelProbe.verify(player);
     }
 
     private static int giveKit(CommandSourceStack source) {

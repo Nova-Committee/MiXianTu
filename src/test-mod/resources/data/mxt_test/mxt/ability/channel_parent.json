@@ -1,0 +1,5 @@
+{
+  "type": "mxt:composite",
+  "abilities": ["mxt_test:channel_pulse"],
+  "all_required": true
+}
