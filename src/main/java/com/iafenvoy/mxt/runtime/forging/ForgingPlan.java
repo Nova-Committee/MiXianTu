@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -63,8 +64,26 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         return value >= this.meterMin && value <= this.meterMax;
     }
 
+    /**
+     * The method's delta, or {@code null} when this plan does not allow it.
+     *
+     * <p>An unlisted method is an answer, not an accident. The client offers whatever the placed tools
+     * currently resolve to, and the session is struck through several layers that can each see a slightly
+     * older plan, so "is this method allowed" is a question a caller is entitled to ask. That is what this
+     * method is for; {@link #delta} is for callers that have already asked and are entitled to treat the
+     * missing entry as the contract violation it now is.</p>
+     */
+    public @Nullable Integer deltaIfAllowed(@NotNull Identifier method) {
+        return this.deltas.get(method);
+    }
+
+    /**
+     * The method's delta, throwing when the plan does not allow the method.
+     *
+     * @see #deltaIfAllowed the non-throwing question
+     */
     public int delta(@NotNull Identifier method) {
-        Integer value = this.deltas.get(method);
+        Integer value = this.deltaIfAllowed(method);
         if (value == null) {
             throw new IllegalArgumentException("Method is not allowed: " + method);
         }
@@ -98,14 +117,19 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         throw new IllegalArgumentException("Forging plan cannot reach its target while satisfying the suffix rule");
     }
 
-    private static List<Identifier> append(List<Identifier> history, Identifier method) {
-        ArrayList<Identifier> result = new ArrayList<>(Math.min(6, history.size() + 1));
-        result.addAll(history.subList(Math.max(0, history.size() - 5), history.size()));
-        result.add(method);
-        return result;
-    }
-
-    private static boolean suffixMatches(List<Identifier> history, List<Identifier> pattern, int requiredSteps) {
+    /**
+     * Whether the last {@code requiredSteps} entries of {@code history} equal the last {@code requiredSteps}
+     * entries of the six-long {@code pattern}.
+     *
+     * <p>Only those are compared. The positions in front of them - which the screen draws as barriers when
+     * {@code requiredSteps} is less than six - take no part in the rule, so a pattern's earlier steps are
+     * never asked for and a longer history is only ever judged by its tail.</p>
+     *
+     * <p>One definition, because it has to be one: the optimal-step search below uses this to decide when a
+     * session <em>would be</em> finished, and {@link ForgingSession} uses it to decide that it <em>is</em>.
+     * Two copies could let the search return a path the session then refuses to accept.</p>
+     */
+    public static boolean suffixMatches(List<Identifier> history, List<Identifier> pattern, int requiredSteps) {
         if (requiredSteps == 0) return true;
         if (history.size() < requiredSteps) return false;
         for (int index = 0; index < requiredSteps; index++) {
@@ -113,6 +137,13 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
                 return false;
         }
         return true;
+    }
+
+    private static List<Identifier> append(List<Identifier> history, Identifier method) {
+        ArrayList<Identifier> result = new ArrayList<>(Math.min(6, history.size() + 1));
+        result.addAll(history.subList(Math.max(0, history.size() - 5), history.size()));
+        result.add(method);
+        return result;
     }
 
     private record SearchState(int value, List<Identifier> history) {

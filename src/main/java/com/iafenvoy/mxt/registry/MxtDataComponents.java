@@ -9,6 +9,8 @@ import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.curse.CurseContainerComponent;
 import com.iafenvoy.mxt.data.economy.ChequeComponent;
+import com.iafenvoy.mxt.data.forging.BlueprintBinding;
+import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.mojang.serialization.Codec;
@@ -24,6 +26,8 @@ public final class MxtDataComponents {
     public static final DataComponents REGISTRY = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MiXianTu.MOD_ID);
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ForgingResultComponent>> FORGING_RESULT = register("forging_result", ForgingResultComponent.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<ToolBinding>>> TOOL_BINDING = register("tool_binding", ToolBinding.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<BlueprintBinding>>> BLUEPRINT_BINDING = register("blueprint_binding", BlueprintBinding.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<ItemQuality>>> ITEM_QUALITY = register("item_quality", ItemQuality.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemAuraComponent>> ITEM_AURA = register("item_aura", ItemAuraComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<SpiritStorageComponent>> SPIRIT_STORAGE = register("spirit_storage", SpiritStorageComponent.CODEC);

@@ -153,10 +153,9 @@ public final class InformationPanelScreen extends Screen {
         if (this.minecraft.player != null) {
             int x1 = this.playerRenderLeft;
             int x2 = this.playerRenderRight;
-            int y1 = contentTop;
-            int y2 = y1 + this.playerPreviewHeight;
-            graphics.blit(RenderPipelines.GUI_TEXTURED, PLAYER_PREVIEW, x1, y1, 0.0F, 0.0F,
-                    x2 - x1, y2 - y1, PLAYER_RENDER_WIDTH, EQUIPMENT_SLOT_SIZE * EQUIPMENT_SLOT_COUNT);
+            int y2 = contentTop + this.playerPreviewHeight;
+            graphics.blit(RenderPipelines.GUI_TEXTURED, PLAYER_PREVIEW, x1, contentTop, 0.0F, 0.0F,
+                    x2 - x1, y2 - contentTop, PLAYER_RENDER_WIDTH, EQUIPMENT_SLOT_SIZE * EQUIPMENT_SLOT_COUNT);
             for (int index = 0; index < EQUIPMENT_SLOT_COUNT; index++) {
                 int slotTop = contentTop + index * EQUIPMENT_SLOT_SIZE;
                 graphics.blit(RenderPipelines.GUI_TEXTURED, SLOT, this.equipmentLeft, slotTop, 0.0F, 0.0F,

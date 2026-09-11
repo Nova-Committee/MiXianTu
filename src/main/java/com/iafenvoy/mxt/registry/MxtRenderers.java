@@ -47,6 +47,7 @@ public final class MxtRenderers {
         event.register(MxtMenus.TRADE_STATION_CUSTOMER.get(), StationScreen::new);
         event.register(MxtMenus.PLAYER_TRADE.get(), PlayerTradeScreen::new);
         event.register(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SpiritCraftingScreen::new);
+        event.register(MxtMenus.FORGING_TABLE.get(), ForgingScreen::new);
     }
 
     /**

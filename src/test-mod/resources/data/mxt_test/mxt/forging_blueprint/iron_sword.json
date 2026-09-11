@@ -1,6 +1,11 @@
 {
-  "input": "minecraft:iron_sword",
-  "allowed_methods": ["mxt_test:heavy_strike", "mxt_test:light_strike"],
+  "input": [
+    { "id": "minecraft:iron_sword", "count": 1 }
+  ],
+  "allowed_methods": [
+    "mxt_test:heavy_strike", "mxt_test:light_strike", "mxt_test:draw_out", "mxt_test:flatten",
+    "mxt_test:quench", "mxt_test:temper", "mxt_test:fold", "mxt_test:punch", "mxt_test:grind", "mxt_test:polish"
+  ],
   "meter_min": -10,
   "meter_max": 10,
   "target_min": 2,
@@ -10,8 +15,7 @@
       "mxt_test:heavy_strike", "mxt_test:light_strike", "mxt_test:heavy_strike",
       "mxt_test:light_strike", "mxt_test:light_strike", "mxt_test:heavy_strike"
     ],
-    "required_suffix_steps": 3,
-    "show_finish_pattern": true
+    "required_suffix_steps": 3
   },
   "max_steps": 32,
   "quality_by_extra_steps": [

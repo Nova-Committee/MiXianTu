@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.util.InventoryUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
@@ -281,8 +280,7 @@ public final class PlayerTradeService {
         }
 
         private boolean isOnline(ServerPlayer player) {
-            MinecraftServer server = player.level().getServer();
-            return server != null && server.getPlayerList().getPlayer(player.getUUID()) != null;
+            return player.level().getServer().getPlayerList().getPlayer(player.getUUID()) != null;
         }
 
         private Side partner(Side side) {

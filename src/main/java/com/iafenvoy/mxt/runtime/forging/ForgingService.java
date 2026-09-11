@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -26,11 +27,11 @@ public final class ForgingService {
     private ForgingService() {
     }
 
-    public static StartResult start(ForgingBlueprint blueprint) {
+    public static StartResult start(ForgingBlueprint blueprint, RegistryAccess registries) {
         if (NeoForge.EVENT_BUS.post(new Start(blueprint)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         try {
-            StartResult result = StartResult.started(new ForgingSession(blueprint.plan()));
+            StartResult result = StartResult.started(new ForgingSession(blueprint.plan(registries)));
             NeoForge.EVENT_BUS.post(new Started(result.session()));
             return result;
         } catch (IllegalArgumentException exception) {
@@ -82,7 +83,49 @@ public final class ForgingService {
         return !NeoForge.EVENT_BUS.post(new Cancel(session)).isCanceled();
     }
 
-    public enum Failure {DISABLED, INVALID_BLUEPRINT, CONDITIONS, INVALID_STRIKE, INVALID_FORMULA, INSUFFICIENT_RESOURCE, NOT_COMPLETE, CANCELLED}
+    public enum Failure {
+        DISABLED,
+        INVALID_BLUEPRINT,
+        CONDITIONS,
+        INVALID_STRIKE,
+        INVALID_FORMULA,
+        INSUFFICIENT_RESOURCE,
+        NOT_COMPLETE,
+        CANCELLED,
+        /**
+         * No forging session exists at the table.
+         */
+        NO_SESSION,
+        /**
+         * The table already owns a session.
+         */
+        ALREADY_ACTIVE,
+        /**
+         * The player is too far from the table.
+         */
+        OUT_OF_RANGE,
+        /**
+         * The blueprint is not provided by the placed blueprint items.
+         */
+        BLUEPRINT_NOT_HELD,
+        /**
+         * The struck method is not in the intersection of the blueprint's allowed methods and the
+         * methods the placed tools unlock.
+         */
+        METHOD_NOT_AVAILABLE,
+        /**
+         * The input slots cannot cover the blueprint material list.
+         */
+        INSUFFICIENT_MATERIALS,
+        /**
+         * The output slot is occupied.
+         */
+        OUTPUT_BLOCKED,
+        /**
+         * The strike was refused by the method cooldown.
+         */
+        COOLDOWN
+    }
 
     public record StartResult(ForgingSession session, Failure failure) {
         private static StartResult started(ForgingSession session) {

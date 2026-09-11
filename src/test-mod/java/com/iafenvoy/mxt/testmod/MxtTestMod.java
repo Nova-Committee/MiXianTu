@@ -37,6 +37,14 @@ import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.data.forging.ForgingMaterial;
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
+import com.iafenvoy.mxt.runtime.forging.ForgingSession;
+import com.iafenvoy.mxt.runtime.forging.ForgingTableState;
+import com.iafenvoy.mxt.screen.menu.ForgingMenu;
+import com.iafenvoy.mxt.screen.menu.ForgingMenuProbe;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
@@ -49,6 +57,9 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.formation.FormationStructureValidator;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
+import com.iafenvoy.mxt.runtime.forging.ForgingProbe;
+import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
+import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
@@ -90,6 +101,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
@@ -107,11 +119,11 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.dimension.LevelStem;
-import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.neoforged.bus.api.IEventBus;
@@ -124,6 +136,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -135,6 +148,7 @@ public final class MxtTestMod {
 
     public MxtTestMod(IEventBus modBus) {
         MxtTestItems.REGISTRY.register(modBus);
+        MxtTestForgeItems.REGISTRY.register(modBus);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::verifyItemBindings);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::grantTestAbilities);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
@@ -304,15 +318,409 @@ public final class MxtTestMod {
         verifyChannelAbility(event);
         verifyWeaponAttributeMerge(event);
         verifyInventoryUtilAtomicity();
+        verifyForgingMaterialMatching();
+        verifyForgingStepLimit();
+        verifyForgingAssets();
+        verifyForgingBindingsLoaded();
+        verifyForgingMethodIntersection(event.getServer().registryAccess());
+        verifyForgingPlans(event.getServer().registryAccess());
+        verifyForgingStepRows(event.getServer().registryAccess());
+        verifyForgingSuffixWindow();
+        verifyForgingSessionRoundTrip();
+        verifyForgingUnlocks();
         LOGGER.info("MiXianTu server audit passed");
     }
 
     /**
-     * The station, cheque and player-trade menus prove a transaction with a preview container before
-     * they touch the real one, so a failed {@code InventoryUtil} mutation must leave the target
-     * untouched. A partial write here would corrupt a real inventory that the caller believes was
-     * never modified.
+     * Starting a session consumes a blueprint's materials from the surface slots as an
+     * order-independent multiset, and a requirement the surface cannot cover must consume nothing.
      */
+    private static void verifyForgingMaterialMatching() {
+        List<ForgingMaterial> requirement = List.of(
+                new ForgingMaterial(Identifier.parse("minecraft:iron_ingot"), 3),
+                new ForgingMaterial(Identifier.parse("minecraft:coal"), 1));
+
+        Container covered = forgingInputs();
+        // Deliberately loaded out of declaration order and split across slots.
+        covered.setItem(ForgingSurface.INPUT_START, new ItemStack(Items.COAL, 2));
+        covered.setItem(ForgingSurface.INPUT_START + 1, new ItemStack(Items.IRON_INGOT, 1));
+        covered.setItem(ForgingSurface.INPUT_START + 4, new ItemStack(Items.IRON_INGOT, 4));
+        if (!ForgingProbe.materialsCovered(covered, requirement))
+            throw new IllegalStateException("Forging audit expected an out-of-order, split material list to match");
+        if (!ForgingProbe.consumeMaterials(covered, requirement))
+            throw new IllegalStateException("Forging audit expected the material list to be consumable");
+        if (covered.getItem(ForgingSurface.INPUT_START).getCount() != 1
+                || !covered.getItem(ForgingSurface.INPUT_START + 1).isEmpty()
+                || covered.getItem(ForgingSurface.INPUT_START + 4).getCount() != 2) {
+            throw new IllegalStateException("Forging audit found materials consumed from the wrong slots: "
+                    + covered.getItem(ForgingSurface.INPUT_START) + " / "
+                    + covered.getItem(ForgingSurface.INPUT_START + 1) + " / "
+                    + covered.getItem(ForgingSurface.INPUT_START + 4));
+        }
+
+        Container short1 = forgingInputs();
+        short1.setItem(ForgingSurface.INPUT_START, new ItemStack(Items.IRON_INGOT, 2));
+        short1.setItem(ForgingSurface.INPUT_START + 1, new ItemStack(Items.COAL, 1));
+        if (ForgingProbe.materialsCovered(short1, requirement))
+            throw new IllegalStateException("Forging audit expected an undersupplied material list to be rejected");
+        if (ForgingProbe.consumeMaterials(short1, requirement))
+            throw new IllegalStateException("Forging audit expected consumption of an undersupplied list to fail");
+        if (short1.getItem(ForgingSurface.INPUT_START).getCount() != 2
+                || short1.getItem(ForgingSurface.INPUT_START + 1).getCount() != 1) {
+            throw new IllegalStateException("Forging audit found materials partially consumed on failure: "
+                    + short1.getItem(ForgingSurface.INPUT_START) + " / " + short1.getItem(ForgingSurface.INPUT_START + 1));
+        }
+
+        Container wrongItem = forgingInputs();
+        wrongItem.setItem(ForgingSurface.INPUT_START, new ItemStack(Items.GOLD_INGOT, 5));
+        wrongItem.setItem(ForgingSurface.INPUT_START + 1, new ItemStack(Items.COAL, 1));
+        if (ForgingProbe.materialsCovered(wrongItem, requirement))
+            throw new IllegalStateException("Forging audit expected a wrong-item material list to be rejected");
+
+        // The blueprint tooltip prints one line per entry from availableCount, and the button is gated by
+        // materialsCovered - two helpers answering the same question from different directions. If they
+        // ever disagreed, the tooltip would tick every line while the button stayed dark, so they are
+        // compared here on a container that covers the list exactly and on one that falls short.
+        Container exact = forgingInputs();
+        exact.setItem(ForgingSurface.INPUT_START, new ItemStack(Items.IRON_INGOT, 3));
+        exact.setItem(ForgingSurface.INPUT_START + 1, new ItemStack(Items.COAL, 1));
+        if (!ForgingWorkstationService.materialsCovered(exact, requirement))
+            throw new IllegalStateException("Forging audit expected an exact material list to be covered");
+        for (ForgingMaterial entry : requirement) {
+            int have = ForgingWorkstationService.availableCount(exact, entry);
+            if (have < entry.count())
+                throw new IllegalStateException("Forging audit found " + have + " of " + entry.id()
+                        + ", which would print a cross on a container the button accepts");
+        }
+        if (ForgingWorkstationService.materialsCovered(short1, requirement))
+            throw new IllegalStateException("Forging audit expected the undersupplied container to stay uncovered");
+        ForgingMaterial iron = requirement.getFirst();
+        int shortHave = ForgingWorkstationService.availableCount(short1, iron);
+        if (shortHave != 2)
+            throw new IllegalStateException("Forging audit expected the undersupplied container to hold 2 of "
+                    + iron.id() + ", got " + shortHave);
+    }
+
+    /**
+     * An omitted {@code max_steps} means "never fail for running long", and the plan must still hold
+     * a positive bound because {@code ForgingPlan} rejects a non-positive step limit.
+     */
+    private static void verifyForgingStepLimit() {
+        if (ForgingProbe.planMaxSteps(0) != Integer.MAX_VALUE)
+            throw new IllegalStateException("Forging audit expected an omitted max_steps to become an unbounded plan limit");
+        if (ForgingProbe.planMaxSteps(32) != 32)
+            throw new IllegalStateException("Forging audit expected an explicit max_steps to survive normalisation");
+    }
+    /**
+     * Every binding the test items name must actually resolve.
+     *
+     * <p>The items declare their binding as a key rather than a resolved holder - items are built
+     * before the datapack registries load, so that is the only way - and a key that names nothing is
+     * silent: the component simply reads as absent, the table's slot refuses the item, and it looks
+     * like the slot filter is broken rather than like a typo in a file name. Resolving each one here
+     * turns that into a startup failure.
+     */
+    private static void verifyForgingBindingsLoaded() {
+        List<String> tools = List.of("crude_hammer", "smith_hammer", "master_hammer");
+        for (String path : tools) {
+            Identifier id = Identifier.parse("mxt_test:" + path);
+            if (MxtDatapackRegistries.holder(MxtResourceKeys.TOOL_BINDING, id).isEmpty())
+                throw new IllegalStateException("Test item " + path + " names a tool_binding that does not exist: " + id);
+        }
+        List<String> manuals = List.of("sword_manual", "pickaxe_manual");
+        for (String path : manuals) {
+            Identifier id = Identifier.parse("mxt_test:" + path);
+            if (MxtDatapackRegistries.holder(MxtResourceKeys.BLUEPRINT_BINDING, id).isEmpty())
+                throw new IllegalStateException("Test item " + path + " names a blueprint_binding that does not exist: " + id);
+        }
+    }
+    /**
+     * The method list is the blueprint's {@code allowed_methods} intersected with the tools', and
+     * declaring nothing - or declaring an empty list - restricts nothing.
+     *
+     * <p>Every way of writing the field is exercised here, because two of them fail quietly. An
+     * {@code allowed_methods} that names a tag nobody loads decodes to an empty set; an item whose
+     * {@code delayedHolderComponent} never resolved carries no binding at all and simply cannot be
+     * placed. Both look like "the slot filter is broken" from in game, so they are pinned here.</p>
+     *
+     * <p>The counts are the test datapacks' own: master unlocks ten, smith five, crude two; iron_sword
+     * lists all ten, and pickaxe declares the three-member tag {@code #mxt_test:pickaxe_methods}.</p>
+     */
+    private static void verifyForgingMethodIntersection(RegistryAccess registries) {
+        Identifier ironSword = Identifier.parse("mxt_test:iron_sword");
+        Identifier pickaxe = Identifier.parse("mxt_test:pickaxe");
+        Container master = forgingTools(MxtTestForgeItems.MASTER_HAMMER.get());
+        Container smith = forgingTools(MxtTestForgeItems.SMITH_HAMMER.get());
+
+        // Nothing selected: a null blueprint restricts nothing, which is the state the grid starts in.
+        expectMethods(registries, master, null, 10, "no blueprint");
+        // An explicit list that covers everything the tool has.
+        expectMethods(registries, master, ironSword, 10, "iron_sword's explicit list");
+        expectMethods(registries, smith, ironSword, 5, "smith hammer against iron_sword");
+
+        // A tag, which is the case that fails silently when the tag path is wrong. Exact equality, not
+        // just a count, so a tag resolving to the wrong three is caught too.
+        List<Identifier> tagged = ForgingWorkstationService.availableMethodIds(master, registries, pickaxe);
+        List<Identifier> expectedTag = List.of(Identifier.parse("mxt_test:heavy_strike"),
+                Identifier.parse("mxt_test:light_strike"), Identifier.parse("mxt_test:fold"));
+        if (!tagged.equals(expectedTag))
+            throw new IllegalStateException("Expected pickaxe's tag to resolve to " + expectedTag + ", got " + tagged);
+
+        // The intersection bites from both sides: smith performs five and the tag names three, and they
+        // only agree on the two strikes.
+        expectMethods(registries, smith, pickaxe, 2, "smith hammer against pickaxe's tag");
+    }
+
+    private static void expectMethods(RegistryAccess registries, Container tools, Identifier blueprint,
+                                      int expected, String what) {
+        int actual = ForgingWorkstationService.availableMethodIds(tools, registries, blueprint).size();
+        if (actual != expected)
+            throw new IllegalStateException("Expected " + expected + " methods from " + what + ", got " + actual);
+    }
+
+    private static Container forgingTools(Item tool) {
+        Container container = new SimpleContainer(ForgingSurface.TOTAL_SLOTS);
+        container.setItem(ForgingSurface.TOOL_START, new ItemStack(tool));
+        return container;
+    }
+
+    /**
+     * Every test blueprint must be able to build a plan, and that plan must be able to reach its target.
+     *
+     * <p>A plan is built when a session starts, not when the datapack loads, so a blueprint whose target
+     * band cannot be reached - or whose {@code finish_pattern} names a method its {@code allowed_methods}
+     * excludes - only fails once a player has put their materials in and pressed the button. Building each
+     * one here moves that to startup, where it is a crash instead of a lost afternoon.</p>
+     *
+     * <p>That membership check is the one the decode-time validator cannot do: a tag's members are not
+     * known while the entry is being decoded, so it lives in the plan constructor, and this is what
+     * exercises it.</p>
+     */
+    private static void verifyForgingPlans(RegistryAccess registries) {
+        for (Reference<ForgingBlueprint> holder : MxtDatapackRegistries.holders(registries, MxtResourceKeys.FORGING_BLUEPRINT).toList()) {
+            Identifier id = HolderHelper.id(holder);
+            try {
+                ForgingPlan plan = holder.value().plan(registries);
+                if (plan.deltas().isEmpty())
+                    throw new IllegalStateException("Test blueprint " + id + " resolves to no methods at all");
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalStateException("Test blueprint " + id + " cannot be forged: " + exception.getMessage(), exception);
+            }
+        }
+    }
+
+    /**
+     * The 要求 row must show the <em>last</em> {@code required} steps of the finish pattern.
+     *
+     * <p>The server compares the session's last steps against {@code pattern[6 - required .. 5]}. A row
+     * built from the pattern's first {@code required} entries fills exactly the same six cells, so it looks
+     * right while naming a sequence the server never asks for - and the only symptom is a player who
+     * follows the row and is refused. That is why this is pinned rather than eyeballed.</p>
+     */
+    private static void verifyForgingStepRows(RegistryAccess registries) {
+        ForgingBlueprint blueprint = MxtDatapackRegistries
+                .get(registries, MxtResourceKeys.FORGING_BLUEPRINT, Identifier.parse("mxt_test:iron_sword"))
+                .orElseThrow(() -> new IllegalStateException("The step-row audit needs mxt_test:iron_sword"));
+        List<Identifier> pattern = blueprint.finishPattern().steps().stream().map(HolderHelper::id).toList();
+        int required = blueprint.finishPattern().requiredSuffixSteps();
+        int first = ForgingMenu.SUFFIX_STEPS - required;
+
+        // Two halves that are equal would pass whichever end the row came from, so the test data has to
+        // be able to tell the difference at all.
+        if (pattern.subList(0, first).equals(pattern.subList(first, ForgingMenu.SUFFIX_STEPS)))
+            throw new IllegalStateException("iron_sword's finish pattern is symmetric, so it cannot catch a"
+                    + " required row taken from the wrong end; make its last " + required + " steps differ from its first " + required);
+
+        int[] row = ForgingMenuProbe.targetRow(pattern, required);
+        for (int position = 0; position < ForgingMenu.SUFFIX_STEPS; position++) {
+            int expected = position < first ? ForgingMenu.NONE : registryId(registries, pattern.get(position));
+            if (row[position] != expected)
+                throw new IllegalStateException("Target row position " + position + " is " + row[position]
+                        + " but the finish pattern puts " + expected + " there");
+        }
+
+        // The current row is right-aligned: three strikes occupy the last three cells and nothing else.
+        List<Identifier> three = pattern.subList(0, 3);
+        int[] current = ForgingMenuProbe.historyRow(three);
+        for (int position = 0; position < ForgingMenu.SUFFIX_STEPS; position++) {
+            int expected = position < 3 ? ForgingMenu.NONE : registryId(registries, three.get(position - 3));
+            if (current[position] != expected)
+                throw new IllegalStateException("Current row position " + position + " is " + current[position]
+                        + " but a three-strike history puts " + expected + " there");
+        }
+    }
+
+    private static int registryId(RegistryAccess registries, Identifier method) {
+        Registry<ForgingMethod> registry = registries.lookupOrThrow(MxtResourceKeys.FORGING_METHOD);
+        return registry.get(method).map(holder -> registry.getId(holder.value())).orElse(ForgingMenu.NONE);
+    }
+
+    /**
+     * Only the <em>last</em> {@code required_suffix_steps} history entries are checked.
+     *
+     * <p>The pattern is always six long and the requirement may be shorter, so the leading entries are the
+     * ones the 要求 row draws as barriers. They must take no part in the rule - and that is only observable
+     * with a pattern whose two halves differ, which is why this builds one instead of reading the test
+     * datapack.</p>
+     *
+     * <p>The plan is hand-built for the same reason: methods only have to be ids and deltas to the rule,
+     * and a plan of my own lets the value land exactly on the target with a history I chose.</p>
+     */
+    private static void verifyForgingSuffixWindow() {
+        Identifier a = Identifier.parse("mxt_test:probe_a");
+        Identifier b = Identifier.parse("mxt_test:probe_b");
+        Identifier c = Identifier.parse("mxt_test:probe_c");
+        Identifier lead = Identifier.parse("mxt_test:probe_lead");
+
+        // Required three: the rule reads [a, b, c] out of this. The first three are deliberately not that.
+        List<Identifier> pattern = List.of(b, c, a, a, b, c);
+        Map<Identifier, Integer> deltas = new LinkedHashMap<>();
+        for (Identifier method : List.of(a, b, c, lead)) deltas.put(method, 1);
+        // Every method moves the value by one, so n strikes put it at n and the target is "n == 4".
+        ForgingPlan plan = new ForgingPlan(-10, 10, 4, 4, pattern, 3, deltas, 10);
+
+        // The last three are [a, b, c]. The leading step is not part of the pattern at all, and the cell it
+        // occupies in the row is one of the three barriers.
+        ForgingSession matched = new ForgingSession(plan);
+        for (Identifier method : List.of(lead, a, b, c)) matched.strike(method);
+        if (!matched.canComplete())
+            throw new IllegalStateException("Forging audit expected [lead, a, b, c] to satisfy a last-three rule of [a, b, c]");
+
+        // The last three are the pattern's *first* three. Same value, so if the rule read the wrong end - or
+        // counted the barriers as positions that have to match something - this is the case that slips
+        // through.
+        ForgingSession reversed = new ForgingSession(plan);
+        for (Identifier method : List.of(lead, b, c, a)) reversed.strike(method);
+        if (reversed.canComplete())
+            throw new IllegalStateException("Forging audit found the pattern's first three entries being checked as the suffix");
+    }
+
+    /**
+     * A session must answer the same way before and after a save/reload round trip, and a method the plan
+     * does not list must be a refusal rather than an error.
+     *
+     * <p>Both are about the split between the two classes. The session persists only its progress, so the
+     * shortest run and the whole rule set have to come back from the plan beside it - a session that stored
+     * its own {@code optimal_steps} could be restored disagreeing with the plan it was restored against, and
+     * nothing else in the audit would notice. The round trip is therefore compared on the answers, not just
+     * on the numbers: the same strike has to be accepted and the same completion answer given.</p>
+     *
+     * <p>The unlisted method is the other half: the client offers whatever the placed tools resolve to, and
+     * the session is reached through layers that can each see a slightly older plan, so asking about a
+     * method the plan does not list has to be an ordinary <em>no</em>. It used to be raised and caught.</p>
+     */
+    private static void verifyForgingSessionRoundTrip() {
+        Identifier allowed = Identifier.parse("mxt_test:probe_a");
+        Identifier stranger = Identifier.parse("mxt_test:probe_stranger");
+
+        Map<Identifier, Integer> deltas = new LinkedHashMap<>();
+        deltas.put(allowed, 1);
+        // Every strike moves the value by one, so the target is entered on the third strike and a fourth
+        // strike still sits inside it: three is optimal, four is exactly one step worse.
+        ForgingPlan plan = new ForgingPlan(-10, 10, 3, 4, List.of(), 0, deltas, 10);
+        if (plan.optimalSteps() != 3)
+            throw new IllegalStateException("Forging audit expected a target of three to be solvable in three steps");
+
+        ForgingSession session = new ForgingSession(plan);
+        if (session.canStrike(stranger) || session.strike(stranger) || session.value() != 0 || session.steps() != 0)
+            throw new IllegalStateException("Forging audit expected an unlisted method to be refused without touching the session");
+
+        for (int index = 0; index < 4; index++) {
+            if (!session.strike(allowed))
+                throw new IllegalStateException("Forging audit expected four strikes towards a target of three to be allowed");
+        }
+        if (!session.canComplete() || session.extraSteps() != 1)
+            throw new IllegalStateException("Forging audit expected a four-step run to be one step over an optimal three");
+
+        ForgingSession restored = ForgingSession.restore(plan, session.snapshot());
+        if (restored.value() != session.value() || restored.steps() != session.steps()
+                || restored.optimalSteps() != plan.optimalSteps() || restored.extraSteps() != session.extraSteps())
+            throw new IllegalStateException("Forging audit found a restored session disagreeing about its own progress");
+        if (!restored.snapshot().history().equals(session.snapshot().history()))
+            throw new IllegalStateException("Forging audit found a restored session losing its method history");
+        if (restored.canStrike(allowed) != session.canStrike(allowed) || restored.canComplete() != session.canComplete())
+            throw new IllegalStateException("Forging audit found a restored session judging a strike differently");
+
+        // And the meter still refuses a step that would leave it, which is the other answer `canStrike` gives
+        // without an exception: up by one from the top of a range that ends at one.
+        ForgingPlan narrow = new ForgingPlan(-1, 1, 0, 0, List.of(), 0, deltas, 10);
+        ForgingSession bounded = new ForgingSession(narrow);
+        if (!bounded.strike(allowed) || bounded.value() != 1 || bounded.canStrike(allowed))
+            throw new IllegalStateException("Forging audit expected a strike out of the meter to be refused at the bound");
+    }
+
+    /**
+     * Ending a session must unlock the table - by any route, and in both directions.
+     *
+     * <p>Placement and pickup both end up in {@link ForgingSurface}, and what it asks about a busy table comes
+     * from the session state. That is what makes the two symptoms a stuck table shows - it refuses materials,
+     * and it will not give the blueprint back - testable without a player, as the four calls below.</p>
+     */
+    private static void verifyForgingUnlocks() {
+        ItemStack material = new ItemStack(Items.IRON_INGOT);
+        ItemStack manual = new ItemStack(MxtTestForgeItems.SWORD_MANUAL.get());
+
+        ForgingTableState state = new ForgingTableState();
+        if (state.active())
+            throw new IllegalStateException("A fresh forging state must not be busy");
+        if (!ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, state.active(), null))
+            throw new IllegalStateException("A fresh forging state must accept materials");
+        if (!ForgingSurface.canPlace(ForgingSurface.BLUEPRINT_START, manual, state.active(), null))
+            throw new IllegalStateException("A fresh forging state must accept a blueprint");
+
+        // Busy: the session holds materials that have to stay where they are until it settles.
+        ForgingPlan plan = probePlan();
+        state.lock(Identifier.parse("mxt_test:iron_sword"), plan, new ForgingSession(plan),
+                List.of(new ItemStack(Items.IRON_SWORD)), null);
+        if (!state.active())
+            throw new IllegalStateException("A locked forging state must be busy");
+        if (ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, state.active(), null))
+            throw new IllegalStateException("A busy forging state must refuse materials");
+        if (ForgingSurface.canTake(ForgingSurface.BLUEPRINT_START, state.active()))
+            throw new IllegalStateException("A busy forging state must hold on to its blueprint");
+
+        // Cancelled or failed: nothing is held, so nothing may stay locked.
+        state.clear();
+        if (state.active() || state.blueprint().isPresent() || state.plan().isPresent() || state.session().isPresent())
+            throw new IllegalStateException("Clearing a forging state must leave none of it behind");
+        if (!ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, state.active(), null))
+            throw new IllegalStateException("A cleared forging state must accept materials again");
+        if (!ForgingSurface.canPlace(ForgingSurface.BLUEPRINT_START, manual, state.active(), null))
+            throw new IllegalStateException("A cleared forging state must accept a blueprint again");
+        if (!ForgingSurface.canTake(ForgingSurface.BLUEPRINT_START, state.active()))
+            throw new IllegalStateException("A cleared forging state must give its blueprint back");
+    }
+
+    /**
+     * A hand-built plan for checks that only need a valid one: one method that moves the value by one, no
+     * finish pattern, and a target the shortest possible session already meets.
+     */
+    private static ForgingPlan probePlan() {
+        Map<Identifier, Integer> deltas = new LinkedHashMap<>();
+        deltas.put(Identifier.parse("mxt_test:probe_a"), 1);
+        return new ForgingPlan(-10, 10, 0, 0, List.of(), 0, deltas, 10);
+    }
+
+    private static void verifyForgingAssets() {
+        List<String> required = List.of(
+                "assets/mxt/blockstates/forging_table.json",
+                "assets/mxt/models/block/forging_table.json",
+                "assets/mxt/models/item/forging_table.json",
+                "assets/mxt/textures/block/forging_table/smithing_table_side.png",
+                "assets/mxt/textures/block/forging_table/smithing_table_top.png",
+                "assets/mxt/textures/block/forging_table/smithing_table_bottom.png",
+                "assets/mxt/textures/block/forging_table/hammer.png",
+                "assets/mxt/textures/gui/forging_table.png");
+        for (String path : required) {
+            if (MxtTestMod.class.getClassLoader().getResource(path) == null)
+                throw new IllegalStateException("Forging asset is missing from the jar: " + path);
+        }
+    }
+
+    private static Container forgingInputs() {
+        return new SimpleContainer(ForgingSurface.INPUT_SLOTS);
+    }
+
     private static void verifyInventoryUtilAtomicity() {
         ItemStack initial = new ItemStack(Items.DIAMOND, 10);
 

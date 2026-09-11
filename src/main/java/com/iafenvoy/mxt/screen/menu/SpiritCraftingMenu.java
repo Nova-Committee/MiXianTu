@@ -29,10 +29,30 @@ import org.jspecify.annotations.NonNull;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 /**
  * Vanilla-sized crafting menu restricted to the two spirit recipe types.
+ *
+ * <h2>Reaching the table</h2>
+ * The table is reached through {@link ContainerLevelAccess}, the vanilla handle for "the block this
+ * menu belongs to", created by {@code SpiritCraftingTableBlockEntity#createMenu}. The server gets a
+ * real access and resolves the block on demand; the client gets {@link ContainerLevelAccess#NULL},
+ * whose every lookup is empty. Nothing about the block is therefore held across the menu's life, and a
+ * table that is broken while its menu is open stops being found instead of lingering here.
+ *
+ * <p>Both containers the block owns - the crafting grid and the result slot - are resolved the same
+ * way, server side through the access and client side as stand-ins that the container content packet
+ * fills through the slots.
+ *
+ * <h2>The aura readout</h2>
+ * The aura buffer lives on the block and the recipe is matched by this menu, so the progress rows need
+ * both. They are published to data slots, which is also why the client half must not compute them: it
+ * can see neither the recipe (matching needs a server level) nor the buffer, and writing the slots
+ * there would overwrite what the server had just sent.
  */
 public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private static final int MAX_PROGRESS_ENTRIES = 8;
@@ -43,23 +63,21 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private final Container grid;
     private final Container result;
     private final ContainerLevelAccess access;
-    private final SpiritCraftingTableBlockEntity table;
     private final DataSlot[] progressTypes = new DataSlot[MAX_PROGRESS_ENTRIES];
     private final DataSlot[] progressAmounts = new DataSlot[MAX_PROGRESS_ENTRIES];
     private final DataSlot[] progressRequirements = new DataSlot[MAX_PROGRESS_ENTRIES];
     private RecipeMatch current;
 
     public SpiritCraftingMenu(int id, Inventory inventory) {
-        this(id, inventory, new SimpleContainer(9), ContainerLevelAccess.NULL, null);
+        this(id, inventory, ContainerLevelAccess.NULL);
     }
 
-    public SpiritCraftingMenu(int id, Inventory inventory, Container grid, ContainerLevelAccess access, SpiritCraftingTableBlockEntity table) {
+    public SpiritCraftingMenu(int id, Inventory inventory, ContainerLevelAccess access) {
         super(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), id);
         this.player = inventory.player;
-        this.grid = grid;
         this.access = access;
-        this.table = table;
-        this.result = table == null ? new SimpleContainer(1) : table.result();
+        this.grid = this.fromTable(SpiritCraftingTableBlockEntity::grid, new SimpleContainer(9));
+        this.result = this.fromTable(SpiritCraftingTableBlockEntity::result, new SimpleContainer(1));
         for (int index = 0; index < MAX_PROGRESS_ENTRIES; index++) {
             this.progressTypes[index] = DataSlot.standalone();
             this.progressAmounts[index] = DataSlot.standalone();
@@ -82,12 +100,38 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         });
         for (int row = 0; row < 3; row++)
             for (int column = 0; column < 3; column++)
-                this.addSlot(new Slot(grid, column + row * 3, 30 + column * 18, 17 + row * 18));
+                this.addSlot(new Slot(this.grid, column + row * 3, 30 + column * 18, 17 + row * 18));
         for (int row = 0; row < 3; row++)
             for (int column = 0; column < 9; column++)
                 this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 84 + row * 18));
         for (int column = 0; column < 9; column++) this.addSlot(new Slot(inventory, column, 8 + column * 18, 142));
         this.updateResult();
+    }
+
+    /**
+     * Runs one action against the spirit crafting table, or does nothing when there is none.
+     *
+     * <p>No action means no table: the block was broken or replaced under an open menu, the chunk is
+     * not loaded, or this is the client half, which has no access at all. Every caller here treats that
+     * as "nothing to do" rather than as "nothing to show", which is what keeps a client from writing
+     * over the data slots the server publishes.
+     */
+    private void withTable(Consumer<SpiritCraftingTableBlockEntity> action) {
+        this.access.execute((level, pos) -> {
+            if (level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table) action.accept(table);
+        });
+    }
+
+    /**
+     * Runs one read against the spirit crafting table, or returns {@code fallback} when there is none.
+     */
+    private <T> T fromTable(Function<SpiritCraftingTableBlockEntity, T> reader, T fallback) {
+        return this.access
+                .evaluate((level, pos) -> level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table
+                        ? Optional.ofNullable(reader.apply(table))
+                        : Optional.<T>empty())
+                .flatMap(Function.identity())
+                .orElse(fallback);
     }
 
     public Holder<Resource> progressResource(int index) {
@@ -117,31 +161,46 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         super.broadcastChanges();
     }
 
+    /**
+     * Re-matches the grid, hands the matched costs to the block's intake window, and republishes the
+     * rows.
+     *
+     * <p>This runs on both halves - {@code slotsChanged} and {@code broadcastChanges} both call it - and
+     * does almost nothing on the client, which is the point. {@link #findRecipe} needs a server level, so
+     * the client matches nothing; {@link #withTable} finds no block, so it configures nothing; and
+     * {@link #syncProgress} therefore writes nothing. The client's three progress arrays keep whatever
+     * the server published, and the readout on the right of the screen is that.
+     */
     private void updateResult() {
         this.current = this.findRecipe();
-        if (this.table != null) this.table.configureAuraCosts(this.current == null ? Map.of() : this.current.costs());
+        Map<Holder<Resource>, Integer> costs = this.current == null ? Map.of() : this.current.costs();
+        this.withTable(table -> table.configureAuraCosts(costs));
         this.syncProgress();
     }
 
     private void syncProgress() {
-        if (this.table == null) return;
-        Registry<Resource> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
-        int index = 0;
-        if (this.current != null) {
-            for (Entry<Holder<Resource>, Integer> entry : this.current.costs().entrySet()) {
-                if (index >= MAX_PROGRESS_ENTRIES) break;
-                this.progressTypes[index].set(registry.getId(entry.getKey().value()));
-                this.progressAmounts[index].set(Math.clamp(this.table.aura(entry.getKey()), 0, Short.MAX_VALUE));
-                this.progressRequirements[index].set(Math.clamp(entry.getValue(), 0, Short.MAX_VALUE));
+        // The whole row is read in one visit to the block, and no block means no rows written at all -
+        // which is what leaves the client's data slots holding what the server published rather than
+        // being blanked by a half that cannot see either the recipe or the buffer.
+        this.withTable(table -> {
+            Registry<Resource> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+            int index = 0;
+            if (this.current != null) {
+                for (Entry<Holder<Resource>, Integer> entry : this.current.costs().entrySet()) {
+                    if (index >= MAX_PROGRESS_ENTRIES) break;
+                    this.progressTypes[index].set(registry.getId(entry.getKey().value()));
+                    this.progressAmounts[index].set(Math.clamp(table.aura(entry.getKey()), 0, Short.MAX_VALUE));
+                    this.progressRequirements[index].set(Math.clamp(entry.getValue(), 0, Short.MAX_VALUE));
+                    index++;
+                }
+            }
+            while (index < MAX_PROGRESS_ENTRIES) {
+                this.progressTypes[index].set(-1);
+                this.progressAmounts[index].set(0);
+                this.progressRequirements[index].set(0);
                 index++;
             }
-        }
-        while (index < MAX_PROGRESS_ENTRIES) {
-            this.progressTypes[index].set(-1);
-            this.progressAmounts[index].set(0);
-            this.progressRequirements[index].set(0);
-            index++;
-        }
+        });
     }
 
     private RecipeMatch findRecipe() {

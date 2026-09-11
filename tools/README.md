@@ -1,14 +1,22 @@
-# Bendable Cuboids Animation Tools
+# Tools
 
-`mxt_bendable_cuboids_animation.js` is a local Blockbench companion plugin for
-GeckoLib Animation Utils. It is intended for Player Animation Library (PAL)
-and BendableCuboids animations used by MiXianTu.
+Three scripts live here, none of which is part of the mod build:
 
-## Installation
+| File | What it is |
+| --- | --- |
+| `mxt_bendable_cuboids_animation.js` | A Blockbench companion plugin. Documented below. |
+| `generate_classic_gui_textures.py` | Regenerates `src/main/resources/assets/mxt/textures/gui/classic/` with Pillow. |
+
+## Bendable Cuboids Animation (`mxt_bendable_cuboids_animation.js`)
+
+A local Blockbench companion plugin for GeckoLib Animation Utils. It is intended for Player Animation
+Library (PAL) and BendableCuboids animations used by MiXianTu.
+
+### Installation
 
 1. Install **GeckoLib Animation Utils** from Blockbench's plugin browser.
 2. Use `File -> Plugins -> Load Plugin from File` and select
-   `bendable-cuboids-animation.js`.
+   `mxt_bendable_cuboids_animation.js`.
 3. Open a GeckoLib Animation project, select a bone in the timeline, then use
    `Animation -> Insert PAL Bend Keyframe`.
 
@@ -19,7 +27,7 @@ passes only the bend track's X keyframes to its single-float
 the visible value as X and automatically writes Y/Z as `0` for GeckoLib's
 vector JSON format.
 
-## Export
+### Export
 
 GeckoLib Animation Utils exports the channel directly:
 
@@ -35,7 +43,7 @@ The channel can be previewed in any Blockbench project with bone animation and
 cube meshes. Its exported JSON is intended for GeckoLib/PAL/BendableCuboids and
 is read back when the same animation JSON is imported.
 
-## Project Persistence
+### Project Persistence
 
 Saving a `.bbmodel` writes bend tracks into a dedicated root field so they do
 not depend on Blockbench retaining an unknown animation channel:
@@ -60,7 +68,7 @@ is loaded with this plugin enabled, its bend tracks are restored before
 Blockbench creates the animation timeline. Animation UUIDs are used first;
 the animation name is only a fallback for older project files.
 
-## Preview Limits
+### Preview Limits
 
 The viewport preview tessellates each cube and applies the default player
 BendableCuboids deformation to the local mesh. It previews the result without

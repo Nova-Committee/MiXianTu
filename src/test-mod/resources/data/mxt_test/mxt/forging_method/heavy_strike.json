@@ -2,5 +2,6 @@
   "value_delta": 2,
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
   "condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
-  "display_icon": "minecraft:iron_ingot"
+  "display_icon": "minecraft:iron_ingot",
+  "cooldown": 10
 }

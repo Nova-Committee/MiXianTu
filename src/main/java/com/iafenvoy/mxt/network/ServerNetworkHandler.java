@@ -13,23 +13,28 @@ import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
+import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
+import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.slf4j.Logger;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
 
 public final class ServerNetworkHandler {
+    public static final Logger MXT_DEBUG = LogUtils.getLogger();
     static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
         Player player = context.player();
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
@@ -51,15 +56,31 @@ public final class ServerNetworkHandler {
 
     static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
+        // The table comes from the menu the player has open, not from the packet. The client cannot
+        // reach the block at all - its ContainerLevelAccess is NULL - so a position in the request
+        // would have to be published to it first and trusted coming back. Resolving here also scopes a
+        // request to the table this player is actually standing at, which is what makes the distance
+        // check below the only remaining thing to verify.
+        if (!(player.containerMenu instanceof ForgingMenu menu)) return;
+        if (!(menu.table() instanceof ForgingTableBlockEntity table)) return;
         Identifier definition = payload.definition().orElse(null);
+        // The outcomes carry the reason a request was refused, and every branch below used to throw it
+        // away - which makes "nothing happens" the only symptom a player can report.
+        //
+        // `active` is logged after the call for the two actions that can settle a session by themselves:
+        // a strike that completes the piece ends it, so "the session is gone afterwards" is the success
+        // path rather than something to go looking for.
         switch (payload.action()) {
-            case START ->
-                    MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, definition).ifPresent(blueprint ->
-                            ForgingWorkstationService.start(player, payload.position(), definition, blueprint));
-            case STRIKE -> MxtDatapackRegistries.holder(MxtResourceKeys.FORGING_METHOD, definition).ifPresent(method ->
-                    ForgingWorkstationService.strike(player, payload.position(), method));
-            case FINISH -> ForgingWorkstationService.finish(player, payload.position(), definition);
-            case CANCEL -> ForgingWorkstationService.cancel(player, payload.position());
+            case SELECT -> MXT_DEBUG.info("forging SELECT definition={} selectable={} methods={} outcome={} active={}",
+                    definition, table.selectableBlueprintIds(), table.availableMethodIds(),
+                    ForgingWorkstationService.start(player, table, definition),
+                    table.forgingState().active());
+            case STRIKE -> MXT_DEBUG.info("forging STRIKE definition={} available={} outcome={} active={}",
+                    definition, table.availableMethodIds(),
+                    ForgingWorkstationService.strike(player, table, definition),
+                    table.forgingState().active());
+            case FINISH -> MXT_DEBUG.info("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
+            case CANCEL -> MXT_DEBUG.info("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
         }
     }
 

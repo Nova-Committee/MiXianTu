@@ -25,6 +25,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -73,15 +74,13 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SpiritCraftingTableBlockEntity table) {
-        if (level.getServer() != null) table.craftAvailable(level);
+        if (level.getServer() != null) table.craftAvailable(level, level.getServer().getRecipeManager());
     }
 
-    private void craftAvailable(Level level) {
+    private void craftAvailable(Level level, RecipeManager recipeManager) {
         SpiritCraftingInput input = new SpiritCraftingInput(IntStream.range(0, 9).mapToObj(this.grid::getItem).toList());
-        RecipeHolder<? extends SpiritRecipe> shaped = level.getServer().getRecipeManager()
-                .getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPED.get(), input, level).orElse(null);
-        SpiritRecipe recipe = shaped == null ? level.getServer().getRecipeManager()
-                .getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPELESS.get(), input, level).map(RecipeHolder::value).orElse(null) : shaped.value();
+        RecipeHolder<? extends SpiritRecipe> shaped = recipeManager.getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPED.get(), input, level).orElse(null);
+        SpiritRecipe recipe = shaped == null ? recipeManager.getRecipeFor(MxtRecipeTypes.SPIRIT_SHAPELESS.get(), input, level).map(RecipeHolder::value).orElse(null) : shaped.value();
         if (recipe == null) {
             this.requiredAura = Map.of();
             this.clearAura();
@@ -253,12 +252,20 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
 
     @Override
     public @NonNull Component getDisplayName() {
-        return Component.translatable("container.mxt.spirit_crafting_table");
+        return Component.translatable("screen.mxt.spirit_crafting_table");
     }
 
+    /**
+     * Hands out an access, not the entity.
+     *
+     * <p>{@code ContainerLevelAccess} is how a menu reaches the block it belongs to: the server half
+     * resolves the entity on demand, and the client half gets {@code ContainerLevelAccess.NULL}, whose
+     * every lookup is empty. Nothing about the table can leak into the menu's client half, and nothing
+     * has to be null-checked there either. Vanilla does the same for every workstation menu.
+     */
     @Override
     public AbstractContainerMenu createMenu(int id, @NonNull Inventory inventory, @NonNull Player player) {
-        return new SpiritCraftingMenu(id, inventory, this.grid(), ContainerLevelAccess.create(player.level(), this.getBlockPos()), this);
+        return new SpiritCraftingMenu(id, inventory, ContainerLevelAccess.create(player.level(), this.getBlockPos()));
     }
 
     @Override

@@ -1,0 +1,3 @@
+{
+  "methods": ["mxt_test:heavy_strike", "mxt_test:light_strike", "mxt_test:draw_out", "mxt_test:flatten", "mxt_test:quench", "mxt_test:temper", "mxt_test:fold", "mxt_test:punch", "mxt_test:grind", "mxt_test:polish"]
+}

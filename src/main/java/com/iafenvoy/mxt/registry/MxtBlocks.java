@@ -11,6 +11,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DropExperienceBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
+import net.minecraft.world.level.material.MapColor;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -27,6 +28,7 @@ public final class MxtBlocks {
     public static final DeferredBlock<DropExperienceBlock> SPIRIT_STONE_ORE = register("spirit_stone_ore", properties -> new DropExperienceBlock(ConstantInt.of(1), properties.strength(3.0F, 3.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
     public static final DeferredBlock<Block> SPIRIT_STONE_BLOCK = registerSolid("spirit_stone_block", properties -> new Block(properties.strength(5.0F, 6.0F).sound(SoundType.METAL).requiresCorrectToolForDrops()));
     public static final DeferredBlock<SpiritCraftingTableBlock> SPIRIT_CRAFTING_TABLE = register("spirit_crafting_table", SpiritCraftingTableBlock::new);
+    public static final DeferredBlock<ForgingTableBlock> FORGING_TABLE = registerForging("forging_table", ForgingTableBlock::new);
     public static final DeferredBlock<DisplayStandBlock> OAK_DISPLAY_STAND = register("oak_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> BIRCH_DISPLAY_STAND = register("birch_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> SPRUCE_DISPLAY_STAND = register("spruce_display_stand", DisplayStandBlock::new);
@@ -47,6 +49,25 @@ public final class MxtBlocks {
     private static <T extends Block> DeferredBlock<T> registerSolid(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
         DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.ofFullCopy(Blocks.IRON_BLOCK).setId(key)));
+        MxtItems.registerBlockItem(path, block);
+        return block;
+    }
+
+    /**
+     * Registers the forge table. It deliberately does not copy the vanilla smithing table, which is
+     * a wooden block (map colour WOOD, instrument BASS, {@code SoundType.WOOD}, flammable) despite
+     * the stone-looking texture. The forge is an anvil-and-hammer station, so it uses
+     * {@link SoundType#ANVIL} and a stone map colour, and needs a pickaxe to drop.
+     */
+    private static <T extends Block> DeferredBlock<T> registerForging(String path, Function<Properties, T> factory) {
+        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
+        DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.of()
+                .setId(key)
+                .mapColor(MapColor.STONE)
+                .strength(3.5F)
+                .sound(SoundType.STONE)
+                .requiresCorrectToolForDrops()
+                .noOcclusion()));
         MxtItems.registerBlockItem(path, block);
         return block;
     }

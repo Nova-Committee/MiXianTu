@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
-import com.iafenvoy.mxt.runtime.forging.ForgingWorldAttachment;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
@@ -44,13 +43,11 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulAttachment>> SOUL = entity("soul", SoulAttachment::new, SoulAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CreatureSpiritAttachment>> CREATURE_SPIRIT = entity("creature_spirit", CreatureSpiritAttachment::new, CreatureSpiritAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillToxicityAttachment>> PILL_TOXICITY = entity("pill_toxicity", PillToxicityAttachment::new, PillToxicityAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ForgingSessionAttachment>> FORGING_SESSION = entityWithoutDeathCopy("forging_session", ForgingSessionAttachment::new, ForgingSessionAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FlightAttachment>> FLIGHT = entityWithoutDeathCopy("flight", FlightAttachment::new, FlightAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SectAttachment>> SECT = entity("sect", SectAttachment::new, SectAttachment.CODEC);
     // Level
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraWorldAttachment>> AURA_WORLD = REGISTRY.register("aura_world", () -> AttachmentType.builder(AuraWorldAttachment::new).serialize(AuraWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FormationWorldAttachment>> FORMATION_WORLD = REGISTRY.register("formation_world", () -> AttachmentType.builder(FormationWorldAttachment::new).serialize(FormationWorldAttachment.MAP_CODEC).build());
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ForgingWorldAttachment>> FORGING_WORLD = REGISTRY.register("forging_world", () -> AttachmentType.builder(ForgingWorldAttachment::new).serialize(ForgingWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkAttachment>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkAttachment::new).serialize(AuraChunkAttachment.CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SectTerritoryAttachment>> SECT_TERRITORY = REGISTRY.register("sect_territory", () -> AttachmentType.builder(SectTerritoryAttachment::new).serialize(SectTerritoryAttachment.CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmInstanceAttachment>> REALM_INSTANCE = REGISTRY.register("realm_instance", () -> AttachmentType.builder(RealmInstanceAttachment::new).serialize(RealmInstanceAttachment.CODEC).build());
