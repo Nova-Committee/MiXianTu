@@ -18,7 +18,7 @@ public record JsDamageCondition(String id, JsonObject params) implements DamageC
 
     @Override
     public boolean test(@NonNull DamageConditionContext context) {
-        return MxtJsConditionCallbacks.testDamage(this.id, context.source(), context.amount(), this.params);
+        return MxtJsConditionCallbacks.testDamage(this.id, context.source(), context.amount(), this.params, context.formula());
     }
 
     @Override

@@ -18,7 +18,7 @@ public record JsEntityAction(String id, JsonObject params) implements EntityActi
 
     @Override
     public void execute(@NonNull EntityActionContext context) {
-        MxtJsActionCallbacks.executeEntity(this.id, context.entity(), this.params);
+        MxtJsActionCallbacks.executeEntity(this.id, context.entity(), this.params, context.formula());
     }
 
     @Override

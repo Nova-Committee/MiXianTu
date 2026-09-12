@@ -18,7 +18,7 @@ public record JsItemAction(String id, JsonObject params) implements ItemAction {
 
     @Override
     public void execute(@NonNull ItemActionContext context) {
-        MxtJsActionCallbacks.executeItem(this.id, context.holder(), context.stack(), this.params);
+        MxtJsActionCallbacks.executeItem(this.id, context.holder(), context.stack(), this.params, context.formula());
     }
 
     @Override

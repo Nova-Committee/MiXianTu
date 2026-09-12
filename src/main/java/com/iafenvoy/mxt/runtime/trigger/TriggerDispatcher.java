@@ -85,6 +85,28 @@ public final class TriggerDispatcher {
     }
 
     /**
+     * Returns the current runtime-only subscription count of one module for one
+     * owner. Modules that build their own index ask for their own slice instead
+     * of the total, which also contains the subscriptions of every other module.
+     */
+    public static int subscriptionCount(UUID owner, String module) {
+        LinkedHashMap<String, TriggerSubscription> subscriptions = BY_OWNER.get(owner);
+        if (subscriptions == null) return 0;
+        String prefix = module + ":";
+        int count = 0;
+        for (String key : subscriptions.keySet()) if (key.startsWith(prefix)) count++;
+        return count;
+    }
+
+    /**
+     * Whether one module currently owns the subscription with that identity.
+     */
+    public static boolean hasSubscription(UUID owner, String module, String identity) {
+        LinkedHashMap<String, TriggerSubscription> subscriptions = BY_OWNER.get(owner);
+        return subscriptions != null && subscriptions.containsKey(module + ":" + identity);
+    }
+
+    /**
      * Returns a stable module-to-subscription count snapshot for diagnostics.
      */
     public static Map<String, Integer> subscriptionCountsByModule() {

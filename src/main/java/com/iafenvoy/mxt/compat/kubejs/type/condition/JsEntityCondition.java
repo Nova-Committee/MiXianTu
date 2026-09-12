@@ -18,7 +18,7 @@ public record JsEntityCondition(String id, JsonObject params) implements EntityC
 
     @Override
     public boolean test(@NonNull EntityConditionContext context) {
-        return MxtJsConditionCallbacks.testEntity(this.id, context.entity(), this.params);
+        return MxtJsConditionCallbacks.testEntity(this.id, context.entity(), this.params, context.formula());
     }
 
     @Override

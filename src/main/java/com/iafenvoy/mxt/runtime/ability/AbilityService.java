@@ -415,8 +415,10 @@ public final class AbilityService {
     private static boolean reserveItemCosts(List<Cost> costs, Player player, ItemCostDraft draft) {
         if (requiresPlayerCost(costs) && (player == null || draft == null)) return false;
         for (Cost cost : costs) {
-            if (cost instanceof com.iafenvoy.mxt.data.cost.ResourceCost) continue;
-            if (!(cost instanceof ItemCost itemCost) || !draft.reserve(itemCost, player)) return false;
+            // Only item costs need the detached draft; resource costs go through the resource
+            // transaction and every other cost type validates itself in check/consume.
+            if (!(cost instanceof ItemCost itemCost)) continue;
+            if (!draft.reserve(itemCost, player)) return false;
         }
         return true;
     }

@@ -18,7 +18,7 @@ public record JsItemCondition(String id, JsonObject params) implements ItemCondi
 
     @Override
     public boolean test(@NonNull ItemConditionContext context) {
-        return MxtJsConditionCallbacks.testItem(this.id, context.holder(), context.stack(), this.params);
+        return MxtJsConditionCallbacks.testItem(this.id, context.holder(), context.stack(), this.params, context.formula());
     }
 
     @Override

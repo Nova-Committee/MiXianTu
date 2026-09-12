@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsActionCallbacks;
+import com.iafenvoy.mxt.compat.kubejs.callback.QuadConsumer;
 import com.iafenvoy.mxt.compat.kubejs.callback.TriConsumer;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
@@ -15,29 +16,30 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-import java.util.function.BiConsumer;
-
 /**
  * KubeJS registrations for the four intrinsic action dispatch types.
+ *
+ * <p>Callbacks receive the {@link FormulaContext} of the dispatch as their last argument, so the
+ * same event payload variables a data pack action reads are available to the script.</p>
  */
 public final class MxtKubeJsActionBindings {
     @Info("Registers an entity action. Datapack type: mxt:js")
-    public void entity(String id, BiConsumer<Entity, JsonObject> callback) {
+    public void entity(String id, TriConsumer<Entity, JsonObject, FormulaContext> callback) {
         MxtJsActionCallbacks.registerEntity(id, callback);
     }
 
     @Info("Registers a bi-entity action. Datapack type: mxt:js")
-    public void biEntity(String id, TriConsumer<Entity, Entity, JsonObject> callback) {
+    public void biEntity(String id, QuadConsumer<Entity, Entity, JsonObject, FormulaContext> callback) {
         MxtJsActionCallbacks.registerBiEntity(id, callback);
     }
 
     @Info("Registers a block action. Datapack type: mxt:js")
-    public void block(String id, TriConsumer<Level, BlockPos, JsonObject> callback) {
+    public void block(String id, QuadConsumer<Level, BlockPos, JsonObject, FormulaContext> callback) {
         MxtJsActionCallbacks.registerBlock(id, callback);
     }
 
     @Info("Registers an item action. Datapack type: mxt:js")
-    public void item(String id, TriConsumer<Entity, ItemStack, JsonObject> callback) {
+    public void item(String id, QuadConsumer<Entity, ItemStack, JsonObject, FormulaContext> callback) {
         MxtJsActionCallbacks.registerItem(id, callback);
     }
 

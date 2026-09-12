@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.ItemCost;
+import com.iafenvoy.mxt.data.cost.JsCost;
 import com.iafenvoy.mxt.data.cost.ResourceCost;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -14,4 +15,5 @@ public final class MxtCosts {
 
     public static final DeferredHolder<MapCodec<? extends Cost>, MapCodec<ResourceCost>> RESOURCE = REGISTRY.register("resource", () -> ResourceCost.CODEC);
     public static final DeferredHolder<MapCodec<? extends Cost>, MapCodec<ItemCost>> ITEM = REGISTRY.register("item", () -> ItemCost.CODEC);
+    public static final DeferredHolder<MapCodec<? extends Cost>, MapCodec<JsCost>> JS = REGISTRY.register("js", () -> JsCost.CODEC);
 }

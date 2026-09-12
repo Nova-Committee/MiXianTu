@@ -18,7 +18,7 @@ public record JsBiEntityCondition(String id, JsonObject params) implements BiEnt
 
     @Override
     public boolean test(@NonNull BiEntityConditionContext context) {
-        return MxtJsConditionCallbacks.testBiEntity(this.id, context.actor(), context.target(), this.params);
+        return MxtJsConditionCallbacks.testBiEntity(this.id, context.actor(), context.target(), this.params, context.formula());
     }
 
     @Override

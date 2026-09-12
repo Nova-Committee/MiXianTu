@@ -20,6 +20,8 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtCurses` | 施加或显式移除诅咒。 |
 | `MxtAura` | 查询、添加、移除服务端灵气区域。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
+| `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
+| `MxtLoot` | 注册脚本战利品条件与战利品函数。 |
 | `MxtEvents` | 所有 MXT 服务端生命周期事件。 |
 
 `Entity`、`LivingEntity`、`Player`、`Level`、`BlockPos`、`ItemStack`、`DamageSource` 均为 KubeJS 暴露的原版 Java 对象。`JsonObject`/`JsonElement` 参数可直接传普通 JavaScript 对象或数组。
@@ -40,7 +42,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 
 ### `mxt:js` 回调定义
 
-Action、Condition、NumberProvider 与 ResourceValueProvider 均有一个预注册的 `mxt:js` 类型。先在服务器脚本中注册回调：
+Action、Condition、NumberProvider、ResourceValueProvider、触发器匹配器、Cost、技能目标选择器、战利品条件与战利品函数均有一个预注册的 `mxt:js` 类型。先在服务器脚本中注册回调：
 
 ```js
 MxtActions.entity('example:heal', (entity, params) => {
@@ -66,12 +68,24 @@ MxtActions.entity('example:heal', (entity, params) => {
 
 | 方法 | 回调参数 | 作用 |
 | --- | --- | --- |
-| `entity(id, callback)` | `(entity: Entity, params: object)` | 注册实体 Action。 |
-| `biEntity(id, callback)` | `(actor: Entity, target: Entity, params: object)` | 注册双实体 Action。 |
-| `block(id, callback)` | `(level: Level, pos: BlockPos, params: object)` | 注册方块位置 Action。 |
-| `item(id, callback)` | `(holder: Entity, stack: ItemStack, params: object)` | 注册物品 Action。 |
+| `entity(id, callback)` | `(entity: Entity, params: object, context: FormulaContext)` | 注册实体 Action。 |
+| `biEntity(id, callback)` | `(actor: Entity, target: Entity, params: object, context: FormulaContext)` | 注册双实体 Action。 |
+| `block(id, callback)` | `(level: Level, pos: BlockPos, params: object, context: FormulaContext)` | 注册方块位置 Action。 |
+| `item(id, callback)` | `(holder: Entity, stack: ItemStack, params: object, context: FormulaContext)` | 注册物品 Action。 |
 
 四种回调都对应数据包中的 `type: "mxt:js"`。回调抛出的异常会被捕获、写入错误日志，当前 Action 终止，但不会令服务器崩溃。
+
+最后一个参数是本次派发所用的公式上下文，因此脚本能读到数据包 Action 能读到的同一份事件载荷。只有事件知道的数值（例如 `damage`）就是这样拿到的：
+
+```js
+MxtActions.entity('example:knockback_on_hit', (entity, params, context) => {
+  const damage = context.explicit('damage')
+  if (Number.isNaN(damage)) return
+  entity.push(0, params.strength * damage, 0)
+})
+```
+
+不需要上下文时少写几个参数即可，JavaScript 会忽略多余实参。可用的变量方法见 [`FormulaContext`](#formulacontext)；内置变量都能读，但不能注册新变量。
 
 ### 直接运行任意内置 Action
 
@@ -97,13 +111,13 @@ MxtActions.executeEntity(player, {
 
 | 方法 | 回调参数 | 返回值 |
 | --- | --- | --- |
-| `entity(id, callback)` | `(entity, params)` | `boolean` |
-| `biEntity(id, callback)` | `(actor, target, params)` | `boolean` |
-| `block(id, callback)` | `(level, pos, params)` | `boolean` |
-| `item(id, callback)` | `(holder, stack, params)` | `boolean` |
-| `damage(id, callback)` | `(source: DamageSource, amount: number, params)` | `boolean` |
+| `entity(id, callback)` | `(entity, params, context)` | `boolean` |
+| `biEntity(id, callback)` | `(actor, target, params, context)` | `boolean` |
+| `block(id, callback)` | `(level, pos, params, context)` | `boolean` |
+| `item(id, callback)` | `(holder, stack, params, context)` | `boolean` |
+| `damage(id, callback)` | `(source: DamageSource, amount: number, params, context)` | `boolean` |
 
-它们分别对应 Entity、BiEntity、Block、Item、Damage Condition 的 `mxt:js` 固有类型。返回 `true` 表示满足；未注册或回调异常均视为 `false`。
+它们分别对应 Entity、BiEntity、Block、Item、Damage Condition 的 `mxt:js` 固有类型。返回 `true` 表示满足；未注册或回调异常均视为 `false`。末尾的 `context` 是本次判定的公式上下文，与脚本 Action 完全一致。
 
 ### 直接测试任意内置 Condition
 
@@ -133,7 +147,9 @@ const enoughQi = MxtConditions.testEntity(player, {
 | `number(id, callback)` | `(context: FormulaContext, params: object)` | 有限 `number` | `mxt:js` NumberProvider。 |
 | `resourceValue(id, callback)` | `(holder: ResourceHolderAttachment, resource: Holder<Resource>, context: FormulaContext, params: object)` | 有限 `number` | `mxt:js` ResourceValueProvider。 |
 
-`FormulaContext` 可调用：
+#### `FormulaContext`
+
+所有拿到公式上下文的回调用的都是同一个对象：`MxtValues.number`、`MxtValues.resourceValue`，以及 Action、Condition 的 `mxt:js` 回调。它提供：
 
 | 方法 | 说明 |
 | --- | --- |
@@ -174,8 +190,28 @@ const actualAura = MxtValues.evaluateResource(player, 'mxt:spirit_power', {
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `check(player, definition)` | `Player`、一个 `Cost` JSON | `boolean` | 只检查，不改变背包或资源。 |
-| `consume(player, definition)` | `Player`、一个 `Cost` JSON | `boolean` | 先检查再支付；无法支付时不做改动。 |
+| `check(player, definition)` | `Player`、一个 `Cost` JSON | `boolean` | 只检查，不改变背包或资源。它是只读的，客户端脚本也可以调用。 |
+| `consume(player, definition)` | `Player`、一个 `Cost` JSON | `boolean` | 先检查再支付；无法支付时不做改动。仅服务端：在客户端脚本中调用只记录一次警告并返回 `false`，不会改动玩家。 |
+| `register(id, check, consume)` | 回调 ID、`(player, params, context) => boolean`、`(player, params, context) => void` | `void` | 注册脚本 Cost。数据包类型：`mxt:js`。 |
+
+```js
+MxtCosts.register('example:quest_token',
+  (player, params, context) => {
+    const needed = params.count || 1
+    return player.persistentData.getInt('tokens') >= needed
+  },
+  (player, params, context) => {
+    const needed = params.count || 1
+    player.persistentData.putInt('tokens', player.persistentData.getInt('tokens') - needed)
+  }
+)
+```
+
+```json
+{"type": "mxt:js", "id": "example:quest_token", "params": {"count": 3}}
+```
+
+脚本 Cost 需要玩家：只要 `costs` 里存在非 `resource` 费用，整个技能就要求付款者是玩家。`Cost` 只用玩家做检查，因此回调拿到的 `context` 由该玩家构建，不含事件载荷——`context.value('level')` 可用，`context.value('damage')` 不可用。
 
 支持完整 Cost 注册表分派。当前内置类型：
 
@@ -222,12 +258,33 @@ if (result.committed()) {
 | 方法 | 参数 | 返回值 |
 | --- | --- | --- |
 | `use(entity, ability)` | `Entity`、技能 ID | `AbilityService.UseResult` |
+| `selector(id, callback)` | 回调 ID、`(actor, context, params) => Entity[]` | `void` |
 
 只能施放实体已持有的技能，且仅在服务端生效。结果 record：`committed()` 表示立即完成，`casting()` 表示已开始吟唱，`failure()` 为失败枚举，`failedResource()` 为不足的资源 ID，`amounts()` 为实际支付资源。
 
 ```js
 const result = MxtAbilities.use(player, 'example:fireball')
 if (result.failure() !== null) console.warn(String(result.failure()))
+```
+
+`selector` 注册数据包类型 `mxt:js` 的技能目标选择器。回调返回要作用的实体数组，数组里的 `null` 会被丢弃：
+
+```js
+MxtAbilities.selector('example:nearest_three', (actor, context, params) => {
+  const range = params.range || 8
+  const found = []
+  actor.level().getEntities(actor, actor.getBoundingBox().inflate(range))
+    .forEach(entity => found.push(entity))
+  found.sort((a, b) => a.distanceToSqr(actor) - b.distanceToSqr(actor))
+  return found.slice(0, 3)
+})
+```
+
+```json
+{
+  "target_selector": {"type": "mxt:js", "id": "example:nearest_three", "params": {"range": 12}},
+  "bi_entity_action": {"type": "mxt:heal", "amount": 4}
+}
 ```
 
 ### `MxtCultivation`
@@ -263,6 +320,106 @@ if (result.failure() !== null) console.warn(String(result.failure()))
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
 | `reclaim(entity)` | `Entity` | `boolean` | 使用权威魂魄回收流程。仅适用于可转移魂魄；会触发 `soul` 的回收 pre/post 事件。 |
+
+### `MxtTriggers`
+
+触发器信号就是数据包技能在等待的通知（例如持有者命中目标）。`MxtTriggers` 让脚本发布同一种信号，也让脚本等待它；两侧都走运行时 `TriggerDispatcher`，因此脚本订阅和数据包技能触发器看到的是同一次派发。
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `matcher(id, callback)` | 回调 ID、`(signal, params, context) => boolean` | `void` | 注册数据包触发器匹配器（`mxt:js`）。 |
+| `publish(entity, signal, values)` | `Entity`、带命名空间的信号 ID、`object` 或 `null` | `boolean` | 为该实体发布一次服务端权威信号；实体在客户端时返回 `false`。 |
+| `subscribe(entity, signal, key, callback)` | `Entity`、信号 ID、稳定 key、`(signal: TriggerSignal) => void` | `boolean` | 为该实体注册一个运行时订阅。 |
+| `subscribeOnce(entity, signal, key, callback)` | 同上 | `boolean` | 注册一次性订阅，首次匹配后自行移除。 |
+| `unsubscribe(entity, key)` | `Entity`、注册时使用的 key | `boolean` | 移除一个脚本订阅。 |
+| `has(entity, key)` | `Entity`、注册时使用的 key | `boolean` | 当前是否存在该订阅。 |
+| `subscriptions(entity)` | `Entity` | `number` | 该实体当前的脚本订阅数量。 |
+
+`matcher` 是同一套机制的数据包侧：`mxt:js` 触发器声明自己监听哪个信号，再由回调决定是否触发。这是数据包技能或突破条件等待**自定义**信号 ID 的唯一方式，内置的 `mxt:tick` 一类匹配器表达不了：
+
+```js
+MxtTriggers.matcher('example:on_pill', (signal, params, context) => {
+  return context.explicit('toxicity') >= (params.minimum || 0)
+})
+```
+
+```json
+{
+  "type": "mxt:triggered",
+  "triggers": [{"type": "mxt:js", "signal": "example:pill_taken", "id": "example:on_pill", "params": {"minimum": 10}}]
+}
+```
+
+回调收到 `TriggerSignal` 与该信号的公式上下文，因此能读到脚本用 `MxtTriggers.publish` 发布的载荷值。回调缺失或抛异常时该触发器永不匹配。
+
+```js
+// kubejs/server_scripts/mxt_triggers.js
+const KEY = 'example:toxicity_watch'
+
+function onPillTaken(signal) {
+  const toxicity = signal.context().formula().explicit('toxicity')
+  if (!Number.isNaN(toxicity)) console.info(`${signal.type()} with toxicity ${toxicity}`)
+}
+
+function watch(entity) {
+  // 同一个 key 重复注册会替换旧订阅，所以这里可以安全地反复调用。
+  if (!MxtTriggers.has(entity, KEY)) {
+    MxtTriggers.subscribe(entity, 'example:pill_taken', KEY, onPillTaken)
+  }
+}
+
+EntityEvents.spawned(event => watch(event.entity))
+
+// /reload 会重新执行本脚本并丢掉它的订阅；这里为仍在线的玩家重新挂上。
+// 发布信号时不要求存在订阅者。
+ServerEvents.tick(event => event.server.players.forEach(watch))
+
+// 在你自己的逻辑里发布：命令处理、任务钩子或物品使用。
+function publishPillTaken(player, toxicity) {
+  MxtTriggers.publish(player, 'example:pill_taken', { pill: 'example:returning_pill', toxicity })
+}
+```
+
+`values` 会被复制进触发上下文作为扩展数据，其中每个有限数值还会写入触发器的公式上下文。因此脚本回调可以用 `signal.context().formula().explicit('toxicity')` 读到上面的 `toxicity`，与数据包信号携带 `damage` 的方式完全一致。
+
+一个 key 在每个实体上只对应一个订阅，请为每个信号使用独立的 key：用同一个 key 再次注册会替换掉旧的订阅，无论它原本监听的是哪个信号。
+
+回调收到一个 `TriggerSignal`，其访问器为 `type()`（信号 ID）、`gameTime()` 与 `context()`。上下文提供 `actor()`、`target()`、`level()`、`position()`、`item()`、`block()`、`damageSource()`、`formula()`，以及读取发布值的 `get(key)`（返回 `Optional`）与 `data()`（原始扩展表）。请把上下文当作只读对象：它会被同一信号的多个订阅者共享。
+
+触发器订阅只存在于运行时，永不存档：实体离开世界、服务器关闭、数据包重载或服务器脚本重载都会丢掉它们——重载会替换订阅所引用的回调对象。请使用稳定的 key，并从运行时钩子重新注册，例如上面的写法。一次性订阅在首次匹配后自行移除，适合只能完成一次的任务步骤。
+
+### `MxtLoot`
+
+MiXianTu 给原版战利品表加了几个类型，其中两个可以由脚本提供，于是普通战利品表也能调用服务端脚本，而不需要依赖某个物品或方块。
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `condition(id, callback)` | 回调 ID、`(lootContext, params) => boolean` | `void` | 注册原版战利品条件类型 `mxt:js`。 |
+| `function(id, callback)` | 回调 ID、`(stack, lootContext, params) => ItemStack` | `void` | 注册原版战利品函数类型 `mxt:js`。 |
+
+```js
+// KubeJS 没有把原版战利品参数键绑定为全局，先加载一次类。
+const LootParams = Java.loadClass('net.minecraft.world.level.storage.loot.parameters.LootContextParams')
+
+MxtLoot.condition('example:first_clear', (loot, params) => {
+  const player = loot.getParam(LootParams.THIS_ENTITY)
+  return player != null && player.tags.contains(`cleared_${params.dungeon}`)
+})
+
+MxtLoot.function('example:bless', (stack, loot, params) => {
+  stack.grow((params.multiplier || 1) - 1)
+  return stack
+})
+```
+
+```json
+{
+  "conditions": [{"condition": "mxt:js", "id": "example:first_clear", "params": {"dungeon": "example:fire_temple"}}],
+  "functions": [{"function": "mxt:js", "id": "example:bless", "params": {"multiplier": 3}}]
+}
+```
+
+两个回调都在服务端生成战利品时执行，且都不接收 `FormulaContext`：请直接读原版 `LootContext`，例如 `loot.getParam(LootParams.THIS_ENTITY)`。战利品函数返回要保留的 stack——原样返回表示不改动掉落，返回新 stack 表示替换，返回 `null` 表示保留原样。回调缺失时条件为 `false`、函数保留原 stack，并记录一条警告。
 
 ## `MxtEvents`
 
@@ -356,16 +513,8 @@ MxtEvents.cultivationBreak(event => {
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
 
-### 自定义 Trigger 信号
+只在服务端才有意义的操作遇到客户端脚本时不会抛异常，而是只记录一次警告并拒绝执行，避免脚本把客户端状态改坏：`MxtCosts.consume`，以及 `MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtAura`、`MxtSouls`、`MxtTriggers` 中所有会改动状态的方法。
 
-`MxtKubeJsApi.publishTrigger(entity, signal, values)` 可从服务端脚本发布自定义触发器信号：
-
-| 参数 | 类型 | 说明 |
-|---|---|---|
-| `entity` | `Entity` | 信号主体，同时作为订阅分派目标；客户端实体会被拒绝。 |
-| `signal` | `Identifier` | 带命名空间的信号 ID，例如 `example:pill_taken`。 |
-| `values` | `Map<String,Object>` | 写入 `TriggerContext` 扩展字段的键值；可为 `null`。 |
-
-触发器订阅不会保存到存档。脚本若需要跨重启等待事件，应自行保存稳定 ID/阶段状态，并在实体加入世界或服务器脚本重载后重新调用注册逻辑。
+`MxtActions.execute*` 故意不设该保护，因为内置 Action 自己决定作用端：JSON 里声明了客户端执行的 Action（例如带 `client` 标志的速度 Action）本来就应当就地运行。
 
 完整组合示例见 [KubeJS 综合示例](examples.md)。

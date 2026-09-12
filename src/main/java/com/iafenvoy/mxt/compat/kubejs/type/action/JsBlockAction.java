@@ -18,7 +18,7 @@ public record JsBlockAction(String id, JsonObject params) implements BlockAction
 
     @Override
     public void execute(@NonNull BlockActionContext context) {
-        MxtJsActionCallbacks.executeBlock(this.id, context.level(), context.pos(), this.params);
+        MxtJsActionCallbacks.executeBlock(this.id, context.level(), context.pos(), this.params, context.formula());
     }
 
     @Override

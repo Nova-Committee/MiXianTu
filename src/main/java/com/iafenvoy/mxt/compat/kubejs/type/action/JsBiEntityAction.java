@@ -18,7 +18,7 @@ public record JsBiEntityAction(String id, JsonObject params) implements BiEntity
 
     @Override
     public void execute(@NonNull BiEntityActionContext context) {
-        MxtJsActionCallbacks.executeBiEntity(this.id, context.actor(), context.target(), this.params);
+        MxtJsActionCallbacks.executeBiEntity(this.id, context.actor(), context.target(), this.params, context.formula());
     }
 
     @Override

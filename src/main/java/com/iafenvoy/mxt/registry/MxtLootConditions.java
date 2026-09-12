@@ -17,4 +17,5 @@ public final class MxtLootConditions {
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<RealmLootCondition>> REALM = REGISTRY.register("realm", () -> RealmLootCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasSpiritRootLootCondition>> HAS_SPIRIT_ROOT = REGISTRY.register("has_spirit_root", () -> HasSpiritRootLootCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasPhysiqueLootCondition>> HAS_PHYSIQUE = REGISTRY.register("has_physique", () -> HasPhysiqueLootCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<JsLootCondition>> JS = REGISTRY.register("js", () -> JsLootCondition.CODEC);
 }

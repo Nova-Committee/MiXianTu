@@ -58,8 +58,9 @@ datapacks or content packs; installing the mod alone does not give you a complet
   and resources.
 - **Item integration**: binding tables hook **existing** items into weapons, pills, techniques, resources and aura fuel,
   which makes integration with other mods easy.
-- **KubeJS**: extension points such as action callbacks and number providers; register items from a script first and let
-  the binding tables handle them.
+- **KubeJS**: extension points such as action, condition, cost, number provider, target selector, trigger matcher and
+  loot callbacks, the `MxtEvents` server lifecycle events, and the `MxtTriggers` custom trigger signals a script can
+  publish and subscribe to; register items from a script first and let the binding tables handle them.
 - **Java API**: interfaces for data table registration, attachments, networking, screens and client rendering.
 
 ## Module Status

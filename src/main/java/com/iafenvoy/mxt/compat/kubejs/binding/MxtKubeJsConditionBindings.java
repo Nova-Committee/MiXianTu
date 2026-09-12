@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsConditionCallbacks;
+import com.iafenvoy.mxt.compat.kubejs.callback.QuadPredicate;
 import com.iafenvoy.mxt.compat.kubejs.callback.TriPredicate;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.condition.*;
@@ -13,34 +14,35 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-import java.util.function.BiPredicate;
-
 /**
  * KubeJS registrations for the five intrinsic condition dispatch types.
+ *
+ * <p>Callbacks receive the {@link FormulaContext} of the test as their last argument, so the same
+ * event payload variables a data pack condition reads are available to the script.</p>
  */
 public final class MxtKubeJsConditionBindings {
     @Info("Registers an entity condition. Datapack type: mxt:js")
-    public void entity(String id, BiPredicate<Entity, JsonObject> callback) {
+    public void entity(String id, TriPredicate<Entity, JsonObject, FormulaContext> callback) {
         MxtJsConditionCallbacks.registerEntity(id, callback);
     }
 
     @Info("Registers a bi-entity condition. Datapack type: mxt:js")
-    public void biEntity(String id, TriPredicate<Entity, Entity, JsonObject> callback) {
+    public void biEntity(String id, QuadPredicate<Entity, Entity, JsonObject, FormulaContext> callback) {
         MxtJsConditionCallbacks.registerBiEntity(id, callback);
     }
 
     @Info("Registers a block condition. Datapack type: mxt:js")
-    public void block(String id, TriPredicate<Level, BlockPos, JsonObject> callback) {
+    public void block(String id, QuadPredicate<Level, BlockPos, JsonObject, FormulaContext> callback) {
         MxtJsConditionCallbacks.registerBlock(id, callback);
     }
 
     @Info("Registers an item condition. Datapack type: mxt:js")
-    public void item(String id, TriPredicate<Entity, ItemStack, JsonObject> callback) {
+    public void item(String id, QuadPredicate<Entity, ItemStack, JsonObject, FormulaContext> callback) {
         MxtJsConditionCallbacks.registerItem(id, callback);
     }
 
     @Info("Registers a damage condition. Datapack type: mxt:js")
-    public void damage(String id, TriPredicate<DamageSource, Float, JsonObject> callback) {
+    public void damage(String id, QuadPredicate<DamageSource, Double, JsonObject, FormulaContext> callback) {
         MxtJsConditionCallbacks.registerDamage(id, callback);
     }
 

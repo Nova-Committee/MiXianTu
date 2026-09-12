@@ -18,7 +18,7 @@ public record JsBlockCondition(String id, JsonObject params) implements BlockCon
 
     @Override
     public boolean test(@NonNull BlockConditionContext context) {
-        return MxtJsConditionCallbacks.testBlock(this.id, context.level(), context.pos(), this.params);
+        return MxtJsConditionCallbacks.testBlock(this.id, context.level(), context.pos(), this.params, context.formula());
     }
 
     @Override

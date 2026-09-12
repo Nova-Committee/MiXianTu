@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.trigger.JsTrigger;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.Trigger.Builtin;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
@@ -27,6 +28,7 @@ public final class MxtTriggers {
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> EQUIP = register("equip");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> DEATH = register("death");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> BREAKTHROUGH = register("breakthrough");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<JsTrigger>> JS = REGISTRY.register("js", () -> JsTrigger.CODEC);
 
     private static DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> register(String signal) {
         return REGISTRY.register(signal, () -> MapCodec.unit(new Builtin(
