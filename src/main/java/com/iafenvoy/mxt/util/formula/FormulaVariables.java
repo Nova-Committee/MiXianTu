@@ -15,8 +15,8 @@ import java.util.regex.Pattern;
  * {@link Binding} and reuse it: {@code Expression} does exactly that, once per name per formula,
  * which is what stops a long lived formula from repeating the lookup on every evaluation.</p>
  *
- * <p>An unknown name is a content bug: development environments throw, production warns once and
- * uses {@code 0}.</p>
+ * <p>An unknown name is a content bug: a development environment logs the whole error and
+ * production logs one warning line, and both keep evaluating with {@code 0}.</p>
  */
 public final class FormulaVariables {
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
@@ -101,10 +101,8 @@ public final class FormulaVariables {
                 return 0.0D;
             }
             return value;
-        } catch (FormulaException exception) {
-            throw exception;
         } catch (RuntimeException exception) {
-            FormulaDiagnostics.report("Formula variable '" + name + "' failed: " + exception);
+            FormulaDiagnostics.report("Formula variable '" + name + "' failed", exception);
             return 0.0D;
         }
     }

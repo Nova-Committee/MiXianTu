@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
@@ -14,18 +15,20 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * only the value is read per evaluation.</p>
  */
 public final class ContextVariable implements NumberProvider {
-    public static final MapCodec<ContextVariable> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    private static final MapCodec<ContextVariable> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("variable").forGetter(ContextVariable::variable),
             FINITE_DOUBLE_CODEC.optionalFieldOf("fallback", 0.0D).forGetter(ContextVariable::fallback)
     ).apply(i, ContextVariable::new));
+
+    public static final MapCodec<ContextVariable> MAP_CODEC = RAW_CODEC.validate(variable -> variable.variable().isBlank()
+            ? DataResult.error(() -> "Context variable name must not be blank")
+            : DataResult.success(variable));
 
     private final String variable;
     private final double fallback;
     private volatile FormulaVariables.Binding binding;
 
     public ContextVariable(String variable, double fallback) {
-        if (variable.isBlank() || !Double.isFinite(fallback))
-            throw new IllegalArgumentException("Invalid context variable provider");
         this.variable = variable;
         this.fallback = fallback;
     }

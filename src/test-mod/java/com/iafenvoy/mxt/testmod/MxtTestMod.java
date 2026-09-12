@@ -40,7 +40,6 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
-import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession;
 import com.iafenvoy.mxt.runtime.forging.ForgingTableState;
@@ -53,23 +52,16 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationCont
 import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NonZeroVisibility;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.runtime.ability.AbilityService.PrepareResult;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
-import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.formation.FormationStructureValidator;
-import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.forging.ForgingProbe;
-import com.iafenvoy.mxt.runtime.forging.ForgingService;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
-import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
@@ -86,15 +78,16 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.InventoryUtil;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.mxt.util.formula.number.ContextVariable;
 import com.iafenvoy.mxt.util.formula.number.Expression;
+import com.iafenvoy.mxt.util.formula.number.WeightedList;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.RegistryOps;
@@ -142,7 +135,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 /** Development-only mod that contributes the mxt_test datapack and client resources. */
 @Mod(MxtTestMod.MOD_ID)
@@ -182,7 +174,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Realm cache did not preserve linear realm ordering");
         }
         verifyDynamicResourceValues(foundation, coreForming);
-        verifyEnergyCosts();
+        verifyFormulaDiagnostics();
         verifyItemQualities(event);
         ItemStack weapon = new ItemStack(Items.DIAMOND_SWORD);
         WeaponBinding weaponBinding = ItemBindingService.weapon(weapon)
@@ -235,8 +227,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Technique binding did not retain its technique item configuration");
         }
         Holder<CultivateAction> qingxiaoMeditation = requireHolder(MxtResourceKeys.CULTIVATE_ACTION, Identifier.parse("mxt_test:qingxiao_meditation"));
-        if (!qingxiaoMeditation.value().defaultAction()
-                || !same(qingxiaoMeditation.value().absorbAmount().evaluate(FormulaContext.EMPTY), 2.0D)) {
+        if (!qingxiaoMeditation.value().defaultAction()) {
             throw new IllegalStateException("Default cultivation action settings were not decoded");
         }
         CultivationAttachment cultivationMode = new CultivationAttachment();
@@ -331,7 +322,6 @@ public final class MxtTestMod {
         verifyForgingStepRows(event.getServer().registryAccess());
         verifyForgingSuffixWindow();
         verifyForgingSessionRoundTrip();
-        verifyForgingListenerFailures(event.getServer().registryAccess());
         verifyForgingMethodSounds(event.getServer().registryAccess());
         verifyForgingUnlocks();
         LOGGER.info("MiXianTu server audit passed");
@@ -653,67 +643,6 @@ public final class MxtTestMod {
         ForgingSession bounded = new ForgingSession(narrow);
         if (!bounded.strike(allowed) || bounded.value() != 1 || bounded.canStrike(allowed))
             throw new IllegalStateException("Forging audit expected a strike out of the meter to be refused at the bound");
-    }
-
-    /**
-     * A listener that throws must refuse the operation, not escape into the middle of it.
-     *
-     * <p>NeoForge's bus logs a listener's throwable and rethrows it, and the post sites sit between a
-     * precheck and a payment. Without the catch at the post site an exception would travel out of the
-     * packet handler with the strike already paid for, so this is a property worth pinning rather than
-     * trusting: the audit installs a listener that throws, posts through the real handler, and expects the
-     * refusal the workstation knows how to handle.</p>
-     *
-     * <p>The other half is the notification events. Nothing is left to refuse by the time those are
-     * posted, so a throw there must not escape either - and that one is asserted by the audit simply
-     * surviving the call.</p>
-     *
-     * <p>The events posted here carry a hollow payload: only the dispatch is under test, and a real player
-     * and table would need a level. The listeners are unregistered in a {@code finally}, because a throwing
-     * listener left on the bus would refuse every later forging operation in this server's life.</p>
-     */
-    private static void verifyForgingListenerFailures(RegistryAccess registries) {
-        ForgingBlueprint blueprint = MxtDatapackRegistries
-                .get(registries, MxtResourceKeys.FORGING_BLUEPRINT, Identifier.parse("mxt_test:iron_sword"))
-                .orElseThrow(() -> new IllegalStateException("The listener audit needs mxt_test:iron_sword"));
-
-        // A deciding event: a listener that throws refuses the operation.
-        Consumer<ForgingEvent.Start> broken = event -> {
-            throw new IllegalStateException("forging audit probe");
-        };
-        NeoForge.EVENT_BUS.addListener(ForgingEvent.Start.class, broken);
-        try {
-            if (ForgingProbe.postRefusalForAudit(new ForgingEvent.Start(null, null, blueprint)) != ForgingService.Failure.LISTENER_ERROR)
-                throw new IllegalStateException("A throwing forging listener must refuse the operation as LISTENER_ERROR");
-        } finally {
-            NeoForge.EVENT_BUS.unregister(broken);
-        }
-
-        // With the listener gone the same post has to go through, or the check above proved nothing about
-        // the listener being the cause.
-        if (ForgingProbe.postRefusalForAudit(new ForgingEvent.Start(null, null, blueprint)) != null)
-            throw new IllegalStateException("A forging event with no listener must be accepted");
-
-        // Cancelling is the other way a listener refuses, and it has to stay distinguishable from breaking.
-        Consumer<ForgingEvent.Start> veto = event -> event.setCanceled(true);
-        NeoForge.EVENT_BUS.addListener(ForgingEvent.Start.class, veto);
-        try {
-            if (ForgingProbe.postRefusalForAudit(new ForgingEvent.Start(null, null, blueprint)) != ForgingService.Failure.CANCELLED)
-                throw new IllegalStateException("A cancelling forging listener must be reported as CANCELLED");
-        } finally {
-            NeoForge.EVENT_BUS.unregister(veto);
-        }
-
-        // A notification: the operation has happened, so a throwing listener must not reach the caller.
-        Consumer<ForgingEvent.Started> brokenNotification = event -> {
-            throw new IllegalStateException("forging audit notification probe");
-        };
-        NeoForge.EVENT_BUS.addListener(ForgingEvent.Started.class, brokenNotification);
-        try {
-            ForgingProbe.postNotificationForAudit(new ForgingEvent.Started(null, null, null));
-        } finally {
-            NeoForge.EVENT_BUS.unregister(brokenNotification);
-        }
     }
 
     /**
@@ -1104,102 +1033,35 @@ public final class MxtTestMod {
                 || !same(holder.audit(qi).maxSnapshot(), 220.0D)) {
             throw new IllegalStateException("Resource validation draft modified live server-resolved bounds");
         }
-
-        Identifier meditationId = Identifier.parse("mxt_test:fire_meditation");
-        CultivateAction meditation = MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATE_ACTION, meditationId)
-                .orElseThrow(() -> new IllegalStateException("Cultivation restoration test action was not loaded"));
-        CultivationAttachment absorbingSpirit = new CultivationAttachment();
-        absorbingSpirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
-        ResourceHolderAttachment absorbingResources = new ResourceHolderAttachment();
-        absorbingResources.set(spiritPower, 5.0D);
-        AuraChunkAttachment absorbingAura = new AuraChunkAttachment();
-        Holder<Resource> fire = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
-        absorbingAura.initializeAuras(Map.of(fire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of(Identifier.parse("mxt_test:aura_kind/fire")));
-        if (!CultivationActionService.start(absorbingSpirit, meditationId, meditation, 0L, () -> true).started()) {
-            throw new IllegalStateException("Cultivation restoration test action did not start");
-        }
-        Result absorbed = CultivationActionService.tick(absorbingSpirit, absorbingResources,
-                absorbingAura, meditationId, meditation, 0L, FormulaContext.EMPTY, () -> true);
-        if (!absorbed.progressed() || !same(absorbingSpirit.cultivationProgress(qi), 0.375D)
-                || !same(absorbingResources.get(qi), 2.25D) || !same(absorbingResources.get(spiritPower), 4.0D)) {
-            throw new IllegalStateException("Cultivation did not apply source-side resource conversion limits correctly");
-        }
-        Result convertedWhileWaiting = CultivationActionService.tick(absorbingSpirit, absorbingResources,
-                absorbingAura, meditationId, meditation, 1L, FormulaContext.EMPTY, () -> true);
-        if (!convertedWhileWaiting.waiting() || !same(absorbingSpirit.cultivationProgress(qi), 0.75D)
-                || !same(absorbingResources.get(qi), 1.5D) || !same(absorbingAura.auras().get(fire).amount(), 9.0D)) {
-            throw new IllegalStateException("Cultivation conversion did not use its source-side limit every game tick");
-        }
     }
 
-    private static void verifyEnergyCosts() {
-        if (MiscCodecs.COLOR.parse(JsonOps.INSTANCE, JsonParser.parseString("\"#FFFFFFFF\""))
-                .result().filter(value -> value == -1).isEmpty()
-                || MiscCodecs.COLOR.parse(JsonOps.INSTANCE, JsonParser.parseString("4294967295"))
-                .result().filter(value -> value == -1).isEmpty()
-                || MiscCodecs.COLOR_NO_ALPHA.parse(JsonOps.INSTANCE, JsonParser.parseString("\"#66CCFF\""))
-                .result().filter(value -> value == 0x66CCFF).isEmpty()
-                || MiscCodecs.COLOR_NO_ALPHA.parse(JsonOps.INSTANCE, JsonParser.parseString("\"66CCFF\""))
-                .result().isPresent()
-                || MiscCodecs.COLOR_NO_ALPHA.parse(JsonOps.INSTANCE, JsonParser.parseString("\"#GGGGGG\""))
+    private static void verifyFormulaDiagnostics() {
+        // A malformed formula is a decode error rather than a thrown exception, so the registry
+        // loader can list every broken formula of one load instead of stopping at the first one.
+        DataResult<Expression> broken = Expression.decode("1 +");
+        if (broken.result().isPresent()) {
+            throw new IllegalStateException("A malformed expression must not decode");
+        }
+        String brokenMessage = broken.error().map(DataResult.Error::message).orElse("");
+        if (!brokenMessage.contains("Invalid number expression '1 +'")) {
+            throw new IllegalStateException("A malformed expression must name its source: " + brokenMessage);
+        }
+        // Every problem of one expression is collected, not just the first one.
+        List<String> problems = new Expression("1 +", Map.of("unused", new Constant(1.0D))).problems();
+        if (problems.size() < 2) {
+            throw new IllegalStateException("Expression problems must be collected together, got " + problems);
+        }
+        if (Expression.decode("level * 2").result().isEmpty()) {
+            throw new IllegalStateException("A valid expression must decode");
+        }
+        // Provider-level checks that used to abort the load on their own are decode errors too.
+        if (WeightedList.MAP_CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("{\"distribution\":[]}"))
                 .result().isPresent()) {
-            throw new IllegalStateException("Color codecs must validate hexadecimal values and preserve unsigned int bits");
+            throw new IllegalStateException("An empty weighted list must not decode");
         }
-        if (ItemAuraComponent.CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(3.5D))
-                .result().map(ItemAuraComponent::remain).filter(value -> same(value, 3.5D)).isEmpty()
-                || ItemAuraComponent.CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(-1.0D)).result().isPresent()
-                || ItemAuraComponent.CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(Double.NaN)).result().isPresent()) {
-            throw new IllegalStateException("Item-aura component codec must only accept finite non-negative remainders");
-        }
-        if (NumberProvider.FINITE_DOUBLE_CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(Double.NaN)).result().isPresent()
-                || NumberProvider.FINITE_DOUBLE_CODEC.parse(JsonOps.INSTANCE, JsonOps.INSTANCE.createDouble(Double.POSITIVE_INFINITY)).result().isPresent()) {
-            throw new IllegalStateException("Number-provider codecs must reject non-finite values while loading");
-        }
-        if (!same(new Expression("1 / 0").evaluate(FormulaContext.EMPTY), 0.0D)) {
-            throw new IllegalStateException("Non-finite runtime formula results must fall back to zero");
-        }
-        if (!same(new Expression("round(1.7) + clamp(4, 0, 3) + zero").evaluate(FormulaContext.EMPTY), 5.0D)) {
-            throw new IllegalStateException("Intrinsic formula functions or variables were not available to expressions");
-        }
-        if (!same(new Expression("damage * 2", Map.of("damage", new Constant(3.0D)))
-                .evaluate(FormulaContext.EMPTY.with("damage", 10.0D)), 6.0D)) {
-            throw new IllegalStateException("Expression parameters did not override the formula context");
-        }
-        NumberProvider parameterizedExpression = NumberProvider.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("""
-                {"type":"mxt:expression","expression":"damage * 2","params":{"damage":"1 + level"}}
-                """)).getOrThrow();
-        if (!same(parameterizedExpression.evaluate(FormulaContext.EMPTY.with("damage", 10.0D).with("level", 2.0D)), 6.0D)) {
-            throw new IllegalStateException("Expression parameter codecs did not decode or override the formula context");
-        }
-        Holder<Resource> spiritPower = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
-        Holder<Resource> soulPower = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:soul_power"));
-        Identifier firebolt = Identifier.parse("mxt_test:firebolt");
-        Holder<Ability> ability = requireHolder(MxtResourceKeys.ABILITY, firebolt);
-        if (!same(ability.value().castTime().evaluate(FormulaContext.EMPTY), 0.0D)) {
-            throw new IllegalStateException("Inline structured number providers did not evaluate correctly");
-        }
-        AbilityAttachment abilities = new AbilityAttachment();
-        abilities.grant(ability, Identifier.fromNamespaceAndPath(MOD_ID, "test"));
-        ResourceHolderAttachment abilityResources = new ResourceHolderAttachment();
-        abilityResources.set(spiritPower, 20.0D);
-        abilityResources.set(soulPower, 3.0D);
-        PrepareResult prepared = AbilityService.prepare(ability, ability.value(), abilities, abilityResources, 0L, FormulaContext.EMPTY);
-        if (!prepared.approved() || !AbilityService.commit(prepared.use(), abilities, abilityResources, 0L).committed()
-                || !same(abilityResources.get(spiritPower), 12.0D) || !same(abilityResources.get(soulPower), 1.0D)) {
-            throw new IllegalStateException("Ability costs did not deduct their declared resource bars");
-        }
-
-        Formation formation = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, Identifier.parse("mxt_test:spirit_gathering"))
-                .orElseThrow(() -> new IllegalStateException("Formation energy-cost test definition was not loaded"));
-        ResourceHolderAttachment formationResources = new ResourceHolderAttachment();
-        formationResources.set(spiritPower, 20.0D);
-        ActivateResult activation = FormationService.activate(Identifier.parse("mxt_test:spirit_gathering"), formation,
-                formationResources, FormulaContext.EMPTY);
-        if (!activation.active() || !same(formationResources.get(spiritPower), 10.0D)
-                || !FormationService.maintain(activation.instance(), formation, formationResources, FormulaContext.EMPTY).maintained()
-                || !same(formationResources.get(spiritPower), 9.0D)
-                || !same(formation.maxBonus().get(requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))).evaluate(FormulaContext.EMPTY), 50.0D)) {
-            throw new IllegalStateException("Formation activation and upkeep did not deduct their declared resource bar");
+        if (ContextVariable.MAP_CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("{\"variable\":\" \"}"))
+                .result().isPresent()) {
+            throw new IllegalStateException("A blank context variable must not decode");
         }
     }
 

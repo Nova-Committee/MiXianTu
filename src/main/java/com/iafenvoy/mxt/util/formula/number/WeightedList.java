@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.util.formula.number;
 
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
@@ -13,7 +15,8 @@ import java.util.List;
  * loaded, so the total is computed here instead of on every evaluation.
  */
 public final class WeightedList implements NumberProvider {
-    public static final MapCodec<WeightedList> MAP_CODEC = Entry.MAP_CODEC.codec().listOf().fieldOf("distribution").xmap(WeightedList::new, WeightedList::distribution);
+    public static final MapCodec<WeightedList> MAP_CODEC = Entry.MAP_CODEC.codec().listOf().fieldOf("distribution")
+            .flatXmap(WeightedList::decode, list -> DataResult.success(list.distribution()));
 
     private final List<Entry> distribution;
     /**
@@ -38,11 +41,21 @@ public final class WeightedList implements NumberProvider {
         return this.distribution;
     }
 
+    /**
+     * Reports an empty distribution as a decode error, so a broken weight list is collected with
+     * every other load error instead of aborting the load on its own.
+     */
+    private static DataResult<WeightedList> decode(List<Entry> distribution) {
+        return distribution.isEmpty()
+                ? DataResult.error(() -> "Weighted list requires at least one entry")
+                : DataResult.success(new WeightedList(distribution));
+    }
+
     @Override
     public double evaluate(FormulaContext context) {
         long total = this.total;
         if (total <= 0L) {
-            LOGGER.warn("Number provider WeightedList has an invalid total weight; using 0");
+            FormulaDiagnostics.report("Number provider WeightedList has an invalid total weight; using 0");
             return 0.0D;
         }
         long selected = (long) (context.random().nextDouble() * total);

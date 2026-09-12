@@ -19,9 +19,9 @@ import java.util.Optional;
  */
 public record Conditional(List<Branch> branches, Optional<NumberProvider> fallback) implements NumberProvider {
     private static final Codec<NumberProvider> SCALAR_CODEC = Codec.either(FINITE_DOUBLE_CODEC, Codec.STRING).flatXmap(
-            value -> value.map(number -> DataResult.success(new Constant(number)), expression -> Expression.create(expression)
-                    .<DataResult<NumberProvider>>map(DataResult::success)
-                    .orElseGet(() -> DataResult.error(() -> "Invalid number expression: " + expression))),
+            value -> value.map(
+                    number -> DataResult.success(new Constant(number)),
+                    expression -> Expression.decode(expression).map(provider -> (NumberProvider) provider)),
             value -> {
                 if (value instanceof Constant(double value1)) return DataResult.success(Either.left(value1));
                 if (value instanceof Expression expression)
