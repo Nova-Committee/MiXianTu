@@ -24,6 +24,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -59,7 +60,7 @@ public final class PassiveAttributeService {
         if (entity.level().isClientSide()) return;
         List<Entry> entries = entries(entity);
         removeGenerated(entity, Set.of());
-        FormulaContext context = FormulaContexts.forEntity(entity);
+        FormulaContext context = dynamic(entries) ? FormulaContexts.forEntity(entity) : null;
         for (Entry entry : entries) apply(entity, entry, context);
     }
 
@@ -72,10 +73,21 @@ public final class PassiveAttributeService {
         if (entity.level().isClientSide()) return;
         List<Entry> entries = entries(entity);
         Set<Identifier> active = new HashSet<>();
-        for (Entry entry : entries) active.add(modifierId(entry));
+        boolean dynamic = false;
+        for (Entry entry : entries) {
+            active.add(entry.id());
+            dynamic |= entry.definition().value().isPresent();
+        }
         removeGenerated(entity, active);
-        FormulaContext context = FormulaContexts.forEntity(entity);
+        // A static entry only needs its constant amount, so a tick whose entries are all static
+        // never builds a formula context.
+        FormulaContext context = dynamic ? FormulaContexts.forEntity(entity) : null;
         for (Entry entry : entries) apply(entity, entry, context);
+    }
+
+    private static boolean dynamic(List<Entry> entries) {
+        for (Entry entry : entries) if (entry.definition().value().isPresent()) return true;
+        return false;
     }
 
     private static List<Entry> entries(LivingEntity entity) {
@@ -83,7 +95,9 @@ public final class PassiveAttributeService {
         Map<Identifier, Integer> abilityIndices = new HashMap<>();
         for (ResolvedModifier value : AbilityModifierService.resolve(entity.getData(MxtAttachments.ABILITY_HOLDER))) {
             int index = abilityIndices.merge(value.ability(), 1, Integer::sum) - 1;
-            entries.add(new Entry("ability", value.ability(), index, value.modifier()));
+            AttributeEntry definition = value.modifier();
+            entries.add(new Entry("ability", value.ability(), index, definition,
+                    modifierId("ability", value.ability(), index, definition.modifier())));
         }
 
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
@@ -109,37 +123,42 @@ public final class PassiveAttributeService {
     }
 
     private static void addAll(List<Entry> target, String kind, Identifier source, List<AttributeEntry> values) {
-        for (int index = 0; index < values.size(); index++)
-            target.add(new Entry(kind, source, index, values.get(index)));
+        for (int index = 0; index < values.size(); index++) {
+            AttributeEntry definition = values.get(index);
+            target.add(new Entry(kind, source, index, definition,
+                    modifierId(kind, source, index, definition.modifier())));
+        }
     }
 
-    private static void apply(LivingEntity entity, Entry entry, FormulaContext context) {
+    private static void apply(LivingEntity entity, Entry entry, @Nullable FormulaContext context) {
         AttributeEntry definition = entry.definition();
         Holder<Attribute> attribute = definition.attribute();
         AttributeInstance instance = entity.getAttribute(attribute);
         if (instance == null) return;
         final double amount;
         try {
-            amount = definition.amount(context);
+            amount = context == null ? definition.modifier().amount() : definition.amount(context);
         } catch (RuntimeException ignored) {
             return;
         }
         if (!Double.isFinite(amount)) return;
-        Identifier id = modifierId(entry);
+        Identifier id = entry.id();
         AttributeModifier current = instance.getModifier(id);
         if (current == null || Double.compare(current.amount(), amount) != 0
                 || current.operation() != definition.modifier().operation())
             instance.addOrUpdateTransientModifier(new AttributeModifier(id, amount, definition.modifier().operation()));
     }
 
-    private static Identifier modifierId(Entry entry) {
-        AttributeModifier definition = entry.definition().modifier();
-        String source = entry.source().getNamespace() + "/" + entry.source().getPath();
+    /**
+     * The generated modifier id. It is computed while the entry is collected, not on every tick.
+     */
+    private static Identifier modifierId(String kind, Identifier source, int index, AttributeModifier definition) {
+        String origin = source.getNamespace() + "/" + source.getPath();
         String original = definition.id().getNamespace() + "/" + definition.id().getPath();
         return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
-                PREFIX + entry.kind() + "/" + source + "/" + entry.index() + "/" + original);
+                PREFIX + kind + "/" + origin + "/" + index + "/" + original);
     }
 
-    private record Entry(String kind, Identifier source, int index, AttributeEntry definition) {
+    private record Entry(String kind, Identifier source, int index, AttributeEntry definition, Identifier id) {
     }
 }

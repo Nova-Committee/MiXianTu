@@ -16,7 +16,7 @@ import java.util.List;
 public final class MxtKubeJsResourceBindings {
     @Info("Consumes a datapack-format resource-cost array through the normal atomic transaction path.")
     public Object consume(Entity entity, JsonElement costs) {
-        List<ResourceCost> decoded = MxtKubeJsDataCodec.decode(ResourceCost.LIST_CODEC, costs, entity.level().registryAccess());
+        List<ResourceCost> decoded = MxtKubeJsDataCodec.decodeCached(ResourceCost.LIST_CODEC, costs, entity.level().registryAccess());
         return MxtKubeJsApi.tryConsumeResources(entity, decoded, FormulaContext.of(entity));
     }
 }

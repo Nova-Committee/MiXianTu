@@ -46,32 +46,32 @@ public final class MxtKubeJsConditionBindings {
 
     @Info("Decodes and evaluates any registered entity condition definition.")
     public boolean testEntity(Entity entity, JsonObject definition) {
-        return MxtKubeJsDataCodec.decode(EntityCondition.CODEC, definition, entity.level().registryAccess())
+        return MxtKubeJsDataCodec.decodeCached(EntityCondition.CODEC, definition, entity.level().registryAccess())
                 .test(entity, FormulaContext.of(entity));
     }
 
     @Info("Decodes and evaluates any registered bi-entity condition definition.")
     public boolean testBiEntity(Entity actor, Entity target, JsonObject definition) {
-        return MxtKubeJsDataCodec.decode(BiEntityCondition.CODEC, definition, actor.level().registryAccess())
+        return MxtKubeJsDataCodec.decodeCached(BiEntityCondition.CODEC, definition, actor.level().registryAccess())
                 .test(actor, target, FormulaContext.of(actor));
     }
 
     @Info("Decodes and evaluates any registered block condition definition.")
     public boolean testBlock(Level level, BlockPos pos, JsonObject definition) {
-        return MxtKubeJsDataCodec.decode(BlockCondition.CODEC, definition, level.registryAccess())
+        return MxtKubeJsDataCodec.decodeCached(BlockCondition.CODEC, definition, level.registryAccess())
                 .test(level, pos, FormulaContext.of(level));
     }
 
     @Info("Decodes and evaluates any registered item condition definition.")
     public boolean testItem(Entity holder, ItemStack stack, JsonObject definition) {
-        return MxtKubeJsDataCodec.decode(ItemCondition.CODEC, definition, holder.level().registryAccess())
+        return MxtKubeJsDataCodec.decodeCached(ItemCondition.CODEC, definition, holder.level().registryAccess())
                 .test(holder, stack, FormulaContext.of(holder));
     }
 
     @Info("Decodes and evaluates any registered damage condition definition.")
     public boolean testDamage(Level level, DamageSource source, float amount, JsonObject definition) {
         FormulaContext context = source.getEntity() == null ? FormulaContext.EMPTY : FormulaContext.of(source.getEntity());
-        return MxtKubeJsDataCodec.decode(DamageCondition.CODEC, definition, level.registryAccess())
+        return MxtKubeJsDataCodec.decodeCached(DamageCondition.CODEC, definition, level.registryAccess())
                 .test(source, amount, context);
     }
 }

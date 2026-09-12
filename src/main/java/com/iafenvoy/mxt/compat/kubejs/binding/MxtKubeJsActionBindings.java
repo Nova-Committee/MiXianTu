@@ -43,25 +43,25 @@ public final class MxtKubeJsActionBindings {
 
     @Info("Decodes and executes any registered entity action definition.")
     public void executeEntity(Entity entity, JsonObject definition) {
-        MxtKubeJsDataCodec.decode(EntityAction.CODEC, definition, entity.level().registryAccess())
+        MxtKubeJsDataCodec.decodeCached(EntityAction.CODEC, definition, entity.level().registryAccess())
                 .execute(entity, FormulaContext.of(entity));
     }
 
     @Info("Decodes and executes any registered bi-entity action definition.")
     public void executeBiEntity(Entity actor, Entity target, JsonObject definition) {
-        MxtKubeJsDataCodec.decode(BiEntityAction.CODEC, definition, actor.level().registryAccess())
+        MxtKubeJsDataCodec.decodeCached(BiEntityAction.CODEC, definition, actor.level().registryAccess())
                 .execute(actor, target, FormulaContext.of(actor));
     }
 
     @Info("Decodes and executes any registered block action definition.")
     public void executeBlock(Level level, BlockPos pos, JsonObject definition) {
-        MxtKubeJsDataCodec.decode(BlockAction.CODEC, definition, level.registryAccess())
+        MxtKubeJsDataCodec.decodeCached(BlockAction.CODEC, definition, level.registryAccess())
                 .execute(level, pos, FormulaContext.of(level));
     }
 
     @Info("Decodes and executes any registered item action definition.")
     public void executeItem(Entity holder, ItemStack stack, JsonObject definition) {
-        MxtKubeJsDataCodec.decode(ItemAction.CODEC, definition, holder.level().registryAccess())
+        MxtKubeJsDataCodec.decodeCached(ItemAction.CODEC, definition, holder.level().registryAccess())
                 .execute(holder, stack, FormulaContext.of(holder));
     }
 }

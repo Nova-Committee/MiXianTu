@@ -135,7 +135,7 @@ public final class AbilityService {
                                 AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                 FormulaContext context) {
         if (actor instanceof LivingEntity living) {
-            context = FormulaContexts.forEntity(living, context.variables());
+            context = FormulaContexts.forEntity(living, context);
             context = withElementAffinity(living, definition, context);
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
@@ -167,7 +167,7 @@ public final class AbilityService {
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context) {
         if (actor instanceof LivingEntity living) {
-            context = FormulaContexts.forEntity(living, context.variables());
+            context = FormulaContexts.forEntity(living, context);
             context = withElementAffinity(living, definition, context);
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
@@ -215,7 +215,7 @@ public final class AbilityService {
                                             AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                             FormulaContext context) {
         if (actor instanceof LivingEntity living) {
-            context = withElementAffinity(living, definition, FormulaContexts.forEntity(living, context.variables()));
+            context = withElementAffinity(living, definition, FormulaContexts.forEntity(living, context));
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D) {
                 stopChannel(abilities);
                 return ChannelResult.stopped(Failure.ELEMENT_AFFINITY);
@@ -352,7 +352,7 @@ public final class AbilityService {
             Ability child = childHolder.value();
             FormulaContext childContext = context;
             if (actor instanceof LivingEntity living) {
-                childContext = withElementAffinity(living, child, FormulaContexts.forEntity(living, context.variables()));
+                childContext = withElementAffinity(living, child, FormulaContexts.forEntity(living, context));
                 if (!child.elementAffinity().isEmpty() && childContext.value("element_modifier") <= 0.0D)
                     return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
             }
@@ -446,9 +446,7 @@ public final class AbilityService {
         if (definition.elementAffinity().isEmpty()) return context;
         double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY), definition.elementAffinity(), context,
                 id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id));
-        LinkedHashMap<String, Double> variables = new LinkedHashMap<>(context.variables());
-        variables.put("element_modifier", modifier);
-        return new FormulaContext(variables, context.random(), context.player());
+        return context.with("element_modifier", modifier);
     }
 
     private static <T extends AbilityComponent> Optional<T> component(Ability definition, Class<T> type) {
@@ -470,7 +468,7 @@ public final class AbilityService {
     public static void executeTargetAction(Ability definition, Entity actor, Entity target, FormulaContext context) {
         try {
             FormulaContext targetContext = actor instanceof LivingEntity caster && target instanceof LivingEntity livingTarget
-                    ? FormulaContexts.forEntities(caster, livingTarget, context.variables()) : context;
+                    ? FormulaContexts.forEntities(caster, livingTarget, context) : context;
             if (definition.targetCondition().test(actor, target, targetContext))
                 definition.biEntityAction().execute(actor, target, targetContext);
         } catch (RuntimeException exception) {

@@ -41,7 +41,8 @@ public record Conditional(List<Branch> branches, Optional<NumberProvider> fallba
         if (player != null)
             for (Branch branch : this.branches)
                 if (branch.condition().test(player, context)) return branch.value().evaluate(context);
-        return this.fallback.map(value -> value.evaluate(context)).orElse(0.0D);
+        Optional<NumberProvider> fallback = this.fallback;
+        return fallback.isPresent() ? fallback.get().evaluate(context) : 0.0D;
     }
 
     @Override

@@ -231,9 +231,7 @@ public final class AbilityEventBridge {
      * Called by server-side cultivation entry points after a successful breakthrough.
      */
     public static void onBreakthrough(LivingEntity entity, Identifier target, FormulaContext context) {
-        Map<String, Double> values = new LinkedHashMap<>(context.variables());
-        values.put("breakthrough", 1.0D);
-        dispatch(TriggerSignals.BREAKTHROUGH, entity, new FormulaContext(values, context.random(), context.player()), definition -> true);
+        dispatch(TriggerSignals.BREAKTHROUGH, entity, context.with("breakthrough", 1.0D), definition -> true);
     }
 
     private static FormulaContext blockContext(Entity entity, BlockPos pos) {
@@ -276,7 +274,7 @@ public final class AbilityEventBridge {
                 double distanceSquared = actor.distanceToSqr(target);
                 FormulaContext context = FormulaContext.of(actor, Map.of("aura_radius", radius, "distance", Math.sqrt(distanceSquared)));
                 if (distanceSquared <= radiusSquared) {
-                    FormulaContext targetContext = target instanceof LivingEntity livingTarget ? FormulaContexts.forEntities(actor, livingTarget, context.variables()) : context;
+                    FormulaContext targetContext = target instanceof LivingEntity livingTarget ? FormulaContexts.forEntities(actor, livingTarget, context) : context;
                     AbilityService.executeTargetAction(definition, actor, target, targetContext);
                 }
             }

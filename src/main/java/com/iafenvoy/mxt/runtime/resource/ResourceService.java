@@ -15,8 +15,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -79,18 +77,7 @@ public final class ResourceService {
      * deliberately zero when the player has no realm stage in this resource's chain.
      */
     public static FormulaContext formulaContext(CultivationAttachment spirit, Holder<Resource> resource, FormulaContext base) {
-        Resource definition = resource.value();
-        Map<String, Double> values = new LinkedHashMap<>(base.variables());
-        int realmRank = realmRank(spirit, resource, definition);
-        boolean matchesResource = realmRank >= 0;
-        double absorbedAura = matchesResource ? spirit.cultivationProgress(resource) : 0.0D;
-        int resolvedRank = Math.max(0, realmRank);
-        values.put("realm", (double) resolvedRank);
-        values.put("realm_rank", (double) resolvedRank);
-        values.put("level", (double) resolvedRank);
-        values.put("absorbed_aura", absorbedAura);
-        values.put("cultivation_progress", absorbedAura);
-        return new FormulaContext(values, base.random(), base.player());
+        return base.withResource(spirit, resource);
     }
 
     public static FormulaContext formulaContext(CultivationAttachment spirit, Identifier resource, Resource definition, FormulaContext base) {
@@ -102,8 +89,8 @@ public final class ResourceService {
      * Builds the same resource context on either logical side from an entity attachment.
      */
     public static FormulaContext formulaContext(LivingEntity entity, Holder<Resource> resource, FormulaContext base) {
-        return formulaContext(entity.getData(MxtAttachments.CULTIVATION), resource,
-                FormulaContexts.forEntity(entity, base.variables()));
+        return FormulaContexts.forEntity(entity, base)
+                .withResource(entity.getData(MxtAttachments.CULTIVATION), resource);
     }
 
     public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, Resource definition, FormulaContext base) {
@@ -121,7 +108,12 @@ public final class ResourceService {
         return resolveBounds(definition, context).orElse(null);
     }
 
-    private static int realmRank(CultivationAttachment spirit, Holder<Resource> resource, Resource definition) {
+    /**
+     * Rank of this entity's stage in the resource's chain, or {@code -1} when it has no stage in
+     * that chain. Read by the resource formula variables.
+     */
+    public static int realmRank(CultivationAttachment spirit, Holder<Resource> resource) {
+        Resource definition = resource.value();
         int best = -1;
         for (Holder<RealmStage> current : spirit.realmStages().values()) {
             if (!current.value().resource().equals(resource)) continue;

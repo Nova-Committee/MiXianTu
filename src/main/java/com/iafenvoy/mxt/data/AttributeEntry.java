@@ -23,6 +23,7 @@ public record AttributeEntry(Holder<Attribute> attribute, AttributeModifier modi
     ).apply(i, AttributeEntry::new));
 
     public double amount(FormulaContext context) {
-        return this.value.map(provider -> provider.evaluate(context)).orElse(this.modifier.amount());
+        if (this.value.isEmpty()) return this.modifier.amount();
+        return this.value.get().evaluate(context);
     }
 }

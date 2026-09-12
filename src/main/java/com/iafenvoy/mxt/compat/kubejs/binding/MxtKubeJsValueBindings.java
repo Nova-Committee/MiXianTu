@@ -35,7 +35,7 @@ public final class MxtKubeJsValueBindings {
 
     @Info("Decodes and evaluates any registered number provider definition.")
     public double evaluateNumber(Entity entity, JsonObject definition) {
-        NumberProvider provider = MxtKubeJsDataCodec.decode(NumberProvider.CODEC, definition, entity.level().registryAccess());
+        NumberProvider provider = MxtKubeJsDataCodec.decodeCached(NumberProvider.CODEC, definition, entity.level().registryAccess());
         double value = provider.evaluate(FormulaContext.of(entity));
         return provider.assertFinite(value) ? value : 0.0D;
     }
@@ -46,7 +46,7 @@ public final class MxtKubeJsValueBindings {
         if (id == null) throw new IllegalArgumentException("Invalid MXT identifier: " + resource);
         Holder<Resource> holder = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown MXT resource: " + resource));
-        ResourceValueProvider provider = MxtKubeJsDataCodec.decode(ResourceValueProvider.CODEC, definition, entity.level().registryAccess());
+        ResourceValueProvider provider = MxtKubeJsDataCodec.decodeCached(ResourceValueProvider.CODEC, definition, entity.level().registryAccess());
         return provider.resolve(entity, holder, FormulaContext.of(entity));
     }
 }

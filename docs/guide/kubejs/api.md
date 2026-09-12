@@ -138,6 +138,7 @@ const enoughQi = MxtConditions.testEntity(player, {
 | 方法 | 说明 |
 | --- | --- |
 | `context.value(name)` | 读取变量：先取显式上下文值，再查内置变量表。上下文无法提供的名字会被报告——开发环境直接抛异常，生产环境每个名字记录一次警告并返回 `0`。 |
+| `context.explicit(name)` | 只取显式值；上下文没有该值时返回 `NaN`。用于判断当前事件是否提供了某个载荷，而不用去查变量表。 |
 | `context.contains(name)` | 判断当前上下文能否提供该名字；不报告也不抛异常。 |
 | `context.player()` | 返回当前玩家；不存在时为 `null`。 |
 | `context.caster()` | 返回施法实体；上下文没有实体时为 `null`。 |
@@ -154,6 +155,8 @@ const enoughQi = MxtConditions.testEntity(player, {
 | --- | --- | --- | --- |
 | `evaluateNumber(entity, definition)` | `Entity`、NumberProvider 对象 | `number` | 计算任意注册 Provider。非有限结果返回 `0`。 |
 | `evaluateResource(entity, resource, definition)` | `LivingEntity`、资源 ID、ResourceValueProvider JSON | `number` | 计算指定资源的值。实体感知 Provider 会读取当前位置环境/实际灵气。 |
+
+同一个 JSON 文本只解析一次并复用（解析会构建整棵 Provider 树，包括其中的表达式），所以脚本每 tick 计算同一份定义也只付出一次解析代价。世界注册表变化时缓存会被丢弃；脚本改动定义后 JSON 文本不同，也会重新解析。
 
 ```js
 const levelScaled = MxtValues.evaluateNumber(player, {

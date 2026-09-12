@@ -52,11 +52,14 @@ public final class CurseScheduler {
 
     static long nextDue(Entity entity, long gameTime) {
         CurseHolderAttachment data = entity.getData(MxtAttachments.CURSE_HOLDER);
+        if (data.instances().isEmpty()) return Long.MAX_VALUE;
         long result = Long.MAX_VALUE;
+        // One context for the entity, rather than one per curse instance.
+        FormulaContext context = FormulaContext.of(entity);
         for (Map.Entry<Holder<Curse>, State> entry : data.instances().entrySet()) {
             State state = entry.getValue();
             if (state.expiresAt() >= 0L) result = Math.min(result, state.expiresAt());
-            double intervalValue = entry.getKey().value().tickInterval().evaluate(FormulaContext.of(entity));
+            double intervalValue = entry.getKey().value().tickInterval().evaluate(context);
             if (!Double.isFinite(intervalValue) || intervalValue <= 0.0D) continue;
             long interval = Math.max(1L, Math.round(intervalValue));
             long elapsed = Math.max(0L, gameTime - state.appliedAt());

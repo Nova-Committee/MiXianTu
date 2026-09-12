@@ -8,24 +8,41 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import java.util.List;
 
-public record WeightedList(List<Entry> distribution) implements NumberProvider {
+/**
+ * Picks one entry by positive integer weight. The weights are fixed once the definition is
+ * loaded, so the total is computed here instead of on every evaluation.
+ */
+public final class WeightedList implements NumberProvider {
     public static final MapCodec<WeightedList> MAP_CODEC = Entry.MAP_CODEC.codec().listOf().fieldOf("distribution").xmap(WeightedList::new, WeightedList::distribution);
 
-    public WeightedList {
+    private final List<Entry> distribution;
+    /**
+     * Sum of all weights, or a non-positive value when the list overflows an {@code int} total and
+     * the provider has to refuse to roll.
+     */
+    private final long total;
+
+    public WeightedList(List<Entry> distribution) {
         if (distribution.isEmpty()) throw new IllegalArgumentException("Weighted list requires at least one entry");
+        this.distribution = List.copyOf(distribution);
+        long sum = 0L;
+        try {
+            for (Entry entry : this.distribution) sum = Math.addExact(sum, entry.weight());
+        } catch (ArithmeticException exception) {
+            sum = -1L;
+        }
+        this.total = sum;
+    }
+
+    public List<Entry> distribution() {
+        return this.distribution;
     }
 
     @Override
     public double evaluate(FormulaContext context) {
-        long total = 0L;
-        try {
-            for (Entry entry : this.distribution) total = Math.addExact(total, entry.weight());
-        } catch (ArithmeticException exception) {
-            LOGGER.warn("Number provider WeightedList overflowed its total weight; using 0");
-            return 0.0D;
-        }
+        long total = this.total;
         if (total <= 0L) {
-            LOGGER.warn("Number provider WeightedList has no positive weight; using 0");
+            LOGGER.warn("Number provider WeightedList has an invalid total weight; using 0");
             return 0.0D;
         }
         long selected = (long) (context.random().nextDouble() * total);
