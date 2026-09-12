@@ -8,7 +8,7 @@ title: Hotbar、资源条与灵气 HUD
 
 ```java
 void onPress(Player player);
-void onTick(Player player, boolean pressed);
+void onPressTick(Player player);
 void onRelease(Player player);
 ```
 

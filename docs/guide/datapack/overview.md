@@ -23,10 +23,10 @@ data/<namespace>/mxt/<registry>/<id>.json
 
 ## 禁用标签
 
-每个动态注册表都支持：
+每个动态注册表都支持固定的 `mxt:disabled` 标签（标签 ID 自带 `mxt` 命名空间，文件位置不随数据包命名空间变化）：
 
 ```text
-data/<namespace>/tags/mxt/<registry>/disabled.json
+data/mxt/tags/mxt/<registry>/disabled.json
 ```
 
 被列入 `mxt:disabled` 的条目不会参与运行时查询。标签值顺序不作为玩法顺序；品质顺序由品质读取接口根据原版标签顺序处理。
@@ -43,7 +43,7 @@ data/<namespace>/tags/mxt/<registry>/disabled.json
 }
 ```
 
-表达式使用 exp4j。变量来自 `FormulaContext`，`params` 可以覆盖或追加变量。加载阶段的 NaN/Infinity 会使数据包失败；运行阶段会记录单行警告并按 0 处理。
+表达式使用 exp4j。变量由内置变量表从 `FormulaContext` 携带的对象（施法者、目标、资源、随机源）中按需读取，`params` 可以覆盖或追加变量。加载阶段的 NaN/Infinity 会使数据包失败；上下文无法提供的变量名在开发环境直接抛异常，生产环境记录一次警告并按 0 处理。
 
 ## 行为与条件
 

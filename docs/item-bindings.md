@@ -17,14 +17,14 @@ KubeJS / mod item registry
 - All four bindings may declare an optional `quality_group` reference to an `mxt:item_quality` tag. It selects the permitted quality group for that physical item; the tag's member order defines quality order, while an explicit stack component or forge result still determines the current quality.
 - `conditions` is optional on every binding. Every matching binding condition and the current quality's condition must pass before the item can be used. Each entry may be an inline `EntityCondition`, or an object with `condition` and an optional translation-key `description`. Described entries are shown in the item tooltip in green when true and red when false. The check blocks right-click use, block interaction, attacks, data-driven item effects, weapon tick effects, technique learning, and binding-added weapon attributes.
 
-Every binding uses the `items` matcher. It accepts one item ID, one item tag (such as `"#example:herbs"`), or a mixed array of both; one binding can therefore cover many physical items. When multiple bindings match an item, the matcher selects the highest-priority definition (all four binding types currently use priority `0`).
+Every binding uses the `items` matcher. It accepts one item ID, one item tag (such as `"#example:herbs"`), or a mixed array of both; one binding can therefore cover many physical items. When multiple bindings match an item, the matcher selects the definition with the lowest `priority` first (all four binding types currently use priority `0`, so registry order decides the tie).
 
 ```json
 // data/example/mxt/item_binding/fire_root_pellet.json
 {
   "items": "kubejs:fire_root_pellet",
   "quality_group": "#example:group/pellet",
-  "conditions": [{"condition": {"type": "mxt:realm", "realm": "example:foundation"}, "description": "condition.example.fire_root"}]
+  "conditions": [{"condition": {"type": "mxt:realm", "realm": "example:foundation"}, "description": "condition.example.fire_root"}],
   "actions": [
     {
       "type": "mxt:grant_spirit_root",

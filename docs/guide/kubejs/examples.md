@@ -35,4 +35,4 @@ MxtEvents.cultivationBreak(event => {
 })
 ```
 
-对应的数据包可以把 `example:spirit_manual` 绑定到功法，把 `example:spirit_stone` 接入 `item_aura` 或 `currency`。这样脚本只负责内容注册，规则仍可热重载和同步。
+对应的数据包可以把 `example:spirit_manual` 绑定到功法，把 `example:spirit_stone` 接入 `item_aura` 或 `currency`。这样脚本只负责内容注册，规则仍由数据包驱动并同步到各客户端。

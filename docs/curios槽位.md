@@ -9,12 +9,17 @@
 
 Jupiter server config 文件 `config/mxt-server.json` 中的 `curios` 部分控制自动验证范围。该配置会随服务器同步给客户端，容器名称为 `MxtServerConfig`：
 
-```toml
-[curios]
-back_mode = "MANUAL"
-belt_mode = "MANUAL"
-force_render_slots = false
+```json
+{
+  "curios": {
+    "config.mxt.server.curios.back_mode": "MANUAL",
+    "config.mxt.server.curios.belt_mode": "MANUAL",
+    "config.mxt.server.curios.force_render_slots": false
+  }
+}
 ```
+
+字段名使用翻译键，与游戏内配置界面显示的名称对应。
 
 `back_mode` 可选 `MANUAL`、`WEAPONS`、`ALL`：
 

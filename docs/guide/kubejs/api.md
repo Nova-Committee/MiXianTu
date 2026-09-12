@@ -137,10 +137,13 @@ const enoughQi = MxtConditions.testEntity(player, {
 
 | 方法 | 说明 |
 | --- | --- |
-| `context.value(name)` | 取得显式上下文变量或已注册的公式变量。 |
-| `context.contains(name)` | 判断变量是否可用。 |
+| `context.value(name)` | 读取变量：先取显式上下文值，再查内置变量表。上下文无法提供的名字会被报告——开发环境直接抛异常，生产环境每个名字记录一次警告并返回 `0`。 |
+| `context.contains(name)` | 判断当前上下文能否提供该名字；不报告也不抛异常。 |
 | `context.player()` | 返回当前玩家；不存在时为 `null`。 |
-| `context.variables()` | 返回当前显式变量映射。 |
+| `context.caster()` | 返回施法实体；上下文没有实体时为 `null`。 |
+| `context.target()` | 返回双实体公式中的第二个实体；不存在时为 `null`。 |
+| `context.resource()` | 返回本次计算绑定的资源修炼状态；公式不针对单个资源时为 `null`。 |
+| `context.variables()` | 只返回显式值（事件载荷与调用方写入的值）；实体与资源变量按需从上下文对象读取，不在此表中。 |
 | `context.random()` | 返回本次计算使用的权威随机源。 |
 
 `resourceValue` 中的 `holder` 是资源附件，`resource` 是资源 Holder；通常只读使用，例如 `holder.get(resource)`。不要把该回调用于写入状态。
@@ -360,6 +363,6 @@ MxtEvents.cultivationBreak(event => {
 | `signal` | `Identifier` | 带命名空间的信号 ID，例如 `example:pill_taken`。 |
 | `values` | `Map<String,Object>` | 写入 `TriggerContext` 扩展字段的键值；可为 `null`。 |
 
-触发器订阅不会保存到存档。脚本若需要跨重启等待事件，应自行保存稳定 ID/阶段状态，并在实体加入世界或数据包重载后重新调用注册逻辑。
+触发器订阅不会保存到存档。脚本若需要跨重启等待事件，应自行保存稳定 ID/阶段状态，并在实体加入世界或服务器脚本重载后重新调用注册逻辑。
 
 完整组合示例见 [KubeJS 综合示例](examples.md)。
