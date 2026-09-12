@@ -1,9 +1,12 @@
 package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
+import com.iafenvoy.mxt.event.ForgingEvent;
+import com.iafenvoy.mxt.runtime.forging.ForgingService.Failure;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService.StartupMaterials;
 import com.mojang.serialization.Codec;
 import net.minecraft.world.Container;
+import net.neoforged.bus.api.ICancellableEvent;
 
 import java.util.List;
 
@@ -47,5 +50,26 @@ public final class ForgingProbe {
      */
     public static int planMaxSteps(int blueprintMaxSteps) {
         return blueprintMaxSteps == 0 ? Integer.MAX_VALUE : blueprintMaxSteps;
+    }
+
+    /**
+     * Posts a deciding event exactly as the service does, for the listener-failure rule.
+     *
+     * <p>The audit needs a real dispatch: whether a throwing listener becomes a refusal rather than an
+     * escaping exception is a property of the post site, not of anything it could compute. The event it
+     * passes may carry a hollow payload - only the dispatch is under test - but the bus, the listener list
+     * and the handler are the live ones.</p>
+     *
+     * @return the refusal the service would report, or {@code null} when the operation may continue
+     */
+    public static <T extends ForgingEvent & ICancellableEvent> Failure postRefusalForAudit(T event) {
+        return ForgingService.postEvent(event);
+    }
+
+    /**
+     * Posts a notification event exactly as the service does, for the other half of the same rule.
+     */
+    public static void postNotificationForAudit(ForgingEvent event) {
+        ForgingService.notifyListeners(event);
     }
 }

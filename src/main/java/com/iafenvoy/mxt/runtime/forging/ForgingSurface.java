@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.forging;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
@@ -46,6 +47,16 @@ public interface ForgingSurface {
      * The persistent session state of this table.
      */
     ForgingTableState forgingState();
+
+    /**
+     * The block this surface is attached to.
+     *
+     * <p>A position rather than the surface itself, because this is what an event hands to a listener that
+     * has to name the table. The container and the session state that go with a surface are both writable,
+     * and a listener is not a place either of them should be writable from - the same reason events carry a
+     * {@link ForgingSessionView} instead of a session.</p>
+     */
+    BlockPos pos();
 
     /**
      * Marks the container contents and session state dirty and pushes them to tracking clients.

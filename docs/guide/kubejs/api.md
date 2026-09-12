@@ -315,7 +315,7 @@ MxtEvents.resourceConsume(event => {
 | `techniqueLearn` | `Pre`、`Post` | `technique()`（`Holder<CultivationTechnique>`）、`spirit()`；`Pre` 可取消。 |
 | `alchemyCraft` | `Pre`、`Post` | `recipe()`（`RecipeHolder<AlchemyRecipe>`）；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
-| `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 共同按阶段读取：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
+| `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
 | `formation` | `Activate`、`Deactivate`、`Tick` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate` 与 `Tick` 可取消。 |
 | `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Pre` 可取消结束，取消后寿元会被设为不受限。 |
 | `realmInstance` | `EnterPre`、`EnterPost`、`Exit` | `level()`、`definition()`（`Holder<RealmInstance>`）、`member()`；只有 `EnterPre` 可取消。 |
@@ -323,6 +323,18 @@ MxtEvents.resourceConsume(event => {
 | `soul` | `TransferPre`、`TransferPost`、`ReclaimPre`、`ReclaimPost` | `entity()`、`soul()`；所有 `*Pre` 可取消。 |
 | `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`BREAK`、`RECALL`、`RELEASE`；`Pre` 可取消。 |
 | `tribulation` | `StartPre`、`StartPost`、`PhasePre`、`PhasePost`、`Complete` | `tribulation()`（`Holder<Tribulation>`）、`phase()`、`data()`；`StartPre`、`PhasePre` 可取消。 |
+
+### `forging` 的两条额外约定
+
+**会话是只读的。** `session()` 返回 `ForgingSessionView`，可读 `value()`、`steps()`、`optimalSteps()`、
+`history()`（不可变列表）、`canComplete()`，**不能**改写会话——原生的 `ForgingSession` 是可变对象，
+已不再交给监听器，所以 `event.getEvent().session().strike(...)` 这类写法不存在。台子本身也不交给监听器，
+只给位置 `pos()`；要读槽位就用 `player.level().getBlockEntity(pos)`。
+
+**监听器不要抛异常，抛了也不会搞坏操作。** 四个决定型事件（`Start`、`StrikePre`、`CompletePre`、
+`Cancel`）在事务中间派发，所以监听器抛出时会被服务端就地转成一次拒绝：日志记为 `LISTENER_ERROR`
+（与脚本主动 `cancel()` 的 `CANCELLED` 区分），操作不发生、材料不消耗、会话保持原样。
+三个通知型事件（`Started`、`StrikePost`、`CompletePost`）派发时操作已经生效，抛出只记录并忽略。
 
 例如调整突破消耗：
 

@@ -55,6 +55,17 @@ public final class ForgingSession {
     }
 
     /**
+     * The methods struck, oldest first, as an immutable copy.
+     *
+     * <p>Package private, and a copy even so. The live list is this class's own state, and the one reader
+     * outside it is {@link ForgingSessionView}; what leaves this class to be persisted is
+     * {@link #snapshot()}.</p>
+     */
+    List<Identifier> history() {
+        return List.copyOf(this.history);
+    }
+
+    /**
      * The shortest run that satisfies the plan, taken from the plan itself.
      *
      * <p>Not stored: it is a property of the plan, and the plan travels with the session anyway - both are

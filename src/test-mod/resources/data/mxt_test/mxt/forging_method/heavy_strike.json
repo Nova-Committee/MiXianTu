@@ -3,5 +3,6 @@
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
   "condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "display_icon": "minecraft:iron_ingot",
-  "cooldown": 10
+  "cooldown": 10,
+  "sound": "minecraft:block.anvil.land"
 }

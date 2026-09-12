@@ -22,6 +22,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -203,7 +204,7 @@ public final class ForgingWorkstationService {
         if (materials == null) return new StartOutcome(Failure.INSUFFICIENT_MATERIALS, false);
 
         RegistryAccess registries = player.level().registryAccess();
-        StartResult result = ForgingService.start(blueprint, registries);
+        StartResult result = ForgingService.start(player, surface, blueprint, registries);
         if (!result.started()) return new StartOutcome(result.failure(), false);
 
         materials.consume(surface.forgingContainer());
@@ -215,6 +216,9 @@ public final class ForgingWorkstationService {
 
     /**
      * Executes one strike with the selected method.
+     *
+     * <p>A strike that happens also plays the method's sound at the table; a refused one is silent - see
+     * {@link #playMethodSound}.</p>
      */
     public static StrikeOutcome strike(ServerPlayer player, ForgingSurface surface, Identifier methodId) {
         if (!canUse(player, surface)) return new StrikeOutcome(Failure.OUT_OF_RANGE, false, 0);
@@ -242,12 +246,26 @@ public final class ForgingWorkstationService {
         FormulaContext context = FormulaContext.of(player);
         boolean conditionsMet = method.value().condition().test(player, context);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        StrikeResult result = ForgingService.strike(session, method, resources, context, () -> conditionsMet);
+        StrikeResult result = ForgingService.strike(player, surface, session, method, resources, context, () -> conditionsMet);
         if (!result.struck()) return new StrikeOutcome(result.failure(), false, session.value());
         state.update(session);
         surface.forgingChanged();
+        playMethodSound(player, surface, method.value());
         settleIfComplete(player, surface, state, session);
         return new StrikeOutcome(null, true, session.value());
+    }
+
+    /**
+     * Plays the struck method's own sound at the table.
+     *
+     * <p>Only ever after a strike that happened: a refusal leaves the world as it was, so it makes no
+     * noise. Played through the level with no excepted player, which is what makes it everyone in range
+     * rather than only the striker - the table is a shared one, and the strike is something the other
+     * players at it should hear too. {@link SoundSource#BLOCKS} because this is a station making a noise,
+     * so the block volume slider governs it like every other machine sound.</p>
+     */
+    private static void playMethodSound(ServerPlayer player, ForgingSurface surface, ForgingMethod method) {
+        player.level().playSound(null, surface.pos(), method.sound(), SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     /**
@@ -267,9 +285,9 @@ public final class ForgingWorkstationService {
      * and further strikes could only raise {@code extraSteps}, which the quality curve reads as strictly
      * worse. Leaving it open would be an opportunity to ruin a finished piece.</p>
      *
-     * <p>A settlement that fails - a listener cancelling {@code CompletePre}, or a blueprint that vanished
-     * under a reload - leaves the session exactly as it was. Nothing else in the system will settle it, so
-     * whoever cancelled is responsible for the session they kept alive.</p>
+     * <p>A settlement that fails - a listener cancelling {@code CompletePre} or throwing out of it, or a
+     * blueprint that vanished under a reload - leaves the session exactly as it was. Nothing else in the
+     * system will settle it, so whoever cancelled is responsible for the session they kept alive.</p>
      */
     private static void settleIfComplete(ServerPlayer player, ForgingSurface surface, ForgingTableState state, ForgingSession session) {
         if (session.canComplete()) settle(player, surface, state);
@@ -322,9 +340,11 @@ public final class ForgingWorkstationService {
         if (holder == null || session == null) return new FinishOutcome(Failure.DISABLED, false);
 
         ForgingBlueprint blueprint = holder.value();
-        FinishResult result = ForgingService.finish(holder, session, blueprint::qualityFor);
+        FinishResult result = ForgingService.finish(player, surface, holder, session, blueprint::qualityFor);
         if (!result.finished()) {
-            if (result.failure() == Failure.CANCELLED) return new FinishOutcome(Failure.CANCELLED, false);
+            // A listener refusing - by cancelling CompletePre or by throwing out of it - is not a verdict on
+            // the piece, so it leaves the session where it is: see Failure#refusedByListener.
+            if (result.failure().refusedByListener()) return new FinishOutcome(result.failure(), false);
             fail(player, surface, state, session);
             return new FinishOutcome(null, true);
         }
@@ -353,7 +373,8 @@ public final class ForgingWorkstationService {
         ForgingSession session = state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).orElse(null);
         // The event decides *whether*; the policy decides *what it costs*. Refusing here leaves the
         // session exactly as it was, materials and all.
-        if (session == null || !ForgingService.cancel(session)) return new CancelOutcome(Failure.CANCELLED, false);
+        Failure refusal = session == null ? Failure.NO_SESSION : ForgingService.cancel(player, surface, session);
+        if (refusal != null) return new CancelOutcome(refusal, false);
         ForgingBlueprint blueprint = state.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
         if (blueprint != null) blueprint.failAction().execute(player, FormulaContext.of(player));
         // After the policy, because its whole input is what the session took; and a full clear rather than

@@ -79,11 +79,17 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
     }
 
     @Override
+    public BlockPos pos() {
+        return this.worldPosition;
+    }
+
+    @Override
     public void forgingChanged() {
         this.setChanged();
         if (this.level != null && !this.level.isClientSide())
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
     }
+
     /**
      * The blueprint this table's session locked in, resolved live so a datapack reload is picked up
      * outside a session. Null when no session is running.

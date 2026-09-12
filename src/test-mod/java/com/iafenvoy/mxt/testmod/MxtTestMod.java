@@ -40,6 +40,7 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession;
 import com.iafenvoy.mxt.runtime.forging.ForgingTableState;
@@ -58,6 +59,7 @@ import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.formation.FormationStructureValidator;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.forging.ForgingProbe;
+import com.iafenvoy.mxt.runtime.forging.ForgingService;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -108,6 +110,7 @@ import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -139,6 +142,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /** Development-only mod that contributes the mxt_test datapack and client resources. */
 @Mod(MxtTestMod.MOD_ID)
@@ -327,6 +331,8 @@ public final class MxtTestMod {
         verifyForgingStepRows(event.getServer().registryAccess());
         verifyForgingSuffixWindow();
         verifyForgingSessionRoundTrip();
+        verifyForgingListenerFailures(event.getServer().registryAccess());
+        verifyForgingMethodSounds(event.getServer().registryAccess());
         verifyForgingUnlocks();
         LOGGER.info("MiXianTu server audit passed");
     }
@@ -647,6 +653,93 @@ public final class MxtTestMod {
         ForgingSession bounded = new ForgingSession(narrow);
         if (!bounded.strike(allowed) || bounded.value() != 1 || bounded.canStrike(allowed))
             throw new IllegalStateException("Forging audit expected a strike out of the meter to be refused at the bound");
+    }
+
+    /**
+     * A listener that throws must refuse the operation, not escape into the middle of it.
+     *
+     * <p>NeoForge's bus logs a listener's throwable and rethrows it, and the post sites sit between a
+     * precheck and a payment. Without the catch at the post site an exception would travel out of the
+     * packet handler with the strike already paid for, so this is a property worth pinning rather than
+     * trusting: the audit installs a listener that throws, posts through the real handler, and expects the
+     * refusal the workstation knows how to handle.</p>
+     *
+     * <p>The other half is the notification events. Nothing is left to refuse by the time those are
+     * posted, so a throw there must not escape either - and that one is asserted by the audit simply
+     * surviving the call.</p>
+     *
+     * <p>The events posted here carry a hollow payload: only the dispatch is under test, and a real player
+     * and table would need a level. The listeners are unregistered in a {@code finally}, because a throwing
+     * listener left on the bus would refuse every later forging operation in this server's life.</p>
+     */
+    private static void verifyForgingListenerFailures(RegistryAccess registries) {
+        ForgingBlueprint blueprint = MxtDatapackRegistries
+                .get(registries, MxtResourceKeys.FORGING_BLUEPRINT, Identifier.parse("mxt_test:iron_sword"))
+                .orElseThrow(() -> new IllegalStateException("The listener audit needs mxt_test:iron_sword"));
+
+        // A deciding event: a listener that throws refuses the operation.
+        Consumer<ForgingEvent.Start> broken = event -> {
+            throw new IllegalStateException("forging audit probe");
+        };
+        NeoForge.EVENT_BUS.addListener(ForgingEvent.Start.class, broken);
+        try {
+            if (ForgingProbe.postRefusalForAudit(new ForgingEvent.Start(null, null, blueprint)) != ForgingService.Failure.LISTENER_ERROR)
+                throw new IllegalStateException("A throwing forging listener must refuse the operation as LISTENER_ERROR");
+        } finally {
+            NeoForge.EVENT_BUS.unregister(broken);
+        }
+
+        // With the listener gone the same post has to go through, or the check above proved nothing about
+        // the listener being the cause.
+        if (ForgingProbe.postRefusalForAudit(new ForgingEvent.Start(null, null, blueprint)) != null)
+            throw new IllegalStateException("A forging event with no listener must be accepted");
+
+        // Cancelling is the other way a listener refuses, and it has to stay distinguishable from breaking.
+        Consumer<ForgingEvent.Start> veto = event -> event.setCanceled(true);
+        NeoForge.EVENT_BUS.addListener(ForgingEvent.Start.class, veto);
+        try {
+            if (ForgingProbe.postRefusalForAudit(new ForgingEvent.Start(null, null, blueprint)) != ForgingService.Failure.CANCELLED)
+                throw new IllegalStateException("A cancelling forging listener must be reported as CANCELLED");
+        } finally {
+            NeoForge.EVENT_BUS.unregister(veto);
+        }
+
+        // A notification: the operation has happened, so a throwing listener must not reach the caller.
+        Consumer<ForgingEvent.Started> brokenNotification = event -> {
+            throw new IllegalStateException("forging audit notification probe");
+        };
+        NeoForge.EVENT_BUS.addListener(ForgingEvent.Started.class, brokenNotification);
+        try {
+            ForgingProbe.postNotificationForAudit(new ForgingEvent.Started(null, null, null));
+        } finally {
+            NeoForge.EVENT_BUS.unregister(brokenNotification);
+        }
+    }
+
+    /**
+     * A method's sound has to survive the datapack: declared when written, the anvil when omitted.
+     *
+     * <p>Two shapes, and the test pack has to keep both - a method that writes {@code sound} and one that
+     * does not - or one of the two branches goes untested while both look fine. So this names the two
+     * methods rather than counting: if either is edited into the other shape, the audit says which.</p>
+     *
+     * <p>The default is the whole point of the field being optional, and a missing key silently falling back
+     * to nothing would be a silent failure - a table that stops making a noise.</p>
+     */
+    private static void verifyForgingMethodSounds(RegistryAccess registries) {
+        ForgingMethod declared = MxtDatapackRegistries
+                .get(registries, MxtResourceKeys.FORGING_METHOD, Identifier.parse("mxt_test:heavy_strike"))
+                .orElseThrow(() -> new IllegalStateException("The forging sound audit needs mxt_test:heavy_strike"));
+        if (declared.sound() != SoundEvents.ANVIL_LAND)
+            throw new IllegalStateException("heavy_strike declares minecraft:block.anvil.land, so its parsed sound"
+                    + " must be the anvil landing rather than " + declared.sound());
+
+        ForgingMethod omitted = MxtDatapackRegistries
+                .get(registries, MxtResourceKeys.FORGING_METHOD, Identifier.parse("mxt_test:light_strike"))
+                .orElseThrow(() -> new IllegalStateException("The forging sound audit needs mxt_test:light_strike"));
+        if (omitted.sound() != SoundEvents.ANVIL_PLACE)
+            throw new IllegalStateException("light_strike writes no sound, so it must fall back to the anvil being"
+                    + " placed rather than " + omitted.sound());
     }
 
     /**
