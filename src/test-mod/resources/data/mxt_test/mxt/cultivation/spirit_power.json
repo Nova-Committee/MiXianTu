@@ -1,0 +1,12 @@
+{
+  "resource": "mxt_test:spirit_power",
+  "first_realm": "mxt_test:spirit_power_refining",
+  "start_exp": 10,
+  "regen": 1,
+  "aura_type": "mxt_test:fire",
+  "burst_amount": 10,
+  "use_condition": {
+    "type": "mxt:has_realm",
+    "resource": "mxt_test:spirit_power"
+  }
+}

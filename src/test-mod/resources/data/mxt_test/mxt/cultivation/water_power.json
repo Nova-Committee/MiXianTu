@@ -1,0 +1,5 @@
+{
+  "resource": "mxt_test:water_power",
+  "aura_type": "mxt_test:water",
+  "burst_amount": 10
+}

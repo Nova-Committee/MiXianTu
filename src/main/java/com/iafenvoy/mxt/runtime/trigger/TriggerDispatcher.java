@@ -118,6 +118,8 @@ public final class TriggerDispatcher {
 
     public static void publish(TriggerSignal signal) {
         if (signal.context().level() != null && signal.context().level().isClientSide()) return;
+        // Datapack rules are reactions of their own and run before any subscription is considered.
+        TriggerRuleService.dispatch(signal);
         Entity actor = signal.context().actor();
         if (actor == null) return;
         publishTo(actor.getUUID(), signal);

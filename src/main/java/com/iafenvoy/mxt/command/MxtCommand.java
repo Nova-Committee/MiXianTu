@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.command;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
@@ -16,6 +17,7 @@ import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
@@ -265,7 +267,7 @@ public final class MxtCommand {
         Component action = spirit.cultivateAction().<Component>map(id -> DefinitionText.name(id, "cultivate_action")).orElseGet(() -> Component.translatable("command.mxt.none"));
         Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.none")
                 : Component.literal(spirit.cultivationProgresses().object2DoubleEntrySet().stream()
-                .map(entry -> DefinitionText.name(entry.getKey(), "resource").getString() + "="
+                .map(entry -> DefinitionText.name(entry.getKey().value().resource(), "resource").getString() + "="
                         + String.format(Locale.ROOT, "%.2f", entry.getDoubleValue()))
                 .collect(Collectors.joining(", ")));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, progress, spirit.nextCultivateTick()), false);
@@ -320,7 +322,8 @@ public final class MxtCommand {
 
     private static Component resourceName(Holder<Resource> resource) {
         MutableComponent base = DefinitionText.name(resource, "resource");
-        return resource.value().auraType().map(type -> base.copy().append(" (").append(DefinitionText.name(type, "element")).append(")")).orElse(base);
+        return CultivationProfiles.findServer(resource).flatMap(CultivationProfile::auraType)
+                .map(type -> base.copy().append(" (").append(DefinitionText.name(type, "element")).append(")")).orElse(base);
     }
 
     private static Component sourceName(AuraResult aura) {

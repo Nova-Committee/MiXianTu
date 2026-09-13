@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.resource;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtRegistries;
@@ -72,7 +73,8 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
 
         @Override
         public double resolve(ResourceHolderAttachment holder, Holder<Resource> resource, FormulaContext context) {
-            return resource.value().regen().evaluate(context);
+            return CultivationProfiles.find(CultivationProfiles.access(context), resource)
+                    .map(profile -> profile.regen().evaluate(context)).orElse(0.0D);
         }
 
         @Override

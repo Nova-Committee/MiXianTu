@@ -3,8 +3,10 @@ package com.iafenvoy.mxt.render;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -71,7 +73,8 @@ public final class AuraZoneRenderer {
             if (!Double.isFinite(amount) || amount <= 0.0D) continue;
             int color = entry.getValue().color();
             if (color == 0xFFFFFF) {
-                color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);
+                color = CultivationProfiles.find(Minecraft.getInstance().level, entry.getKey())
+                        .flatMap(CultivationProfile::auraType).map(type -> type.value().color()).orElse(0xFFFFFF);
             }
             hasExplicitColor |= color != 0xFFFFFF;
             red += ((color >>> 16) & 0xFF) * amount;

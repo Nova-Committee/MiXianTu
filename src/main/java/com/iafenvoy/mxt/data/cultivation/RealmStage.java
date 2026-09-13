@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -27,7 +26,7 @@ import java.util.Optional;
 /**
  * One named realm stage. Conditions and outcomes are resolved by the cultivation runtime.
  */
-public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeight, EntityCondition cultivateCondition,
+public record RealmStage(Holder<CultivationProfile> cultivation, NumberProvider auraShareWeight, EntityCondition cultivateCondition,
                          Optional<Holder<RealmStage>> nextRealm,
                          NumberProvider breakthroughExp, NumberProvider maxExperience,
                          CultivateConditions breakthrough,
@@ -45,7 +44,7 @@ public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeig
 
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            Resource.CODEC.fieldOf("resource").forGetter(RealmStage::resource),
+            CultivationProfile.CODEC.fieldOf("cultivation").forGetter(RealmStage::cultivation),
             NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
             EntityCondition.optionalCodec("cultivate_condition").forGetter(RealmStage::cultivateCondition),
             RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
@@ -67,7 +66,7 @@ public record RealmStage(Holder<Resource> resource, NumberProvider auraShareWeig
      */
     @Override
     public @NonNull String toString() {
-        return "RealmStage[resource=" + HolderHelper.id(this.resource) + ", hasNextRealm=" + this.nextRealm.isPresent()
+        return "RealmStage[cultivation=" + HolderHelper.id(this.cultivation) + ", hasNextRealm=" + this.nextRealm.isPresent()
                 + ", breakthroughConditions=" + this.breakthrough.conditions().size() + ", costs=" + this.breakthroughCosts.size()
                 + ", abilityRequirements=" + this.abilityRequirements.size() + ", hasTribulation=" + this.tribulation.isPresent() + "]";
     }

@@ -2,10 +2,12 @@ package com.iafenvoy.mxt.runtime.spirit;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -38,7 +40,8 @@ public final class SpiritBurstService {
         }
         Optional<Identifier> valid = resourceId.filter(id -> MxtDatapackRegistries
                 .holder(MxtResourceKeys.RESOURCE, id)
-                .map(resource -> resource.value().auraType().isPresent() && ResourceUseService.canUse(player, resource)).orElse(false));
+                .map(resource -> CultivationProfiles.find(player, resource).flatMap(CultivationProfile::auraType).isPresent()
+                        && ResourceUseService.canUse(player, resource)).orElse(false));
         if (valid.isEmpty()) return;
         Set<Identifier> active = ACTIVE_RESOURCES.computeIfAbsent(playerId, ignored -> new HashSet<>());
         if (firing) {
@@ -71,7 +74,8 @@ public final class SpiritBurstService {
         Set<Identifier> active = ACTIVE_RESOURCES.get(player.getUUID());
         if (active == null || !active.contains(resourceId)) return;
         active.removeIf(id -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
-                .map(resource -> resource.value().auraType().isEmpty() || !ResourceUseService.canUse(player, resource)).orElse(true));
+                .map(resource -> CultivationProfiles.find(player, resource).flatMap(CultivationProfile::auraType).isEmpty()
+                        || !ResourceUseService.canUse(player, resource)).orElse(true));
         Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resourceId).orElse(null);
         if (resource == null) return;
         SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
@@ -85,15 +89,15 @@ public final class SpiritBurstService {
      * A positive {@code burst_amount} marks a resource that can be fired by the shortcut.
      */
     private static boolean tryFire(ServerPlayer player, ResourceHolderAttachment holder, Holder<Resource> resource) {
-        Resource definition = resource.value();
-        if (definition.auraType().isEmpty() || !ResourceUseService.canUse(player, resource)) return false;
+        CultivationProfile profile = CultivationProfiles.find(player, resource).orElse(null);
+        if (profile == null || profile.auraType().isEmpty() || !ResourceUseService.canUse(player, resource)) return false;
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
-        int amount = asWholeAmount(definition.burstAmount().evaluate(context));
+        int amount = asWholeAmount(profile.burstAmount().evaluate(context));
         if (amount <= 0) return false;
         if (!ResourceService.initialize(holder, resource, context).valid() || holder.get(resource) < amount)
             return false;
         if (!ResourceService.change(holder, resource, -amount, context).valid()) return false;
-        player.level().addFreshEntity(new SpiritBurstEntity(player.level(), player, resource, amount, definition.particleColor()));
+        player.level().addFreshEntity(new SpiritBurstEntity(player.level(), player, resource, amount, resource.value().particleColor()));
         return true;
     }
 

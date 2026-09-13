@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -11,6 +12,7 @@ import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -59,16 +61,15 @@ public final class ResourceService {
                 .map(resource -> change(holder, resource, amount, context)).orElse(Result.invalid());
     }
 
-    public static Result regenerate(ResourceHolderAttachment holder, Holder<Resource> resource, long elapsedTicks, FormulaContext context) {
+    /**
+     * Applies a cultivation profile's passive regeneration over the elapsed ticks.
+     */
+    public static Result regenerate(ResourceHolderAttachment holder, Holder<Resource> resource, NumberProvider regen,
+                                    long elapsedTicks, FormulaContext context) {
         if (elapsedTicks < 0L) throw new IllegalArgumentException("Elapsed ticks cannot be negative");
-        double regen = resource.value().regen().evaluate(context);
-        if (!Double.isFinite(regen)) return Result.invalid();
-        return change(holder, resource, regen * elapsedTicks, context);
-    }
-
-    public static Result regenerate(ResourceHolderAttachment holder, Identifier id, Resource definition, long elapsedTicks, FormulaContext context) {
-        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
-                .map(resource -> regenerate(holder, resource, elapsedTicks, context)).orElse(Result.invalid());
+        double amount = regen.evaluate(context);
+        if (!Double.isFinite(amount)) return Result.invalid();
+        return change(holder, resource, amount * elapsedTicks, context);
     }
 
     /**
@@ -109,40 +110,27 @@ public final class ResourceService {
     }
 
     /**
-     * Rank of this entity's stage in the resource's chain, or {@code -1} when it has no stage in
-     * that chain. Read by the resource formula variables.
+     * Rank of this entity's stage in the chain, or {@code -1} when it has no stage in it. The chain
+     * holder is the state key, so no registry lookup is needed. Read by the resource formula variables.
      */
-    public static int realmRank(CultivationAttachment spirit, Holder<Resource> resource) {
-        Resource definition = resource.value();
-        int best = -1;
-        for (Holder<RealmStage> current : spirit.realmStages().values()) {
-            if (!current.value().resource().equals(resource)) continue;
+    public static int realmRank(CultivationAttachment spirit, Holder<CultivationProfile> cultivation) {
+        Holder<RealmStage> current = spirit.realmStage(cultivation);
+        if (current != null) {
             Identifier currentId = HolderHelper.id(current);
-            Optional<Integer> cached = ServerCache.get()
-                    .filter(cache -> cache.resourceForRealm(currentId).filter(value -> value.equals(HolderHelper.id(resource))).isPresent())
-                    .flatMap(cache -> cache.rankForRealm(currentId));
-            if (cached.isPresent()) {
-                best = Math.max(best, cached.get());
-                continue;
-            }
-            Holder<RealmStage> stage = definition.firstRealm().orElse(null);
+            Optional<Integer> cached = ServerCache.get().flatMap(cache -> cache.rankForRealm(currentId));
+            if (cached.isPresent()) return cached.get();
+            Holder<RealmStage> stage = cultivation.value().firstRealm().orElse(null);
             for (int rank = 0; stage != null && rank < 1024; rank++) {
-                if (stage.equals(current)) {
-                    best = Math.max(best, rank);
-                    break;
-                }
+                if (stage.equals(current)) return rank;
                 stage = stage.value().nextRealm().orElse(null);
             }
+            return -1;
         }
         // A null realm stage represents a mortal, whose formulas still use the
-        // resource chain's first realm as the pending cultivation stage.
-        if (best < 0) {
-            Holder<RealmStage> first = definition.firstRealm().orElse(null);
-            if (first != null) {
-                best = ServerCache.get().flatMap(cache -> cache.rankForRealm(HolderHelper.id(first))).orElse(0);
-            }
-        }
-        return best;
+        // chain's first realm as the pending cultivation stage.
+        return cultivation.value().firstRealm()
+                .map(first -> ServerCache.get().flatMap(cache -> cache.rankForRealm(HolderHelper.id(first))).orElse(0))
+                .orElse(-1);
     }
 
     private static double clamp(double value, Bounds bounds) {

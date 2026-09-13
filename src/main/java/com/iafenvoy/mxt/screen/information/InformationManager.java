@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
@@ -73,37 +73,39 @@ public final class InformationManager {
         }
         boolean first = true;
         FormulaContext context = FormulaContexts.forEntity(collector.getPlayer());
-        for (Entry<Holder<Resource>> entry : cultivation.cultivationProgresses().object2DoubleEntrySet()) {
+        for (Entry<Holder<CultivationProfile>> entry : cultivation.cultivationProgresses().object2DoubleEntrySet()) {
+            // The state is keyed by the chain itself, so nothing has to be looked up again here.
             if (!entry.getKey().value().showCultivationInfo()) continue;
-            BreakthroughStatus status = CultivationService.breakthroughStatus(collector.getPlayer(), entry.getKey(), context);
+            BreakthroughStatus status = CultivationService.breakthroughStatusForChain(collector.getPlayer(), entry.getKey(), context);
             Component tooltip = status.reached()
                     ? Component.translatable(status.conditionsMet() ? "info.mxt.breakthrough.ready" : "info.mxt.breakthrough.conditions_unmet")
                     : null;
             int color = status.conditionsMet() ? 0xFF55FF55 : 0xFFE0E4EC;
             collector.add(first ? Component.translatable("info.mxt.cultivation_progress") : null,
-                    Component.literal(DefinitionText.name(entry.getKey(), "resource").getString() + ": " + String.format("%.2f", entry.getDoubleValue())),
+                    Component.literal(DefinitionText.name(entry.getKey().value().resource(), "resource").getString() + ": " + String.format("%.2f", entry.getDoubleValue())),
                     color, tooltip);
             first = false;
         }
     }
 
     /**
-     * Displays every resource tracked by the player, using Mortal when no realm is assigned.
+     * Displays every chain tracked by the player, using Mortal when no realm is assigned.
      */
     private static void realmLines(InformationCollector collector) {
         CultivationAttachment cultivation = collector.getData(MxtAttachments.CULTIVATION);
-        Set<Holder<Resource>> resources = new LinkedHashSet<>(cultivation.cultivationProgresses().keySet());
-        resources.addAll(cultivation.realmStages().keySet());
-        if (resources.isEmpty()) {
+        Set<Holder<CultivationProfile>> chains = new LinkedHashSet<>(cultivation.cultivationProgresses().keySet());
+        chains.addAll(cultivation.realmStages().keySet());
+        if (chains.isEmpty()) {
             collector.add("info.mxt.realm", Component.translatable("info.mxt.mortal"));
             return;
         }
         boolean first = true;
-        for (Holder<Resource> resource : resources) {
-            if (!resource.value().showCultivationInfo()) continue;
-            Holder<?> realm = cultivation.realmStage(resource);
+        for (Holder<CultivationProfile> chain : chains) {
+            if (!chain.value().showCultivationInfo()) continue;
+            Holder<?> realm = cultivation.realmStage(chain);
             Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.name(realm, "realm_stage");
-            collector.add(first ? Component.translatable("info.mxt.realm") : null, DefinitionText.name(resource, "resource").copy().append(": ").append(realmName));
+            collector.add(first ? Component.translatable("info.mxt.realm") : null,
+                    DefinitionText.name(chain.value().resource(), "resource").copy().append(": ").append(realmName));
             first = false;
         }
     }

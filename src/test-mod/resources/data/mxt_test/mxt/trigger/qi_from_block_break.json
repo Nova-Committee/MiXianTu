@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:block_break"},
+  "condition": {"type": "mxt:health", "comparison": ">=", "compare_to": 1},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:qi", "amount": 1}
+}

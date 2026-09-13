@@ -2,15 +2,6 @@
   "default_value": 0,
   "min": 0,
   "max": "100 + realm_rank * 50 + absorbed_aura * 0.5",
-  "regen": "0.25 + realm_rank * 0.1",
-  "cultivation_to_resource": {
-    "multiplier": 0.25,
-    "max_per_tick": 0.5
-  },
-  "resource_to_cultivation": {
-    "multiplier": 0.5,
-    "max_per_tick": 0.75
-  },
   "bars": [
     {
       "context": "mxt:self_hud",
@@ -27,11 +18,5 @@
       "visibility": { "type": "mxt:always" },
       "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
     }
-  ],
-  "first_realm": "mxt_test:qi_refining",
-  "start_exp": 100,
-  "use_condition": {
-    "type": "mxt:has_realm",
-    "resource": "mxt_test:qi"
-  }
+  ]
 }

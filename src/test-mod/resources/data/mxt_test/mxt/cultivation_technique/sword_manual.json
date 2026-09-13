@@ -3,5 +3,13 @@
   "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "exclusive_tags": ["mxt_test:technique/sword"],
   "cultivation_modifier": 1.1,
-  "granted_abilities": ["mxt_test:artifact_guard"]
+  "granted_abilities": ["mxt_test:artifact_guard"],
+  "default_stage": "mxt_test:sword_art_1",
+  "stage_abilities": {
+    "mxt_test:sword_art_1": "mxt_test:qingxiao_firebolt",
+    "mxt_test:sword_art_2": ["mxt_test:qingxiao_firebolt", "mxt_test:artifact_guard"]
+  },
+  "advance_conditions": {
+    "mxt_test:sword_art_2": { "type": "mxt:health", "comparison": ">=", "compare_to": 4 }
+  }
 }

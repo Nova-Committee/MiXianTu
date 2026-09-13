@@ -39,6 +39,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.data.trigger.Trigger;
+import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
@@ -85,6 +86,7 @@ public final class MxtResourceKeys {
 
     // Datapack registries
     public static final ResourceKey<Registry<Resource>> RESOURCE = create("resource");
+    public static final ResourceKey<Registry<CultivationProfile>> CULTIVATION = create("cultivation");
     public static final ResourceKey<Registry<Badge>> BADGE = create("badge");
     public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = create("realm_stage");
     public static final ResourceKey<Registry<Element>> ELEMENT = create("element");
@@ -97,6 +99,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<ToolBinding>> TOOL_BINDING = create("tool_binding");
     public static final ResourceKey<Registry<BlueprintBinding>> BLUEPRINT_BINDING = create("blueprint_binding");
     public static final ResourceKey<Registry<CultivationTechnique>> CULTIVATION_TECHNIQUE = create("cultivation_technique");
+    public static final ResourceKey<Registry<SkillStage>> SKILL_STAGE = create("skill_stage");
     public static final ResourceKey<Registry<CultivateAction>> CULTIVATE_ACTION = create("cultivate_action");
     public static final ResourceKey<Registry<ItemArchetype>> ITEM_ARCHETYPE = create("item_archetype");
     public static final ResourceKey<Registry<SpiritHerb>> SPIRIT_HERB = create("spirit_herb");
@@ -116,6 +119,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<BlockAura>> BLOCK_AURA = create("block_aura");
     public static final ResourceKey<Registry<ItemAura>> ITEM_AURA = create("item_aura");
     public static final ResourceKey<Registry<ItemQuality>> ITEM_QUALITY = create("item_quality");
+    public static final ResourceKey<Registry<TriggerRule>> TRIGGER = create("trigger");
 
     private static <T> ResourceKey<Registry<T>> create(String path) {
         return ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

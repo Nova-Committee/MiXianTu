@@ -14,6 +14,9 @@ import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.aura.AuraValue;
+import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.trigger.TriggerContext;
+import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
@@ -23,15 +26,17 @@ import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
+import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantPhysiqueAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.RemovePhysiqueAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.RemoveSpiritRootAction;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasPhysiqueEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.HasSpiritRootEntityCondition;
-import com.iafenvoy.mxt.data.item.WeaponBinding;
+import com.iafenvoy.mxt.data.condition.builtin.entity.HasSpiritRootEntityCondition;import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
@@ -63,6 +68,8 @@ import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
+import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -74,6 +81,7 @@ import com.iafenvoy.mxt.runtime.world.BlockAuraContribution;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
+import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.InventoryUtil;
@@ -172,7 +180,7 @@ public final class MxtTestMod {
                 || cache.rankForRealm(tribulation).filter(rank -> rank == 8).isEmpty()) {
             throw new IllegalStateException("Realm cache did not preserve linear realm ordering");
         }
-        verifyDynamicResourceValues(foundation, coreForming);
+        verifyDynamicResourceValues(event.getServer().registryAccess(), foundation, coreForming);
         verifyFormulaDiagnostics();
         verifyItemQualities(event);
         ItemStack weapon = new ItemStack(Items.DIAMOND_SWORD);
@@ -224,6 +232,39 @@ public final class MxtTestMod {
         if (!HolderHelper.id(techniqueBinding.technique()).equals(Identifier.parse("mxt_test:qingxiao_breathing_manual"))
                 || techniqueBinding.conditions().stream().anyMatch(condition -> condition.description().isPresent())) {
             throw new IllegalStateException("Technique binding did not retain its technique item configuration");
+        }
+        CultivationTechnique swordManual = MxtDatapackRegistries
+                .get(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:sword_manual"))
+                .orElseThrow(() -> new IllegalStateException("Skill-stage test technique was not loaded"));
+        SkillStage firstStage = swordManual.defaultStage().map(Holder::value)
+                .orElseThrow(() -> new IllegalStateException("Technique default_stage was not decoded"));
+        if (!firstStage.skill().equals(Identifier.parse("mxt_test:sword_art")) || !same(firstStage.damageMultiplier(), 1.1D)
+                || swordManual.stageAbilities().size() != 2
+                || swordManual.stageAbilities().values().stream().mapToInt(List::size).sum() != 3
+                || swordManual.stageAbilities().keySet().stream()
+                .anyMatch(stage -> !stage.value().skill().equals(firstStage.skill()))) {
+            throw new IllegalStateException("Technique skill stages did not decode their chain, multiplier or ability map");
+        }
+        ServerCache skillChain = ServerCache.get()
+                .orElseThrow(() -> new IllegalStateException("The server cache was not built before the audit"));
+        Identifier firstStageId = Identifier.parse("mxt_test:sword_art_1");
+        Identifier secondStageId = Identifier.parse("mxt_test:sword_art_2");
+        if (skillChain.rankForStage(firstStageId).orElse(-1) != 0 || skillChain.rankForStage(secondStageId).orElse(-1) != 1
+                || !skillChain.isStageAtLeast(secondStageId, firstStageId) || skillChain.isStageAtLeast(firstStageId, secondStageId)) {
+            throw new IllegalStateException("Skill stages were not ordered into a linear chain");
+        }
+        Holder<SkillStage> firstStageHolder = requireHolder(MxtResourceKeys.SKILL_STAGE, firstStageId);
+        Holder<SkillStage> secondStageHolder = requireHolder(MxtResourceKeys.SKILL_STAGE, secondStageId);
+        if (SkillStageService.unlockedAbilities(swordManual, firstStageHolder).size() != 1
+                || SkillStageService.unlockedAbilities(swordManual, secondStageHolder).size() != 2) {
+            throw new IllegalStateException("Stage abilities were not gated as minimum requirements");
+        }
+        if (SkillStageService.nextStage(swordManual, firstStageHolder).filter(secondStageHolder::equals).isEmpty()
+                || SkillStageService.nextStage(swordManual, secondStageHolder).isPresent()
+                || swordManual.advanceConditions().size() != 1
+                || SkillStageService.advanceCondition(swordManual, firstStageHolder) != AlwaysTrueCondition.INSTANCE
+                || SkillStageService.advanceCondition(swordManual, secondStageHolder) == AlwaysTrueCondition.INSTANCE) {
+            throw new IllegalStateException("Technique advancement conditions were not decoded onto its chain");
         }
         Holder<CultivateAction> qingxiaoMeditation = requireHolder(MxtResourceKeys.CULTIVATE_ACTION, Identifier.parse("mxt_test:qingxiao_meditation"));
         if (!qingxiaoMeditation.value().defaultAction()) {
@@ -958,59 +999,65 @@ public final class MxtTestMod {
         }
     }
 
-    private static void verifyDynamicResourceValues(Identifier foundation, Identifier coreForming) {
+    private static void verifyDynamicResourceValues(RegistryAccess registries, Identifier foundation, Identifier coreForming) {
         Identifier qiId = Identifier.parse("mxt_test:qi");
         Identifier spiritPowerId = Identifier.parse("mxt_test:spirit_power");
         Holder<Resource> qi = requireHolder(MxtResourceKeys.RESOURCE, qiId);
         Holder<Resource> spiritPower = requireHolder(MxtResourceKeys.RESOURCE, spiritPowerId);
-        if (!same(qi.value().cultivationToResource().multiplier().evaluate(FormulaContext.EMPTY), 0.25D)
-                || !same(qi.value().cultivationToResource().maxPerTick().evaluate(FormulaContext.EMPTY), 0.5D)
-                || !same(qi.value().resourceToCultivation().multiplier().evaluate(FormulaContext.EMPTY), 0.5D)
-                || !same(qi.value().resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 0.75D)
-                || !same(spiritPower.value().cultivationToResource().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
-                || !same(spiritPower.value().cultivationToResource().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
-                || !same(spiritPower.value().resourceToCultivation().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
-                || !same(spiritPower.value().resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
-                || !same(spiritPower.value().burstAmount().evaluate(FormulaContext.EMPTY), 10.0D)
-                || !same(qi.value().startExp().evaluate(FormulaContext.EMPTY), 100.0D)
-                || !same(spiritPower.value().startExp().evaluate(FormulaContext.EMPTY), 10.0D)
+        Reference<CultivationProfile> qiChain = CultivationProfiles.holder(registries, qi)
+                .orElseThrow(() -> new IllegalStateException("Qi cultivation profile was not loaded"));
+        Reference<CultivationProfile> spiritPowerChain = CultivationProfiles.holder(registries, spiritPower)
+                .orElseThrow(() -> new IllegalStateException("Spirit power cultivation profile was not loaded"));
+        CultivationProfile qiProfile = qiChain.value();
+        CultivationProfile spiritPowerProfile = spiritPowerChain.value();
+        if (!same(qiProfile.cultivationToResource().multiplier().evaluate(FormulaContext.EMPTY), 0.25D)
+                || !same(qiProfile.cultivationToResource().maxPerTick().evaluate(FormulaContext.EMPTY), 0.5D)
+                || !same(qiProfile.resourceToCultivation().multiplier().evaluate(FormulaContext.EMPTY), 0.5D)
+                || !same(qiProfile.resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 0.75D)
+                || !same(spiritPowerProfile.cultivationToResource().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
+                || !same(spiritPowerProfile.cultivationToResource().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
+                || !same(spiritPowerProfile.resourceToCultivation().multiplier().evaluate(FormulaContext.EMPTY), 1.0D)
+                || !same(spiritPowerProfile.resourceToCultivation().maxPerTick().evaluate(FormulaContext.EMPTY), 1.0D)
+                || !same(spiritPowerProfile.burstAmount().evaluate(FormulaContext.EMPTY), 10.0D)
+                || !same(qiProfile.startExp().evaluate(FormulaContext.EMPTY), 100.0D)
+                || !same(spiritPowerProfile.startExp().evaluate(FormulaContext.EMPTY), 10.0D)
                 || !same(spiritPower.value().max().evaluate(FormulaContext.EMPTY), 0.0D)
                 || spiritPower.value().particleColor() != 0x66CCFF) {
-            throw new IllegalStateException("Resource cultivation conversion settings were not decoded correctly");
+            throw new IllegalStateException("Cultivation profile conversion settings were not decoded correctly");
         }
         CultivationAttachment spirit = new CultivationAttachment();
         CultivationAttachment mortal = new CultivationAttachment();
         if (!same(CultivationService.addProgress(mortal, qi, 120.0D, FormulaContext.EMPTY), 100.0D)
                 || !same(CultivationService.addProgress(mortal, qi, 1.0D, FormulaContext.EMPTY), 0.0D)
-                || !same(mortal.cultivationProgress(qi), 100.0D)) {
+                || !same(mortal.cultivationProgress(qiChain), 100.0D)) {
             throw new IllegalStateException("Mortal cultivation progress must stop at resource start_exp");
         }
         spirit.setRealmStage(requireHolder(MxtResourceKeys.REALM_STAGE, foundation));
-        spirit.setCultivationProgress(qi, 40.0D);
+        spirit.setCultivationProgress(qiChain, 40.0D);
         Holder<RealmStage> spiritPowerRealm = requireHolder(MxtResourceKeys.REALM_STAGE,
                 Identifier.parse("mxt_test:spirit_power_refining"));
         CultivationAttachment multiChain = new CultivationAttachment();
         Holder<RealmStage> foundationHolder = requireHolder(MxtResourceKeys.REALM_STAGE, foundation);
-        multiChain.setRealmStages(Map.of(foundationHolder.value().resource(), foundationHolder,
-                spiritPowerRealm.value().resource(), spiritPowerRealm));
-        multiChain.setCultivationProgress(qi, 12.0D);
-        multiChain.setCultivationProgress(spiritPower, 7.0D);
-        if (multiChain.realmStages().size() != 2 || !same(multiChain.cultivationProgress(qi), 12.0D)
-                || !same(multiChain.cultivationProgress(spiritPower), 7.0D)) {
-            throw new IllegalStateException("Multiple realm chains must retain independent resources and progress");
+        multiChain.setRealmStages(Map.of(foundationHolder.value().cultivation(), foundationHolder,
+                spiritPowerRealm.value().cultivation(), spiritPowerRealm));
+        multiChain.setCultivationProgress(qiChain, 12.0D);
+        multiChain.setCultivationProgress(spiritPowerChain, 7.0D);
+        if (multiChain.realmStages().size() != 2 || !same(multiChain.cultivationProgress(qiChain), 12.0D)
+                || !same(multiChain.cultivationProgress(spiritPowerChain), 7.0D)) {
+            throw new IllegalStateException("Multiple realm chains must retain independent chains and progress");
         }
-        if (spirit.realmStage(spiritPower) != null) {
-            throw new IllegalStateException("A resource without a realm must resolve to null");
+        if (spirit.realmStage(spiritPowerChain) != null) {
+            throw new IllegalStateException("A chain without a stage must resolve to null");
         }
         FormulaContext foundationContext = ResourceService.formulaContext(spirit, qi, FormulaContext.EMPTY);
         Bounds foundationBounds = ResourceService.resolveBounds(qi.value(), foundationContext)
                 .orElseThrow(() -> new IllegalStateException("Foundation qi bounds were invalid"));
-        if (!same(foundationBounds.max(), 170.0D) || !same(qi.value().regen().evaluate(foundationContext), 0.35D)) {
+        if (!same(foundationBounds.max(), 170.0D) || !same(qiProfile.regen().evaluate(foundationContext), 0.35D)) {
             throw new IllegalStateException("Qi maximum and regeneration did not use foundation absorbed aura");
         }
         ResourceHolderAttachment holder = new ResourceHolderAttachment();
         ResourceService.initialize(holder, qi, foundationContext);
-        ResourceService.regenerate(holder, qi, 4L, foundationContext);
+        ResourceService.regenerate(holder, qi, qiProfile.regen(), 4L, foundationContext);
         if (!same(holder.get(qi), 1.4D)) {
             throw new IllegalStateException("Qi regeneration did not use its dynamic formula");
         }
@@ -1018,7 +1065,7 @@ public final class MxtTestMod {
         FormulaContext coreContext = ResourceService.formulaContext(spirit, qi, FormulaContext.EMPTY);
         Bounds coreBounds = ResourceService.resolveBounds(qi.value(), coreContext)
                 .orElseThrow(() -> new IllegalStateException("Core-forming qi bounds were invalid"));
-        if (!same(coreBounds.max(), 220.0D) || !same(qi.value().regen().evaluate(coreContext), 0.45D)) {
+        if (!same(coreBounds.max(), 220.0D) || !same(qiProfile.regen().evaluate(coreContext), 0.45D)) {
             throw new IllegalStateException("Qi maximum and regeneration did not use realm rank");
         }
         ResourceService.change(holder, qi, 1_000.0D, coreContext);
@@ -1031,6 +1078,20 @@ public final class MxtTestMod {
         if (!same(holder.get(qi), 220.0D) || !same(holder.audit(qi).minSnapshot(), 0.0D)
                 || !same(holder.audit(qi).maxSnapshot(), 220.0D)) {
             throw new IllegalStateException("Resource validation draft modified live server-resolved bounds");
+        }
+
+        // A datapack trigger rule is a reaction of its own: publishing its signal runs its condition
+        // and action for the actor, with no ability and no subscription involved.
+        ServerCache triggerCache = ServerCache.get()
+                .orElseThrow(() -> new IllegalStateException("The server cache was not built before the audit"));
+        if (triggerCache.triggerRules(TriggerSignals.BLOCK_BREAK).isEmpty()) {
+            throw new IllegalStateException("The trigger rule test fixture was not indexed by its signal");
+        }
+        Pig triggered = new Pig(EntityType.PIG, triggerCache.server().overworld());
+        TriggerDispatcher.publish(TriggerSignals.BLOCK_BREAK, new TriggerContext().actor(triggered)
+                .level(triggered.level()).formula(FormulaContext.of(triggered)), triggered.level().getGameTime());
+        if (!same(triggered.getData(MxtAttachments.RESOURCE_HOLDER).get(qi), 1.0D)) {
+            throw new IllegalStateException("A datapack trigger rule did not add its resource when its signal was published");
         }
     }
 

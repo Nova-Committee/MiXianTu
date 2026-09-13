@@ -6,13 +6,17 @@
 > 变更记录
 > - 2026-09-12：新增本文件。
 > - 2026-09-12：**删除 Curios 功法槽设计**（§5、T3 已解决），新增 §8 功法等级链条调研。
+> - 2026-09-12：按 §8 的方案 B 落地**数据层**：新增 `skill_stage` 注册表（`skill` + `next_stage` + `damage_multiplier`），功法新增 `default_stage` 与 `stage_abilities`；运行期（玩家当前水平、链校验、`damage_multiplier` 消费）仍未接入。
+> - 2026-09-12：定下 `stage_abilities` 的 key 为**最低要求**；补上链条顺序能力（`ServerCache` 推导链首与 rank、校验多首级/跨链/成环/缺失）、`isStageAtLeast` 比较与 `SkillStageService.unlockedAbilities` 查询。玩家当前水平状态仍缺。
+> - 2026-09-12：新增 `advance_conditions`（key = 晋升到的等级，value = 该级所需条件），并补上 `nextStage` / `advanceCondition` / `canAdvance` 查询与缓存期链校验。仍缺玩家当前水平状态，因此还没有真正的"升级"执行路径。
+> - 2026-09-12：新增 `mxt:trigger` 数据包注册表（事件规则：信号匹配器 + 条件 + 实体行为），`TriggerDispatcher.publish` 统一派发，规则按信号建索引。可用于"触发条件就给某个 resource +1"这类需求。
 
 ## 0. 边界澄清（避免概念混淆）
 
 - **功法 = `cultivation_technique`**：玩家学会后常驻生效的修炼法门。
 - **手法 = `forging_method`**：锻造单步效果，与功法无关（`ForgingBlueprint.allowed_methods`、`ToolBinding` 那一套）。
 - **修炼行为 = `cultivate_action`**：与功法**无关联**。`CultivationModeService.resolveAction`（`runtime/cultivation/CultivationModeService.java:71-77`）只按 `default` 标记 / 玩家已选 / 注册表第一个来解析，不读 `learnedTechniques`。
-- 功法只有两个数据驱动注册表：`cultivation_technique`（定义）与 `technique_binding`（载体绑定）。无第三张表（没有"功法槽位表""功法等级表"之类）。
+- 功法自身只有两个数据驱动注册表：`cultivation_technique`（定义）与 `technique_binding`（载体绑定）。掌握程度由第三张表 `skill_stage` 表达——它按自由 `skill` 标识分链，可被多个功法共用（§8）。
 
 ## 1. 注册表清单
 
@@ -20,6 +24,7 @@
 | --- | --- | --- | --- | --- |
 | `mxt:cultivation_technique` | `data/<ns>/mxt/cultivation_technique/<id>.json` | `CultivationTechnique.DIRECT_CODEC`（`data/cultivation/CultivationTechnique.java:26-34`） | `registry/MxtDatapackRegistries.java:69` | 同一 codec 兼作同步 codec（`MxtDatapackRegistries.java:91-94`），客户端可读，故 tooltip 能用 `context.registries()` 解析 |
 | `mxt:technique_binding` | `data/<ns>/mxt/technique_binding/<id>.json` | `TechniqueBinding.CODEC`（`data/item/TechniqueBinding.java:23-28`） | `registry/MxtDatapackRegistries.java:84` | 走 `ItemMatcher`，载体是**现有物品**，不创建书籍/玉简 |
+| `mxt:skill_stage` | `data/<ns>/mxt/skill_stage/<id>.json` | `SkillStage.DIRECT_CODEC`（`data/cultivation/SkillStage.java:26-38`） | `registry/MxtDatapackRegistries.java:70` | 技能水平链的单级：`skill`（链身份，自由 `Identifier`）+ `next_stage` + `damage_multiplier`；解析期校验倍率有限非负 |
 
 两者都支持 `#mxt:disabled` 标签禁用：`MxtDatapackRegistries.java:52,100-109,152-174`；功法侧入口检查在 `TechniqueService.java:29-30`。
 
@@ -32,7 +37,10 @@
 | `exclusive_tags` | `Identifier[]` `[]` | 互斥：汇总已学功法的标签集合，与新功法求交集，命中 → `CONFLICT` | `TechniqueService.java:33-36`；另见 `runtime/cultivation/CultivationIdentityService.java:46-48`、`TitleService.java:31-33`（同型机制） |
 | `cultivation_modifier` | `NumberProvider` `1` | 修炼速度倍率，**逐功法连乘**进 affinity；非有限或负数 → NaN → 修炼中断 `INVALID_FORMULA` | `runtime/cultivation/CultivationAffinity.java:49-53, 76-80`；被 `CultivationActionService.java:99-101, 120-122` 调用 |
 | `passive_modifiers` | `AttributeEntry[]` `[]` | 常驻被动属性，修饰符来源标识 `technique` | `runtime/ability/PassiveAttributeService.java:107-108` |
-| `granted_abilities` | `HolderOrTag<ability>[]` `[]` | 学习后授予能力；支持 `#tag`，经 `RegistryCodecs.resolve` 展开去重；source = `mxt:grant/technique/<ns>/<path>`，重算时先撤销全部 `grant/` 来源再重建 | `runtime/cultivation/CultivationGrantService.java:36-37, 45-47, 60-70` |
+| `granted_abilities` | `HolderOrTag<ability>[]` `[]` | 学习后授予能力；支持 `#tag`，经 `RegistryCodecs.resolve` 展开去重；source = `mxt:grant/technique/<ns>/<path>`，重算时先撤销全部 `grant/` 来源再重建。**始终生效** | `runtime/cultivation/CultivationGrantService.java:36-37, 45-47, 60-70` |
+| `default_stage` | `Holder<skill_stage>`，可选 | 该功法水平链的入口等级；`CultivationTechnique.java:46`。**运行期尚未读取** | ——（仅编解码与测试断言） |
+| `stage_abilities` | `Map<Holder<skill_stage>, HolderOrTag<ability>[]>` `{}` | 按水平解锁的能力，value 可写单值/`#tag`/数组（`Codec.unboundedMap` + `RegistryCodecs.holderOrTagList`，`CultivationTechnique.java:47-48`）。**运行期尚未读取**，且语义（累积 vs 严格）未定 | ——（仅编解码与测试断言） |
+| `advance_conditions` | `Map<Holder<skill_stage>, EntityCondition>` `{}` | **晋升到** key 所写等级所需的条件（2026-09-12 新增）：链条由多个功法共用，攀爬条件属于本功法；value 支持单条件或数组。查询 API 见 `SkillStageService.nextStage/advanceCondition/canAdvance`。**运行期尚未消费**（没有玩家当前水平状态） | `runtime/cultivation/SkillStageService.java`；缓存校验在 `ServerCache.validateTechniqueChains` |
 
 ## 3. `technique_binding` 字段
 
@@ -81,7 +89,7 @@
 
 | 编号 | 问题 | 证据 |
 | --- | --- | --- |
-| T1 | `grade` 无消费者：不显示、不影响掉落/突破/学习条件；`docs/模块实现审计.md:74` 自己也写"仅存储/展示候选" | `CultivationTechnique` 无 `.grade()` 调用点 |
+| T1 | `grade` 无消费者：不显示、不影响掉落/突破/学习条件；`docs/模块实现审计.md:74` 自己也写"仅存储/展示候选" | `CultivationTechnique` 无 `.grade()` 调用点。注意 `grade` 与新的 `skill_stage` **不是**同一件事：前者是自由字符串元数据，后者才是可推进的水平链 |
 | T2 | 学习失败**零反馈**：`use()` 丢弃 `Result`，lang 里也没有任何功法失败提示键 | `TechniqueItemService.java:43-44`；对比 `CultivationModeService.notifyFailure`（`:59-66`）有 actionbar 提示 |
 | T3 | ~~Curios 功法槽是死的~~ → **已解决（删除整套功法槽，2026-09-12，见 §5）**。原始问题留档：唯一读取已装备 Curios 的是 `AbilityEventBridge.syncCuriosAbilities`，它只读物品的 `mxt:item_abilities` 组件、不读 `technique_binding`，所以玉简放进功法槽既不学习也无效果 | `runtime/ability/AbilityEventBridge.java:205-223`；`CuriosIntegration.equipped` 调用点仅此一处 + 两个渲染器（`BackWeaponRenderer.java:39`、`BeltWeaponRenderer.java:37`） |
 | T4 | **死参数**：`CultivationAffinity.multiplier(...)` 两个重载的 `Function<Identifier, Optional<CultivationTechnique>> techniques` 完全未使用，实际遍历 `spirit.learnedTechniques()`；调用方仍在传解析器 | `CultivationAffinity.java:34, 59`；`CultivationActionService.java:100, 121` |
@@ -96,11 +104,22 @@
 问题：现有系统里有没有可以**直接**给 `CultivationTechnique.grade` 复用的"等级链条系统"？
 结论：**没有可直接复用的通用等级链**——只有一个完整的境界链，加几个内联的阈值阶梯，且没有任何通用的链抽象类。
 
+### 8.0 选定并落地的方案（2026-09-12，仅数据层）
+
+调研后选的是"照抄 `realm_stage` 的模型，但链身份用自由 `Identifier`"（原方案 B）：
+
+- 新注册表 `mxt:skill_stage`（`data/cultivation/SkillStage.java:26-38`，注册于 `MxtDatapackRegistries.java:70`）：`skill: Identifier`（必填，链身份）+ `next_stage: Holder<SkillStage>`（可选，单向指针）+ `damage_multiplier: double`（默认 `1.0`，解析期校验有限非负）。与 `realm_stage` 的 `resource`+`next_realm` 同形，唯一区别是链身份不是注册表条目，所以多个功法（以及将来的其它系统）可以共用一条链。
+- `CultivationTechnique` 新增 `default_stage`（可选，链入口，`:46`）与 `stage_abilities`（`Map<Holder<skill_stage>, HolderOrTag<ability>[]>`，value 支持单值 / `#tag` / 数组，`:47-48`）。为了让链可达，`stage_abilities` 非空而 `default_stage` 缺失会在解析期报错（`:51-54`）。
+- 地图值选了 `Codec.unboundedMap` 而不是 `CollectionCodecs.map`：后者（`AutoIgnoreMapCodec.java:31-38`）会**静默丢弃**解码失败的键值、只打一行 warn，与"加载期把所有问题收集起来报出"的既有策略冲突。
+- **解锁语义已定（2026-09-12）**：`stage_abilities` 的 key 是**最低要求**——当前水平位于该级或其之后的级别时条目生效（能力累积解锁，不逐级替换）。为支持这一点，链条顺序由 `ServerCache.rebuildSkillChains`（`runtime/ServerCache.java`）在服务端启动/数据包重载时推导：以"没有任何一级指向它"的那一级为链首，沿 `next_stage` 编号 rank（链首为 `0`），并拒绝多首级、跨链指向、成环、指向缺失条目，以及"功法的 `stage_abilities` key 与 `default_stage` 不在同一条链"。比较与查询接口：`isStageAtLeast(current, required)`、`rankForStage`、`skillForStage`，以及 `SkillStageService.unlockedAbilities(technique, current)`（展开 `#tag`、去重、按最低要求过滤）。
+- 测试夹具：`data/mxt_test/mxt/skill_stage/{sword_art_1,sword_art_2}.json` + `sword_manual.json` 的 `default_stage`/`stage_abilities`（单值、数组两种写法各一）/`advance_conditions`（对 `sword_art_2` 设条件），`MxtTestMod` 有一段静默断言（链身份、倍率、条目数、键的 `skill` 一致、rank 0/1、`isStageAtLeast` 双向、level1 → 1 个能力 / level2 → 2 个能力、`nextStage` 到顶为空、`advanceCondition` 对未声明级别为 `always_true`）。
+- **未做**（下一步见 §9）：玩家当前水平状态（所以按水平解锁与晋升都还没接进运行时）、`damage_multiplier` 的消费点。链顺序、校验与两个查询已就绪，不再是缺口。
+
 ### 8.1 唯一的完整等级链条：`realm_stage`（境界链）
 
 - 数据模型 `data/cultivation/RealmStage.java:30-63`：`resource`（**必填**）、`next_realm`（单向 next 指针）、`breakthrough_exp`（本级下限）、`max_experience`（本级上限）、`breakthrough`（条件组）、`auto_breakthrough`、`costs`、`ability_requirements`、`tribulation`、`passive_modifiers`、`success_action`/`fail_action`、`aura_share_weight`、`cultivate_condition`。构造期还校验常量的 `breakthrough_exp <= max_experience`（`:39-44`）。
 - 推进逻辑 `runtime/cultivation/CultivationService.java`：
-  - `next()`（`:130-141`）从当前级沿 `next_realm` 走**一跳**，并强制 `resource` 一致；凡人态改用 `Resource.first_realm` 与 `start_exp`。
+  - `next()`（`:130-141`）从当前级沿 `next_realm` 走**一跳**，并强制链身份一致（链以 `mxt:cultivation` 档案为键，`RealmStage.cultivation` 指向档案）；凡人态改用该档案的 `first_realm` 与 `start_exp`（2026-09-12 从 `Resource` 迁出，见 `research/audit/resource-cultivation-split.md`）。
   - `threshold()`（`:253-267`）解析本级 `[breakthrough_exp, max_experience]`。
   - `commit()`（`:100-128`）突破事务：阈值 → 进度 → 条件 → 能力要求 → `CultivationBreakEvent.Pre` → 扣资源 → `setRealmStage` + 进度归零 → `Post`。
   - `addProgress()`（`:146-164`）按本级 `max_experience` 封顶；`remainingProgressCapacity()`（`:190-203`）；`breakthroughStatus()`（`:209-219`，供信息面板与自动突破）；`pendingConditions()`（`:226-229`）。
@@ -140,11 +159,12 @@
 
 ## 9. 建议动手顺序（未执行，仅方案）
 
-1. **功法等级（T1/T5 + §8）**：先定"等级"的形态，三选一：
-   - (a) **复用 `item_quality` 当品阶**：`grade` 改为 `Holder<ItemQuality>` 或 quality tag。改动最小，但只有标签/数值/展示，没有升级过程。
-   - (b) **照抄 `realm_stage` 模型**：功法自带等级链（next 指针 + 阈值 + 条件 + 消耗 + 每级收益），运行时状态新增附件字段（如 `Map<Holder<CultivationTechnique>, Integer>` 或进度 `Double`）。
-   - (c) **抽出通用 `LevelChain`**：把境界链的 next/阈值/条件/奖励抽象成共用类型，境界与功法共同消费。改动最大、收益最统一。
-   无论选哪条，都要同步修 `docs/模块实现审计.md:74,110` 中"主动功法/激活状态"的措辞。
+1. **掌握程度的运行时（§8.0 的下一步）**：
+   - 玩家当前水平状态：新附件字段（按功法或链键存 `Holder<SkillStage>`），或复用 `SpiritIdentityAttachment`。链顺序、校验、"最低要求"解锁查询与晋升条件查询（`nextStage`/`advanceCondition`/`canAdvance`）都已就绪，缺的只是这个状态。
+   - 接入授予流程：`CultivationGrantService.recalculate` 目前只处理 `granted_abilities`；按水平解锁应改为"该功法已授予的 = `granted_abilities` ∪ `SkillStageService.unlockedAbilities(technique, 当前水平)`"，并沿用 `mxt:grant/technique/...` 来源整体撤销重算。
+   - 晋升执行路径：用 `canAdvance` 做前置校验 + 写状态 + 重算授予/被动属性；练习数值怎么涨（经验/修炼/事件）仍待定，可以挂到新的 `mxt:trigger` 事件规则上。
+   - `damage_multiplier` 消费点：目前没有统一的技能伤害管线（伤害来自 `mxt:damage` 动作里的 `NumberProvider`），要么做成公式变量（需要 `FormulaContext` 携带水平主体），要么在 `DamageAction` 里按施法者水平乘算。
+   - `grade`（T1）与 `skill_stage` 的关系也要一次定清：建议 `grade` 只做展示/掉落元数据，数值进阶交给水平链。`docs/模块实现审计.md:74` 的错误措辞已在本轮修正。
 2. **T2 失败反馈**：把 `Result`/`Failure` 转成 actionbar 文案（`TechniqueService.Failure` 已 5 种，lang 需补 5 个键），或复用 `TechniqueLearnEvent.Post` 让内容包自行提示。
 3. **T6 遗忘入口**：`TechniqueService.forget` + 重算授予/被动属性 + 事件（`TechniqueForgetEvent`）+ 互斥的追溯校验策略。
 4. **T7 信号与 API**：新增 `TriggerSignals.TECHNIQUE_LEARN`（或复用 `TechniqueLearnEvent`）与 `MxtKubeJsApi` 的功法查询/授予/遗忘方法。
@@ -153,6 +173,9 @@
 ## 10. 关键文件索引
 
 - 定义：`src/main/java/com/iafenvoy/mxt/data/cultivation/CultivationTechnique.java`
+- 水平链：`src/main/java/com/iafenvoy/mxt/data/cultivation/SkillStage.java`
+- 水平查询：`src/main/java/com/iafenvoy/mxt/runtime/cultivation/SkillStageService.java`（解锁能力 + 晋升条件）
+- 事件规则：`src/main/java/com/iafenvoy/mxt/data/trigger/TriggerRule.java`、`src/main/java/com/iafenvoy/mxt/runtime/trigger/TriggerRuleService.java`
 - 绑定：`src/main/java/com/iafenvoy/mxt/data/item/TechniqueBinding.java`
 - 学习事务：`src/main/java/com/iafenvoy/mxt/runtime/cultivation/TechniqueService.java`
 - 物品入口：`src/main/java/com/iafenvoy/mxt/runtime/cultivation/TechniqueItemService.java`
@@ -164,5 +187,5 @@
 - 注册：`src/main/java/com/iafenvoy/mxt/registry/{MxtResourceKeys,MxtDatapackRegistries,MxtItems}.java`
 - 展示：`src/main/java/com/iafenvoy/mxt/data/item/ItemBindingTooltipAppender.java`、`src/main/java/com/iafenvoy/mxt/screen/information/InformationManager.java`
 - 等级链参考（§8）：`data/cultivation/RealmStage.java`、`runtime/cultivation/CultivationService.java`、`attachment/CultivationAttachment.java`、`data/Sect.java`、`data/quality/ItemQuality.java`、`data/forging/ForgingBlueprint.java`、`data/Tribulation.java`
-- 测试夹具：`src/test-mod/resources/data/mxt_test/mxt/cultivation_technique/{qingxiao_breathing_manual,sword_manual,body_manual}.json`、`.../mxt/technique_binding/qingxiao_breathing_jade_slip.json`
-- 相关文档：`docs/数据包格式.md:706-717, 783-790`、`docs/item-bindings.md:10-16, 65-78`、`docs/guide/datapack/cultivation.md:5`、`docs/curios槽位.md`、`E:\Website\docs\docs\mod\mxt\datapack\json\cultivation_technique.md`、`...\technique_binding.md`、`...\player-guide\curios-slots.md`
+- 测试夹具：`src/test-mod/resources/data/mxt_test/mxt/cultivation_technique/{qingxiao_breathing_manual,sword_manual,body_manual}.json`、`.../mxt/technique_binding/qingxiao_breathing_jade_slip.json`、`.../mxt/skill_stage/{sword_art_1,sword_art_2}.json`
+- 相关文档：`docs/数据包格式.md`（`skill_stage` 段 + `cultivation_technique` 字段）、`docs/guide/datapack/overview.md:56`、`docs/模块实现审计.md:74-75`、`docs/item-bindings.md:10-16, 65-78`、`docs/guide/datapack/cultivation.md:5`、`docs/curios槽位.md`、`E:\Website\docs\docs\mod\mxt\datapack\json\{cultivation_technique,skill_stage,index}.md`、`...\datapack\overview.md`、`...\player-guide\curios-slots.md`

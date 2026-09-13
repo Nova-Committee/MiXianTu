@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -18,6 +19,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.cultivation.TitleService;
@@ -193,7 +195,7 @@ public final class MxtTestCommands {
             source.sendFailure(Component.translatable("command.mxt_test.kit.realm_failed"));
             return 0;
         }
-        spirit.setCultivationProgress(require(MxtResourceKeys.RESOURCE, QI), 80.0D);
+        spirit.setCultivationProgress(requireProfile(QI), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, QI), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, WATER_POWER), 80.0D);
@@ -318,6 +320,11 @@ public final class MxtTestCommands {
                                          Identifier id) {
         return MxtDatapackRegistries.holder(registry, id)
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao test definition " + id));
+    }
+
+    private static Reference<CultivationProfile> requireProfile(Identifier resource) {
+        return CultivationProfiles.holderServer(resource)
+                .orElseThrow(() -> new IllegalStateException("Missing Qingxiao cultivation profile " + resource));
     }
 
     private record HolderLookup<T>(ResourceKey<? extends Registry<T>> registry, Identifier id) {

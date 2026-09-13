@@ -11,19 +11,10 @@
     ],
     "fallback": 0
   },
-  "regen": 1,
   "icon": {
     "texture": "mxt_test:textures/item/qingxiao_spirit_crystal.png"
   },
-  "burst_amount": 10,
   "particle_color": "#66CCFF",
-  "aura_type": "mxt_test:fire",
-  "first_realm": "mxt_test:spirit_power_refining",
-  "start_exp": 10,
-  "use_condition": {
-    "type": "mxt:has_realm",
-    "resource": "mxt_test:spirit_power"
-  },
   "bars": [
     {
       "context": "mxt:boss_overlay",

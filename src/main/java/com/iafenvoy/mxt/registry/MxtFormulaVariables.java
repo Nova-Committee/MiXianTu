@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
@@ -169,9 +171,11 @@ public final class MxtFormulaVariables {
             if (!suffix.isEmpty()) return Double.NaN;
             ResourceSubject subject = context.resource();
             if (subject == null) return Double.NaN;
-            int rank = ResourceService.realmRank(subject.cultivation(), subject.resource());
+            Holder<CultivationProfile> cultivation = CultivationProfiles
+                    .holder(CultivationProfiles.access(context), subject.resource()).orElse(null);
+            int rank = cultivation == null ? -1 : ResourceService.realmRank(subject.cultivation(), cultivation);
             if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
-                return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(subject.resource());
+                return rank < 0 || cultivation == null ? 0.0D : subject.cultivation().cultivationProgress(cultivation);
             return Math.max(0, rank);
         }
     }

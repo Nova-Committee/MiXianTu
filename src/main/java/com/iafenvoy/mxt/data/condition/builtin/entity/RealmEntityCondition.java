@@ -3,18 +3,16 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
@@ -36,12 +34,12 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
         Identifier required = HolderHelper.id(this.realm);
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
         Stream<Holder<RealmStage>> stages = cultivation.realmStages().values().stream();
-        // A missing stage is the mortal state; for a resource chain its
+        // A missing stage is the mortal state; for a value whose profile enters a chain its
         // first realm is the pending stage used by cultivation formulas.
-        Stream<Reference<Resource>> registry = MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE);
+        Stream<CultivationProfile> profiles = CultivationProfiles.byResource(entity.level().registryAccess()).values().stream();
         stages = Stream.concat(stages,
-                registry.map(Holder::value).map(Resource::firstRealm).flatMap(Optional::stream)
-                        .filter(first -> cultivation.realmStage(first.value().resource()) == null));
+                profiles.map(CultivationProfile::firstRealm).flatMap(Optional::stream)
+                        .filter(first -> cultivation.realmStage(first.value().cultivation()) == null));
         return stages.anyMatch(current -> switch (this.comparison) {
             case EXACT -> current.equals(this.realm);
             case AT_LEAST ->

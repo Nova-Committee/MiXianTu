@@ -1,10 +1,13 @@
 package com.iafenvoy.mxt.compat.jei;
 
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.Expression;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -45,7 +48,8 @@ final class SpiritJeiText {
         String value = providerName(entry.getValue());
         String name = resourceName(entry.getKey());
         MutableComponent line = first ? Component.translatable("jei.mxt.aura_cost_label") : Component.empty();
-        int color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);
+        int color = CultivationProfiles.find(Minecraft.getInstance().level, entry.getKey())
+                .flatMap(CultivationProfile::auraType).map(type -> type.value().color()).orElse(0xFFFFFF);
         line.append(Component.literal(name).withColor(readableTextColor(color, PANEL_BACKGROUND)));
         line.append(Component.literal(" x" + value));
         if (font.width(line) <= maxWidth) return line;

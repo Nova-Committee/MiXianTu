@@ -2,7 +2,6 @@
   "default_value": 0,
   "min": 0,
   "max": 100,
-  "regen": 0,
   "bars": [
     {
       "context": "mxt:self_hud",

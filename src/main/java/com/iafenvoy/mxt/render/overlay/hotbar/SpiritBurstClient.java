@@ -1,9 +1,11 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -48,8 +50,9 @@ public final class SpiritBurstClient {
      * explicitly opts a resource into the spirit-burst hotbar.
      */
     private static boolean canBurst(Player player, Reference<Resource> resource) {
-        if (resource.value().auraType().isEmpty() || !ResourceUseService.canUse(player, resource)) return false;
-        double amount = resource.value().burstAmount().evaluate(
+        CultivationProfile profile = CultivationProfiles.find(player, resource).orElse(null);
+        if (profile == null || profile.auraType().isEmpty() || !ResourceUseService.canUse(player, resource)) return false;
+        double amount = profile.burstAmount().evaluate(
                 ResourceService.formulaContext(player, resource, FormulaContext.of(player)));
         return Double.isFinite(amount) && amount >= 1.0D;
     }

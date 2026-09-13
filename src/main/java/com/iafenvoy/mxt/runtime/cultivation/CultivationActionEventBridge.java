@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatu
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -104,11 +103,11 @@ public final class CultivationActionEventBridge {
     private static void attemptAutomaticBreakthrough(ServerPlayer player, CultivationAttachment spirit) {
         if (!spirit.cultivating()) return;
         FormulaContext context = FormulaContexts.forEntity(player);
-        MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE).forEach(resource -> {
-            BreakthroughStatus status = CultivationService.breakthroughStatus(player, resource, context);
+        MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATION).forEach(cultivation -> {
+            BreakthroughStatus status = CultivationService.breakthroughStatusForChain(player, cultivation, context);
             if (!status.automatic() || !status.reached() || !status.conditionsMet()) return;
             CultivationService.attempt(player, spirit, player.getData(MxtAttachments.RESOURCE_HOLDER),
-                    HolderHelper.id(resource), context, () -> true);
+                    cultivation, context, () -> true);
         });
     }
 

@@ -1,5 +1,5 @@
 {
-  "resource": "mxt_test:spirit_power",
+  "cultivation": "mxt_test:spirit_power",
   "breakthrough_exp": 10,
   "max_experience": 100
 }

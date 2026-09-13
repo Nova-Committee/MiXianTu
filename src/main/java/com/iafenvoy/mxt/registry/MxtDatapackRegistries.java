@@ -23,6 +23,7 @@ import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -55,6 +56,7 @@ public final class MxtDatapackRegistries {
     @SubscribeEvent
     public static void newDatapackRegistries(NewRegistry event) {
         register(event, MxtResourceKeys.RESOURCE, Resource.DIRECT_CODEC);
+        register(event, MxtResourceKeys.CULTIVATION, CultivationProfile.DIRECT_CODEC);
         register(event, MxtResourceKeys.BADGE, Badge.DIRECT_CODEC);
         register(event, MxtResourceKeys.REALM_STAGE, RealmStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.ELEMENT, Element.DIRECT_CODEC);
@@ -67,6 +69,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.TOOL_BINDING, ToolBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.CULTIVATION_TECHNIQUE, CultivationTechnique.DIRECT_CODEC);
+        register(event, MxtResourceKeys.SKILL_STAGE, SkillStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.CULTIVATE_ACTION, CultivateAction.DIRECT_CODEC);
         register(event, MxtResourceKeys.ITEM_ARCHETYPE, ItemArchetype.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_HERB, SpiritHerb.CODEC);
@@ -86,6 +89,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
         register(event, MxtResourceKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
         register(event, MxtResourceKeys.ITEM_QUALITY, ItemQuality.DIRECT_CODEC);
+        register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
     }
 
     private static <T> void register(NewRegistry event, ResourceKey<Registry<T>> key, Codec<T> codec) {

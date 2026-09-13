@@ -1,0 +1,18 @@
+{
+  "resource": "mxt_test:qi",
+  "first_realm": "mxt_test:qi_refining",
+  "start_exp": 100,
+  "cultivation_to_resource": {
+    "multiplier": 0.25,
+    "max_per_tick": 0.5
+  },
+  "resource_to_cultivation": {
+    "multiplier": 0.5,
+    "max_per_tick": 0.75
+  },
+  "regen": "0.25 + realm_rank * 0.1",
+  "use_condition": {
+    "type": "mxt:has_realm",
+    "resource": "mxt_test:qi"
+  }
+}

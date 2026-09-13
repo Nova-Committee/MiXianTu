@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -11,8 +12,10 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map.Entry;
@@ -30,6 +33,7 @@ public final class CultivationAffinity {
      * Legacy attachment-only path; it retains element separation but has no zone-specific modifiers.
      */
     public static double multiplier(SpiritIdentityAttachment spirit, AuraChunkAttachment aura, FormulaContext context,
+                                    @Nullable Provider access,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -38,7 +42,8 @@ public final class CultivationAffinity {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
             AuraPool pool = aura.auras().entrySet().stream()
-                    .filter(entry -> entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
+                    .filter(entry -> CultivationProfiles.find(access, entry.getKey())
+                            .flatMap(CultivationProfile::auraType).filter(root.element()::equals).isPresent())
                     .map(Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
@@ -55,6 +60,7 @@ public final class CultivationAffinity {
     }
 
     public static double multiplier(SpiritIdentityAttachment spirit, AuraResult aura, FormulaContext context,
+                                    @Nullable Provider access,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
                                     Function<Identifier, Optional<CultivationTechnique>> techniques) {
         double total = 0.0D;
@@ -63,7 +69,8 @@ public final class CultivationAffinity {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
             AuraPool pool = aura.aura().entrySet().stream()
-                    .filter(entry -> entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
+                    .filter(entry -> CultivationProfiles.find(access, entry.getKey())
+                            .flatMap(CultivationProfile::auraType).filter(root.element()::equals).isPresent())
                     .map(Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;

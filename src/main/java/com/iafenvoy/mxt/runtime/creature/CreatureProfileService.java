@@ -1,9 +1,11 @@
 package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -38,7 +40,8 @@ public final class CreatureProfileService {
             return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
         })
                 || (!definition.preferredAuraElements().isEmpty() && aura.aura().entrySet().stream().noneMatch(element -> element.getValue().amount() > 0.0D
-                && element.getKey().value().auraType().filter(type -> RegistryCodecs.matches(definition.preferredAuraElements(), type)).isPresent())))
+                && CultivationProfiles.find(creature, element.getKey()).flatMap(CultivationProfile::auraType)
+                .filter(type -> RegistryCodecs.matches(definition.preferredAuraElements(), type)).isPresent())))
             return false;
         final double intelligence;
         try {

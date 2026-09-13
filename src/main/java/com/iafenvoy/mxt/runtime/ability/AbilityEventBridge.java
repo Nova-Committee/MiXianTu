@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
+import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
@@ -105,12 +106,15 @@ public final class AbilityEventBridge {
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         initializeHudResources(entity, resourceHolder);
-        for (Holder<Resource> resource : List.copyOf(resourceHolder.values().keySet())) {
-            if (CultivationActionService.handlesNaturalRegeneration(entity, resource)) continue;
-            Identifier resourceId = HolderHelper.id(resource);
-            Resource definition = resource.value();
-            ResourceService.regenerate(resourceHolder, resourceId, definition, 1L,
-                    ResourceService.formulaContext(entity, resourceId, definition, FormulaContext.EMPTY));
+        // Regeneration is part of a cultivation profile, so only profiled values are visited at all:
+        // a plain counter is never looked at, and a profiled value that has no stored entry yet is
+        // created by its first change instead of by this loop.
+        for (Reference<CultivationProfile> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION).toList()) {
+            Holder<Resource> resource = cultivation.value().resource();
+            if (!resourceHolder.contains(resource)) continue;
+            if (CultivationActionService.handlesNaturalRegeneration(entity, cultivation)) continue;
+            ResourceService.regenerate(resourceHolder, resource, cultivation.value().regen(), 1L,
+                    ResourceService.formulaContext(entity, resource, FormulaContext.EMPTY));
         }
         dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity), definition -> true);
         PassiveAttributeService.tick(entity);
