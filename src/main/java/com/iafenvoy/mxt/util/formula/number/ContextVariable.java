@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.util.formula.number;
 
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaVariables;
+import com.iafenvoy.mxt.util.formula.FormulaVariables.Binding;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -26,7 +27,7 @@ public final class ContextVariable implements NumberProvider {
 
     private final String variable;
     private final double fallback;
-    private volatile FormulaVariables.Binding binding;
+    private volatile Binding binding;
 
     public ContextVariable(String variable, double fallback) {
         this.variable = variable;
@@ -45,7 +46,7 @@ public final class ContextVariable implements NumberProvider {
     public double evaluate(FormulaContext context) {
         double explicit = context.explicit(this.variable);
         if (!Double.isNaN(explicit)) return this.assertFinite(explicit) ? explicit : 0.0D;
-        FormulaVariables.Binding resolved = this.binding;
+        Binding resolved = this.binding;
         if (resolved == null) this.binding = resolved = FormulaVariables.bind(this.variable);
         // An unknown name is what the fallback exists for; a known name that this context cannot
         // provide keeps the usual reporting.

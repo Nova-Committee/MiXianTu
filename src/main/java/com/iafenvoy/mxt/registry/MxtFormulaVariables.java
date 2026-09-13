@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
 import com.iafenvoy.mxt.util.formula.FormulaNames;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import net.minecraft.core.Holder;
@@ -166,12 +167,12 @@ public final class MxtFormulaVariables {
         @Override
         public double value(String key, String suffix, FormulaContext context) {
             if (!suffix.isEmpty()) return Double.NaN;
-            FormulaContext.ResourceSubject subject = context.resource();
+            ResourceSubject subject = context.resource();
             if (subject == null) return Double.NaN;
             int rank = ResourceService.realmRank(subject.cultivation(), subject.resource());
             if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
                 return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(subject.resource());
-            return (double) Math.max(0, rank);
+            return Math.max(0, rank);
         }
     }
 }

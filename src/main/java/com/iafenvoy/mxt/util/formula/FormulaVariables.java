@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.util.formula;
 
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.util.formula.FormulaVariables.Binding.Candidate;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -129,15 +130,15 @@ public final class FormulaVariables {
     public static Binding bind(String name) {
         Lookup index = lookup();
         FormulaVariable exact = index.exact().get(name);
-        List<Binding.Candidate> candidates = null;
+        List<Candidate> candidates = null;
         if (exact != null) {
             candidates = new ArrayList<>(2);
-            candidates.add(new Binding.Candidate(exact, name, ""));
+            candidates.add(new Candidate(exact, name, ""));
         }
         for (Lookup.Prefix prefix : index.prefixes()) {
             if (name.length() <= prefix.key().length() || !name.startsWith(prefix.key())) continue;
             if (candidates == null) candidates = new ArrayList<>(2);
-            candidates.add(new Binding.Candidate(prefix.variable(), prefix.key(), name.substring(prefix.key().length())));
+            candidates.add(new Candidate(prefix.variable(), prefix.key(), name.substring(prefix.key().length())));
         }
         return candidates == null ? null : new Binding(List.copyOf(candidates));
     }

@@ -42,7 +42,7 @@ public record Conditional(List<Branch> branches, Optional<NumberProvider> fallba
             for (Branch branch : this.branches)
                 if (branch.condition().test(player, context)) return branch.value().evaluate(context);
         Optional<NumberProvider> fallback = this.fallback;
-        return fallback.isPresent() ? fallback.get().evaluate(context) : 0.0D;
+        return fallback.map(numberProvider -> numberProvider.evaluate(context)).orElse(0.0D);
     }
 
     @Override

@@ -37,6 +37,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 
 /**
@@ -136,7 +137,7 @@ public final class MxtKubeJsApi {
         TriggerContext context = new TriggerContext().actor(actor).level(actor.level());
         FormulaContext formula = FormulaContext.of(actor);
         if (values != null)
-            for (Map.Entry<String, Object> entry : values.entrySet()) {
+            for (Entry<String, Object> entry : values.entrySet()) {
                 context.set(entry.getKey(), entry.getValue());
                 if (entry.getValue() instanceof Number number && Double.isFinite(number.doubleValue()))
                     formula = formula.with(entry.getKey(), number.doubleValue());

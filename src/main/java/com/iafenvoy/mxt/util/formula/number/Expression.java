@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
 import com.iafenvoy.mxt.util.formula.FormulaFunctions;
 import com.iafenvoy.mxt.util.formula.FormulaVariables;
+import com.iafenvoy.mxt.util.formula.FormulaVariables.Binding;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -160,6 +161,6 @@ public final class Expression implements NumberProvider {
      * every tick, for example — resolves each name once and afterwards only re-reads the values
      * from the current context.</p>
      */
-    private record Compiled(net.objecthunter.exp4j.Expression expression, Map<String, FormulaVariables.Binding> bindings) {
+    private record Compiled(net.objecthunter.exp4j.Expression expression, Map<String, Binding> bindings) {
     }
 }

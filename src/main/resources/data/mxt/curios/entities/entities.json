@@ -4,7 +4,6 @@
   ],
   "slots": [
     "back_weapon",
-    "belt_item",
-    "technique"
+    "belt_item"
   ]
 }

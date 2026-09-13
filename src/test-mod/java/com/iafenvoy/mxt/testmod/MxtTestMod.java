@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.aura.ItemAura;

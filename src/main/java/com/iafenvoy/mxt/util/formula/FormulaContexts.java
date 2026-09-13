@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Factories for formula contexts.
@@ -52,7 +53,7 @@ public final class FormulaContexts {
      */
     static Map<String, Double> finite(Map<String, Double> extra) {
         if (extra.isEmpty()) return Map.of();
-        for (Map.Entry<String, Double> entry : extra.entrySet()) {
+        for (Entry<String, Double> entry : extra.entrySet()) {
             Double value = entry.getValue();
             if (value == null || !Double.isFinite(value)) return sanitise(extra);
         }

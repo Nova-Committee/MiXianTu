@@ -12,7 +12,7 @@ title: 交互与界面
 
 ### Curios 槽位
 
-本模组提供 `back_weapon`、`belt_item` 和功法槽位。背部和腰部槽位受服务端配置的 validator 模式控制，快捷键可交换主手和背部第一个槽位物品。
+本模组提供 `back_weapon` 和 `belt_item` 槽位。背部和腰部槽位受服务端配置的 validator 模式控制，快捷键可交换主手和背部第一个槽位物品。
 
 ### `/display`
 
