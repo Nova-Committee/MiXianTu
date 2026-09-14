@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.hotbar;
+package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.render.IconRenderer;
@@ -96,15 +96,13 @@ public final class HotbarConfigurationScreen extends Screen {
         int hotbarTop = this.hotbarTop();
         int keyLabelTop = hotbarTop - KEY_LABEL_GAP - KEY_LABEL_HEIGHT;
         int dividerY = keyLabelTop - DIVIDER_GAP;
-        graphics.fill(this.optionsLeft - 4, dividerY, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4,
-                dividerY + 1, 0xFF555555);
-        graphics.fill(this.optionsLeft - 4, dividerY + 1, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4,
-                dividerY + 2, 0xFFFFFFFF);
+        graphics.fill(this.optionsLeft - 4, dividerY, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4, dividerY + 1, 0xFF555555);
+        graphics.fill(this.optionsLeft - 4, dividerY + 1, this.optionsLeft + COLUMNS * GRID_STEP - SLOT_GAP + 4, dividerY + 2, 0xFFFFFFFF);
         for (int i = 0; i < MAX_SLOTS; i++) {
             int x = this.optionsLeft + i * GRID_STEP;
             graphics.blit(RenderPipelines.GUI_TEXTURED, SLOT, x, hotbarTop, 0.0F, 0.0F, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE);
             String key = Integer.toString(i + 1);
-            graphics.text(this.font, key, x + (SLOT_SIZE - this.font.width(key)) / 2, keyLabelTop, 0xFF404040, true);
+            graphics.text(this.font, key, x + (SLOT_SIZE - this.font.width(key)) / 2, keyLabelTop, 0xFF404040, false);
         }
     }
 
