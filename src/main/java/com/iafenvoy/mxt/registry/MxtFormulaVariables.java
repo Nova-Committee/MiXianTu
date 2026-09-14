@@ -175,7 +175,7 @@ public final class MxtFormulaVariables {
                     .holder(CultivationProfiles.access(context), subject.resource()).orElse(null);
             int rank = cultivation == null ? -1 : ResourceService.realmRank(subject.cultivation(), cultivation);
             if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
-                return rank < 0 || cultivation == null ? 0.0D : subject.cultivation().cultivationProgress(cultivation);
+                return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(cultivation);
             return Math.max(0, rank);
         }
     }

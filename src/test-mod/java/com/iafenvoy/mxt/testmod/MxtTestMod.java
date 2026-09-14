@@ -5,9 +5,13 @@ import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
+import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.mojang.authlib.GameProfile;
 import net.neoforged.neoforge.common.util.FakePlayer;
-import java.util.UUID;import com.iafenvoy.mxt.command.TechniqueRepairCommand;
+import java.util.UUID;
+
+import com.iafenvoy.mxt.command.TechniqueCommand;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -75,7 +79,6 @@ import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
@@ -1154,21 +1157,21 @@ public final class MxtTestMod {
         UUID id = UUID.randomUUID();
         long now = overworld.getGameTime();
         int interval = MxtServerConfig.auraEntityRefreshInterval();
-        AuraQueryCache.AuraLocation here = new AuraQueryCache.AuraLocation(overworld.dimension().identifier(), BlockPos.ZERO, now);
+        AuraLocation here = new AuraLocation(overworld.dimension().identifier(), BlockPos.ZERO, now);
         if (!AuraQueryCache.needsQuery(overworld, id, here, interval))
             throw new IllegalStateException("Aura entity gate skipped an entity it had never seen");
         AuraQueryCache.recordQuery(overworld, id, here);
         if (AuraQueryCache.needsQuery(overworld, id, here, interval))
             throw new IllegalStateException("Aura entity gate resolved a stationary entity twice in the same tick");
         for (long offset = 1L; offset < interval; offset++) {
-            AuraQueryCache.AuraLocation same = new AuraQueryCache.AuraLocation(here.dimension(), here.pos(), now + offset);
+            AuraLocation same = new AuraLocation(here.dimension(), here.pos(), now + offset);
             if (AuraQueryCache.needsQuery(overworld, id, same, interval))
                 throw new IllegalStateException("Aura entity gate resolved a stationary entity after only " + offset + " of " + interval + " ticks");
         }
-        AuraQueryCache.AuraLocation stale = new AuraQueryCache.AuraLocation(here.dimension(), here.pos(), now + interval);
+        AuraLocation stale = new AuraLocation(here.dimension(), here.pos(), now + interval);
         if (!AuraQueryCache.needsQuery(overworld, id, stale, interval))
             throw new IllegalStateException("Aura entity gate never refreshed a stationary entity, so a zone change could go unnoticed forever");
-        AuraQueryCache.AuraLocation moved = new AuraQueryCache.AuraLocation(here.dimension(), BlockPos.ZERO.east(), now + interval + 1L);
+        AuraLocation moved = new AuraLocation(here.dimension(), BlockPos.ZERO.east(), now + interval + 1L);
         if (!AuraQueryCache.needsQuery(overworld, id, moved, interval))
             throw new IllegalStateException("Aura entity gate did not resolve an entity that moved one block");
         AuraQueryCache.forget(overworld, id);
@@ -1500,9 +1503,9 @@ public final class MxtTestMod {
 
         // A live technique resolves; an id nobody defines does not. The second is the shape a removed
         // data pack file leaves in saved data, and the whole command turns on telling them apart.
-        if (!TechniqueRepairCommand.resolves(real))
+        if (!TechniqueCommand.resolves(real))
             throw new IllegalStateException("The repair sweep called a live technique stale");
-        if (!TechniqueRepairCommand.resolvesStage(MxtDatapackRegistries
+        if (!TechniqueCommand.resolvesStage(MxtDatapackRegistries
                 .holder(MxtResourceKeys.SKILL_STAGE, Identifier.parse("mxt_test:sword_art_1"))
                 .orElseThrow(() -> new IllegalStateException("The repair audit needs a real skill stage"))))
             throw new IllegalStateException("The repair sweep called a live skill stage stale");
@@ -1511,14 +1514,14 @@ public final class MxtTestMod {
         // on healthy data is a no-op rather than a way to lose techniques.
         List<Identifier> clean = new ArrayList<>();
         List<Holder<CultivationTechnique>> untouched =
-                TechniqueRepairCommand.prune(new ArrayList<>(List.of(real)), clean);
+                TechniqueCommand.prune(new ArrayList<>(List.of(real)), clean);
         if (untouched.size() != 1 || !clean.isEmpty())
             throw new IllegalStateException("The repair sweep removed something from an already clean list");
 
         // A duplicate of a live entry goes: two copies of one technique would double every passive
         // modifier the definition grants, which is a real corruption the sweep should clear.
         List<Identifier> dupes = new ArrayList<>();
-        if (TechniqueRepairCommand.prune(new ArrayList<>(List.of(real, real)), dupes).size() != 1
+        if (TechniqueCommand.prune(new ArrayList<>(List.of(real, real)), dupes).size() != 1
                 || dupes.size() != 1)
             throw new IllegalStateException("The repair sweep kept a duplicate technique");
 
@@ -1530,7 +1533,7 @@ public final class MxtTestMod {
         stages.put(real, stage);
         List<Identifier> removedStages = new ArrayList<>();
         Map<Holder<CultivationTechnique>, Holder<SkillStage>> sweptStages =
-                TechniqueRepairCommand.pruneStages(stages, removedStages);
+                TechniqueCommand.pruneStages(stages, removedStages);
         if (sweptStages.size() != 1 || !removedStages.isEmpty())
             throw new IllegalStateException("The repair sweep dropped a healthy stage entry");
 
@@ -1585,7 +1588,7 @@ public final class MxtTestMod {
 
         // And the transaction itself must succeed on a holder who knows nothing yet.
         SpiritIdentityAttachment spirit = student.getData(MxtAttachments.SPIRIT_IDENTITY);
-        TechniqueService.Result result = TechniqueService.learn(student, spirit, technique, FormulaContext.of(student));
+        Result result = TechniqueService.learn(student, spirit, technique, FormulaContext.of(student));
         if (!result.learned())
             throw new IllegalStateException("Learning the azure technique was refused: " + result.failure());
     }

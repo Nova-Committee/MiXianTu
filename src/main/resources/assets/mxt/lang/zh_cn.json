@@ -139,6 +139,8 @@
   "config.mxt.server.aura.sync_interval": "灵气同步周期",
   "config.mxt.server.aura.query_stats": "输出灵气解析耗时统计（诊断用）",
   "config.mxt.server.aura.entity_refresh_interval": "静止实体的灵气重算周期（刻）",
+  "config.mxt.server.commands": "指令",
+  "config.mxt.server.commands.root_aliases": "注册根指令别名（如 /aura 与 /mxt aura 同时可用）",
   "config.mxt.server.mode.all": "所有物品",
   "config.mxt.server.mode.manual": "手动",
   "config.mxt.server.mode.weapons": "所有注册的武器",

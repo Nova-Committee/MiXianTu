@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Registry;
@@ -54,7 +55,7 @@ public final class AuraZoneEventBridge {
     public static void onEntityTick(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
         if (!(entity.level() instanceof ServerLevel level)) return;
-        AuraQueryCache.AuraLocation position = AuraQueryCache.location(level, entity.blockPosition());
+        AuraLocation position = AuraQueryCache.location(level, entity.blockPosition());
         if (!AuraQueryCache.needsQuery(level, entity.getUUID(), position, MxtServerConfig.auraEntityRefreshInterval()))
             return;
         AuraResult current = AuraService.getPositionAura(level, entity.blockPosition());

@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.world.AuraService.Resolved;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -58,8 +59,8 @@ public final class AuraQueryCache {
     }
 
     private static final Map<ServerLevel, Long> EPOCH = new IdentityHashMap<>();
-    private static final Map<ServerLevel, Map<AuraLocation, AuraService.Resolved>> STATIC = new IdentityHashMap<>();
-    private static final Map<ServerLevel, Map<AuraLocation, Optional<AuraService.Resolved>>> FORMATION = new IdentityHashMap<>();
+    private static final Map<ServerLevel, Map<AuraLocation, Resolved>> STATIC = new IdentityHashMap<>();
+    private static final Map<ServerLevel, Map<AuraLocation, Optional<Resolved>>> FORMATION = new IdentityHashMap<>();
     private static final Map<ServerLevel, Map<LevelPosition, AuraResult>> RESULT = new IdentityHashMap<>();
     private static final Map<ServerLevel, Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Resource>, AuraPool>>>> POOLS = new IdentityHashMap<>();
     /**
@@ -389,10 +390,10 @@ public final class AuraQueryCache {
         cache.put(new LevelPosition(location.pos(), location.gameTime()), result);
     }
 
-    static Optional<AuraService.Resolved> staticZone(ServerLevel level, AuraLocation location) {
+    static Optional<Resolved> staticZone(ServerLevel level, AuraLocation location) {
         if (!enabled || !current(level, location)) return Optional.empty();
-        Map<AuraLocation, AuraService.Resolved> cache = STATIC.get(level);
-        AuraService.Resolved cached = cache == null ? null : cache.get(location);
+        Map<AuraLocation, Resolved> cache = STATIC.get(level);
+        Resolved cached = cache == null ? null : cache.get(location);
         if (cached == null) {
             STATIC_MISSES.incrementAndGet();
             return Optional.empty();
@@ -401,9 +402,9 @@ public final class AuraQueryCache {
         return Optional.of(cached);
     }
 
-    static void cacheStaticZone(ServerLevel level, AuraLocation location, AuraService.Resolved value) {
+    static void cacheStaticZone(ServerLevel level, AuraLocation location, Resolved value) {
         if (!enabled || !current(level, location)) return;
-        Map<AuraLocation, AuraService.Resolved> cache = STATIC.get(level);
+        Map<AuraLocation, Resolved> cache = STATIC.get(level);
         if (cache == null || cache.size() >= MAX_ENTRIES) {
             cache = new HashMap<>();
             STATIC.put(level, cache);
@@ -411,10 +412,10 @@ public final class AuraQueryCache {
         cache.put(location, value);
     }
 
-    static Optional<Optional<AuraService.Resolved>> formationZone(ServerLevel level, AuraLocation location) {
+    static Optional<Optional<Resolved>> formationZone(ServerLevel level, AuraLocation location) {
         if (!enabled || !current(level, location)) return Optional.empty();
-        Map<AuraLocation, Optional<AuraService.Resolved>> cache = FORMATION.get(level);
-        Optional<AuraService.Resolved> cached = cache == null ? null : cache.get(location);
+        Map<AuraLocation, Optional<Resolved>> cache = FORMATION.get(level);
+        Optional<Resolved> cached = cache == null ? null : cache.get(location);
         if (cached == null) {
             FORMATION_MISSES.incrementAndGet();
             return Optional.empty();
@@ -423,9 +424,9 @@ public final class AuraQueryCache {
         return Optional.of(cached);
     }
 
-    static void cacheFormationZone(ServerLevel level, AuraLocation location, Optional<AuraService.Resolved> value) {
+    static void cacheFormationZone(ServerLevel level, AuraLocation location, Optional<Resolved> value) {
         if (!enabled || !current(level, location)) return;
-        Map<AuraLocation, Optional<AuraService.Resolved>> cache = FORMATION.get(level);
+        Map<AuraLocation, Optional<Resolved>> cache = FORMATION.get(level);
         if (cache == null || cache.size() >= MAX_ENTRIES) {
             cache = new HashMap<>();
             FORMATION.put(level, cache);

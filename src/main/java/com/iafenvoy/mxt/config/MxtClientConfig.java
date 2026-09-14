@@ -5,7 +5,6 @@ import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.iafenvoy.jupiter.config.entry.EnumEntry;
 import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;

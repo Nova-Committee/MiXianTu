@@ -121,7 +121,7 @@ public final class TechniquePanelScreen extends Screen {
     }
 
     private List<TechniqueList.RowEntry> buildEntries() {
-        if (this.minecraft == null || this.minecraft.player == null) {
+        if (this.minecraft.player == null) {
             this.empty = true;
             return List.of();
         }

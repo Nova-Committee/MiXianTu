@@ -140,6 +140,8 @@
   "config.mxt.server.aura.sync_interval": "Aura synchronization interval",
   "config.mxt.server.aura.query_stats": "Log aura resolution cost (diagnostics)",
   "config.mxt.server.aura.entity_refresh_interval": "Stationary entity aura refresh interval (ticks)",
+  "config.mxt.server.commands": "Commands",
+  "config.mxt.server.commands.root_aliases": "Register top-level command aliases (e.g. /aura and /mxt aura)",
   "config.mxt.server.mode.all": "All Items",
   "config.mxt.server.mode.manual": "Manual",
   "config.mxt.server.mode.weapons": "Registered Weapons",

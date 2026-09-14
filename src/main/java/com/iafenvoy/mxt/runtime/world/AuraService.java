@@ -13,6 +13,8 @@ import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
+import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AvailabilityKey;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -55,7 +57,7 @@ public final class AuraService {
             // A queued block change must stay visible immediately, so the dirty flush happens before
             // the memo is consulted rather than only on a miss.
             AuraChunkTicker.flushDirty(server);
-            AuraQueryCache.AuraLocation location = AuraQueryCache.location(server, pos);
+            AuraLocation location = AuraQueryCache.location(server, pos);
             Optional<AuraResult> cached = AuraQueryCache.result(server, location);
             if (cached.isPresent()) return cached.get();
             AuraResult result = resolveAura(level, pos);
@@ -81,7 +83,8 @@ public final class AuraService {
             resolved = formation;
         }
         Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
-        if (pools.isEmpty()) pools.putAll(pools(level, resolved.holder().orElse(null), resolved.definition(), pos, level.getGameTime()));
+        if (pools.isEmpty())
+            pools.putAll(pools(level, resolved.holder().orElse(null), resolved.definition(), pos, level.getGameTime()));
         applyBlockDistance(level, pools, chunk, resolved.definition(), pos, level.getGameTime());
         applyMaximumBonus(pools, resolved.maxBonus());
         return new AuraResult(pools, resolved.definition().auraKinds(),
@@ -145,16 +148,15 @@ public final class AuraService {
      */
     private static Resolved staticZone(Level level, BlockPos pos) {
         ServerLevel server = level instanceof ServerLevel value ? value : null;
-        AuraQueryCache.AuraLocation location = server == null ? null : AuraQueryCache.location(server, pos);
+        AuraLocation location = server == null ? null : AuraQueryCache.location(server, pos);
         Optional<Resolved> cached = location == null ? Optional.empty() : AuraQueryCache.staticZone(server, location);
         if (cached.isPresent()) return cached.get();
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         Identifier dimension = level.dimension().identifier();
         Identifier memoised = location == null ? null : AuraQueryCache.biome(server, location);
         if (memoised == null) {
-            long biomeStarted = started;
             memoised = HolderHelper.id(level.getBiome(pos));
-            if (biomeStarted != 0L) AuraQueryCache.countBiome(System.nanoTime() - biomeStarted);
+            if (started != 0L) AuraQueryCache.countBiome(System.nanoTime() - started);
             if (location != null) AuraQueryCache.cacheBiome(server, location, memoised);
         }
         Identifier biome = memoised;
@@ -210,7 +212,7 @@ public final class AuraService {
 
     private static Optional<Resolved> formationZone(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel server)) return Optional.empty();
-        AuraQueryCache.AuraLocation location = AuraQueryCache.location(server, pos);
+        AuraLocation location = AuraQueryCache.location(server, pos);
         Optional<Optional<Resolved>> cached = AuraQueryCache.formationZone(server, location);
         if (cached.isPresent()) return cached.get();
         Optional<Resolved> resolved = server.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet().stream()
@@ -402,8 +404,8 @@ public final class AuraService {
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         try {
             ServerLevel server = level instanceof ServerLevel value ? value : null;
-            AuraQueryCache.AvailabilityKey key = server == null ? null
-                    : new AuraQueryCache.AvailabilityKey(attachment, sourcePosition.immutable(), resource);
+            AvailabilityKey key = server == null ? null
+                    : new AvailabilityKey(attachment, sourcePosition.immutable(), resource);
             if (key != null) {
                 Optional<Double> cached = AuraQueryCache.availability(server, key);
                 if (cached.isPresent()) return availability(attachment, resource, cached.get(), sourcePosition);
@@ -460,7 +462,7 @@ public final class AuraService {
         if (!(level instanceof ServerLevel server) || holder == null) return computePools(zone, pos, gameTime);
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         try {
-            AuraQueryCache.AuraLocation location = AuraQueryCache.location(server, pos);
+            AuraLocation location = AuraQueryCache.location(server, pos);
             Optional<Map<Holder<Resource>, AuraPool>> cached = AuraQueryCache.pools(server, location, holder);
             if (cached.isPresent()) return cached.get();
             Map<Holder<Resource>, AuraPool> pools = computePools(zone, pos, gameTime);
@@ -488,8 +490,7 @@ public final class AuraService {
      */
     static Optional<Holder<AuraZone>> findHolder(AuraZone zone) {
         if (zone == EMPTY_ZONE) return Optional.empty();
-        return MxtDatapackRegistries.holders(MxtResourceKeys.AURA_ZONE)
-                .filter(holder -> holder.value() == zone).findFirst().map(holder -> (Holder<AuraZone>) holder);
+        return MxtDatapackRegistries.holders(MxtResourceKeys.AURA_ZONE).filter(holder -> holder.value() == zone).findFirst().map(holder -> holder);
     }
 
     private static Map<Holder<Resource>, AuraPool> computePools(AuraZone zone, BlockPos pos, long gameTime) {

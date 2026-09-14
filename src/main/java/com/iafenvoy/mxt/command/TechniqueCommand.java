@@ -1,16 +1,20 @@
 package com.iafenvoy.mxt.command;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService.Failure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.Map.Entry;
 import java.util.Optional;
+
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -18,7 +22,7 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueHoldLookup;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.Holder;
@@ -26,7 +30,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
-import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -39,15 +42,16 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * Repairs technique data that points at entries the current data pack no longer provides.
+ * The {@code /technique} command; also reachable as {@code /mxt technique}.
  *
- * <p>A stale reference is survivable, but it fails quietly in the wrong way. The lists decode through
+ * <p>Its subject is technique data that points at entries the current data pack no longer provides.
+ * A stale reference is survivable, but it fails quietly in the wrong way: the lists decode through
  * {@code CollectionCodecs.list}, which is {@code AutoIgnoreListCodec} - it decodes element by element
  * and drops the ones that fail, logging a single warning. A removed technique therefore costs only
  * itself and the player keeps everything else; what they lose is that one technique, with no in-game
  * message saying why it went.</p>
  *
- * <p>This command makes that state explicit and tidy: it names the dead entries, removes them so the
+ * <p>{@code repair} makes that state explicit and tidy: it names the dead entries, removes them so the
  * stored data stops carrying references that can never resolve again, and rebuilds the attributes and
  * abilities derived from the techniques that remain. On healthy data it changes nothing.</p>
  *
@@ -55,23 +59,17 @@ import static net.minecraft.commands.Commands.literal;
  * {@code Ignoring invalid list element}, there are no stale references, and an empty panel or an inert
  * manual has some other cause entirely.</p>
  */
-public final class TechniqueRepairCommand {
-    private TechniqueRepairCommand() {
-    }
-
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(literal(MiXianTu.MOD_ID)
-                .then(literal("technique")
-                        .then(literal("repair")
-                                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                                .executes(ctx -> repair(ctx.getSource(), false))
-                                .then(literal("dry-run").executes(ctx -> repair(ctx.getSource(), true))))
-                        .then(literal("drop")
-                                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                                .then(argument("id", IdentifierArgument.id())
-                                        .executes(ctx -> drop(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
-                        .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())))));
-    }
+public final class TechniqueCommand {
+    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("technique")
+            .then(literal("repair")
+                    .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                    .executes(ctx -> repair(ctx.getSource(), false))
+                    .then(literal("dry-run").executes(ctx -> repair(ctx.getSource(), true))))
+            .then(literal("drop")
+                    .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                    .then(argument("id", IdentifierArgument.id())
+                            .executes(ctx -> drop(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
+            .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
 
     /**
      * Reports why the item in hand cannot be used, one gate at a time.
@@ -80,12 +78,8 @@ public final class TechniqueRepairCommand {
      * condition, and each can refuse independently. When an item simply does nothing, "which one said
      * no" is the whole question, and it is not answerable from outside the game.</p>
      */
-    private static int diagnose(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
+    private static int diagnose(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         ItemStack stack = player.getMainHandItem();
         if (stack.isEmpty()) {
             source.sendFailure(Component.translatable("command.mxt.technique.diagnose.empty_hand"));
@@ -107,9 +101,8 @@ public final class TechniqueRepairCommand {
 
         // 2. Does the item gate refuse it? This is the one that cancels Start and Tick, which is what a
         // pose that appears and then aborts looks like.
-        Optional<ItemQualityService.Failure> refusal = ItemQualityService.check(player, stack);
-        source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.gate",
-                refusal.map(failure -> failure.name()).orElse("OK")), false);
+        Optional<Failure> refusal = ItemQualityService.check(player, stack);
+        source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.gate", refusal.map(Enum::name).orElse("OK")), false);
 
         // 3. Is it already known, or blocked by an exclusive tag?
         SpiritIdentityAttachment spirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
@@ -146,12 +139,8 @@ public final class TechniqueRepairCommand {
      *
      * @param dryRun when true, reports what would be removed and changes nothing
      */
-    private static int repair(CommandSourceStack source, boolean dryRun) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
+    private static int repair(CommandSourceStack source, boolean dryRun) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         List<Identifier> removed = new ArrayList<>();
 
@@ -182,12 +171,8 @@ public final class TechniqueRepairCommand {
      * <p>The sweep above cannot reach a reference that is already gone, and the sweep is also no use to
      * a player who simply wants a mistaken grant undone. Naming the entry directly covers both.</p>
      */
-    private static int drop(CommandSourceStack source, Identifier id) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
+    private static int drop(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         int before = identity.learnedTechniques().size() + identity.techniqueStages().size();
 
@@ -196,7 +181,7 @@ public final class TechniqueRepairCommand {
             if (!HolderHelper.id(technique).equals(id)) techniques.add(technique);
 
         Map<Holder<CultivationTechnique>, Holder<SkillStage>> stages = new LinkedHashMap<>();
-        for (Map.Entry<Holder<CultivationTechnique>, Holder<SkillStage>> entry : identity.techniqueStages().entrySet())
+        for (Entry<Holder<CultivationTechnique>, Holder<SkillStage>> entry : identity.techniqueStages().entrySet())
             if (!HolderHelper.id(entry.getKey()).equals(id)) stages.put(entry.getKey(), entry.getValue());
 
         int after = techniques.size() + stages.size();
@@ -218,10 +203,8 @@ public final class TechniqueRepairCommand {
      * resource ceilings all came from the definitions that were just dropped, so they have to be
      * recomputed or the player keeps buffs from a technique they no longer hold.</p>
      */
-    private static void rebuild(Player player, SpiritIdentityAttachment identity) {
-        if (!(player instanceof ServerPlayer serverPlayer)) return;
-        CultivationGrantService.recalculate(serverPlayer, identity,
-                serverPlayer.getData(MxtAttachments.ABILITY_HOLDER));
+    private static void rebuild(ServerPlayer player, SpiritIdentityAttachment identity) {
+        CultivationGrantService.recalculate(player, identity, player.getData(MxtAttachments.ABILITY_HOLDER));
     }
 
     /**
@@ -230,8 +213,7 @@ public final class TechniqueRepairCommand {
      * <p>Package-visible so the server audit can exercise the sweep directly: the command itself needs a
      * real player, and this is the half that decides what a repair actually does.</p>
      */
-    public static List<Holder<CultivationTechnique>> prune(List<Holder<CultivationTechnique>> values,
-                                                    List<Identifier> removed) {
+    public static List<Holder<CultivationTechnique>> prune(List<Holder<CultivationTechnique>> values, List<Identifier> removed) {
         List<Holder<CultivationTechnique>> kept = new ArrayList<>(values.size());
         Set<Identifier> seen = new LinkedHashSet<>();
         for (Holder<CultivationTechnique> technique : values) {
@@ -245,10 +227,9 @@ public final class TechniqueRepairCommand {
         return kept;
     }
 
-    public static Map<Holder<CultivationTechnique>, Holder<SkillStage>> pruneStages(
-            Map<Holder<CultivationTechnique>, Holder<SkillStage>> values, List<Identifier> removed) {
+    public static Map<Holder<CultivationTechnique>, Holder<SkillStage>> pruneStages(Map<Holder<CultivationTechnique>, Holder<SkillStage>> values, List<Identifier> removed) {
         Map<Holder<CultivationTechnique>, Holder<SkillStage>> kept = new LinkedHashMap<>();
-        for (Map.Entry<Holder<CultivationTechnique>, Holder<SkillStage>> entry : values.entrySet()) {
+        for (Entry<Holder<CultivationTechnique>, Holder<SkillStage>> entry : values.entrySet()) {
             Holder<CultivationTechnique> technique = entry.getKey();
             if (!resolves(technique) || !resolvesStage(entry.getValue())) {
                 removed.add(HolderHelper.id(technique));

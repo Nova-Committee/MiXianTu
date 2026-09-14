@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.command;
 
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService.RequestResult;
-import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
@@ -15,12 +15,10 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 public final class TradeCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(literal("trade")
-                .requires(source -> source.getPlayer() != null)
-                .then(argument("target", EntityArgument.player())
-                        .executes(TradeCommand::trade)));
-    }
+    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("trade")
+            .requires(CommandSourceStack::isPlayer)
+            .then(argument("target", EntityArgument.player())
+                    .executes(TradeCommand::trade));
 
     private static int trade(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException(), target = EntityArgument.getPlayer(ctx, "target");

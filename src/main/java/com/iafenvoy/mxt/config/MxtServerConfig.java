@@ -17,6 +17,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Curios curios = new Curios();
     public final Cultivation cultivation = new Cultivation();
     public final Aura aura = new Aura();
+    public final Commands commands = new Commands();
 
     private MxtServerConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "server"), "config.mxt.server", "./config/mxt-server.json");
@@ -73,16 +74,9 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     }
 
     public static final class Cultivation extends AutoInitConfigCategoryBase {
-        public final BooleanEntry forbidWithoutEligibleAura = BooleanEntry.builder(
-                "config.mxt.server.cultivation.forbid_without_eligible_aura", false).build();
-        public final BooleanEntry allowMovement = BooleanEntry.builder(
-                "config.mxt.server.cultivation.allow_movement", false).build();
-        /**
-         * Ticks one technique item is unusable after it teaches something, so a manual cannot be read
-         * back to back. Zero disables the cooldown entirely, which is the old behaviour.
-         */
-        public final IntegerEntry techniqueLearnCooldown = IntegerEntry.builder(
-                "config.mxt.server.cultivation.technique_learn_cooldown", 60).range(0, 72_000).build();
+        public final BooleanEntry forbidWithoutEligibleAura = BooleanEntry.builder("config.mxt.server.cultivation.forbid_without_eligible_aura", false).build();
+        public final BooleanEntry allowMovement = BooleanEntry.builder("config.mxt.server.cultivation.allow_movement", false).build();
+        public final IntegerEntry techniqueLearnCooldown = IntegerEntry.builder("config.mxt.server.cultivation.technique_learn_cooldown", 60).range(0, 72_000).build();
 
         private Cultivation() {
             super("cultivation", "config.mxt.server.cultivation");
@@ -90,27 +84,25 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     }
 
     public static final class Aura extends AutoInitConfigCategoryBase {
-        public final IntegerEntry blockAuraTickInterval = IntegerEntry.builder(
-                "config.mxt.server.aura.block_aura_tick_interval", 10).range(1, 1200).build();
-        public final IntegerEntry auraSyncInterval = IntegerEntry.builder(
-                "config.mxt.server.aura.sync_interval", 5).range(1, 1200).build();
-        /**
-         * Logs how much server time aura resolution actually costs, once every ten seconds. Diagnostics
-         * only; the counting itself is two atomics per query.
-         */
-        public final BooleanEntry queryStats = BooleanEntry.builder(
-                "config.mxt.server.aura.query_stats", false).build();
-        /**
-         * How often an entity that has not moved is re-resolved, in ticks. A stationary entity can only
-         * see a different aura zone because the chunk stock changed or a formation came and went, so
-         * this is the upper bound on how long such a change takes to reach its enter/leave events. One
-         * tick restores the old behaviour of resolving every entity every tick.
-         */
-        public final IntegerEntry entityRefreshInterval = IntegerEntry.builder(
-                "config.mxt.server.aura.entity_refresh_interval", 10).range(1, 1200).build();
+        public final IntegerEntry blockAuraTickInterval = IntegerEntry.builder("config.mxt.server.aura.block_aura_tick_interval", 10).range(1, 1200).build();
+        public final IntegerEntry auraSyncInterval = IntegerEntry.builder("config.mxt.server.aura.sync_interval", 5).range(1, 1200).build();
+        public final BooleanEntry queryStats = BooleanEntry.builder("config.mxt.server.aura.query_stats", false).build();
+        public final IntegerEntry entityRefreshInterval = IntegerEntry.builder("config.mxt.server.aura.entity_refresh_interval", 10).range(1, 1200).build();
 
         private Aura() {
             super("aura", "config.mxt.server.aura");
+        }
+    }
+
+    public static final class Commands extends AutoInitConfigCategoryBase {
+        public final BooleanEntry ability = BooleanEntry.builder("config.mxt.server.commands.ability", true).build();
+        public final BooleanEntry aura = BooleanEntry.builder("config.mxt.server.commands.aura", true).build();
+        public final BooleanEntry display = BooleanEntry.builder("config.mxt.server.commands.display", true).build();
+        public final BooleanEntry technique = BooleanEntry.builder("config.mxt.server.commands.technique", true).build();
+        public final BooleanEntry trade = BooleanEntry.builder("config.mxt.server.commands.trade", true).build();
+
+        private Commands() {
+            super("commands", "config.mxt.server.commands");
         }
     }
 
