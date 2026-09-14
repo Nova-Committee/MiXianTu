@@ -1,10 +1,12 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.network.payload.ForgingActionC2SPayload;
+import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
@@ -22,8 +24,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
@@ -160,7 +164,7 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
      * alignment to be guessed at; the barrier says the cell is part of the row and deliberately has no
      * value.</p>
      */
-    private static final ItemStack EMPTY_STEP = new ItemStack(Items.BARRIER);
+    private static final IconReference EMPTY_STEP = IconReference.item(ItemStackTemplate.fromNonEmptyStack(new ItemStack(Items.BARRIER)));
     /**
      * How far the first cell column starts inside its recess: the left recess starts at column 7 and
      * its cells at 8.
@@ -527,13 +531,12 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
      * and taking these to the cell width instead stops a two pixel stripe of the recess showing down
      * the right of every button.
      */
-    private void option(GuiGraphicsExtractor graphics, int x, int y, ItemStack icon,
+    private void option(GuiGraphicsExtractor graphics, int x, int y, @Nullable IconReference icon,
                         boolean selected, boolean hovered) {
         Identifier sprite = selected ? OPTION_SELECTED : hovered ? OPTION_HIGHLIGHTED : OPTION;
         graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y - (OPTION_H - ForgingMenu.CELL) / 2, OPTION_W, OPTION_H);
-        if (icon.isEmpty()) return;
-        int inset = (ForgingMenu.CELL - ICON) / 2;
-        graphics.item(icon, x + inset, y + inset);
+        if (icon == null) return;
+        IconRenderer.render(graphics, icon, x, y, ForgingMenu.CELL);
     }
 
     /**
@@ -595,11 +598,12 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
      * fresh session would read as six things that went wrong.</p>
      */
     private void stepIcons(GuiGraphicsExtractor graphics, int y, boolean target) {
-        List<ItemStack> icons = this.stepIcons(target);
+        List<IconReference> icons = this.stepIcons(target);
         for (int position = 0; position < ForgingMenu.SUFFIX_STEPS && position < icons.size(); position++) {
-            ItemStack icon = icons.get(position);
-            if (icon.isEmpty() && !target) continue;
-            graphics.item(icon.isEmpty() ? EMPTY_STEP : icon, STEP_X + position * STEP_CELL_PITCH, y);
+            IconReference icon = icons.get(position);
+            if (icon == null && !target) continue;
+            IconRenderer.render(graphics, icon == null ? EMPTY_STEP : icon,
+                    STEP_X + position * STEP_CELL_PITCH, y, ICON);
         }
     }
 
@@ -716,7 +720,7 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
      * would make that a promise about two iterators agreeing, which is exactly the kind of promise
      * that breaks silently when one of them starts skipping entries.
      */
-    private record Entry(Identifier id, ItemStack icon) {
+    private record Entry(Identifier id, @Nullable IconReference icon) {
     }
 
     /**
@@ -731,10 +735,10 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
         if (this.minecraft.level == null) return List.of();
         List<Entry> entries = new ArrayList<>();
         for (Identifier id : this.menu.blueprints()) {
-            ItemStack icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
+            IconReference icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
                             MxtResourceKeys.FORGING_BLUEPRINT, id)
                     .flatMap(blueprint -> BuiltInRegistries.ITEM.getOptional(blueprint.result()))
-                    .map(ItemStack::new).orElse(ItemStack.EMPTY);
+                    .map(ItemStack::new).flatMap(IconReference::of).orElse(null);
             entries.add(new Entry(id, icon));
         }
         return entries;
@@ -754,26 +758,26 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
         Identifier blueprint = this.picked(this.blueprintEntries(), this.selectedBlueprint);
         List<Entry> entries = new ArrayList<>();
         for (Identifier id : this.menu.methods(blueprint)) {
-            ItemStack icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
+            IconReference icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
                             MxtResourceKeys.FORGING_METHOD, id)
-                    .map(ForgingMethod::iconStack).orElse(ItemStack.EMPTY);
+                    .flatMap(ForgingMethod::icon).orElse(null);
             entries.add(new Entry(id, icon));
         }
         return entries;
     }
 
-    private List<ItemStack> stepIcons(boolean target) {
-        List<ItemStack> icons = new ArrayList<>(ForgingMenu.SUFFIX_STEPS);
+    private List<IconReference> stepIcons(boolean target) {
+        List<IconReference> icons = new ArrayList<>(ForgingMenu.SUFFIX_STEPS);
         boolean usable = this.menu.active() && this.minecraft.level != null;
         Registry<ForgingMethod> registry = usable ? this.minecraft.level.registryAccess().lookupOrThrow(MxtResourceKeys.FORGING_METHOD) : null;
         for (int position = 0; position < ForgingMenu.SUFFIX_STEPS; position++) {
             if (!usable) {
-                icons.add(ItemStack.EMPTY);
+                icons.add(null);
                 continue;
             }
             int id = target ? this.menu.targetStep(position) : this.menu.historyStep(position);
-            icons.add(ForgingMenu.isNone(id) ? ItemStack.EMPTY
-                    : registry.get(id).map(holder -> holder.value().iconStack()).orElse(ItemStack.EMPTY));
+            icons.add(ForgingMenu.isNone(id) ? null
+                    : registry.get(id).flatMap(holder -> holder.value().icon()).orElse(null));
         }
         return icons;
     }

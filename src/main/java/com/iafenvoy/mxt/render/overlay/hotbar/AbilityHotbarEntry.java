@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.data.HotbarIcon;
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
@@ -27,7 +27,7 @@ public record AbilityHotbarEntry(Identifier id, Ability definition) implements H
     }
 
     @Override
-    public Optional<HotbarIcon> icon() {
+    public Optional<IconReference> icon() {
         return this.definition.icon();
     }
 

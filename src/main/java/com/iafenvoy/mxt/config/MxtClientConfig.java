@@ -5,6 +5,7 @@ import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.iafenvoy.jupiter.config.entry.EnumEntry;
 import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
@@ -17,6 +18,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public final Hotbar hotbar = new Hotbar();
     public final ResourceBars resourceBars = new ResourceBars();
     public final Information information = new Information();
+    public final Techniques techniques = new Techniques();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt-client.json");
@@ -40,6 +42,10 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
     public static int informationRefreshInterval() {
         return Math.max(1, INSTANCE.information.refreshInterval.getValue());
+    }
+
+    public static TechniqueProgress.Mode techniqueProgressMode() {
+        return INSTANCE.techniques.progressMode.getValue();
     }
 
     public static final class Hotbar extends AutoInitConfigCategoryBase {
@@ -76,6 +82,17 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
         private Information() {
             super("information", "config.mxt.client.information");
+        }
+    }
+
+    public static final class Techniques extends AutoInitConfigCategoryBase {
+        public final EnumEntry<TechniqueProgress.Mode> progressMode = EnumEntry.builder(
+                        "config.mxt.client.techniques.progress_mode", TechniqueProgress.Mode.ABSOLUTE)
+                .nameProvider(value -> Component.translatable("config.mxt.client.techniques.progress_mode." + value.name().toLowerCase()))
+                .build();
+
+        private Techniques() {
+            super("techniques", "config.mxt.client.techniques");
         }
     }
 }

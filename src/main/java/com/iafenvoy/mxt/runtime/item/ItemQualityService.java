@@ -43,54 +43,64 @@ public final class ItemQualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onAttack(AttackEntityEvent event) {
-        if (!canUseForEvent(event.getEntity(), event.getEntity().getMainHandItem())) {
+        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getMainHandItem());
+        if (failure.isPresent()) {
             event.setCanceled(true);
-            notifyCannotUse(event.getEntity());
+            notifyCannotUse(event.getEntity(), failure.orElseThrow());
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onItemUse(RightClickItem event) {
-        if (!canUseForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) {
+        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()));
+        if (failure.isPresent()) {
             event.setCanceled(true);
-            notifyCannotUse(event.getEntity());
+            notifyCannotUse(event.getEntity(), failure.orElseThrow());
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onBlockUse(RightClickBlock event) {
-        if (!canUseForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) {
+        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()));
+        if (failure.isPresent()) {
             event.setCanceled(true);
-            notifyCannotUse(event.getEntity());
+            notifyCannotUse(event.getEntity(), failure.orElseThrow());
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onUseStart(Start event) {
-        if (!canUseForEvent(event.getEntity(), event.getItem())) {
+        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
+        if (failure.isPresent()) {
             event.setCanceled(true);
-            notifyCannotUse(event.getEntity());
+            notifyCannotUse(event.getEntity(), failure.orElseThrow());
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onUseTick(Tick event) {
-        if (!canUseForEvent(event.getEntity(), event.getItem())) {
+        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
+        if (failure.isPresent()) {
             event.setCanceled(true);
-            notifyCannotUse(event.getEntity());
+            notifyCannotUse(event.getEntity(), failure.orElseThrow());
         }
     }
 
-    private static void notifyCannotUse(LivingEntity entity) {
+    /**
+     * Sends the user-facing reason this item's gate refused an entity. Public because an interaction
+     * that runs below the gate's own priority still has to report the refusal it sees.
+     */
+    public static void notifyCannotUse(LivingEntity entity, Failure failure) {
         if (entity instanceof ServerPlayer player)
-            player.sendSystemMessage(Component.translatable("actionbar.mxt.item.cannot_use")
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.item.cannot_use",
+                            Component.translatable("actionbar.mxt.item.cannot_use." + failure.name().toLowerCase(Locale.ROOT)))
                     .withStyle(ChatFormatting.RED), true);
     }
 
-    private static boolean canUseForEvent(LivingEntity user, ItemStack stack) {
+    private static Optional<Failure> checkForEvent(LivingEntity user, ItemStack stack) {
         if (user.level().isClientSide())
-            return canUse(user.level().registryAccess(), user, stack);
-        return canUse(user, stack);
+            return check(user.level().registryAccess(), user, stack);
+        return check(user, stack);
     }
 
     public static Optional<Holder<ItemQuality>> find(ItemStack stack) {
@@ -99,6 +109,19 @@ public final class ItemQualityService {
 
     public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
         return find(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), stack, ItemBindingService.resolve(access, stack), access);
+    }
+
+    /**
+     * Why an entity may not use an item. The gate is the union of three independent data-driven
+     * checks, so it reports which one refused instead of only that the item is unusable.
+     */
+    public enum Failure {
+        /** A matching binding's own conditions did not all pass. */
+        BINDING_CONDITIONS,
+        /** The condition of the item's resolved quality did not pass. */
+        QUALITY_CONDITIONS,
+        /** The item's resolved quality is missing, or is not a member of the binding's quality group. */
+        QUALITY_GROUP
     }
 
     /**
@@ -111,26 +134,43 @@ public final class ItemQualityService {
     }
 
     static boolean canUse(LivingEntity user, ItemStack stack, ResolvedBindings bindings) {
-        if (stack.isEmpty()) return true;
-        FormulaContext context = FormulaContext.of(user);
-        if (!bindings.conditionsMet(user, context)) return false;
-        Optional<Holder<ItemQuality>> quality = find(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY), stack, bindings);
-        if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context)) return false;
-        return bindings.qualityGroup()
-                .map(group -> quality.map(value -> value.is(group)).orElse(false))
-                .orElse(true);
+        return check(user, stack, bindings).isEmpty();
     }
 
     static boolean canUse(Provider access, LivingEntity user, ItemStack stack) {
-        if (stack.isEmpty()) return true;
+        return check(access, user, stack).isEmpty();
+    }
+
+    /**
+     * The reason {@link #canUse} would refuse this item, or empty while the item is usable.
+     */
+    public static Optional<Failure> check(LivingEntity user, ItemStack stack) {
+        return check(user, stack, ItemBindingService.resolve(stack));
+    }
+
+    static Optional<Failure> check(LivingEntity user, ItemStack stack, ResolvedBindings bindings) {
+        if (stack.isEmpty()) return Optional.empty();
+        FormulaContext context = FormulaContext.of(user);
+        if (!bindings.conditionsMet(user, context)) return Optional.of(Failure.BINDING_CONDITIONS);
+        Optional<Holder<ItemQuality>> quality = find(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY), stack, bindings);
+        if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
+            return Optional.of(Failure.QUALITY_CONDITIONS);
+        return bindings.qualityGroup()
+                .filter(group -> quality.map(value -> !value.is(group)).orElse(true))
+                .map(group -> Failure.QUALITY_GROUP);
+    }
+
+    static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {
+        if (stack.isEmpty()) return Optional.empty();
         ResolvedBindings bindings = ItemBindingService.resolve(access, stack);
         FormulaContext context = FormulaContext.of(user);
-        if (!bindings.conditionsMet(user, context)) return false;
+        if (!bindings.conditionsMet(user, context)) return Optional.of(Failure.BINDING_CONDITIONS);
         Optional<Holder<ItemQuality>> quality = find(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), stack, bindings, access);
-        if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context)) return false;
+        if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
+            return Optional.of(Failure.QUALITY_CONDITIONS);
         return bindings.qualityGroup()
-                .map(group -> quality.map(value -> value.is(group)).orElse(false))
-                .orElse(true);
+                .filter(group -> quality.map(value -> !value.is(group)).orElse(true))
+                .map(group -> Failure.QUALITY_GROUP);
     }
 
     public static void set(ItemStack stack, Holder<ItemQuality> quality) {

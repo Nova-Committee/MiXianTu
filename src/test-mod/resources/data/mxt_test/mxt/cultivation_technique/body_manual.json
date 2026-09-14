@@ -1,5 +1,6 @@
 {
   "grade": "uncommon",
+  "icon": { "id": "minecraft:book" },
   "exclusive_tags": ["mxt_test:technique/sword"],
   "cultivation_modifier": 1.05,
   "granted_abilities": []

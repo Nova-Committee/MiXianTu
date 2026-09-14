@@ -15,8 +15,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  */
 @SuppressWarnings("unused")
 public final class MxtTriggers {
-    public static final DeferredRegister<MapCodec<? extends Trigger>> REGISTRY =
-            DeferredRegister.create(MxtRegistries.TRIGGER_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends Trigger>> REGISTRY = DeferredRegister.create(MxtRegistries.TRIGGER_TYPE, MiXianTu.MOD_ID);
 
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> TICK = register("tick");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> ATTACK = register("attack");
@@ -28,6 +27,7 @@ public final class MxtTriggers {
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> EQUIP = register("equip");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> DEATH = register("death");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> BREAKTHROUGH = register("breakthrough");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> TECHNIQUE_STAGE = register("technique_stage");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<JsTrigger>> JS = REGISTRY.register("js", () -> JsTrigger.CODEC);
 
     private static DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> register(String signal) {

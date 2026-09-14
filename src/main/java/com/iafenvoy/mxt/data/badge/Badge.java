@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.data.badge;
 
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.function.Function;
@@ -18,7 +18,7 @@ public interface Badge {
     Codec<Holder<Badge>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.BADGE);
     Codec<Badge> DIRECT_CODEC = MxtRegistries.BADGE_TYPE.byNameCodec().dispatch("type", Badge::codec, Function.identity());
 
-    Identifier sprite();
+    IconReference icon();
 
     MapCodec<? extends Badge> codec();
 }

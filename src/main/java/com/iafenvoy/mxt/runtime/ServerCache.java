@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
@@ -236,9 +237,19 @@ public final class ServerCache {
                         + known + " and " + first);
             Identifier current = first;
             int rank = 0;
+            double lastMastery = Double.NEGATIVE_INFINITY;
             while (current != null) {
                 if (ranks.containsKey(current))
                     throw new IllegalStateException("Cyclic skill chain for " + stages.get(current).skill() + " at stage " + current);
+                // A later level may not ask for less mastery than an earlier one. Only a constant can be
+                // compared here: a formula cannot, and does not need to be, because advancement always
+                // walks to the next level, so a provider that happens to drop only climbs faster.
+                if (stages.get(current).mastery() instanceof Constant(double mastery)) {
+                    if (mastery < lastMastery)
+                        throw new IllegalStateException("Skill chain " + stages.get(current).skill()
+                                + " lowers its mastery requirement at stage " + current);
+                    lastMastery = mastery;
+                }
                 resolved.put(current, stages.get(current).skill());
                 ranks.put(current, rank++);
                 current = stages.get(current).nextStage().map(HolderHelper::id).orElse(null);
@@ -253,29 +264,41 @@ public final class ServerCache {
     }
 
     /**
-     * A technique's mastery levels must all belong to the chain its entry level is on; a level from
-     * another skill could never be reached, and would be reported as an ordinary satisfied minimum.
+     * A technique annotates one chain: its entry level is where a holder starts, every level after it
+     * must be configured, and nothing may be configured that the technique can never reach. The walk
+     * rejects a partially annotated chain instead of letting a holder reach a level nothing describes.
      */
     private void validateTechniqueChains(Map<Identifier, Identifier> resolved) {
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.CULTIVATION_TECHNIQUE).forEach(holder -> {
             CultivationTechnique technique = holder.value();
             Identifier entry = technique.defaultStage().map(HolderHelper::id).orElse(null);
             if (entry == null) return;
+            Identifier techniqueId = holder.key().identifier();
             Identifier skill = resolved.get(entry);
             if (skill == null)
-                throw new IllegalStateException("Technique " + holder.key().identifier() + " enters the unknown skill stage " + entry);
-            for (Holder<SkillStage> stage : technique.stageAbilities().keySet()) {
-                Identifier id = HolderHelper.id(stage);
-                if (!skill.equals(resolved.get(id)))
-                    throw new IllegalStateException("Technique " + holder.key().identifier() + " unlocks abilities on stage " + id
-                            + " of skill " + resolved.get(id) + " instead of " + skill);
+                throw new IllegalStateException("Technique " + techniqueId + " enters the unknown skill stage " + entry);
+            Set<Identifier> configured = new LinkedHashSet<>();
+            technique.configuration().keySet().forEach(stage -> configured.add(HolderHelper.id(stage)));
+            Set<Identifier> reached = new LinkedHashSet<>();
+            Identifier current = entry;
+            while (current != null) {
+                if (!reached.add(current))
+                    throw new IllegalStateException("Technique " + techniqueId + " walks a cyclic skill chain at stage " + current);
+                if (!entry.equals(current) && !configured.contains(current))
+                    throw new IllegalStateException("Technique " + techniqueId + " does not configure the skill stage " + current);
+                Identifier stageSkill = resolved.get(current);
+                if (!skill.equals(stageSkill))
+                    throw new IllegalStateException("Technique " + techniqueId + " walks stage " + current + " of skill " + stageSkill
+                            + " instead of " + skill);
+                SkillStage stage = MxtDatapackRegistries.get(MxtResourceKeys.SKILL_STAGE, current).orElse(null);
+                if (stage == null)
+                    throw new IllegalStateException("Technique " + techniqueId + " walks the unknown skill stage " + current);
+                current = stage.nextStage().map(HolderHelper::id).orElse(null);
             }
-            for (Holder<SkillStage> stage : technique.advanceConditions().keySet()) {
-                Identifier id = HolderHelper.id(stage);
-                if (!skill.equals(resolved.get(id)))
-                    throw new IllegalStateException("Technique " + holder.key().identifier() + " requires an advancement condition on stage " + id
-                            + " of skill " + resolved.get(id) + " instead of " + skill);
-            }
+            for (Identifier configuredStage : configured)
+                if (!reached.contains(configuredStage))
+                    throw new IllegalStateException("Technique " + techniqueId + " configures skill stage " + configuredStage
+                            + ", which it can never reach from " + entry);
         });
     }
 }

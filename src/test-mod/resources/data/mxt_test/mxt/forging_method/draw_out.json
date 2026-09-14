@@ -1,4 +1,4 @@
 {
   "value_delta": -1,
-  "display_icon": "minecraft:shears"
+  "icon": { "id": "minecraft:shears" }
 }

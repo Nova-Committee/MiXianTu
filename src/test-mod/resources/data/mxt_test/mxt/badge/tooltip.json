@@ -1,5 +1,5 @@
 {
   "type": "mxt:tooltip",
-  "sprite": "mxt:textures/gui/badge/info.png",
+  "icon": "mxt:textures/gui/badge/info.png",
   "text": "badge.mxt_test.tooltip"
 }

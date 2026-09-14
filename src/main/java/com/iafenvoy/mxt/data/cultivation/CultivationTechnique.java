@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.data.AttributeEntry;
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -23,43 +25,64 @@ import java.util.Optional;
 /**
  * A learnable technique grants named abilities and cultivation modifiers.
  *
- * <p>An ability may be granted unconditionally ({@code granted_abilities}) or unlocked by mastery
- * ({@code stage_abilities}, keyed by {@link SkillStage}). The two are independent: the first list is
- * always active, the second becomes available as the holder's stage in the technique's chain
- * advances. {@code default_stage} is the chain entry point and may be omitted by a technique that
- * defines no mastery; a technique with stage-gated abilities or advancement conditions must declare
- * it, because the chain a mastery level belongs to is only reachable through that entry point.</p>
+ * <p>An ability may be granted unconditionally ({@code granted_abilities}) or by mastery
+ * ({@code configuration}). The two are independent: the first list is always active, the second
+ * grows as the holder's level in the technique's chain advances.</p>
  *
- * <p>{@code advance_conditions} is keyed by the level a holder advances <em>to</em>: one chain is
- * shared by every technique that names it, while the conditions to climb it are the technique's own.
- * A key without an entry is an advancement with no extra requirement.</p>
+ * <p>{@code configuration} is the technique's own view of a shared chain: the levels come from
+ * {@link SkillStage}, while what each level grants ({@code ability}) and what it takes to reach it
+ * ({@code condition}) belong to the technique. {@code condition} is required per entry and names the
+ * requirement to reach that level; the entry level itself is where a holder starts, so its condition
+ * is decoded but never gates anything. {@code default_stage} is the chain entry point and is
+ * mandatory as soon as any level is configured, because the chain a level belongs to is only
+ * reachable through it.</p>
+ *
+ * <p>{@code mastery_resource} names the stored value that measures this technique's mastery. While it
+ * is set, the holder advances to the next level once that value reaches the level's own
+ * {@code mastery} and the level's {@code condition} holds, which is what makes growth data-driven:
+ * a content pack decides how the value grows (a trigger rule, a cultivation profile, a script) and
+ * the level follows.</p>
  */
-public record CultivationTechnique(String grade, EntityCondition learnCondition, List<Identifier> exclusiveTags,
+public record CultivationTechnique(String grade, Optional<IconReference> icon, EntityCondition learnCondition,
+                                   List<Identifier> exclusiveTags,
                                    NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,
                                    List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                                    Optional<Holder<SkillStage>> defaultStage,
-                                   Map<Holder<SkillStage>, List<Either<Holder<Ability>, TagKey<Ability>>>> stageAbilities,
-                                   Map<Holder<SkillStage>, EntityCondition> advanceConditions) {
+                                   Optional<Holder<Resource>> masteryResource,
+                                   Map<Holder<SkillStage>, StageConfiguration> configuration) {
     public static final Codec<Holder<CultivationTechnique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CULTIVATION_TECHNIQUE);
     public static final Codec<CultivationTechnique> DIRECT_CODEC = RecordCodecBuilder.<CultivationTechnique>create(i -> i.group(
             Codec.STRING.optionalFieldOf("grade", "common").forGetter(CultivationTechnique::grade),
+            IconReference.CODEC.optionalFieldOf("icon").forGetter(CultivationTechnique::icon),
             EntityCondition.optionalCodec("learn_condition").forGetter(CultivationTechnique::learnCondition),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(CultivationTechnique::exclusiveTags),
             NumberProvider.CODEC.optionalFieldOf("cultivation_modifier", new Constant(1.0D)).forGetter(CultivationTechnique::cultivationModifier),
             AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(CultivationTechnique::passiveModifiers),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(CultivationTechnique::grantedAbilities),
             SkillStage.CODEC.optionalFieldOf("default_stage").forGetter(CultivationTechnique::defaultStage),
-            Codec.unboundedMap(SkillStage.CODEC, RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY))
-                    .optionalFieldOf("stage_abilities", Map.of()).forGetter(CultivationTechnique::stageAbilities),
-            Codec.unboundedMap(SkillStage.CODEC, EntityCondition.CODEC)
-                    .optionalFieldOf("advance_conditions", Map.of()).forGetter(CultivationTechnique::advanceConditions)
+            Resource.CODEC.optionalFieldOf("mastery_resource").forGetter(CultivationTechnique::masteryResource),
+            Codec.unboundedMap(SkillStage.CODEC, StageConfiguration.CODEC)
+                    .optionalFieldOf("configuration", Map.of()).forGetter(CultivationTechnique::configuration)
     ).apply(i, CultivationTechnique::new)).validate(CultivationTechnique::validate);
 
     private static DataResult<CultivationTechnique> validate(CultivationTechnique technique) {
-        if (technique.defaultStage().isEmpty() && !technique.stageAbilities().isEmpty())
-            return DataResult.error(() -> "stage_abilities needs default_stage to name the skill chain it belongs to");
-        if (technique.defaultStage().isEmpty() && !technique.advanceConditions().isEmpty())
-            return DataResult.error(() -> "advance_conditions needs default_stage to name the skill chain it belongs to");
+        if (technique.defaultStage().isEmpty() && !technique.configuration().isEmpty())
+            return DataResult.error(() -> "configuration needs default_stage to name the skill chain it belongs to");
+        if (technique.defaultStage().isEmpty() && technique.masteryResource().isPresent())
+            return DataResult.error(() -> "mastery_resource needs default_stage to name the skill chain it measures");
         return DataResult.success(technique);
+    }
+
+    /**
+     * What one level of the technique's chain means to this technique: the requirement to reach it
+     * and the abilities it grants. {@code condition} is required - a level that needs nothing writes
+     * {@code mxt:always_true} - and {@code ability} may be omitted by a level that grants nothing.
+     */
+    public record StageConfiguration(EntityCondition condition,
+                                     List<Either<Holder<Ability>, TagKey<Ability>>> abilities) {
+        public static final Codec<StageConfiguration> CODEC = RecordCodecBuilder.create(i -> i.group(
+                EntityCondition.CODEC.fieldOf("condition").forGetter(StageConfiguration::condition),
+                RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability", List.of()).forGetter(StageConfiguration::abilities)
+        ).apply(i, StageConfiguration::new));
     }
 }

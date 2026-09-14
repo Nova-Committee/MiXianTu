@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.forging;
 
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -28,17 +29,17 @@ import java.util.Optional;
  * because a method that says nothing about sound should still sound like smithing.</p>
  */
 public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCondition condition,
-                            Optional<Identifier> displayIcon, int cooldown, SoundEvent sound) {
+                            Optional<IconReference> icon, int cooldown, SoundEvent sound) {
     public static final Codec<Holder<ForgingMethod>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORGING_METHOD);
     public static final Codec<ForgingMethod> DIRECT_CODEC = RecordCodecBuilder.<ForgingMethod>create(i -> i.group(
             Codec.INT.fieldOf("value_delta").forGetter(ForgingMethod::valueDelta),
             ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(ForgingMethod::costs),
             EntityCondition.optionalCodec("condition").forGetter(ForgingMethod::condition),
-            Identifier.CODEC.optionalFieldOf("display_icon").forGetter(ForgingMethod::displayIcon),
+            IconReference.CODEC.optionalFieldOf("icon").forGetter(ForgingMethod::icon),
             Codec.intRange(0, 72_000).optionalFieldOf("cooldown", 0).forGetter(ForgingMethod::cooldown),
             // By name rather than by id resolved later: a sound event is a built-in registry entry, not an
-            // item stack, so unlike `display_icon` there is nothing here that has to wait for components to
-            // be bound - and a typo fails the datapack load instead of silently playing nothing.
+            // item stack, so unlike an icon there is nothing here that has to wait for components to be
+            // bound - and a typo fails the datapack load instead of silently playing nothing.
             BuiltInRegistries.SOUND_EVENT.byNameCodec().optionalFieldOf("sound", SoundEvents.ANVIL_PLACE).forGetter(ForgingMethod::sound)
     ).apply(i, ForgingMethod::new)).validate(ForgingMethod::validate);
 
@@ -48,22 +49,22 @@ public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCond
     }
 
     /**
-     * The icon stack for the selector list, empty when the id is missing or unknown.
+     * The icon stack for the selector list, empty when the method has no icon or draws a texture.
      *
-     * <p>Kept as an id in the datapack because native datapack registries are parsed before item
-     * components are bound.</p>
+     * <p>The item branch is materialised here rather than stored, because a datapack registry is parsed
+     * before item components are bound.</p>
      */
     public ItemStack iconStack() {
-        return this.displayIcon.flatMap(BuiltInRegistries.ITEM::getOptional).map(ItemStack::new).orElse(ItemStack.EMPTY);
+        return this.icon.flatMap(IconReference::stack).orElse(ItemStack.EMPTY);
     }
 
     /**
      * The name this method is listed under, wherever it is listed.
      *
-     * <p>Its icon's own name, because that icon is what the selector grid draws and what the player
-     * recognises. {@code id} is needed for the one case the icon cannot cover: a method with no
-     * {@code display_icon} has a blank cell, and an empty stack would otherwise report itself as "Air".
-     * A raw id is a poor name, but it is a name.</p>
+     * <p>Its icon's own name when the icon is an item, because that icon is what the selector grid draws
+     * and what the player recognises. {@code id} is needed for the cases the icon cannot cover: a method
+     * with no icon, or one drawn from a texture, has no item name to borrow - and an empty stack would
+     * otherwise report itself as "Air". A raw id is a poor name, but it is a name.</p>
      */
     public MutableComponent displayName(Identifier id) {
         ItemStack icon = this.iconStack();

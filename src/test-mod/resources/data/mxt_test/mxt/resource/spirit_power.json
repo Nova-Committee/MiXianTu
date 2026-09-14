@@ -11,9 +11,7 @@
     ],
     "fallback": 0
   },
-  "icon": {
-    "texture": "mxt_test:textures/item/qingxiao_spirit_crystal.png"
-  },
+  "icon": "mxt_test:textures/item/qingxiao_spirit_crystal.png",
   "particle_color": "#66CCFF",
   "bars": [
     {

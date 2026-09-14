@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
@@ -19,34 +20,45 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Reads a technique's mastery: the abilities each level unlocks and the conditions to climb.
+ * Reads a technique's mastery: the abilities each configured level grants and the conditions to climb.
  *
- * <p>Every {@code stage_abilities} key is a <em>minimum</em> requirement: its abilities are active
- * while the holder stands on that level or a later one of the same chain, so raising a level adds
- * to what the earlier levels granted instead of replacing it. Ordering comes from
- * {@link ServerCache}, which validates the chain and ranks its levels before anything compares
- * them, so two levels of different chains are never ordered against each other.</p>
+ * <p>The chain belongs to {@link SkillStage}, the technique only annotates it. Every
+ * {@code configuration} entry's {@code ability} is a <em>minimum</em> requirement: its abilities are
+ * active while the holder stands on that level or a later one, so raising a level adds to what the
+ * earlier levels granted instead of replacing it. Ordering comes from {@link ServerCache}, which
+ * validates the chain and ranks its levels before anything compares them, so two levels of different
+ * chains are never ordered against each other.</p>
  *
- * <p>{@code advance_conditions} is read the other way round: the key is the level a holder advances
- * <em>to</em>, and the chain is shared while the conditions are the technique's own.</p>
+ * <p>The entry's {@code condition} is read the other way round: it is the requirement to reach that
+ * level, so it is asked for the level a holder advances <em>to</em>.</p>
  */
 public final class SkillStageService {
     private SkillStageService() {
     }
 
     /**
-     * Every ability the technique unlocks at the given level, with item tags already expanded and
-     * duplicates removed. An empty list means nothing is unlocked - either the technique gates no
+     * The level a holder currently stands on in this technique: the level it has advanced to, or the
+     * technique's entry level while it never advanced. An empty result means the technique has no
+     * chain at all, so nothing can be granted or climbed.
+     */
+    public static Optional<Holder<SkillStage>> currentStage(SpiritIdentityAttachment spirit, Holder<CultivationTechnique> technique) {
+        Holder<SkillStage> stored = spirit.techniqueStage(technique);
+        return Optional.ofNullable(stored != null ? stored : technique.value().defaultStage().orElse(null));
+    }
+
+    /**
+     * Every ability the technique grants at the given level, with item tags already expanded and
+     * duplicates removed. An empty list means nothing is granted - either the technique configures no
      * abilities, the holder has no level yet, or no chain is available to order the levels.
      */
     public static List<Holder<Ability>> unlockedAbilities(CultivationTechnique technique, Holder<SkillStage> current) {
-        if (technique.stageAbilities().isEmpty() || current == null) return List.of();
+        if (technique.configuration().isEmpty() || current == null) return List.of();
         ServerCache cache = ServerCache.get().orElse(null);
         if (cache == null) return List.of();
         Identifier currentId = HolderHelper.id(current);
-        return technique.stageAbilities().entrySet().stream()
+        return technique.configuration().entrySet().stream()
                 .filter(entry -> cache.isStageAtLeast(currentId, HolderHelper.id(entry.getKey())))
-                .flatMap(entry -> RegistryCodecs.resolve(entry.getValue(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY)))
+                .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY)))
                 .distinct()
                 .toList();
     }
@@ -64,11 +76,13 @@ public final class SkillStageService {
     }
 
     /**
-     * The condition required to advance to the given level. A level the technique does not list
-     * requires nothing, so a chain can be climbed freely where only some steps are gated.
+     * The condition required to reach the given level. A level the technique does not configure
+     * requires nothing; the cache rejects a chain whose steps are not all configured, so this only
+     * happens for the entry level, which no holder advances into.
      */
     public static EntityCondition advanceCondition(CultivationTechnique technique, Holder<SkillStage> target) {
-        return technique.advanceConditions().getOrDefault(target, AlwaysTrueCondition.INSTANCE);
+        return Optional.ofNullable(technique.configuration().get(target))
+                .map(CultivationTechnique.StageConfiguration::condition).orElse(AlwaysTrueCondition.INSTANCE);
     }
 
     /**

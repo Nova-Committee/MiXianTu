@@ -17,6 +17,7 @@ public final class TriggerSignals {
     public static final Identifier EQUIP = id("equip");
     public static final Identifier DEATH = id("death");
     public static final Identifier BREAKTHROUGH = id("breakthrough");
+    public static final Identifier TECHNIQUE_STAGE = id("technique_stage");
 
     private TriggerSignals() {
     }

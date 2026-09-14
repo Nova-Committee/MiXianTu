@@ -1,4 +1,4 @@
 {
   "value_delta": -1,
-  "display_icon": "minecraft:water_bucket"
+  "icon": { "id": "minecraft:water_bucket" }
 }

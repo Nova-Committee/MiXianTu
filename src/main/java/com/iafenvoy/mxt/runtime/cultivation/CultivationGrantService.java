@@ -43,7 +43,13 @@ public final class CultivationGrantService {
             granted += grantAll(abilities, physique.value().grantedAbilities(), source("physique", HolderHelper.id(physique)));
         }
         for (Holder<CultivationTechnique> technique : spirit.learnedTechniques()) {
-            granted += grantAll(abilities, technique.value().grantedAbilities(), source("technique", HolderHelper.id(technique)));
+            Identifier source = source("technique", HolderHelper.id(technique));
+            granted += grantAll(abilities, technique.value().grantedAbilities(), source);
+            // Mastery adds to the same source: a technique's grants are revoked and rebuilt together,
+            // so a promotion only has to change the level, not the sources.
+            granted += SkillStageService.currentStage(spirit, technique)
+                    .map(current -> grantResolved(abilities, SkillStageService.unlockedAbilities(technique.value(), current), source))
+                    .orElse(0);
         }
         return new Result(granted, revoked);
     }
@@ -58,10 +64,13 @@ public final class CultivationGrantService {
     }
 
     private static int grantAll(AbilityAttachment holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {
+        return grantResolved(holder, RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
+                .distinct().toList(), source);
+    }
+
+    private static int grantResolved(AbilityAttachment holder, List<Holder<Ability>> abilities, Identifier source) {
         int granted = 0;
-        for (Holder<Ability> ability : RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
-                .distinct().toList())
-            if (holder.grant(ability, source)) granted++;
+        for (Holder<Ability> ability : abilities) if (holder.grant(ability, source)) granted++;
         return granted;
     }
 

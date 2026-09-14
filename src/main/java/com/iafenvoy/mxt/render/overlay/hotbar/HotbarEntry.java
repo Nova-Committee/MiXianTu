@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
-import com.iafenvoy.mxt.data.HotbarIcon;
+import com.iafenvoy.mxt.data.IconReference;
+import com.iafenvoy.mxt.render.IconRenderer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -26,7 +26,7 @@ public interface HotbarEntry {
         return null;
     }
 
-    default Optional<HotbarIcon> icon() {
+    default Optional<IconReference> icon() {
         return Optional.empty();
     }
 
@@ -72,15 +72,7 @@ public interface HotbarEntry {
         graphics.fill(x, y + SLOT_SIZE - 1, x + SLOT_SIZE, y + SLOT_SIZE, 0xFF303747);
         String key = Integer.toString(index + 1);
         graphics.text(font, key, x + (SLOT_SIZE - font.width(key)) / 2, y - 9, 0xFFFFFFFF, true);
-        this.icon().ifPresentOrElse(icon -> icon.item().ifPresentOrElse(
-                item -> graphics.item(item.create(), x + 3, y + 3),
-                () -> icon.texture().ifPresent(texture -> graphics.blit(RenderPipelines.GUI_TEXTURED, texture,
-                        x + 3, y + 3, 0.0F, 0.0F, 16, 16, 16, 16))
-        ), () -> {
-            String name = this.name().getString();
-            if (name.length() > 3) name = name.substring(0, 3);
-            graphics.text(font, name, x + (SLOT_SIZE - font.width(name)) / 2, y + 10, 0xFFE0E5EF, true);
-        });
+        IconRenderer.renderOrName(graphics, font, this.icon(), this.name(), x, y, SLOT_SIZE);
         float cooldown = Math.max(0.0F, Math.min(1.0F, this.cooldown(player)));
         int height = (int) Math.ceil(cooldown * SLOT_SIZE);
         if (height > 0)

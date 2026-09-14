@@ -1,16 +1,16 @@
 package com.iafenvoy.mxt.data.badge.builtin;
 
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.badge.Badge;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
 
 /**
- * A stand-alone sprite badge.
+ * A stand-alone icon badge.
  */
-public record SpriteBadge(Identifier sprite) implements Badge {
+public record SpriteBadge(IconReference icon) implements Badge {
     public static final MapCodec<SpriteBadge> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("sprite").forGetter(SpriteBadge::sprite)
+            IconReference.CODEC.fieldOf("icon").forGetter(SpriteBadge::icon)
     ).apply(i, SpriteBadge::new));
 
     @Override

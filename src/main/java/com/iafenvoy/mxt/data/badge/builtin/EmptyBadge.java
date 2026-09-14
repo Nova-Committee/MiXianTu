@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.badge.builtin;
 
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.badge.Badge;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.resources.Identifier;
@@ -12,8 +13,8 @@ public enum EmptyBadge implements Badge {
     public static final MapCodec<EmptyBadge> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public Identifier sprite() {
-        return Identifier.withDefaultNamespace("missingno");
+    public IconReference icon() {
+        return IconReference.texture(Identifier.withDefaultNamespace("missingno"));
     }
 
     @Override

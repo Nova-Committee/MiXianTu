@@ -1,5 +1,6 @@
 {
   "skill": "mxt_test:sword_art",
   "next_stage": "mxt_test:sword_art_2",
+  "mastery": 0,
   "damage_multiplier": 1.1
 }

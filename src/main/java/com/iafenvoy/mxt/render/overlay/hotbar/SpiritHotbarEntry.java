@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
-import com.iafenvoy.mxt.data.HotbarIcon;
+import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -32,7 +32,7 @@ public record SpiritHotbarEntry(Identifier id) implements HotbarEntry {
     }
 
     @Override
-    public Optional<HotbarIcon> icon() {
+    public Optional<IconReference> icon() {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, this.id).flatMap(resource -> resource.value().icon());
     }
 

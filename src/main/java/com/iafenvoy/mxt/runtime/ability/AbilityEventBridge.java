@@ -23,6 +23,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
@@ -118,7 +119,11 @@ public final class AbilityEventBridge {
         }
         dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity), definition -> true);
         PassiveAttributeService.tick(entity);
-        if (entity.level().getGameTime() % 20L == 0L) syncCuriosAbilities(entity, abilities);
+        if (entity.level().getGameTime() % 20L == 0L) {
+            syncCuriosAbilities(entity, abilities);
+            // Mastery is measured by a stored value, so it is re-read on the same slow cadence.
+            TechniqueMasteryService.tick(entity);
+        }
         tickAuras(entity, abilities, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
         Holder<Ability> ability = abilities.channelledAbility().orElse(null);

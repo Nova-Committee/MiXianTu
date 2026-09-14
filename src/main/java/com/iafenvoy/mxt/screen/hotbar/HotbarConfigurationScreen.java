@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.screen.hotbar;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.render.overlay.hotbar.HotbarEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -125,7 +126,7 @@ public final class HotbarConfigurationScreen extends Screen {
                         x, y, 0.0F, 0.0F, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE, SLOT_SIZE);
                 if (hovered && index != this.selectedOption)
                     graphics.outline(x, y, SLOT_SIZE, SLOT_SIZE, 0xFFFFFFFF);
-                renderIcon(graphics, option.entry(), x + 3, y + 3);
+                renderIcon(graphics, option.entry(), x, y);
             }
         }
         int hotbarTop = this.hotbarTop();
@@ -134,7 +135,7 @@ public final class HotbarConfigurationScreen extends Screen {
             if (id == null) continue;
             int slotIndex = i;
             this.options.stream().filter(option -> option.id().equals(id)).findFirst()
-                    .ifPresent(option -> renderIcon(graphics, option.entry(), this.optionsLeft + slotIndex * GRID_STEP + 3, hotbarTop + 3));
+                    .ifPresent(option -> renderIcon(graphics, option.entry(), this.optionsLeft + slotIndex * GRID_STEP, hotbarTop));
         }
         this.renderTooltip(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
@@ -154,17 +155,12 @@ public final class HotbarConfigurationScreen extends Screen {
         }
     }
 
+    /**
+     * Draws one entry's slot content: its icon, or its name when the definition has none. The slot box
+     * is what this hands over, so the icon centres itself the same way the hotbar overlay does.
+     */
     private static void renderIcon(GuiGraphicsExtractor graphics, HotbarEntry entry, int x, int y) {
-        entry.icon().ifPresentOrElse(icon -> icon.item().ifPresentOrElse(
-                        item -> graphics.item(item.create(), x, y),
-                        () -> icon.texture().ifPresent(texture -> graphics.blit(RenderPipelines.GUI_TEXTURED, texture,
-                                x, y, 0.0F, 0.0F, 16, 16, 16, 16))),
-                () -> {
-                    String name = entry.name().getString();
-                    if (name.length() > 3) name = name.substring(0, 3);
-                    graphics.text(Minecraft.getInstance().font, name, x + (16 - Minecraft.getInstance().font.width(name)) / 2,
-                            y + 5, 0xFFE0E5EF, true);
-                });
+        IconRenderer.renderOrName(graphics, Minecraft.getInstance().font, entry.icon(), entry.name(), x, y, SLOT_SIZE);
     }
 
     @Override

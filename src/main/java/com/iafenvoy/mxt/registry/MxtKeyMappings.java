@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
+import com.iafenvoy.mxt.screen.technique.TechniquePanelScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
@@ -29,6 +30,11 @@ public final class MxtKeyMappings {
     public static final KeyMappingHolder SWAP_BACK = new KeyMappingHolder("key.mxt.swap_back", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder CULTIVATE = new KeyMappingHolder("key.mxt.cultivate", Type.KEYSYM, InputConstants.KEY_C, CATEGORY);
     public static final KeyMappingHolder INFORMATION_PANEL = new KeyMappingHolder("key.mxt.information_panel", Type.KEYSYM, InputConstants.KEY_Z, CATEGORY);
+    /**
+     * Left unbound on purpose: the technique panel is also reachable from the character information
+     * panel, so a default key would compete with other mods for a slot nobody asked for.
+     */
+    public static final KeyMappingHolder TECHNIQUE_PANEL = new KeyMappingHolder("key.mxt.technique_panel", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
 
     static {
         SWAP_BACK.onStateChange(pressed -> {
@@ -40,6 +46,10 @@ public final class MxtKeyMappings {
         INFORMATION_PANEL.onStateChange(pressed -> {
             if (pressed && Minecraft.getInstance().screen == null)
                 Minecraft.getInstance().setScreen(new InformationPanelScreen());
+        });
+        TECHNIQUE_PANEL.onStateChange(pressed -> {
+            if (pressed && Minecraft.getInstance().screen == null)
+                Minecraft.getInstance().setScreen(new TechniquePanelScreen());
         });
     }
 

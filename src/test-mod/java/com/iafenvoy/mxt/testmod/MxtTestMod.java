@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.aura.AuraValue;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
@@ -24,7 +25,10 @@ import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.IconReference;
+import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
@@ -47,6 +51,7 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession;
 import com.iafenvoy.mxt.runtime.forging.ForgingTableState;
+import com.iafenvoy.mxt.screen.information.InformationHelper;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.ForgingMenuProbe;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
@@ -70,6 +75,9 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -90,6 +98,7 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.ContextVariable;
 import com.iafenvoy.mxt.util.formula.number.Expression;
 import com.iafenvoy.mxt.util.formula.number.WeightedList;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.datafixers.util.Either;
@@ -137,10 +146,15 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /** Development-only mod that contributes the mxt_test datapack and client resources. */
@@ -181,6 +195,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Realm cache did not preserve linear realm ordering");
         }
         verifyDynamicResourceValues(event.getServer().registryAccess(), foundation, coreForming);
+        verifyTechniqueRefusals(event);
         verifyFormulaDiagnostics();
         verifyItemQualities(event);
         ItemStack weapon = new ItemStack(Items.DIAMOND_SWORD);
@@ -239,11 +254,11 @@ public final class MxtTestMod {
         SkillStage firstStage = swordManual.defaultStage().map(Holder::value)
                 .orElseThrow(() -> new IllegalStateException("Technique default_stage was not decoded"));
         if (!firstStage.skill().equals(Identifier.parse("mxt_test:sword_art")) || !same(firstStage.damageMultiplier(), 1.1D)
-                || swordManual.stageAbilities().size() != 2
-                || swordManual.stageAbilities().values().stream().mapToInt(List::size).sum() != 3
-                || swordManual.stageAbilities().keySet().stream()
+                || swordManual.configuration().size() != 2
+                || swordManual.configuration().values().stream().mapToInt(config -> config.abilities().size()).sum() != 3
+                || swordManual.configuration().keySet().stream()
                 .anyMatch(stage -> !stage.value().skill().equals(firstStage.skill()))) {
-            throw new IllegalStateException("Technique skill stages did not decode their chain, multiplier or ability map");
+            throw new IllegalStateException("Technique skill stages did not decode their chain, multiplier or configuration");
         }
         ServerCache skillChain = ServerCache.get()
                 .orElseThrow(() -> new IllegalStateException("The server cache was not built before the audit"));
@@ -257,14 +272,19 @@ public final class MxtTestMod {
         Holder<SkillStage> secondStageHolder = requireHolder(MxtResourceKeys.SKILL_STAGE, secondStageId);
         if (SkillStageService.unlockedAbilities(swordManual, firstStageHolder).size() != 1
                 || SkillStageService.unlockedAbilities(swordManual, secondStageHolder).size() != 2) {
-            throw new IllegalStateException("Stage abilities were not gated as minimum requirements");
+            throw new IllegalStateException("Configured abilities were not gated as minimum requirements");
         }
         if (SkillStageService.nextStage(swordManual, firstStageHolder).filter(secondStageHolder::equals).isEmpty()
                 || SkillStageService.nextStage(swordManual, secondStageHolder).isPresent()
-                || swordManual.advanceConditions().size() != 1
-                || SkillStageService.advanceCondition(swordManual, firstStageHolder) != AlwaysTrueCondition.INSTANCE
-                || SkillStageService.advanceCondition(swordManual, secondStageHolder) == AlwaysTrueCondition.INSTANCE) {
-            throw new IllegalStateException("Technique advancement conditions were not decoded onto its chain");
+                || swordManual.configuration().get(firstStageHolder) == null
+                || swordManual.configuration().get(secondStageHolder) == null
+                || swordManual.configuration().get(firstStageHolder).condition() == AlwaysTrueCondition.INSTANCE
+                || swordManual.configuration().get(secondStageHolder).condition() == AlwaysTrueCondition.INSTANCE
+                || SkillStageService.advanceCondition(swordManual, firstStageHolder)
+                != swordManual.configuration().get(firstStageHolder).condition()
+                || SkillStageService.advanceCondition(swordManual, secondStageHolder)
+                != swordManual.configuration().get(secondStageHolder).condition()) {
+            throw new IllegalStateException("Technique configuration did not keep its per-level conditions and abilities");
         }
         Holder<CultivateAction> qingxiaoMeditation = requireHolder(MxtResourceKeys.CULTIVATE_ACTION, Identifier.parse("mxt_test:qingxiao_meditation"));
         if (!qingxiaoMeditation.value().defaultAction()) {
@@ -356,6 +376,10 @@ public final class MxtTestMod {
         verifyForgingMaterialMatching();
         verifyForgingStepLimit();
         verifyForgingAssets();
+        verifyTechniquePanelAssets();
+        verifyDisplayNames();
+        verifyInformationColumns();
+        verifyIconReferences();
         verifyForgingBindingsLoaded();
         verifyForgingMethodIntersection(event.getServer().registryAccess());
         verifyForgingPlans(event.getServer().registryAccess());
@@ -783,6 +807,89 @@ public final class MxtTestMod {
         return new SimpleContainer(ForgingSurface.INPUT_SLOTS);
     }
 
+    /**
+     * The technique panel is client-only, so the audit cannot open it; it can still prove the assets
+     * and the message keys it needs are in the jar. A misspelled texture path or translation key is
+     * otherwise a silent client-side defect: the panel would draw the missing-texture placeholder or
+     * print a raw key.
+     */
+    private static void verifyTechniquePanelAssets() {
+        for (String path : List.of(
+                "assets/mxt/textures/gui/classic/technique_panel.png",
+                "assets/mxt/textures/gui/classic/slot_24.png")) {
+            if (MxtTestMod.class.getClassLoader().getResource(path) == null)
+                throw new IllegalStateException("Technique panel asset is missing from the jar: " + path);
+        }
+        List<String> keys = new ArrayList<>(List.of(
+                "screen.mxt.technique_panel",
+                "screen.mxt.technique_panel.empty",
+                "screen.mxt.technique_panel.level",
+                "screen.mxt.technique_panel.level_unknown",
+                "screen.mxt.technique_panel.value",
+                "screen.mxt.technique_panel.value_max",
+                "screen.mxt.technique_panel.value_unknown",
+                "key.mxt.technique_panel",
+                "config.mxt.client.techniques",
+                "config.mxt.client.techniques.progress_mode"));
+        for (TechniqueProgress.Mode mode : TechniqueProgress.Mode.values())
+            keys.add("config.mxt.client.techniques.progress_mode." + mode.name().toLowerCase(Locale.ROOT));
+        for (String language : List.of("en_us", "zh_cn")) {
+            JsonObject lang = readLang(language);
+            for (String key : keys)
+                if (!lang.has(key))
+                    throw new IllegalStateException("Technique panel lang key is missing from " + language + ": " + key);
+        }
+    }
+
+    private static JsonObject readLang(String language) {
+        String path = "assets/mxt/lang/" + language + ".json";
+        try (InputStream stream = MxtTestMod.class.getClassLoader().getResourceAsStream(path)) {
+            if (stream == null) throw new IllegalStateException("Lang file is missing from the jar: " + path);
+            return JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Could not read " + path, exception);
+        }
+    }
+
+    private static JsonObject readTestLang(String language) {
+        String path = "assets/" + MOD_ID + "/lang/" + language + ".json";
+        try (InputStream stream = MxtTestMod.class.getClassLoader().getResourceAsStream(path)) {
+            if (stream == null) throw new IllegalStateException("Test lang file is missing from the jar: " + path);
+            return JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)).getAsJsonObject();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Could not read " + path, exception);
+        }
+    }
+
+    /**
+     * Every definition whose name a panel prints must carry that name in the test pack, in both
+     * languages. A missing key is invisible at runtime: the panel prints the raw key instead, which is
+     * how a realm without a name turned an information line into a wall of text.
+     *
+     * <p>{@code skill_stage} is deliberately absent: a level without a name is a supported case, and
+     * the technique panel falls back to the level's rank.</p>
+     */
+    private static void verifyDisplayNames() {
+        JsonObject en = readTestLang("en_us");
+        JsonObject zh = readTestLang("zh_cn");
+        verifyDisplayNames(en, zh, MxtResourceKeys.RESOURCE, "resource");
+        verifyDisplayNames(en, zh, MxtResourceKeys.REALM_STAGE, "realm_stage");
+        verifyDisplayNames(en, zh, MxtResourceKeys.SPIRIT_ROOT, "spirit_root");
+        verifyDisplayNames(en, zh, MxtResourceKeys.PHYSIQUE, "physique");
+        verifyDisplayNames(en, zh, MxtResourceKeys.CULTIVATION_TECHNIQUE, "cultivation_technique");
+    }
+
+    private static <T> void verifyDisplayNames(JsonObject en, JsonObject zh,
+                                               ResourceKey<? extends Registry<T>> registry, String category) {
+        for (Holder.Reference<T> holder : MxtDatapackRegistries.holders(registry).toList()) {
+            Identifier id = holder.key().identifier();
+            if (!MOD_ID.equals(id.getNamespace())) continue;
+            String key = id.toLanguageKey(category);
+            if (!en.has(key) || !zh.has(key))
+                throw new IllegalStateException("Test definition has no display name: " + key);
+        }
+    }
+
     private static void verifyInventoryUtilAtomicity() {
         ItemStack initial = new ItemStack(Items.DIAMOND, 10);
 
@@ -1088,10 +1195,117 @@ public final class MxtTestMod {
             throw new IllegalStateException("The trigger rule test fixture was not indexed by its signal");
         }
         Pig triggered = new Pig(EntityType.PIG, triggerCache.server().overworld());
-        TriggerDispatcher.publish(TriggerSignals.BLOCK_BREAK, new TriggerContext().actor(triggered)
-                .level(triggered.level()).formula(FormulaContext.of(triggered)), triggered.level().getGameTime());
+        publishBlockBreak(triggered);
         if (!same(triggered.getData(MxtAttachments.RESOURCE_HOLDER).get(qi), 1.0D)) {
             throw new IllegalStateException("A datapack trigger rule did not add its resource when its signal was published");
+        }
+
+        // Mastery is data-driven end to end: a trigger rule grows the counter, the level's own
+        // requirement decides when the level moves, and the promotion recalculates the grants.
+        Holder<CultivationTechnique> masteryTechnique = MxtDatapackRegistries
+                .holder(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:sword_manual"))
+                .orElseThrow(() -> new IllegalStateException("The mastery test technique was not loaded"));
+        Holder<Resource> mastery = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:sword_mastery"));
+        Holder<SkillStage> entryStage = requireHolder(MxtResourceKeys.SKILL_STAGE, Identifier.parse("mxt_test:sword_art_1"));
+        Holder<SkillStage> stagedStage = requireHolder(MxtResourceKeys.SKILL_STAGE, Identifier.parse("mxt_test:sword_art_2"));
+        Holder<Ability> stagedAbility = requireHolder(MxtResourceKeys.ABILITY, Identifier.parse("mxt_test:qingxiao_firebolt"));
+        Pig student = new Pig(EntityType.PIG, triggerCache.server().overworld());
+        SpiritIdentityAttachment identity = student.getData(MxtAttachments.SPIRIT_IDENTITY);
+        identity.setLearnedTechniques(List.of(masteryTechnique));
+        AbilityAttachment studentAbilities = student.getData(MxtAttachments.ABILITY_HOLDER);
+        if (SkillStageService.currentStage(identity, masteryTechnique).filter(entryStage::equals).isEmpty()
+                || studentAbilities.has(stagedAbility)) {
+            throw new IllegalStateException("A technique did not start on its default stage without its staged ability");
+        }
+        publishBlockBreak(student);
+        TechniqueMasteryService.tick(student);
+        if (!same(student.getData(MxtAttachments.RESOURCE_HOLDER).get(mastery), 5.0D)
+                || SkillStageService.currentStage(identity, masteryTechnique).filter(stagedStage::equals).isPresent()) {
+            throw new IllegalStateException("A technique advanced before its mastery reached the level requirement");
+        }
+        publishBlockBreak(student);
+        TechniqueMasteryService.tick(student);
+        if (!same(student.getData(MxtAttachments.RESOURCE_HOLDER).get(mastery), 10.0D)
+                || SkillStageService.currentStage(identity, masteryTechnique).filter(stagedStage::equals).isEmpty()
+                || !studentAbilities.has(stagedAbility)) {
+            throw new IllegalStateException("A technique did not advance and regrant when its mastery reached the requirement");
+        }
+        verifyTechniqueProgress(student, masteryTechnique, entryStage, stagedStage);
+    }
+
+    /**
+     * The technique panel's rows are computed from synchronized state, so the same walk has to run on
+     * a server. This pins the reported level, the rank pair, and both mastery progress modes.
+     */
+    private static void verifyTechniqueProgress(LivingEntity student, Holder<CultivationTechnique> technique,
+                                                Holder<SkillStage> entryStage, Holder<SkillStage> stagedStage) {
+        FormulaContext context = FormulaContext.of(student);
+        List<TechniqueProgress.Entry> rows = TechniqueProgress.rows(
+                student.getData(MxtAttachments.SPIRIT_IDENTITY),
+                student.getData(MxtAttachments.RESOURCE_HOLDER), context);
+        if (rows.size() != 1) {
+            throw new IllegalStateException("Technique progress did not list exactly the learned technique");
+        }
+        TechniqueProgress.Entry row = rows.getFirst();
+        if (!row.technique().equals(technique) || !stagedStage.equals(row.stage()) || !row.hasStage()
+                || row.rank() != 1 || row.total() != 2 || !row.hasMastery()
+                || !same(row.mastery(), 10.0D) || !same(row.currentRequirement(), 10.0D) || row.hasNextLevel()) {
+            throw new IllegalStateException("Technique progress did not report the promoted level: " + row);
+        }
+        if (!same(TechniqueProgress.progress(row, TechniqueProgress.Mode.ABSOLUTE).fraction(), 1.0D)) {
+            throw new IllegalStateException("A finished climb did not fill the progress bar");
+        }
+        // At the entry level both modes measure the same span, because nothing was required to reach it.
+        TechniqueProgress.Entry start = new TechniqueProgress.Entry(technique, entryStage, 0, 2, 0.0D, true, 4.0D, 10.0D);
+        if (!same(TechniqueProgress.progress(start, TechniqueProgress.Mode.ABSOLUTE).fraction(), 0.4D)
+                || !same(TechniqueProgress.progress(start, TechniqueProgress.Mode.WITHIN_LEVEL).fraction(), 0.4D)) {
+            throw new IllegalStateException("Technique progress modes disagreed at the entry level");
+        }
+        // Above the entry level the relative mode subtracts what the current level already asked for.
+        TechniqueProgress.Entry midway = new TechniqueProgress.Entry(technique, stagedStage, 1, 3, 10.0D, true, 18.0D, 25.0D);
+        if (!same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.ABSOLUTE).fraction(), 0.72D)
+                || !same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.WITHIN_LEVEL).fraction(), 8.0D / 15.0D)
+                || !same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.WITHIN_LEVEL).done(), 8.0D)
+                || !same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.WITHIN_LEVEL).span(), 15.0D)) {
+            throw new IllegalStateException("Technique progress modes did not measure different spans");
+        }
+    }
+
+    /**
+     * Publishes the signal the mastery test rules react to, for one actor.
+     */
+    private static void publishBlockBreak(LivingEntity actor) {
+        TriggerDispatcher.publish(TriggerSignals.BLOCK_BREAK, new TriggerContext().actor(actor)
+                .level(actor.level()).formula(FormulaContext.of(actor)), actor.level().getGameTime());
+    }
+
+    /**
+     * A refusal is part of the contract rather than a silent no-op: the item gate names which of its
+     * three checks refused, and the learning transaction names its own failure. Both are shown to the
+     * player, so the audit pins the exact values the messages are selected from.
+     */
+    private static void verifyTechniqueRefusals(ServerStartedEvent event) {
+        Pig student = new Pig(EntityType.PIG, event.getServer().overworld());
+        ItemStack lockedCarrot = new ItemStack(Items.CARROT);
+        if (ItemQualityService.check(student, lockedCarrot)
+                .filter(ItemQualityService.Failure.BINDING_CONDITIONS::equals).isEmpty()
+                || ItemQualityService.canUse(student, lockedCarrot)) {
+            throw new IllegalStateException("A failing item binding did not report its own gate failure");
+        }
+        ItemStack jadeSlip = new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get());
+        if (ItemQualityService.check(student, jadeSlip).isPresent() || !ItemQualityService.canUse(student, jadeSlip)) {
+            throw new IllegalStateException("A usable technique item was refused by its gate");
+        }
+        SpiritIdentityAttachment identity = student.getData(MxtAttachments.SPIRIT_IDENTITY);
+        FormulaContext context = FormulaContext.of(student);
+        Holder<CultivationTechnique> sword = requireHolder(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:sword_manual"));
+        Holder<CultivationTechnique> body = requireHolder(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:body_manual"));
+        if (!TechniqueService.learn(student, identity, sword, context).learned()) {
+            throw new IllegalStateException("The refusal audit could not learn its first technique");
+        }
+        if (TechniqueService.learn(student, identity, sword, context).failure() != TechniqueService.Failure.ALREADY_LEARNED
+                || TechniqueService.learn(student, identity, body, context).failure() != TechniqueService.Failure.CONFLICT) {
+            throw new IllegalStateException("A rejected learning attempt did not report its own failure");
         }
     }
 
@@ -1122,6 +1336,83 @@ public final class MxtTestMod {
         if (ContextVariable.MAP_CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("{\"variable\":\" \"}"))
                 .result().isPresent()) {
             throw new IllegalStateException("A blank context variable must not decode");
+        }
+    }
+
+    /**
+     * The information panel splits each row between its label and its value. The split is pure
+     * arithmetic, so it is audited here with the widths that a narrow window actually produces: a
+     * value must get the room it needs, the label keeps a quarter of the row, and nothing goes
+     * negative. Reserving one global label width for every row is what used to cut values off.
+     */
+    private static void verifyInformationColumns() {
+        // A narrow window: 90 px of row, the widest label is 36 px, the value wants 54 px.
+        InformationHelper.Columns fitted = InformationHelper.columns(90, 36, 54);
+        if (fitted.nameWidth() != 28 || fitted.valueWidth() != 54)
+            throw new IllegalStateException("Information columns did not give the value its own width: " + fitted);
+        // A short value leaves the full label width alone, which is what keeps values aligned.
+        InformationHelper.Columns aligned = InformationHelper.columns(90, 36, 6);
+        if (aligned.nameWidth() != 36 || aligned.valueWidth() != 46)
+            throw new IllegalStateException("Information columns did not keep the label width while it fits: " + aligned);
+        // A value that cannot fit anywhere still keeps a quarter of the row for the label.
+        InformationHelper.Columns floored = InformationHelper.columns(90, 36, 200);
+        if (floored.nameWidth() != 22 || floored.valueWidth() != 60)
+            throw new IllegalStateException("Information columns did not floor the label width: " + floored);
+        InformationHelper.Columns degenerate = InformationHelper.columns(1, 36, 200);
+        if (degenerate.nameWidth() < 0 || degenerate.valueWidth() < 1)
+            throw new IllegalStateException("Information columns went negative on a degenerate row: " + degenerate);
+    }
+
+    /**
+     * One icon type is shared by abilities, resources, badges, forging methods and techniques, so its two
+     * branches are pinned here: a bare string is a texture, an object is an item, and anything that parses
+     * as neither is rejected. The branches are inlined, so this also pins which one claims a bare string.
+     */
+    private static void verifyIconReferences() {
+        if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"mxt:textures/gui/badge/star.png\""))
+                .result().flatMap(IconReference::texture)
+                .filter(Identifier.parse("mxt:textures/gui/badge/star.png")::equals).isEmpty())
+            throw new IllegalStateException("An icon did not decode a bare string as its texture branch");
+        if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"id\":\"minecraft:diamond\"}"))
+                .result().flatMap(IconReference::stack)
+                .filter(stack -> stack.is(Items.DIAMOND)).isEmpty())
+            throw new IllegalStateException("An icon did not decode an object as its item branch");
+        // An item is only reachable through the object form, because a bare string is claimed by the texture
+        // branch above. This pins that ordering rather than leaving it to whichever branch happens to win.
+        if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"minecraft:diamond\""))
+                .result().flatMap(IconReference::texture).isEmpty())
+            throw new IllegalStateException("A bare item id was not claimed by the texture branch");
+        for (String malformed : List.of("{}", "[]", "7")) {
+            if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(malformed)).result().isPresent())
+                throw new IllegalStateException("An icon accepted a malformed reference: " + malformed);
+        }
+        // The definitions that carry an icon must have kept it through their own codecs.
+        Holder<Ability> firebolt = requireHolder(MxtResourceKeys.ABILITY, Identifier.parse("mxt_test:firebolt"));
+        if (firebolt.value().icon().flatMap(IconReference::stack)
+                .filter(stack -> stack.is(Items.FIRE_CHARGE)).isEmpty())
+            throw new IllegalStateException("An ability did not keep its icon");
+        Holder<Resource> spiritPower = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
+        if (spiritPower.value().icon().flatMap(IconReference::texture).isEmpty())
+            throw new IllegalStateException("A resource did not keep its texture icon");
+        Holder<Badge> badge = requireHolder(MxtResourceKeys.BADGE, Identifier.parse("mxt_test:sprite"));
+        if (badge.value().icon().texture().filter(Identifier.parse("mxt:textures/gui/badge/star.png")::equals).isEmpty())
+            throw new IllegalStateException("A badge did not keep its icon");
+        ForgingMethod polish = MxtDatapackRegistries.get(MxtResourceKeys.FORGING_METHOD, Identifier.parse("mxt_test:polish"))
+                .orElseThrow(() -> new IllegalStateException("The icon audit needs mxt_test:polish"));
+        if (!polish.iconStack().is(Items.DIAMOND)
+                || !polish.displayName(Identifier.parse("mxt_test:polish")).getString()
+                .equals(new ItemStack(Items.DIAMOND).getHoverName().getString()))
+            throw new IllegalStateException("A forging method did not keep its icon or the name it borrows from it");
+        // Both technique fixtures carry an icon, one of each branch.
+        CultivationTechnique swordManual = MxtDatapackRegistries
+                .get(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:sword_manual"))
+                .orElseThrow(() -> new IllegalStateException("The icon audit needs mxt_test:sword_manual"));
+        CultivationTechnique bodyManual = MxtDatapackRegistries
+                .get(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:body_manual"))
+                .orElseThrow(() -> new IllegalStateException("The icon audit needs mxt_test:body_manual"));
+        if (swordManual.icon().flatMap(IconReference::texture).isEmpty()
+                || bodyManual.icon().flatMap(IconReference::stack).filter(stack -> stack.is(Items.BOOK)).isEmpty()) {
+            throw new IllegalStateException("A technique did not keep its icon");
         }
     }
 

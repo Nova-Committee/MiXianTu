@@ -1,4 +1,4 @@
 {
   "value_delta": -1,
-  "display_icon": "minecraft:grindstone"
+  "icon": { "id": "minecraft:grindstone" }
 }

@@ -4,9 +4,11 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
+import com.iafenvoy.mxt.screen.technique.TechniquePanelScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -19,8 +21,10 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Expandable player information screen with a scrollable, selectable list.
@@ -42,6 +46,8 @@ public final class InformationPanelScreen extends Screen {
     };
     private InformationList list;
     private InformationList basicList;
+    private Button techniquesButton;
+    private final Set<String> overflowReports = new HashSet<>();
     private int panelLeft;
     private int panelTop;
     private int panelWidth;
@@ -62,6 +68,21 @@ public final class InformationPanelScreen extends Screen {
         this.layoutWidgets();
         if (!this.children().contains(this.list)) this.addRenderableOnly(this.list);
         if (!this.children().contains(this.basicList)) this.addRenderableOnly(this.basicList);
+        if (this.techniquesButton == null) {
+            this.techniquesButton = Button.builder(Component.translatable("screen.mxt.technique_panel"), _ -> this.minecraft.setScreen(new TechniquePanelScreen())).build();
+            this.addRenderableWidget(this.techniquesButton);
+        }
+        this.layoutButton();
+    }
+
+    /**
+     * Puts the technique-panel entry point in the header, right of the title.
+     */
+    private void layoutButton() {
+        if (this.techniquesButton == null) return;
+        Component label = Component.translatable("screen.mxt.technique_panel");
+        int buttonWidth = Math.max(1, Math.min(this.panelWidth - 36, this.font.width(label) + 12));
+        this.techniquesButton.setRectangle(buttonWidth, 16, this.panelLeft + this.panelWidth - 20 - buttonWidth, this.panelTop + 17);
     }
 
     /**
@@ -86,7 +107,7 @@ public final class InformationPanelScreen extends Screen {
         int rightListTop = contentTop + 16;
         int rightListHeight = Math.max(1, contentHeight - 16);
         if (this.list == null) {
-            this.list = new InformationList(this.minecraft, rightX, rightListTop, rightWidth, rightListHeight);
+            this.list = new InformationList(this.minecraft, rightX, rightListTop, rightWidth, rightListHeight, this.overflowReports);
             this.list.replaceEntries(this.buildEntries(Side.CULTIVATION));
         } else {
             this.list.updateSizeAndPosition(rightWidth, rightListHeight, rightX, rightListTop);
@@ -96,11 +117,12 @@ public final class InformationPanelScreen extends Screen {
         int basicHeight = Math.max(1, contentBottom - basicListTop);
         int basicWidth = Math.max(1, this.playerWidth);
         if (this.basicList == null) {
-            this.basicList = new InformationList(this.minecraft, this.panelLeft + 20, basicListTop, basicWidth, basicHeight);
+            this.basicList = new InformationList(this.minecraft, this.panelLeft + 20, basicListTop, basicWidth, basicHeight, this.overflowReports);
             this.basicList.replaceEntries(this.buildEntries(Side.BASIC));
         } else {
             this.basicList.updateSizeAndPosition(basicWidth, basicHeight, this.panelLeft + 20, basicListTop);
         }
+        this.layoutButton();
     }
 
     @Override
@@ -136,7 +158,7 @@ public final class InformationPanelScreen extends Screen {
                 .max().orElse(0);
         List<InformationList.LineEntry> entries = new ArrayList<>(information.size());
         for (InformationEntry entry : information)
-            entries.add(new InformationList.LineEntry(entry, nameWidth));
+            entries.add(new InformationList.LineEntry(entry, nameWidth, this.overflowReports));
         return entries;
     }
 
@@ -206,9 +228,12 @@ public final class InformationPanelScreen extends Screen {
     }
 
     private static final class InformationList extends ObjectSelectionList<InformationList.LineEntry> {
-        private InformationList(Minecraft minecraft, int x, int y, int width, int height) {
+        private final Set<String> overflowReports;
+
+        private InformationList(Minecraft minecraft, int x, int y, int width, int height, Set<String> overflowReports) {
             super(minecraft, width, height, y, 18);
             this.setX(x);
+            this.overflowReports = overflowReports;
         }
 
         @Override
@@ -219,11 +244,12 @@ public final class InformationPanelScreen extends Screen {
         private static final class LineEntry extends Entry<LineEntry> {
             private final InformationEntry entry;
             private final int nameWidth;
-            private boolean overflowReported;
+            private final Set<String> overflowReports;
 
-            private LineEntry(InformationEntry entry, int nameWidth) {
+            private LineEntry(InformationEntry entry, int nameWidth, Set<String> overflowReports) {
                 this.entry = entry;
                 this.nameWidth = nameWidth;
+                this.overflowReports = overflowReports;
             }
 
             @Override
@@ -232,15 +258,19 @@ public final class InformationPanelScreen extends Screen {
                 if (hovered || this.isFocused())
                     graphics.fill(this.getX(), this.getY(), this.getX() + this.getWidth(), this.getY() + this.getHeight(), 0x503F6A91);
                 Font font = Minecraft.getInstance().font;
-                int availableWidth = Math.max(1, this.getWidth() - 16);
-                int valueX = this.getX() + 8 + this.nameWidth + 8;
-                int nameAvailableWidth = Math.max(1, Math.min(this.nameWidth, availableWidth));
-                int valueAvailableWidth = Math.max(1, this.getX() + this.getWidth() - valueX - 8);
                 Component name = this.entry.name();
+                int availableWidth = Math.max(1, this.getWidth() - 16);
+                // The width is shared out by need rather than fixed: the value is data and the name is a
+                // label, so a long value narrows the label column instead of being cut off. Reserving one
+                // global name width for every row used to starve values whose own label was short.
+                InformationHelper.Columns columns = InformationHelper.columns(
+                        availableWidth, this.nameWidth, font.width(this.entry.value()));
+                int nameAvailableWidth = Math.max(1, columns.nameWidth());
+                int valueX = this.getX() + 8 + columns.nameWidth() + 8;
+                int valueAvailableWidth = Math.max(1, columns.valueWidth());
                 int nameLineCount = name == null ? 0 : font.split(name, nameAvailableWidth).size();
                 int valueLineCount = font.split(this.entry.value(), valueAvailableWidth).size();
-                if ((nameLineCount > 1 || valueLineCount > 1) && !this.overflowReported) {
-                    this.overflowReported = true;
+                if ((nameLineCount > 1 || valueLineCount > 1) && this.overflowReports.add(overflowKey(this.entry))) {
                     if (!FMLEnvironment.isProduction())
                         MiXianTu.LOGGER.error("Information entry contains more than one line (width={}): {} = {}",
                                 availableWidth, name == null ? "" : name.getString(), this.entry.value().getString());
@@ -261,6 +291,14 @@ public final class InformationPanelScreen extends Screen {
                                             : name.copy().append(": ").append(this.entry.value()), mouseX, mouseY);
                             });
                 }
+            }
+
+            /**
+             * One line per distinct too-long entry while the panel stays open. Entries are rebuilt on
+             * every refresh, so a per-entry flag would report the same overflow once per refresh.
+             */
+            private static String overflowKey(InformationEntry entry) {
+                return (entry.name() == null ? "" : entry.name().getString()) + "=" + entry.value().getString();
             }
 
             private static String abbreviate(Font font, String text, int width) {
