@@ -1,0 +1,6 @@
+{
+  "skill": "mxt_test:iron_body",
+  "next_stage": "mxt_test:iron_body_2",
+  "mastery": 0,
+  "damage_multiplier": 1.0
+}

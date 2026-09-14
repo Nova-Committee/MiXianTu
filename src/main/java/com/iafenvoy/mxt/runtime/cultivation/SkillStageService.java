@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.CultivationTechnique.StageConfiguration;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -82,7 +83,7 @@ public final class SkillStageService {
      */
     public static EntityCondition advanceCondition(CultivationTechnique technique, Holder<SkillStage> target) {
         return Optional.ofNullable(technique.configuration().get(target))
-                .map(CultivationTechnique.StageConfiguration::condition).orElse(AlwaysTrueCondition.INSTANCE);
+                .map(StageConfiguration::condition).orElse(AlwaysTrueCondition.INSTANCE);
     }
 
     /**

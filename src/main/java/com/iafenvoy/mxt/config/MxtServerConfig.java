@@ -42,6 +42,10 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         return INSTANCE.cultivation.allowMovement.getValue();
     }
 
+    public static int techniqueLearnCooldown() {
+        return INSTANCE.cultivation.techniqueLearnCooldown.getValue();
+    }
+
     public static int blockAuraTickInterval() {
         return INSTANCE.aura.blockAuraTickInterval.getValue();
     }
@@ -65,6 +69,12 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 "config.mxt.server.cultivation.forbid_without_eligible_aura", false).build();
         public final BooleanEntry allowMovement = BooleanEntry.builder(
                 "config.mxt.server.cultivation.allow_movement", false).build();
+        /**
+         * Ticks one technique item is unusable after it teaches something, so a manual cannot be read
+         * back to back. Zero disables the cooldown entirely, which is the old behaviour.
+         */
+        public final IntegerEntry techniqueLearnCooldown = IntegerEntry.builder(
+                "config.mxt.server.cultivation.technique_learn_cooldown", 60).range(0, 72_000).build();
 
         private Cultivation() {
             super("cultivation", "config.mxt.server.cultivation");

@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -20,6 +19,7 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Global server-lifetime cache for derived datapack data. It is absent on the
@@ -213,7 +213,7 @@ public final class ServerCache {
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.SKILL_STAGE)
                 .forEach(holder -> stages.put(holder.key().identifier(), holder.value()));
         Map<Identifier, Identifier> previous = new LinkedHashMap<>();
-        for (Map.Entry<Identifier, SkillStage> entry : stages.entrySet()) {
+        for (Entry<Identifier, SkillStage> entry : stages.entrySet()) {
             Identifier next = entry.getValue().nextStage().map(HolderHelper::id).orElse(null);
             if (next == null) continue;
             SkillStage target = stages.get(next);

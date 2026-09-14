@@ -1,0 +1,9 @@
+{
+  "items": "mxt_test:azure_water_manual",
+  "technique": "mxt_test:azure_water_manual",
+  "learn_time": 60,
+  "hold_animation": "brush",
+  "conditions": [
+    {"type": "mxt:always_true"}
+  ]
+}

@@ -6,6 +6,7 @@ import com.iafenvoy.jupiter.config.entry.EnumEntry;
 import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
@@ -44,7 +45,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
         return Math.max(1, INSTANCE.information.refreshInterval.getValue());
     }
 
-    public static TechniqueProgress.Mode techniqueProgressMode() {
+    public static Mode techniqueProgressMode() {
         return INSTANCE.techniques.progressMode.getValue();
     }
 
@@ -86,8 +87,8 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     }
 
     public static final class Techniques extends AutoInitConfigCategoryBase {
-        public final EnumEntry<TechniqueProgress.Mode> progressMode = EnumEntry.builder(
-                        "config.mxt.client.techniques.progress_mode", TechniqueProgress.Mode.ABSOLUTE)
+        public final EnumEntry<Mode> progressMode = EnumEntry.builder(
+                        "config.mxt.client.techniques.progress_mode", Mode.ABSOLUTE)
                 .nameProvider(value -> Component.translatable("config.mxt.client.techniques.progress_mode." + value.name().toLowerCase()))
                 .build();
 

@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.screen.information;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
+import com.iafenvoy.mxt.screen.information.InformationHelper.Columns;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
 import com.iafenvoy.mxt.screen.technique.TechniquePanelScreen;
 import net.minecraft.client.Minecraft;
@@ -263,7 +264,7 @@ public final class InformationPanelScreen extends Screen {
                 // The width is shared out by need rather than fixed: the value is data and the name is a
                 // label, so a long value narrows the label column instead of being cut off. Reserving one
                 // global name width for every row used to starve values whose own label was short.
-                InformationHelper.Columns columns = InformationHelper.columns(
+                Columns columns = InformationHelper.columns(
                         availableWidth, this.nameWidth, font.width(this.entry.value()));
                 int nameAvailableWidth = Math.max(1, columns.nameWidth());
                 int valueX = this.getX() + 8 + columns.nameWidth() + 8;

@@ -14,5 +14,6 @@ public final class CommandManager {
         DisplayCommand.register(dispatcher);
         MxtCommand.register(dispatcher);
         TradeCommand.register(dispatcher);
+        TechniqueRepairCommand.register(dispatcher);
     }
 }

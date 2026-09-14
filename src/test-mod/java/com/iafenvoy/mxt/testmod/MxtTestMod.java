@@ -5,8 +5,11 @@ import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
+import com.mojang.authlib.GameProfile;
+import net.neoforged.neoforge.common.util.FakePlayer;
+import java.util.UUID;import com.iafenvoy.mxt.command.TechniqueRepairCommand;
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
@@ -48,10 +51,13 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Failure;
 import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession;
 import com.iafenvoy.mxt.runtime.forging.ForgingTableState;
 import com.iafenvoy.mxt.screen.information.InformationHelper;
+import com.iafenvoy.mxt.screen.information.InformationHelper.Columns;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.ForgingMenuProbe;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
@@ -60,6 +66,7 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NonZeroVisibility;
 import com.iafenvoy.mxt.registry.MxtItems;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.runtime.formation.FormationStructureValidator;
 import com.iafenvoy.mxt.runtime.forging.ForgingProbe;
@@ -77,6 +84,9 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueHoldLookup;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
@@ -98,8 +108,10 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.ContextVariable;
 import com.iafenvoy.mxt.util.formula.number.Expression;
 import com.iafenvoy.mxt.util.formula.number.WeightedList;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
@@ -117,6 +129,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -129,10 +142,12 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -141,6 +156,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
@@ -166,6 +182,7 @@ public final class MxtTestMod {
     public MxtTestMod(IEventBus modBus) {
         MxtTestItems.REGISTRY.register(modBus);
         MxtTestForgeItems.REGISTRY.register(modBus);
+        MxtTestTechniqueItems.REGISTRY.register(modBus);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::verifyItemBindings);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::grantTestAbilities);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
@@ -380,6 +397,7 @@ public final class MxtTestMod {
         verifyDisplayNames();
         verifyInformationColumns();
         verifyIconReferences();
+        verifySampleTechniques();
         verifyForgingBindingsLoaded();
         verifyForgingMethodIntersection(event.getServer().registryAccess());
         verifyForgingPlans(event.getServer().registryAccess());
@@ -831,7 +849,7 @@ public final class MxtTestMod {
                 "key.mxt.technique_panel",
                 "config.mxt.client.techniques",
                 "config.mxt.client.techniques.progress_mode"));
-        for (TechniqueProgress.Mode mode : TechniqueProgress.Mode.values())
+        for (Mode mode : Mode.values())
             keys.add("config.mxt.client.techniques.progress_mode." + mode.name().toLowerCase(Locale.ROOT));
         for (String language : List.of("en_us", "zh_cn")) {
             JsonObject lang = readLang(language);
@@ -881,7 +899,7 @@ public final class MxtTestMod {
 
     private static <T> void verifyDisplayNames(JsonObject en, JsonObject zh,
                                                ResourceKey<? extends Registry<T>> registry, String category) {
-        for (Holder.Reference<T> holder : MxtDatapackRegistries.holders(registry).toList()) {
+        for (Reference<T> holder : MxtDatapackRegistries.holders(registry).toList()) {
             Identifier id = holder.key().identifier();
             if (!MOD_ID.equals(id.getNamespace())) continue;
             String key = id.toLanguageKey(category);
@@ -1252,21 +1270,21 @@ public final class MxtTestMod {
                 || !same(row.mastery(), 10.0D) || !same(row.currentRequirement(), 10.0D) || row.hasNextLevel()) {
             throw new IllegalStateException("Technique progress did not report the promoted level: " + row);
         }
-        if (!same(TechniqueProgress.progress(row, TechniqueProgress.Mode.ABSOLUTE).fraction(), 1.0D)) {
+        if (!same(TechniqueProgress.progress(row, Mode.ABSOLUTE).fraction(), 1.0D)) {
             throw new IllegalStateException("A finished climb did not fill the progress bar");
         }
         // At the entry level both modes measure the same span, because nothing was required to reach it.
         TechniqueProgress.Entry start = new TechniqueProgress.Entry(technique, entryStage, 0, 2, 0.0D, true, 4.0D, 10.0D);
-        if (!same(TechniqueProgress.progress(start, TechniqueProgress.Mode.ABSOLUTE).fraction(), 0.4D)
-                || !same(TechniqueProgress.progress(start, TechniqueProgress.Mode.WITHIN_LEVEL).fraction(), 0.4D)) {
+        if (!same(TechniqueProgress.progress(start, Mode.ABSOLUTE).fraction(), 0.4D)
+                || !same(TechniqueProgress.progress(start, Mode.WITHIN_LEVEL).fraction(), 0.4D)) {
             throw new IllegalStateException("Technique progress modes disagreed at the entry level");
         }
         // Above the entry level the relative mode subtracts what the current level already asked for.
         TechniqueProgress.Entry midway = new TechniqueProgress.Entry(technique, stagedStage, 1, 3, 10.0D, true, 18.0D, 25.0D);
-        if (!same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.ABSOLUTE).fraction(), 0.72D)
-                || !same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.WITHIN_LEVEL).fraction(), 8.0D / 15.0D)
-                || !same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.WITHIN_LEVEL).done(), 8.0D)
-                || !same(TechniqueProgress.progress(midway, TechniqueProgress.Mode.WITHIN_LEVEL).span(), 15.0D)) {
+        if (!same(TechniqueProgress.progress(midway, Mode.ABSOLUTE).fraction(), 0.72D)
+                || !same(TechniqueProgress.progress(midway, Mode.WITHIN_LEVEL).fraction(), 8.0D / 15.0D)
+                || !same(TechniqueProgress.progress(midway, Mode.WITHIN_LEVEL).done(), 8.0D)
+                || !same(TechniqueProgress.progress(midway, Mode.WITHIN_LEVEL).span(), 15.0D)) {
             throw new IllegalStateException("Technique progress modes did not measure different spans");
         }
     }
@@ -1303,10 +1321,512 @@ public final class MxtTestMod {
         if (!TechniqueService.learn(student, identity, sword, context).learned()) {
             throw new IllegalStateException("The refusal audit could not learn its first technique");
         }
-        if (TechniqueService.learn(student, identity, sword, context).failure() != TechniqueService.Failure.ALREADY_LEARNED
-                || TechniqueService.learn(student, identity, body, context).failure() != TechniqueService.Failure.CONFLICT) {
+        if (TechniqueService.learn(student, identity, sword, context).failure() != Failure.ALREADY_LEARNED
+                || TechniqueService.learn(student, identity, body, context).failure() != Failure.CONFLICT) {
             throw new IllegalStateException("A rejected learning attempt did not report its own failure");
         }
+    }
+
+    /**
+     * The two sample manuals, one held and one instant, and the field that tells them apart.
+     *
+     * <p>The hold is asserted as data rather than as a simulated keypress: what the codec carries is
+     * what the use cycle is built from, so a binding that decoded its {@code learn_time} is a binding
+     * that asks for a hold. That also keeps this audit runnable on a server, where there is no client
+     * to hold a button down.</p>
+     */
+    private static void verifySampleTechniques() {
+        Holder<CultivationTechnique> azureWater = requireHolder(MxtResourceKeys.CULTIVATION_TECHNIQUE,
+                Identifier.parse("mxt_test:azure_water_manual"));
+        Holder<CultivationTechnique> ironBody = requireHolder(MxtResourceKeys.CULTIVATION_TECHNIQUE,
+                Identifier.parse("mxt_test:iron_body_manual"));
+        if (azureWater.value().icon().flatMap(IconReference::texture).isEmpty()
+                || ironBody.value().icon().flatMap(IconReference::stack).filter(stack -> stack.is(Items.WRITTEN_BOOK)).isEmpty())
+            throw new IllegalStateException("A sample technique did not keep its own icon branch");
+        if (azureWater.value().grantedAbilities().isEmpty() || ironBody.value().defaultStage().isEmpty())
+            throw new IllegalStateException("A sample technique did not decode its grants or its skill chain");
+
+        // The held manual declares a duration and the instant one does not, so both paths stay covered.
+        TechniqueBinding held = ItemBindingService.technique(new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()))
+                .orElseThrow(() -> new IllegalStateException("The held manual did not resolve its binding"));
+        if (held.learnTime() != 60 || !held.requiresHold())
+            throw new IllegalStateException("The held manual did not keep its learn_time: " + held.learnTime());
+        TechniqueBinding instant = ItemBindingService.technique(new ItemStack(MxtTestTechniqueItems.IRON_BODY_MANUAL.get()))
+                .orElseThrow(() -> new IllegalStateException("The instant manual did not resolve its binding"));
+        if (instant.learnTime() != TechniqueBinding.NO_HOLD || instant.requiresHold())
+            throw new IllegalStateException("An unheld manual reported a hold: " + instant.learnTime());
+
+        verifyHoldAnimations(held, instant);
+
+        // A hold must not also learn on the click that starts it, or the hold would be decoration. The
+        // click is deliberately left unclaimed for a held binding, so `use` answers false here - that
+        // false is the whole reason the use cycle is allowed to begin.
+        Pig student = new Pig(EntityType.PIG,
+                ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
+                        .server().overworld());
+        SpiritIdentityAttachment identity = student.getData(MxtAttachments.SPIRIT_IDENTITY);
+        if (TechniqueItemService.use(student, new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()))
+                || identity.learnedTechniques().stream()
+                .anyMatch(value -> HolderHelper.id(value).equals(Identifier.parse("mxt_test:azure_water_manual"))))
+            throw new IllegalStateException("A held manual claimed the click or taught on it");
+        // ...while the instant one still claims the click and teaches on it, which it must keep doing.
+        if (!TechniqueItemService.use(student, new ItemStack(MxtTestTechniqueItems.IRON_BODY_MANUAL.get()))
+                || identity.learnedTechniques().stream()
+                .noneMatch(value -> HolderHelper.id(value).equals(Identifier.parse("mxt_test:iron_body_manual"))))
+            throw new IllegalStateException("An instant manual stopped teaching on use");
+
+        verifyLearnFeedback();
+        verifyHoldLifecycle();
+        verifyRepairSweep();
+    }
+
+    /**
+     * Checks that the repair sweep keeps exactly the references that still resolve.
+     *
+     * <p>This guards a command whose failure mode is doing nothing at all: if {@code resolves} answered
+     * true for a stale id, the sweep would report a clean bill of health and leave the broken data in
+     * place - the worst outcome for a repair tool, because the player is told there is no problem.</p>
+     */
+    private static void verifyRepairSweep() {
+        Reference<CultivationTechnique> real = MxtDatapackRegistries
+                .holder(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:sword_manual"))
+                .orElseThrow(() -> new IllegalStateException("The repair audit needs a real technique"));
+
+        // A live technique resolves; an id nobody defines does not. The second is the shape a removed
+        // data pack file leaves in saved data, and the whole command turns on telling them apart.
+        if (!TechniqueRepairCommand.resolves(real))
+            throw new IllegalStateException("The repair sweep called a live technique stale");
+        if (!TechniqueRepairCommand.resolvesStage(MxtDatapackRegistries
+                .holder(MxtResourceKeys.SKILL_STAGE, Identifier.parse("mxt_test:sword_art_1"))
+                .orElseThrow(() -> new IllegalStateException("The repair audit needs a real skill stage"))))
+            throw new IllegalStateException("The repair sweep called a live skill stage stale");
+
+        // A clean list is left completely alone, and the sweep reports nothing - so running the command
+        // on healthy data is a no-op rather than a way to lose techniques.
+        List<Identifier> clean = new ArrayList<>();
+        List<Holder<CultivationTechnique>> untouched =
+                TechniqueRepairCommand.prune(new ArrayList<>(List.of(real)), clean);
+        if (untouched.size() != 1 || !clean.isEmpty())
+            throw new IllegalStateException("The repair sweep removed something from an already clean list");
+
+        // A duplicate of a live entry goes: two copies of one technique would double every passive
+        // modifier the definition grants, which is a real corruption the sweep should clear.
+        List<Identifier> dupes = new ArrayList<>();
+        if (TechniqueRepairCommand.prune(new ArrayList<>(List.of(real, real)), dupes).size() != 1
+                || dupes.size() != 1)
+            throw new IllegalStateException("The repair sweep kept a duplicate technique");
+
+        // A stage map whose technique is gone must lose the entry rather than keep a dangling level.
+        Map<Holder<CultivationTechnique>, Holder<SkillStage>> stages = new LinkedHashMap<>();
+        Reference<SkillStage> stage = MxtDatapackRegistries
+                .holder(MxtResourceKeys.SKILL_STAGE, Identifier.parse("mxt_test:sword_art_1"))
+                .orElseThrow(() -> new IllegalStateException("The repair audit needs a real skill stage"));
+        stages.put(real, stage);
+        List<Identifier> removedStages = new ArrayList<>();
+        Map<Holder<CultivationTechnique>, Holder<SkillStage>> sweptStages =
+                TechniqueRepairCommand.pruneStages(stages, removedStages);
+        if (sweptStages.size() != 1 || !removedStages.isEmpty())
+            throw new IllegalStateException("The repair sweep dropped a healthy stage entry");
+
+        // And the messages the command prints must exist, including for the "nothing to do" case - a
+        // missing key would surface as a raw translation id in chat.
+        for (String key : List.of("command.mxt.technique.repair.clean", "command.mxt.technique.repair.done",
+                "command.mxt.technique.repair.dry", "command.mxt.technique.drop.done",
+                "command.mxt.technique.drop.absent", "command.mxt.technique.diagnose.item",
+                "command.mxt.technique.diagnose.no_binding", "command.mxt.technique.diagnose.binding",
+                "command.mxt.technique.diagnose.gate", "command.mxt.technique.diagnose.known",
+                "command.mxt.technique.diagnose.condition", "command.mxt.technique.diagnose.cooldown",
+                "command.mxt.technique.diagnose.empty_hand", "command.mxt.technique.diagnose.hold",
+                "command.mxt.technique.diagnose.ending")) {
+            if (Component.translatable(key).getString().equals(key))
+                throw new IllegalStateException("A repair message key has no translation: " + key);
+        }
+
+        verifyStaleReferenceDecode();
+        verifyAzureManualIsLearnable();
+    }
+
+    /**
+     * Reproduces the reported situation: the azure manual cannot be learned in game.
+     *
+     * <p>Every step of the real path is run against a real entity rather than asserted in the abstract,
+     * so whichever gate is refusing gets named instead of guessed at. The report was "the scroll shows a
+     * downward pose and then aborts immediately, and nothing appears in chat", which rules out a silent
+     * data problem and points at one of the gates that run around the use cycle.</p>
+     */
+    private static void verifyAzureManualIsLearnable() {
+        ServerLevel level = ServerCache.get()
+                .orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
+                .server().overworld();
+        Pig student = new Pig(EntityType.PIG, level);
+        ItemStack manual = new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get());
+
+        // The binding must resolve at all, or nothing downstream can work.
+        if (ItemBindingService.technique(manual).isEmpty())
+            throw new IllegalStateException("The azure manual resolves no technique binding");
+
+        // The item gate runs at HIGHEST on Start/Tick and cancels there, which is exactly what a pose
+        // that appears and then vanishes looks like.
+        if (!ItemQualityService.canUse(student, manual))
+            throw new IllegalStateException("The item gate refuses the azure manual");
+
+        // The technique's own learn condition, evaluated the way the real transaction does.
+        Holder<CultivationTechnique> technique = MxtDatapackRegistries
+                .holder(MxtResourceKeys.CULTIVATION_TECHNIQUE, Identifier.parse("mxt_test:azure_water_manual"))
+                .orElseThrow(() -> new IllegalStateException("The azure technique does not resolve"));
+        if (!technique.value().learnCondition().test(student, FormulaContext.of(student)))
+            throw new IllegalStateException("The azure technique's learn condition refuses this entity");
+
+        // And the transaction itself must succeed on a holder who knows nothing yet.
+        SpiritIdentityAttachment spirit = student.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueService.Result result = TechniqueService.learn(student, spirit, technique, FormulaContext.of(student));
+        if (!result.learned())
+            throw new IllegalStateException("Learning the azure technique was refused: " + result.failure());
+    }
+
+    /**
+     * Decodes an attachment payload holding a technique id that no longer exists.
+     *
+     * <p>This is the fact the whole repair story rests on, so it is asserted rather than assumed. The
+     * attachment decodes its technique lists through {@code CollectionCodecs.list}, which is
+     * {@link com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec} - a codec that decodes element by element
+     * and skips the ones that fail. A stale id therefore costs only itself: the rest of the list and
+     * every other field still load.</p>
+     *
+     * <p>That distinction decides what the repair command is for. If a single stale id took the whole
+     * attachment down, the command would be useless - the bad data would already be gone before any
+     * code could look at it - and the only cure would be restoring a backup.</p>
+     */
+    private static void verifyStaleReferenceDecode() {
+        ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"));
+        String json = """
+                {
+                  "learned_techniques": ["mxt_test:sword_manual", "mxt_test:never_existed"],
+                  "titles": []
+                }
+                """;
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE,
+                ServerCache.get().orElseThrow().server().registryAccess());
+        SpiritIdentityAttachment decoded = SpiritIdentityAttachment.CODEC.codec()
+                .parse(ops, JsonParser.parseString(json))
+                .getOrThrow(error -> new IllegalStateException("A stale technique id took down the whole attachment: " + error));
+
+        // The good entry survives and the bad one is gone, rather than the list dying with it.
+        if (decoded.learnedTechniques().size() != 1)
+            throw new IllegalStateException("A stale technique id removed healthy entries too: "
+                    + decoded.learnedTechniques().size());
+        if (!HolderHelper.id(decoded.learnedTechniques().getFirst()).equals(Identifier.parse("mxt_test:sword_manual")))
+            throw new IllegalStateException("The surviving technique is not the one that should have loaded");
+    }
+
+    /**
+     * Drives a hold through the real vanilla use cycle.
+     *
+     * <p>Earlier versions of this check called the mod's own handlers directly, so they passed while the
+     * in-game hold was broken - twice. A hold is not one call: the item has to say how long the cycle
+     * runs and what it looks like, the cycle has to run that long, and the technique has to be taught at
+     * the end. A test that skips the middle cannot see the middle go wrong, so this one runs the middle:
+     * {@code LivingEntity#tick} is what drives {@code updatingUsingItem}, and the entity here is ticked
+     * until the cycle completes on its own.</p>
+     *
+     * <p>What it therefore covers, for the first time, is the part that was actually broken: the two
+     * answers vanilla asks the <em>item</em> for. {@code getUseDuration} and {@code getUseAnimation} are
+     * supplied by {@code ItemMixin} from the data pack binding, and the tick count assertion pins the
+     * duration behaviourally - a duration of {@code 0}, which is what the client used to compute, would
+     * teach on the first tick instead of the sixtieth.</p>
+     *
+     * <p>The lookup table behind the mixin is populated by {@code TagsUpdatedEvent}, which has already
+     * fired by the time the audit runs, so asserting it is populated also asserts that the build actually
+     * happened. If it silently did not, every hold in the game would do nothing on one side only.</p>
+     */
+    private static void verifyHoldLifecycle() {
+        ServerLevel level = ServerCache.get()
+                .orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
+                .server().overworld();
+
+        ItemStack manual = new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get());
+        ItemStack instant = new ItemStack(MxtTestTechniqueItems.IRON_BODY_MANUAL.get());
+        TechniqueBinding held = ItemBindingService.technique(manual)
+                .orElseThrow(() -> new IllegalStateException("The held manual resolves no binding"));
+        if (held.learnTime() != 60 || !held.requiresHold())
+            throw new IllegalStateException("The held manual did not keep its learn_time: " + held.learnTime());
+
+        // Step 0: the lookup the mixin reads was built, from the data pack, for the right items only.
+        if (TechniqueHoldLookup.hold(manual) == null)
+            throw new IllegalStateException("The hold lookup has no entry for the held manual");
+        if (TechniqueHoldLookup.hold(instant) != null)
+            throw new IllegalStateException("The hold lookup listed an instant manual as a hold");
+
+        // Step 1: the item answers the two questions the use cycle asks, from the binding's own values.
+        // A plain item would answer 0 and NONE here, so this is also what proves the mixin applied.
+        Pig probe = new Pig(EntityType.PIG, level);
+        int duration = manual.getItem().getUseDuration(manual, probe);
+        if (duration != held.learnTime())
+            throw new IllegalStateException("The manual reported a duration of " + duration
+                    + " instead of its learn_time of " + held.learnTime());
+        if (manual.getItem().getUseAnimation(manual) != held.holdAnimation())
+            throw new IllegalStateException("The manual reported the wrong pose: "
+                    + manual.getItem().getUseAnimation(manual) + " instead of " + held.holdAnimation());
+
+        // Step 2: the real cycle. It must not finish early, and it must finish at the binding's duration.
+        Pig reader = new Pig(EntityType.PIG, level);
+        reader.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()));
+        ItemStack handStack = reader.getItemInHand(InteractionHand.MAIN_HAND);
+        int before = handStack.getCount();
+        if (handStack.getItem().getUseDuration(handStack, reader) != 60)
+            throw new IllegalStateException("The held manual did not report a hold to run");
+
+        reader.startUsingItem(InteractionHand.MAIN_HAND);
+        if (!reader.isUsingItem())
+            throw new IllegalStateException("The hold did not start, so no cycle can complete");
+        for (int i = 0; i < 30; i++) reader.tick();
+        if (taught(reader, "mxt_test:azure_water_manual"))
+            throw new IllegalStateException("The hold taught after 30 ticks, so its duration is not being honoured");
+        for (int i = 0; i < 35; i++) reader.tick();
+
+        // Step 3: it taught at the end, and the manual survived - nothing in this design is edible.
+        if (!taught(reader, "mxt_test:azure_water_manual"))
+            throw new IllegalStateException("A completed hold taught nothing");
+        if (reader.getItemInHand(InteractionHand.MAIN_HAND).getCount() != before)
+            throw new IllegalStateException("A completed hold consumed the manual");
+        if (reader.isUsingItem())
+            throw new IllegalStateException("A completed hold left the entity still using the manual");
+
+        // Step 4: reading a manual that is already known is a harmless no-op, not a way to lose it.
+        Pig veteran = new Pig(EntityType.PIG, level);
+        veteran.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()));
+        ItemStack second = veteran.getItemInHand(InteractionHand.MAIN_HAND);
+        int count = second.getCount();
+        for (int round = 0; round < 2; round++) {
+            veteran.startUsingItem(InteractionHand.MAIN_HAND);
+            for (int i = 0; i < 65; i++) veteran.tick();
+        }
+        if (veteran.getItemInHand(InteractionHand.MAIN_HAND).getCount() != count)
+            throw new IllegalStateException("Re-reading a known manual destroyed it");
+
+        verifyHoldProgress();
+        verifyCooldownOnAnyOutcome();
+    }
+
+    /**
+     * The reading cooldown, which is charged for the attempt rather than for the result.
+     *
+     * <p>This could not be checked before, because the cooldown lives on a {@link Player} and the audit
+     * could only build animals. A {@code FakePlayer} is a real {@code ServerPlayer} with the parts that
+     * need a connection stubbed out, so the cooldown tracker it carries is the real one and can simply be
+     * read.</p>
+     *
+     * <p>The point of the check is the second read. The first teaches and must cost a cooldown; the
+     * second is refused for being already known and must still cost one, because a refusal that is free
+     * leaves a manual the holder cannot learn free to read over and over. The cooldown is cleared between
+     * the two so that the second observation is about the second read and not about the first one still
+     * running down.</p>
+     */
+    private static void verifyCooldownOnAnyOutcome() {
+        // Disabled by configuration: there is no cooldown to observe, and asserting one would be asserting
+        // something the operator switched off.
+        if (MxtServerConfig.techniqueLearnCooldown() <= 0) return;
+
+        ServerLevel level = ServerCache.get()
+                .orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
+                .server().overworld();
+        FakePlayer holder = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit"));
+        ItemStack manual = new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get());
+        holder.setItemInHand(InteractionHand.MAIN_HAND, manual);
+
+        TechniqueItemService.onUseFinish(new Finish(holder, manual.copy(), 0, manual.copy()));
+        int known = holder.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques().size();
+        if (known == 0)
+            throw new IllegalStateException("The first read of the cooldown check did not teach anything");
+        if (!holder.getCooldowns().isOnCooldown(manual))
+            throw new IllegalStateException("A read that taught did not put the manual on cooldown");
+
+        holder.getCooldowns().removeCooldown(holder.getCooldowns().getCooldownGroup(manual));
+        if (holder.getCooldowns().isOnCooldown(manual))
+            throw new IllegalStateException("The cooldown check could not clear the cooldown it observes");
+
+        // Already known, so this read is refused - and still has to cost a cooldown.
+        TechniqueItemService.onUseFinish(new Finish(holder, manual.copy(), 0, manual.copy()));
+        if (holder.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques().size() != known)
+            throw new IllegalStateException("The second read of the cooldown check was expected to be refused");
+        if (!holder.getCooldowns().isOnCooldown(manual))
+            throw new IllegalStateException("A refused read did not put the manual on cooldown");
+    }
+
+    /**
+     * The percentage shown while a manual is being read.
+     *
+     * <p>This exists because a hold is otherwise guesswork: the allowed poses are fixed motions that
+     * repeat, so nothing on screen says whether the player is a tenth of the way through or one tick
+     * from the end. A duration long enough to read is long enough to give up on early, and giving up
+     * early is a silent cancel.</p>
+     *
+     * <p>The ends matter more than the middle: an off-by-one would show a full bar one tick before the
+     * technique is actually granted, and a duration of zero - an instant binding that somehow reached
+     * the tick handler - must not divide by zero.</p>
+     */
+    private static void verifyHoldProgress() {
+        if (TechniqueItemService.holdPercent(60, 60) != 0)
+            throw new IllegalStateException("A hold that has not started is not at zero percent");
+        if (TechniqueItemService.holdPercent(60, 30) != 50)
+            throw new IllegalStateException("A half-finished hold is not at fifty percent");
+        if (TechniqueItemService.holdPercent(60, 0) != 100)
+            throw new IllegalStateException("A finished hold is not at full");
+        if (TechniqueItemService.holdPercent(0, 5) != 100)
+            throw new IllegalStateException("A zero-length hold did not resolve to full without dividing by zero");
+        if (TechniqueItemService.holdPercent(60, -3) != 100 || TechniqueItemService.holdPercent(60, 999) != 0)
+            throw new IllegalStateException("The hold percentage is not clamped to its ends");
+
+        // The last tick a read ever sees arrives with one tick left, because the tick after it is the one
+        // that completes the read. Reporting that honestly leaves the bar stuck at 98% on every successful
+        // read, which reads as a read that never finishes.
+        if (TechniqueItemService.displayPercent(60, 1) != 100)
+            throw new IllegalStateException("The final tick of a read does not show a full bar");
+        if (TechniqueItemService.displayPercent(60, 60) != 0 || TechniqueItemService.displayPercent(60, 30) != 50)
+            throw new IllegalStateException("The last-tick rule leaked into the rest of the read");
+
+        // Once the client's own count runs out the pose is kept alive by folding the count back into the
+        // positive range. That has to land on the phase the pose would have reached anyway, or the motion
+        // restarts out of step and every loop shows as a stutter - which is what an earlier version, using
+        // an unrelated cycling number, did.
+        for (int remaining = 0; remaining > -25; remaining--) {
+            int wrapped = TechniqueItemService.loopingUseRemaining(remaining);
+            if (wrapped <= 0)
+                throw new IllegalStateException("A folded count is not positive and would drop the pose: " + wrapped);
+            // The pose code reads the remainder, so the remainder is what has to go on counting down by one
+            // per tick and wrap off the bottom of the loop back onto its top. Keeping that equality is the
+            // whole requirement, and it is what makes the motion continue instead of restart.
+            if (Math.floorMod(wrapped, 10) != Math.floorMod(remaining, 10))
+                throw new IllegalStateException("A folded count is out of phase at " + remaining + ": " + wrapped);
+        }
+
+        String key = "actionbar.mxt.technique.holding";
+        if (Component.translatable(key).getString().equals(key))
+            throw new IllegalStateException("The hold progress message has no translation: " + key);
+        // It must carry both the bar and the number, or it would not show progress at all.
+        if (Component.translatable(key, "#---------", 10).getString().equals(key))
+            throw new IllegalStateException("The hold progress message ignores its arguments");
+    }
+
+    private static boolean taught(Pig reader, String technique) {
+        Identifier id = Identifier.parse(technique);
+        return reader.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques().stream()
+                .anyMatch(value -> HolderHelper.id(value).equals(id));
+    }
+
+    /**
+     * The feedback a successful learn produces, and the cooldown gate behind it.
+     *
+     * <p>The success message used to be missing entirely: only refusals were reported, so a technique
+     * that <em>was</em> learned looked exactly like the click doing nothing. That is a one-line bug with
+     * no crash and no log, which is precisely the kind this audit exists to hold down - so the message
+     * key is asserted to exist rather than assumed.</p>
+     *
+     * <p>The cooldown itself cannot be exercised here: it applies to {@link Player}, and the only
+     * entity this audit can build is a pig. What is checked instead is the gate it goes through - a
+     * non-positive config disables it - which is the part that could silently rot if the default were
+     * changed to zero.</p>
+     */
+    private static void verifyLearnFeedback() {
+        // Both messages belong to one family and must stay in step: a player who sees the refusal
+        // message must also be able to see the success one.
+        for (String key : List.of("actionbar.mxt.technique.learned", "actionbar.mxt.technique.failed"))
+            if (Component.translatable(key).getString().equals(key))
+                throw new IllegalStateException("A learning message has no translation: " + key);
+        // The success message has to name the technique, or "learned" would not say what was learned.
+        if (!Component.translatable("actionbar.mxt.technique.learned").getString().contains("%s"))
+            throw new IllegalStateException("The success message must name the technique it reports");
+
+        int cooldown = MxtServerConfig.techniqueLearnCooldown();
+        if (cooldown < 0)
+            throw new IllegalStateException("The learn cooldown must not be negative: " + cooldown);
+        // A pig is not a player, so `learn` must survive being asked to cool down for one rather than
+        // throwing on the cast.
+        Pig animal = new Pig(EntityType.PIG,
+                ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
+                        .server().overworld());
+        SpiritIdentityAttachment identity = animal.getData(MxtAttachments.SPIRIT_IDENTITY);
+        if (!TechniqueItemService.use(animal, new ItemStack(MxtTestTechniqueItems.IRON_BODY_MANUAL.get()))
+                || identity.learnedTechniques().isEmpty())
+            throw new IllegalStateException("A non-player learner must still learn without a cooldown");
+    }
+
+    /**
+     * The hold animation field: the declared value, the default, and the values the whitelist refuses.
+     *
+     * <p>The refusals are the point of the whitelist, so they are asserted by decoding JSON rather than
+     * by reading the list. A list that is right but never consulted would pass a check written against
+     * the list itself.</p>
+     */
+    private static void verifyHoldAnimations(TechniqueBinding declared, TechniqueBinding instant) {
+        if (declared.holdAnimation() != ItemUseAnimation.BRUSH)
+            throw new IllegalStateException("A held manual did not keep its declared hold_animation: "
+                    + declared.holdAnimation());
+        if (instant.holdAnimation() != TechniqueBinding.DEFAULT_HOLD_ANIMATION)
+            throw new IllegalStateException("An instant manual did not fall back to the default animation: "
+                    + instant.holdAnimation());
+
+        // The jade slip asks for a hold without naming an animation, which is the case the default covers.
+        TechniqueBinding undeclared = ItemBindingService.technique(new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get()))
+                .orElseThrow(() -> new IllegalStateException("The jade slip did not resolve its binding"));
+        if (!undeclared.requiresHold() || undeclared.holdAnimation() != TechniqueBinding.DEFAULT_HOLD_ANIMATION)
+            throw new IllegalStateException("An undeclared hold_animation did not take the default: "
+                    + undeclared.holdAnimation());
+
+        // Every allowed animation has to survive a round trip, or the whitelist would be advertising
+        // values the codec then rejects. The binding holds a registry reference, so this needs the
+        // server's registry access rather than plain JsonOps.
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE,
+                ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
+                        .server().registryAccess());
+        for (ItemUseAnimation animation : TechniqueBinding.ALLOWED_ANIMATIONS) {
+            DataResult<TechniqueBinding> decoded = TechniqueBinding.CODEC.parse(ops,
+                    holdBindingJson(animation.getSerializedName()));
+            if (decoded.result().isEmpty() || decoded.result().orElseThrow().holdAnimation() != animation)
+                throw new IllegalStateException("The whitelist allowed an animation the codec rejects: " + animation
+                        + " (" + decoded.error().map(DataResult.Error::message).orElse("no value") + ")");
+        }
+
+        // SPYGLASS is refused because vanilla reaches outside the item from it: the pose *is*
+        // Player#isScoping, which locks the field of view to 0.1 and drops mouse sensitivity in classes
+        // no mod can reach, and it is the one pose that renders no item at all.
+        for (String refused : List.of("spyglass", "eat", "drink", "bow", "trident", "crossbow", "spear")) {
+            if (TechniqueBinding.CODEC.parse(ops, holdBindingJson(refused)).result().isPresent())
+                throw new IllegalStateException("The whitelist let through a side-effecting animation: " + refused);
+        }
+        // An animation without a hold is rejected too: nothing would ever play it. A non-default value
+        // is used on purpose - "block" *is* the default, so writing it on an instant binding asks for
+        // nothing and is correctly accepted.
+        Map<JsonElement, JsonElement> instantFields = new LinkedHashMap<>();
+        instantFields.put(new JsonPrimitive("items"), new JsonPrimitive("minecraft:stick"));
+        instantFields.put(new JsonPrimitive("technique"), new JsonPrimitive("mxt_test:qingxiao_breathing_manual"));
+        instantFields.put(new JsonPrimitive("hold_animation"), new JsonPrimitive("brush"));
+        DataResult<TechniqueBinding> orphaned = TechniqueBinding.CODEC.parse(ops,
+                JsonOps.INSTANCE.createMap(instantFields));
+        if (orphaned.result().isPresent())
+            throw new IllegalStateException("An animation on an instant binding must not decode");
+
+        // ...while the same field on a *held* binding is accepted, so the check above is about the
+        // missing learn_time and not about the animation.
+        Map<JsonElement, JsonElement> heldFields = new LinkedHashMap<>();
+        heldFields.put(new JsonPrimitive("items"), new JsonPrimitive("minecraft:stick"));
+        heldFields.put(new JsonPrimitive("technique"), new JsonPrimitive("mxt_test:qingxiao_breathing_manual"));
+        heldFields.put(new JsonPrimitive("learn_time"), new JsonPrimitive(20));
+        heldFields.put(new JsonPrimitive("hold_animation"), new JsonPrimitive("brush"));
+        if (TechniqueBinding.CODEC.parse(ops, JsonOps.INSTANCE.createMap(heldFields)).result().isEmpty())
+            throw new IllegalStateException("A held binding must accept a non-default animation");
+    }
+
+    /**
+     * A minimal held binding carrying one animation, for the codec checks above.
+     */
+    private static JsonElement holdBindingJson(String animation) {
+        Map<JsonElement, JsonElement> fields = new LinkedHashMap<>();
+        fields.put(new JsonPrimitive("items"), new JsonPrimitive("minecraft:stick"));
+        fields.put(new JsonPrimitive("technique"), new JsonPrimitive("mxt_test:qingxiao_breathing_manual"));
+        fields.put(new JsonPrimitive("learn_time"), new JsonPrimitive(20));
+        fields.put(new JsonPrimitive("hold_animation"), new JsonPrimitive(animation));
+        return JsonOps.INSTANCE.createMap(fields);
     }
 
     private static void verifyFormulaDiagnostics() {
@@ -1347,18 +1867,18 @@ public final class MxtTestMod {
      */
     private static void verifyInformationColumns() {
         // A narrow window: 90 px of row, the widest label is 36 px, the value wants 54 px.
-        InformationHelper.Columns fitted = InformationHelper.columns(90, 36, 54);
+        Columns fitted = InformationHelper.columns(90, 36, 54);
         if (fitted.nameWidth() != 28 || fitted.valueWidth() != 54)
             throw new IllegalStateException("Information columns did not give the value its own width: " + fitted);
         // A short value leaves the full label width alone, which is what keeps values aligned.
-        InformationHelper.Columns aligned = InformationHelper.columns(90, 36, 6);
+        Columns aligned = InformationHelper.columns(90, 36, 6);
         if (aligned.nameWidth() != 36 || aligned.valueWidth() != 46)
             throw new IllegalStateException("Information columns did not keep the label width while it fits: " + aligned);
         // A value that cannot fit anywhere still keeps a quarter of the row for the label.
-        InformationHelper.Columns floored = InformationHelper.columns(90, 36, 200);
+        Columns floored = InformationHelper.columns(90, 36, 200);
         if (floored.nameWidth() != 22 || floored.valueWidth() != 60)
             throw new IllegalStateException("Information columns did not floor the label width: " + floored);
-        InformationHelper.Columns degenerate = InformationHelper.columns(1, 36, 200);
+        Columns degenerate = InformationHelper.columns(1, 36, 200);
         if (degenerate.nameWidth() < 0 || degenerate.valueWidth() < 1)
             throw new IllegalStateException("Information columns went negative on a degenerate row: " + degenerate);
     }

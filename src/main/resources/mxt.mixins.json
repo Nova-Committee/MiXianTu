@@ -3,6 +3,8 @@
   "package": "com.iafenvoy.mxt.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": [
+    "ItemMixin",
+    "LivingEntityMixin",
     "MinecraftServerRuntimeAccessor"
   ],
   "client": [

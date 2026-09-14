@@ -1,0 +1,18 @@
+{
+  "grade": "mystic",
+  "icon": "mxt_test:textures/item/qingxiao_spirit_crystal.png",
+  "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
+  "exclusive_tags": ["mxt_test:technique/azure_water"],
+  "cultivation_modifier": 1.35,
+  "passive_modifiers": [
+    {
+      "attribute": "minecraft:max_health",
+      "id": "mxt_test:technique/azure_water_manual",
+      "amount": 2,
+      "operation": "add_value"
+    }
+  ],
+  "granted_abilities": ["mxt_test:water_shield"],
+  "default_stage": "mxt_test:azure_water_1",
+  "mastery_resource": "mxt_test:water_power"
+}

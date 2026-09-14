@@ -1,0 +1,20 @@
+{
+  "grade": "earth",
+  "icon": { "id": "minecraft:written_book" },
+  "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
+  "exclusive_tags": ["mxt_test:technique/iron_body"],
+  "cultivation_modifier": 1.15,
+  "granted_abilities": [],
+  "default_stage": "mxt_test:iron_body_1",
+  "mastery_resource": "mxt_test:qi",
+  "configuration": {
+    "mxt_test:iron_body_1": {
+      "condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
+      "ability": ["mxt_test:sword_focus"]
+    },
+    "mxt_test:iron_body_2": {
+      "condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 6 },
+      "ability": ["mxt_test:sword_focus", "mxt_test:artifact_guard"]
+    }
+  }
+}

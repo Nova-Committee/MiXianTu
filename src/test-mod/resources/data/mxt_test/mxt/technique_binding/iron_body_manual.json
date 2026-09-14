@@ -1,0 +1,7 @@
+{
+  "items": "mxt_test:iron_body_manual",
+  "technique": "mxt_test:iron_body_manual",
+  "conditions": [
+    {"type": "mxt:always_true"}
+  ]
+}

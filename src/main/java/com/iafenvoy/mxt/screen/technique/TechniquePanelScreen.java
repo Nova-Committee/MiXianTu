@@ -196,7 +196,7 @@ public final class TechniquePanelScreen extends Screen {
             return this.getWidth();
         }
 
-        private static final class RowEntry extends ObjectSelectionList.Entry<RowEntry> {
+        private static final class RowEntry extends Entry<RowEntry> {
             private final TechniqueProgress.Entry row;
             private final Progress progress;
 

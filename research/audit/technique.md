@@ -18,6 +18,14 @@
 > - 2026-09-13：用户调试功法面板时发现**信息面板不停报 `Information entry contains more than one line`**（见 §13）。根因不是这次新增的界面，而是 `InformationPanelScreen` 把"所有条目标题的最大宽度"当成每一行的标题列宽，一条长标题会把**所有**数值列挤到换行并被省略号截断；加上条目每次刷新都重建、`overflowReported` 随之复位，于是每秒重复报错。已改成**按需分配列宽**（`InformationHelper.columns`，纯算术、可服务端审计）、诊断按内容去重，并补上测试包缺失的 5 个显示名（含日志里那条 `realm_stage.mxt_test.spirit_power_refining`）+ 新增"面板会打印名字的定义都必须有翻译键"的审计。
 > - 2026-09-13：用户看了功法面板截图后反馈"字看不清而且顶格"（见 §12.5）。查 MC 源码确认是 `ObjectSelectionList` 自带的界面装饰：列表底色贴图把手画背景压成平灰、首行上方那条原版分隔线紧贴第一行文字。已把 `extractListBackground` / `extractListSeparators` 置空、把 `scrollBarX()` 收进面板内、空状态文案改用正常文字色并内缩。
 > - 2026-09-13：**把图标统一成一套**（见 §14）：`HotbarIcon` 提升为双端通用 `IconReference`（内部 `Either<Identifier, ItemStackTemplate>`），新增客户端渲染 Helper `IconRenderer`，`ability`/`resource`/`badge`/`forging_method`/`cultivation_technique` 全部改用它，并消掉热键栏与热键配置界面里重复的那段渲染逻辑。
+> - 2026-09-13：`IconReference.CODEC` 改为**内联** `Codec.either(Identifier.CODEC, ItemStackTemplate.CODEC)`（去掉 `texture`/`item` 两个键），并给 `OriginsRenderData`/`TexturedRenderData` 的贴图字段打上"是否接入 `IconReference`"的 TODO（见 §14 的返工段）。
+> - 2026-09-13：`technique_binding` 新增 `learn_time`（长按 tick 数）与 `hold_animation`（长按播放的动作，白名单制），并补两本可直接测试的功法（见 §15）。
+> - 2026-09-13：**修掉"学会成功没有任何提示"**（只写了失败分支），并新增学会后的物品冷却（原版 `CooldownTracker`，长度走服务端配置；只有成功才计）（见 §16）。
+> - 2026-09-13：**修掉"长按学不会"**：学会原本挂在 `Stop`，而 `Stop` 在 `Consumable.onConsume` 吃掉物品之后才到，绑定已解析不到 → 书少一本、功法没学到。改挂 `Finish`（早于消耗）并先摘掉 `CONSUMABLE`（见 §17，同时更正 §15 的错误结论）。
+> - 2026-09-13：**修掉"用一次就没了"**：`Finish` 事件携带的 `ItemStack` 是 `useItem.copy()` 的**副本**，清它的组件等于没清，真身仍被吃掉。改为同时清理手持 stack（见 §18）。
+> - 2026-09-13：**新增 `/mxt technique repair`**：引用已删除定义的功法会让整个 `SpiritIdentityAttachment` 解码失败并静默回退到空（面板空白、书没反应、无报错）。命令清理失效引用与重复项并重建派生状态（见 §19）。
+> - 2026-09-13：**修掉"长按拿手上没反应/刚 Start 就没了"的真正原因**：hold 的时长与动作原本靠"点击事件里往 stack 写 `CONSUMABLE`"，而那个写入**只在服务端**执行——客户端因此算出 duration=0、animation=NONE，玩家从头到尾没有进入过真正的 hold。改为 `TechniqueManualItem` 重写 `use`/`getUseDuration`/`getUseAnimation`，两边跑同一段代码（见 §20）。**约束：声明 `learn_time` 的物品必须是该类**，否则记录 ERROR 点名绑定。
+> - 2026-09-13：**定案为 mixin**（见 §21）。§20 的物品类方案**取消**——它破坏了"绑定作用于任何已注册物品（含 KubeJS）"这一承诺。改为 `ItemMixin` 注入 `Item.use`/`getUseDuration`/`getUseAnimation` 三处，取值来自两端各自捕获的数据包绑定；不再写任何组件，也就不再有"抢在游戏吃掉它之前摘组件"的竞态。`TechniqueManualItem`、`TechniqueHoldComponent`、`TECHNIQUE_HOLD` 全部删除。
 
 ## 0. 边界澄清（避免概念混淆）
 
@@ -415,3 +423,382 @@ Information entry contains more than one line (width=90): 维度 = overworld
 **顺带修的踩坑点**：`ForgingMethod` 的 `display_icon` 以前写贴图路径会静默变成空图标（因为用 `BuiltInRegistries.ITEM` 解析），现在贴图走字符串分支就真的是贴图。
 
 **一次返工（同日）**：初始实现把两支写成 `{"texture": ...}` / `{"item": ...}` 两个键，用 `Codec.xor` 保证"恰好二选一"。按用户要求改成**内联**：去掉两个键，直接用 `Codec.either(Identifier.CODEC, ItemStackTemplate.CODEC)`。代价是 `either` 的语义是"先成功者胜"而不是"互斥"，而 `Identifier.CODEC` 与 `ItemStackTemplate.CODEC` **都接受裸字符串**（后者是 `Codec.withAlternative(MAP_CODEC.codec(), Item.CODEC, ...)`，见 `ItemStackTemplate.java:29`），所以：(1) 物品必须写成对象 `{"id": ...}`，裸字符串永远归贴图；(2) "两个都写"不再报错（该形状本身已不存在）。相应地删掉了测试里"两个都写要被拒绝"的断言，换成钉死"裸字符串归贴图"的断言。
+
+## 15. 长按学习与长按动作（2026-09-13）
+
+**需求**：功法拿在手上，满足条件后**长按**一段时间即可学会（类似吃东西），时长写在绑定 JSON 里；随后用户要求默认动作从"吃东西"换掉，并且**数据包可以自己选动作**。
+
+**`technique_binding` 新增两个字段**
+
+| 字段 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- |
+| `learn_time` | Integer | `0` | 长按 tick 数，范围 `0..72000`。`0` = 右键即学（原行为）。用 tick 而不是秒，因为 use 周期本来就按 tick 计数 |
+| `hold_animation` | String | `block` | 长按播放的动作。仅在 `learn_time > 0` 时有意义 |
+
+**为什么必须挂在 `RightClickItem` 上而不是 `LivingEntityUseItemEvent.Start`**
+
+这是本次最容易踩的坑。26.1.2 的 `Item.use`（`Item.java:207-230`）**先读 `DataComponents.CONSUMABLE`**，没有这个组件就落到 `EQUIPPABLE` / `BLOCKS_ATTACKS` / `KINETIC_WEAPON` 分支，最后返回 `InteractionResult.PASS`。也就是说普通物品**根本不会开始 use 周期**，`Start` 永远不会触发，在那里写组件是死代码。所以时长必须在 `RightClickItem` 阶段就写进手持 stack 的组件里（此时 `Item.use` 还没执行）。
+
+配套地，`use()` 对长按绑定必须返回 `false`。返回值的语义是"是否认领/取消这次点击"，返回 `true` 会让调用方取消交互，而这次点击正是 use 周期的起点——取消掉长按就永远不会开始。瞬发绑定仍然返回 `true` 以认领点击。
+
+**在哪学会**：`Finish`。~~`Stop`，不是 `Finish`。`Finish` 只在物品**真的被消耗**时触发，书是不会被吃掉的。~~ **这段判断是错的，见 §17**：`Finish` 并不是"只在被消耗时触发"，它是 `completeUsingItem` 在时长走完那一刻发的，**早于**消耗；而 `Stop` 是取消路径，且在它触发前 `Consumable.onConsume` 已经把书吃掉了一本。按这里写的原方案实现后，长按完全学不会。
+
+**动作白名单**（`TechniqueBinding.ALLOWED_ANIMATIONS`）
+
+用户先要求默认 `SPYGLASS`，在得知下面这段源码事实后改选"白名单排除 spyglass"：
+
+`SPYGLASS` 无法做成"只要姿势、屏蔽副作用"，因为**姿势本身就是副作用**：
+- `ItemInHandRenderer:431` 是 `if (!player.isScoping())` **包住整个手部渲染**——`isScoping()` 为真时手臂**连同物品**都不画。也就是说这个姿势的"视觉"其实是"没有视觉"，画面来自遮罩；屏蔽 scoping 之后它和 `NONE` 完全等价。
+- `Player.isScoping()`（`Player.java:1991-1993`）读的是 `getUseItem().canPerformAction(ItemAbilities.SPYGLASS_SCOPE)`；而 FOV 锁 0.1（`AbstractClientPlayer:111-112`）与低鼠标灵敏度（`MouseHandler:394`）都是**无条件**跟随 `isScoping()` 的，且在 mod 够不到的类里。
+- `AvatarRenderer:125-127` 的 `ArmPose.SPYGLASS` 只作用于第三人称；`ItemInHandRenderer` 的 switch 里**根本没有 SPYGLASS 分支**。
+
+最终白名单 `block` / `brush` / `bundle` / `none` / `toot_horn`，其余全部在加载期报错。排除理由：
+- `spyglass`：见上。
+- `eat` / `drink` / `spear`：声明了 `hasCustomArmTransform`，`ItemInHandRenderer:494` 会因此**跳过**本该把物品举起来的手臂变换，而这些物品没有配套手臂模型；`spear` 还会读 kinetic-hit 计时器。
+- `bow` / `trident` / `crossbow`：按"已蓄力多少"缩放姿势，用它们会让阅读看起来像在拉一张不存在的弓。
+
+默认 `block` 的理由：它在客户端只有一段纯姿势变换，且被 `if (!(itemStack.getItem() instanceof ShieldItem))` 包着——我们的是普通 `Item`，所以这段分支**正好会执行**（`ItemInHandRenderer:507-514`），且不带任何全局副作用。`hasCustomArmTransform` 为 false，也不会触发 `isScoping()`。
+
+**实现位置**
+
+| 文件 | 改动 |
+| --- | --- |
+| `data/item/TechniqueBinding.java` | 加 `learnTime` / `holdAnimation` 两个组件；`NO_HOLD`、`DEFAULT_HOLD_ANIMATION`、`ALLOWED_ANIMATIONS`；`validate` 拒绝"无 `learn_time` 却写了非默认动作"和"动作不在白名单" |
+| `runtime/cultivation/TechniqueItemService.java` | 删掉硬编码的 `HOLD_ANIMATION = EAT`；`onItemClick` 在点击时把 `Consumable` 写进手持 stack；`onUseStop` 在按满时学会；`use()` 对长按绑定返回 `false` |
+
+**测试**（`MxtTestMod.verifySampleTechniques` + `verifyHoldAnimations`）
+- 两本功法：`azure_water_manual`（`learn_time: 60` + `hold_animation: brush`）、`iron_body_manual`（无 `learn_time`，右键即学）；
+- 玉简 `qingxiao_breathing_jade_slip` 补了 `learn_time: 40` 但不写 `hold_animation`，覆盖**默认值**路径；
+- 白名单五个值逐个 round-trip 解码，`spyglass`/`eat`/`drink`/`bow`/`trident`/`crossbow`/`spear` 逐个断言**被拒绝**；
+- 无 `learn_time` 却写非默认动作 → 拒绝；同样的动作写在有 `learn_time` 的绑定上 → 接受。
+
+**归属修正（同日）**：两本手册最初注册在主 mod 的 `MxtItems`，用户指出**测试内容不该进主 mod**。已移到 `MxtTestTechniqueItems`（`mxt_test` 命名空间，纯 `Item` + 数据包绑定，无自带行为），主 mod 侧同步删除：`MxtItems` 的两项、`assets/mxt/items` 与 `assets/mxt/models/item` 各两个文件、`assets/mxt/lang` 里两条 `item.mxt.*`。物品 id 从 `mxt:azure_water_manual` 改成 `mxt_test:azure_water_manual`，`technique_binding` 的 `items` 字段与文档示例一并跟着改。放在主 mod 的代价是把两个半成品道具塞进每个玩家的创造模式物品栏，并把它们的 id 冻进存档。
+
+**两次被自己的审计抓到的错**
+1. 用裸 `JsonOps` 解 `technique_binding`，但 `technique` 是 `RegistryFixedCodec`，必须配 `RegistryOps.create(JsonOps.INSTANCE, server.registryAccess())`——参考同文件里 `ItemMatcher.ENTRIES_CODEC` 的既有写法。
+2. 断言"无 `learn_time` + `hold_animation` 要被拒绝"时写的是 `"block"`，而 `block` **就是默认值**，所以 `validate` 的第一条（`learnTime <= NO_HOLD && holdAnimation != DEFAULT`）**本就该放行**。是断言写错了，不是编解码器。改成用非默认的 `"brush"` 后通过。
+
+## 16. 学会反馈与物品冷却（2026-09-13）
+
+**起因**：用户发现"学习成功没有提示"，并要求加物品冷却。
+
+**成功提示缺失**（真 bug）。`TechniqueItemService.learn` 原来只写了失败分支：
+
+```java
+if (!result.learned()) notifyLearnFailure(entity, binding.technique(), result);
+```
+
+`learned == true` 时**一行都不发**。而失败有完整的一族消息（`actionbar.mxt.technique.failed` + 五个 `failure.*`），成功什么都没有——玩家看到的现象是"右键没反应"，与"没匹配到绑定"无法区分。这类"没有崩溃、没有日志、只是少了一行"的缺陷正是审计该守住的，所以修复后把消息键的存在性也写成了断言。
+
+补法：`learn` 拆成两条路径，成功走新增的 `notifyLearned`（`actionbar.mxt.technique.learned`，绿色，动作栏，与失败同一条通道——两者都是瞬时状态而不是记录）。
+
+**物品冷却**。按用户要求：**用原版实现**、**长度在 config（tick）**。初期为"只在成功时计"，**后按用户要求改为无论成功失败都计**（见 §23）。
+
+| 位置 | 改动 |
+| --- | --- |
+| `config/MxtServerConfig.java` | `cultivation` 页新增 `techniqueLearnCooldown`（`config.mxt.server.cultivation.technique_learn_cooldown`，默认 `60`，范围 `0..72000`，`0` 关闭） |
+| `runtime/cultivation/TechniqueItemService.java` | `learn` 在判定结果**之前**调 `applyCooldown(entity, stack)` → `player.getCooldowns().addCooldown(stack, ticks)` |
+
+走原版 `Player#getCooldowns` 而不是自建计时器的好处：热键栏的灰色扫描与 `mxt:on_cooldown` 物品条件**零成本**就能读到，也不需要新增数据组件。
+
+**测试**（`MxtTestMod.verifyLearnFeedback`）
+- 两条消息键都能解析出翻译（不返回 key 本身），且成功消息含 `%s`（否则"学会了"却不说学会了什么）；
+- 配置项非负；
+- 冷却**无法**在此审计里真正触发：它只对 `Player` 生效，而审计唯一能造的实体是 `Pig`。改为断言"非玩家学会时不会因为冷却而抛异常或漏学"——即 `use` 仍返回 `true` 且功法真的进了 `learnedTechniques`。这是能覆盖的部分，剩下的是客户端手感。
+
+## 17. 长按学不会 —— 学错事件了（2026-09-13）
+
+**起因**：用户实测"长按的碧水诀好像学不会"。
+
+**这是个真 bug，而且 §15 的审计完全没抓到**。之前所有断言都直接调 `TechniqueItemService.use(...)`，而 `.use()` 对长按绑定**永远返回 `false` 并且什么都不做**（§15 的设计如此）——等于整套长按路径一行都没被验过。审计全绿，游戏里全坏。
+
+**根因：学会挂在了 `Stop` 上。** 追 MC 26.1.2 的 use 周期：
+
+```
+LivingEntity.tick → updatingUsingItem (3455)
+  → updateUsingItem (3503):
+      --useItemRemaining <= 0  &&  !useOnRelease()  →  completeUsingItem() (3602)
+          → EventHooks.onItemUseFinish(...)   ← Finish 在这里
+          → useItem.finishUsingItem(...)      → Consumable.onConsume → stack.consume(1, user)  ← 物品在这里被吃掉
+          → stopUsingItem() → ... onStopUsing ...
+      （松手 / 中途取消）                       ← Stop 在这里
+```
+
+`Stop` 是**取消**路径（`releaseUsingItem()`），而按满走的是 `completeUsingItem()`。两者都会走到 `stopUsingItem()`，但顺序上 `Consumable.onConsume` 已经在 `Finish` 与 `stopUsingItem` 之间把 `stack.consume(1, user)` 执行完了。
+
+于是 `Stop` 里的判定同时错两处：
+
+1. **物品已经被吃掉了一本**（`shrink(1)`）；
+2. 更致命的是，此时手上的 stack 已经空了，`ItemBindingService.technique(stack)` 解析不到绑定，`onUseStop` 直接 `return` —— **学会逻辑根本没执行**。
+
+玩家的观感就是"长按读完了，书少了一本，功法没学会"。
+
+**修法**
+
+| 改动 | 说明 |
+| --- | --- |
+| 学会移到 `Finish` | 这是唯一同时满足"时长走完"且"物品还在"的时刻。`Finish` 从 `completeUsingItem` 触发，早于消耗 |
+| 在 `Finish` 里**先** `clearHold(stack)` 再 `learn(...)` | 把 `CONSUMABLE` 摘掉，后面的 `Consumable.onConsume` 就没东西可吃了。顺序反过来仍会被吃掉 |
+| `Stop` 改为只清理组件 | 中途松手是取消路径，不该学会，但必须把组件摘掉 |
+| 抽出 `arm(entity, stack)` | `RightClickItem` 构造器要求真 `Player`，审计造不出来；把"是否武装"的判定抽成可单测的方法 |
+
+**组件必须摘掉**：`CONSUMABLE` 正是原版判断"这东西能吃"的依据。留在手上，一次普通右键就会把功法书直接吃掉且什么也学不到。
+
+**测试**（`MxtTestMod.verifyHoldLifecycle`）按真实事件顺序回放：武装 → `Finish`（断言**物品数量不变** + 功法已学会 + 组件已摘）→ 另一只实体武装后 `Stop`（断言组件已摘 + 没学会）。
+
+**变异测试验证**：把学会改回挂在 `Stop` 上重跑，审计**确实报错**（`A read manual kept its consumable and would be eaten next click`），改回即通过。这一步是必要的——否则无法证明新断言真的在覆盖这条路径，而不是又一次"全绿但没测到"。
+
+**与 §15 的关系**：§15 写的"学会在 `Stop`、用 `getUseItemRemainingTicks() == 0` 判断按满"是**错的**，已按本节更正。当时只读了 `Item.use` 一侧就下结论，没有把 `completeUsingItem` → `onConsume` 这条链追到底。
+
+## 18. 长按"用一次就没了"—— `Finish` 带的是副本（2026-09-13）
+
+**起因**：用户实测"使用了一次后并没有学会，然后就不能再次使用了"。
+
+这是 §17 修复**没修干净**留下的：学会确实动了，但 `clearHold` 摘错了对象，书照样被吃掉，于是"用一次就没了、也不能再用"。
+
+**根因：`Finish` 事件里的 `ItemStack` 是副本。**
+
+`completeUsingItem`（`LivingEntity.java:3602`）：
+
+```java
+ItemStack copy = this.useItem.copy();                                  // 3609 ← 副本
+ItemStack result = EventHooks.onItemUseFinish(this, copy, getUseItemRemainingTicks(),
+                                              this.useItem.finishUsingItem(this.level(), this));  // 3610
+```
+
+第 3610 行同时做了两件事，顺序很关键：
+1. **先**把 `copy` 交给 `EventHooks.onItemUseFinish` 发事件 —— 所以 `event.getItem()` 是那份副本；
+2. **再**（同一个表达式里）调 `this.useItem.finishUsingItem(...)`，而它内部（`Item.java:232-235`）读的是 **`this.useItem`** 的 `CONSUMABLE`，然后 `onConsume` → `stack.consume(1, user)`。
+
+我在事件处理器里对 `event.getItem()` 调 `remove(CONSUMABLE)`，改的是那份**马上就要被丢掉的副本**；`this.useItem`（真正在手上的那份）组件还在，于是照吃不误。玩家看到的就是"读一次，书没了，功法没学会"。
+
+**修法**：`clearHold(entity, stack)` 改成同时清 **事件带来的 stack** 和 **`entity.getItemInHand(entity.getUsedItemHand())`**（两者不是同一对象时才处理第二个）。`onUseFinish` 也改为优先取手上的 stack。
+
+**审计为什么又漏了**：`verifyHoldLifecycle` 里写的是
+```java
+ItemStack manual = armHold(reader);
+TechniqueItemService.onUseFinish(new Finish(reader, manual, 0, manual.copy()));
+```
+事件参数直接传了**手上那个对象本身**，而 vanilla 传的是 `copy()`。两者相等让"清副本 vs 清真身"这个区别完全消失，断言却是在 `manual` 上做的——所以**必然通过**。已改成传 `handStack.copy()`，断言改读 `reader.getItemInHand(MAIN_HAND)`。
+
+**变异测试验证**：把 `clearHold` 改回只清事件 stack，审计报 `An abandoned hold left the manual edible`；改回即通过。
+
+**教训**：这条 bug 和 §17 是同一类——**用"我以为是那个对象"代替了"vanilla 实际传的是哪个对象"**。修 §17 时我只验证了"`Finish` 早于消耗"这个时间顺序，没有再核对一次**参数是不是同一个引用**。
+
+## 19. 失效功法引用与 `/mxt technique repair`（2026-09-13）
+
+**起因**：用户报告"好像数据损坏了，目前卡在了一个中间位置，学习学不了，面板也不显示"，并要求加一个一键清理无效功法数据的修复指令。
+
+**🚨 本节最初的根因判断是错的，已订正。** 我最初写的是"`RegistryFixedCodec` 遇到无法解析的 id 会让**整个附件解码失败**并静默回退到全空"。用户提醒 `util.codec` 里有自动忽略失败的 codec，实查后发现：
+
+```java
+// CollectionCodecs.java:25-31
+public static <K, V> Codec<Map<K, V>> map(Codec<K> keyCodec, Codec<V> valueCodec) {
+    return AutoIgnoreMapCodec.create(keyCodec, valueCodec);
+}
+public static <T> Codec<List<T>> list(Codec<T> elementCodec) {
+    return AutoIgnoreListCodec.create(elementCodec);
+}
+```
+
+`SpiritIdentityAttachment` **本来就在用**这两个宽松 codec。`AutoIgnoreListCodec.accept`（第 46-50 行）逐元素 decode，失败的元素**只记一条 WARN 并跳过**，其余元素正常进入列表。所以**失效引用只损失它自己**，不会拖垮附件。
+
+**实证**（`MxtTestMod.verifyStaleReferenceDecode`）：构造含 `["mxt_test:sword_manual", "mxt_test:never_existed"]` 的附件 JSON 解码，断言 `learnedTechniques().size() == 1`（好的存活、坏的消失）且附件整体解码成功。服务端日志确认：
+
+```
+[WARN] [AutoIgnoreListCodec]: Ignoring invalid list element: Failed to get element mxt_test:never_existed
+```
+
+**同时否掉了"失效引用"这个假设本身。** 既然存在失效引用必然打 WARN，就去查了用户的客户端日志：
+
+```
+（搜索 'Ignoring invalid' / 'Failed to get element' —— 零结果）
+```
+
+**没有任何 WARN**，说明用户存档里**不存在失效引用**。面板空白与书无反应**另有原因**，与该命令无关。
+
+**我的错误性质**：看到 `RegistryFixedCodec` 是"整体失败"语义就推出了结论，**没有实读 `CollectionCodecs` 的实现**（它就在同一个工程里）。而且我在只有推测的情况下，把结论写进了 `docs/数据包格式.md` 和 javadoc，还写了"日志零报错"这种**可以被一条 grep 证伪**的具体论断。这是本轮最严重的问题：**用推断冒充已验证的事实，并写进文档固化下来。**
+
+**保留下来的东西**：命令本身仍有价值（清理失效引用、去重、重建派生状态），但它的定位从"修你这个 bug"降级为"一个正确但与你当前问题无关的工具"。文档已改写为：看到 `Ignoring invalid list element` 才是本节的情况，看不到就别用它。
+
+**测试**（`MxtTestMod.verifyRepairSweep`）：`resolves` 对真实功法/未定义 id 分别返回 true/false；干净列表不被改动（保证幂等、不误删）；重复项被清除；五个消息键都能解析出翻译。
+
+**测试中踩的坑**：本想构造"未绑定 holder"模拟失效引用，但 `Holder.Reference` 构造器是 `protected`、`Registry` 只有 `createIntrusiveHolder(T)`，外部造不出来。改为直接构造 JSON 走真实解码路径——**这反而成了发现根因判断错误的关键一步**。
+
+## 20. 长按的真实根因：服务端/客户端各算各的（2026-09-13）
+
+**起因**：用户报告"碧水诀拿手上无法使用，第一人称会有个向下的动作，应该是刚 Start 就被取消了，聊天栏也没报错"。
+
+**先做的事：让证据说话，而不是继续推断。** 加 `/mxt technique diagnose`，用户在游戏内实测输出：
+
+```
+手持物品：mxt_test:azure_water_manual
+绑定功法：mxt_test:azure_water_manual；长按时长：60 tick；动作：brush
+物品使用门槛：OK
+是否已学会：no（已会功法数 1）
+学习条件：PASS
+是否在冷却中：no
+```
+
+**服务端每一项都是好的。** 这一条把 §17/§18 修的全部内容、以及绑定/门槛/条件全部排除掉了——问题不在逻辑，而在**客户端和服务端对同一件物品的理解不一致**。
+
+**根因**：hold 的实现是"在点击事件里往 stack 上写 `CONSUMABLE` 组件"，而 `arm()` 开头有
+
+```java
+if (entity.level().isClientSide()) return;   // ← 只在服务端写
+```
+
+于是同一个物品，两边的回答完全不同：
+
+| 问题 | 服务端 | 客户端 |
+| --- | --- | --- |
+| `Item.use`（`Item.java:207-211`）读 `CONSUMABLE` | 有 → 启动 use 周期 | **无 → 返回 `PASS`，根本不启动** |
+| `Item.getUseDuration`（`:328-335`） | `consumeTicks()` = 60 | **0** |
+| `Item.getUseAnimation`（`:317-326`） | `BRUSH` | **`NONE`** |
+
+而且客户端拿到服务端的"正在使用"标记后，`LivingEntity.onSyncedDataUpdated`（`:3558-3567`）会这样补状态：
+
+```java
+} else if (DATA_LIVING_ENTITY_FLAGS.equals(accessor) && this.level().isClientSide()) {
+    if (this.isUsingItem() && this.useItem.isEmpty()) {
+        this.useItem = this.getItemInHand(this.getUsedItemHand());
+        if (!this.useItem.isEmpty()) {
+            this.useItemRemaining = this.useItem.getUseDuration(this);   // ← 客户端算出来是 0
+        }
+    }
+```
+
+**所以玩家看到的就是**：客户端自己没启动 use（`use` 返回 `PASS` → 普通右键挥手，即"向下的动作"），服务端却在跑一个 60 tick 的 hold；标记同步过来后客户端用 0 当时的剩余量，进度条和姿势全是坏的。**"刚 Start 就被取消"的观感，本质是客户端从头到尾就没有进入过真正的 hold。**
+
+**这也解释了为什么之前三轮都没修对**：§17、§18 修的是**服务端**的事件顺序和组件清理，而那些确实是 bug，但**没有任何一个能修好"客户端不知道有 hold 这回事"**。
+
+**修法：把答案搬到物品上，而不是继续在 stack 上写组件。**
+
+| 新增/改动 | 作用 |
+| --- | --- |
+| `item/TechniqueManualItem`（新） | 重写 `use`/`getUseDuration`/`getUseAnimation`。vanilla 问物品的这三个问题由物品回答，**客户端和服务端跑同一段代码、读同一份数据，因此必然一致** |
+| `data/item/TechniqueHoldComponent`（新） | 承载本次 hold 的 `(duration, animation)`，`use` 里由两边**各自**写入（`Item.use` 客户端也会跑） |
+| `MxtDataComponents.TECHNIQUE_HOLD` | 注册为**非持久化**、但网络同步的组件：它是"此刻正在长按"的瞬时状态，落盘没有意义 |
+
+因此 `TechniqueItemService` 里那一整套 `arm`/`holdComponent`/`clearHold`/`onItemClick` **全部删除**——不再往 stack 上写 `CONSUMABLE`，也就没有"抢在游戏吃掉它之前把组件摘掉"这场竞态。物品不是食物，**永远不会被消耗**。
+
+**设计约束（必须让数据包作者知道）**：**声明了 `learn_time` 的绑定，其物品必须是 `TechniqueManualItem`**。即时学习的绑定不受影响，仍然可以用普通 `Item`。为避免再次出现"数据包完全合法但什么都没发生"，`TechniqueItemService.use` 在遇到"有 hold 绑定但不是该物品类"时会**打一条 ERROR 日志并点名绑定**（同一功法只报一次，不刷屏）。这是这类配置唯一能被发现的渠道。
+
+**测试**（`MxtTestMod.verifyHoldLifecycle` 重写）：
+
+| 步骤 | 断言 |
+| --- | --- |
+| 0 | 测试手册**和**主模组的玉简都是 `TechniqueManualItem`——**这条就是本该一开始就有的守卫** |
+| 1 | 物品报出的 duration/animation **等于绑定里的值**（不是硬编码） |
+| 2 | `Finish` 学会，且**物品数量不变**（不是食物） |
+| 3 | 读完手上不留 hold 标记 |
+| 4 | 中途 `Stop` 不学会、标记清掉 |
+| 5 | 重复阅读不毁书 |
+
+**变异测试验证**：把两个 override 改成"看不到 hold"（`return 0;` / `return ItemUseAnimation.NONE;`，即**精确复现客户端当时的计算结果**），审计报：
+
+```
+IllegalStateException: The manual reported a duration of 0 instead of its learn_time of 60
+```
+
+改回即通过。这证明新断言真的守在坏掉的那一环上。
+
+**测试中发现的真实差异**：`Stop` 传的是**手上的活 stack**（`releaseUsingItem` 第 3641-3643 行先把手持 stack 读回 `useItem` 再发事件），而 `Finish` 传的是**副本**（`completeUsingItem` 第 3609 行 `this.useItem.copy()`）。两者不对称。测试里我先按 `Finish` 的习惯给 `Stop` 传了 `.copy()`，审计立刻报"标记没清掉"——说明这类不对称**必须按真实调用点写测试**，凭习惯套用就会测出一个不存在的情形。
+
+**§15/§17/§18 的定位**：它们记录的服务端问题（学错事件、清错对象）都是真的，但**都不是玩家看到的那个现象的原因**。§18 结尾那句"下一次我会先把 `completeUsingItem` 整段反编译确认"这次做到了，也正是靠完整读 `Item.use` + `onSyncedDataUpdated` 才找到了真正的一环。
+
+## 21. 定案：mixin 到 Item 的三个取值点（2026-09-13）
+
+**起因**：用户提出第三个方案——**不要再用组件，直接 mixin 到"读组件的地方"**，并让我参考他之前写的 `E:\Java\Throwable`。
+
+看过之后确认这是对的方案，而且他之前已经实现过同一形状（`ItemMixin`：`@Inject` 到 `getUseAction` / `getMaxUseTime` / `use` / `onStoppedUsing`）。**§20 我引入 `TechniqueManualItem` 是设计失误**：这个模组自己的承诺是"绑定作用于任何已注册物品"（`ItemBindingService` 类注释明写 *items already registered by Minecraft, a mod, or KubeJS*），`items` 字段也接受 tag，而 **KubeJS 注册的物品不可能继承我的类**。子类方案等于把这个承诺砍掉。
+
+**最终形态**（`mixin/ItemMixin`，注册在 `mxt.mixins.json` 的 `mixins` 里）：
+
+| 注入点 | 作用 |
+| --- | --- |
+| `Item.use` | 有长按绑定时 `startUsingItem(hand)` + `CONSUME`，自己接管这次交互 |
+| `Item.getUseDuration` | 返回绑定的 `learn_time` |
+| `Item.getUseAnimation` | 返回绑定的 `hold_animation` |
+
+**故意不注入 `finishUsingItem`**：手册是普通物品、没有 `CONSUMABLE`，原版实现本身就返回原 stack，**不会被吃掉**。§18 那场"抢在 `onConsume` 之前摘组件"的竞态**因为不再使用那个组件而自然消失**——不是赢下竞态，而是没有竞态了。
+
+**顺带删掉的东西**：`TechniqueManualItem`（删）、`TechniqueHoldComponent`（删）、`MxtDataComponents.TECHNIQUE_HOLD`（删）、`TechniqueItemService.onUseStop` 与那条"物品类不对"的 ERROR 日志（都不需要了）。`MxtItems` 的玉简和测试手册恢复为普通 `Item`。
+
+**取值表**（`TechniqueHoldLookup`）：`getUseDuration`/`getUseAnimation` 在**渲染循环里每帧**都会被问（`ItemInHandRenderer` 的 281/455/493/520/543/568），所以不能每次查注册表。做法是**只捕获长按绑定列表**，按物品惰性匹配并记忆（匹配只看物品身份——已核对四种匹配项 `Item`/`Tag`/`Wildcard`/`Regex` 都不看组件，所以按 `Item` 记忆是安全的）。
+
+**踩到并修掉的坑**：最初版本在事件里遍历全部已注册物品、用 `new ItemStack(item)` 预建整张表 —— **直接崩掉服务器启动**：
+
+```
+Exception caught during firing event: Components not bound yet
+Failed to load datapacks, can't proceed with server load
+```
+
+追到 `Holder$Reference.components()`（`Holder.java:271-274`）：构造 `ItemStack` 会读物品 holder 的组件表，而**数据包加载阶段物品 holder 还没绑定**。所以：**不能在数据包加载期构造 ItemStack**，改为只读绑定列表、按需匹配。顺带确认 `.value()` 在那个时机是安全的（去掉 ItemStack 后即通过）。
+
+**"什么时候捕获"**：`TagsUpdatedEvent`（服务端 `ServerDataLoad` / 客户端 `ClientPacketReceived` 都会触发，两端各自捕获）**加** `ServerStartedEvent`（服务端等数据包完全加载后再捕获一次）。因此**不需要任何"客户端注册表访问"的桥**，也就天然避开了 §20 里指出的那个坑。
+
+> **关于那个坑**：用户那份 `ThrowableRegistry.DYNAMIC_REGISTRY_GETTER` 只从 `MinecraftServer` 取注册表，多人客户端上 `SERVER == null` → `manager == null` → **整个跳过覆盖** → vanilla 返回 0，而服务端返回数据包值，两边不一致。单人下测不出来（集成交互服务端在客户端进程里也非 null）。这是**同一个 bug 的同一形状**。MiXianTu 这边靠"两端各自从自己的同步数据捕获"避免了它。
+> 另外 `ThrowableItemMixin.getUseAction` 之所以没问题，是因为它的动作只依赖一个**同步的 tag**（`isIn(THROWABLE)`），根本不需要注册表——**能让属性退化成 tag 的就不需要跨端取数**，这点值得保留借鉴。（用户要求本次不动那个项目。）
+
+**测试**（`MxtTestMod.verifyHoldLifecycle` 重写）——这次是**真的把 use 周期跑完**：
+
+| 步骤 | 断言 |
+| --- | --- |
+| 0 | 取值表里有这本手册；**即时**手册不在表里 |
+| 1 | `getUseDuration` == 绑定的 `learn_time`、`getUseAnimation` == 绑定的 `hold_animation`（普通物品会答 0 / NONE，所以**这条同时证明 mixin 生效**） |
+| 2 | **真实周期**：`startUsingItem` 后 tick 30 次**不能**学会（证明时长被遵守），再 tick 到 65 次**必须**学会；物品数量不变；结束后不再 `isUsingItem` |
+| 3 | 已会状态下重复读两次不毁书 |
+
+第 2 步是**第一次**真正覆盖"中间那一段"——以前几轮的测试全都是直接调 mod 自己的 handler，所以中间坏掉也全绿。
+
+**变异测试（两次，都确认断言站在坏掉的那一环上）**：
+
+| 变异 | 审计报出 |
+| --- | --- |
+| 从 `mxt.mixins.json` 移除 `ItemMixin` | `The manual reported a duration of 0 instead of its learn_time of 60` ← **正是客户端当时算出的那个 0** |
+| 从 `onUseFinish` 移除 `learn(...)` | `A completed hold taught nothing` ← 周期跑完却没学会 |
+
+**代价（说清楚）**：三处注入 vanilla `Item`，而这块区域**变动频繁**（1.21.2 的 `Consumable` 重构就是例子），每次升 MC 都要重验。好在 `mxt.mixins.json` 里 `required: true` + `defaultRequire: 1`，目标方法一旦改名/消失会**直接启动失败**，而不是静默失效。
+
+## 22. 以服务端为准结束阅读姿势（2026-09-13）
+
+**起因**：用户报"学习正常了，但中途动画会中断"，随后又报"进度条到 100% 好像不止三秒"，并自己用 tick query 对齐后判断"**应该就是服务端跑不满**"。
+
+**根因：一次 use 周期被计时两次，而两次没有任何机制保持同步。**
+
+| | 客户端 | 服务端 |
+| --- | --- | --- |
+| 计数器 | `LivingEntity.useItemRemaining` | 同名，各算各的 |
+| 起始 | 点击时本地 `startUsingItem` | 收到包后 `startUsingItem` |
+| 速率 | 客户端自己的 20 TPS | 服务端的实际 TPS |
+| 驱动什么 | **姿势**（`ItemInHandRenderer:492` 的 `剩余 > 0`）与进度显示 | **真正的完成/学会** |
+
+服务端只要跑不满 20 TPS，它的 60 tick 在真实时间里就比客户端的 60 tick 长。于是**姿势先掉、功法后到**——玩家看到"动画中途断了"，而进度条（我特意只用服务端发包）还在走。审计实测那条 `[mxt] read finished: 60 server ticks in ... ms` 就是为量这个加的。
+
+**修法（`LivingEntityMixin`）**：注入 `LivingEntity.getUseItemRemainingTicks()`，**只在客户端、且确实还在使用中、且本地计数已 ≤ 0 时**，返回一个 1..9 的循环值而不是 0。
+
+- 姿势因此一直挂着，直到**松手**或**服务端读完**——两者都会清掉 using 标记，姿势随之结束
+- 服务端的计数**完全不动**：它才是"读完没有、学会没有、`Stop` 报多少"的依据（审计三项都钉着）
+- 返回值取循环值而不是常数：允许的姿势都是短循环动作，返回常数会把姿势冻住一帧，看起来和断掉一样糟
+- **而且不能是任意循环值**（见下）——必须是**把跑负的计数器按模折回正区间**，相位正好接在原版停下的地方
+
+**一次返工：循环方式选错导致"抽抽"**。初版返回 `1 + floorMod(tickCount, 9)`，读数 `1..9` 然后 **9 → 1 直接跳回**，相位一次倒退 8 tick，于是**每 9 tick 抽一下**（用户原话："现在因为卡住了在抽抽"）。
+
+而原版刷子的循环是 `0 → 9` 的**反向**跳变：`applyBrushTransform` 里 `scaledUsageTime = 1 - (remaining%10 - frameInterp + 1)/10`，`cos(2π·x)` 在 x 的 0/1 接缝上是连续的，所以原版那个看起来是顺滑的。
+
+正确做法（`TechniqueItemService.loopingUseRemaining`）：`phase = floorMod(remaining, 10)`，为 0 时返回 10。因为 `useItemRemaining` 在客户端会继续递减到负数（`updatingUsingItem` 依旧每 tick `--`，只是不完成），`floorMod` 正好把它折回原版本该到达的相位：`0 → 10(相位0)`、`-1 → 9`、`-2 → 8`……**与"如果它继续数下去"完全一致，接缝为零**；且恒 ≥ 1，姿势条件不会掉。周期 10 是 vanilla 刷子循环的长度，已提为常量 `POSE_LOOP_TICKS` 并注明来源。
+
+**顺带修掉一个显示 bug**：`updateUsingItem` 是"先发 Tick 事件、再 `--`、再完成"，所以一次阅读**最后一个事件的 `remaining` 是 1，不是 0**（审计实测 `last reported 1`）。原来算出来最大只有 `(60-1)*100/60 = 98%`——**进度条永远到不了 100%**，还会停在 98% 再显示几秒。新增 `displayPercent`：剩余 ≤ 1 按 100% 显示。另外松手时补发一条空动作栏消息，否则半截的条子会继续挂着。
+
+**测试**：审计新增 `displayPercent(60,1)==100`，以及"最后 tick 规则不外溢"（`displayPercent(60,60)==0`、`(60,30)==50`）。**服务端不受影响由既有断言保证**：30 tick 不得学会、约 60 tick 必须学会——如果这个 clamp 泄漏到了服务端，这两条会立刻失败。
+
+**这里的教训**：客户端姿势和服务端判定用了两个独立计时器，是 vanilla 的固有设计（吃食物同理）。任何把"时长"赋予意义的 mod 都会撞上它；靠"两边各自数 60"是默认它就同步，而它不同步。
+
+
+
+
+
+
+
+

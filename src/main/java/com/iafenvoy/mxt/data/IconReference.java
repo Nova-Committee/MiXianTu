@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
@@ -69,7 +70,7 @@ public record IconReference(Either<Identifier, ItemStackTemplate> value) {
      * The item branch holds a registry holder, so diagnostics must remain shallow.
      */
     @Override
-    public String toString() {
+    public @NonNull String toString() {
         return "IconReference[" + this.texture().map(Identifier::toString)
                 .or(() -> this.value.right().flatMap(template -> template.item().unwrapKey()).map(Object::toString))
                 .orElse("?") + "]";
