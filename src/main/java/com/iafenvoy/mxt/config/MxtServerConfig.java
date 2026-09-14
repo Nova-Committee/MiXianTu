@@ -54,6 +54,14 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         return INSTANCE.aura.auraSyncInterval.getValue();
     }
 
+    public static boolean auraQueryStats() {
+        return INSTANCE.aura.queryStats.getValue();
+    }
+
+    public static int auraEntityRefreshInterval() {
+        return INSTANCE.aura.entityRefreshInterval.getValue();
+    }
+
     public static final class Curios extends AutoInitConfigCategoryBase {
         public final EnumEntry<BackMode> backMode = EnumEntry.builder("config.mxt.server.curios.back_mode", BackMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
         public final EnumEntry<BeltMode> beltMode = EnumEntry.builder("config.mxt.server.curios.belt_mode", BeltMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
@@ -86,6 +94,20 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 "config.mxt.server.aura.block_aura_tick_interval", 10).range(1, 1200).build();
         public final IntegerEntry auraSyncInterval = IntegerEntry.builder(
                 "config.mxt.server.aura.sync_interval", 5).range(1, 1200).build();
+        /**
+         * Logs how much server time aura resolution actually costs, once every ten seconds. Diagnostics
+         * only; the counting itself is two atomics per query.
+         */
+        public final BooleanEntry queryStats = BooleanEntry.builder(
+                "config.mxt.server.aura.query_stats", false).build();
+        /**
+         * How often an entity that has not moved is re-resolved, in ticks. A stationary entity can only
+         * see a different aura zone because the chunk stock changed or a formation came and went, so
+         * this is the upper bound on how long such a change takes to reach its enter/leave events. One
+         * tick restores the old behaviour of resolving every entity every tick.
+         */
+        public final IntegerEntry entityRefreshInterval = IntegerEntry.builder(
+                "config.mxt.server.aura.entity_refresh_interval", 10).range(1, 1200).build();
 
         private Aura() {
             super("aura", "config.mxt.server.aura");

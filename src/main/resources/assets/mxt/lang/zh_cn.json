@@ -137,6 +137,8 @@
   "config.mxt.server.aura": "灵气",
   "config.mxt.server.aura.block_aura_tick_interval": "方块灵气 tick 周期",
   "config.mxt.server.aura.sync_interval": "灵气同步周期",
+  "config.mxt.server.aura.query_stats": "输出灵气解析耗时统计（诊断用）",
+  "config.mxt.server.aura.entity_refresh_interval": "静止实体的灵气重算周期（刻）",
   "config.mxt.server.mode.all": "所有物品",
   "config.mxt.server.mode.manual": "手动",
   "config.mxt.server.mode.weapons": "所有注册的武器",

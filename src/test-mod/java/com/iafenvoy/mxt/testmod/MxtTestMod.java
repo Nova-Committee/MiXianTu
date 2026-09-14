@@ -91,6 +91,7 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
+import com.iafenvoy.mxt.runtime.world.AuraQueryCache;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -387,6 +388,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Spirit herb quality did not resolve through the shared item-quality system");
         }
         verifyAuraZonePriority(event);
+        verifyAuraResolutionMemo(event);
         verifyChannelAbility(event);
         verifyWeaponAttributeMerge(event);
         verifyInventoryUtilAtomicity();
@@ -1068,6 +1070,110 @@ public final class MxtTestMod {
             if (!expected.equals(winner))
                 throw new IllegalStateException("Aura zone priority audit expected " + expected + " but the ordering helper returned " + winner);
         }
+    }
+
+    /**
+     * The aura memo must never change an answer, and must actually remove repetition. This measures
+     * both, and then asks the resolver to attribute its own cost to stages, because a sampling
+     * profiler cannot tell a hot single computation from a repeated cheap one.
+     */
+    private static void verifyAuraResolutionMemo(ServerStartedEvent event) {
+        ServerLevel overworld = event.getServer().overworld();
+        BlockPos probe = BlockPos.ZERO;
+        int batches = 3;
+        int perBatch = 100;
+        AuraQueryCache.setTiming(true);
+        // The loop itself has a cost, so it is measured on a plain game-time read and subtracted. The
+        // best batch is used instead of the average so one GC pause cannot skew the result.
+        long baseline = Long.MAX_VALUE;
+        for (int batch = 0; batch < batches; batch++) {
+            long started = System.nanoTime();
+            for (int index = 0; index < perBatch; index++) overworld.getGameTime();
+            baseline = Math.min(baseline, System.nanoTime() - started);
+        }
+        AuraQueryCache.setEnabled(false);
+        AuraQueryCache.advance(overworld, overworld.getGameTime());
+        long uncached = Long.MAX_VALUE;
+        AuraResult first = null;
+        for (int batch = 0; batch < batches; batch++) {
+            long started = System.nanoTime();
+            for (int index = 0; index < perBatch; index++) first = AuraService.getPositionAura(overworld, probe);
+            uncached = Math.min(uncached, System.nanoTime() - started - baseline);
+        }
+        AuraQueryCache.setEnabled(true);
+        AuraQueryCache.advance(overworld, overworld.getGameTime());
+        AuraQueryCache.resetStats();
+        long cached = Long.MAX_VALUE;
+        AuraResult repeat = null;
+        for (int batch = 0; batch < batches; batch++) {
+            long started = System.nanoTime();
+            for (int index = 0; index < perBatch; index++) repeat = AuraService.getPositionAura(overworld, probe);
+            cached = Math.min(cached, System.nanoTime() - started - baseline);
+            AuraQueryCache.advance(overworld, overworld.getGameTime());
+        }
+        long queries = AuraQueryCache.queries();
+        // One fully unresolved query, with the stage timer on, so the resolver reports where the time
+        // of a single query actually goes.
+        AuraQueryCache.setEnabled(false);
+        AuraQueryCache.resetStats();
+        AuraQueryCache.advance(overworld, overworld.getGameTime());
+        AuraQueryCache.resetStats();
+        AuraService.getPositionAura(overworld, probe);
+        LOGGER.info("MiXianTu aura single-query stage report at {}:", probe);
+        AuraQueryCache.reportDiagnostics();
+        AuraQueryCache.reportStageCosts();
+        AuraQueryCache.setEnabled(true);
+        if (first == null || repeat == null) throw new IllegalStateException("Aura resolution audit produced no result");
+        if (!first.aura().equals(repeat.aura()) || !first.source().equals(repeat.source())
+                || first.sourceKind() != repeat.sourceKind() || !first.rules().equals(repeat.rules())) {
+            throw new IllegalStateException("Aura memo changed the resolved result at " + probe
+                    + ": uncached " + first.source() + "/" + first.sourceKind() + " " + first.aura()
+                    + " versus memoised " + repeat.source() + "/" + repeat.sourceKind() + " " + repeat.aura());
+        }
+        if (queries < (long) perBatch * batches) {
+            throw new IllegalStateException("Aura memo did not observe every query: " + queries + " of " + (perBatch * batches));
+        }
+        if (cached * 5L >= uncached) {
+            throw new IllegalStateException("Aura memo did not make repeat resolution cheaper: best memoised batch took "
+                    + cached / 1000L + " us against " + uncached / 1000L + " us uncached for " + perBatch + " queries");
+        }
+        verifyEntityQueryGate(overworld);
+        LOGGER.info("MiXianTu aura memo audit: best of {} batches of {} queries on {} cost {} us memoised ({}.{} us each) "
+                        + "against {} us unresolved ({}.{} us each, {}x), after subtracting a {} us loop baseline",
+                batches, perBatch, first.source(), cached / 1000L, cached / perBatch / 1000L, cached / perBatch % 1000L,
+                uncached / 1000L, uncached / perBatch / 1000L, uncached / perBatch % 1000L,
+                String.format(Locale.ROOT, "%.1f", (double) uncached / Math.max(1L, cached)), baseline / 1000L);
+    }
+
+    /**
+     * The entity gate is what keeps a stationary entity from being re-resolved every tick. It must
+     * resolve a new entity, skip a stationary one inside its refresh interval, resolve it again once the
+     * interval elapses, and resolve it immediately when it moves.
+     */
+    private static void verifyEntityQueryGate(ServerLevel overworld) {
+        UUID id = UUID.randomUUID();
+        long now = overworld.getGameTime();
+        int interval = MxtServerConfig.auraEntityRefreshInterval();
+        AuraQueryCache.AuraLocation here = new AuraQueryCache.AuraLocation(overworld.dimension().identifier(), BlockPos.ZERO, now);
+        if (!AuraQueryCache.needsQuery(overworld, id, here, interval))
+            throw new IllegalStateException("Aura entity gate skipped an entity it had never seen");
+        AuraQueryCache.recordQuery(overworld, id, here);
+        if (AuraQueryCache.needsQuery(overworld, id, here, interval))
+            throw new IllegalStateException("Aura entity gate resolved a stationary entity twice in the same tick");
+        for (long offset = 1L; offset < interval; offset++) {
+            AuraQueryCache.AuraLocation same = new AuraQueryCache.AuraLocation(here.dimension(), here.pos(), now + offset);
+            if (AuraQueryCache.needsQuery(overworld, id, same, interval))
+                throw new IllegalStateException("Aura entity gate resolved a stationary entity after only " + offset + " of " + interval + " ticks");
+        }
+        AuraQueryCache.AuraLocation stale = new AuraQueryCache.AuraLocation(here.dimension(), here.pos(), now + interval);
+        if (!AuraQueryCache.needsQuery(overworld, id, stale, interval))
+            throw new IllegalStateException("Aura entity gate never refreshed a stationary entity, so a zone change could go unnoticed forever");
+        AuraQueryCache.AuraLocation moved = new AuraQueryCache.AuraLocation(here.dimension(), BlockPos.ZERO.east(), now + interval + 1L);
+        if (!AuraQueryCache.needsQuery(overworld, id, moved, interval))
+            throw new IllegalStateException("Aura entity gate did not resolve an entity that moved one block");
+        AuraQueryCache.forget(overworld, id);
+        if (!AuraQueryCache.needsQuery(overworld, id, here, interval))
+            throw new IllegalStateException("Aura entity gate kept state for an entity that left the level");
     }
 
     private static void verifyItemQualities(ServerStartedEvent event) {
