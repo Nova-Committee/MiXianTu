@@ -1,0 +1,12 @@
+{
+  "structure_template": "mxt_test:spirit_gathering",
+  "radius": 8,
+  "entity_tick_action": {
+    "type": "mxt:grant_ability",
+    "ability": "mxt_test:water_shield",
+    "source": "mxt:formation/mxt_test/formation_grant_probe"
+  },
+  "entity_exit_action": {
+    "type": "mxt:no_op"
+  }
+}

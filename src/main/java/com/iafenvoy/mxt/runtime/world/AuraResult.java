@@ -32,7 +32,7 @@ public record AuraResult(Map<Holder<Resource>, AuraPool> aura,
     }
 
     public AuraPool pool(Holder<Resource> resource) {
-        return this.aura.getOrDefault(resource, new AuraPool(0.0D, 0.0D, 0.0D));
+        return this.aura.getOrDefault(resource, AuraPool.empty());
     }
 
     public boolean suppressCultivate() {

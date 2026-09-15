@@ -9,6 +9,16 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
+/**
+ * Compares the block's blast resistance.
+ *
+ * <p>The NeoForge replacement for {@code getExplosionResistance()} takes the level, position, entity and
+ * explosion because a block may vary its resistance per explosion. This condition is evaluated without
+ * an explosion — it is a static property check usable from any block context — so it reads the base
+ * value, which is what the deprecated method returns. The suppression is the decision, not an
+ * oversight: the alternative is dropping the condition or inventing an explosion that never happened.</p>
+ */
+@SuppressWarnings("deprecation")
 public record BlastResistanceCondition(Comparison comparison) implements BlockCondition {
     public static final MapCodec<BlastResistanceCondition> CODEC = Comparison.CODEC.xmap(BlastResistanceCondition::new, BlastResistanceCondition::comparison);
 

@@ -32,12 +32,14 @@ public final class AuraChunkAttachment {
             CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("template_aura_kinds", Set.of()).forGetter(AuraChunkAttachment::templateAuraKinds),
             CollectionCodecs.set(Identifier.CODEC).optionalFieldOf("block_aura_kinds", Set.of()).forGetter(AuraChunkAttachment::blockAuraKinds),
             CollectionCodecs.intObjectMap(BlockAuraSectionCache.CODEC).optionalFieldOf("block_aura_sections", new Int2ObjectOpenHashMap<>()).forGetter(AuraChunkAttachment::blockAuraSections),
+            AuraValue.MAP_CODEC.optionalFieldOf("absorbed_aura", Map.of()).forGetter(AuraChunkAttachment::absorbedAura),
             AuraPool.GROUPED_CODEC.optionalFieldOf("aura", Map.of()).forGetter(AuraChunkAttachment::auras)
     ).apply(i, AuraChunkAttachment::new));
     private boolean initialized;
     private Optional<Holder<AuraZone>> template;
     private final Set<Identifier> auraKinds, templateAuraKinds, blockAuraKinds;
     private final Map<Holder<Resource>, AuraValue> blockAura;
+    private final Map<Holder<Resource>, AuraValue> absorbedAura;
     private final Int2ObjectMap<BlockAuraSectionCache> blockAuraSections;
     private final Map<Holder<Resource>, AuraPool> auras;
     /**
@@ -46,12 +48,13 @@ public final class AuraChunkAttachment {
     private final Map<SectionPos, Integer> auraVisitors = new LinkedHashMap<>();
 
     public AuraChunkAttachment() {
-        this(false, Optional.empty(), Set.of(), Set.of(), Set.of(), new Int2ObjectOpenHashMap<>(), Map.of());
+        this(false, Optional.empty(), Set.of(), Set.of(), Set.of(), new Int2ObjectOpenHashMap<>(), Map.of(), Map.of());
     }
 
     private AuraChunkAttachment(boolean initialized, Optional<Holder<AuraZone>> template, Set<Identifier> auraKinds,
                                 Set<Identifier> templateAuraKinds, Set<Identifier> blockAuraKinds,
-                                Int2ObjectMap<BlockAuraSectionCache> blockAuraSections, Map<Holder<Resource>, AuraPool> auras) {
+                                Int2ObjectMap<BlockAuraSectionCache> blockAuraSections, Map<Holder<Resource>, AuraValue> absorbedAura,
+                                Map<Holder<Resource>, AuraPool> auras) {
         this.initialized = initialized;
         this.template = template;
         this.auraKinds = new LinkedHashSet<>(auraKinds);
@@ -59,6 +62,7 @@ public final class AuraChunkAttachment {
         this.blockAuraKinds = new LinkedHashSet<>(blockAuraKinds);
         this.blockAuraSections = new Int2ObjectOpenHashMap<>(blockAuraSections);
         this.blockAura = aggregate(this.blockAuraSections);
+        this.absorbedAura = new LinkedHashMap<>(absorbedAura);
         this.auras = new LinkedHashMap<>(auras);
     }
 
@@ -162,20 +166,45 @@ public final class AuraChunkAttachment {
     /**
      * Replaces cached block contribution while retaining the already-consumed
      * portion of every affected resource.
+     *
+     * <p>Emitters marked {@link BlockAuraContribution#absorbed()} are left out of both the shared stock and
+     * the per-section caches, and are totalled separately instead. They stand inside an active formation,
+     * which spends them, and letting them into the shared stock would let the same aura be spent twice:
+     * the environment subtracts this chunk's aggregate from the pool, so an absorbed emitter left in the
+     * aggregate would be handed back to every query. The totals carry no distance weighting, matching the
+     * rule that a block inside a formation gives it everything.</p>
      */
     public void setBlockContribution(List<BlockAuraContribution> sources, Collection<Identifier> kinds) {
         Map<Holder<Resource>, AuraValue> previous = new LinkedHashMap<>(this.blockAura);
         this.blockAuraSections.clear();
         Map<Integer, List<BlockAuraContribution>> grouped = new LinkedHashMap<>();
         sources.forEach(source -> grouped.computeIfAbsent(SectionPos.blockToSectionCoord(source.position().getY()), ignored -> new LinkedList<>()).add(source));
-        grouped.forEach((sectionY, values) -> this.blockAuraSections.put(sectionY, new BlockAuraSectionCache(aggregate(values), values)));
+        // Iterating the primitive key type picks the primitive put; the Integer overload inherited from Map
+        // is deprecated and would also be the only boxing in the method.
+        grouped.forEach((sectionY, values) -> {
+            List<BlockAuraContribution> environment = values.stream().filter(value -> !value.absorbed()).toList();
+            if (environment.isEmpty()) return;
+            this.blockAuraSections.put(sectionY.intValue(), new BlockAuraSectionCache(aggregate(environment), environment));
+        });
         Map<Holder<Resource>, AuraValue> values = aggregate(this.blockAuraSections);
         this.blockAura.clear();
         this.blockAura.putAll(values);
+        Map<Holder<Resource>, AuraValue> absorbed = aggregate(sources.stream()
+                .filter(BlockAuraContribution::absorbed).toList());
+        this.absorbedAura.clear();
+        this.absorbedAura.putAll(absorbed);
         if (this.initialized) this.applyBlockContribution(previous, this.blockAura);
         this.blockAuraKinds.clear();
         this.blockAuraKinds.addAll(kinds);
         this.refreshAuraKinds();
+    }
+
+    /**
+     * Totals of the emitters that stand inside a formation, which the formation spends instead of the
+     * environment. Empty for a chunk with no formation over it.
+     */
+    public Map<Holder<Resource>, AuraValue> absorbedAura() {
+        return this.absorbedAura;
     }
 
     /**
@@ -226,7 +255,7 @@ public final class AuraChunkAttachment {
             AuraValue newValue = current.getOrDefault(resource, AuraValue.ZERO);
             AuraPool pool = this.auras.get(resource);
             if (pool == null && newValue != AuraValue.ZERO) {
-                this.auras.put(resource, new AuraPool(newValue.amount(), newValue.max().resolve(newValue.amount()), newValue.regenPerTick()));
+                this.auras.put(resource, AuraPool.natural(newValue.amount(), newValue.max().resolve(newValue.amount()), newValue.regenPerTick()));
                 continue;
             }
             if (pool == null) continue;
@@ -234,7 +263,7 @@ public final class AuraChunkAttachment {
             double newMaximum = newValue.max().resolve(newValue.amount());
             double maximum = addMaximum(pool.maximum(), newMaximum - oldMaximum);
             double amount = Math.max(0.0D, pool.amount() + newValue.amount() - oldValue.amount());
-            this.auras.put(resource, new AuraPool(amount, maximum,
+            this.auras.put(resource, AuraPool.natural(amount, maximum,
                     pool.regenPerTick() + newValue.regenPerTick() - oldValue.regenPerTick()));
         }
     }

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
@@ -16,7 +17,10 @@ public record DamageTargetBiEntityAction(NumberProvider amount) implements BiEnt
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
-        if (Double.isFinite(amount) && amount > 0.0D) target.hurt(target.damageSources().generic(), (float) amount);
+        // Damage is a server decision; the deprecated {@code Entity#hurt} only ever applied on a server
+        // anyway, so asking for the server level first is the same behaviour stated outright.
+        if (!(target.level() instanceof ServerLevel level)) return;
+        if (Double.isFinite(amount) && amount > 0.0D) target.hurtServer(level, target.damageSources().generic(), (float) amount);
     }
 
     @Override

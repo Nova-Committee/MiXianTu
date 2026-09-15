@@ -65,7 +65,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 
 ## Module Status
 
-- **✅ Done**: everything is implemented and usable right away; minor changes may still happen later.
+- **✅ Done**: everything is implemented and passed basic tests; minor changes may still happen later.
 - **🚧 In Progress**: only part of the feature set is done, the rest is still being developed.
 - **🔲 Planned**: only data structures or assets exist, or there is only a development plan.
 
@@ -81,7 +81,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Techniques                      |   🚧   | Players can learn cultivation techniques to gain active moves or passive bonuses, and exclusion tags can stop certain techniques from being learned together; a technique can be bound to any existing item as its carrier.                                            |
 | Titles and Badges               |   🔲   | Titles are granted to players by condition and provide passive attributes; badges define display entries such as achievements or a compendium.                                                                                                                         |
 | Abilities and Curses            |   🚧   | Abilities can be cast from the hotbar with a cost, cooldown, duration and target selection, and can also fire automatically on attacking, being hurt, killing and other timing; curses attach to a character, trigger periodically and can be removed by purification. |
-| Formations                      |   🔲   | Players can build and activate formations; a formation keeps running by consuming resources, applies effects within its area and temporarily provides buffs/debuffs.                                                                                                   |
+| Formations                      |   🚧   | Players can build and activate formations; a formation keeps running by consuming resources, applies effects within its area and temporarily provides buffs/debuffs.                                                                                                   |
 | Tribulations                    |   🔲   | A tribulation can be triggered on a realm breakthrough: it advances in phases, gets harder with the realm, and success or failure each run their own outcome.                                                                                                          |
 | Creature Profiles and Contracts |   🔲   | Creature profiles define a creature's strength, inner core and drops; players can also sign a contract with a creature, letting the spirit beast follow and fight, be stored in a Spirit Beast Bag or recalled with a Beast Taming Bell.                               |
 | Secret Realms                   |   🔲   | Players can enter a separate secret realm with a Realm Token; a realm has player count and time limits, and is cleaned up and returns players to where they came from when it expires.                                                                                 |

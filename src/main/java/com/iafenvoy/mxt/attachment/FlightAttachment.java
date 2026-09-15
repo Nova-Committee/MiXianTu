@@ -12,13 +12,18 @@ import java.util.UUID;
 
 /**
  * Server-owned flight mount state.
+ *
+ * <p>What is saved and restored around a flight is the player's flight <em>attribute</em> value, not the
+ * {@code Abilities#mayfly} flag: that field is deprecated in favour of
+ * {@code NeoForgeMod.CREATIVE_FLIGHT}, and saving the flag while the attribute stayed raised would let a
+ * player keep flying after dismounting.</p>
  */
 public final class FlightAttachment extends ShouldSyncAttachment {
     public static final MapCodec<FlightAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("active", false).forGetter(FlightAttachment::active),
             ItemArchetype.CODEC.optionalFieldOf("archetype").forGetter(FlightAttachment::archetype),
             Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(FlightAttachment::startedAt),
-            Codec.BOOL.optionalFieldOf("previous_mayfly", false).forGetter(FlightAttachment::previousMayfly),
+            Codec.DOUBLE.optionalFieldOf("previous_flight", 0.0D).forGetter(FlightAttachment::previousFlight),
             Codec.BOOL.optionalFieldOf("previous_flying", false).forGetter(FlightAttachment::previousFlying),
             Codec.FLOAT.optionalFieldOf("previous_flying_speed", 0.05F).forGetter(FlightAttachment::previousFlyingSpeed),
             Codec.STRING.optionalFieldOf("vehicle").forGetter(FlightAttachment::vehicleRaw)
@@ -26,18 +31,19 @@ public final class FlightAttachment extends ShouldSyncAttachment {
     private boolean active;
     private Holder<ItemArchetype> archetype;
     private long startedAt;
-    private boolean previousMayfly, previousFlying;
+    private double previousFlight;
+    private boolean previousFlying;
     private float previousFlyingSpeed;
     private String vehicle;
 
     public FlightAttachment() {
     }
 
-    private FlightAttachment(boolean active, Optional<Holder<ItemArchetype>> archetype, long startedAt, boolean previousMayfly, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
+    private FlightAttachment(boolean active, Optional<Holder<ItemArchetype>> archetype, long startedAt, double previousFlight, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
         this.active = active;
         this.archetype = archetype.orElse(null);
         this.startedAt = startedAt;
-        this.previousMayfly = previousMayfly;
+        this.previousFlight = previousFlight;
         this.previousFlying = previousFlying;
         this.previousFlyingSpeed = previousFlyingSpeed;
         this.vehicle = vehicle.orElse(null);
@@ -55,8 +61,8 @@ public final class FlightAttachment extends ShouldSyncAttachment {
         return this.startedAt;
     }
 
-    public boolean previousMayfly() {
-        return this.previousMayfly;
+    public double previousFlight() {
+        return this.previousFlight;
     }
 
     public boolean previousFlying() {
@@ -79,11 +85,11 @@ public final class FlightAttachment extends ShouldSyncAttachment {
         return Optional.ofNullable(this.vehicle);
     }
 
-    public void start(Holder<ItemArchetype> archetype, long gameTime, boolean mayfly, boolean flying, float flyingSpeed, UUID vehicle) {
+    public void start(Holder<ItemArchetype> archetype, long gameTime, double flight, boolean flying, float flyingSpeed, UUID vehicle) {
         this.active = true;
         this.archetype = archetype;
         this.startedAt = gameTime;
-        this.previousMayfly = mayfly;
+        this.previousFlight = flight;
         this.previousFlying = flying;
         this.previousFlyingSpeed = flyingSpeed;
         this.vehicle = vehicle.toString();
@@ -93,7 +99,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
     public void stop() {
         this.active = false;
         this.archetype = null;
-        this.previousMayfly = false;
+        this.previousFlight = 0.0D;
         this.previousFlying = false;
         this.previousFlyingSpeed = 0.05F;
         this.vehicle = null;

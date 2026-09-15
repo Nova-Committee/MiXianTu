@@ -1,0 +1,13 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:gold_block" },
+    { "offset": [2, 0, 0], "state": "minecraft:iron_block" },
+    { "offset": [-2, 0, 0], "state": "minecraft:iron_block" }
+  ],
+  "radius": 8,
+  "entity_tick_action": {
+    "type": "mxt:apply_effect",
+    "effect": "minecraft:glowing",
+    "duration_ticks": 200
+  }
+}

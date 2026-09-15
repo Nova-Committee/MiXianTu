@@ -35,6 +35,8 @@ repositories {
     maven { url = "https://maven.latvian.dev/releases" }
     maven { url = "https://maven.blamejared.com/" }
     maven { url = "https://modmaven.dev" }
+    maven { url = "https://maven.ftb.dev/releases" }
+    maven { url = "https://maven.architectury.dev" }
 }
 
 base {
@@ -132,12 +134,22 @@ dependencies {
     implementation jarJar("curse.maven:player-animation-library-1283899:8674772")
     implementation jarJar("curse.maven:bendable-cuboids-1302303:7986578")
 
-    compileOnly "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
-//    localRuntime "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
-
     implementation "curse.maven:jade-324717:8651070"
     compileOnly("mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}")
     runtimeOnly("mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}")
+
+    compileOnly "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
+//    localRuntime "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
+
+    //FTB
+    compileOnly "dev.ftb.mods:ftb-library:2101.1.36"
+    compileOnly "dev.ftb.mods:ftb-teams:2101.1.11"
+//    compileOnly "dev.ftb.mods:ftb-chunks:2101.1.22"
+
+//    runtimeOnly "dev.architectury:architectury-neoforge:20.1.14"
+//    runtimeOnly "dev.ftb.mods:ftb-library-neoforge:2101.1.36"
+//    runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:2101.1.11"
+//    runtimeOnly "dev.ftb.mods:ftb-chunks-neoforge:2101.1.22"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

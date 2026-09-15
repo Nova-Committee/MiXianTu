@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
@@ -19,7 +20,10 @@ public record DamageAction(NumberProvider amount) implements EntityAction {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
-        if (Double.isFinite(amount) && amount > 0.0D) entity.hurt(entity.damageSources().generic(), (float) amount);
+        // Damage is a server decision: {@code Entity#hurt} still routes to the server and is deprecated,
+        // and an action running on a client level must not pretend it dealt damage.
+        if (!(entity.level() instanceof ServerLevel level)) return;
+        if (Double.isFinite(amount) && amount > 0.0D) entity.hurtServer(level, entity.damageSources().generic(), (float) amount);
     }
 
     @Override

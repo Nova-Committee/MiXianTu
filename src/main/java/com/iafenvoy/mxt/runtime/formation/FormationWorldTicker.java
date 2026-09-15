@@ -1,15 +1,23 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
+import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
+import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.formation.FormationInstance.Snapshot;
+import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainResult;
+import com.iafenvoy.mxt.runtime.world.FormationAbsorption;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -18,65 +26,187 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Low-frequency lifecycle dispatcher; it never scans unloaded chunks.
  */
 @EventBusSubscriber
 public final class FormationWorldTicker {
-    private static final FormationStructureValidator VALIDATOR = FormationStructureValidator.TEMPLATE;
+    /**
+     * Ticks between two dispatch passes.
+     */
+    public static final long PERIOD = 20L;
+
+    private static final FormationStructureValidator VALIDATOR = FormationStructureValidator.STRUCTURE;
 
     private FormationWorldTicker() {
     }
 
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 20L != 0L) return;
+        if (!(event.getLevel() instanceof ServerLevel level) || !due(level.getGameTime())) return;
+        dispatch(level);
+    }
+
+    /**
+     * Whether a level tick is a formation tick.
+     *
+     * <p>This is also the granularity of the enter and exit actions, so it is the single knob that
+     * decides how long a formation can go without noticing a change.</p>
+     */
+    public static boolean due(long gameTime) {
+        return gameTime % PERIOD == 0L;
+    }
+
+    /**
+     * One dispatch pass over every active formation in the level: validate, charge upkeep, then run
+     * the per-entity actions, followed by the sweep that releases grants from formations a player has
+     * left.
+     *
+     * <p>Public so the server audit can drive the real path instead of a copy of it; nothing else in
+     * the mod calls this directly.</p>
+     */
+    public static void dispatch(ServerLevel level) {
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
-        for (Entry<BlockPos, Snapshot> entry : world.formations().entrySet()) {
+        for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
             Optional<Formation> definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation());
             if (definition.isEmpty() || !VALIDATOR.matches(level, entry.getKey(), definition.get())) {
-                world.remove(entry.getKey());
-                definition.ifPresent(value -> value.deactivateAction().execute(level, entry.getKey(), FormulaContext.of(level)));
-                NeoForge.EVENT_BUS.post(new Deactivate(level, entry.getKey(), FormationInstance.restore(entry.getValue())));
+                FormationWorldService.deactivate(level, entry.getKey());
                 continue;
             }
-            FormationInstance instance = FormationInstance.restore(entry.getValue());
-            if (!definition.get().maintenanceCosts().isEmpty()) {
-                Entity payer = instance.owner().map(level.getEntities()::get).orElse(null);
-                if (payer == null || !FormationService.maintain(instance, definition.get(), payer.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.of(payer)).maintained()) {
-                    world.remove(entry.getKey());
-                    definition.get().deactivateAction().execute(level, entry.getKey(), FormulaContext.of(level));
-                    NeoForge.EVENT_BUS.post(new Deactivate(level, entry.getKey(), instance));
-                    continue;
-                }
-            }
-            if (!NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance)).isCanceled()) {
+            // The attachment holds the instance itself, so upkeep and its counter are updated in place:
+            // there is no write-back that a later branch could skip and silently drop the payment.
+            FormationInstance instance = entry.getValue();
+            if (!definition.get().maintenanceCosts().isEmpty() && !chargeUpkeep(level, entry.getKey(), instance, definition.get()))
+                continue;
+            // Settled and paid for: observers see every period that got this far. Cancellation lives on
+            // the next event, which gates only the work.
+            NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance));
+            if (!NeoForge.EVENT_BUS.post(new TickEffects(level, entry.getKey(), instance)).isCanceled()) {
                 definition.get().tickAction().execute(level, entry.getKey(), FormulaContext.of(level));
-                executeEntityTickAction(level, entry.getKey(), instance, definition.get());
-                world.replace(entry.getKey(), instance);
+                executeEntityActions(level, entry.getKey(), instance, definition.get());
             }
+        }
+        for (ServerPlayer player : level.players()) releaseOutside(level, player);
+    }
+
+    /**
+     * Charges one period of upkeep, and decides what an unpaid period means.
+     *
+     * @return whether the period may continue; false means the formation was taken down, or a listener
+     * cancelled {@link UpkeepFailed} to let it stand through a period it could not pay for
+     */
+    private static boolean chargeUpkeep(ServerLevel level, BlockPos controller, FormationInstance instance, Formation definition) {
+        Entity payer = instance.owner().map(level.getEntities()::get).orElse(null);
+        Optional<Identifier> failedResource = Optional.empty();
+        boolean paid = false;
+        if (payer != null) {
+            // The block emitters standing inside this formation supply it instead of the environment, so
+            // what they emit this period pays the upkeep before the owner is charged for the rest.
+            MaintainResult result = FormationService.maintain(instance, definition,
+                    payer.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.of(payer),
+                    supply(level, controller, instance.radius()));
+            paid = result.maintained();
+            failedResource = Optional.ofNullable(result.failedResource());
+        }
+        if (paid) return true;
+        // Cancelling keeps the formation registered: it pays nothing and does nothing this period. That is
+        // the hook for content that wants a formation to survive a lean stretch, and it is why failing to
+        // pay is no longer an unconditional teardown.
+        if (NeoForge.EVENT_BUS.post(new UpkeepFailed(level, controller, instance, Optional.ofNullable(payer), failedResource)).isCanceled())
+            return false;
+        FormationWorldService.deactivate(level, controller);
+        return false;
+    }
+
+    /**
+     * What the formation's own ground supplies this period: the emitters inside it, plus — when the server
+     * option allows it — the ambient aura of the position it stands on.
+     *
+     * <p>The two are summed per resource, because they are both spent the same way. The absorbed totals
+     * carry no distance weighting while the pool's own contribution does, so the sum can exceed the second
+     * one alone; that is deliberate, an emitter inside the formation gives it everything.</p>
+     */
+    private static Map<Holder<Resource>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
+        return combine(
+                FormationAbsorption.absorbedFor(level, controller, radius),
+                FormationAbsorption.environmentSupply(level, controller),
+                MxtServerConfig.formationDrawsEnvironment());
+    }
+
+    /**
+     * Sums the two supply sources. Split from the lookup so the rule is assertable without a level: the
+     * option either adds the ambient aura or leaves the formation with only what its own emitters give it.
+     */
+    public static Map<Holder<Resource>, Double> combine(Map<Holder<Resource>, Double> absorbed,
+                                                       Map<Holder<Resource>, Double> environment,
+                                                       boolean drawsEnvironment) {
+        Map<Holder<Resource>, Double> supply = new LinkedHashMap<>(absorbed);
+        if (!drawsEnvironment) return supply;
+        environment.forEach((resource, amount) -> supply.merge(resource, amount, Double::sum));
+        return supply;
+    }
+
+    /**
+     * Runs the per-entity actions for one formation: enter for entities that were not there last tick,
+     * tick for everyone in range, and exit for entities that have left.
+     */
+    private static void executeEntityActions(ServerLevel level, BlockPos controller, FormationInstance instance,
+                                             Formation definition) {
+        double radius = instance.radius();
+        double radiusSquared = radius * radius;
+        Vec3 center = controller.getCenter();
+        FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owner());
+        Identifier source = FormationSources.of(instance.formation());
+        Set<UUID> previous = FormationEntityActions.tracked(level, controller);
+        Set<UUID> present = new HashSet<>();
+        for (Entity entity : level.getEntities(null, AABB.ofSize(center, radius * 2.0D, radius * 2.0D, radius * 2.0D))) {
+            double distanceSquared = entity.distanceToSqr(center);
+            if (distanceSquared > radiusSquared) continue;
+            present.add(entity.getUUID());
+            EntityActionContext context = FormationEntityActions.context(entity, carrier, radius, distanceSquared);
+            // A formation that has just been activated has no previous set, so everything already
+            // inside receives an enter action. That is the intended reading of "the formation
+            // appeared around you", and it is why enter actions must be idempotent.
+            if (!previous.contains(entity.getUUID())) definition.entityEnterAction().execute(context);
+            definition.entityTickAction().execute(context);
+        }
+        FormationEntityActions.remember(level, controller, present);
+        for (UUID departed : previous) {
+            if (present.contains(departed)) continue;
+            Entity entity = level.getEntities().get(departed);
+            if (entity == null) continue;
+            FormationEntityActions.release(entity, source);
+            definition.entityExitAction()
+                    .execute(FormationEntityActions.context(entity, carrier, radius, entity.distanceToSqr(center)));
         }
     }
 
     /**
-     * Executes once per 20 ticks for every entity inside the formation's spherical range.
+     * Releases the formation-scoped grants of a player who is no longer inside that formation.
+     *
+     * <p>A player can leave without the formation ever seeing it — logging out, changing dimension or
+     * teleporting between two ticks — and the attachment holding a granted ability is persistent, so
+     * the grant would otherwise outlive the formation. Sweeping on the same cadence is self-healing
+     * and needs no departure tracking at all.</p>
      */
-    private static void executeEntityTickAction(ServerLevel level, BlockPos controller, FormationInstance instance,
-                                                Formation definition) {
-        double radius = instance.radius();
-        double radiusSquared = radius * radius;
-        Vec3 center = controller.getCenter();
-        for (Entity entity : level.getEntities(null, AABB.ofSize(center, radius * 2.0D, radius * 2.0D, radius * 2.0D))) {
-            double distanceSquared = entity.distanceToSqr(center);
-            if (distanceSquared > radiusSquared) continue;
-            definition.entityTickAction().execute(entity, FormulaContext.of(entity, Map.of(
-                    "formation_radius", radius,
-                    "distance", Math.sqrt(distanceSquared)
-            )));
+    private static void releaseOutside(ServerLevel level, ServerPlayer player) {
+        // A player who never held a granted ability cannot owe a release, and without this guard the
+        // sweep would build a source identifier for every formation in the level, for every player,
+        // every period.
+        if (player.getExistingData(MxtAttachments.ABILITY_HOLDER).isEmpty()) return;
+        BlockPos position = player.blockPosition();
+        for (Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet()) {
+            FormationInstance formation = entry.getValue();
+            if (entry.getKey().distSqr(position) <= formation.radius() * formation.radius()) continue;
+            FormationEntityActions.release(player, FormationSources.of(formation.formation()));
         }
     }
 }

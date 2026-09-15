@@ -286,7 +286,10 @@ public final class MxtTestCommands {
 
     private static ItemStack formationPlate() {
         ItemStack stack = new ItemStack(MxtItems.FORMATION_PLATE.get());
-        stack.set(MxtDataComponents.FORMATION_PLATE, new FormationPlateComponent(Optional.of(require(MxtResourceKeys.FORMATION, FORMATION))));
+        // An empty allow list, which is the shipped plate: unrestricted unless the server option says
+        // otherwise, and therefore bound to whatever the kit's own formation is.
+        stack.set(MxtDataComponents.FORMATION_PLATE,
+                new FormationPlateComponent(List.of(), Optional.of(require(MxtResourceKeys.FORMATION, FORMATION))));
         return stack;
     }
 

@@ -242,6 +242,10 @@ public final class InformationPanelScreen extends Screen {
             return Math.max(1, this.getWidth() - 8);
         }
 
+        public Set<String> getOverflowReports() {
+            return this.overflowReports;
+        }
+
         private static final class LineEntry extends Entry<LineEntry> {
             private final InformationEntry entry;
             private final int nameWidth;

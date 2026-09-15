@@ -1,0 +1,15 @@
+{
+  "structure_template": "mxt_test:spirit_gathering",
+  "radius": 8,
+  "entity_enter_action": {
+    "type": "mxt:apply_effect",
+    "effect": "minecraft:glowing",
+    "duration_ticks": 200
+  },
+  "entity_tick_action": {
+    "type": "mxt:teleport",
+    "x": "formation_x",
+    "y": "formation_y",
+    "z": "formation_z"
+  }
+}

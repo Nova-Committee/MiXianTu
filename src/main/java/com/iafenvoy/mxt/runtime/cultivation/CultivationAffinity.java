@@ -44,7 +44,7 @@ public final class CultivationAffinity {
             AuraPool pool = aura.auras().entrySet().stream()
                     .filter(entry -> CultivationProfiles.find(access, entry.getKey())
                             .flatMap(CultivationProfile::auraType).filter(root.element()::equals).isPresent())
-                    .map(Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
+                    .map(Entry::getValue).findFirst().orElse(AuraPool.empty());
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
             total += base * Math.max(0.0D, 1.0D + concentration);
@@ -71,7 +71,7 @@ public final class CultivationAffinity {
             AuraPool pool = aura.aura().entrySet().stream()
                     .filter(entry -> CultivationProfiles.find(access, entry.getKey())
                             .flatMap(CultivationProfile::auraType).filter(root.element()::equals).isPresent())
-                    .map(Entry::getValue).findFirst().orElse(new AuraPool(0.0D, 0.0D, 0.0D));
+                    .map(Entry::getValue).findFirst().orElse(AuraPool.empty());
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
             double modifier = Math.max(0.0D, 1.0D + concentration

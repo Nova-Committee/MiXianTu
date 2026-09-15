@@ -25,6 +25,7 @@ public final class CommandManager {
                 AbilityCommand.ROOT, config.ability,
                 AuraCommand.ROOT, config.aura,
                 DisplayCommand.ROOT, config.display,
+                FormationCommand.ROOT, config.formation,
                 TechniqueCommand.ROOT, config.technique,
                 TradeCommand.ROOT, config.trade
         );

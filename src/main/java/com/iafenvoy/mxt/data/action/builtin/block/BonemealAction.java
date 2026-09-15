@@ -21,7 +21,7 @@ public record BonemealAction(boolean effect) implements BlockAction {
     public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
-        if (BoneMealItem.growCrop(ItemStack.EMPTY, level, pos) && this.effect && !level.isClientSide())
+        if (BoneMealItem.applyBonemeal(ItemStack.EMPTY, level, pos, null) && this.effect && !level.isClientSide())
             level.globalLevelEvent(LevelEvent.PARTICLES_AND_SOUND_PLANT_GROWTH, pos, 0);
     }
 

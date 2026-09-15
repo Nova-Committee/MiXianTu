@@ -36,7 +36,7 @@ public record SpawnEntityAction(Holder<EntityType<?>> entityType, Optional<Compo
     public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
-        if (!(level instanceof ServerLevel serverLevel) || !level.hasChunkAt(pos)) return;
+        if (!(level instanceof ServerLevel serverLevel) || !level.isLoaded(pos)) return;
         Entity entity = this.entityType.value().create(serverLevel, EntitySpawnReason.TRIGGERED);
         if (entity == null) return;
         this.tag.ifPresent(value -> entity.load(TagValueInput.create(ProblemReporter.DISCARDING, serverLevel.registryAccess(), value.copy())));

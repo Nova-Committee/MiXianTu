@@ -71,7 +71,7 @@ public final class ForgingRateLimiter {
             ServerPlayer player = server.getPlayerList().getPlayer(key.player());
             if (player == null) return true;
             ServerLevel level = server.getLevel(key.dimension());
-            if (level == null || !level.hasChunkAt(key.position())) return true;
+            if (level == null || !level.isLoaded(key.position())) return true;
             BlockEntity blockEntity = level.getBlockEntity(key.position());
             return !(blockEntity instanceof ForgingSurface);
         });

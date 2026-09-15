@@ -4,7 +4,7 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。别名可以在服务端配置 `config.mxt.server.commands.root_aliases` 中关闭（默认开启）；关闭只移除顶层写法，`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。纯诊断节点（`registries`、`resource` 等）没有顶层别名。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名在服务端配置 `config.mxt.server.commands.<名字>` 中单独开关（默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。`formation` 也在这个列表里（顶层写法是 `/formation`）。
 
 | 命令 | 作用 |
 | --- | --- |
@@ -25,6 +25,9 @@ title: 命令
 | `/mxt realm set <realm>` | 设置线性境界。 |
 | `/mxt sect claim` / `release` | 占领或释放宗门领地。 |
 | `/mxt soul reclaim` | 回收可回收的灵魂。 |
+| `/mxt formation list`（= `/formation list`） | 列出当前维度所有已激活阵法：ID、阵心坐标、半径、阵主与已付费的维持次数。 |
+| `/mxt formation info`（= `/formation info`） | 列出覆盖玩家所在位置的阵法；重叠时全部列出，不做取舍。 |
+| `/mxt formation bind <formation>`（= `/formation bind`） | 把指定阵法写入**主手**的阵盘（需要 gamemaster 权限）。阵盘是唯一能把阵法带进世界的物品，而它的绑定存在物品组件里；这条命令是生存流程里取得可用阵盘的入口。Tab 补全只列出**这块阵盘允许的**阵法，不在白名单里的会被拒绝且不修改阵盘；重复绑定会覆盖原值，ID 写错时阵盘保持原样。 |
 | `/technique repair [dry-run]`（= `/mxt technique repair`） | 清理指向已删除功法定义的失效数据。 |
 | `/technique drop <id>`（= `/mxt technique drop <id>`） | 移除一项已习得功法并重建其带来的属性与能力。 |
 | `/technique diagnose`（= `/mxt technique diagnose`） | 逐条检查手持功法物品为何无法使用。 |
@@ -32,3 +35,7 @@ title: 命令
 | `/trade <player>`（= `/mxt trade <player>`） | 向玩家发起交易请求。 |
 
 命令中的注册表 ID 使用原版 `IdentifierArgument`，Tab 补全来自服务端当前注册表。
+
+阵盘的拆除入口不在命令里：对已激活的 controller 使用阵盘即拆除该阵法（需要是阵主或管理员）。
+
+激活同样用阵盘：手持已绑定的阵盘右键阵心即可。**点歪一格不会失败** —— 系统会在点击位置周围 3×3×3 内寻找最近一个满足结构的阵心，因此不必精确命中中心方块；点击位置本身有效时永远优先取它。拆除也走同一次查找，所以对着已激活阵法的旁边一格右键同样是拆除。

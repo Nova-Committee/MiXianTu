@@ -26,7 +26,7 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.FluidTags;
+import net.neoforged.neoforge.common.NeoForgeMod;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
@@ -150,7 +150,10 @@ public enum ResourceBarOverlay implements GuiLayer {
         int y = minecraft.getWindow().getGuiScaledHeight() - 47;
         if (player.getVehicle() instanceof LivingEntity vehicle)
             y -= 8 * (int) (vehicle.getMaxHealth() / 20.0F);
-        if (player.isEyeInFluid(FluidTags.WATER) || player.getAirSupply() < player.getMaxAirSupply()) y -= 8;
+        // The tag overload is deprecated and NeoForge does not ship a water FluidType constant: the
+        // registered water type is the replacement, and asking the player about a type rather than a tag
+        // is also what the client can answer without a registry lookup.
+        if (player.isEyeInFluid(NeoForgeMod.WATER_TYPE.value()) || player.getAirSupply() < player.getMaxAirSupply()) y -= 8;
         int x;
         x = state.anchor() == Anchor.LEFT ? width / 2 - 20 - state.renderData().width() : width / 2 + 20;
         return new Position(x, y - offset);

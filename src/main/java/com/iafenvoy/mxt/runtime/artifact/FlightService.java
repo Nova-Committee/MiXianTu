@@ -11,7 +11,9 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.NeoForgeMod;
 
 /**
  * Authoritative generic flight controller for flying swords and artifacts.
@@ -43,7 +45,10 @@ public final class FlightService {
             sword.discard();
             return Result.rejected(Failure.CANNOT_MOUNT);
         }
-        data.start(archetype, player.level().getGameTime(), player.getAbilities().mayfly, player.getAbilities().flying, player.getAbilities().getFlyingSpeed(), sword.getUUID());
+        // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
+        // deprecated view of it, and reading the attribute is what can actually be written back.
+        data.start(archetype, player.level().getGameTime(), player.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
+                player.getAbilities().flying, player.getAbilities().getFlyingSpeed(), sword.getUUID());
         return Result.mounted();
     }
 
@@ -81,8 +86,9 @@ public final class FlightService {
             player.stopRiding();
             sword.discard();
         }
-        player.getAbilities().mayfly = data.previousMayfly();
-        player.getAbilities().flying = data.previousMayfly() && data.previousFlying();
+        player.getAbilities().flying = data.previousFlight() > 0.0D && data.previousFlying();
+        AttributeInstance flight = player.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
+        if (flight != null) flight.setBaseValue(data.previousFlight());
         player.getAbilities().setFlyingSpeed(data.previousFlyingSpeed());
         data.stop();
         player.onUpdateAbilities();

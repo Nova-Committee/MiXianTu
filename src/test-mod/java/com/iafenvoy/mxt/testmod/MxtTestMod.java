@@ -1,20 +1,30 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.data.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
+import com.iafenvoy.mxt.data.item.FormationPlateComponent.Allowed.Id;
+import com.iafenvoy.mxt.data.item.FormationPlateComponent.Allowed.Tag;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
+import com.iafenvoy.mxt.event.AuraZoneEvent;
+import com.iafenvoy.mxt.event.FormationEvent.Tick;
+import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
+import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
+import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.util.ProblemReporter.Collector;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import java.util.UUID;
 
+import com.iafenvoy.mxt.command.FormationCommand;
 import com.iafenvoy.mxt.command.TechniqueCommand;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.tree.CommandNode;
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
@@ -48,6 +58,7 @@ import com.iafenvoy.mxt.data.action.builtin.entity.RemovePhysiqueAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.RemoveSpiritRootAction;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasPhysiqueEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasSpiritRootEntityCondition;import com.iafenvoy.mxt.data.item.WeaponBinding;
+import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
@@ -69,9 +80,26 @@ import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NonZeroVisibility;
-import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.meta.IfElseAction;
+import com.iafenvoy.mxt.data.condition.builtin.entity.FormationMemberEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.FormationOwnerEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.NotEntityCondition;
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+import com.iafenvoy.mxt.runtime.formation.FormationCarrier;
+import com.iafenvoy.mxt.runtime.formation.FormationCenters;
+import com.iafenvoy.mxt.runtime.formation.FormationInstance;
+import com.iafenvoy.mxt.runtime.formation.FormationService;
+import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
+import com.iafenvoy.mxt.runtime.world.BlockAuraService;
+import com.iafenvoy.mxt.runtime.world.FormationAbsorption;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.Block;
+import com.iafenvoy.mxt.runtime.formation.FormationSources;
+import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
+import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
+import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.runtime.formation.FormationStructureValidator;
 import com.iafenvoy.mxt.runtime.forging.ForgingProbe;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
@@ -121,6 +149,7 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
@@ -130,17 +159,20 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -157,6 +189,11 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
@@ -164,8 +201,8 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finis
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -176,12 +213,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** Development-only mod that contributes the mxt_test datapack and client resources. */
 @Mod(MxtTestMod.MOD_ID)
 public final class MxtTestMod {
     public static final String MOD_ID = "mxt_test";
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static boolean suppressFormationTick;
+    private static boolean suppressFormationUpkeepFailure;
+    private static boolean refusingFormationAuraOverride;
 
     public MxtTestMod(IEventBus modBus) {
         MxtTestItems.REGISTRY.register(modBus);
@@ -189,8 +232,37 @@ public final class MxtTestMod {
         MxtTestTechniqueItems.REGISTRY.register(modBus);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::verifyItemBindings);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::grantTestAbilities);
+        NeoForge.EVENT_BUS.addListener(MxtTestMod::cancelFormationTick);
+        NeoForge.EVENT_BUS.addListener(MxtTestMod::cancelFormationUpkeepFailure);
+        NeoForge.EVENT_BUS.addListener(MxtTestMod::refuseFormationAuraOverride);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
         LOGGER.info("Loaded MiXianTu test mod");
+    }
+
+    /**
+     * Lets the formation audit suppress one period's work to prove that a suppressed period still records
+     * the upkeep it already charged.
+     *
+     * <p>Targets {@code TickEffects}, which is the cancellable half. {@code Tick} is the settled observer
+     * and deliberately cannot be cancelled, so a listener there would be a no-op.</p>
+     */
+    private static void cancelFormationTick(TickEffects event) {
+        if (suppressFormationTick) event.setCanceled(true);
+    }
+
+    /**
+     * Lets the formation audit let a formation stand through a period it cannot pay for.
+     */
+    private static void cancelFormationUpkeepFailure(UpkeepFailed event) {
+        if (suppressFormationUpkeepFailure) event.setCanceled(true);
+    }
+
+    /**
+     * Lets the formation aura audit prove that a formation's override goes through the cancellable event
+     * instead of around it.
+     */
+    private static void refuseFormationAuraOverride(AuraZoneEvent.Override event) {
+        if (refusingFormationAuraOverride) event.setCanceled(true);
     }
 
     private static void grantTestAbilities(PlayerLoggedInEvent event) {
@@ -381,6 +453,7 @@ public final class MxtTestMod {
         }
         verifyClientDefinitions(event);
         verifyFormationTemplate(event);
+        verifyFormationRuntime(event);
         ItemStack fireGinseng = new ItemStack(Items.RED_MUSHROOM);
         if (SpiritHerbService.find(fireGinseng).filter(herb -> HolderHelper.id(herb.quality()).equals(Identifier.parse("mxt_test:spirit_iron"))
                 && same(herb.quality().value().valueMultiplier().modifier().evaluate(FormulaContext.EMPTY), 1.5D)
@@ -391,6 +464,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Spirit herb quality did not resolve through the shared item-quality system");
         }
         verifyAuraZonePriority(event);
+        verifyFormationAuraOverride(event.getServer().overworld());
         verifyAuraResolutionMemo(event);
         verifyChannelAbility(event);
         verifyWeaponAttributeMerge(event);
@@ -996,7 +1070,7 @@ public final class MxtTestMod {
     private static List<AttributeModifier> damageModifiers(ItemStack stack) {
         ItemAttributeModifiers modifiers = stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
         return modifiers.modifiers().stream()
-                .filter(entry -> entry.attribute().is(Attributes.ATTACK_DAMAGE))
+                .filter(entry -> entry.attribute().is(Attributes.ATTACK_DAMAGE.unwrapKey().orElseThrow()))
                 .map(ItemAttributeModifiers.Entry::modifier)
                 .toList();
     }
@@ -2144,9 +2218,9 @@ public final class MxtTestMod {
         }
         AuraChunkAttachment capacity = new AuraChunkAttachment();
         Holder<Resource> capacityFire = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
-        capacity.initializeAuras(Map.of(capacityFire, new AuraPool(10.0D, 10.0D, 0.0D)), List.of());
+        capacity.initializeAuras(Map.of(capacityFire, AuraPool.natural(10.0D, 10.0D, 0.0D)), List.of());
         capacity.setBlockContribution(List.of(new BlockAuraContribution(BlockPos.ZERO,
-                Map.of(capacityFire, new AuraValue(5.0D, new Fixed(5.0D), 1.0D, 0xFFFFFF)))), List.of());
+                Map.of(capacityFire, new AuraValue(5.0D, new Fixed(5.0D), 1.0D, 0xFFFFFF)), false)), List.of());
         capacity.regenerateAuras(20L);
         AuraPool pool = capacity.auras().get(capacityFire);
         if (!same(pool.maximum(), 15.0D) || !same(pool.amount(), 15.0D)) {
@@ -2156,7 +2230,7 @@ public final class MxtTestMod {
         if (!same(formationPool.maximum(), 65.0D) || !same(formationPool.amount(), 65.0D)) {
             throw new IllegalStateException("Formation capacity bonuses did not extend the chunk limit");
         }
-        AuraPool unlimited = new AuraPool(1_000.0D, Double.POSITIVE_INFINITY, 0.0D);
+        AuraPool unlimited = AuraPool.natural(1_000.0D, Double.POSITIVE_INFINITY, 0.0D);
         if (!Double.isInfinite(unlimited.maximum()) || !same(unlimited.amount(), 1_000.0D)) {
             throw new IllegalStateException("Unlimited aura capacity did not preserve stored aura");
         }
@@ -2177,35 +2251,944 @@ public final class MxtTestMod {
         level.setBlock(controller, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
         Formation definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, id)
                 .orElseThrow(() -> new IllegalStateException("Formation test definition was not loaded"));
-        if (!FormationStructureValidator.TEMPLATE.matches(level, controller, definition)) {
+        if (!FormationStructureValidator.STRUCTURE.matches(level, controller, definition)) {
             throw new IllegalStateException("Vanilla structure-template formation validation failed");
         }
         level.removeBlock(controller, false);
     }
 
+    /**
+     * Formation runtime audit.
+     *
+     * <p>Drives {@link FormationWorldTicker#dispatch} directly rather than fabricating a level tick
+     * event, so every assertion runs against the exact method the game calls. Each case uses the same
+     * controller and tears its formation down afterwards, which keeps the whole audit inside the
+     * loaded spawn chunks — entity lookup is chunk scoped, so an out of range probe parked in an
+     * unloaded chunk would silently skip the release path it is meant to exercise.</p>
+     */
+    private static void verifyFormationRuntime(ServerStartedEvent event) {
+        ServerLevel level = event.getServer().overworld();
+        if (FormationWorldTicker.PERIOD != 20L || !FormationWorldTicker.due(0L)
+                || FormationWorldTicker.due(1L) || FormationWorldTicker.due(19L)
+                || !FormationWorldTicker.due(20L) || !FormationWorldTicker.due(60L)) {
+            throw new IllegalStateException("Formation dispatch was not bound to its 20 tick cadence");
+        }
+        verifyFormationConditionNesting(level);
+        verifyFormationContextAndRange(level);
+        verifyFormationOwnerCondition(level);
+        verifyFormationGrantLifecycle(level);
+        verifyFormationUpkeep(level);
+        verifyFormationInlineStructure(level);
+        verifyFormationTemplateAir(level);
+        verifyFormationPlateBinding(level);
+        verifyFormationPlateAllowList(level);
+        verifyFormationAbsorption(level);
+        verifyFormationEventSplit();
+        verifyFormationUpkeepFailure(level);
+        verifyFormationIndexTolerance(level);
+        verifyFormationPersistence(level);
+        LOGGER.info("MiXianTu formation audit: {} tick cadence; explicit formation_x/y/z reaching the action; spherical "
+                        + "range inside the entity lookup box; mxt:formation_owner distinct from mxt:formation_member; "
+                        + "scoped grants released on exit and on teardown; upkeep recorded through a suppressed period; "
+                        + "an unpaid period survivable when UpkeepFailed is cancelled; Tick split from TickEffects; "
+                        + "inline and template structures both enforced and mutually exclusive; air entries in a "
+                        + "template ignored rather than required; a formation centre resolved one block off and "
+                        + "binding a formation onto a hand-held plate; a plate's allow list honoured by id, by tag "
+                        + "and on the selected formation; a formation's aura_zone and max_bonus reaching the resolved "
+                        + "aura through the cancellable hook; block emitters inside a formation supplying it instead "
+                        + "of the environment and paying its upkeep, with the ambient draw following its option; "
+                        + "malformed and duplicate "
+                        + "index rows dropped without losing the rest; and a live index surviving the save path NeoForge "
+                        + "writes it through",
+                FormationWorldTicker.PERIOD);
+    }
+
+    /**
+     * The carrier has to reach a condition three levels down.
+     *
+     * <p>The ticker only ever hands the carrier to the top level action, so everything nested below it
+     * depends on {@code Context.copyTo} carrying the extension data through {@code if_else} and
+     * {@code not}. That is the assumption the whole design rests on and nothing else asserts it.</p>
+     */
+    private static void verifyFormationConditionNesting(ServerLevel level) {
+        Pig subject = new Pig(EntityType.PIG, level);
+        Pig outsider = new Pig(EntityType.PIG, level);
+        FormationCarrier carrier = new FormationCarrier(Identifier.parse("mxt_test:formation_owner_probe"),
+                BlockPos.ZERO, 8.0D, Optional.of(subject.getUUID()));
+        FormationContextProbe probe = new FormationContextProbe();
+        EntityAction nested = new IfElseAction(new NotEntityCondition(FormationOwnerEntityCondition.INSTANCE),
+                probe, NoOpAction.INSTANCE);
+        // Carrier present, entity is not the owner: the condition is read from the nested context and
+        // the probe runs, so what it captured proves the carrier survived the nesting.
+        executeWithCarrier(outsider, carrier, nested);
+        if (probe.invocations() != 1 || probe.carriers().size() != 1 || !probe.carriers().getFirst().equals(carrier))
+            throw new IllegalStateException("The formation carrier did not survive if_else and not nesting");
+        // Same nesting, but now the entity is the owner, so the else branch must be the one taken.
+        probe.clear();
+        executeWithCarrier(subject, carrier, nested);
+        if (probe.invocations() != 0)
+            throw new IllegalStateException("mxt:formation_owner did not read the carrier through the nesting");
+        // Without a formation there is nothing to be the owner of. The condition must say so rather
+        // than falling back to "owns an active formation somewhere", which is a different question.
+        probe.clear();
+        executeWithCarrier(subject, null, nested);
+        if (probe.invocations() != 1 || !probe.carriers().isEmpty())
+            throw new IllegalStateException("mxt:formation_owner answered outside a formation context");
+    }
+
+    /**
+     * The explicit values a per-entity action can read, and the shape of the range they describe.
+     */
+    private static void verifyFormationContextAndRange(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_context_probe");
+        Formation definition = formationDefinition(level, id);
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig inside = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig corner = spawnProbe(level, controller.offset(6, 1, 6));
+        Vec3 cornerStart = corner.position();
+        try {
+            activateFormation(level, controller, id, null);
+            FormationWorldTicker.dispatch(level);
+            if (inside.position().distanceTo(controller.getCenter()) > 0.1D)
+                throw new IllegalStateException("formation_x/y/z did not reach the entity action: "
+                        + inside.position() + " instead of " + controller.getCenter());
+            if (!inside.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("The formation enter action did not run for a covered entity");
+            // 8.5 blocks away: inside the box the entity lookup hands over, outside the sphere the
+            // formation claims. Affecting it would mean the range had silently become a box.
+            if (corner.position().distanceTo(cornerStart) > 0.1D || corner.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("The formation reached an entity inside its box but outside its sphere");
+        } finally {
+            clearFormation(level, controller, definition, inside, corner);
+        }
+    }
+
+    /**
+     * {@code mxt:formation_owner} means "owns <em>this</em> formation", which is a different question
+     * from what {@code mxt:formation_member} already answered.
+     */
+    private static void verifyFormationOwnerCondition(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_owner_probe");
+        Formation definition = formationDefinition(level, id);
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig other = spawnProbe(level, controller.offset(-2, 1, 0));
+        Vec3 ownerStart = owner.position();
+        try {
+            activateFormation(level, controller, id, owner.getUUID());
+            FormationWorldTicker.dispatch(level);
+            if (owner.position().distanceTo(ownerStart) > 0.1D)
+                throw new IllegalStateException("mxt:formation_owner did not recognise the formation's own owner");
+            if (other.position().distanceTo(controller.getCenter()) > 0.1D)
+                throw new IllegalStateException("mxt:formation_owner excluded an entity that is not the owner");
+            // The level-wide condition must keep answering its own question, and the narrow one must
+            // not answer it: the owner owns an active formation here yet owns no formation context.
+            if (!FormationMemberEntityCondition.INSTANCE.test(owner, FormulaContext.EMPTY))
+                throw new IllegalStateException("mxt:formation_member stopped answering the level-wide question");
+            if (FormationOwnerEntityCondition.INSTANCE.test(owner, FormulaContext.EMPTY))
+                throw new IllegalStateException("mxt:formation_owner answered outside a formation context");
+        } finally {
+            clearFormation(level, controller, definition, owner, other);
+        }
+    }
+
+    /**
+     * A grant made by a formation must not outlive it.
+     *
+     * <p>{@code ABILITY_HOLDER} is serialised and copied on death, so a granted ability stays until
+     * something revokes it, and {@code deactivate_action} cannot: its context is a level, not an
+     * entity. This drives the three places that do release it — leaving the range, re-entering, and
+     * tearing the formation down.</p>
+     */
+    private static void verifyFormationGrantLifecycle(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_grant_probe");
+        Formation definition = formationDefinition(level, id);
+        Identifier source = FormationSources.of(id);
+        if (!source.equals(Identifier.parse("mxt:formation/mxt_test/formation_grant_probe")))
+            throw new IllegalStateException("The formation source convention changed: " + source);
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig subject = spawnProbe(level, controller.offset(2, 1, 0));
+        try {
+            activateFormation(level, controller, id, null);
+            FormationWorldTicker.dispatch(level);
+            if (!holdsSource(subject, source))
+                throw new IllegalStateException("The formation did not grant through its scoped source");
+            // Twelve blocks away: outside the radius of eight, but still inside the loaded chunks, so
+            // the entity stays resolvable and the release path is actually exercised.
+            subject.teleportTo(controller.getX() + 12.5D, controller.getY() + 1.0D, controller.getZ() + 0.5D);
+            FormationWorldTicker.dispatch(level);
+            if (holdsSource(subject, source))
+                throw new IllegalStateException("Leaving a formation did not release its scoped grant");
+            // Releasing on exit must not have disabled the instance: coming back has to grant again.
+            subject.teleportTo(controller.getX() + 2.5D, controller.getY() + 1.0D, controller.getZ() + 0.5D);
+            FormationWorldTicker.dispatch(level);
+            if (!holdsSource(subject, source))
+                throw new IllegalStateException("Re-entering a formation did not restore its grant");
+            if (!FormationWorldService.deactivate(level, controller))
+                throw new IllegalStateException("Formation teardown reported nothing to remove");
+            if (holdsSource(subject, source))
+                throw new IllegalStateException("Formation teardown did not release its scoped grant");
+            if (level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isPresent())
+                throw new IllegalStateException("Formation teardown left the instance registered");
+            if (FormationWorldService.deactivate(level, controller))
+                throw new IllegalStateException("Formation teardown was not idempotent");
+        } finally {
+            clearFormation(level, controller, definition, subject);
+        }
+    }
+
+    /**
+     * Upkeep is charged and recorded in the same pass, including when a listener cancels the tick.
+     *
+     * <p>The attachment holds the live instance, so the counter moves in place. Before that it was
+     * written back only on the branch that ran the tick, which meant a canceled tick consumed the
+     * resource and then threw the bookkeeping away.</p>
+     */
+    private static void verifyFormationUpkeep(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_upkeep_probe");
+        Formation definition = formationDefinition(level, id);
+        Holder<Resource> spiritPower = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))
+                .orElseThrow(() -> new IllegalStateException("The upkeep audit needs the spirit power resource"));
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig payer = spawnProbe(level, controller.offset(1, 1, 0));
+        Pig subject = spawnProbe(level, controller.offset(-2, 1, 0));
+        payer.getData(MxtAttachments.RESOURCE_HOLDER).set(spiritPower, 100.0D);
+        try {
+            activateFormation(level, controller, id, payer.getUUID());
+            suppressFormationTick = true;
+            FormationWorldTicker.dispatch(level);
+            long canceled = upkeep(level, controller);
+            double afterCanceled = payer.getData(MxtAttachments.RESOURCE_HOLDER).get(spiritPower);
+            if (!same(afterCanceled, 95.0D))
+                throw new IllegalStateException("Formation upkeep was not charged: " + afterCanceled);
+            if (canceled != 1L)
+                throw new IllegalStateException("A canceled formation tick charged upkeep and then dropped the record of it: " + canceled);
+            if (subject.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("A canceled formation tick still ran the per-entity actions");
+            suppressFormationTick = false;
+            FormationWorldTicker.dispatch(level);
+            if (upkeep(level, controller) != 2L)
+                throw new IllegalStateException("Formation upkeep was not counted in place");
+            if (!same(payer.getData(MxtAttachments.RESOURCE_HOLDER).get(spiritPower), 90.0D))
+                throw new IllegalStateException("Formation upkeep was not charged twice");
+            if (!subject.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An uncanceled formation tick did not run the per-entity actions");
+        } finally {
+            suppressFormationTick = false;
+            clearFormation(level, controller, definition, payer, subject);
+        }
+    }
+
+    /**
+     * A live formation has to survive a save.
+     *
+     * <p>Drives the same calls NeoForge makes when it writes and reads level attachments: store through
+     * a {@code TagValueOutput} and assert its problem reporter stayed empty, because that reporter is
+     * what decides whether the attachment is written at all. The index is keyed by a packed
+     * {@link BlockPos}, and a map key is a string in both NBT and JSON, so this is the assertion that
+     * catches a key codec which only works while the map happens to be empty.</p>
+     *
+     * <p>The read has to go through the deprecated {@code ValueInput#read(MapCodec)}: the interface has no
+     * non-deprecated whole-object read, and its replacement takes a field name, which would mean wrapping
+     * the codec in a synthetic field and no longer testing the shape NeoForge actually writes.</p>
+     */
+    @SuppressWarnings("deprecation")
+    private static void verifyFormationPersistence(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_context_probe");
+        Formation definition = formationDefinition(level, id);
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        double radius = definition.radius().evaluate(FormulaContext.of(level));
+        try {
+            activateFormation(level, controller, id, owner.getUUID());
+            Collector writer = new Collector();
+            TagValueOutput output = TagValueOutput.createWithContext(writer, level.registryAccess());
+            output.store(FormationWorldAttachment.MAP_CODEC, level.getData(MxtAttachments.FORMATION_WORLD));
+            if (!writer.isEmpty())
+                throw new IllegalStateException("Saving a live formation index reported: " + writer.getReport());
+            Collector reader = new Collector();
+            FormationWorldAttachment decoded = TagValueInput
+                    .create(reader, level.registryAccess(), output.buildResult())
+                    .read(FormationWorldAttachment.MAP_CODEC)
+                    .orElseThrow(() -> new IllegalStateException("Reading a saved formation index failed: " + reader.getReport()));
+            FormationInstance restored = decoded.get(controller)
+                    .orElseThrow(() -> new IllegalStateException("A saved formation index lost its controller"));
+            if (!restored.formation().equals(id) || !same(restored.radius(), radius)
+                    || !restored.owner().equals(Optional.of(owner.getUUID())) || restored.maintenanceCount() != 0L) {
+                throw new IllegalStateException("A saved formation index did not round trip: "
+                        + restored.formation() + " r=" + restored.radius() + " owner=" + restored.owner()
+                        + " count=" + restored.maintenanceCount());
+            }
+        } finally {
+            clearFormation(level, controller, definition, owner);
+        }
+    }
+
+    private static long upkeep(ServerLevel level, BlockPos controller) {
+        return level.getData(MxtAttachments.FORMATION_WORLD).get(controller)
+                .map(FormationInstance::maintenanceCount).orElse(-1L);
+    }
+
+    private static void executeWithCarrier(Pig entity, FormationCarrier carrier, EntityAction action) {
+        EntityActionContext context = new EntityActionContext(entity, FormulaContext.of(entity));
+        if (carrier != null) context.set(FormationCarrier.KEY, carrier);
+        action.execute(context);
+    }
+
+    private static Formation formationDefinition(ServerLevel level, Identifier id) {
+        return MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, id)
+                .orElseThrow(() -> new IllegalStateException("Formation test definition was not loaded: " + id));
+    }
+
+    /**
+     * An inline {@code structure} must both satisfy activation and keep enforcing afterwards, and the two
+     * shape forms must stay mutually exclusive.
+     */
+    private static void verifyFormationInlineStructure(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_inline_probe");
+        Formation definition = formationDefinition(level, id);
+        if (definition.structure().size() != 3 || definition.structureTemplate().isPresent())
+            throw new IllegalStateException("The inline test formation did not declare exactly its three blocks");
+        BlockPos required = new BlockPos(2, 0, 0);
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig subject = spawnProbe(level, controller.offset(-2, 1, 0));
+        try {
+            activateFormation(level, controller, id, null);
+            FormationWorldTicker.dispatch(level);
+            if (!subject.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An inline-structured formation did not run its per-entity action");
+            // Break one required block: the inline path is what has to notice, and it must notice on the
+            // next pass rather than only at activation.
+            level.removeBlock(controller.offset(required), false);
+            FormationWorldTicker.dispatch(level);
+            if (level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isPresent())
+                throw new IllegalStateException("Breaking an inline structure block left the formation active");
+        } finally {
+            clearFormation(level, controller, definition, subject);
+        }
+        rejectFormationShape(level, "{\"radius\": 8}");
+        rejectFormationShape(level, """
+                {"structure_template": "mxt_test:spirit_gathering",
+                 "structure": [{"offset": [0, 0, 0], "state": "minecraft:gold_block"}],
+                 "radius": 8}
+                """);
+    }
+
+    /**
+     * Air entries inside a structure template must be ignored rather than required.
+     *
+     * <p>A template saved with a structure block carries its whole bounding box, so a formation would
+     * otherwise fail because a torch landed on a cell the template recorded as empty. The template here
+     * requires a gold block at {@code [0, 0, 0]} and air at {@code [1, 0, 0]}, and the audit then puts
+     * stone on the air cell — activation may not care, while breaking the gold block must still take the
+     * formation down. Without the second half, deleting the whole palette check would pass.</p>
+     */
+    private static void verifyFormationTemplateAir(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_template_probe");
+        Formation definition = formationDefinition(level, id);
+        if (definition.structureTemplate().isEmpty() || !definition.structure().isEmpty())
+            throw new IllegalStateException("The template test formation no longer declares a template");
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig subject = spawnProbe(level, controller.offset(1, 1, 0));
+        try {
+            level.setBlock(controller.offset(1, 0, 0), Blocks.STONE.defaultBlockState(), 3);
+            activateFormation(level, controller, id, null);
+            FormationWorldTicker.dispatch(level);
+            if (!subject.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An air entry in a template was required, so the formation would not stand");
+            level.removeBlock(controller, false);
+            FormationWorldTicker.dispatch(level);
+            if (level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isPresent())
+                throw new IllegalStateException("Breaking a template's non-air block left the formation active");
+        } finally {
+            level.removeBlock(controller.offset(1, 0, 0), false);
+            clearFormation(level, controller, definition, subject);
+        }
+    }
+
+    /**
+     * The two halves of "a player can actually get a running formation": where the plate puts the
+     * centre, and how the plate gets its formation in the first place.
+     *
+     * <p>The centre is resolved by {@link FormationCenters}, asserted on a corridor of two gold blocks one
+     * step apart. The search window is only 3x3x3 around the click, so a longer structure would not fit
+     * inside it: the corridor is as long as the window allows and no longer. A single block would not
+     * exercise the search at all, and the inline probe cannot either — its blocks are two apart, so only
+     * the position it was built at is ever a valid centre.</p>
+     *
+     * <p>Binding is driven through the command body with a {@code FakePlayer}, because the bug being
+     * guarded against is not in {@code ItemStack#set} — it is that nothing used to call it at all, and a
+     * plate in survival had no way to stop carrying an empty component.</p>
+     */
+    private static void verifyFormationPlateBinding(ServerLevel level) {
+        try {
+            verifyFormationPlateBindingChecked(level);
+        } catch (CommandSyntaxException failure) {
+            throw new IllegalStateException("The formation plate binding check could not finish", failure);
+        }
+    }
+
+    private static void verifyFormationPlateBindingChecked(ServerLevel level) throws CommandSyntaxException {
+        Identifier id = Identifier.parse("mxt_test:formation_center_probe");
+        Formation definition = formationDefinition(level, id);
+        if (definition.structure().size() != 2 || definition.structureTemplate().isPresent())
+            throw new IllegalStateException("The centre probe did not declare exactly its two blocks");
+        BlockPos controller = new BlockPos(0, level.getMinY() + 2, 0);
+        BlockPos ahead = controller.offset(0, 0, 1);
+        level.setBlock(controller, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+        level.setBlock(ahead, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+        try {
+            // Both blocks of the corridor are centres in their own right, which is what makes "the search
+            // works" distinguishable from "the click happened to land on the controller".
+            for (BlockPos own : List.of(controller, ahead)) {
+                Optional<BlockPos> resolved = FormationCenters.resolve(level, own, definition);
+                if (resolved.isEmpty() || !List.of(controller, ahead).contains(resolved.get()))
+                    throw new IllegalStateException("A click on the structure did not resolve to a centre of it: "
+                            + own + " -> " + resolved.orElse(null));
+            }
+            Optional<BlockPos> exact = FormationCenters.resolve(level, controller, definition);
+            if (exact.isEmpty() || !exact.get().equals(controller))
+                throw new IllegalStateException("A click on a formation's own centre did not resolve to it: "
+                        + exact.orElse(null));
+            // Outside the 3x3x3 there is nothing to find: a click on empty ground must not resolve.
+            if (FormationCenters.resolve(level, controller.offset(1, 0, 4), definition).isPresent())
+                throw new IllegalStateException("A click outside the search window still resolved to a centre");
+            level.removeBlock(ahead, false);
+            if (FormationCenters.resolve(level, controller.offset(1, 0, 4), definition).isPresent())
+                throw new IllegalStateException("A broken structure still resolved to a formation centre");
+            level.setBlock(ahead, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+
+            FakePlayer holder = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-plate"));
+            CommandSourceStack source = new CommandSourceStack(holder.commandSource(), holder.position(), Vec2.ZERO, level,
+                    PermissionSet.ALL_PERMISSIONS, holder.getName().getString(), holder.getDisplayName(),
+                    level.getServer(), holder);
+            ItemStack blank = new ItemStack(MxtItems.FORMATION_PLATE.get());
+            if (blank.getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY).formation().isPresent())
+                throw new IllegalStateException("A fresh formation plate arrived already bound");
+            holder.setItemInHand(InteractionHand.MAIN_HAND, blank);
+            if (FormationCommand.bind(source, id) != 1)
+                throw new IllegalStateException("Binding a formation to a held plate reported no change");
+            Optional<Holder<Formation>> bound = holder.getMainHandItem()
+                    .getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY).formation();
+            if (bound.isEmpty() || !HolderHelper.id(bound.get()).equals(id))
+                throw new IllegalStateException("The bind command did not put the formation on the held plate");
+            holder.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
+            if (FormationCommand.bind(source, id) != 0)
+                throw new IllegalStateException("The bind command modified an item that is not a plate");
+            // A typo must be refused before anything is written, so the plate keeps whatever it had: the id
+            // lookup runs first and throws, which is what reaches the operator.
+            // A typo must be refused before anything is written, so a fresh plate stays unbound. Reusing the
+            // stack bound above would make this vacuous: it is already carrying a formation for the wrong
+            // reason.
+            holder.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtItems.FORMATION_PLATE.get()));
+            try {
+                FormationCommand.bind(source, Identifier.parse("mxt_test:never_existed"));
+                throw new IllegalStateException("The bind command accepted a formation that does not exist");
+            } catch (CommandSyntaxException expected) {
+                // Refused, and the plate is untouched.
+            }
+            if (holder.getMainHandItem().getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY)
+                    .formation().isPresent())
+                throw new IllegalStateException("A refused bind still wrote something onto the plate");
+
+            ServerLevel overworld = ServerCache.get()
+                    .orElseThrow(() -> new IllegalStateException("The formation audit needs the server cache"))
+                    .server().overworld();
+            CommandNode<CommandSourceStack> formation = overworld.getServer().getCommands().getDispatcher()
+                    .getRoot().getChild("mxt").getChild("formation");
+            if (formation == null || formation.getChild("bind") == null)
+                throw new IllegalStateException("The formation bind command is not registered under /mxt formation");
+            if (formation.getChild("bind").getRequirement().test(source.withPermission(PermissionSet.NO_PERMISSIONS)))
+                throw new IllegalStateException("Binding a formation does not require gamemaster permission");
+            if (formation.getChild("list") == null
+                    || !formation.getChild("list").getRequirement().test(source.withPermission(PermissionSet.NO_PERMISSIONS)))
+                throw new IllegalStateException("The formation diagnostics stopped being readable without permission");
+            // The top-level alias is a separate registration from the /mxt subtree, and the server option
+            // decides whether it exists. Asserting both directions would fight the option, so the check is
+            // that presence follows the option rather than that it is present.
+            CommandNode<CommandSourceStack> alias = overworld.getServer().getCommands().getDispatcher()
+                    .getRoot().getChild("formation");
+            if ((alias == null) == MxtServerConfig.INSTANCE.commands.formation.getValue())
+                throw new IllegalStateException("The top-level /formation alias does not follow its server option");
+            if (alias != null && (alias.getChild("bind") == null || alias.getChild("list") == null))
+                throw new IllegalStateException("The /formation alias does not expose the same subtree as /mxt formation");
+            // The two registrations share one builder, and the risk of that is a node that silently carries
+            // different children. Compare the child sets rather than trusting the shared source.
+            if (alias != null && !children(alias).equals(children(formation)))
+                throw new IllegalStateException("The /formation alias and /mxt formation expose different children: "
+                        + children(alias) + " vs " + children(formation));
+        } finally {
+            level.removeBlock(controller, false);
+            level.removeBlock(ahead, false);
+        }
+    }
+
+    /**
+     * The plate's allow list, which is what keeps "which formation can this run" a property of the item
+     * instead of "every formation in the registry".
+     *
+     * <p>Four things are asserted: an empty list follows the server option, an id in the list admits that
+     * formation and refuses another, a {@code #tag} entry admits by tag rather than by id, and the
+     * selection is only usable when it is itself admitted. The last one is the rule that makes a
+     * hand-edited or stale plate fail closed rather than activate something it should not.</p>
+     */
+    private static void verifyFormationPlateAllowList(ServerLevel level) {
+        Registry<Formation> registry = level.registryAccess().lookupOrThrow(MxtResourceKeys.FORMATION);
+        Identifier allowedId = Identifier.parse("mxt_test:formation_center_probe");
+        Identifier otherId = Identifier.parse("mxt_test:formation_inline_probe");
+        Identifier tagId = Identifier.parse("mxt_test:probe_group");
+        Reference<Formation> allowedFormation = registry.getOrThrow(ResourceKey.create(MxtResourceKeys.FORMATION, allowedId));
+        Reference<Formation> otherFormation = registry.getOrThrow(ResourceKey.create(MxtResourceKeys.FORMATION, otherId));
+
+        FormationPlateComponent empty = new FormationPlateComponent(List.of(), Optional.empty());
+        if (empty.admits(allowedFormation) != MxtServerConfig.emptyPlateAllowsAll())
+            throw new IllegalStateException("An empty plate allow list ignored the empty_plate_allows_all option");
+        if (empty.admitsSelection())
+            throw new IllegalStateException("An unbound plate reported a usable selection");
+
+        FormationPlateComponent restricted = new FormationPlateComponent(List.of(new Id(allowedId)), Optional.empty());
+        if (!restricted.admits(allowedFormation))
+            throw new IllegalStateException("An allow list refused the formation it lists");
+        if (restricted.admits(otherFormation))
+            throw new IllegalStateException("An allow list admitted a formation it does not list");
+        if (restricted.admitsSelection())
+            throw new IllegalStateException("A restricted but unbound plate reported a usable selection");
+
+        FormationPlateComponent tagged = new FormationPlateComponent(List.of(new Tag(TagKey.create(MxtResourceKeys.FORMATION, tagId))), Optional.empty());
+        if (!tagged.admits(allowedFormation))
+            throw new IllegalStateException("A tag entry did not admit the formation the tag lists");
+        if (tagged.admits(otherFormation))
+            throw new IllegalStateException("A tag entry admitted a formation outside the tag");
+        // The enumeration is what binding and suggestions consume, so it has to agree with admits().
+        if (!tagged.admissible(registry).contains(allowedFormation) || tagged.admissible(registry).contains(otherFormation))
+            throw new IllegalStateException("The admissible set disagreed with the tag's own admits() result");
+
+        // Bound to something the list refuses: the plate says so rather than activating it.
+        FormationPlateComponent stalemate = new FormationPlateComponent(restricted.allowed(), Optional.of(otherFormation));
+        if (stalemate.admitsSelection())
+            throw new IllegalStateException("A plate bound to a formation outside its allow list still had a usable selection");
+        FormationPlateComponent usable = new FormationPlateComponent(restricted.allowed(), Optional.of(allowedFormation));
+        if (!usable.admitsSelection())
+            throw new IllegalStateException("A plate bound inside its own allow list was not usable");
+    }
+
+    private static Set<String> children(CommandNode<CommandSourceStack> node) {
+        return node.getChildren().stream().map(CommandNode::getName).collect(Collectors.toSet());
+    }
+
+    /**
+     * A formation's {@code aura_zone} has to reach the aura resolver, and it has to do so through the
+     * cancellable {@link AuraZoneEvent.Override} rather than by being applied unconditionally.
+     *
+     * <p>Nothing asserted this before: the formation audit checked that formations run, and the aura
+     * audit checked the static priority tiers, but the join between them — a formation standing on the
+     * ground changing what aura the position resolves to — had no coverage at all. That join is the only
+     * reason {@code aura_zone} exists on a formation, so it is exactly the kind of wiring that breaks
+     * silently when either side is edited.</p>
+     *
+     * <p>The position is chosen in a far corner rather than at the origin so the run does not disturb the
+     * aura memo benchmark that queries the origin next.</p>
+     */
+    private static void verifyFormationAuraOverride(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_aura_probe");
+        Formation definition = formationDefinition(level, id);
+        Identifier zone = definition.auraZone()
+                .orElseThrow(() -> new IllegalStateException("The aura probe formation declares no aura zone"))
+                .unwrapKey()
+                .orElseThrow(() -> new IllegalStateException("The aura probe's aura zone has no identifier"))
+                .identifier();
+        BlockPos controller = new BlockPos(496, level.getMinY() + 2, 496);
+        try {
+            for (Formation.RequiredBlock required : definition.structure())
+                level.setBlock(controller.offset(required.offset()), required.state(), 3);
+            sweepAuraMemo(level);
+            AuraResult before = AuraService.getPositionAura(level, controller);
+            if (before.sourceKind() == SourceKind.FORMATION)
+                throw new IllegalStateException("A position reported a formation override before any formation stood there");
+
+            FormationWorldService.Result activated = FormationWorldService.activate(level, controller, id, definition,
+                    new ResourceHolderAttachment(), FormulaContext.of(level), null);
+            if (!activated.active())
+                throw new IllegalStateException("The aura probe formation would not activate: " + activated.failure());
+            sweepAuraMemo(level);
+            AuraResult overridden = AuraService.getPositionAura(level, controller);
+            if (overridden.sourceKind() != SourceKind.FORMATION || !zone.equals(overridden.source()))
+                throw new IllegalStateException("A standing formation did not override the aura: kind="
+                        + overridden.sourceKind() + " source=" + overridden.source() + " expected=" + zone);
+            // The formation's max_bonus rides on the same override: it is added to the zone's own upper
+            // bound for the resource, and only for a resource the zone already provides. Both halves are
+            // asserted so "the bonus is applied" cannot pass by the resource simply being absent.
+            Holder<Resource> bonusResource = MxtDatapackRegistries
+                    .holder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))
+                    .orElseThrow(() -> new IllegalStateException("The aura probe's bonus resource is missing"));
+            AuraPool plain = before.pool(bonusResource);
+            AuraPool boosted = overridden.pool(bonusResource);
+            if (boosted == null)
+                throw new IllegalStateException("The formation's override dropped the resource its bonus applies to");
+            double expectedMaximum = (plain == null ? 0.0D : plain.maximum()) + 37.5D;
+            if (!same(boosted.maximum(), expectedMaximum))
+                throw new IllegalStateException("The formation's max_bonus did not raise the aura ceiling: "
+                        + boosted.maximum() + " instead of " + expectedMaximum);
+
+            // The override is an event, so refusing it has to leave the static answer in place. This is
+            // what proves the formation arrives through the hook rather than around it.
+            refusingFormationAuraOverride = true;
+            sweepAuraMemo(level);
+            AuraResult refused = AuraService.getPositionAura(level, controller);
+            if (refused.sourceKind() == SourceKind.FORMATION)
+                throw new IllegalStateException("A refused aura override was applied anyway");
+        } finally {
+            refusingFormationAuraOverride = false;
+            FormationWorldService.deactivate(level, controller);
+            for (Formation.RequiredBlock required : definition.structure())
+                level.removeBlock(controller.offset(required.offset()), false);
+        }
+        sweepAuraMemo(level);
+        AuraResult after = AuraService.getPositionAura(level, controller);
+        if (after.sourceKind() == SourceKind.FORMATION)
+            throw new IllegalStateException("Dismantling a formation left its aura override in place");
+    }
+
+    /**
+     * Drops every memoised aura answer for a level by opening a new tick window with the cache switched
+     * off, then switches it back on.
+     *
+     * <p>The audit needs this because the memo is keyed by game time: within one server tick a position
+     * keeps its first answer, so a formation that appears mid-tick cannot be observed. Opening the window
+     * with {@code setEnabled(false)} also clears it, which is the only public way in.</p>
+     */
+    private static void sweepAuraMemo(ServerLevel level) {
+        AuraQueryCache.setEnabled(false);
+        AuraQueryCache.advance(level, level.getGameTime());
+        AuraQueryCache.setEnabled(true);
+    }
+
+    /**
+     * A block emitter inside a formation supplies the formation, not the environment, and the formation
+     * spends what it supplies on its own upkeep.
+     *
+     * <p>Three separate claims, because they fail independently. The position test decides whether a block
+     * is inside a formation at all. The attachment test decides whether an absorbed emitter is kept out of
+     * the shared stock — it has to be, because the environment subtracts the whole chunk aggregate and an
+     * emitter left in it would be handed back to every query, letting one block's aura be spent twice. The
+     * service test decides whether that aura then reduces the charge, including the case where it covers
+     * the cost entirely and the payer is never asked.</p>
+     *
+     * <p>The last case is the one that matters most in play: a formation standing on enough emitters keeps
+     * running with no owner resources at all, so the payer's balance must be untouched.</p>
+     */
+    private static void verifyFormationAbsorption(ServerLevel level) {
+        Holder<Resource> common = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt:common"));
+        Identifier id = Identifier.parse("mxt_test:formation_absorb_probe");
+        Formation definition = formationDefinition(level, id);
+        if (definition.maintenanceCosts().isEmpty())
+            throw new IllegalStateException("The absorb probe formation declares no upkeep to offset");
+
+        // The predicate itself, against a real formation in the index.
+        BlockPos controller = new BlockPos(16, level.getMinY() + 2, 16);
+        level.setBlock(controller, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+        try {
+            FormationWorldService.Result activated = FormationWorldService.activate(level, controller, id, definition,
+                    new ResourceHolderAttachment(), FormulaContext.of(level), null);
+            if (!activated.active())
+                throw new IllegalStateException("The absorb probe formation would not activate: " + activated.failure());
+            FormationAbsorption.Sources sources = FormationAbsorption.Sources.of(level,
+                    controller.getX() - 8, controller.getZ() - 8, controller.getX() + 8, controller.getZ() + 8);
+            if (!sources.absorbed(controller.offset(4, 0, 0))
+                    || sources.absorbed(controller.offset(9, 0, 0)))
+                throw new IllegalStateException("Formation coverage did not follow its own radius: "
+                        + sources.absorbed(controller.offset(4, 0, 0)) + " / "
+                        + sources.absorbed(controller.offset(9, 0, 0)));
+
+            // End to end through the rebuild: an emitter placed inside the formation must leave the shared
+            // stock and appear in the absorbed totals, and putting a formation up must be what causes the
+            // chunk to be rebuilt at all. Without the invalidation on activation the block would keep
+            // feeding the environment and the formation's share would silently be free.
+            Block emitter = BuiltInRegistries.BLOCK.getValue(Identifier.parse("mxt:spirit_stone_block"));
+            if (emitter == null || emitter == Blocks.AIR)
+                throw new IllegalStateException("The absorption audit needs the spirit stone block to emit aura");
+            if (!BlockAuraService.matches(level, emitter.defaultBlockState()))
+                throw new IllegalStateException("The spirit stone block is no longer a block aura emitter");
+            BlockPos emitterPos = controller.offset(4, 0, 4);
+            level.setBlock(emitterPos, emitter.defaultBlockState(), 3);
+            AuraChunkTicker.markDirty(level, emitterPos);
+            AuraChunkTicker.flushDirty(level);
+            Map<Holder<Resource>, AuraValue> absorbedByChunk = level.getChunkAt(emitterPos)
+                    .getData(MxtAttachments.AURA_CHUNK).absorbedAura();
+            if (!absorbedByChunk.containsKey(common) || absorbedByChunk.get(common).amount() <= 0.0D)
+                throw new IllegalStateException("An emitter inside a formation did not reach the absorbed totals: "
+                        + absorbedByChunk);
+            Map<Holder<Resource>, Double> supplied = FormationAbsorption.absorbedFor(level, controller,
+                    definition.radius().evaluate(FormulaContext.of(level)));
+            if (supplied.getOrDefault(common, 0.0D) <= 0.0D)
+                throw new IllegalStateException("A formation standing over an emitter supplied nothing: " + supplied);
+            level.removeBlock(emitterPos, false);
+        } finally {
+            FormationWorldService.deactivate(level, controller);
+            level.removeBlock(controller, false);
+        }
+        FormationAbsorption.Sources empty = FormationAbsorption.Sources.of(level,
+                controller.getX() - 8, controller.getZ() - 8, controller.getX() + 8, controller.getZ() + 8);
+        if (!empty.empty())
+            throw new IllegalStateException("A dismantled formation still absorbs emitters");
+
+        // An absorbed emitter leaves the shared stock and is totalled on its own.
+        Map<Holder<Resource>, AuraValue> aura = Map.of(common, new AuraValue(50.0D, new Fixed(50.0D), 0.1D, 0xFFFFFF));
+        AuraChunkAttachment chunk = new AuraChunkAttachment();
+        chunk.setBlockContribution(List.of(
+                new BlockAuraContribution(BlockPos.ZERO, aura, false),
+                new BlockAuraContribution(new BlockPos(0, 0, 1), aura, true)), List.of());
+        if (!chunk.blockAura().containsKey(common) || !same(chunk.blockAura().get(common).amount(), 50.0D))
+            throw new IllegalStateException("An absorbed emitter was left in the shared stock: " + chunk.blockAura());
+        if (!chunk.absorbedAura().containsKey(common) || !same(chunk.absorbedAura().get(common).amount(), 50.0D))
+            throw new IllegalStateException("An absorbed emitter was not totalled for the formation: " + chunk.absorbedAura());
+
+        // The supply reduces the charge, and covers it completely when there is enough of it.
+        double cost = definition.maintenanceCosts().getFirst().evaluate(FormulaContext.of(level));
+        Identifier costId = definition.maintenanceCosts().getFirst().id();
+        Map<Identifier, Double> reduced = FormationService.MaintainRule.remaining(definition, FormulaContext.of(level),
+                Map.of(common, cost / 4.0D));
+        if (!same(reduced.getOrDefault(costId, 0.0D), cost * 0.75D))
+            throw new IllegalStateException("The supplied aura did not reduce the upkeep charge: "
+                    + reduced.get(costId) + " instead of " + cost * 0.75D);
+        // A fully covered cost drops out of the charge entirely, which is what lets a formation standing on
+        // enough emitters keep running with no owner resources at all.
+        if (!FormationService.MaintainRule.remaining(definition, FormulaContext.of(level),
+                Map.of(common, cost * 2.0D)).isEmpty())
+            throw new IllegalStateException("A fully supplied upkeep still demanded payment from its owner");
+        // Aura of another resource offsets nothing: the charge is not a generic pool.
+        Holder<Resource> qi = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:qi"));
+        if (!same(FormationService.MaintainRule.remaining(definition, FormulaContext.of(level),
+                Map.of(qi, cost * 10.0D)).getOrDefault(costId, 0.0D), cost))
+            throw new IllegalStateException("Aura of a resource the upkeep does not cost reduced the charge anyway");
+
+        // The optional second source. Off is the shipped behaviour — only the formation's own emitters count
+        // — and it must not be possible for the ambient aura to arrive anyway.
+        Map<Holder<Resource>, Double> environment = Map.of(common, 7.5D);
+        Map<Holder<Resource>, Double> absorbed = Map.of(common, 2.5D);
+        Map<Holder<Resource>, Double> emitterOnly = FormationWorldTicker.combine(absorbed, environment, false);
+        if (!same(emitterOnly.getOrDefault(common, 0.0D), 2.5D))
+            throw new IllegalStateException("The ambient aura of the ground paid upkeep while its server option was off");
+        if (!same(FormationWorldTicker.combine(absorbed, environment, true).getOrDefault(common, 0.0D), 10.0D))
+            throw new IllegalStateException("Turning the ambient draw on did not add the ground's aura to the supply");
+        // The pool has to say how much of itself came from field blocks, or a formation allowed to spend the
+        // ground would spend its own emission back and count the same aura twice.
+        if (!same(AuraPool.empty().supplied(), 0.0D)
+                || !same(new AuraPool(5.0D, 5.0D, 0.0D, 3.0D).supplied(), 3.0D))
+            throw new IllegalStateException("A resolved pool does not report the part of it that field blocks supply");
+    }
+
+    /**
+     * Asserts a formation definition is refused, and refused because of how it declares its shape rather
+     * than for some unrelated reason.
+     */
+    private static void rejectFormationShape(ServerLevel level, String json) {
+        DataResult<Formation> result = Formation.DIRECT_CODEC.parse(
+                RegistryOps.create(JsonOps.INSTANCE, level.registryAccess()), JsonParser.parseString(json));
+        if (result.result().isPresent())
+            throw new IllegalStateException("A formation declaring the wrong shape was accepted: " + json);
+        String message = result.error().map(DataResult.Error::message).orElse("");
+        if (!message.contains("structure"))
+            throw new IllegalStateException("A formation with a wrong shape was refused for another reason: " + message);
+    }
+
+    /**
+     * The period hooks must be split the way the design says: {@code Tick} is the settled observer and
+     * cannot be cancelled, while {@code TickEffects} and {@code UpkeepFailed} can.
+     */
+    private static void verifyFormationEventSplit() {
+        if (ICancellableEvent.class.isAssignableFrom(Tick.class))
+            throw new IllegalStateException("FormationEvent.Tick is cancellable again, so cancelling it would suppress effects while upkeep is still charged");
+        if (!ICancellableEvent.class.isAssignableFrom(TickEffects.class))
+            throw new IllegalStateException("FormationEvent.TickEffects cannot be cancelled, so no listener can suppress a period's work");
+        if (!ICancellableEvent.class.isAssignableFrom(UpkeepFailed.class))
+            throw new IllegalStateException("FormationEvent.UpkeepFailed cannot be cancelled, so a formation cannot survive an unpaid period");
+    }
+
+    /**
+     * A formation that cannot pay must be able to stand through the period when a listener says so, and
+     * must come down when nobody intervenes.
+     */
+    private static void verifyFormationUpkeepFailure(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_upkeep_probe");
+        Formation definition = formationDefinition(level, id);
+        Holder<Resource> spiritPower = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))
+                .orElseThrow(() -> new IllegalStateException("The upkeep audit needs the spirit power resource"));
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig payer = spawnProbe(level, controller.offset(1, 1, 0));
+        Pig subject = spawnProbe(level, controller.offset(-2, 1, 0));
+        // One short of the five the formation asks for.
+        payer.getData(MxtAttachments.RESOURCE_HOLDER).set(spiritPower, 1.0D);
+        try {
+            activateFormation(level, controller, id, payer.getUUID());
+            suppressFormationUpkeepFailure = true;
+            FormationWorldTicker.dispatch(level);
+            if (level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isEmpty())
+                throw new IllegalStateException("A cancelled UpkeepFailed did not let the formation stand");
+            if (upkeep(level, controller) != 0L)
+                throw new IllegalStateException("An unpaid period was counted as paid upkeep");
+            if (subject.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An unpaid period still ran the per-entity actions");
+            suppressFormationUpkeepFailure = false;
+            FormationWorldTicker.dispatch(level);
+            if (level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isPresent())
+                throw new IllegalStateException("An unpaid period nobody defended left the formation standing");
+        } finally {
+            suppressFormationUpkeepFailure = false;
+            clearFormation(level, controller, definition, payer, subject);
+        }
+    }
+
+    /**
+     * One unreadable row must not cost the whole index, and a repeated controller must not cost the index
+     * either.
+     *
+     * <p>This is what the shared tolerant list codec buys, and it is why instance validation had to stop
+     * throwing: a codec that throws escapes the tolerant decoder and takes the attachment down instead.</p>
+     */
+    private static void verifyFormationIndexTolerance(ServerLevel level) {
+        BlockPos controller = new BlockPos(0, level.getMinY() + 2, 0);
+        long packed = controller.asLong();
+        String json = """
+                {"formations": [
+                  {"position": %d, "formation": {"formation": "mxt_test:formation_context_probe", "radius": 8}},
+                  {"position": %d, "formation": {"formation": "mxt_test:formation_context_probe", "radius": -1}},
+                  {"position": %d, "formation": {"formation": "mxt_test:formation_context_probe", "radius": 8, "maintenance_count": -5}},
+                  {"position": %d, "formation": {"formation": "mxt_test:formation_context_probe", "radius": 12}}
+                ]}
+                """.formatted(packed, packed + 1, packed + 2, packed);
+        FormationWorldAttachment decoded = FormationWorldAttachment.CODEC.parse(
+                        RegistryOps.create(JsonOps.INSTANCE, level.registryAccess()), JsonParser.parseString(json))
+                .getOrThrow();
+        if (decoded.formations().size() != 1)
+            throw new IllegalStateException("A malformed or duplicated index row was not dropped: kept " + decoded.formations().size());
+        FormationInstance kept = decoded.get(controller)
+                .orElseThrow(() -> new IllegalStateException("A tolerant index decode dropped its only valid row"));
+        if (!same(kept.radius(), 8.0D))
+            throw new IllegalStateException("A duplicate controller replaced the first row instead of being ignored: r=" + kept.radius());
+    }
+
+    /**
+     * Makes the world match what a test formation declares, so activation validates.
+     *
+     * <p>A template-based formation gets the one-block gold template written into the structure manager,
+     * so the audit owns both halves of the match instead of depending on a shipped {@code .nbt}. An
+     * inline one gets exactly the blocks it lists.</p>
+     */
+    private static BlockPos prepareFormationController(ServerLevel level, Formation definition) {
+        BlockPos controller = new BlockPos(0, level.getMinY() + 2, 0);
+        definition.structureTemplate().ifPresent(id -> {
+            StructureTemplate template = level.getStructureManager().getOrCreate(id);
+            template.load(level.registryAccess().lookupOrThrow(Registries.BLOCK), singleBlockTemplate());
+            level.setBlock(controller, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+        });
+        for (RequiredBlock required : definition.structure())
+            level.setBlock(controller.offset(required.offset()), required.state(), 3);
+        return controller;
+    }
+
+    private static void activateFormation(ServerLevel level, BlockPos controller, Identifier id, UUID owner) {
+        FormationWorldService.Result result = FormationWorldService.activate(level, controller, id,
+                formationDefinition(level, id), new ResourceHolderAttachment(), FormulaContext.of(level), owner);
+        if (!result.active())
+            throw new IllegalStateException("Formation audit could not activate " + id + ": " + result.failure());
+    }
+
+    private static Pig spawnProbe(ServerLevel level, BlockPos position) {
+        Pig probe = new Pig(EntityType.PIG, level);
+        probe.setPos(position.getX() + 0.5D, position.getY(), position.getZ() + 0.5D);
+        level.addFreshEntity(probe);
+        return probe;
+    }
+
+    /**
+     * Removes the formation, the probes, and every block the definition required, so one audit cannot
+     * leave a structure behind for the next one to trip over.
+     */
+    private static void clearFormation(ServerLevel level, BlockPos controller, Formation definition, Pig... probes) {
+        FormationWorldService.deactivate(level, controller);
+        for (Pig probe : probes) probe.discard();
+        level.removeBlock(controller, false);
+        for (RequiredBlock required : definition.structure())
+            level.removeBlock(controller.offset(required.offset()), false);
+    }
+
+    private static boolean holdsSource(LivingEntity entity, Identifier source) {
+        return entity.getData(MxtAttachments.ABILITY_HOLDER).sources().containsValue(source);
+    }
+
+    /**
+     * Records the formation context an action was handed so that nesting can be asserted rather than
+     * assumed. It is never encoded: the audit builds the action tree in code.
+     */
+    private static final class FormationContextProbe implements EntityAction {
+        private final List<FormationCarrier> carriers = new ArrayList<>();
+        private int invocations;
+
+        @Override
+        public void execute(@NonNull EntityActionContext context) {
+            this.invocations++;
+            FormationCarrier.of(context).ifPresent(this.carriers::add);
+        }
+
+        @Override
+        public @NonNull MapCodec<? extends EntityAction> codec() {
+            return MapCodec.unit(this);
+        }
+
+        private List<FormationCarrier> carriers() {
+            return this.carriers;
+        }
+
+        private int invocations() {
+            return this.invocations;
+        }
+
+        private void clear() {
+            this.carriers.clear();
+            this.invocations = 0;
+        }
+    }
+
+    /**
+     * The template the audit installs for every template-based test formation: a gold block at the
+     * controller and an air entry beside it.
+     *
+     * <p>The air entry is deliberate. A template saved with a structure block records its whole bounding
+     * box, so this is the shape of a real saved template, and it is what lets the audit assert that an
+     * empty cell is not something the world has to reproduce.</p>
+     */
     private static CompoundTag singleBlockTemplate() {
         CompoundTag template = new CompoundTag();
         ListTag size = new ListTag();
-        size.add(IntTag.valueOf(1));
+        size.add(IntTag.valueOf(2));
         size.add(IntTag.valueOf(1));
         size.add(IntTag.valueOf(1));
         template.put("size", size);
-        CompoundTag state = new CompoundTag();
-        state.putString("Name", "minecraft:gold_block");
         ListTag palette = new ListTag();
-        palette.add(state);
+        CompoundTag gold = new CompoundTag();
+        gold.putString("Name", "minecraft:gold_block");
+        palette.add(gold);
+        CompoundTag air = new CompoundTag();
+        air.putString("Name", "minecraft:air");
+        palette.add(air);
         template.put("palette", palette);
-        CompoundTag block = new CompoundTag();
-        ListTag position = new ListTag();
-        position.add(IntTag.valueOf(0));
-        position.add(IntTag.valueOf(0));
-        position.add(IntTag.valueOf(0));
-        block.put("pos", position);
-        block.putInt("state", 0);
         ListTag blocks = new ListTag();
-        blocks.add(block);
+        blocks.add(blockAt(0, 0, 0, 0));
+        blocks.add(blockAt(1, 0, 0, 1));
         template.put("blocks", blocks);
         template.put("entities", new ListTag());
         return template;
+    }
+
+    private static CompoundTag blockAt(int x, int y, int z, int state) {
+        CompoundTag block = new CompoundTag();
+        ListTag position = new ListTag();
+        position.add(IntTag.valueOf(x));
+        position.add(IntTag.valueOf(y));
+        position.add(IntTag.valueOf(z));
+        block.put("pos", position);
+        block.putInt("state", state);
+        return block;
     }
 }

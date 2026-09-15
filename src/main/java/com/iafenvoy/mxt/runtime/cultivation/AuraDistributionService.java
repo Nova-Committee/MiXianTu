@@ -76,7 +76,7 @@ public final class AuraDistributionService {
         Set<Holder<Resource>> resources = new LinkedHashSet<>();
         claims.forEach(claim -> resources.addAll(claim.requested().keySet()));
         for (Holder<Resource> resource : resources) {
-            double available = stored.auras().getOrDefault(resource, new AuraPool(0.0D, 0.0D, 0.0D)).amount();
+            double available = stored.auras().getOrDefault(resource, AuraPool.empty()).amount();
             List<Double> allocated = distribute(claims.stream().map(claim -> claim.requested().getOrDefault(resource, 0.0D)).toList(),
                     claims.stream().map(Claim::weight).toList(), available, distribution, level.getRandom());
             for (int index = 0; index < claims.size(); index++) {

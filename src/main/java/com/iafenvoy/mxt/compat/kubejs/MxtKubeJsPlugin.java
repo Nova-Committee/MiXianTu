@@ -10,6 +10,8 @@ import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
 import com.iafenvoy.mxt.event.FormationEvent.Activate;
 import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
+import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
+import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPost;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.Exit;
@@ -78,7 +80,12 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         forward(Cancel.class, "forging");
         forward(Activate.class, "formation");
         forward(Deactivate.class, "formation");
+        // All three periods share one script group and are told apart by isCancellable()/getPhase():
+        // Tick is the settled observer, TickEffects is the cancellable half, UpkeepFailed is the
+        // cancellable "let it stand through a period it cannot pay for".
         forward(FormationEvent.Tick.class, "formation");
+        forward(TickEffects.class, "formation");
+        forward(UpkeepFailed.class, "formation");
         forward(LifeSpanEndEvent.Pre.class, "lifespanEnd");
         forward(LifeSpanEndEvent.Post.class, "lifespanEnd");
         forward(EnterPre.class, "realmInstance");

@@ -1,59 +1,91 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.runtime.formation.FormationInstance.Snapshot;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import org.slf4j.Logger;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
  * Persistable level-scoped index of active formations, keyed by their validated controller position.
+ *
+ * <p>Holds live {@link FormationInstance} objects, so a caller that reaches one through this attachment
+ * mutates the stored state directly. {@link #formations()} copies the map but not its values, which is
+ * what lets the ticker remove entries while iterating over it.</p>
+ *
+ * <p>Stored as a <em>list</em> of rows rather than a map. A map key has to be a string in both NBT and
+ * JSON — {@code NbtOps.getStringValue} rejects any tag that is not a string — so keying by the packed
+ * position made saving a populated index fail outright, and NeoForge answered with
+ * {@code Failed to serialize data attachment mxt:formation_world. Skipping.} until an audit round tripped
+ * a non-empty one. A row carries the position as an ordinary numeric field, where no such constraint
+ * exists, and reads back out of a save file as something a human can actually inspect.</p>
  */
 public final class FormationWorldAttachment {
     public static final MapCodec<FormationWorldAttachment> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.unboundedMap(Codec.LONG, Snapshot.CODEC).optionalFieldOf("formations", Map.of()).forGetter(FormationWorldAttachment::encoded)
+            // Tolerant per row, via the shared list codec: one unreadable or invalid entry is dropped with
+            // a named warning instead of costing every other formation in the level.
+            CollectionCodecs.list(Stored.CODEC).optionalFieldOf("formations", List.of()).forGetter(FormationWorldAttachment::stored)
     ).apply(i, FormationWorldAttachment::new));
     public static final Codec<FormationWorldAttachment> CODEC = MAP_CODEC.codec();
-    private final Map<Long, Snapshot> formations;
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private final Map<Long, FormationInstance> formations;
 
     public FormationWorldAttachment() {
-        this(Map.of());
+        this(List.of());
     }
 
-    private FormationWorldAttachment(Map<Long, Snapshot> formations) {
-        this.formations = new LinkedHashMap<>(formations);
+    private FormationWorldAttachment(List<Stored> stored) {
+        this.formations = new LinkedHashMap<>(stored.size());
+        for (Stored entry : stored) {
+            FormationInstance previous = this.formations.putIfAbsent(entry.position(), entry.formation());
+            // Tolerant on purpose: a repeated controller is a hand-edited save, and losing the row that
+            // lost the race is better than losing the index. A map could not express this at all.
+            if (previous != null) LOGGER.warn("Ignoring duplicate formation controller in the saved index: {}", entry.position());
+        }
     }
 
-    public Optional<Snapshot> get(BlockPos position) {
+    public Optional<FormationInstance> get(BlockPos position) {
         return Optional.ofNullable(this.formations.get(position.asLong()));
     }
 
     public boolean put(BlockPos position, FormationInstance instance) {
         long key = position.asLong();
         if (this.formations.containsKey(key)) return false;
-        this.formations.put(key, instance.snapshot());
+        this.formations.put(key, instance);
         return true;
     }
 
-    public void replace(BlockPos position, FormationInstance instance) {
-        this.formations.put(position.asLong(), instance.snapshot());
-    }
-
-    public Optional<Snapshot> remove(BlockPos position) {
+    public Optional<FormationInstance> remove(BlockPos position) {
         return Optional.ofNullable(this.formations.remove(position.asLong()));
     }
 
-    public Map<BlockPos, Snapshot> formations() {
-        Map<BlockPos, Snapshot> result = new LinkedHashMap<>();
-        this.formations.forEach((position, snapshot) -> result.put(BlockPos.of(position), snapshot));
+    public Map<BlockPos, FormationInstance> formations() {
+        Map<BlockPos, FormationInstance> result = new LinkedHashMap<>();
+        this.formations.forEach((position, instance) -> result.put(BlockPos.of(position), instance));
         return result;
     }
 
-    private Map<Long, Snapshot> encoded() {
-        return this.formations;
+    private List<Stored> stored() {
+        return this.formations.entrySet().stream().map(entry -> new Stored(entry.getKey(), entry.getValue())).toList();
+    }
+
+    /**
+     * One row of the index: the controller's packed position, and the instance stored at it.
+     *
+     * <p>Named fields rather than {@code Codec.pair}'s positional {@code [position, instance]}, so a save
+     * file says which number is which.</p>
+     */
+    private record Stored(long position, FormationInstance formation) {
+        private static final Codec<Stored> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.LONG.fieldOf("position").forGetter(Stored::position),
+                FormationInstance.CODEC.fieldOf("formation").forGetter(Stored::formation)
+        ).apply(i, Stored::new));
     }
 }

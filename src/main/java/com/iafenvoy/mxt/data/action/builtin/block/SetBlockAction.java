@@ -17,7 +17,8 @@ public record SetBlockAction(Block block) implements BlockAction {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         // Runtime actions must never load or mutate remote chunks, especially while world generation is active.
-        if (level.isClientSide() || !level.hasChunkAt(pos)) return;
+        // {@code isLoaded} also refuses a position outside the world's build bounds.
+        if (level.isClientSide() || !level.isLoaded(pos)) return;
         level.setBlock(pos, this.block.defaultBlockState(), Block.UPDATE_ALL);
     }
 

@@ -77,10 +77,15 @@ public final class AuraService {
         Resolved resolved = staticResolved;
         Resolved lower = resolved;
         resolved = customZone(level, pos).orElse(resolved);
-        Resolved formation = formationZone(level, pos).orElse(null);
-        if (formation != null && level instanceof ServerLevel server
-                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(lower, level, pos), formation.holder().orElseThrow())).isCanceled()) {
-            resolved = formation;
+        // A formation's override is announced before it is applied, so a listener can refuse it. The
+        // event only exists when there is a zone holder to name, which is why the no-formation and the
+        // no-aura-zone cases both skip it rather than posting an event with nothing to inspect.
+        Optional<Resolved> formation = formationZone(level, pos);
+        if (formation.isPresent() && level instanceof ServerLevel server
+                && formation.get().holder().isPresent()
+                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(lower, level, pos),
+                formation.get().holder().get())).isCanceled()) {
+            resolved = formation.get();
         }
         Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
         if (pools.isEmpty())
@@ -213,41 +218,16 @@ public final class AuraService {
     private static Optional<Resolved> formationZone(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel server)) return Optional.empty();
         AuraLocation location = AuraQueryCache.location(server, pos);
-        Optional<Optional<Resolved>> cached = AuraQueryCache.formationZone(server, location);
-        if (cached.isPresent()) return cached.get();
-        Optional<Resolved> resolved = server.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet().stream()
+        // The read-through lives in the cache so its two-layer result stays internal, and the caller
+        // states only what to compute on a miss: the highest-priority formation covering this position
+        // that declares an aura zone, or nothing.
+        return AuraQueryCache.computeFormationZone(server, location, () -> server.getData(MxtAttachments.FORMATION_WORLD)
+                .formations().entrySet().stream()
                 .filter(entry -> entry.getKey().distSqr(pos) <= entry.getValue().radius() * entry.getValue().radius())
                 .max(Comparator.comparingDouble(entry -> -entry.getKey().distSqr(pos)))
                 .flatMap(entry -> MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation())
                         .flatMap(formation -> formation.auraZone().map(zone -> new Resolved(Optional.of(zone), zone.value(),
-                                SourceKind.FORMATION, evaluateMaximumBonus(formation, FormulaContext.of(level))))));
-        AuraQueryCache.cacheFormationZone(server, location, resolved);
-        return resolved;
-    }
-
-    /**
-     * Highest active formation capacity bonus that intersects the given chunk.
-     */
-    @Deprecated
-    public static double formationMaximumBonus(ServerLevel level, LevelChunk chunk) {
-        double minX = chunk.getPos().getMinBlockX();
-        double minZ = chunk.getPos().getMinBlockZ();
-        double maxX = minX + 16.0D;
-        double maxZ = minZ + 16.0D;
-        return level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet().stream()
-                .filter(entry -> distanceSquaredToChunk(entry.getKey(), minX, minZ, maxX, maxZ) <= entry.getValue().radius() * entry.getValue().radius())
-                .mapToDouble(entry -> MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation())
-                        .map(formation -> evaluateMaximumBonus(formation, FormulaContext.of(level)).values().stream()
-                                .mapToDouble(Double::doubleValue).sum()).orElse(0.0D))
-                .max().orElse(0.0D);
-    }
-
-    private static double distanceSquaredToChunk(BlockPos origin, double minX, double minZ, double maxX, double maxZ) {
-        double x = Math.clamp(origin.getX(), minX, maxX);
-        double z = Math.clamp(origin.getZ(), minZ, maxZ);
-        double deltaX = origin.getX() - x;
-        double deltaZ = origin.getZ() - z;
-        return deltaX * deltaX + deltaZ * deltaZ;
+                                SourceKind.FORMATION, evaluateMaximumBonus(formation, FormulaContext.of(level)))))));
     }
 
     private static Resolved resolved(Reference<AuraZone> holder, SourceKind kind) {
@@ -352,12 +332,15 @@ public final class AuraService {
             double[] contribution = weighted.getOrDefault(resource, new double[3]);
             double maximum = baseMaximum == Double.POSITIVE_INFINITY || Double.isInfinite(contribution[1])
                     ? Double.POSITIVE_INFINITY : baseMaximum + contribution[1];
-            pools.put(resource, new AuraPool(baseAmount + contribution[0], maximum, baseRegen + contribution[2]));
+            // The block part of this pool is recorded as supplied, not as environment: a consumer allowed to
+            // spend the ground it stands on must not also spend the field aura it is itself emitting.
+            pools.put(resource, new AuraPool(baseAmount + contribution[0], maximum, baseRegen + contribution[2],
+                    contribution[0]));
         }
     }
 
     private static AuraPool zeroPool() {
-        return new AuraPool(0.0D, 0.0D, 0.0D);
+        return AuraPool.empty();
     }
 
     private static double subtractMaximum(double maximum, double amount) {
@@ -498,7 +481,7 @@ public final class AuraService {
         double fluctuation = factor(zone, gameTime);
         zone.aura().forEach((resource, value) -> {
             double initial = Math.max(0.0D, (value.amount() + perlin(pos.getX(), pos.getZ(), zone.noise())) / 10.0D - 5.0D);
-            pools.put(resource, new AuraPool(initial * fluctuation, value.max().resolve(initial), value.regenPerTick()));
+            pools.put(resource, AuraPool.natural(initial * fluctuation, value.max().resolve(initial), value.regenPerTick()));
         });
         return pools;
     }

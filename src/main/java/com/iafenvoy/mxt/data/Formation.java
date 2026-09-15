@@ -8,28 +8,55 @@ import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
- * A multiblock formation's static shape, resource costs, and lifecycle actions.
+ * A formation's static shape, resource costs, and lifecycle actions.
+ *
+ * <p>The shape is declared one of two ways, never both:</p>
+ * <ul>
+ *   <li>{@code structure_template} — a vanilla structure template. Right for a large or intricate
+ *       layout, and the only way to require blocks the format cannot name one by one. Its air entries
+ *       are ignored: a template saved from a bounding box records its empty cells too, and requiring
+ *       them to stay empty would break the formation over a dropped item. A template therefore says
+ *       what must be present, never what must be absent.</li>
+ *   <li>{@code structure} — an inline list of required blocks at offsets from the controller. Right
+ *       for the common case of a handful of positions: the expectation is parsed once into the
+ *       definition and is immutable, so validating it is one {@code getBlockState} per block with no
+ *       template lookup, NBT round trip or registry parsing. A template, by contrast, has to be
+ *       re-serialised and re-parsed on every check.</li>
+ * </ul>
  */
-public record Formation(Identifier structureTemplate, NumberProvider radius,
+public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlock> structure,
+                        NumberProvider radius,
                         Map<Holder<Resource>, NumberProvider> maxBonus, List<ResourceCost> activationCosts,
                         List<ResourceCost> maintenanceCosts, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
-                        EntityAction entityTickAction,
+                        EntityAction entityTickAction, EntityAction entityEnterAction,
+                        EntityAction entityExitAction,
                         Optional<Holder<AuraZone>> auraZone) {
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
-    public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            Identifier.CODEC.fieldOf("structure_template").forGetter(Formation::structureTemplate),
+    public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
+            Identifier.CODEC.optionalFieldOf("structure_template").forGetter(Formation::structureTemplate),
+            // Strict, unlike the action and cost lists: dropping a required block because its id was
+            // mistyped would quietly make the structure easier to satisfy, and a formation standing on
+            // half its flags is worse than a definition that refuses to load.
+            RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
             NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
             CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).optionalFieldOf("max_bonus", Map.of()).forGetter(Formation::maxBonus),
             ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
@@ -38,6 +65,44 @@ public record Formation(Identifier structureTemplate, NumberProvider radius,
             BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
             BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
             EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
+            EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
+            EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction),
             AuraZone.CODEC.optionalFieldOf("aura_zone").forGetter(Formation::auraZone)
-    ).apply(i, Formation::new));
+    ).apply(i, Formation::new)).flatXmap(Formation::validate, Formation::validate);
+
+    /**
+     * The declared shape must be exactly one of the two forms. Reporting it here rather than in the
+     * constructor keeps the failure a normal decode error, which is what lets a bad definition be named
+     * instead of taken down as an exception.
+     */
+    private static DataResult<Formation> validate(Formation formation) {
+        boolean template = formation.structureTemplate().isPresent();
+        boolean inline = !formation.structure().isEmpty();
+        if (template && inline)
+            return DataResult.error(() -> "A formation declares both structure_template and structure; keep exactly one");
+        if (!template && !inline)
+            return DataResult.error(() -> "A formation needs either structure_template or a non-empty structure");
+        return DataResult.success(formation);
+    }
+
+    /**
+     * One block an inline structure requires, at an offset from the controller.
+     */
+    public record RequiredBlock(BlockPos offset, BlockState state) {
+        /**
+         * Accepts a bare block id, because a layout of plain blocks should read like a list of positions,
+         * and falls back to vanilla's {@code {"Name": ..., "Properties": ...}} object only when the state
+         * is not the block's default one. The two are interchangeable on read; on write the bare id comes
+         * back for anything a plain id can express, so a hand-written layout stays hand-writable.
+         */
+        private static final Codec<BlockState> STATE = Codec.either(BuiltInRegistries.BLOCK.byNameCodec(), BlockState.CODEC)
+                .xmap(choice -> choice.map(Block::defaultBlockState, Function.identity()),
+                        state -> state.equals(state.getBlock().defaultBlockState())
+                                ? Either.left(state.getBlock()) : Either.right(state));
+
+        public static final Codec<RequiredBlock> CODEC = RecordCodecBuilder.create(i -> i.group(
+                BlockPos.CODEC.fieldOf("offset").forGetter(RequiredBlock::offset),
+                STATE.fieldOf("state").forGetter(RequiredBlock::state)
+        ).apply(i, RequiredBlock::new));
+    }
 }

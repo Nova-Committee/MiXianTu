@@ -49,6 +49,10 @@ public final class BlockAuraService {
         int minZ = chunk.getPos().getMinBlockZ();
         int minY = level.getMinY();
         int maxY = level.getMaxY();
+        // Formation coverage is decided here rather than when aura is queried: the shared stock subtracts
+        // this chunk's whole aggregate, so an absorbed emitter left in it would be handed back to every
+        // query and the same aura would be spendable twice.
+        FormationAbsorption.Sources absorbed = FormationAbsorption.Sources.of(level, minX, minZ, minX + 15, minZ + 15);
         for (int x = minX; x < minX + 16; x++) {
             for (int z = minZ; z < minZ + 16; z++) {
                 for (int y = minY; y < maxY; y++) {
@@ -56,8 +60,9 @@ public final class BlockAuraService {
                     BlockState state = chunk.getBlockState(pos);
                     List<BlockAura> definitions = index.byBlock().get(state.getBlock());
                     if (definitions == null) continue;
+                    boolean insideFormation = !absorbed.empty() && absorbed.absorbed(pos);
                     for (BlockAura definition : definitions) {
-                        contributions.add(new BlockAuraContribution(pos.immutable(), definition.aura()));
+                        contributions.add(new BlockAuraContribution(pos.immutable(), definition.aura(), insideFormation));
                         auraKinds.addAll(definition.auraKinds());
                     }
                 }

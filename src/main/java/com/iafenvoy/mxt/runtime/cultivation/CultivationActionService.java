@@ -273,7 +273,7 @@ public final class CultivationActionService {
     }
 
     private static boolean hasAura(AuraChunkAttachment aura, Map<Holder<Resource>, Double> costs) {
-        return costs.entrySet().stream().allMatch(entry -> aura.auras().getOrDefault(entry.getKey(), new AuraPool(0.0D, 0.0D, 0.0D)).amount() >= entry.getValue());
+        return costs.entrySet().stream().allMatch(entry -> aura.auras().getOrDefault(entry.getKey(), AuraPool.empty()).amount() >= entry.getValue());
     }
 
     private static Map<Holder<Resource>, Double> scaleAuraCosts(Map<Holder<Resource>, Double> values,

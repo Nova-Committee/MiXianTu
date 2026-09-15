@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 /**
  * Per-tick memo for the aura resolution pipeline.
@@ -215,6 +216,10 @@ public final class AuraQueryCache {
     /**
      * Memoised holder lookup for one definition. An empty optional is a real answer, so only a
      * missing map entry counts as a miss.
+     *
+     * <p>A null result from the lookup is stored and returned as an empty optional: this method's
+     * contract is "never null", and a caller doing {@code .orElse(null)} on it should be reading a
+     * genuine miss rather than an NPE.</p>
      */
     static Optional<Holder<AuraZone>> holder(ServerLevel level, AuraZone zone) {
         if (!enabled) return Optional.empty();
@@ -228,6 +233,7 @@ public final class AuraQueryCache {
         }
         HOLDER_MISSES.incrementAndGet();
         Optional<Holder<AuraZone>> found = AuraService.findHolder(zone);
+        if (found == null) found = Optional.empty();
         if (cache == null || cache.size() >= MAX_ENTRIES) {
             cache = new IdentityHashMap<>();
             HOLDER.put(level, cache);
@@ -412,6 +418,19 @@ public final class AuraQueryCache {
         cache.put(location, value);
     }
 
+    /**
+     * Memoised formation override for one position, or {@code true} answer {@code false}.
+     *
+     * <p>The result is an {@code Optional} of an {@code Optional} on purpose: the outer one answers
+     * "was this position memoised?" and the inner one is the answer itself, which is very often "no
+     * formation covers here". Both are needed, because a missing formation is a real answer that has
+     * to be cached — most positions have no formation, so recomputing the negative every time would
+     * cost exactly what the memo exists to save. Collapsing the two layers would make a miss and a
+     * cached "nothing here" indistinguishable, which is the same reason {@link #holder} caches an
+     * empty optional rather than omitting the entry.</p>
+     *
+     * <p>Callers should prefer {@link #computeFormationZone}, which keeps this shape internal.</p>
+     */
     static Optional<Optional<Resolved>> formationZone(ServerLevel level, AuraLocation location) {
         if (!enabled || !current(level, location)) return Optional.empty();
         Map<AuraLocation, Optional<Resolved>> cache = FORMATION.get(level);
@@ -421,9 +440,30 @@ public final class AuraQueryCache {
             return Optional.empty();
         }
         FORMATION_HITS.incrementAndGet();
+        // An entry is never stored as null, but a null here would surface as an NPE in Optional.of.
         return Optional.of(cached);
     }
 
+    /**
+     * Resolves one position's formation override, computing and memoising it on a miss.
+     *
+     * <p>This is the whole read-through so that the two-layer result never leaves the cache: the
+     * caller supplies the computation and receives an ordinary optional, and the invariant that a
+     * stored entry is never null is enforced here rather than trusted.</p>
+     */
+    static Optional<Resolved> computeFormationZone(ServerLevel level, AuraLocation location,
+                                                   Supplier<Optional<Resolved>> compute) {
+        Optional<Optional<Resolved>> cached = formationZone(level, location);
+        if (cached.isPresent()) return cached.get();
+        Optional<Resolved> resolved = compute.get();
+        cacheFormationZone(level, location, resolved);
+        return resolved;
+    }
+
+    /**
+     * Stores one position's formation override. A null is stored as "no formation", so a caller that
+     * never resolved anything cannot plant a null that a later read would trip over.
+     */
     static void cacheFormationZone(ServerLevel level, AuraLocation location, Optional<Resolved> value) {
         if (!enabled || !current(level, location)) return;
         Map<AuraLocation, Optional<Resolved>> cache = FORMATION.get(level);
@@ -431,7 +471,7 @@ public final class AuraQueryCache {
             cache = new HashMap<>();
             FORMATION.put(level, cache);
         }
-        cache.put(location, value);
+        cache.put(location, value == null ? Optional.empty() : value);
     }
 
     static Optional<Map<Holder<Resource>, AuraPool>> pools(ServerLevel level, AuraLocation location, Holder<AuraZone> zone) {

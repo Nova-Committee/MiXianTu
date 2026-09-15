@@ -90,6 +90,15 @@ public final class ResourceTransactions {
         public Evaluation {
             amounts = new LinkedHashMap<>(amounts);
         }
+
+        /**
+         * Wraps amounts already evaluated by the caller, so a system that needs to adjust a cost — a
+         * formation offsetting its upkeep with the aura its own blocks supply — does not have to
+         * re-evaluate the providers with a different context than the one they were written against.
+         */
+        public static Evaluation of(Map<Identifier, Double> amounts) {
+            return new Evaluation(amounts);
+        }
     }
 
     public record Result(boolean committed, Identifier failedResource, Map<Identifier, Double> amounts) {

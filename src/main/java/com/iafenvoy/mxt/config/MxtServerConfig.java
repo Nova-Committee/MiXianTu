@@ -18,6 +18,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Cultivation cultivation = new Cultivation();
     public final Aura aura = new Aura();
     public final Commands commands = new Commands();
+    public final Formations formations = new Formations();
 
     private MxtServerConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "server"), "config.mxt.server", "./config/mxt-server.json");
@@ -63,6 +64,29 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         return INSTANCE.aura.entityRefreshInterval.getValue();
     }
 
+    /**
+     * What an empty allow list on a formation plate means.
+     *
+     * <p>Defaults to true because that is what every plate written before the allow list existed relies
+     * on: a plate with no restriction can bind any formation. Turning it off makes an unrestricted plate
+     * impossible, so every plate has to name what it may run.</p>
+     */
+    public static boolean emptyPlateAllowsAll() {
+        return INSTANCE.formations.emptyAllowsAll.getValue();
+    }
+
+    /**
+     * Whether the ambient aura of the ground a formation stands on also pays its upkeep.
+     *
+     * <p>Off by default, because it makes a formation cheaper to run than what it stands on: the block
+     * emitters inside it are already supplying it, and this additionally spends the natural aura of the
+     * area. Turned on, a formation over rich ground is cheap or free even with no emitters and no owner
+     * resources, which is a different balance from the one the mechanic ships with.</p>
+     */
+    public static boolean formationDrawsEnvironment() {
+        return INSTANCE.formations.drawsEnvironment.getValue();
+    }
+
     public static final class Curios extends AutoInitConfigCategoryBase {
         public final EnumEntry<BackMode> backMode = EnumEntry.builder("config.mxt.server.curios.back_mode", BackMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
         public final EnumEntry<BeltMode> beltMode = EnumEntry.builder("config.mxt.server.curios.belt_mode", BeltMode.MANUAL).nameProvider(value -> Component.translatable("config.mxt.server.mode." + value.name().toLowerCase())).build();
@@ -98,11 +122,21 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry ability = BooleanEntry.builder("config.mxt.server.commands.ability", true).build();
         public final BooleanEntry aura = BooleanEntry.builder("config.mxt.server.commands.aura", true).build();
         public final BooleanEntry display = BooleanEntry.builder("config.mxt.server.commands.display", true).build();
+        public final BooleanEntry formation = BooleanEntry.builder("config.mxt.server.commands.formation", true).build();
         public final BooleanEntry technique = BooleanEntry.builder("config.mxt.server.commands.technique", true).build();
         public final BooleanEntry trade = BooleanEntry.builder("config.mxt.server.commands.trade", true).build();
 
         private Commands() {
             super("commands", "config.mxt.server.commands");
+        }
+    }
+
+    public static final class Formations extends AutoInitConfigCategoryBase {
+        public final BooleanEntry emptyAllowsAll = BooleanEntry.builder("config.mxt.server.formation.empty_plate_allows_all", true).build();
+        public final BooleanEntry drawsEnvironment = BooleanEntry.builder("config.mxt.server.formation.draws_environment", false).build();
+
+        private Formations() {
+            super("formation", "config.mxt.server.formation");
         }
     }
 

@@ -1,0 +1,22 @@
+{
+  "structure_template": "mxt_test:spirit_gathering",
+  "radius": 8,
+  "entity_tick_action": {
+    "type": "mxt:if_else",
+    "condition": {
+      "type": "mxt:not",
+      "condition": {
+        "type": "mxt:formation_owner"
+      }
+    },
+    "if_action": {
+      "type": "mxt:teleport",
+      "x": "formation_x",
+      "y": "formation_y",
+      "z": "formation_z"
+    },
+    "else_action": {
+      "type": "mxt:no_op"
+    }
+  }
+}

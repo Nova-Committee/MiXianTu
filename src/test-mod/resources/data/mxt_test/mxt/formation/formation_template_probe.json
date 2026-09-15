@@ -1,0 +1,9 @@
+{
+  "structure_template": "mxt_test:formation_template_probe",
+  "radius": 8,
+  "entity_tick_action": {
+    "type": "mxt:apply_effect",
+    "effect": "minecraft:glowing",
+    "duration_ticks": 200
+  }
+}

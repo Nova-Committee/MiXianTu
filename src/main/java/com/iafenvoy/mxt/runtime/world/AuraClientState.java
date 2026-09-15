@@ -43,7 +43,8 @@ public final class AuraClientState {
             double maximum = Double.isFinite(pool.maximum()) || pool.maximum() == Double.POSITIVE_INFINITY
                     ? Math.max(0.0D, pool.maximum()) : 0.0D;
             double regen = Double.isFinite(pool.regenPerTick()) ? pool.regenPerTick() : 0.0D;
-            sanitized.put(id, new AuraPool(amount, maximum, regen));
+            double supplied = Double.isFinite(pool.supplied()) ? Math.max(0.0D, pool.supplied()) : 0.0D;
+            sanitized.put(id, new AuraPool(amount, maximum, regen, supplied));
         });
         return Map.copyOf(sanitized);
     }
@@ -67,11 +68,11 @@ public final class AuraClientState {
         }
 
         public AuraPool environmentPool(Identifier id) {
-            return this.environment.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+            return this.environment.getOrDefault(id, AuraPool.empty());
         }
 
         public AuraPool actualPool(Identifier id) {
-            return this.actual.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+            return this.actual.getOrDefault(id, AuraPool.empty());
         }
 
         private static Snapshot interpolate(Snapshot from, Snapshot to, double factor) {
@@ -85,14 +86,15 @@ public final class AuraClientState {
             Set<Identifier> ids = new HashSet<>(from.keySet());
             ids.addAll(to.keySet());
             ids.forEach(id -> {
-                AuraPool start = from.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
-                AuraPool end = to.getOrDefault(id, new AuraPool(0.0D, 0.0D, 0.0D));
+                AuraPool start = from.getOrDefault(id, AuraPool.empty());
+                AuraPool end = to.getOrDefault(id, AuraPool.empty());
                 double amount = lerp(start.amount(), end.amount(), factor);
                 double maximum = end.maximum() == Double.POSITIVE_INFINITY ? Double.POSITIVE_INFINITY
                         : lerp(start.maximum() == Double.POSITIVE_INFINITY ? end.maximum() : start.maximum(), end.maximum(), factor);
                 double regen = lerp(start.regenPerTick(), end.regenPerTick(), factor);
+                double supplied = lerp(start.supplied(), end.supplied(), factor);
                 if (amount > 0.0D || maximum > 0.0D || regen != 0.0D)
-                    values.put(id, new AuraPool(amount, maximum, regen));
+                    values.put(id, new AuraPool(amount, maximum, regen, supplied));
             });
             return Map.copyOf(values);
         }

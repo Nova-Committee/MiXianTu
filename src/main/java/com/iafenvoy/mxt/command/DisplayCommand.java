@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
@@ -38,7 +39,7 @@ public final class DisplayCommand {
                             .suggests((_, builder) -> SharedSuggestionProvider.suggest(SLOT_NAMES, builder))
                             .executes(DisplayCommand::displayTargetSlot)));
 
-    private static int displayTargetOrSlot(CommandContext<CommandSourceStack> ctx) {
+    private static int displayTargetOrSlot(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         String value = StringArgumentType.getString(ctx, "target_or_slot");
         EquipmentSlot slot = parseSlot(value);
         if (slot != null) return display(ctx, slot);
@@ -46,7 +47,7 @@ public final class DisplayCommand {
         return target == null ? 0 : display(ctx, target, EquipmentSlot.MAINHAND);
     }
 
-    private static int displayTargetSlot(CommandContext<CommandSourceStack> ctx) {
+    private static int displayTargetSlot(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = target(ctx, StringArgumentType.getString(ctx, "target_or_slot"));
         if (target == null) return 0;
         String name = StringArgumentType.getString(ctx, "slot");
@@ -74,12 +75,8 @@ public final class DisplayCommand {
         return null;
     }
 
-    private static int display(CommandContext<CommandSourceStack> ctx, EquipmentSlot slot) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) {
-            ctx.getSource().sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
+    private static int display(CommandContext<CommandSourceStack> ctx, EquipmentSlot slot) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
         ItemStack item = player.getItemBySlot(slot);
         Component slotName = Component.translatable("command.mxt.display.slot." + slot.getName());
         if (item.isEmpty()) {
@@ -92,12 +89,8 @@ public final class DisplayCommand {
         return Command.SINGLE_SUCCESS;
     }
 
-    private static int display(CommandContext<CommandSourceStack> ctx, ServerPlayer target, EquipmentSlot slot) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) {
-            ctx.getSource().sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
+    private static int display(CommandContext<CommandSourceStack> ctx, ServerPlayer target, EquipmentSlot slot) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
         ItemStack item = player.getItemBySlot(slot);
         Component slotName = Component.translatable("command.mxt.display.slot." + slot.getName());
         if (item.isEmpty()) {

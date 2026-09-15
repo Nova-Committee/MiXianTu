@@ -15,7 +15,7 @@ public record ScheduleTickAction(int delay) implements BlockAction {
     public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
-        if (!level.isClientSide() && level.hasChunkAt(pos))
+        if (!level.isClientSide() && level.isLoaded(pos))
             level.scheduleTick(pos, level.getBlockState(pos).getBlock(), this.delay);
     }
 
