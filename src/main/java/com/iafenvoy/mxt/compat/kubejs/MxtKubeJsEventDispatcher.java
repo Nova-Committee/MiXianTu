@@ -10,6 +10,7 @@ import dev.latvian.mods.kubejs.event.EventHandler;
 import dev.latvian.mods.kubejs.event.EventResult;
 import dev.latvian.mods.kubejs.event.KubeEvent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.TriState;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
@@ -29,6 +30,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     private static final EventHandler CURSE_APPLY = EVENTS.server("curseApply", () -> CurseApplyKubeEvent.class);
     private static final EventHandler RESOURCE_CONSUME = EVENTS.server("resourceConsume", () -> ResourceConsumeKubeEvent.class);
     private static final EventHandler AURA_ZONE = EVENTS.server("auraZone", () -> AuraZoneKubeEvent.class);
+    private static final EventHandler FRIEND_RELATION = EVENTS.server("friendRelation", () -> FriendRelationKubeEvent.class);
     private static final EventHandler ABILITY_TRIGGERED = EVENTS.server("abilityTriggered", () -> GenericKubeEvent.class);
     private static final EventHandler CURSE_REMOVE = EVENTS.server("curseRemove", () -> GenericKubeEvent.class);
     private static final EventHandler CULTIVATION_BREAK = EVENTS.server("cultivationBreak", () -> GenericKubeEvent.class);
@@ -66,6 +68,18 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     public void postAura(AuraZoneEvent event) {
         EventResult result = AURA_ZONE.post(new AuraZoneKubeEvent(event));
         if (event instanceof ICancellableEvent cancellable) result.applyCancel(cancellable);
+    }
+
+    /**
+     * A friend judgement is a question, not a notification, and it is asked far more often than any
+     * lifecycle event — once per entity per period by a hostile formation, and once per hit by anything
+     * that filters friendly fire. The listener is registered whether or not a script uses it, so this
+     * check is the whole difference between a server with a friend script and one without: the latter pays
+     * a boolean per query instead of building a wrapper and walking an empty handler list.
+     */
+    @Override
+    public void postFriendRelation(FriendEvent.Relation event) {
+        if (FRIEND_RELATION.hasListeners()) FRIEND_RELATION.post(new FriendRelationKubeEvent(event));
     }
 
     @Override
@@ -218,6 +232,66 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
 
         public String getOverrideZone() {
             return this.event instanceof AuraZoneEvent.Override override ? HolderHelper.id(override.zone()).toString() : "";
+        }
+    }
+
+    /**
+     * KubeJS view of a friend judgement.
+     *
+     * <p>A script answers by writing a verdict; leaving the event alone leaves the question to the
+     * player's own friend list, which is what {@code "default"} reports and what most scripts want. The
+     * two setters are separate rather than one nullable argument, because "no opinion" and "not a friend"
+     * are the two answers a script is most likely to confuse, and neither is spelled as {@code null}.</p>
+     *
+     * <p>The judge is given as an id first and an entity second, because the entity is missing whenever that
+     * player is offline — a script that only needs to know who is asking never has to look at it.</p>
+     */
+    public static final class FriendRelationKubeEvent implements KubeEvent {
+        private final FriendEvent.Relation event;
+
+        FriendRelationKubeEvent(FriendEvent.Relation event) {
+            this.event = event;
+        }
+
+        public String getJudgeId() {
+            return this.event.judgeId().toString();
+        }
+
+        /**
+         * The judge entity, or {@code null} while that player is offline.
+         */
+        public Entity getJudge() {
+            return this.event.judge().orElse(null);
+        }
+
+        public boolean hasJudge() {
+            return this.event.judge().isPresent();
+        }
+
+        public Entity getCandidate() {
+            return this.event.candidate();
+        }
+
+        /**
+         * {@code "true"}, {@code "false"} or {@code "default"}, matching the Java {@link TriState}.
+         */
+        public String getResult() {
+            return this.event.result().getSerializedName();
+        }
+
+        public boolean isAnswered() {
+            return this.event.answered();
+        }
+
+        public void setFriend(boolean friend) {
+            this.event.setResult(TriState.from(friend));
+        }
+
+        /**
+         * Gives the question back to the friend list after having claimed it.
+         */
+        public void abstain() {
+            this.event.setResult(TriState.DEFAULT);
         }
     }
 

@@ -95,6 +95,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Economy                         |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                                   |
 | Sects                           |   🔲   | A sect has members and ranks, contribution accumulation, sect tasks and exchange, and can claim and release territory.                                                                                                                                                 |
 | Curios Slots                    |   🚧   | Players have three Curios slots — Back Weapon, Belt Item and Cultivation Technique — rendered on the character, and swappable with the main hand by keybind.                                                                                                           |
+| Friend and Foe Identification   |   ✅   | Every player can keep a list of the players they treat as their own — for the session or saved with the world — and other mods or scripts can answer the same question through a TriState event, asked by player id so a source holding its own per-player data (FTB Teams, whose members and allies count when it is installed) can answer for somebody who is offline. A formation that declares itself hostile spares its owner's friends, and two conditions expose the judgement to datapacks. |
 
 ## FAQ
 

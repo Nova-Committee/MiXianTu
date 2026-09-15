@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.compat.ftb.FtbTeamsCompat;
 import com.iafenvoy.mxt.data.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
@@ -12,6 +13,7 @@ import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
+import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
@@ -43,6 +45,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.FriendAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.badge.Badge;
@@ -83,13 +86,24 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.NonZeroVisibility;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.IfElseAction;
+import com.iafenvoy.mxt.data.condition.BiEntityCondition;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.FormationAllyEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.FormationMemberEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.FormationOwnerEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.meta.NotEntityCondition;
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+import com.iafenvoy.mxt.data.formation.AttackFormationAction;
+import com.iafenvoy.mxt.data.formation.BuffFormationAction;
+import com.iafenvoy.mxt.data.formation.EmptyFormationAction;
+import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.ProtectionFormationAction;
 import com.iafenvoy.mxt.runtime.formation.FormationCarrier;
 import com.iafenvoy.mxt.runtime.formation.FormationCenters;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
+import com.iafenvoy.mxt.runtime.formation.FormationProtection;
+import com.iafenvoy.mxt.runtime.formation.FormationRelations;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
 import com.iafenvoy.mxt.runtime.world.BlockAuraService;
@@ -131,6 +145,8 @@ import com.iafenvoy.mxt.runtime.world.BlockAuraContribution;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
+import com.iafenvoy.mxt.runtime.friend.FriendCache;
+import com.iafenvoy.mxt.runtime.friend.FriendService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -154,6 +170,7 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.TriState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -163,16 +180,20 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -199,6 +220,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 import org.jspecify.annotations.NonNull;
@@ -225,6 +247,8 @@ public final class MxtTestMod {
     private static boolean suppressFormationTick;
     private static boolean suppressFormationUpkeepFailure;
     private static boolean refusingFormationAuraOverride;
+    private static Entity friendVerdictTarget;
+    private static TriState friendVerdict = TriState.DEFAULT;
 
     public MxtTestMod(IEventBus modBus) {
         MxtTestItems.REGISTRY.register(modBus);
@@ -235,6 +259,7 @@ public final class MxtTestMod {
         NeoForge.EVENT_BUS.addListener(MxtTestMod::cancelFormationTick);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::cancelFormationUpkeepFailure);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::refuseFormationAuraOverride);
+        NeoForge.EVENT_BUS.addListener(MxtTestMod::overrideFriendVerdict);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
         LOGGER.info("Loaded MiXianTu test mod");
     }
@@ -263,6 +288,16 @@ public final class MxtTestMod {
      */
     private static void refuseFormationAuraOverride(AuraZoneEvent.Override event) {
         if (refusingFormationAuraOverride) event.setCanceled(true);
+    }
+
+    /**
+     * Lets the friend audit give a verdict of its own, which is the only way to assert that the event and
+     * not the friend list decides. Scoped to the audit's own throwaway candidate, so nothing else in the
+     * run can be answered by it.
+     */
+    private static void overrideFriendVerdict(FriendEvent.Relation event) {
+        if (event.candidate() == friendVerdictTarget && friendVerdict != TriState.DEFAULT)
+            event.setResult(friendVerdict);
     }
 
     private static void grantTestAbilities(PlayerLoggedInEvent event) {
@@ -454,6 +489,7 @@ public final class MxtTestMod {
         verifyClientDefinitions(event);
         verifyFormationTemplate(event);
         verifyFormationRuntime(event);
+        verifyFriendIdentification(event.getServer().overworld());
         ItemStack fireGinseng = new ItemStack(Items.RED_MUSHROOM);
         if (SpiritHerbService.find(fireGinseng).filter(herb -> HolderHelper.id(herb.quality()).equals(Identifier.parse("mxt_test:spirit_iron"))
                 && same(herb.quality().value().valueMultiplier().modifier().evaluate(FormulaContext.EMPTY), 1.5D)
@@ -2282,6 +2318,8 @@ public final class MxtTestMod {
         verifyFormationTemplateAir(level);
         verifyFormationPlateBinding(level);
         verifyFormationPlateAllowList(level);
+        verifyFormationFriendProtection(level);
+        verifyFormationActionTypes(level);
         verifyFormationAbsorption(level);
         verifyFormationEventSplit();
         verifyFormationUpkeepFailure(level);
@@ -2298,7 +2336,23 @@ public final class MxtTestMod {
                         + "aura through the cancellable hook; block emitters inside a formation supplying it instead "
                         + "of the environment and paying its upkeep, with the ambient draw following its option; "
                         + "malformed and duplicate "
-                        + "index rows dropped without losing the rest; and a live index surviving the save path NeoForge "
+                        + "index rows dropped without losing the rest; a hostile formation sparing its owner and "
+                        + "whoever the identification event calls a friend while affecting everyone else, honouring "
+                        + "a verdict for an owner it cannot resolve, standing down on a pair nobody can identify, "
+                        + "and the "
+                        + "server option restoring the unconditional behaviour when it is turned off; "
+                        + "an attack module selected through the module registry, attributing its damage to the "
+                        + "owner while sparing him and his friends; a benefit module granting under the "
+                        + "formation's own source and taking the grant back from an entity it stops targeting; a "
+                        + "a protection ward holding its radius against a stranger at either end of an action and "
+                        + "against actorless ones, while its owner always passes and a friend passes only while the "
+                        + "friend judgement is on, and falling back to its own flags while enforcing none of them once "
+                        + "it delegates to claims and there is no claim protection to hand them to, with both claim "
+                        + "linkage modes staying inert on a server that has no claims rather than turning into "
+                        + "\"cannot build\" or \"protect nothing\", with the foreign-claim rule telling a ward from an "
+                        + "array that is not one; "
+                        + "and a live index "
+                        + "surviving the save path NeoForge "
                         + "writes it through",
                 FormationWorldTicker.PERIOD);
     }
@@ -2792,7 +2846,8 @@ public final class MxtTestMod {
     private static void verifyFormationAuraOverride(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_aura_probe");
         Formation definition = formationDefinition(level, id);
-        Identifier zone = definition.auraZone()
+        BuffFormationAction auraModule = module(definition, BuffFormationAction.class, id);
+        Identifier zone = auraModule.auraZone()
                 .orElseThrow(() -> new IllegalStateException("The aura probe formation declares no aura zone"))
                 .unwrapKey()
                 .orElseThrow(() -> new IllegalStateException("The aura probe's aura zone has no identifier"))
@@ -3092,6 +3147,747 @@ public final class MxtTestMod {
                 formationDefinition(level, id), new ResourceHolderAttachment(), FormulaContext.of(level), owner);
         if (!result.active())
             throw new IllegalStateException("Formation audit could not activate " + id + ": " + result.failure());
+    }
+
+    /**
+     * The friend judgement a hostile formation makes about the entities it covers.
+     *
+     * <p>Three pigs and one owner: the owner itself, an entity the identification event calls a friend, and
+     * one it does not. A hostile formation has to spare the first two and affect the third. The owner is
+     * not a special case in the code — {@code FriendService} answers yes for an entity and itself — so
+     * asserting it here asserts that the rule belongs to the friend system rather than to a separate check
+     * that merely agrees with it today.</p>
+     *
+     * <p>The verdict comes from the audit's own event listener rather than from a friend list, which is
+     * also the only way to make a pig friendly: the lists live on players. It is the same route another mod
+     * would take, so this exercises the ticker, the event and the option end to end instead of in pieces.</p>
+     *
+     * <p>The option is exercised in both directions on purpose. It exists to turn the judgement off, and an
+     * off branch that is never run is a branch nobody has checked: turning it off has to restore the
+     * unconditional behaviour, hitting the formation's own owner included.</p>
+     *
+     * <p>The last phase re-points the formation at an owner the level cannot resolve, which is how an
+     * offline owner looks to the ticker, and expects it to stop affecting anybody. That is the opposite of
+     * the unconditional fallback this used to have, so it is the assertion most likely to be lost by a
+     * later edit that reads "no owner" as "no friends". It then turns the verdict around to prove the two
+     * outcomes are not the same: with the owner absent the event still answers by id, so a pair a listener
+     * speaks about is decided, and only a pair nobody speaks about stands down.</p>
+     */
+    private static void verifyFormationFriendProtection(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_hostile_probe");
+        Formation definition = formationDefinition(level, id);
+        if (!definition.hostile())
+            throw new IllegalStateException("The hostile probe did not decode its hostile flag");
+        Formation passive = formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe"));
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig friend = spawnProbe(level, controller.offset(0, 1, 2));
+        Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
+        boolean configured = MxtServerConfig.INSTANCE.formations.respectFriends.getValue();
+        try {
+            friendVerdictTarget = friend;
+            friendVerdict = TriState.TRUE;
+            if (!FriendService.isFriend(owner, friend))
+                throw new IllegalStateException("The audit's own verdict did not make the entity a friend");
+
+            // The rule on its own, without a world: a formation that is not hostile spares nobody whatever
+            // the owner situation, a hostile one with nobody to ask fires at nobody, and one whose instance
+            // records no owner cannot even start asking.
+            if (!FormationRelations.affects(passive, owner.getUUID(), owner, stranger))
+                throw new IllegalStateException("A formation that is not hostile spared somebody");
+            if (!FormationRelations.affects(passive, null, null, stranger))
+                throw new IllegalStateException("A formation that is not hostile stood down with no owner");
+            if (FormationRelations.affects(definition, owner.getUUID(), null, stranger))
+                throw new IllegalStateException("A hostile formation with no owner to ask still fired at a stranger");
+            if (FormationRelations.affects(definition, null, null, stranger))
+                throw new IllegalStateException("A hostile formation with no owner recorded still fired");
+
+            // The datapack condition asks the same question from inside a formation context, and refuses to
+            // guess outside one. A per-entity action's condition slot is an entity condition, so this is the
+            // only way a pack can write that judgement per action rather than per formation.
+            FormationCarrier carrier = new FormationCarrier(id, controller,
+                    definition.radius().evaluate(FormulaContext.of(level)), Optional.of(owner.getUUID()));
+            if (!allied(friend, carrier))
+                throw new IllegalStateException("mxt:formation_ally did not recognise a friend of the owner");
+            if (allied(stranger, carrier))
+                throw new IllegalStateException("mxt:formation_ally recognised somebody the owner does not know");
+            if (FormationAllyEntityCondition.INSTANCE.test(stranger, FormulaContext.EMPTY))
+                throw new IllegalStateException("mxt:formation_ally answered outside a formation context");
+            // The condition asks the same question the same way, so an owner who is offline is still
+            // answered for by whatever source speaks about the pair — otherwise the two ways of asking
+            // would disagree exactly when it matters most.
+            FormationCarrier absent = new FormationCarrier(id, controller,
+                    definition.radius().evaluate(FormulaContext.of(level)), Optional.of(UUID.randomUUID()));
+            if (!allied(friend, absent))
+                throw new IllegalStateException("mxt:formation_ally ignored a verdict for an offline owner");
+            if (allied(stranger, absent))
+                throw new IllegalStateException("mxt:formation_ally invented an ally for an offline owner");
+
+            activateFormation(level, controller, id, owner.getUUID());
+            FormationWorldTicker.dispatch(level);
+            if (!stranger.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("A hostile formation stopped affecting a stranger");
+            if (owner.hasEffect(MobEffects.GLOWING) || friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("A hostile formation affected its owner or a friend");
+
+            // The other direction: an entity that stops being a friend has to be picked back up, which only
+            // works if being spared means the formation never started tracking it.
+            friendVerdict = TriState.FALSE;
+            FormationWorldTicker.dispatch(level);
+            if (!friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An entity that stopped being a friend was not picked back up");
+
+            friendVerdict = TriState.TRUE;
+            owner.removeEffect(MobEffects.GLOWING);
+            friend.removeEffect(MobEffects.GLOWING);
+            stranger.removeEffect(MobEffects.GLOWING);
+            FormationWorldTicker.dispatch(level);
+            if (friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("A hostile formation kept affecting an entity that became a friend");
+            if (!stranger.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("Spared one entity and stopped affecting the rest");
+
+            MxtServerConfig.INSTANCE.formations.respectFriends.setValue(false);
+            owner.removeEffect(MobEffects.GLOWING);
+            friend.removeEffect(MobEffects.GLOWING);
+            stranger.removeEffect(MobEffects.GLOWING);
+            FormationWorldTicker.dispatch(level);
+            if (!owner.hasEffect(MobEffects.GLOWING) || !friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("Turning the friend judgement off did not restore the unconditional behaviour");
+
+            // Last, the owner is gone: the formation is re-pointed at an owner this level cannot resolve,
+            // which is exactly how an offline owner looks to the ticker. A hostile formation then has nobody
+            // to ask, so it stands down rather than firing at everybody — hitting the owner's friends is the
+            // one outcome the flag exists to prevent, and it cannot tell who they are any more.
+            MxtServerConfig.INSTANCE.formations.respectFriends.setValue(true);
+            FormationWorldService.deactivate(level, controller);
+            UUID absentOwner = UUID.randomUUID();
+            activateFormation(level, controller, id, absentOwner);
+            owner.removeEffect(MobEffects.GLOWING);
+            friend.removeEffect(MobEffects.GLOWING);
+            stranger.removeEffect(MobEffects.GLOWING);
+            FormationWorldTicker.dispatch(level);
+            if (stranger.hasEffect(MobEffects.GLOWING) || friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("A hostile formation kept firing with no owner to identify anybody");
+            // The two dark outcomes are not the same thing, and only a verdict that *affects* tells them
+            // apart: the stranger above was spared because nobody could answer, while the friend was spared
+            // because the event answered for an owner with no entity. Turning the verdict around has to make
+            // the formation fire at the friend, which is only possible if the id really did reach the source.
+            friendVerdict = TriState.FALSE;
+            friend.removeEffect(MobEffects.GLOWING);
+            stranger.removeEffect(MobEffects.GLOWING);
+            FormationWorldTicker.dispatch(level);
+            if (!friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("A verdict for an offline owner was not honoured");
+            if (FormationRelations.affects(definition, absentOwner, null, stranger))
+                throw new IllegalStateException("An unanswered pair was fired at instead of standing down");
+        } finally {
+            friendVerdictTarget = null;
+            friendVerdict = TriState.DEFAULT;
+            MxtServerConfig.INSTANCE.formations.respectFriends.setValue(configured);
+            clearFormation(level, controller, definition, owner, friend, stranger);
+        }
+    }
+
+    /**
+     * The function modules: the registry that selects them, and what each of the three does.
+     *
+     * <p>A module is a second way to build a formation, next to the raw action hooks, and the two things
+     * that can go wrong with it are both invisible in play: the {@code type} field may dispatch to the
+     * wrong record (every module is a pile of optional fields, so a wrong one decodes into defaults), and
+     * a module may end up as a field nothing reads. The decode assertions catch the first, and the three
+     * end-to-end phases catch the second — each one goes through the real activation and the real ticker
+     * rather than calling the runtime directly.</p>
+     *
+     * <p>The attack phase also covers the rule that made {@code hostile} optional: nothing in the probe's
+     * JSON declares intent, so the friend judgement can only come from the module itself. The ward phase
+     * covers the one place the same silence is read the other way round — no friend source can answer for
+     * a stranger, and a ward keeps protecting.</p>
+     */
+    private static void verifyFormationActionTypes(ServerLevel level) {
+        Identifier attackId = Identifier.parse("mxt_test:formation_attack_probe");
+        Formation attack = formationDefinition(level, attackId);
+        AttackFormationAction strike = module(attack, AttackFormationAction.class, attackId);
+        if (!same(strike.damage().evaluate(FormulaContext.of(level)), 3.0D) || strike.effects().size() != 1)
+            throw new IllegalStateException("The attack probe's damage or effect list did not decode");
+        if (strike.damageType().isPresent() || !strike.attributeToOwner())
+            throw new IllegalStateException("An attack module did not default to an untyped, owner-attributed strike");
+        if (attack.hostile())
+            throw new IllegalStateException("The attack probe declared the hostile flag as well as the module");
+        if (!FormationRelations.isHostile(attack))
+            throw new IllegalStateException("An attack module did not make its formation hostile");
+        if (FormationRelations.isHostile(formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe"))))
+            throw new IllegalStateException("A formation with neither the flag nor an attack module was treated as hostile");
+
+        Identifier buffId = Identifier.parse("mxt_test:formation_buff_probe");
+        Formation buffProbe = formationDefinition(level, buffId);
+        BuffFormationAction buff = module(buffProbe, BuffFormationAction.class, buffId);
+        if (buff.target() != BuffFormationAction.TargetMode.ALLIES || buff.abilities().size() != 1)
+            throw new IllegalStateException("The benefit probe's target or ability list did not decode");
+        if (buff.auraZone().isPresent() || !buff.maxBonus().isEmpty())
+            throw new IllegalStateException("A benefit module with no aura fields invented an aura override");
+        Identifier auraId = Identifier.parse("mxt_test:formation_aura_probe");
+        BuffFormationAction aura = module(formationDefinition(level, auraId), BuffFormationAction.class, auraId);
+        if (aura.auraZone().isEmpty() || aura.maxBonus().isEmpty())
+            throw new IllegalStateException("The aura fields did not survive their move into a benefit module");
+
+        Identifier protectionId = Identifier.parse("mxt_test:formation_protection_probe");
+        Formation protectionProbe = formationDefinition(level, protectionId);
+        ProtectionFormationAction protection = module(protectionProbe, ProtectionFormationAction.class, protectionId);
+        if (protection.delegateToClaims())
+            throw new IllegalStateException("A protection module delegated to claims without being asked to");
+        Identifier openId = Identifier.parse("mxt_test:formation_protection_open_probe");
+        ProtectionFormationAction open = module(formationDefinition(level, openId), ProtectionFormationAction.class, openId);
+        // The pair is the defaults against every flag written false. An all-true record cannot tell "read as
+        // true" from "never read", and the opened probe is what pins each field to the JSON that declares it.
+        expectProtectionCoverage(protection, true, true, true, true, true, true, true, true, true, "The default protection module");
+        expectProtectionCoverage(open, false, false, false, false, false, false, false, false, false, "The opened protection module");
+        Identifier delegateId = Identifier.parse("mxt_test:formation_protection_delegate_probe");
+        Formation delegateProbe = formationDefinition(level, delegateId);
+        ProtectionFormationAction delegate = module(delegateProbe, ProtectionFormationAction.class, delegateId);
+        if (!delegate.delegateToClaims() || !delegate.blockBreak() || !delegate.itemUse())
+            throw new IllegalStateException("The delegating probe did not decode its switch, or lost the flags beside it");
+
+        verifyFormationModuleCodec(level);
+        verifyFormationAttackModule(level, attackId, attack);
+        verifyFormationBuffModule(level, buffId, buffProbe);
+        verifyFormationProtection(level, protectionId, protectionProbe);
+        verifyFormationProtectionDelegation(level, delegateId, delegateProbe);
+        verifyFormationProtectionLinkage(level, protectionId, protectionProbe);
+    }
+
+    /**
+     * One module list has to survive the codec in both directions, and an unknown type has to be refused.
+     *
+     * <p>The refusal matters more than it looks: a module's fields are all optional, so a dispatch that
+     * silently fell back to the default entry would turn a typo into an array that stands there doing
+     * nothing — and nothing in play distinguishes that from an array whose pack meant it that way.</p>
+     */
+    private static void verifyFormationModuleCodec(ServerLevel level) {
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        String json = """
+                {"structure":[{"offset":[0,0,0],"state":"minecraft:gold_block"}],"radius":8,
+                 "actions":[{"type":"mxt:attack","damage":1},
+                            {"type":"mxt:buff","abilities":["mxt_test:water_shield"]},
+                            {"type":"mxt:protection","delegate_to_claims":true},
+                            {"type":"mxt:none"}]}
+                """;
+        DataResult<Formation> decoded = Formation.DIRECT_CODEC.parse(ops, JsonParser.parseString(json));
+        if (decoded.result().isEmpty())
+            throw new IllegalStateException("A formation with four modules did not decode: "
+                    + decoded.error().map(String::valueOf).orElse("no detail"));
+        Formation definition = decoded.result().orElseThrow();
+        if (!(definition.actions().get(0) instanceof AttackFormationAction)
+                || !(definition.actions().get(1) instanceof BuffFormationAction)
+                || !(definition.actions().get(2) instanceof ProtectionFormationAction protection)
+                || !protection.delegateToClaims()
+                || !(definition.actions().get(3) instanceof EmptyFormationAction))
+            throw new IllegalStateException("A formation's module list did not dispatch on its type ids");
+        DataResult<Formation> roundTripped = Formation.DIRECT_CODEC.parse(ops,
+                Formation.DIRECT_CODEC.encodeStart(ops, definition).getOrThrow());
+        if (roundTripped.result().isEmpty()
+                || !(roundTripped.result().orElseThrow().actions().get(0) instanceof AttackFormationAction restored)
+                || !same(restored.damage().evaluate(FormulaContext.EMPTY), 1.0D))
+            throw new IllegalStateException("A module list did not survive an encode and a decode");
+        DataResult<Formation> unknown = Formation.DIRECT_CODEC.parse(ops, JsonParser.parseString("""
+                {"structure":[{"offset":[0,0,0],"state":"minecraft:gold_block"}],"radius":8,
+                 "actions":[{"type":"mxt_test:not_a_module"}]}
+                """));
+        if (unknown.result().isPresent())
+            throw new IllegalStateException("An unknown module type decoded instead of being reported");
+    }
+
+    /**
+     * An attack module hurts strangers, spares the owner and his friends, and credits the owner for what
+     * it does.
+     *
+     * <p>The attribution is the half that is easy to lose silently: damage with no attacker leaves no mob
+     * aggro behind and makes a kill look like weather, and nothing throws when it goes missing. It is
+     * asserted through the victim's own record of who hurt it, which is what the rest of the game reads.</p>
+     */
+    private static void verifyFormationAttackModule(ServerLevel level, Identifier id, Formation definition) {
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig friend = spawnProbe(level, controller.offset(0, 1, 2));
+        Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
+        try {
+            friendVerdictTarget = friend;
+            friendVerdict = TriState.TRUE;
+            double before = stranger.getHealth();
+            activateFormation(level, controller, id, owner.getUUID());
+            FormationWorldTicker.dispatch(level);
+            if (!stranger.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An attack module did not reach a stranger");
+            if (stranger.getHealth() >= before)
+                throw new IllegalStateException("An attack module's damage did not land: " + stranger.getHealth());
+            if (stranger.getLastHurtByMob() != owner)
+                throw new IllegalStateException("An attack module's damage was not attributed to the formation's owner");
+            if (owner.hasEffect(MobEffects.GLOWING) || friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An attack module reached its owner or a friend");
+            // Being spared means never being tracked, so turning the verdict around is the same pick-up
+            // path the raw hostile hook has — and the module has to run through it as well.
+            friendVerdict = TriState.FALSE;
+            FormationWorldTicker.dispatch(level);
+            if (!friend.hasEffect(MobEffects.GLOWING))
+                throw new IllegalStateException("An attack module kept sparing an entity that stopped being a friend");
+        } finally {
+            friendVerdictTarget = null;
+            friendVerdict = TriState.DEFAULT;
+            clearFormation(level, controller, definition, owner, friend, stranger);
+        }
+    }
+
+    /**
+     * A benefit module grants under the formation's own source, respects its target, and takes the grant
+     * back from an entity it stops targeting.
+     *
+     * <p>The last part is the one no other path covers. Walking out of the radius releases a grant, and
+     * so does teardown, but an entity that stays put and simply stops being a friend is only released if
+     * the module reconciles what it handed out — otherwise the gift sits there until the entity happens
+     * to leave, which is a hole nothing in play would report.</p>
+     */
+    private static void verifyFormationBuffModule(ServerLevel level, Identifier id, Formation definition) {
+        BlockPos controller = prepareFormationController(level, definition);
+        Identifier source = FormationSources.of(id);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig friend = spawnProbe(level, controller.offset(0, 1, 2));
+        Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
+        try {
+            friendVerdictTarget = friend;
+            friendVerdict = TriState.TRUE;
+            activateFormation(level, controller, id, owner.getUUID());
+            FormationWorldTicker.dispatch(level);
+            if (!holdsSource(friend, source))
+                throw new IllegalStateException("A benefit module did not reach a friend of its owner");
+            // The owner is his own friend, so an ALLIES module reaches him too: the modes are one rule at
+            // different widths, not two rules that happen to agree.
+            if (!holdsSource(owner, source))
+                throw new IllegalStateException("A benefit module did not reach its own owner");
+            if (holdsSource(stranger, source))
+                throw new IllegalStateException("A benefit module reached a stranger");
+            friendVerdict = TriState.FALSE;
+            FormationWorldTicker.dispatch(level);
+            if (holdsSource(friend, source))
+                throw new IllegalStateException("A benefit module left its grant on an entity it no longer targets");
+            friendVerdict = TriState.TRUE;
+            FormationWorldTicker.dispatch(level);
+            if (!holdsSource(friend, source))
+                throw new IllegalStateException("A benefit module did not restore a grant it had released");
+        } finally {
+            friendVerdictTarget = null;
+            friendVerdict = TriState.DEFAULT;
+            clearFormation(level, controller, definition, owner, friend, stranger);
+        }
+    }
+
+    /**
+     * A protection ward holds its radius against everyone except its owner and — while the judgement is on —
+     * his friends, and it is asked about both ends of the action.
+     *
+     * <p>The exemptions are asked by id, which is the only shape in which they can be asserted here: the
+     * audit has no logged-in player to swing at a block, and the rule is written so that it does not need
+     * one. The same silence that makes a hostile array hold fire makes a ward keep protecting, and the
+     * option that turns the friend half off must not touch the owner.</p>
+     *
+     * <p>The union is asserted in both directions rather than assumed: a stranger reaching in from outside
+     * is refused for the block's sake, a stranger standing inside is refused for his own, and an action with
+     * no target at all can only be judged by where its actor stands.</p>
+     */
+    private static void verifyFormationProtection(ServerLevel level, Identifier id, Formation definition) {
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig friend = spawnProbe(level, controller.offset(0, 1, 2));
+        Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
+        Pig outsider = spawnProbe(level, controller.offset(12, 1, 0));
+        BlockPos inside = controller.offset(2, 0, 0);
+        BlockPos outside = controller.offset(12, 0, 0);
+        boolean configured = MxtServerConfig.INSTANCE.formations.respectFriends.getValue();
+        try {
+            friendVerdictTarget = friend;
+            friendVerdict = TriState.TRUE;
+            activateFormation(level, controller, id, owner.getUUID());
+            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+                if (!FormationProtection.prevented(level, action, inside, stranger.getUUID()))
+                    throw new IllegalStateException("A ward let a stranger through: " + action);
+                if (FormationProtection.prevented(level, action, inside, owner.getUUID()))
+                    throw new IllegalStateException("A ward locked its own owner out: " + action);
+                if (FormationProtection.prevented(level, action, inside, friend.getUUID()))
+                    throw new IllegalStateException("A ward did not spare a friend of its owner: " + action);
+                if (FormationProtection.prevented(level, action, outside, outsider.getUUID()))
+                    throw new IllegalStateException("A ward reached outside its own radius: " + action);
+            }
+            // Both ends of the action, each on its own: an outsider reaching in, and an insider reaching
+            // out. Looking at only one of them would be watching the wrong end of a ward.
+            if (!FormationProtection.prevented(level, FormationProtection.Action.BREAK, inside, outsider.getUUID()))
+                throw new IllegalStateException("A ward ignored a stranger reaching into it from outside");
+            if (!FormationProtection.prevented(level, FormationProtection.Action.BREAK, outside, stranger.getUUID()))
+                throw new IllegalStateException("A ward ignored a stranger acting from inside it");
+            if (!FormationProtection.prevented(level, FormationProtection.Action.ITEM_USE, null, stranger.getUUID()))
+                throw new IllegalStateException("A ward ignored an act with no target by an actor inside it");
+            if (FormationProtection.prevented(level, FormationProtection.Action.ITEM_USE, null, outsider.getUUID()))
+                throw new IllegalStateException("A ward answered for an act with no target and an actor outside it");
+            // An explosion has no actor to be exempted, which the owner's own blast would otherwise be.
+            if (!FormationProtection.prevented(level, FormationProtection.Action.EXPLOSION, inside, null))
+                throw new IllegalStateException("A ward let an actorless action inside it through");
+            MxtServerConfig.INSTANCE.formations.respectFriends.setValue(false);
+            if (!FormationProtection.prevented(level, FormationProtection.Action.BREAK, inside, friend.getUUID()))
+                throw new IllegalStateException("Turning the friend judgement off did not restore the ward");
+            if (FormationProtection.prevented(level, FormationProtection.Action.BREAK, inside, owner.getUUID()))
+                throw new IllegalStateException("The friend judgement's option locked a ward's owner out");
+        } finally {
+            friendVerdictTarget = null;
+            friendVerdict = TriState.DEFAULT;
+            MxtServerConfig.INSTANCE.formations.respectFriends.setValue(configured);
+            clearFormation(level, controller, definition, owner, friend, stranger, outsider);
+        }
+    }
+
+    /**
+     * A module that hands its protection to claims enforces none of its own flags — while there is
+     * something to hand it to.
+     *
+     * <p>The whole point of the server option is that "hand it over" must not quietly mean "protect
+     * nothing", so both answers are asserted here. This server has no FTB Chunks, which is exactly the
+     * situation the option exists for: with it on (the default) the ward keeps its own flags, and with it
+     * off the flags are handed over and nothing is enforced. Every action is checked rather than one,
+     * because a half-honoured switch would be worse than either answer.</p>
+     */
+    private static void verifyFormationProtectionDelegation(ServerLevel level, Identifier id, Formation definition) {
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
+        BlockPos inside = controller.offset(2, 0, 0);
+        boolean configured = MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.getValue();
+        try {
+            activateFormation(level, controller, id, owner.getUUID());
+            MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(true);
+            if (FormationProtection.delegationHandsOver())
+                throw new IllegalStateException("A formation handed its protection over with no claim protection to hand it to");
+            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+                if (!FormationProtection.prevented(level, action, inside, stranger.getUUID()))
+                    throw new IllegalStateException("A delegating ward fell back to nothing rather than to its own flags: " + action);
+            }
+            // The literal reading, on purpose: hand it over regardless, and enforce nothing.
+            MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(false);
+            if (!FormationProtection.delegationHandsOver())
+                throw new IllegalStateException("A formation refused to hand its protection over with the server option off");
+            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+                if (FormationProtection.prevented(level, action, inside, stranger.getUUID()))
+                    throw new IllegalStateException("A delegated ward enforced a flag it handed over: " + action);
+            }
+        } finally {
+            MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(configured);
+            clearFormation(level, controller, definition, owner, stranger);
+        }
+    }
+
+    /**
+     * The claim linkage options, as far as a server without a claim plugin can show them.
+     *
+     * <p>Every one of them is about claims and this server has none — which is the case worth pinning,
+     * because the options that restrict or hand over must not degenerate into "cannot build" or "protect
+     * nothing" when the plugin they refer to is missing. {@code claims_only} has to stay inert (and say so
+     * once), the foreign-claim rule has no claim to judge, and {@code claims_precedence} has to find no
+     * claim to prefer and leave the ward's own flags in force. Which formations the rules apply to is the
+     * other half: a ward is a claim of jurisdiction, an attack array is not.</p>
+     */
+    private static void verifyFormationProtectionLinkage(ServerLevel level, Identifier id, Formation definition) {
+        Formation attack = formationDefinition(level, Identifier.parse("mxt_test:formation_attack_probe"));
+        if (!FormationProtection.hasProtection(definition) || FormationProtection.hasProtection(attack))
+            throw new IllegalStateException("The audit could not tell a formation with a ward from one without");
+        MxtServerConfig.ClaimLinkage configured = MxtServerConfig.INSTANCE.formations.claimLinkage.getValue();
+        boolean configuredPermission = MxtServerConfig.INSTANCE.formations.wardsNeedClaimPermission.getValue();
+        BlockPos controller = prepareFormationController(level, definition);
+        Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
+        Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
+        BlockPos inside = controller.offset(2, 0, 0);
+        try {
+            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(MxtServerConfig.ClaimLinkage.CLAIMS_ONLY);
+            if (FormationProtection.claimsOnlyRefuses(level, controller))
+                throw new IllegalStateException("claims_only refused a ward with no claim plugin to require");
+            // The foreign-claim rule is asked with the option on, so that this asserts the rule and not the
+            // default: with no claims it has nobody's land to judge either.
+            MxtServerConfig.INSTANCE.formations.wardsNeedClaimPermission.setValue(true);
+            if (FormationProtection.foreignClaimRefuses(level, controller, stranger.getUUID()))
+                throw new IllegalStateException("The foreign-claim rule refused a ward with no claims to judge");
+            // The modes have to leave ordinary activation working, not merely report themselves as inert.
+            activateFormation(level, controller, id, owner.getUUID());
+            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(MxtServerConfig.ClaimLinkage.CLAIMS_PRECEDENCE);
+            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+                if (!FormationProtection.prevented(level, action, inside, stranger.getUUID()))
+                    throw new IllegalStateException("claims_precedence handed a ward over with no claim to hand it to: " + action);
+            }
+        } finally {
+            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(configured);
+            MxtServerConfig.INSTANCE.formations.wardsNeedClaimPermission.setValue(configuredPermission);
+            clearFormation(level, controller, definition, owner, stranger);
+        }
+    }
+
+    /**
+     * Reads a module out of a decoded definition by its record type, which is also the assertion that the
+     * definition really carries one.
+     */
+    private static <T extends FormationActionType> T module(Formation definition, Class<T> type, Identifier id) {
+        return definition.actions().stream().filter(type::isInstance).map(type::cast).findFirst()
+                .orElseThrow(() -> new IllegalStateException(id + " declares no " + type.getSimpleName()));
+    }
+
+    /**
+     * Every flag of a protection module, as declared and as {@code covers} answers for it.
+     */
+    private static void expectProtectionCoverage(ProtectionFormationAction ward, boolean blockBreak, boolean blockPlace,
+                                                 boolean blockInteract, boolean explosions, boolean mobGriefing,
+                                                 boolean entityInteract, boolean attackEntity, boolean itemUse,
+                                                 boolean spareFriends, String what) {
+        if (ward.blockBreak() != blockBreak || ward.blockPlace() != blockPlace || ward.blockInteract() != blockInteract
+                || ward.explosions() != explosions || ward.mobGriefing() != mobGriefing
+                || ward.entityInteract() != entityInteract || ward.attackEntity() != attackEntity
+                || ward.itemUse() != itemUse || ward.spareFriends() != spareFriends)
+            throw new IllegalStateException(what + " did not decode the flags it declares");
+        for (FormationProtection.Action action : FormationProtection.Action.values()) {
+            boolean expected = switch (action) {
+                case BREAK -> blockBreak;
+                case PLACE -> blockPlace;
+                case INTERACT -> blockInteract;
+                case EXPLOSION -> explosions;
+                case MOB_GRIEFING -> mobGriefing;
+                case ENTITY_INTERACT -> entityInteract;
+                case ATTACK_ENTITY -> attackEntity;
+                case ITEM_USE -> itemUse;
+            };
+            if (FormationProtection.covers(ward, action) != expected)
+                throw new IllegalStateException(what + " answered for " + action + " against its own flag");
+        }
+    }
+
+    /**
+     * Evaluates {@code mxt:formation_ally} the way a per-entity action does: decoded from its own JSON by
+     * id, with the formation carrier already in the context, which is the only route to the owner a
+     * condition of that shape has.
+     */
+    private static boolean allied(Pig entity, FormationCarrier carrier) {
+        EntityCondition condition = EntityCondition.SINGLE_CODEC
+                .parse(JsonOps.INSTANCE, JsonParser.parseString("{\"type\": \"mxt:formation_ally\"}")).getOrThrow();
+        EntityConditionContext context = new EntityConditionContext(entity, FormulaContext.of(entity));
+        context.set(FormationCarrier.KEY, carrier);
+        return condition.test(context);
+    }
+
+    /**
+     * The friend system: what "temporary" means, what the identification event is allowed to override, and
+     * that the command actually reaches a list.
+     *
+     * <p>"Temporary" is invisible in play — nothing tells a player whether a friend survived, and nothing
+     * breaks loudly if the split is wrong — so both halves are asserted at the boundaries that decide it.
+     * The codec is the first: a list holding one of each has to come back whole, because a session friend
+     * that a death takes with it is precisely the bug that putting the list in the codec prevents. The
+     * login event is the second, and it is the one that ends the session: posting a real
+     * {@code PlayerLoggedInEvent} has to empty the session list and leave the saved one alone. Neither
+     * assertion is worth much without the other, since a codec that drops the session list and a login
+     * that keeps it look identical from inside the list.</p>
+     *
+     * <p>The identification pipeline is driven through a listener on the real bus, because the part that
+     * can silently invert is the precedence between the event and the lists: a listener's verdict has to
+     * win, and a listener that abstains has to leave the lists in charge instead of answering "no". The
+     * command is driven through the dispatcher for the reason the plate binding is: the interesting bug is
+     * that nothing calls the list at all.</p>
+     */
+    private static void verifyFriendIdentification(ServerLevel level) {
+        NameAndId saved = new NameAndId(UUID.randomUUID(), "mxt-audit-saved");
+        NameAndId session = new NameAndId(UUID.randomUUID(), "mxt-audit-session");
+
+        // What the codec holds is the definition of what a death keeps: both lists, because NeoForge copies
+        // an attachment on death by serialising and deserialising it.
+        FriendAttachment encoded = new FriendAttachment();
+        if (encoded.add(session) != FriendAttachment.AddResult.ADDED
+                || encoded.addPermanent(saved) != FriendAttachment.AddResult.ADDED)
+            throw new IllegalStateException("A fresh friend list refused its first entries");
+        if (!encoded.isFriend(saved.id()) || !encoded.isFriend(session.id()))
+            throw new IllegalStateException("Adding a friend did not make it a friend");
+        Collector writer = new Collector();
+        TagValueOutput output = TagValueOutput.createWithContext(writer, level.registryAccess());
+        output.store(FriendAttachment.CODEC, encoded);
+        if (!writer.isEmpty())
+            throw new IllegalStateException("Saving a friend list reported: " + writer.getReport());
+        FriendAttachment decoded = FriendAttachment.CODEC.codec().parse(NbtOps.INSTANCE, output.buildResult()).getOrThrow();
+        if (!decoded.isFriend(saved.id()) || decoded.permanent().size() != 1)
+            throw new IllegalStateException("A permanent friend did not survive the save");
+        if (!decoded.isFriend(session.id()) || decoded.temporary().size() != 1)
+            throw new IllegalStateException("A session friend was not saved, so dying would take it with it");
+
+        // A hand-edited file can put one player on both lists; the saved entry is the one that has to win.
+        FriendAttachment merged = FriendAttachment.CODEC.codec().parse(JsonOps.INSTANCE, JsonParser.parseString("""
+                {"permanent": [{"id": "%s", "name": "mxt-audit-both"}],
+                 "temporary": [{"id": "%s", "name": "mxt-audit-both"}]}
+                """.formatted(session.id(), session.id()))).getOrThrow();
+        if (merged.permanent().size() != 1 || !merged.temporary().isEmpty())
+            throw new IllegalStateException("A player on both lists was kept as both a saved and a session friend");
+
+        // The two lists describe one player at most: saving a session friend moves it rather than copying it.
+        FriendAttachment promoting = new FriendAttachment();
+        if (promoting.add(session) != FriendAttachment.AddResult.ADDED
+                || promoting.addPermanent(session) != FriendAttachment.AddResult.ADDED)
+            throw new IllegalStateException("Saving a session friend was refused");
+        if (!promoting.temporary().isEmpty() || promoting.permanent().size() != 1)
+            throw new IllegalStateException("Saving a session friend left it on both lists");
+        if (promoting.add(session) != FriendAttachment.AddResult.ALREADY_PERMANENT
+                || promoting.addPermanent(session) != FriendAttachment.AddResult.ALREADY_PERMANENT)
+            throw new IllegalStateException("A saved friend was not reported as already saved");
+        if (promoting.remove(session.id()) != FriendAttachment.RemoveResult.PERMANENT || !promoting.isFriend(session.id()))
+            throw new IllegalStateException("A session removal took a saved friend away");
+        if (promoting.removePermanent(session.id()) != FriendAttachment.RemoveResult.REMOVED || promoting.isFriend(session.id()))
+            throw new IllegalStateException("Removing a saved friend left it behind");
+        if (promoting.removePermanent(session.id()) != FriendAttachment.RemoveResult.NOT_A_FRIEND)
+            throw new IllegalStateException("Removing a saved friend twice reported a change");
+
+        FakePlayer judge = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-friend"));
+        Pig target = new Pig(EntityType.PIG, level);
+        Pig stranger = new Pig(EntityType.PIG, level);
+        // An entity is its own friend, so no consumer has to special-case self, and a judge with no list is
+        // nobody's friend rather than everybody's.
+        if (FriendService.builtin(judge, judge) != TriState.TRUE || FriendService.builtin(judge, target) != TriState.FALSE)
+            throw new IllegalStateException("A judge with no friend list did not answer from the list alone");
+        if (FriendService.builtin(target, target) != TriState.TRUE || FriendService.builtin(target, stranger) != TriState.FALSE)
+            throw new IllegalStateException("A judge that is not a player was not nobody's friend");
+        // The list is read, never created: this is asked about every entity in range of every effect.
+        if (judge.getExistingData(MxtAttachments.FRIEND).isPresent())
+            throw new IllegalStateException("Asking whether somebody is a friend created a friend list for the judge");
+        judge.getData(MxtAttachments.FRIEND).addPermanent(new NameAndId(target.getUUID(), "mxt-audit-target"));
+        if (!FriendService.isFriend(judge, target))
+            throw new IllegalStateException("A saved friend was not recognised");
+        // Reachable by id from JSON, not merely present as a Java object: a registration that is missing or
+        // spelled differently is invisible until a datapack tries to use it.
+        if (!BiEntityCondition.SINGLE_CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"type\": \"mxt:friend\"}"))
+                .getOrThrow().test(judge, target, FormulaContext.EMPTY))
+            throw new IllegalStateException("mxt:friend is not reachable as a datapack condition");
+
+        // The event gets the question first, in both directions...
+        friendVerdictTarget = target;
+        friendVerdict = TriState.FALSE;
+        if (FriendService.identify(judge, target) != TriState.FALSE || FriendService.isFriend(judge, target))
+            throw new IllegalStateException("A listener could not turn a saved friend into a stranger");
+        friendVerdictTarget = stranger;
+        friendVerdict = TriState.TRUE;
+        if (!FriendService.isFriend(judge, stranger))
+            throw new IllegalStateException("A listener could not turn a stranger into a friend");
+        // ... and abstaining hands the question back rather than answering "no".
+        friendVerdict = TriState.DEFAULT;
+        if (!FriendService.isFriend(judge, target) || FriendService.isFriend(judge, stranger))
+            throw new IllegalStateException("A listener that abstained did not hand the question back to the friend list");
+        friendVerdictTarget = null;
+
+        // An id-only question is the form that reaches a source keeping its own per-player data, and the only
+        // form that exists for a judge who is offline. With no listener speaking and no entity to read a list
+        // from, nobody can answer — a real third outcome, not a disguised "no". A judge the mirror has never
+        // seen is exactly that case.
+        if (FriendService.identify(stranger.getUUID(), null, target) != TriState.DEFAULT)
+            throw new IllegalStateException("A question with no judge entity and no listener invented an answer");
+        if (FriendService.identify(judge.getUUID(), null, judge) != TriState.TRUE)
+            throw new IllegalStateException("An entity was not its own friend when named by id alone");
+        if (FriendCache.lookup(judge.getUUID(), target.getUUID()) != TriState.DEFAULT)
+            throw new IllegalStateException("A judge nobody has logged in as was already mirrored");
+
+        // The FTB Teams source is a soft dependency, and this is what keeps it soft: with FTB Teams absent
+        // the listener has to answer nothing, without a single FTB class being loaded. If an FTB type ever
+        // leaks into the guard class, this is where the NoClassDefFoundError lands.
+        FriendEvent.Relation ftb = new FriendEvent.Relation(UUID.randomUUID(), null, stranger);
+        FtbTeamsCompat.onRelation(ftb);
+        if (ftb.answered())
+            throw new IllegalStateException("The FTB Teams source answered for an owner it knows nothing about");
+
+        // Both rank options have to read their own entry; the pair is easy to cross by accident and the
+        // consequence of crossing them is a server-wide behaviour change.
+        if (MxtServerConfig.ftbTeamsAllyCounts() != MxtServerConfig.INSTANCE.friends.ftbTeamsAlly.getValue()
+                || MxtServerConfig.ftbTeamsInvitedCounts() != MxtServerConfig.INSTANCE.friends.ftbTeamsInvited.getValue())
+            throw new IllegalStateException("The FTB Teams rank options do not follow their entries");
+
+        // The command has to reach the list, and a name has to resolve while that player is offline. Seeding
+        // the profile cache keeps the lookup off the network; it is the same cache vanilla resolves the
+        // names given to /op and /ban through.
+        String name = "MxtAuditFriend";
+        UUID named = UUID.randomUUID();
+        MinecraftServer server = level.getServer();
+        server.services().nameToIdCache().add(new NameAndId(named, name));
+        CommandSourceStack source = new CommandSourceStack(judge.commandSource(), judge.position(), Vec2.ZERO, level,
+                PermissionSet.ALL_PERMISSIONS, judge.getName().getString(), judge.getDisplayName(), server, judge);
+        FriendAttachment throughCommand = judge.getData(MxtAttachments.FRIEND);
+        server.getCommands().performPrefixedCommand(source, "mxt friend add " + name);
+        if (throughCommand.permanent().stream().anyMatch(friend -> friend.id().equals(named))
+                || throughCommand.temporary().stream().noneMatch(friend -> friend.id().equals(named)))
+            throw new IllegalStateException("/mxt friend add did not add a session friend: " + throughCommand.temporary());
+        server.getCommands().performPrefixedCommand(source, "mxt friend permanent add " + name);
+        if (throughCommand.temporary().stream().anyMatch(friend -> friend.id().equals(named))
+                || throughCommand.permanent().stream().noneMatch(friend -> friend.id().equals(named)))
+            throw new IllegalStateException("/mxt friend permanent add did not move the entry to the saved list: "
+                    + throughCommand.permanent());
+        // The session removal refuses a saved friend. It is the refusal a player is most likely to meet, and
+        // the one that must not quietly succeed.
+        server.getCommands().performPrefixedCommand(source, "mxt friend remove " + name);
+        if (throughCommand.permanent().stream().noneMatch(friend -> friend.id().equals(named)))
+            throw new IllegalStateException("/mxt friend remove took a saved friend away");
+        server.getCommands().performPrefixedCommand(source, "mxt friend permanent remove " + name);
+        if (throughCommand.isFriend(named))
+            throw new IllegalStateException("/mxt friend permanent remove left the friend behind");
+
+        // A login is what ends a session, and it is posted through the real bus: the failure worth
+        // guarding against is not a wrong comparison, it is a bridge that never runs.
+        throughCommand.add(new NameAndId(stranger.getUUID(), "mxt-audit-session-target"));
+        if (throughCommand.temporary().isEmpty())
+            throw new IllegalStateException("A session friend could not be added for the login check");
+        NeoForge.EVENT_BUS.post(new PlayerLoggedInEvent((ServerPlayer) judge));
+        if (!throughCommand.temporary().isEmpty())
+            throw new IllegalStateException("Logging in did not end the session friend list");
+        if (throughCommand.permanent().stream().noneMatch(friend -> friend.id().equals(target.getUUID())))
+            throw new IllegalStateException("Logging in dropped a saved friend");
+
+        // The login is also where the mirror is filled, and the mirror is what lets the built-in system
+        // answer for a player whose entity is gone. Asked with no listener speaking, so the answer can only
+        // have come from the mirror.
+        if (FriendCache.lookup(judge.getUUID(), target.getUUID()) != TriState.TRUE
+                || FriendCache.lookup(judge.getUUID(), stranger.getUUID()) != TriState.FALSE)
+            throw new IllegalStateException("Logging in did not mirror the friend lists");
+        if (FriendService.identify(judge.getUUID(), null, target) != TriState.TRUE)
+            throw new IllegalStateException("The built-in system could not answer for an offline judge");
+
+        // The logout end of the session is what makes the mirror correct for the offline stretch: a change
+        // made while the player is online is invisible to the mirror — and harmless, because the live
+        // attachment is what gets read — until the session ends.
+        throughCommand.addPermanent(new NameAndId(stranger.getUUID(), "mxt-audit-late"));
+        if (FriendCache.lookup(judge.getUUID(), stranger.getUUID()) != TriState.FALSE)
+            throw new IllegalStateException("The mirror followed a change made during the session");
+        NeoForge.EVENT_BUS.post(new PlayerLoggedOutEvent((ServerPlayer) judge));
+        if (FriendCache.lookup(judge.getUUID(), stranger.getUUID()) != TriState.TRUE)
+            throw new IllegalStateException("Logging out did not refresh the friend mirror");
+
+        CommandNode<CommandSourceStack> friend = server.getCommands().getDispatcher().getRoot().getChild("mxt").getChild("friend");
+        if (friend == null || friend.getChild("list") == null || friend.getChild("add") == null
+                || friend.getChild("remove") == null || friend.getChild("permanent") == null
+                || friend.getChild("permanent").getChild("add") == null
+                || friend.getChild("permanent").getChild("remove") == null)
+            throw new IllegalStateException("The friend command is not registered under /mxt friend");
+        // A friend list belongs to a player, so there is nothing for any other source to act on.
+        if (friend.getRequirement().test(server.createCommandSourceStack()))
+            throw new IllegalStateException("The friend command accepted a source that is not a player");
+        // The alias is a separate registration from the /mxt subtree and the server option decides whether
+        // it exists, so the check is that presence follows the option rather than that it is present.
+        CommandNode<CommandSourceStack> alias = server.getCommands().getDispatcher().getRoot().getChild("friend");
+        if ((alias == null) == MxtServerConfig.INSTANCE.commands.friend.getValue())
+            throw new IllegalStateException("The top-level /friend alias does not follow its server option");
+        if (alias != null && !children(alias).equals(children(friend)))
+            throw new IllegalStateException("The /friend alias and /mxt friend expose different children: "
+                    + children(alias) + " vs " + children(friend));
+        LOGGER.info("MiXianTu friend audit: both lists surviving the codec and a real login ending the session "
+                + "one while leaving the saved one alone; a session friend promoted rather than duplicated; a "
+                + "hand-edited file listing one player twice resolved to the saved entry; a listener's TriState "
+                + "verdict outranking the friend lists while an abstaining listener hands the question back; an "
+                + "id-only question answered by self or by a listener and otherwise left unanswered; the mirror of "
+                + "the lists filled at login and refreshed at logout so the built-in system can answer for an "
+                + "offline judge; a judge that is "
+                + "not a player owning nobody; the FTB Teams source staying silent with the mod absent, and its two "
+                + "rank options reading their own entries; and add, "
+                + "permanent add, remove and permanent remove each reaching the list they "
+                + "name through the dispatcher");
     }
 
     private static Pig spawnProbe(ServerLevel level, BlockPos position) {

@@ -46,6 +46,16 @@ public final class FormationWorldService {
         if (world.get(controller).isPresent()) return Result.rejected(Failure.OCCUPIED, null);
         if (!FormationStructureValidator.STRUCTURE.matches(level, controller, definition))
             return Result.rejected(Failure.INVALID_STRUCTURE, null);
+        // Jurisdiction before payment: a ward this server will not allow here must not charge for the
+        // attempt, and both rules are about where the formation stands rather than about what it costs.
+        // They apply to formations that carry a ward at all: an attack or benefit array is not a claim of
+        // jurisdiction and has nothing to do with anybody's land.
+        if (FormationProtection.hasProtection(definition)) {
+            if (FormationProtection.claimsOnlyRefuses(level, controller))
+                return Result.rejected(Failure.NOT_CLAIMED, null);
+            if (FormationProtection.foreignClaimRefuses(level, controller, owner))
+                return Result.rejected(Failure.FOREIGN_CLAIM, null);
+        }
         double radius = definition.radius().evaluate(context);
         if (!Double.isFinite(radius) || radius <= 0.0D) return Result.rejected(Failure.ACTIVATION_FAILED, null);
         FormationInstance preview = owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner);
@@ -55,6 +65,10 @@ public final class FormationWorldService {
         if (!activated.active()) return Result.rejected(Failure.ACTIVATION_FAILED, activated.failedResource());
         if (!world.put(controller, activated.instance()))
             throw new IllegalStateException("Formation controller became occupied during activation");
+        // A ward whose delegation cannot be honoured falls back to its own flags, and nothing in play
+        // distinguishes that from a ward leaning on a claim plugin; the report belongs here, where the
+        // definition was just chosen.
+        FormationProtection.warnIfDelegationFallsBack(id, definition);
         // The formation now absorbs the block emitters inside its radius, so every chunk it reaches has to
         // rebuild its block aura: the absorbed ones must leave the shared stock the same tick the formation
         // starts drawing on them.
@@ -115,7 +129,7 @@ public final class FormationWorldService {
         }
     }
 
-    public enum Failure {OCCUPIED, INVALID_STRUCTURE, ACTIVATION_FAILED, CANCELLED}
+    public enum Failure {OCCUPIED, INVALID_STRUCTURE, NOT_CLAIMED, FOREIGN_CLAIM, ACTIVATION_FAILED, CANCELLED}
 
     public record Result(FormationInstance instance, Failure failure, Identifier failedResource) {
         private static Result activated(FormationInstance instance) {

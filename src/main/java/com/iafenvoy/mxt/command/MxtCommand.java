@@ -67,8 +67,8 @@ import static net.minecraft.commands.Commands.literal;
  *
  * <p>The player-facing subtrees are not built here. Each lives in its own class next to the command it
  * implements - {@link AuraCommand}, {@link AbilityCommand}, {@link TechniqueCommand},
- * {@link DisplayCommand}, {@link TradeCommand} - and {@code CommandManager} is what attaches them both
- * here and at the top level.</p>
+ * {@link DisplayCommand}, {@link TradeCommand}, {@link FormationCommand}, {@link FriendCommand} - and
+ * {@code CommandManager} is what attaches them both here and at the top level.</p>
  */
 public final class MxtCommand {
     /**

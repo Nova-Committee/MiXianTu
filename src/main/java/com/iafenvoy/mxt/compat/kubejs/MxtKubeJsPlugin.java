@@ -59,6 +59,9 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         NeoForge.EVENT_BUS.addListener(Leave.class, MxtKubeJsEvents::postAura);
         NeoForge.EVENT_BUS.addListener(Tick.class, MxtKubeJsEvents::postAura);
         NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Override.class, MxtKubeJsEvents::postAura);
+        // A judgement rather than a lifecycle notification, so it goes through its own entry point: see
+        // MxtKubeJsEventDispatcher#postFriendRelation for why it is not on the generic forwarder.
+        NeoForge.EVENT_BUS.addListener(FriendEvent.Relation.class, MxtKubeJsEvents::postFriendRelation);
         forward(AbilityTriggeredEvent.Pre.class, "abilityTriggered");
         forward(AbilityTriggeredEvent.Post.class, "abilityTriggered");
         forward(CurseRemoveEvent.Pre.class, "curseRemove");

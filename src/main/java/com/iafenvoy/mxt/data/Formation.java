@@ -2,11 +2,9 @@ package com.iafenvoy.mxt.data;
 
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.aura.AuraZone;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -21,7 +19,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -41,15 +38,28 @@ import java.util.function.Function;
  *       template lookup, NBT round trip or registry parsing. A template, by contrast, has to be
  *       re-serialised and re-parsed on every check.</li>
  * </ul>
+ *
+ * <p>{@code actions} is what the formation <em>does</em>: a list of functional modules, each carrying the
+ * fields its own job needs. What lives here instead is the framework every formation shares — shape,
+ * radius, what it costs, and the lifecycle and per-entity hooks a pack can drive by hand. A module may
+ * be repeated, so one array can hold two attack modules with different damage, and the hooks stay
+ * available next to them as the escape hatch for anything the modules cannot express.</p>
+ *
+ * <p>{@code hostile} describes what the per-entity actions are for, and it has to be declared because
+ * nothing else can supply it for a hand-written action tree: a formation's intent is not recoverable
+ * from its actions, since the same effect can be reached through a builtin action, a nested condition or
+ * a script. A hostile formation spares whoever its owner recognises as a friend when the server option
+ * allows it; a formation that is not hostile — a healing or support array — affects everyone. An
+ * {@code mxt:attack} module is hostile by construction and needs no flag; this field is how a definition
+ * built out of raw hooks says the same thing. See {@code FormationRelations#affects}.</p>
  */
 public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlock> structure,
-                        NumberProvider radius,
-                        Map<Holder<Resource>, NumberProvider> maxBonus, List<ResourceCost> activationCosts,
-                        List<ResourceCost> maintenanceCosts, BlockAction activateAction,
+                        NumberProvider radius, List<ResourceCost> activationCosts,
+                        List<ResourceCost> maintenanceCosts, List<FormationActionType> actions,
+                        boolean hostile, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction, EntityAction entityEnterAction,
-                        EntityAction entityExitAction,
-                        Optional<Holder<AuraZone>> auraZone) {
+                        EntityAction entityExitAction) {
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
             Identifier.CODEC.optionalFieldOf("structure_template").forGetter(Formation::structureTemplate),
@@ -58,16 +68,16 @@ public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlo
             // half its flags is worse than a definition that refuses to load.
             RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
             NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
-            CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).optionalFieldOf("max_bonus", Map.of()).forGetter(Formation::maxBonus),
             ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
             ResourceCost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
+            FormationActionType.CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(Formation::actions),
+            Codec.BOOL.optionalFieldOf("hostile", false).forGetter(Formation::hostile),
             BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
             BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
             BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
             EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
             EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
-            EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction),
-            AuraZone.CODEC.optionalFieldOf("aura_zone").forGetter(Formation::auraZone)
+            EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
     ).apply(i, Formation::new)).flatXmap(Formation::validate, Formation::validate);
 
     /**

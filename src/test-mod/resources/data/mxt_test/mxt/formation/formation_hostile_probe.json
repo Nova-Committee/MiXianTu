@@ -1,0 +1,12 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:gold_block" }
+  ],
+  "radius": 8,
+  "hostile": true,
+  "entity_tick_action": {
+    "type": "mxt:apply_effect",
+    "effect": "minecraft:glowing",
+    "duration_ticks": 200
+  }
+}

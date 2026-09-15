@@ -142,14 +142,14 @@ dependencies {
 //    localRuntime "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
 
     //FTB
-    compileOnly "dev.ftb.mods:ftb-library:2101.1.36"
-    compileOnly "dev.ftb.mods:ftb-teams:2101.1.11"
-//    compileOnly "dev.ftb.mods:ftb-chunks:2101.1.22"
+    compileOnly "dev.ftb.mods:ftb-library:26.1.2.8"
+    compileOnly "dev.ftb.mods:ftb-teams:26.1.2.4"
+    compileOnly "dev.ftb.mods:ftb-chunks:26.1.2.8"
 
 //    runtimeOnly "dev.architectury:architectury-neoforge:20.1.14"
-//    runtimeOnly "dev.ftb.mods:ftb-library-neoforge:2101.1.36"
-//    runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:2101.1.11"
-//    runtimeOnly "dev.ftb.mods:ftb-chunks-neoforge:2101.1.22"
+//    runtimeOnly "dev.ftb.mods:ftb-library-neoforge:26.1.2.8"
+//    runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:26.1.2.4"
+//    runtimeOnly "dev.ftb.mods:ftb-chunks-neoforge:26.1.2.8"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

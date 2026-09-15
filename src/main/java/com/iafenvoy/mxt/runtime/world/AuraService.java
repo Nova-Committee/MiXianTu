@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.*;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.formation.BuffFormationAction;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -224,23 +225,50 @@ public final class AuraService {
         return AuraQueryCache.computeFormationZone(server, location, () -> server.getData(MxtAttachments.FORMATION_WORLD)
                 .formations().entrySet().stream()
                 .filter(entry -> entry.getKey().distSqr(pos) <= entry.getValue().radius() * entry.getValue().radius())
-                .max(Comparator.comparingDouble(entry -> -entry.getKey().distSqr(pos)))
-                .flatMap(entry -> MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation())
-                        .flatMap(formation -> formation.auraZone().map(zone -> new Resolved(Optional.of(zone), zone.value(),
-                                SourceKind.FORMATION, evaluateMaximumBonus(formation, FormulaContext.of(level)))))));
+                // Nearest first, and then resolved in that order until one answers. Asking the nearest
+                // array whether it has a zone and stopping there would let a terrain ward raised inside a
+                // cultivating array hide the zone it is standing in, which is not what "highest-priority
+                // formation that declares an aura zone" has always meant here.
+                .sorted(Comparator.comparingDouble(entry -> entry.getKey().distSqr(pos)))
+                .map(entry -> MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation())
+                        .flatMap(formation -> auraZone(formation).map(zone -> new Resolved(Optional.of(zone), zone.value(),
+                                SourceKind.FORMATION, maximumBonus(formation, FormulaContext.of(level))))))
+                .flatMap(Optional::stream)
+                .findFirst());
     }
 
     private static Resolved resolved(Reference<AuraZone> holder, SourceKind kind) {
         return new Resolved(Optional.of(holder), holder.value(), kind, Map.of());
     }
 
-    private static Map<Holder<Resource>, Double> evaluateMaximumBonus(Formation formation, FormulaContext context) {
+    /**
+     * A formation's aura zone is a module parameter, so it is read from the benefit modules that declare
+     * one. A formation whose {@code aura_zone} is absent declares no override at all.
+     */
+    private static Optional<Holder<AuraZone>> auraZone(Formation formation) {
+        return buffModules(formation).map(BuffFormationAction::auraZone).flatMap(Optional::stream).findFirst();
+    }
+
+    /**
+     * The ceiling bonus a formation applies, summed per resource across its benefit modules with the
+     * highest winning.
+     *
+     * <p>Taking the highest rather than the last is the same rule the resolver already applies between
+     * overlapping formations, so one array with two benefit modules reads exactly like two arrays.</p>
+     */
+    private static Map<Holder<Resource>, Double> maximumBonus(Formation formation, FormulaContext context) {
         Map<Holder<Resource>, Double> values = new LinkedHashMap<>();
-        formation.maxBonus().forEach((resource, provider) -> {
+        buffModules(formation).forEach(buff -> buff.maxBonus().forEach((resource, provider) -> {
             double value = provider.evaluate(context);
-            if (Double.isFinite(value) && value > 0.0D) values.put(resource, value);
-        });
+            if (Double.isFinite(value) && value > 0.0D) values.merge(resource, value, Math::max);
+        }));
         return values;
+    }
+
+    private static Stream<BuffFormationAction> buffModules(Formation formation) {
+        return formation.actions().stream()
+                .filter(BuffFormationAction.class::isInstance)
+                .map(BuffFormationAction.class::cast);
     }
 
     private static void applyMaximumBonus(Map<Holder<Resource>, AuraPool> pools, Map<Holder<Resource>, Double> bonuses) {

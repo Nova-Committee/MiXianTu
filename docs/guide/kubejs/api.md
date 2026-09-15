@@ -443,6 +443,7 @@ MxtEvents.abilityUse(event => {
 | `curseApply` | `Pre`、`Post` | `getCurse()`、`isPre()`、`getStacks()`、`setStacks(n)`、`getSource()`、`setSource(text)` | 仅 `Pre` 可取消和修改层数/来源；层数必须大于 0。对 `Post` 调用 setter 会抛异常。 |
 | `resourceConsume` | `Pre`、`Post` | `isPre()`、`getAmounts()`、`setAmount(resource, amount)` | 仅 `Pre` 可取消和修改单项资源量；金额必须有限且大于 0。 |
 | `auraZone` | `enter`、`leave`、`tick`、`override` | `getKind()`、`getSource()`、`getConcentration()`、`isCultivationSuppressed()`、`getOverrideZone()` | 仅 `override` 可取消。`getOverrideZone()` 非 override 时返回空字符串。 |
+| `friendRelation` | 无（判断型事件） | `getJudgeId()`、`getJudge()`、`hasJudge()`、`getCandidate()`、`getResult()`、`isAnswered()`、`setFriend(friend)`、`abstain()` | 脚本给自己判断：`setFriend(true/false)` 表态，`abstain()` 交回玩家好友名单。`getResult()` 返回 `"true"` / `"false"` / `"default"`。判断者以 **UUID** 给出（`getJudgeId()` 永远有值），`getJudge()` 在对方离线时返回 `null`，先用 `hasJudge()` 判断。**不可取消**，也不该返回布尔值——表态只能通过 setter。没有脚本监听时该事件根本不会派发。 |
 
 资源映射的键已转换为字符串 ID。例如：
 
@@ -455,6 +456,20 @@ MxtEvents.resourceConsume(event => {
   }
 })
 ```
+
+`friendRelation` 是**判断型**事件：脚本不改游戏状态，只回答问题，所以没有"阶段"也没有取消。
+
+```js
+MxtEvents.friendRelation(event => {
+  // 只认这一位是自己人；其余情况什么都不做，交回玩家好友名单。
+  // 需要用判断者实体时先看 hasJudge()：对方可能离线。
+  if (event.getCandidate().getName().getString() === 'Alice') {
+    event.setFriend(true)
+  }
+})
+```
+
+不表态（或调用 `abstain()`）等于"按名单来"，**不等于否定**。所有事件都在服务端派发。
 
 ### 通用生命周期事件
 
@@ -479,7 +494,7 @@ MxtEvents.resourceConsume(event => {
 | `alchemyCraft` | `Pre`、`Post` | `recipe()`（`RecipeHolder<AlchemyRecipe>`）；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
 | `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
-| `formation` | `Activate`、`Deactivate`、`Tick` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate` 与 `Tick` 可取消。 |
+| `formation` | `Activate`、`Deactivate`、`Tick`、`TickEffects`、`UpkeepFailed` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate`、`TickEffects`、`UpkeepFailed` 可取消，`Deactivate` 与 `Tick` 不可取消。`Tick` 是"本周期已付费"的观察点，`TickEffects` 只挡这一周期的效果且不退费，`UpkeepFailed` 取消表示让阵法撑过付不出钱的这一周期。 |
 | `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Pre` 可取消结束，取消后寿元会被设为不受限。 |
 | `realmInstance` | `EnterPre`、`EnterPost`、`Exit` | `level()`、`definition()`（`Holder<RealmInstance>`）、`member()`；只有 `EnterPre` 可取消。 |
 | `sect` | `JoinPre`、`JoinPost`、`LeavePre`、`LeavePost`、`PromotePre`、`PromotePost` | `sect()`、`data()`；所有 `*Pre` 可取消。 |

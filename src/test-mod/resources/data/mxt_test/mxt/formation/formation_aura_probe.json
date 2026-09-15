@@ -3,6 +3,11 @@
     { "offset": [0, 0, 0], "state": "minecraft:gold_block" }
   ],
   "radius": 8,
-  "max_bonus": { "mxt_test:spirit_power": 37.5 },
-  "aura_zone": "mxt_test:spirit_gathering"
+  "actions": [
+    {
+      "type": "mxt:buff",
+      "max_bonus": { "mxt_test:spirit_power": 37.5 },
+      "aura_zone": "mxt_test:spirit_gathering"
+    }
+  ]
 }

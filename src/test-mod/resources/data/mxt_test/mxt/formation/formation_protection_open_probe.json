@@ -1,0 +1,21 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:gold_block" }
+  ],
+  "radius": 8,
+  "actions": [
+    {
+      "type": "mxt:protection",
+      "block_break": false,
+      "block_place": false,
+      "block_interact": false,
+      "explosions": false,
+      "mob_griefing": false,
+      "entity_interact": false,
+      "attack_entity": false,
+      "item_use": false,
+      "spare_friends": false,
+      "delegate_to_claims": false
+    }
+  ]
+}

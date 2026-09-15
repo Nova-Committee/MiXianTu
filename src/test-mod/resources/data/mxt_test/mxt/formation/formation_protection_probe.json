@@ -1,0 +1,9 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:gold_block" }
+  ],
+  "radius": 8,
+  "actions": [
+    { "type": "mxt:protection" }
+  ]
+}

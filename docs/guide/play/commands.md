@@ -4,7 +4,7 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名在服务端配置 `config.mxt.server.commands.<名字>` 中单独开关（默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。`formation` 也在这个列表里（顶层写法是 `/formation`）。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名在服务端配置 `config.mxt.server.commands.<名字>` 中单独开关（默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。`formation` 和 `friend` 也在这个列表里（顶层写法分别是 `/formation` 和 `/friend`）。
 
 | 命令 | 作用 |
 | --- | --- |
@@ -33,9 +33,17 @@ title: 命令
 | `/technique diagnose`（= `/mxt technique diagnose`） | 逐条检查手持功法物品为何无法使用。 |
 | `/display [player] [slot]`（= `/mxt display`） | 展示槽位物品。 |
 | `/trade <player>`（= `/mxt trade <player>`） | 向玩家发起交易请求。 |
+| `/friend`（= `/mxt friend`） | 输出好友指令帮助，每一行可点击把指令填入聊天栏（不发送）。 |
+| `/friend list`（= `/mxt friend list`） | 列出永久与临时好友名单，名单中的名字可点击填入移除指令。 |
+| `/friend add <player>`（= `/mxt friend add`） | 添加**临时**好友，重登后失效。 |
+| `/friend remove <player>`（= `/mxt friend remove`） | 移除临时好友；对永久好友会拒绝并提示改用下一条。 |
+| `/friend permanent add <player>`（= `/mxt friend permanent add`） | 添加**永久**好友，写入存档；临时好友会被升级。 |
+| `/friend permanent remove <player>`（= `/mxt friend permanent remove`） | 移除永久好友。 |
 
 命令中的注册表 ID 使用原版 `IdentifierArgument`，Tab 补全来自服务端当前注册表。
 
 阵盘的拆除入口不在命令里：对已激活的 controller 使用阵盘即拆除该阵法（需要是阵主或管理员）。
 
 激活同样用阵盘：手持已绑定的阵盘右键阵心即可。**点歪一格不会失败** —— 系统会在点击位置周围 3×3×3 内寻找最近一个满足结构的阵心，因此不必精确命中中心方块；点击位置本身有效时永远优先取它。拆除也走同一次查找，所以对着已激活阵法的旁边一格右键同样是拆除。
+
+好友名单的"临时"指的是**下次登录时会被清空**：重登与服务器重启都会清掉它，**重生不会**。添加和移除都按玩家档案解析，对方离线也能操作，因此要加一个离线玩家直接写名字即可。细节见[好友与敌我识别](friends)。

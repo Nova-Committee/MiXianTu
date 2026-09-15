@@ -156,7 +156,11 @@ public final class FormationWorldTicker {
 
     /**
      * Runs the per-entity actions for one formation: enter for entities that were not there last tick,
-     * tick for everyone in range, and exit for entities that have left.
+     * tick for everyone in range the formation affects, and exit for entities that have left.
+     *
+     * <p>An entity the formation does not affect — a friend of a hostile formation's owner — is treated as
+     * absent rather than as present-but-skipped, which is what makes the exit path release what the
+     * formation granted it. See {@link FormationRelations#affects}.</p>
      */
     private static void executeEntityActions(ServerLevel level, BlockPos controller, FormationInstance instance,
                                              Formation definition) {
@@ -165,17 +169,31 @@ public final class FormationWorldTicker {
         Vec3 center = controller.getCenter();
         FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owner());
         Identifier source = FormationSources.of(instance.formation());
+        // Resolved once per formation rather than per entity: a hostile formation asks the same owner about
+        // every entity it covers. The id outlives the owner logging out and the entity does not, which is
+        // why the judgement is asked by id: a manager-level source can still answer for an absent owner.
+        UUID ownerId = instance.owner().orElse(null);
+        Entity owner = ownerId == null ? null : level.getEntities().get(ownerId);
         Set<UUID> previous = FormationEntityActions.tracked(level, controller);
         Set<UUID> present = new HashSet<>();
         for (Entity entity : level.getEntities(null, AABB.ofSize(center, radius * 2.0D, radius * 2.0D, radius * 2.0D))) {
             double distanceSquared = entity.distanceToSqr(center);
             if (distanceSquared > radiusSquared) continue;
+            // An entity the formation does not affect is not tracked either. The presence set is what
+            // decides who receives an enter and an exit action, and because an exit is also where a
+            // formation-scoped grant is released, leaving a spared entity in the set would hand it back
+            // its actions the moment its owner's list changed. Not tracking it means: the formation stops
+            // seeing it, and picks it up as a newcomer if it ever becomes a stranger again.
+            if (!FormationRelations.affects(definition, ownerId, owner, entity)) continue;
             present.add(entity.getUUID());
             EntityActionContext context = FormationEntityActions.context(entity, carrier, radius, distanceSquared);
             // A formation that has just been activated has no previous set, so everything already
             // inside receives an enter action. That is the intended reading of "the formation
             // appeared around you", and it is why enter actions must be idempotent.
             if (!previous.contains(entity.getUUID())) definition.entityEnterAction().execute(context);
+            // The function modules run before the definition's own hook, so a pack customising the tick
+            // sees the state the array left behind rather than the state before it acted.
+            FormationActionRunner.perEntity(level, definition, instance, entity, context, owner, ownerId);
             definition.entityTickAction().execute(context);
         }
         FormationEntityActions.remember(level, controller, present);
