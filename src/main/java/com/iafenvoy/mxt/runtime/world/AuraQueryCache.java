@@ -261,7 +261,7 @@ public final class AuraQueryCache {
             SKIPPED.incrementAndGet();
             return false;
         }
-        if (age >= Math.max(1, refreshInterval)) return true;
+        if (age >= refreshInterval) return true;
         SKIPPED.incrementAndGet();
         return false;
     }

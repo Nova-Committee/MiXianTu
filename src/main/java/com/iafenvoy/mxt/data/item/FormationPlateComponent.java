@@ -79,7 +79,7 @@ public record FormationPlateComponent(List<Allowed> allowed, Optional<Holder<For
      * anything listed matches by id or by tag.
      */
     public boolean admits(Holder<Formation> candidate) {
-        if (this.allowed.isEmpty()) return MxtServerConfig.emptyPlateAllowsAll();
+        if (this.allowed.isEmpty()) return MxtServerConfig.INSTANCE.formations.emptyAllowsAll.getValue();
         return this.allowed.stream().anyMatch(entry -> entry.matches(candidate));
     }
 

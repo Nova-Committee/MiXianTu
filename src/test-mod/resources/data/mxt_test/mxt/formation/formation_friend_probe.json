@@ -11,7 +11,7 @@
     { "offset": [1, 0, 1], "state": "minecraft:nether_bricks" }
   ],
   "radius": 8,
-  "hostile": true,
+  "spare_friends": true,
   "entity_tick_action": {
     "type": "mxt:apply_effect",
     "effect": "minecraft:glowing",

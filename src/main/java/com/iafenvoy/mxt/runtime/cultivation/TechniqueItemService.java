@@ -256,7 +256,7 @@ public final class TechniqueItemService {
      * {@code mxt:on_cooldown} item condition both see it for free.
      */
     private static void applyCooldown(LivingEntity entity, ItemStack stack) {
-        int ticks = MxtServerConfig.techniqueLearnCooldown();
+        int ticks = MxtServerConfig.INSTANCE.cultivation.techniqueLearnCooldown.getValue();
         if (ticks <= 0 || stack.isEmpty() || !(entity instanceof Player player)) return;
         player.getCooldowns().addCooldown(stack, ticks);
     }

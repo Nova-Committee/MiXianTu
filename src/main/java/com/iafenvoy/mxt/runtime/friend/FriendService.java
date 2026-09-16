@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.friend;
 
 import com.iafenvoy.mxt.attachment.FriendAttachment;
-import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.util.TriState;

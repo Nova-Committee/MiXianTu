@@ -105,7 +105,7 @@ public final class AuraChunkTicker {
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLevelTick(Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
-        long interval = Math.max(1L, MxtServerConfig.blockAuraTickInterval());
+        long interval = MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.getValue();
         if (level.getGameTime() % interval != 0L) return;
         Set<LevelChunk> chunks = LOADED.get(level);
         if (chunks == null) return;

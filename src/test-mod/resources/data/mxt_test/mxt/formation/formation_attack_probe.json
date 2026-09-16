@@ -11,6 +11,7 @@
     { "offset": [1, 0, 1], "state": "minecraft:polished_blackstone_bricks" }
   ],
   "radius": 8,
+  "spare_friends": true,
   "actions": [
     {
       "type": "mxt:attack",

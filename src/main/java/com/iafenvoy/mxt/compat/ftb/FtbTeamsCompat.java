@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.compat.ftb;
 
-import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;

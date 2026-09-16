@@ -51,7 +51,7 @@ public final class AuraService {
     public static AuraResult getPositionAura(Level level, BlockPos pos) {
         // The two nanoTime calls are only worth paying for when the diagnostic timer is on; the query
         // counter itself is unconditional because it costs a single increment.
-        boolean timing = MxtServerConfig.auraQueryStats();
+        boolean timing = MxtServerConfig.INSTANCE.aura.queryStats.getValue();
         long startedAt = timing ? System.nanoTime() : 0L;
         try {
             if (!(level instanceof ServerLevel server)) return resolveAura(level, pos);

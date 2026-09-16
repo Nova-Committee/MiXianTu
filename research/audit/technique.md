@@ -323,7 +323,7 @@
 - 滚动条位置：原版 `scrollBarX() = getRowRight() + 6 + 2` 会落到面板边框上，覆写成 `getRowRight()`，正好落进预留的 `SCROLLBAR_ROOM`（直接引用 `AbstractScrollArea.SCROLLBAR_WIDTH`，不再写死 6）。
 - 空状态文案用 `TEXT_COLOR`（`0xFF404040`，和面板其余文字一致，原 `0xFF7A7A7A` 在 `B8B8B8` 上对比度不足）并再内缩 `EMPTY_INSET`；"无水平"行用的 `UNKNOWN_COLOR` 也从 `0xFF7A7A7A` 调到 `0xFF5A5A5A`。
 - 未同步改动：人物信息面板的两个列表仍保留原版装饰（列表底色 + 首末分隔线）——那是它长期以来的观感，且是文字列表，底色有分隔作用；要不要一并去掉等用户决定。
-- 刷新：沿用 `MxtClientConfig.informationRefreshInterval()`，刷新时保留滚动位置。
+- 刷新：沿用 `MxtClientConfig.INSTANCE.information.refreshInterval.getValue()`，刷新时保留滚动位置。
 - 预留：图标目前只画空槽框，位置在 `extractContent` 里留了 `//TODO::`，等 `cultivation_technique` 有 icon 字段后直接叠一层 blit。
 
 ### 12.6 没有新增网络包

@@ -22,8 +22,8 @@ public final class CuriosIntegration {
      * Registers the data-driven automatic acceptance predicates used by the back and belt slots.
      */
     public static void registerPredicates() {
-        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "back_weapon_auto"), (context, stack) -> acceptsBack(MxtServerConfig.backMode(), context, stack));
-        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "belt_item_auto"), (context, stack) -> acceptsBelt(MxtServerConfig.beltMode(), context, stack));
+        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "back_weapon_auto"), (context, stack) -> acceptsBack(MxtServerConfig.INSTANCE.curios.backMode.getValue(), context, stack));
+        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "belt_item_auto"), (context, stack) -> acceptsBelt(MxtServerConfig.INSTANCE.curios.beltMode.getValue(), context, stack));
     }
 
     private static boolean acceptsBack(BackMode mode, SlotContext context, ItemStack stack) {
@@ -85,7 +85,7 @@ public final class CuriosIntegration {
         if (handler == null) return;
         IDynamicStackHandler stacks = handler.getStacks();
         for (int index = 0; index < stacks.getSlots() && index < places.length; index++) {
-            if (!MxtServerConfig.forceRenderSlots() && (!handler.isVisible() || index >= handler.getRenders().size() || !handler.getRenders().get(index)))
+            if (!MxtServerConfig.INSTANCE.curios.forceRenderSlots.getValue() && (!handler.isVisible() || index >= handler.getRenders().size() || !handler.getRenders().get(index)))
                 continue;
             ItemStack stack = stacks.getStackInSlot(index);
             if (!stack.isEmpty()) result.put(places[index], stack);

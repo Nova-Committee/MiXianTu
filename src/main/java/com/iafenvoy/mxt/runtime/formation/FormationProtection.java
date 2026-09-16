@@ -18,7 +18,6 @@ import net.minecraft.util.TriState;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -108,7 +107,7 @@ public final class FormationProtection {
      */
     private static boolean handsOver(ProtectionFormationAction ward, ServerLevel level, BlockPos controller) {
         boolean declared = ward.delegateToClaims();
-        boolean claimed = MxtServerConfig.formationClaimLinkage() == ClaimLinkage.CLAIMS_PRECEDENCE
+        boolean claimed = MxtServerConfig.INSTANCE.compat.claimLinkage.getValue() == ClaimLinkage.CLAIMS_PRECEDENCE
                 && FtbChunksCompat.chunkClaimed(level, controller);
         return (declared || claimed) && delegationHandsOver();
     }
@@ -123,7 +122,7 @@ public final class FormationProtection {
      * but the first attempt says so once.
      */
     public static boolean claimsOnlyRefuses(ServerLevel level, BlockPos controller) {
-        if (MxtServerConfig.formationClaimLinkage() != ClaimLinkage.CLAIMS_ONLY) return false;
+        if (MxtServerConfig.INSTANCE.compat.claimLinkage.getValue() != ClaimLinkage.CLAIMS_ONLY) return false;
         if (!FtbChunksCompat.loaded()) {
             warnClaimsOnlyWithoutClaims();
             return false;
@@ -138,7 +137,7 @@ public final class FormationProtection {
      * copy of its rule here would drift. Everything else is refused, including an unresolvable actor.
      */
     public static boolean foreignClaimRefuses(ServerLevel level, BlockPos controller, @Nullable UUID actorId) {
-        if (!MxtServerConfig.formationWardsNeedClaimPermission() || !FtbChunksCompat.loaded()) return false;
+        if (!MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.getValue() || !FtbChunksCompat.loaded()) return false;
         // Nobody to judge and no permission of anybody's to check: an activation with no player behind it.
         if (actorId == null) return false;
         if (FtbChunksCompat.mayEdit(level, controller, actorId)) return false;
@@ -152,17 +151,17 @@ public final class FormationProtection {
 
     private static void warnClaimsOnlyWithoutClaims() {
         if (!WARNED_INERT_LINKAGE.compareAndSet(false, true)) return;
-        MiXianTu.LOGGER.warn("config.mxt.server.formation.claim_linkage is claims_only, but FTB Chunks is not installed: "
+        MiXianTu.LOGGER.warn("config.mxt.server.compat.claim_linkage is claims_only, but FTB Chunks is not installed: "
                 + "protection formations can be raised anywhere, because there are no claims to require");
     }
 
     /**
      * Delegating only means anything while the claim plugin's rules exist, and by default
-     * {@code config.mxt.server.formation.delegate_requires_claims} insists they do. Asked on the decision
+     * {@code config.mxt.server.compat.delegate_requires_claims} insists they do. Asked on the decision
      * path, so it stays cheap.
      */
     public static boolean delegationHandsOver() {
-        if (!MxtServerConfig.formationDelegateRequiresClaims()) return true;
+        if (!MxtServerConfig.INSTANCE.compat.delegateRequiresClaims.getValue()) return true;
         return FtbChunksCompat.claimsProtect();
     }
 
@@ -177,7 +176,7 @@ public final class FormationProtection {
         if (!delegates || !WARNED_DELEGATIONS.add(id)) return;
         MiXianTu.LOGGER.warn("Formation {} delegates its protection to claims, but no claim protection is active "
                 + "(FTB Chunks absent, or its claim protection switched off): its own flags stay in force. Turn off "
-                + "the server option config.mxt.server.formation.delegate_requires_claims to hand it over regardless.", id);
+                + "the server option config.mxt.server.compat.delegate_requires_claims to hand it over regardless.", id);
     }
 
     private static boolean inside(BlockPos controller, double radius, @Nullable BlockPos position) {
@@ -195,7 +194,7 @@ public final class FormationProtection {
         UUID ownerId = instance.owner().orElse(null);
         if (ownerId == null) return false;
         if (ownerId.equals(actor.getUUID())) return true;
-        if (!spareFriends || !MxtServerConfig.formationRespectsFriends()) return false;
+        if (!spareFriends || !MxtServerConfig.INSTANCE.formations.respectFriends.getValue()) return false;
         return FriendService.identify(ownerId, level.getEntities().get(ownerId), actor) == TriState.TRUE;
     }
 }

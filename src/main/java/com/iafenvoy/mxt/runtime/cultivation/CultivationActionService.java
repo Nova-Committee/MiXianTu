@@ -157,7 +157,7 @@ public final class CultivationActionService {
         if (auraCost > 0.0D && entity instanceof ServerPlayer player) {
             // The level prepass bounds this from the shared chunk pool; direct callers keep full cost.
             allocationFactor = AuraDistributionService.take(player).map(values -> allocationFactor(auraCosts, values)).orElse(1.0D);
-            if (allocationFactor <= 0.0D && MxtServerConfig.forbidCultivationWithoutEligibleAura())
+            if (allocationFactor <= 0.0D && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue())
                 return stop(entity, spirit, action, definition, gameTime, Failure.INSUFFICIENT_AURA);
         }
         double speed = aura.cultivationSpeed() * allocationFactor;
@@ -302,14 +302,14 @@ public final class CultivationActionService {
         if (aura.suppressCultivate()) return false;
         boolean realmEligible = cultivationStages(entity, spirit).stream()
                 .anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
-        if (!realmEligible && MxtServerConfig.forbidCultivationWithoutEligibleAura()) return false;
+        if (!realmEligible && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue()) return false;
         if (!(aura.cultivateCondition() instanceof AuraRangeEntityCondition(
                 Map<Holder<Resource>, AuraRequirement> aura1
         )))
             return aura.cultivateCondition().test(entity, context);
         boolean anyEligible = aura1.isEmpty() || aura1.entrySet().stream()
                 .anyMatch(entry -> entry.getValue().test(aura.pool(entry.getKey()).amount(), context));
-        return anyEligible || !MxtServerConfig.forbidCultivationWithoutEligibleAura();
+        return anyEligible || !MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue();
     }
 
     /**

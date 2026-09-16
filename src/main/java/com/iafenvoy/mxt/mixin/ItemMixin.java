@@ -27,8 +27,7 @@ public abstract class ItemMixin {
      * Starts the reading gesture instead of letting the click fall through.
      */
     @Inject(method = "use", at = @At("HEAD"), cancellable = true)
-    private void mxt$startTechniqueHold(Level level, Player player, InteractionHand hand,
-                                        CallbackInfoReturnable<InteractionResult> cir) {
+    private void mxt$startTechniqueHold(Level level, Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
         if (TechniqueHoldLookup.hold(player.getItemInHand(hand)) == null) return;
         player.startUsingItem(hand);
         cir.setReturnValue(InteractionResult.CONSUME);
@@ -38,9 +37,8 @@ public abstract class ItemMixin {
      * How long the hold lasts, from the binding rather than from a component.
      */
     @Inject(method = "getUseDuration", at = @At("HEAD"), cancellable = true)
-    private void mxt$techniqueHoldDuration(ItemStack stack, LivingEntity user,
-                                           CallbackInfoReturnable<Integer> cir) {
-        TechniqueBinding binding = TechniqueHoldLookup.hold(stack);
+    private void mxt$techniqueHoldDuration(ItemStack itemStack, LivingEntity user, CallbackInfoReturnable<Integer> cir) {
+        TechniqueBinding binding = TechniqueHoldLookup.hold(itemStack);
         if (binding != null) cir.setReturnValue(binding.learnTime());
     }
 
@@ -48,8 +46,8 @@ public abstract class ItemMixin {
      * The pose the hold plays, which is the question a plain item cannot answer on its own.
      */
     @Inject(method = "getUseAnimation", at = @At("HEAD"), cancellable = true)
-    private void mxt$techniqueHoldAnimation(ItemStack stack, CallbackInfoReturnable<ItemUseAnimation> cir) {
-        TechniqueBinding binding = TechniqueHoldLookup.hold(stack);
+    private void mxt$techniqueHoldAnimation(ItemStack itemStack, CallbackInfoReturnable<ItemUseAnimation> cir) {
+        TechniqueBinding binding = TechniqueHoldLookup.hold(itemStack);
         if (binding != null) cir.setReturnValue(binding.holdAnimation());
     }
 }

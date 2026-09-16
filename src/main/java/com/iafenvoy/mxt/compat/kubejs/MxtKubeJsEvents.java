@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.compat.kubejs;
 import com.iafenvoy.mxt.event.AbilityUseEvent;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
-import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent;
 import net.neoforged.bus.api.Event;

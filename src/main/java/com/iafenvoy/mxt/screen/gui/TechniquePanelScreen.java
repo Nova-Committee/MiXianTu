@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.technique;
+package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
@@ -108,7 +108,7 @@ public final class TechniquePanelScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        int interval = MxtClientConfig.informationRefreshInterval();
+        int interval = MxtClientConfig.INSTANCE.information.refreshInterval.getValue();
         if (++this.refreshTicks < interval) return;
         this.refreshTicks = 0;
         if (this.list == null) return;
@@ -124,7 +124,7 @@ public final class TechniquePanelScreen extends Screen {
         }
         SpiritIdentityAttachment spirit = this.minecraft.player.getData(MxtAttachments.SPIRIT_IDENTITY);
         ResourceHolderAttachment resources = this.minecraft.player.getData(MxtAttachments.RESOURCE_HOLDER);
-        Mode mode = MxtClientConfig.techniqueProgressMode();
+        Mode mode = MxtClientConfig.INSTANCE.techniques.progressMode.getValue();
         List<Entry> rows = TechniqueProgress.rows(spirit, resources, FormulaContexts.forEntity(this.minecraft.player));
         this.empty = rows.isEmpty();
         List<TechniqueList.RowEntry> entries = new ArrayList<>(rows.size());
@@ -135,12 +135,9 @@ public final class TechniquePanelScreen extends Screen {
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         this.extractTransparentBackground(graphics);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, this.panelLeft, this.panelTop, 0.0F, 0.0F,
-                this.panelWidth, this.panelHeight, PANEL_WIDTH, PANEL_HEIGHT);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, this.panelLeft, this.panelTop, 0.0F, 0.0F, this.panelWidth, this.panelHeight, PANEL_WIDTH, PANEL_HEIGHT);
         if (this.empty)
-            graphics.text(this.font, Component.translatable("screen.mxt.technique_panel.empty"),
-                    this.panelLeft + CONTENT_PADDING + EMPTY_INSET, this.panelTop + CONTENT_PADDING + EMPTY_INSET,
-                    TEXT_COLOR, false);
+            graphics.text(this.font, Component.translatable("screen.mxt.technique_panel.empty"), this.panelLeft + CONTENT_PADDING + EMPTY_INSET, this.panelTop + CONTENT_PADDING + EMPTY_INSET, TEXT_COLOR, false);
     }
 
     @Override
@@ -237,7 +234,8 @@ public final class TechniquePanelScreen extends Screen {
                 graphics.fill(rowX, separatorY, rowRight, separatorY + 1, DIVIDER_DARK_COLOR);
                 graphics.fill(rowX, separatorY + 1, rowRight, separatorY + 2, DIVIDER_LIGHT_COLOR);
 
-                if (hovered) graphics.setTooltipForNextFrame(font, this.tooltip(), mouseX, mouseY);            }
+                if (hovered) graphics.setTooltipForNextFrame(font, this.tooltip(), mouseX, mouseY);
+            }
 
             /**
              * The level column, using the level's own display name when the data pack provides one and its

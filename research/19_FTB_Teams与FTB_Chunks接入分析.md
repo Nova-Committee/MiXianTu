@@ -129,8 +129,8 @@ Mxt 的 `FtbTeamsRelation#friendly` 从这里出发，只允许**向上加宽**�
 
 ```java
 rank.isMemberOrBetter()
-    || (MxtServerConfig.ftbTeamsAllyCounts()    && rank == TeamRank.ALLY)     // 默认开
-    || (MxtServerConfig.ftbTeamsInvitedCounts() && rank == TeamRank.INVITED)  // 默认关
+    || (MxtServerConfig.INSTANCE.compat.ftbTeamsAlly.getValue()    && rank == TeamRank.ALLY)     // 默认开
+    || (MxtServerConfig.INSTANCE.compat.ftbTeamsInvited.getValue() && rank == TeamRank.INVITED)  // 默认关
 ```
 
 - **成员资格不可配置**：在队里就是在队里。
@@ -342,7 +342,7 @@ FTB Chunks 的保护不止"别拆我的地"，**交互是一条独立的开关�
 
 三点值得记住：
 
-- **两边的"盟友"口径是一致的**：Mxt 的 FTB 来源抄的就是 FTB Chunks 的 `isMemberOrBetter() || == ALLY`（`config.mxt.server.friends.ftb_teams_ally` 默认开），所以 FTB 眼里的队友与盟友会被**两边同时豁免**，不会出现"FTB 放行、阵法拦住"的分裂。
+- **两边的"盟友"口径是一致的**：Mxt 的 FTB 来源抄的就是 FTB Chunks 的 `isMemberOrBetter() || == ALLY`（`config.mxt.server.compat.ftb_teams_ally` 默认开），所以 FTB 眼里的队友与盟友会被**两边同时豁免**，不会出现"FTB 放行、阵法拦住"的分裂。
 - **两边同时装上是"与"关系**：各自在自己的事件处理器里取消，谁拒绝都算拒绝。
 - **差集正好是 Mxt 多出来的那两块**：`item_use` 与"攻击生物"。FTB Chunks 不管这两件事，所以"在我的领地里不能喝药 / 不能打我的宠物"这类规则只能由阵法守御模块表达；反过来，一个只想沿用 FTB Chunks 那套规则的整合包，可以让阵法把守御整个交出去（见第三部分「把守御交给领地插件」）。
 
@@ -452,8 +452,8 @@ FTBChunksAPI.api().getOwningTeam(level, new ChunkPos(pos));   // Optional<Team>
 | 键 | 默认 | 含义 |
 | --- | --- | --- |
 | `config.mxt.server.formation.respect_friends` | true | 敌对法阵是否执行敌我判断 |
-| `config.mxt.server.friends.ftb_teams_ally` | true | `ALLY` 等级算队友 |
-| `config.mxt.server.friends.ftb_teams_invited` | false | `INVITED` 等级算队友 |
+| `config.mxt.server.compat.ftb_teams_ally` | true | `ALLY` 等级算队友 |
+| `config.mxt.server.compat.ftb_teams_invited` | false | `INVITED` 等级算队友 |
 
 ### 设计取舍（有意为之，不要"顺手优化"掉）
 
@@ -463,8 +463,8 @@ FTBChunksAPI.api().getOwningTeam(level, new ChunkPos(pos));   // Optional<Team>
 4. **`ModList.isLoaded` 每次现问**，不缓存：mod 列表在启动后固定，缓存没有收益。
 5. **好友镜像是纯内存的**：落盘一份陈旧镜像会给出**错误**答案（把不该保的人保了），空镜像只会给出**保守**答案（停火），所以重启后镜像为空、等玩家登录再填。镜像里**空集合也记录**："这人没有好友"（`FALSE`，该打就打）与"没见过这人"（`DEFAULT`，停火）是两个答案。
 6. **镜像只在会话两端刷新**（登录清空临时名单后、登出时）：在线时读实体上的实时名单，镜像陈旧无害；这样以后新增任何写好友数据的路径都**不需要知道**这个类。
-7. **`mxt:friend` 与 `mxt:formation_ally` 不要和 `hostile` 同时用**：前者作用于两个实体，后者作用于"阵主—实体"这一对，语义不同。
-8. **认不出敌就不开火**：没有任何来源作答时，敌对法阵对谁都不生效。逃生口是自己写行动树（不设 `hostile`，改用 `mxt:formation_ally`，上下文外答案为 `false` 走"命中"分支），或关掉 `respect_friends`。
+7. **`mxt:friend` 与 `mxt:formation_ally` 不要和顶层 `spare_friends` 同时用**：前者作用于两个实体，后者作用于"阵主—实体"这一对，语义不同。
+8. **认不出敌就不开火**：没有任何来源作答时，声明了 `spare_friends` 的法阵对谁都不生效。逃生口是自己写行动树（不设 `spare_friends`，改用 `mxt:formation_ally`，上下文外答案为 `false` 走"命中"分支），或关掉 `respect_friends`。
 
 ### 把守御交给领地插件（Mxt 侧的实现）
 
@@ -486,7 +486,7 @@ Mxt 的阵法守御模块有一个 `delegate_to_claims` 开关：置真且**当�
 `claimsProtect()` 读的是**全局**开关，**队伍级看不见**：FTB 是按归属队伍的四项 PrivacyMode 逐块判定的，某个队伍把自己的领地
 全设成 public 时这里仍返回 true。要把这一层也重算，等于把领地插件的规则抄第二份，而那正是"交出去"想避开的事。
 
-**服务端配置 `config.mxt.server.formation.delegate_requires_claims`（默认开启）决定"没有领地保护"时怎么办**：
+**服务端配置 `config.mxt.server.compat.delegate_requires_claims`（默认开启）决定"没有领地保护"时怎么办**：
 
 - **开（默认）**：`delegate_to_claims` 只在有生效的领地保护时才交出；否则阵法**回退到自己那九个开关**，并在激活时按定义打一条
   警告日志（`FormationProtection.warnIfDelegationFallsBack`）。一座静悄悄什么都不保护的守御阵，正是这个模块存在的意义所在，
@@ -499,7 +499,7 @@ Mxt 的阵法守御模块有一个 `delegate_to_claims` 开关：置真且**当�
 #### 服务端侧：三种联动方式（`claim_linkage`）
 
 上面那些是**内容包**对单座阵法的声明；服务器另有一个配置决定**所有**保护阵法与领地插件怎么相处
-（`config.mxt.server.formation.claim_linkage`，默认 `none`）：
+（`config.mxt.server.compat.claim_linkage`，默认 `none`）：
 
 | 取值 | Mxt 侧实现 |
 | --- | --- |

@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
-import com.iafenvoy.mxt.screen.technique.TechniquePanelScreen;
+import com.iafenvoy.mxt.screen.gui.TechniquePanelScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;

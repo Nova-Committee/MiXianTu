@@ -29,13 +29,15 @@ import java.util.function.Function;
  * A formation's static shape, resource costs and lifecycle actions. The shape is declared one of two ways,
  * never both: {@code structure_template}, whose air entries are ignored so a template says what must be
  * present and never what must be absent; or {@code structure}, an inline list of required blocks at offsets
- * from the controller. {@code hostile} is declared because intent is not recoverable from the action tree.
+ * from the controller. {@code spare_friends} is the friend-or-foe switch: it decides whether the per-entity
+ * work goes to everyone the array covers or only to those its owner does not recognise, and it says nothing
+ * about what the array is for — an attacking array is one whose actions attack.
  */
 public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlock> structure,
                         NumberProvider radius, List<ResourceCost> activationCosts,
                         List<ResourceCost> maintenanceCosts, Optional<Storage> storage,
                         List<FormationActionType> actions,
-                        boolean hostile, BlockAction activateAction,
+                        boolean spareFriends, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction, EntityAction entityEnterAction,
                         EntityAction entityExitAction) {
@@ -52,7 +54,7 @@ public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlo
             // and absent is the answer most arrays give, so this is one field rather than a module.
             Storage.CODEC.optionalFieldOf("storage").forGetter(Formation::storage),
             FormationActionType.CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(Formation::actions),
-            Codec.BOOL.optionalFieldOf("hostile", false).forGetter(Formation::hostile),
+            Codec.BOOL.optionalFieldOf("spare_friends", false).forGetter(Formation::spareFriends),
             BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
             BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
             BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),

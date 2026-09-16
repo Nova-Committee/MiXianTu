@@ -132,7 +132,7 @@ public final class FormationWorldTicker {
         return combine(
                 FormationAbsorption.absorbedFor(level, controller, radius),
                 FormationAbsorption.environmentSupply(level, controller),
-                MxtServerConfig.formationDrawsEnvironment());
+                MxtServerConfig.INSTANCE.formations.drawsEnvironment.getValue());
     }
 
     /**

@@ -52,7 +52,8 @@ public final class FormationPlateItem extends Item {
         // The plate is the off switch as well as the on switch, and this lookup is by position alone, so a
         // plate whose structure no longer matches can still dismantle what is standing there. Checked before
         // anything else so nothing is spent discovering the occupancy.
-        if (level.getData(MxtAttachments.FORMATION_WORLD).get(clicked).isPresent()) return dismantle(level, clicked, player);
+        if (level.getData(MxtAttachments.FORMATION_WORLD).get(clicked).isPresent())
+            return dismantle(level, clicked, player);
         Optional<Holder<Formation>> selected = plate.selected();
         if (selected.isPresent()) return activate(level, clicked, player, selected.get());
         // Two different situations: "pick a formation" against "this plate was bound to one it is not
@@ -61,7 +62,7 @@ public final class FormationPlateItem extends Item {
             ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.not_allowed"));
             return InteractionResult.FAIL;
         }
-        if (!MxtServerConfig.formationPlateAutoDetect()) {
+        if (!MxtServerConfig.INSTANCE.formations.plateAutoDetect.getValue()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.unbound"));
             return InteractionResult.FAIL;
         }
@@ -107,7 +108,8 @@ public final class FormationPlateItem extends Item {
      * click, because a stored neighbour is the formation the player is clicking to stop.
      */
     private static InteractionResult activateAt(ServerLevel level, BlockPos center, ServerPlayer player, Holder<Formation> formation) {
-        if (level.getData(MxtAttachments.FORMATION_WORLD).get(center).isPresent()) return dismantle(level, center, player);
+        if (level.getData(MxtAttachments.FORMATION_WORLD).get(center).isPresent())
+            return dismantle(level, center, player);
         Result result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
                 formation.value(), player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
         if (!result.active()) {

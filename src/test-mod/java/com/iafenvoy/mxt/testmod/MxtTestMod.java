@@ -19,7 +19,6 @@ import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
-import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
@@ -120,7 +119,6 @@ import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationProtection;
 import com.iafenvoy.mxt.runtime.formation.FormationRangeDisplay;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
-import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
 import com.iafenvoy.mxt.runtime.world.BlockAuraService;
 import com.iafenvoy.mxt.runtime.world.FormationAbsorption;
@@ -503,6 +501,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("Currency exchange definition did not offer 10 copper coins for one iron coin");
         }
         verifyClientDefinitions(event);
+        verifyConfigKeyMigration();
         verifyFormationTemplate(event);
         verifyFormationRuntime(event);
         verifyFriendIdentification(event.getServer().overworld());
@@ -1214,7 +1213,7 @@ public final class MxtTestMod {
     private static void verifyEntityQueryGate(ServerLevel overworld) {
         UUID id = UUID.randomUUID();
         long now = overworld.getGameTime();
-        int interval = MxtServerConfig.auraEntityRefreshInterval();
+        int interval = MxtServerConfig.INSTANCE.aura.entityRefreshInterval.getValue();
         AuraLocation here = new AuraLocation(overworld.dimension().identifier(), BlockPos.ZERO, now);
         if (!AuraQueryCache.needsQuery(overworld, id, here, interval))
             throw new IllegalStateException("Aura entity gate skipped an entity it had never seen");
@@ -1744,7 +1743,7 @@ public final class MxtTestMod {
     private static void verifyCooldownOnAnyOutcome() {
         // Disabled by configuration: there is no cooldown to observe, and asserting one would be asserting
         // something the operator switched off.
-        if (MxtServerConfig.techniqueLearnCooldown() <= 0) return;
+        if (MxtServerConfig.INSTANCE.cultivation.techniqueLearnCooldown.getValue() <= 0) return;
 
         ServerLevel level = ServerCache.get()
                 .orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
@@ -1835,7 +1834,7 @@ public final class MxtTestMod {
         if (!Component.translatable("actionbar.mxt.technique.learned").getString().contains("%s"))
             throw new IllegalStateException("The success message must name the technique it reports");
 
-        int cooldown = MxtServerConfig.techniqueLearnCooldown();
+        int cooldown = MxtServerConfig.INSTANCE.cultivation.techniqueLearnCooldown.getValue();
         if (cooldown < 0)
             throw new IllegalStateException("The learn cooldown must not be negative: " + cooldown);
         // A pig is not a player, so `learn` must survive being asked to cool down for one rather than
@@ -2185,6 +2184,7 @@ public final class MxtTestMod {
         verifyFormationPlateBinding(level);
         verifyFormationPlateAllowList(level);
         verifyFormationFriendProtection(level);
+        verifyFormationDismantlePermission(level);
         verifyFormationActionTypes(level);
         verifyFormationAbsorption(level);
         verifyFormationStorage(level);
@@ -2206,13 +2206,14 @@ public final class MxtTestMod {
                         + "aura through the cancellable hook; block emitters inside a formation supplying it instead "
                         + "of the environment and paying its upkeep, with the ambient draw following its option; "
                         + "malformed and duplicate "
-                        + "index rows dropped without losing the rest; a hostile formation sparing its owner and "
-                        + "whoever the identification event calls a friend while affecting everyone else, honouring "
-                        + "a verdict for an owner it cannot resolve, standing down on a pair nobody can identify, "
-                        + "and the "
-                        + "server option restoring the unconditional behaviour when it is turned off; "
-                        + "an attack module selected through the module registry, attributing its damage to the "
-                        + "owner while sparing him and his friends; a benefit module granting under the "
+                        + "index rows dropped without losing the rest; a formation that declares spare_friends "
+                        + "sparing its owner and whoever the identification event calls a friend while affecting "
+                        + "everyone else, honouring a verdict for an owner it cannot resolve, standing down on a pair "
+                        + "nobody can identify, and the server option restoring the unconditional behaviour when it "
+                        + "is turned off, with taking an array down left to its owner and operators until the "
+                        + "teammate option says otherwise; an attack module selected through the module registry, attributing its "
+                        + "damage to the owner and sparing him and his friends only because the formation declares "
+                        + "the switch; a benefit module granting under the "
                         + "formation's own source and taking the grant back from an entity it stops targeting; a "
                         + "a protection ward holding its radius against a stranger at either end of an action and "
                         + "against actorless ones, while its owner always passes and a friend passes only while the "
@@ -2657,7 +2658,7 @@ public final class MxtTestMod {
         Reference<Formation> otherFormation = registry.getOrThrow(ResourceKey.create(MxtResourceKeys.FORMATION, otherId));
 
         FormationPlateComponent empty = new FormationPlateComponent(List.of(), Optional.empty());
-        if (empty.admits(allowedFormation) != MxtServerConfig.emptyPlateAllowsAll())
+        if (empty.admits(allowedFormation) != MxtServerConfig.INSTANCE.formations.emptyAllowsAll.getValue())
             throw new IllegalStateException("An empty plate allow list ignored the empty_plate_allows_all option");
         if (empty.admitsSelection())
             throw new IllegalStateException("An unbound plate reported a usable selection");
@@ -2994,14 +2995,15 @@ public final class MxtTestMod {
     }
 
     /**
-     * The friend judgement a hostile formation makes about the entities it covers: the owner and whoever the
-     * identification event calls a friend are spared, everyone else is affected, and the option runs both ways.
+     * The friend judgement a formation that declares {@code spare_friends} makes about the entities it covers:
+     * the owner and whoever the identification event calls a friend are spared, everyone else is affected, the
+     * option runs both ways, and an array without the switch hits its own side.
      */
     private static void verifyFormationFriendProtection(ServerLevel level) {
-        Identifier id = Identifier.parse("mxt_test:formation_hostile_probe");
+        Identifier id = Identifier.parse("mxt_test:formation_friend_probe");
         Formation definition = formationDefinition(level, id);
-        if (!definition.hostile())
-            throw new IllegalStateException("The hostile probe did not decode its hostile flag");
+        if (!definition.spareFriends())
+            throw new IllegalStateException("The friend probe did not decode its friend-or-foe switch");
         Formation passive = formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe"));
         BlockPos controller = prepareFormationController(level, definition);
         Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
@@ -3014,16 +3016,26 @@ public final class MxtTestMod {
             if (!FriendService.isFriend(owner, friend))
                 throw new IllegalStateException("The audit's own verdict did not make the entity a friend");
 
-            // The rule on its own, without a world: a non-hostile formation spares nobody, and a hostile one
-            // with nobody to ask fires at nobody.
+            // The rule on its own, without a world: a formation without the switch spares nobody, and one
+            // that identifies friends with nobody to ask fires at nobody.
             if (!FormationRelations.affects(passive, owner.getUUID(), owner, stranger))
-                throw new IllegalStateException("A formation that is not hostile spared somebody");
+                throw new IllegalStateException("A formation without the friend-or-foe switch spared somebody");
             if (!FormationRelations.affects(passive, null, null, stranger))
-                throw new IllegalStateException("A formation that is not hostile stood down with no owner");
+                throw new IllegalStateException("A formation without the switch stood down with no owner");
             if (FormationRelations.affects(definition, owner.getUUID(), null, stranger))
-                throw new IllegalStateException("A hostile formation with no owner to ask still fired at a stranger");
+                throw new IllegalStateException("A formation identifying friends with no owner to ask still fired at a stranger");
             if (FormationRelations.affects(definition, null, null, stranger))
-                throw new IllegalStateException("A hostile formation with no owner recorded still fired");
+                throw new IllegalStateException("A formation identifying friends with no owner recorded still fired");
+            // The switch decides and nothing else does: an array whose action attacks, without declaring it,
+            // hits its owner exactly like anybody else.
+            Formation offensive = Formation.DIRECT_CODEC.parse(
+                            RegistryOps.create(JsonOps.INSTANCE, level.registryAccess()), JsonParser.parseString("""
+                            {"structure":[{"offset":[0,0,0],"state":"minecraft:gold_block"}],"radius":8,
+                             "actions":[{"type":"mxt:attack","damage":1}]}
+                            """))
+                    .getOrThrow();
+            if (offensive.spareFriends() || !FormationRelations.affects(offensive, owner.getUUID(), owner, friend))
+                throw new IllegalStateException("An attacking array that did not declare the switch spared its owner");
 
             // The datapack condition asks the same question from inside a formation context and refuses to
             // guess outside one, so a pack can write the judgement per action.
@@ -3047,9 +3059,9 @@ public final class MxtTestMod {
             activateFormation(level, controller, id, owner.getUUID());
             FormationWorldTicker.dispatch(level);
             if (!stranger.hasEffect(MobEffects.GLOWING))
-                throw new IllegalStateException("A hostile formation stopped affecting a stranger");
+                throw new IllegalStateException("A formation identifying friends stopped affecting a stranger");
             if (owner.hasEffect(MobEffects.GLOWING) || friend.hasEffect(MobEffects.GLOWING))
-                throw new IllegalStateException("A hostile formation affected its owner or a friend");
+                throw new IllegalStateException("A formation identifying friends affected its owner or a friend");
 
             // The other direction: an entity that stops being a friend has to be picked back up, which only
             // works if being spared means the formation never started tracking it.
@@ -3064,7 +3076,7 @@ public final class MxtTestMod {
             stranger.removeEffect(MobEffects.GLOWING);
             FormationWorldTicker.dispatch(level);
             if (friend.hasEffect(MobEffects.GLOWING))
-                throw new IllegalStateException("A hostile formation kept affecting an entity that became a friend");
+                throw new IllegalStateException("A formation identifying friends kept affecting an entity that became a friend");
             if (!stranger.hasEffect(MobEffects.GLOWING))
                 throw new IllegalStateException("Spared one entity and stopped affecting the rest");
 
@@ -3087,7 +3099,7 @@ public final class MxtTestMod {
             stranger.removeEffect(MobEffects.GLOWING);
             FormationWorldTicker.dispatch(level);
             if (stranger.hasEffect(MobEffects.GLOWING) || friend.hasEffect(MobEffects.GLOWING))
-                throw new IllegalStateException("A hostile formation kept firing with no owner to identify anybody");
+                throw new IllegalStateException("A formation identifying friends kept firing with no owner to identify anybody");
             // The two dark outcomes differ, and only a verdict that *affects* tells them apart: the stranger
             // was spared because nobody could answer, the friend because a listener answered for an absent owner.
             friendVerdict = TriState.FALSE;
@@ -3107,6 +3119,62 @@ public final class MxtTestMod {
     }
 
     /**
+     * Who may take an array down: the owner and an operator always, a stranger never, and a friend only while
+     * the server option says so - demolition is not an effect, so it is off by default and an entity nobody can
+     * identify is refused like anyone else. The plate's own click path is what is driven, so the refusal is
+     * asserted where a player would meet it.
+     */
+    private static void verifyFormationDismantlePermission(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_inline_probe");
+        Formation definition = formationDefinition(level, id);
+        BlockPos controller = prepareFormationController(level, definition);
+        FakePlayer owner = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-owner"));
+        FakePlayer friend = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-friend"));
+        FakePlayer stranger = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-stranger"));
+        boolean configured = MxtServerConfig.INSTANCE.formations.teammatesCanDismantle.getValue();
+        try {
+            activateFormation(level, controller, id, owner.getUUID());
+            FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).get(controller)
+                    .orElseThrow(() -> new IllegalStateException("The dismantle audit could not raise its probe"));
+            if (!FormationRelations.canDismantle(instance, owner))
+                throw new IllegalStateException("A formation's own owner could not take it down");
+            if (FormationRelations.canDismantle(instance, stranger))
+                throw new IllegalStateException("A stranger could take somebody else's formation down");
+
+            friendVerdictTarget = friend;
+            friendVerdict = TriState.TRUE;
+            if (FormationRelations.canDismantle(instance, friend))
+                throw new IllegalStateException("A teammate took a formation down while the option was off");
+
+            MxtServerConfig.INSTANCE.formations.teammatesCanDismantle.setValue(true);
+            if (!FormationRelations.canDismantle(instance, friend))
+                throw new IllegalStateException("A teammate could not take a formation down while the option was on");
+            // The option is about teammates, not about everyone the judgement fails to place.
+            friendVerdictTarget = stranger;
+            friendVerdict = TriState.DEFAULT;
+            if (FormationRelations.canDismantle(instance, stranger))
+                throw new IllegalStateException("An entity nobody could identify was allowed to take a formation down");
+            // And the plate is where a player meets the rule: a refused click leaves the array standing.
+            ItemStack plate = new ItemStack(MxtItems.FORMATION_PLATE.get());
+            stranger.setItemInHand(InteractionHand.MAIN_HAND, plate);
+            if (plate.useOn(plateClick(stranger, controller)) != InteractionResult.FAIL
+                    || level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isEmpty())
+                throw new IllegalStateException("A refused dismantle changed the formation anyway");
+            MxtServerConfig.INSTANCE.formations.teammatesCanDismantle.setValue(false);
+            if (FormationRelations.canDismantle(instance, friend))
+                throw new IllegalStateException("Turning the option back off did not restore the owner-only rule");
+            if (plate.useOn(plateClick(stranger, controller)) != InteractionResult.FAIL
+                    || level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isEmpty())
+                throw new IllegalStateException("A stranger took a formation down through the plate");
+        } finally {
+            friendVerdictTarget = null;
+            friendVerdict = TriState.DEFAULT;
+            MxtServerConfig.INSTANCE.formations.teammatesCanDismantle.setValue(configured);
+            clearFormation(level, controller, definition);
+        }
+    }
+
+    /**
      * The function modules: the registry that selects them, and what each of the three does. A wrong
      * {@code type} would decode into defaults and an unread module would fail silently, so both are pinned.
      */
@@ -3118,12 +3186,10 @@ public final class MxtTestMod {
             throw new IllegalStateException("The attack probe's damage or effect list did not decode");
         if (strike.damageType().isPresent() || !strike.attributeToOwner())
             throw new IllegalStateException("An attack module did not default to an untyped, owner-attributed strike");
-        if (attack.hostile())
-            throw new IllegalStateException("The attack probe declared the hostile flag as well as the module");
-        if (!FormationRelations.isHostile(attack))
-            throw new IllegalStateException("An attack module did not make its formation hostile");
-        if (FormationRelations.isHostile(formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe"))))
-            throw new IllegalStateException("A formation with neither the flag nor an attack module was treated as hostile");
+        if (!attack.spareFriends())
+            throw new IllegalStateException("The attack probe did not declare the friend-or-foe switch");
+        if (formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe")).spareFriends())
+            throw new IllegalStateException("A formation with no switch declared one anyway");
 
         Identifier buffId = Identifier.parse("mxt_test:formation_buff_probe");
         Formation buffProbe = formationDefinition(level, buffId);
@@ -3523,7 +3589,7 @@ public final class MxtTestMod {
             if (owner.hasEffect(MobEffects.GLOWING) || friend.hasEffect(MobEffects.GLOWING))
                 throw new IllegalStateException("An attack module reached its owner or a friend");
             // Being spared means never being tracked, so turning the verdict around is the same pick-up
-            // path the raw hostile hook has — and the module has to run through it as well.
+            // path a declaration of spare_friends has — and the module has to run through it as well.
             friendVerdict = TriState.FALSE;
             FormationWorldTicker.dispatch(level);
             if (!friend.hasEffect(MobEffects.GLOWING))
@@ -3635,10 +3701,10 @@ public final class MxtTestMod {
         Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
         Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
         BlockPos inside = controller.offset(2, 0, 0);
-        boolean configured = MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.getValue();
+        boolean configured = MxtServerConfig.INSTANCE.compat.delegateRequiresClaims.getValue();
         try {
             activateFormation(level, controller, id, owner.getUUID());
-            MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(true);
+            MxtServerConfig.INSTANCE.compat.delegateRequiresClaims.setValue(true);
             if (FormationProtection.delegationHandsOver())
                 throw new IllegalStateException("A formation handed its protection over with no claim protection to hand it to");
             for (Action action : Action.values()) {
@@ -3646,7 +3712,7 @@ public final class MxtTestMod {
                     throw new IllegalStateException("A delegating ward fell back to nothing rather than to its own flags: " + action);
             }
             // The literal reading, on purpose: hand it over regardless, and enforce nothing.
-            MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(false);
+            MxtServerConfig.INSTANCE.compat.delegateRequiresClaims.setValue(false);
             if (!FormationProtection.delegationHandsOver())
                 throw new IllegalStateException("A formation refused to hand its protection over with the server option off");
             for (Action action : Action.values()) {
@@ -3654,7 +3720,7 @@ public final class MxtTestMod {
                     throw new IllegalStateException("A delegated ward enforced a flag it handed over: " + action);
             }
         } finally {
-            MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(configured);
+            MxtServerConfig.INSTANCE.compat.delegateRequiresClaims.setValue(configured);
             clearFormation(level, controller, definition, owner, stranger);
         }
     }
@@ -3667,31 +3733,31 @@ public final class MxtTestMod {
         Formation attack = formationDefinition(level, Identifier.parse("mxt_test:formation_attack_probe"));
         if (!FormationProtection.hasProtection(definition) || FormationProtection.hasProtection(attack))
             throw new IllegalStateException("The audit could not tell a formation with a ward from one without");
-        ClaimLinkage configured = MxtServerConfig.INSTANCE.formations.claimLinkage.getValue();
-        boolean configuredPermission = MxtServerConfig.INSTANCE.formations.wardsNeedClaimPermission.getValue();
+        ClaimLinkage configured = MxtServerConfig.INSTANCE.compat.claimLinkage.getValue();
+        boolean configuredPermission = MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.getValue();
         BlockPos controller = prepareFormationController(level, definition);
         Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
         Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
         BlockPos inside = controller.offset(2, 0, 0);
         try {
-            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(ClaimLinkage.CLAIMS_ONLY);
+            MxtServerConfig.INSTANCE.compat.claimLinkage.setValue(ClaimLinkage.CLAIMS_ONLY);
             if (FormationProtection.claimsOnlyRefuses(level, controller))
                 throw new IllegalStateException("claims_only refused a ward with no claim plugin to require");
             // The foreign-claim rule is asked with the option on, so that this asserts the rule and not the
             // default: with no claims it has nobody's land to judge either.
-            MxtServerConfig.INSTANCE.formations.wardsNeedClaimPermission.setValue(true);
+            MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.setValue(true);
             if (FormationProtection.foreignClaimRefuses(level, controller, stranger.getUUID()))
                 throw new IllegalStateException("The foreign-claim rule refused a ward with no claims to judge");
             // The modes have to leave ordinary activation working, not merely report themselves as inert.
             activateFormation(level, controller, id, owner.getUUID());
-            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(ClaimLinkage.CLAIMS_PRECEDENCE);
+            MxtServerConfig.INSTANCE.compat.claimLinkage.setValue(ClaimLinkage.CLAIMS_PRECEDENCE);
             for (Action action : Action.values()) {
                 if (!FormationProtection.prevented(level, action, inside, stranger.getUUID()))
                     throw new IllegalStateException("claims_precedence handed a ward over with no claim to hand it to: " + action);
             }
         } finally {
-            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(configured);
-            MxtServerConfig.INSTANCE.formations.wardsNeedClaimPermission.setValue(configuredPermission);
+            MxtServerConfig.INSTANCE.compat.claimLinkage.setValue(configured);
+            MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.setValue(configuredPermission);
             clearFormation(level, controller, definition, owner, stranger);
         }
     }
@@ -3743,6 +3809,42 @@ public final class MxtTestMod {
         EntityConditionContext context = new EntityConditionContext(entity, FormulaContext.of(entity));
         context.set(FormationCarrier.KEY, carrier);
         return condition.test(context);
+    }
+
+    /**
+     * The saved file has to survive a rename: keys are short now and the friend ranks moved into the compat
+     * tab, so an old file must still land on the entries it meant, or a server that had tuned something
+     * quietly goes back to the default.
+     */
+    private static void verifyConfigKeyMigration() {
+        MxtServerConfig config = MxtServerConfig.INSTANCE;
+        String before = config.serialize();
+        boolean ally = config.compat.ftbTeamsAlly.getValue();
+        boolean invited = config.compat.ftbTeamsInvited.getValue();
+        boolean respect = config.formations.respectFriends.getValue();
+        boolean detect = config.formations.plateAutoDetect.getValue();
+        try {
+            config.deserialize("""
+                    {"friends": {"config.mxt.server.friends.ftb_teams_ally": false},
+                     "formation": {"config.mxt.server.formation.respect_friends": false,
+                                   "plate_auto_detect": false},
+                     "compat": {"ftb_teams_invited": true}}
+                    """);
+            if (config.compat.ftbTeamsAlly.getValue())
+                throw new IllegalStateException("An old full key lost its value: the tab rename or the key rule did not apply");
+            if (!config.compat.ftbTeamsInvited.getValue())
+                throw new IllegalStateException("A key that was already short was rewritten by the key rules");
+            if (config.formations.respectFriends.getValue() || config.formations.plateAutoDetect.getValue())
+                throw new IllegalStateException("A renamed key did not land on its entry");
+        } finally {
+            // Whatever the check borrowed goes back, and the rest of the file has to be untouched by it.
+            config.compat.ftbTeamsAlly.setValue(ally);
+            config.compat.ftbTeamsInvited.setValue(invited);
+            config.formations.respectFriends.setValue(respect);
+            config.formations.plateAutoDetect.setValue(detect);
+            if (!config.serialize().equals(before))
+                throw new IllegalStateException("The config key migration check did not leave the config as it found it");
+        }
     }
 
     /**
@@ -3848,12 +3950,6 @@ public final class MxtTestMod {
         FtbTeamsCompat.onRelation(ftb);
         if (ftb.answered())
             throw new IllegalStateException("The FTB Teams source answered for an owner it knows nothing about");
-
-        // Both rank options have to read their own entry; the pair is easy to cross by accident and the
-        // consequence of crossing them is a server-wide behaviour change.
-        if (MxtServerConfig.ftbTeamsAllyCounts() != MxtServerConfig.INSTANCE.friends.ftbTeamsAlly.getValue()
-                || MxtServerConfig.ftbTeamsInvitedCounts() != MxtServerConfig.INSTANCE.friends.ftbTeamsInvited.getValue())
-            throw new IllegalStateException("The FTB Teams rank options do not follow their entries");
 
         // The command has to reach the list, and a name has to resolve while that player is offline; seeding
         // the profile cache keeps the lookup off the network.

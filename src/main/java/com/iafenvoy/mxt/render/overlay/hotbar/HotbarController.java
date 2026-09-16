@@ -61,9 +61,9 @@ public final class HotbarController {
     }
 
     static void handleModeKey(Identifier id, boolean pressed) {
-        if (MxtClientConfig.hotbarMode() == HotbarMode.TOGGLE && !pressed) return;
+        if (MxtClientConfig.INSTANCE.hotbar.mode.getValue() == HotbarMode.TOGGLE && !pressed) return;
         if (HotbarModeRegistry.get(id).isEmpty()) return;
-        boolean open = MxtClientConfig.hotbarMode() == HotbarMode.TOGGLE ? !isMode(id) : pressed;
+        boolean open = MxtClientConfig.INSTANCE.hotbar.mode.getValue() == HotbarMode.TOGGLE ? !isMode(id) : pressed;
         if (open) openMode(id);
         else closeMode(id);
     }
@@ -109,7 +109,7 @@ public final class HotbarController {
                 entry.onPress(Minecraft.getInstance().player);
             }
             Minecraft minecraft = Minecraft.getInstance();
-            if (MxtClientConfig.allowVanillaHotbarSelection() && minecraft.player != null)
+            if (MxtClientConfig.INSTANCE.hotbar.allowVanillaHotbarSelection.getValue() && minecraft.player != null)
                 minecraft.player.getInventory().setSelectedSlot(index);
         } else releaseNumberKey(index);
         NUMBER_DOWN[index] = down;
@@ -127,7 +127,7 @@ public final class HotbarController {
     }
 
     private static void suppressVanillaHotbarKey(int index) {
-        if (!isHotbarOpen() || MxtClientConfig.allowVanillaHotbarSelection()) return;
+        if (!isHotbarOpen() || MxtClientConfig.INSTANCE.hotbar.allowVanillaHotbarSelection.getValue()) return;
         Minecraft minecraft = Minecraft.getInstance();
         KeyMapping hotbarKey = minecraft.options.keyHotbarSlots[index];
         hotbarKey.setDown(false);
@@ -137,7 +137,7 @@ public final class HotbarController {
     }
 
     private static void clearVanillaHotbarClicks() {
-        if (!isHotbarOpen() || MxtClientConfig.allowVanillaHotbarSelection()) return;
+        if (!isHotbarOpen() || MxtClientConfig.INSTANCE.hotbar.allowVanillaHotbarSelection.getValue()) return;
         for (int index = 0; index < NUMBER_KEYS.length; index++) suppressVanillaHotbarKey(index);
     }
 

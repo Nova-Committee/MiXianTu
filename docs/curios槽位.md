@@ -12,14 +12,14 @@ Jupiter server config 文件 `config/mxt-server.json` 中的 `curios` 部分控�
 ```json
 {
   "curios": {
-    "config.mxt.server.curios.back_mode": "MANUAL",
-    "config.mxt.server.curios.belt_mode": "MANUAL",
-    "config.mxt.server.curios.force_render_slots": false
+    "back_mode": "MANUAL",
+    "belt_mode": "MANUAL",
+    "force_render_slots": false
   }
 }
 ```
 
-字段名使用翻译键，与游戏内配置界面显示的名称对应。
+文件里的键都很短，界面上看到的名字与提示由翻译键给出（`config.mxt.server.curios.*`）。旧文件里写成整条路径的键（`config.mxt.server.curios.back_mode`）在读取时会被自动翻译成新键，不需要手工改。
 
 `back_mode` 可选 `MANUAL`、`WEAPONS`、`ALL`：
 

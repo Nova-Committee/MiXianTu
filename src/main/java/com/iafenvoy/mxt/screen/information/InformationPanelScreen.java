@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationHelper.Columns;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
-import com.iafenvoy.mxt.screen.technique.TechniquePanelScreen;
+import com.iafenvoy.mxt.screen.gui.TechniquePanelScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -134,7 +134,7 @@ public final class InformationPanelScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        int interval = MxtClientConfig.informationRefreshInterval();
+        int interval = MxtClientConfig.INSTANCE.information.refreshInterval.getValue();
         if (++this.refreshTicks < interval) return;
         this.refreshTicks = 0;
         this.refreshInformation();

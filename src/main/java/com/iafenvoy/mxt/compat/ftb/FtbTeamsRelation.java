@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.compat.ftb;
 
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
@@ -38,7 +37,7 @@ final class FtbTeamsRelation {
     private static boolean friendly(Team team, UUID candidate) {
         TeamRank rank = team.getRankForPlayer(candidate);
         return rank.isMemberOrBetter()
-                || (MxtServerConfig.ftbTeamsAllyCounts() && rank == TeamRank.ALLY)
-                || (MxtServerConfig.ftbTeamsInvitedCounts() && rank == TeamRank.INVITED);
+                || (MxtServerConfig.INSTANCE.compat.ftbTeamsAlly.getValue() && rank == TeamRank.ALLY)
+                || (MxtServerConfig.INSTANCE.compat.ftbTeamsInvited.getValue() && rank == TeamRank.INVITED);
     }
 }

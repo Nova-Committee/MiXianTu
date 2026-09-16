@@ -53,7 +53,7 @@ public final class AuraZoneEventBridge {
         Entity entity = event.getEntity();
         if (!(entity.level() instanceof ServerLevel level)) return;
         AuraLocation position = AuraQueryCache.location(level, entity.blockPosition());
-        if (!AuraQueryCache.needsQuery(level, entity.getUUID(), position, MxtServerConfig.auraEntityRefreshInterval()))
+        if (!AuraQueryCache.needsQuery(level, entity.getUUID(), position, MxtServerConfig.INSTANCE.aura.entityRefreshInterval.getValue()))
             return;
         AuraResult current = AuraService.getPositionAura(level, entity.blockPosition());
         AuraQueryCache.recordQuery(level, entity.getUUID(), position);
@@ -85,8 +85,8 @@ public final class AuraZoneEventBridge {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
         long gameTime = level.getGameTime();
         AuraQueryCache.advance(level, gameTime);
-        AuraQueryCache.setTiming(MxtServerConfig.auraQueryStats());
-        if (MxtServerConfig.auraQueryStats() && gameTime % 200L == 0L) {
+        AuraQueryCache.setTiming(MxtServerConfig.INSTANCE.aura.queryStats.getValue());
+        if (MxtServerConfig.INSTANCE.aura.queryStats.getValue() && gameTime % 200L == 0L) {
             reportQueryStats(gameTime);
             AuraQueryCache.reportDiagnostics();
             AuraQueryCache.reportStageCosts();
@@ -94,7 +94,7 @@ public final class AuraZoneEventBridge {
         Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         level.players().forEach(player -> {
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
-            long syncInterval = Math.max(1L, MxtServerConfig.auraSyncInterval());
+            long syncInterval = MxtServerConfig.INSTANCE.aura.auraSyncInterval.getValue();
             if (level.getGameTime() % syncInterval == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
                 AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
