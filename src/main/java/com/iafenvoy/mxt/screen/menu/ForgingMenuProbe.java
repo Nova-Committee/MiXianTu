@@ -6,22 +6,18 @@ import java.util.List;
 import java.util.function.IntUnaryOperator;
 
 /**
- * Exposes the step rows' window arithmetic to the server audit in {@code mxt_test}.
- *
- * <p>Mirrors {@code AuraZonePriorityProbe} and {@code ForgingProbe}: the audit exercises the encoder the
- * screen actually uses rather than a copy of it. This one earns its place because the rows are a place
- * where being wrong is invisible. A row computed from the wrong end of the finish pattern fills exactly
- * the same six cells with plausible icons, so nothing about the picture says which end it came from -
- * only the server's refusal does, several strikes later.</p>
- *
- * <p>The menu is common code, so this loads on a dedicated server; it is the screen that does not.</p>
+ * Exposes the step rows' window arithmetic to the server audit in {@code mxt_test}, mirroring
+ * {@code ForgingProbe}: the audit exercises the encoder the screen actually uses rather than a copy.
+ * This one earns its place because a row computed from the wrong end of the finish pattern fills
+ * exactly the same cells with plausible icons, so only the server's later refusal reveals it.
  */
 public final class ForgingMenuProbe {
     private ForgingMenuProbe() {
     }
 
     /**
-     * The target row: the registry id each of the six cells will be drawn from, or {@code ForgingMenu.NONE}.
+     * The registry id each of the six cells of the target row will be drawn from, or
+     * {@code ForgingMenu.NONE}.
      */
     public static int[] targetRow(List<Identifier> pattern, int required) {
         return row(position -> ForgingMenu.requiredStep(pattern, position, required));

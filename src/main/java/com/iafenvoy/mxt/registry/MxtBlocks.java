@@ -54,10 +54,9 @@ public final class MxtBlocks {
     }
 
     /**
-     * Registers the forge table. It deliberately does not copy the vanilla smithing table, which is
-     * a wooden block (map colour WOOD, instrument BASS, {@code SoundType.WOOD}, flammable) despite
-     * the stone-looking texture. The forge is an anvil-and-hammer station, so it uses
-     * {@link SoundType#ANVIL} and a stone map colour, and needs a pickaxe to drop.
+     * Registers the forge table. It deliberately does not copy the vanilla smithing table, which is a wooden
+     * block despite its stone-looking texture: an anvil-and-hammer station uses {@link SoundType#ANVIL}, a
+     * stone map colour, and needs a pickaxe to drop.
      */
     private static <T extends Block> DeferredBlock<T> registerForging(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

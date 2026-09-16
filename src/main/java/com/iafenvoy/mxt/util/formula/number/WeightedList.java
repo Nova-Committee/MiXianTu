@@ -20,8 +20,8 @@ public final class WeightedList implements NumberProvider {
 
     private final List<Entry> distribution;
     /**
-     * Sum of all weights, or a non-positive value when the list overflows an {@code int} total and
-     * the provider has to refuse to roll.
+     * Sum of all weights, or non-positive when the list overflows an {@code int} total and the
+     * provider has to refuse to roll.
      */
     private final long total;
 

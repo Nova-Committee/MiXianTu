@@ -15,15 +15,10 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * The cultivation behaviour of one stored value.
- *
- * <p>A {@link Resource} only stores a number and displays it; everything that turns that number into
- * a cultivation resource - the realm chain it enters, its passive regeneration, how it converts to
- * and from cultivation progress, which aura it carries, whether it can be used and whether it shows
- * up in the cultivation information panel - lives here and points back at the value it describes.</p>
- *
- * <p>The relationship is one to one: one value has at most one profile, which the server cache
- * enforces, so a resource is either a plain counter or a cultivation resource and never both.</p>
+ * The cultivation behaviour of one stored value: the realm chain it enters, its passive regeneration, its
+ * conversions to and from cultivation progress, the aura it carries, and whether it shows up in the
+ * cultivation information panel. A {@link Resource} itself only stores and displays a number. The
+ * relationship is one to one, so a resource is either a plain counter or a cultivation resource.
  */
 public record CultivationProfile(Holder<Resource> resource, Optional<Holder<RealmStage>> firstRealm,
                                  NumberProvider startExp, CultivateConditions startCultivateConditions,

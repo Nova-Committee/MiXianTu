@@ -14,19 +14,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Persistable, inventory-neutral forging session state owned by a forge table block entity.
- *
- * <p>The container lives on the block entity; this class owns the selected blueprint id, the
- * resolved {@link ForgingPlan}, the live session snapshot and the exact stacks locked away when
- * the session started. Everything else the session needs at settlement time (result item, quality
- * thresholds, failure settlement) is read back from the live blueprint definition, mirroring how
- * the alchemy workstation state stores a recipe id instead of the whole recipe.</p>
- *
- * <p>The plan is snapshotted on purpose: it carries {@code optimalSteps}, and recomputing it
- * after a datapack reload would change the extra-step count of a session already in progress.</p>
- *
- * <p>The consumed snapshot exists so a cancel or a failure can return exactly what was taken,
- * including component data, without trusting the container to still hold it.</p>
+ * Persistable, inventory-neutral forging session state owned by a forge table block entity: the selected
+ * blueprint id, the resolved {@link ForgingPlan}, the live session snapshot and the stacks locked away when
+ * the session started. The plan is snapshotted because it carries {@code optimalSteps}, and recomputing it
+ * after a datapack reload would change the extra-step count of a session already in progress.
  */
 public final class ForgingTableState {
     public static final MapCodec<ForgingTableState> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -61,14 +52,9 @@ public final class ForgingTableState {
     }
 
     /**
-     * Whether a session is running.
-     *
-     * <p>Deliberately "a session exists" rather than "a blueprint is locked". Every state this class produces
-     * has the two together - {@link #lock} sets both, {@link #clear} drops both - but they are not the same
-     * question, and the difference is what a locked surface is actually protecting: a session holds materials
-     * it consumed, and it is those that have to stay put until it settles. Reading the blueprint instead is how
-     * a table with nothing to strike, nothing to settle and nothing to cancel still refused to accept or release
-     * anything.</p>
+     * Whether a session is running, which is deliberately not the same question as whether a blueprint is
+     * locked: a session holds the materials it consumed, and it is those that have to stay put until it
+     * settles.
      */
     public boolean active() {
         return this.session != null;
@@ -115,24 +101,15 @@ public final class ForgingTableState {
         this.starter = starter;
     }
 
-    /**
-     * Replaces the live session snapshot after a strike.
-     */
     public void update(ForgingSession value) {
         if (!this.active()) throw new IllegalStateException("No forging session is active");
         this.session = value.snapshot();
     }
 
     /**
-     * Fully resets the workstation state.
-     *
-     * <p>The only reset there is, and deliberately so. Dropping the session while keeping the blueprint - which
-     * this class used to offer, so that a retry would not need a re-pick - produces a shape with no plan and no
-     * history behind the blueprint. That shape is rejected by this class's own codec, so it cannot survive a
-     * save, and it is <em>also</em> still a locked surface: {@link #active()} used to read the blueprint, so the
-     * inputs stayed frozen and the blueprint slots stayed shut for a session that no longer existed and could no
-     * longer be cancelled. The table was simply stuck. "Do not make the player pick again" is the client's job
-     * anyway, and it already does it: the pick is UI state that outlives the session.
+     * Fully resets the workstation state. The only reset there is: dropping the session while keeping the
+     * blueprint would leave a shape with no plan behind the blueprint, which this class's own codec rejects
+     * and which would keep the surface locked with nothing left to cancel.
      */
     public void clear() {
         this.blueprint = null;

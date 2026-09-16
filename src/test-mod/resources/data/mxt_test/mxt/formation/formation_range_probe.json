@@ -1,0 +1,23 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:end_stone" },
+    { "offset": [-1, 0, -1], "state": "minecraft:purpur_block" },
+    { "offset": [0, 0, -1], "state": "minecraft:purpur_block" },
+    { "offset": [1, 0, -1], "state": "minecraft:purpur_block" },
+    { "offset": [-1, 0, 0], "state": "minecraft:purpur_block" },
+    { "offset": [1, 0, 0], "state": "minecraft:purpur_block" },
+    { "offset": [-1, 0, 1], "state": "minecraft:purpur_block" },
+    { "offset": [0, 0, 1], "state": "minecraft:purpur_block" },
+    { "offset": [1, 0, 1], "state": "minecraft:purpur_block" }
+  ],
+  "radius": 8,
+  "actions": [
+    {
+      "type": "mxt:range_display",
+      "particle": { "type": "minecraft:end_rod" },
+      "shape": "sphere",
+      "points": 24,
+      "interval_periods": 2
+    }
+  ]
+}

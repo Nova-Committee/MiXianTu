@@ -14,18 +14,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Persistable level-scoped index of active formations, keyed by their validated controller position.
- *
- * <p>Holds live {@link FormationInstance} objects, so a caller that reaches one through this attachment
- * mutates the stored state directly. {@link #formations()} copies the map but not its values, which is
- * what lets the ticker remove entries while iterating over it.</p>
- *
- * <p>Stored as a <em>list</em> of rows rather than a map. A map key has to be a string in both NBT and
- * JSON — {@code NbtOps.getStringValue} rejects any tag that is not a string — so keying by the packed
- * position made saving a populated index fail outright, and NeoForge answered with
- * {@code Failed to serialize data attachment mxt:formation_world. Skipping.} until an audit round tripped
- * a non-empty one. A row carries the position as an ordinary numeric field, where no such constraint
- * exists, and reads back out of a save file as something a human can actually inspect.</p>
+ * Persistable level-scoped index of active formations, keyed by their validated controller position. It holds
+ * live {@link FormationInstance} objects, so a caller that reaches one through this attachment mutates the
+ * stored state directly; {@link #formations()} copies the map but not its values. Stored as a list of rows
+ * rather than a map, because keying by the packed position made saving a populated index fail outright.
  */
 public final class FormationWorldAttachment {
     public static final MapCodec<FormationWorldAttachment> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -45,8 +37,7 @@ public final class FormationWorldAttachment {
         this.formations = new LinkedHashMap<>(stored.size());
         for (Stored entry : stored) {
             FormationInstance previous = this.formations.putIfAbsent(entry.position(), entry.formation());
-            // Tolerant on purpose: a repeated controller is a hand-edited save, and losing the row that
-            // lost the race is better than losing the index. A map could not express this at all.
+            // A repeated controller is a hand-edited save; losing that row is better than losing the index.
             if (previous != null) LOGGER.warn("Ignoring duplicate formation controller in the saved index: {}", entry.position());
         }
     }
@@ -77,10 +68,9 @@ public final class FormationWorldAttachment {
     }
 
     /**
-     * One row of the index: the controller's packed position, and the instance stored at it.
-     *
-     * <p>Named fields rather than {@code Codec.pair}'s positional {@code [position, instance]}, so a save
-     * file says which number is which.</p>
+     * One row of the index: the controller's packed position and the instance stored at it. Named fields
+     * rather than {@code Codec.pair}'s positional {@code [position, instance]}, so a save file says which
+     * number is which.
      */
     private record Stored(long position, FormationInstance formation) {
         private static final Codec<Stored> CODEC = RecordCodecBuilder.create(i -> i.group(

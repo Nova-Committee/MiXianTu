@@ -9,15 +9,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Resolver for the intrinsic {@code mxt:formula_variable} registry.
- *
- * <p>A requested name is split into the variable that claims it and the part of the name that
- * variable receives. That split is context independent, so a caller may keep the resulting
- * {@link Binding} and reuse it: {@code Expression} does exactly that, once per name per formula,
- * which is what stops a long lived formula from repeating the lookup on every evaluation.</p>
- *
- * <p>An unknown name is a content bug: a development environment logs the whole error and
- * production logs one warning line, and both keep evaluating with {@code 0}.</p>
+ * Resolver for the intrinsic {@code mxt:formula_variable} registry. Splitting a name into the variable that
+ * claims it and the part that variable receives is context independent, so the resulting {@link Binding} can
+ * be kept and reused as {@code Expression} does once per name. An unknown name is a content bug: both
+ * environments keep evaluating with {@code 0}.
  */
 public final class FormulaVariables {
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
@@ -34,8 +29,7 @@ public final class FormulaVariables {
     }
 
     /**
-     * Every identifier an expression reads, minus the functions and constants the formula
-     * language already knows.
+     * Every identifier an expression reads, minus the functions and constants the language knows.
      */
     public static Set<String> find(String expression) {
         Set<String> functions = FormulaFunctions.names();
@@ -64,17 +58,16 @@ public final class FormulaVariables {
     }
 
     /**
-     * Resolves one name with a binding the caller already holds, which is what a provider that
-     * reads a single fixed name should use.
+     * Resolves one name with a binding the caller already holds, for a provider that reads a single
+     * fixed name.
      */
     public static double resolve(String name, FormulaContext context, Binding binding) {
         return read(name, context, binding);
     }
 
     /**
-     * Resolves one name, reusing a per-formula binding cache.
-     *
-     * @param cache bindings of one expression, or {@code null} to look the name up every time
+     * Resolves one name, reusing a per-formula binding cache; a {@code null} cache looks the name up every
+     * time.
      */
     public static double resolve(String name, FormulaContext context, @Nullable Map<String, Binding> cache) {
         if (cache == null) return resolve(name, context);
@@ -110,7 +103,7 @@ public final class FormulaVariables {
 
     /**
      * Resolves a name without reporting anything, for callers that treat a missing variable as a
-     * normal outcome. Returns {@link Double#NaN} when the context cannot provide the name.
+     * normal outcome; {@link Double#NaN} when the context cannot provide the name.
      */
     public static double peek(String name, FormulaContext context) {
         Binding binding = bind(name);
@@ -123,8 +116,8 @@ public final class FormulaVariables {
     }
 
     /**
-     * Finds the variables that claim a name. The result depends only on the registry, so it stays
-     * valid for as long as the game runs, and {@code null} means no variable provides the name.
+     * Finds the variables that claim a name; {@code null} means no variable provides it. The result
+     * depends only on the registry, so it stays valid for as long as the game runs.
      */
     @Nullable
     public static Binding bind(String name) {
@@ -167,13 +160,12 @@ public final class FormulaVariables {
     }
 
     /**
-     * The variables that claim one requested name, in the order they are asked. The first
-     * candidate that can provide a value in the current context wins.
+     * The variables that claim one requested name, in the order they are asked; the first candidate
+     * that can provide a value in the current context wins.
      */
     public record Binding(List<Candidate> candidates) {
         /**
-         * The value of the first candidate that can provide one in this context, or
-         * {@link Double#NaN} when none of them can.
+         * The value of the first candidate that can provide one, or {@link Double#NaN} when none can.
          */
         public double value(FormulaContext context) {
             for (Candidate candidate : this.candidates) {

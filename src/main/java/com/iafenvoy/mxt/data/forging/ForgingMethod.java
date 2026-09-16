@@ -21,12 +21,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * A single datapack-defined forging operation.
- *
- * <p>{@code sound} is what the strike sounds like: it is played at the table when the method is used, for
- * everyone in range, so a blueprint can give its steps their own voice. It defaults to the anvil being set
- * down - {@link SoundEvents#ANVIL_PLACE} - because that is the noise the table is standing in for, and
- * because a method that says nothing about sound should still sound like smithing.</p>
+ * A single datapack-defined forging operation. {@code sound} is played at the table when the method is
+ * used, for everyone in range, and defaults to {@link SoundEvents#ANVIL_PLACE} because that is the noise
+ * the table stands in for.
  */
 public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCondition condition,
                             Optional<IconReference> icon, int cooldown, SoundEvent sound) {
@@ -37,9 +34,8 @@ public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCond
             EntityCondition.optionalCodec("condition").forGetter(ForgingMethod::condition),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(ForgingMethod::icon),
             Codec.intRange(0, 72_000).optionalFieldOf("cooldown", 0).forGetter(ForgingMethod::cooldown),
-            // By name rather than by id resolved later: a sound event is a built-in registry entry, not an
-            // item stack, so unlike an icon there is nothing here that has to wait for components to be
-            // bound - and a typo fails the datapack load instead of silently playing nothing.
+            // By name rather than by id resolved later: a sound event is a built-in registry entry, so a typo
+            // fails the datapack load instead of silently playing nothing.
             BuiltInRegistries.SOUND_EVENT.byNameCodec().optionalFieldOf("sound", SoundEvents.ANVIL_PLACE).forGetter(ForgingMethod::sound)
     ).apply(i, ForgingMethod::new)).validate(ForgingMethod::validate);
 
@@ -49,22 +45,17 @@ public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCond
     }
 
     /**
-     * The icon stack for the selector list, empty when the method has no icon or draws a texture.
-     *
-     * <p>The item branch is materialised here rather than stored, because a datapack registry is parsed
-     * before item components are bound.</p>
+     * The icon stack for the selector list, empty when the method has no icon or draws a texture. The item
+     * branch is materialised here because a datapack registry is parsed before item components are bound.
      */
     public ItemStack iconStack() {
         return this.icon.flatMap(IconReference::stack).orElse(ItemStack.EMPTY);
     }
 
     /**
-     * The name this method is listed under, wherever it is listed.
-     *
-     * <p>Its icon's own name when the icon is an item, because that icon is what the selector grid draws
-     * and what the player recognises. {@code id} is needed for the cases the icon cannot cover: a method
-     * with no icon, or one drawn from a texture, has no item name to borrow - and an empty stack would
-     * otherwise report itself as "Air". A raw id is a poor name, but it is a name.</p>
+     * The name this method is listed under: its icon's own name when the icon is an item, because that is
+     * what the selector grid draws. {@code id} covers the cases the icon cannot — no icon, or one drawn from
+     * a texture — where an empty stack would otherwise report itself as "Air".
      */
     public MutableComponent displayName(Identifier id) {
         ItemStack icon = this.iconStack();

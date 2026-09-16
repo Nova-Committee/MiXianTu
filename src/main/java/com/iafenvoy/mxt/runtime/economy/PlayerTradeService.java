@@ -30,13 +30,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Server-owned request and settlement state for direct player-to-player trades.
- *
- * <p>Session and request state is append-only while a trade is live: entries are added on request
- * or on session creation, and only removed when a session reaches a terminal transition, a player
- * disconnects, or a request expires. Every terminal transition is one-shot through
- * {@link Session#closed}, so a stale action that still holds an old session reference can never
- * move items twice.</p>
+ * Server-owned request and settlement state for direct player-to-player trades. Session state is
+ * append-only while a trade is live, and every terminal transition is one-shot through
+ * {@link Session#closed}, so a stale action holding an old session reference cannot move items twice.
  */
 @EventBusSubscriber
 public final class PlayerTradeService {
@@ -190,8 +186,7 @@ public final class PlayerTradeService {
         }
 
         /**
-         * Settles both offers by moving each offer into the partner's inventory. Overflow is
-         * committed to the ground next to its own owner.
+         * Both offers move into the partner's inventory; overflow is committed to the ground.
          */
         private void complete() {
             if (this.closed) return;
@@ -204,8 +199,7 @@ public final class PlayerTradeService {
 
         /**
          * Moves {@code source.offer} into {@code receiver}'s inventory, then clears the offer so no
-         * item can be handed out twice. Anything the inventory cannot hold is appended to
-         * {@code receiver}'s own overflow list.
+         * item can be handed out twice.
          */
         private void swap(Side receiver, Side source) {
             for (int index = 0; index < source.offer.getContainerSize(); index++) {

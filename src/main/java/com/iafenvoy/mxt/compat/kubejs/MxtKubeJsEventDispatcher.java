@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.compat.kubejs;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsEvents.Dispatcher;
 import com.iafenvoy.mxt.event.*;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
+import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
 import com.iafenvoy.mxt.util.HolderHelper;
 import dev.latvian.mods.kubejs.event.EventGroup;
@@ -71,14 +72,11 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     }
 
     /**
-     * A friend judgement is a question, not a notification, and it is asked far more often than any
-     * lifecycle event — once per entity per period by a hostile formation, and once per hit by anything
-     * that filters friendly fire. The listener is registered whether or not a script uses it, so this
-     * check is the whole difference between a server with a friend script and one without: the latter pays
-     * a boolean per query instead of building a wrapper and walking an empty handler list.
+     * A friend judgement is asked far more often than a lifecycle event, so this check replaces a wrapper
+     * and an empty handler walk on every query.
      */
     @Override
-    public void postFriendRelation(FriendEvent.Relation event) {
+    public void postFriendRelation(Relation event) {
         if (FRIEND_RELATION.hasListeners()) FRIEND_RELATION.post(new FriendRelationKubeEvent(event));
     }
 
@@ -236,20 +234,15 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     }
 
     /**
-     * KubeJS view of a friend judgement.
-     *
-     * <p>A script answers by writing a verdict; leaving the event alone leaves the question to the
-     * player's own friend list, which is what {@code "default"} reports and what most scripts want. The
-     * two setters are separate rather than one nullable argument, because "no opinion" and "not a friend"
-     * are the two answers a script is most likely to confuse, and neither is spelled as {@code null}.</p>
-     *
-     * <p>The judge is given as an id first and an entity second, because the entity is missing whenever that
-     * player is offline — a script that only needs to know who is asking never has to look at it.</p>
+     * KubeJS view of a friend judgement. A script answers by writing a verdict; leaving the event alone
+     * leaves the question to the player's own friend list, which is what {@code "default"} reports. The
+     * judge is given as an id first and an entity second, because it is missing while that player is
+     * offline.
      */
     public static final class FriendRelationKubeEvent implements KubeEvent {
-        private final FriendEvent.Relation event;
+        private final Relation event;
 
-        FriendRelationKubeEvent(FriendEvent.Relation event) {
+        FriendRelationKubeEvent(Relation event) {
             this.event = event;
         }
 

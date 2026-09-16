@@ -25,10 +25,8 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /ability} command; also reachable as {@code /mxt ability}.
- *
- * <p>Bare {@code /ability} opens the ability hotbar configuration. Casting keeps its operator
- * requirement in both positions: an alias changes where a node hangs, never what it may do.</p>
+ * The {@code /ability} command; also reachable as {@code /mxt ability}. Casting keeps its operator
+ * requirement in both positions: an alias changes where a node hangs, never what it may do.
  */
 public final class AbilityCommand {
     private static final Identifier ABILITY_HOTBAR_MODE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "ability");

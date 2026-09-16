@@ -25,13 +25,9 @@ public final class MxtKubeJsDataCodec {
     }
 
     /**
-     * Decodes a definition once per distinct JSON text. Decoding builds the whole provider tree,
-     * including exp4j expressions, so a script that evaluates the same definition every tick would
-     * otherwise pay for it every tick. Objects, primitives and arrays are all cached, so cost lists
-     * benefit the same way a single cost object does.
-     *
-     * <p>A decoded value can hold holders of the world it was read in, so every cache is dropped
-     * as soon as the registries change, and each codec keeps at most {@value #CACHE_LIMIT} entries.</p>
+     * Decodes a definition once per distinct JSON text, because decoding builds the whole provider tree.
+     * Every cache is dropped when the registries change, since a decoded value can hold holders of the world
+     * it was read in, and each codec keeps at most {@value #CACHE_LIMIT} entries.
      */
     @SuppressWarnings("unchecked")
     public static <T> T decodeCached(Codec<T> codec, JsonElement json, RegistryAccess registries) {

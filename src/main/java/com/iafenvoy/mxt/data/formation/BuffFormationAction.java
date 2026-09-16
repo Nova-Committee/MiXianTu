@@ -10,6 +10,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.util.StringRepresentable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Locale;
@@ -17,23 +18,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The benefit module: what the array hands to the entities it covers, and what it does to the ground.
- *
- * <p>There is no field here for attribute modifiers on purpose. A granted {@link Ability} already
- * carries its own {@code modifiers}, and the ability pipeline applies and removes them, so a second
- * entry point would be a second set of rules for the same thing — including the parts that are easy to
- * get wrong, such as a modifier outliving the array that granted it.</p>
- *
- * <p>{@code aura_zone} and {@code max_bonus} moved in here from the formation's own fields. They are
- * benefits and nothing else: a zone override raising the ceiling of the ground the array stands on is
- * something a cultivating array does, and neither an attack module nor a terrain ward has any use for
- * them. Keeping them at the top level made every definition carry two fields that only one kind of
- * array ever read.</p>
- *
- * <p>{@link TargetMode#ALLIES} asks the same friend system a hostile array asks, and answers the other
- * way: an entity nobody can identify is <em>not</em> given the benefit. Guessing "friend" would hand
- * the owner's cultivation bonus to a stranger, and the cost of guessing "stranger" is that a friend
- * outside every source's knowledge simply gets nothing.</p>
+ * The benefit module: what the array hands to the entities it covers, and what it does to the ground. No
+ * field for attribute modifiers, because a granted {@link Ability} already carries its own {@code modifiers}.
+ * {@code aura_zone} and {@code max_bonus} are benefits, so they live here rather than on every formation.
+ * Under {@link TargetMode#ALLIES} an unidentifiable entity is not given the benefit.
  */
 public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode target,
                                   Optional<Holder<AuraZone>> auraZone,
@@ -64,7 +52,7 @@ public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode ta
         public static final Codec<TargetMode> CODEC = StringRepresentable.fromEnum(TargetMode::values);
 
         @Override
-        public String getSerializedName() {
+        public @NonNull String getSerializedName() {
             return this.name().toLowerCase(Locale.ROOT);
         }
     }

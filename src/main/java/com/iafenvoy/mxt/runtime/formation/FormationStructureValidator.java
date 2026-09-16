@@ -24,13 +24,8 @@ public interface FormationStructureValidator {
     FormationStructureValidator ALWAYS = (level, controller, definition) -> true;
 
     /**
-     * Matches whichever shape the definition declares.
-     *
-     * <p>An inline {@code structure} is the cheap path and the reason it exists: the expectation is
-     * already parsed and immutable, so a check is one {@code getBlockState} per required block. A
-     * {@code structure_template} has to be fetched from the manager, re-serialised to NBT and re-parsed —
-     * including a block-state registry lookup per block — every single time, which the ticker repeats for
-     * every active formation on every period.</p>
+     * Matches whichever shape the definition declares. An inline {@code structure} is the cheap path, since it
+     * is already parsed and immutable; a {@code structure_template} is re-fetched and re-parsed every period.
      */
     FormationStructureValidator STRUCTURE = (level, controller, definition) -> {
         if (!definition.structure().isEmpty()) return matchesInline(level, controller, definition.structure());
@@ -74,17 +69,8 @@ public interface FormationStructureValidator {
     }
 
     /**
-     * Compares the world against one palette of a saved template.
-     *
-     * <p>Air is skipped rather than required. A structure saved with a structure block records its whole
-     * bounding box, so every empty cell inside the footprint arrives as an air entry, and demanding
-     * those cells stay empty would make a formation fail because a torch or a dropped block landed
-     * nearby. What the template is for is the shape, so an air entry says nothing about the world.</p>
-     *
-     * <p>Note that this is the opposite of what placing the template would do:
-     * {@code StructureTemplate.placeInWorld} writes air over the target, because a structure's job is to
-     * reproduce the saved volume. A formation only asserts that its flags are still standing, which is a
-     * weaker question and does not need the empty cells.</p>
+     * Compares the world against one palette of a saved template. Air is skipped rather than required, because
+     * the saved bounding box would otherwise make a formation fail over a torch that landed nearby.
      */
     private static boolean matchesPalette(ServerLevel level, BlockPos controller, ListTag blocks, ListTag palette) {
         if (palette.isEmpty()) return false;

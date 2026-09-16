@@ -23,8 +23,8 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * Reserves one shared chunk aura pool for all due player cultivation ticks before
- * any player is processed, removing entity-tick ordering as a source of unfairness.
+ * Pre-reserves one shared chunk aura pool for every player due to cultivate this tick, before any of
+ * them is processed, so entity-tick ordering cannot decide who is served first.
  */
 public final class AuraDistributionService {
     private static final Map<UUID, Allocation> ALLOCATIONS = new HashMap<>();
@@ -56,7 +56,7 @@ public final class AuraDistributionService {
     }
 
     /**
-     * Returns a pre-reserved share for this tick, or empty when no player prepass exists.
+     * Returns a pre-reserved share for this tick, or empty when there was no prepass.
      */
     public static Optional<Map<Holder<Resource>, Double>> take(ServerPlayer player) {
         Allocation allocation = ALLOCATIONS.remove(player.getUUID());
@@ -68,8 +68,8 @@ public final class AuraDistributionService {
         claims.sort(Comparator.comparing(claim -> claim.player().getUUID()));
         LevelChunk chunk = level.getChunkAt(claims.getFirst().player().blockPosition());
         AuraChunkAttachment stored = chunk.getData(MxtAttachments.AURA_CHUNK);
-        // The shared pool is chunk-scoped. Its allocation policy follows the first active
-        // claimant's resolved zone when overlapping dynamic zones provide different policies.
+        // The pool is chunk-scoped, so it follows the first active claimant's resolved zone policy when
+        // overlapping dynamic zones disagree.
         Distribution distribution = claims.getFirst().aura().distribution();
         Map<Integer, Map<Holder<Resource>, Double>> allocations = new HashMap<>();
         for (int index = 0; index < claims.size(); index++) allocations.put(index, new LinkedHashMap<>());
@@ -88,9 +88,8 @@ public final class AuraDistributionService {
     }
 
     /**
-     * Allocates one finite shared aura pool without mutating world state. The runtime uses this
-     * method after grouping due players by chunk; it is public so integrations can preview the
-     * exact three allocation rules without creating fake players or chunks.
+     * Allocates one finite shared aura pool without mutating world state. Public so integrations can
+     * preview the three allocation rules without creating fake players or chunks.
      */
     public static List<Double> distribute(List<Double> requests, List<Double> weights, double available,
                                           Distribution distribution, RandomSource random) {

@@ -24,8 +24,7 @@ public final class InventoryUtil {
     }
 
     /**
-     * Removes every requirement from the target. The call is atomic: when a requirement cannot be
-     * satisfied, every change made so far is rolled back and the target is left untouched.
+     * Removes every requirement from the target; on failure the target is left untouched.
      */
     public static boolean removeItems(Container target, Container requirements) {
         int size = target.getContainerSize();
@@ -60,8 +59,7 @@ public final class InventoryUtil {
     }
 
     /**
-     * Inserts every addition into the target. The call is atomic: when one addition cannot be
-     * placed, the target is restored to its previous contents before returning {@code false}.
+     * Inserts every addition into the target; on failure the target is left untouched.
      */
     public static boolean insertItems(Container target, Container additions) {
         int size = target.getContainerSize();

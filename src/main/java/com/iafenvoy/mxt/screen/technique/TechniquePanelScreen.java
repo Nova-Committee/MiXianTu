@@ -33,13 +33,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A scrollable list of the player's learned techniques: one row per technique with its icon, its
- * level and its progress towards the next level.
- *
- * <p>The panel is a view over synchronized state, so the rows are computed locally and no packet is
- * involved. The background is an art asset ({@code textures/gui/classic/technique_panel.png}, drawn
- * at {@value #PANEL_WIDTH}x{@value #PANEL_HEIGHT}); the row separators and the progress bars are
- * drawn in code so they follow the row layout instead of the art.</p>
+ * A scrollable list of the player's learned techniques: one row per technique with its icon, level and
+ * progress towards the next level. The panel is a view over synchronized state, so the rows are computed
+ * locally and no packet is involved. The background is an art asset; the row separators and progress bars
+ * are drawn in code.
  */
 public final class TechniquePanelScreen extends Screen {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/technique_panel.png");
@@ -49,7 +46,7 @@ public final class TechniquePanelScreen extends Screen {
     private static final int CONTENT_PADDING = 12;
     private static final int EMPTY_INSET = 6;
     /**
-     * Room kept beside the rows for the vanilla scrollbar, so the panel's own art stays clear of it.
+     * Room kept beside the rows for the vanilla scrollbar.
      */
     private static final int SCROLLBAR_ROOM = AbstractScrollArea.SCROLLBAR_WIDTH;
     private static final int ROW_HEIGHT = 34;
@@ -167,16 +164,15 @@ public final class TechniquePanelScreen extends Screen {
         }
 
         /**
-         * The panel's own art is the background. The vanilla list backdrop is a translucent tile that
-         * would dim it, which is what turned the panel into a flat grey block.
+         * The panel's own art is the background; the vanilla translucent backdrop would dim it.
          */
         @Override
         protected void extractListBackground(@NonNull GuiGraphicsExtractor graphics) {
         }
 
         /**
-         * Vanilla draws a two-pixel line above the first row and below the last one. Each row already
-         * carries its own separator, and the header line sat right on top of the first row's text.
+         * Vanilla draws a line above the first row and below the last; each row already carries its own
+         * separator.
          */
         @Override
         protected void extractListSeparators(@NonNull GuiGraphicsExtractor graphics) {
@@ -184,7 +180,6 @@ public final class TechniquePanelScreen extends Screen {
 
         /**
          * Vanilla puts the scrollbar past the row and the widget, which lands on the panel's border.
-         * The list width already reserved room for it, so it belongs right after the last row.
          */
         @Override
         protected int scrollBarX() {
@@ -245,9 +240,8 @@ public final class TechniquePanelScreen extends Screen {
                 if (hovered) graphics.setTooltipForNextFrame(font, this.tooltip(), mouseX, mouseY);            }
 
             /**
-             * The level column, using the level's own display name when the data pack provides one and
-             * its rank otherwise. The text is built for a measured width because the level column has
-             * to share one line with the progress value.
+             * The level column, using the level's own display name when the data pack provides one and its
+             * rank otherwise, measured because the level and the progress value share one line.
              */
             private Component levelText(Font font, int width) {
                 if (!this.row.hasStage()) return Component.translatable("screen.mxt.technique_panel.level_unknown");
@@ -269,8 +263,7 @@ public final class TechniquePanelScreen extends Screen {
             }
 
             /**
-             * The bar is tinted with the mastery resource's own particle colour, the same way the
-             * crafting progress bar is tinted by the resource it shows.
+             * Tinted with the mastery resource's own particle colour, like the crafting progress bar.
              */
             private int fillColor() {
                 Holder<Resource> mastery = this.row.technique().value().masteryResource().orElse(null);
@@ -278,8 +271,8 @@ public final class TechniquePanelScreen extends Screen {
             }
 
             /**
-             * The technique's name, plus the level's own ID while it has one: the row itself only has
-             * room for the level's short display name or its rank.
+             * The technique's name, plus the level's own ID while it has one: the row itself only has room
+             * for the level's short display name or its rank.
              */
             private Component tooltip() {
                 MutableComponent line = DefinitionText.name(this.row.technique(), "cultivation_technique").copy();

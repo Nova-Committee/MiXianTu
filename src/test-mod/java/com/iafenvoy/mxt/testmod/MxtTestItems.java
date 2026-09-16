@@ -22,13 +22,9 @@ public final class MxtTestItems {
     public static final DeferredItem<Item> QINGXIAO_SPIRIT_CRYSTAL = register("qingxiao_spirit_crystal", Item::new);
 
     /**
-     * A hammer and a manual that carry {@code mxt:tool_binding} / {@code mxt:blueprint_binding}.
-     *
-     * <p>The forge table's tool and blueprint slots only accept stacks with those components, and
-     * nothing in the mod puts them on an item yet, so without these the gated path is unreachable
-     * and both selector lists can only ever take the "no item placed, fall back to the registry"
-     * branch. The component is attached to the item's own component map once the binding holder is
-     * known.</p>
+     * A hammer and a manual that carry {@code mxt:tool_binding} / {@code mxt:blueprint_binding}: the
+     * forge table's slots accept only stacks with those components, and nothing else puts them on an
+     * item, so without these the gated path and both selector lists are unreachable.
      */
     public static final DeferredItem<Item> TEST_HAMMER = register("test_hammer", Item::new);
     public static final DeferredItem<Item> TEST_MANUAL = register("test_manual", Item::new);

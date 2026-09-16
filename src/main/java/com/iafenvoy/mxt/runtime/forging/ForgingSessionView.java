@@ -6,23 +6,9 @@ import java.util.List;
 
 /**
  * The read-only look at a running session that {@link com.iafenvoy.mxt.event.ForgingEvent} hands to
- * listeners.
- *
- * <p>Events used to carry the {@link ForgingSession} itself, and it is mutable: {@code strike} moves the
- * value, appends to the history and counts a step, and the caller writes whatever it holds back into the
- * table afterwards. A listener could therefore edit a session that was still in flight - or keep the
- * reference and edit it later - and the result would be indistinguishable from the player having struck.
- * The events carry this instead: everything a listener may know about the session, and nothing it can do
- * to it. {@code research/06} states the rule the events now enforce: a pre event may cancel or replace the
- * costs, and may not touch the session's value, history or quality.</p>
- *
- * <p>Deliberately a window rather than a snapshot. The reads below are live for exactly as long as the
- * event is being dispatched, which is the same instant either way, and reading through the session is what
- * keeps this class from restating a rule: {@link #canComplete} is the session's own answer, not a second
- * implementation of the completion rule that could drift from it.</p>
- *
- * <p>The constructor is package private, so a view is only ever one the service made. The table itself is
- * not reachable from here either; a listener that has to name the table gets its position from the event.</p>
+ * listeners: everything a listener may know about the session, and nothing it can do to it. A pre event
+ * may cancel or replace the costs but not touch the session's value, history or quality; the constructor
+ * is package private, so a view is only ever one the service made.
  */
 public final class ForgingSessionView {
     private final ForgingSession session;

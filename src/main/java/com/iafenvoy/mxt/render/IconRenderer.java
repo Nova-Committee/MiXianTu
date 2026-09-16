@@ -9,11 +9,9 @@ import net.minecraft.network.chat.Component;
 import java.util.Optional;
 
 /**
- * The client-side half of {@link IconReference}: the only place that turns an icon into pixels.
- *
- * <p>A screen passes the graphics and the box it has room for, and this decides whether to draw an item
- * or a texture and how to centre it. Both branches used to be written out at every call site, which is
- * how three screens ended up with three slightly different copies of it.</p>
+ * The client-side half of {@link IconReference}: the only place that turns an icon into pixels. A screen
+ * passes the graphics and the box it has room for, and this picks the item branch or the texture branch and
+ * centres it.
  */
 public final class IconRenderer {
     /**
@@ -22,8 +20,7 @@ public final class IconRenderer {
      */
     public static final int ICON_SIZE = 16;
     /**
-     * How far a stand-in made of the name sits below the icon's own position. The hotbar's own nudge, so
-     * its entries keep the look they had before this renderer existed.
+     * How far a stand-in made of the name sits below the icon's own position: the hotbar's own nudge.
      */
     private static final int NAME_OFFSET = 7;
     private static final int NAME_COLOR = 0xFFE0E5EF;
@@ -32,17 +29,11 @@ public final class IconRenderer {
     private IconRenderer() {
     }
 
-    /**
-     * Draws the icon centred in a square box of {@code boxSize} whose top-left corner is {@code (x, y)}.
-     */
     public static void render(GuiGraphicsExtractor graphics, IconReference icon, int x, int y, int boxSize) {
         int inset = Math.max(0, (boxSize - ICON_SIZE) / 2);
         renderAt(graphics, icon, x + inset, y + inset);
     }
 
-    /**
-     * Draws the icon at an exact position, for a caller that has already centred it itself.
-     */
     public static void renderAt(GuiGraphicsExtractor graphics, IconReference icon, int x, int y) {
         icon.item().ifPresentOrElse(
                 item -> graphics.item(item.create(), x, y),
@@ -51,7 +42,7 @@ public final class IconRenderer {
     }
 
     /**
-     * Draws an icon in a box, or the first few characters of the name when a definition has no icon yet.
+     * Draws an icon in a box, or the first few characters of the name when there is no icon yet.
      */
     public static void renderOrName(GuiGraphicsExtractor graphics, Font font, Optional<IconReference> icon,
                                     Component name, int x, int y, int boxSize) {

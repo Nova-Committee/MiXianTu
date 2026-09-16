@@ -14,22 +14,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The attack module: what a hostile array does to everything it covers, once per period.
- *
- * <p>This is the one module that is hostile by construction. A formation carrying it spares whoever its
- * owner counts as his own, exactly as if it had declared {@code hostile} — see
- * {@code FormationRelations} — because "this array exists to hurt people" is not something the runtime
- * should have to infer from a field next to it.</p>
- *
- * <p><b>Who gets the kill.</b> {@code attribute_to_owner} defaults to true, and it matters: damage with
- * no attacker credits nobody, so loot, mob aggro and every condition that reads the attacking entity
- * would see a formation kill as an act of weather. The field exists rather than being always-on because
- * an array can legitimately want the anonymous "environmental damage" reading, which is what
- * {@code mxt:damage} has always been.</p>
- *
- * <p>Effects reuse {@link ApplyEffectAction} rather than declaring a second shape for the same three
- * fields, so an entry copied between an {@code mxt:apply_effect} action and a module's {@code effects}
- * list means the same thing and is validated the same way.</p>
+ * The attack module: what a hostile array does to everything it covers, once per period. A formation carrying
+ * it spares whoever its owner counts as his own, as if it had declared {@code hostile}. Damage with no
+ * attacker credits nobody, so {@code attribute_to_owner} defaults to true, and effects reuse
+ * {@link ApplyEffectAction} rather than declaring a second shape for the same three fields.
  */
 public record AttackFormationAction(NumberProvider damage, Optional<Holder<DamageType>> damageType,
                                     boolean attributeToOwner, List<ApplyEffectAction> effects,

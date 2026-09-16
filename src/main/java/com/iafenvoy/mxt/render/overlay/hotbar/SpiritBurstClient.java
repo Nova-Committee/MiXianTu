@@ -36,7 +36,7 @@ public final class SpiritBurstClient {
     }
 
     /**
-     * Returns every resource available for selection; the runtime hotbar still uses nine.
+     * Every resource available for selection; the runtime hotbar still uses nine.
      */
     public static List<Reference<Resource>> resourcesAvailable(Player player) {
         return MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE)
@@ -46,8 +46,7 @@ public final class SpiritBurstClient {
     }
 
     /**
-     * {@code aura_type} selects the elemental relation, while {@code burst_amount}
-     * explicitly opts a resource into the spirit-burst hotbar.
+     * {@code aura_type} selects the elemental relation, while {@code burst_amount} opts a resource in.
      */
     private static boolean canBurst(Player player, Reference<Resource> resource) {
         CultivationProfile profile = CultivationProfiles.find(player, resource).orElse(null);

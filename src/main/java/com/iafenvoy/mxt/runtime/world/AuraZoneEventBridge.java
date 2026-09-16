@@ -32,12 +32,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Tracks aura source transitions without retaining unloaded entities.
- * <p>
- * An entity is only re-resolved when its answer can actually have changed: a new entity, a moved
- * entity, or an entity whose refresh interval elapsed. Resolving every entity every tick is what made
- * this listener dominate the server thread, because one resolution reads the biome of every block
- * emitter in a 7x7 chunk neighbourhood.
+ * Tracks aura source transitions without retaining unloaded entities. An entity is only re-resolved when
+ * its answer can actually have changed: a new entity, a moved entity, or an entity whose refresh interval
+ * elapsed, because one resolution reads the biome of every block emitter in a 7x7 chunk neighbourhood.
  */
 @EventBusSubscriber
 public final class AuraZoneEventBridge {
@@ -79,10 +76,9 @@ public final class AuraZoneEventBridge {
     }
 
     /**
-     * Opens the next resolution window for this level and closes the previous one. It runs at the
-     * very end of the level tick, after {@link AuraChunkTicker} has regenerated the chunk stock for
-     * this tick, so every query made during the next tick sees one consistent snapshot and the
-     * resolver memo cannot leak a value computed from an older one.
+     * Opens the next resolution window for this level and closes the previous one. It runs at the very end
+     * of the level tick, after {@link AuraChunkTicker} has regenerated this tick's chunk stock, so every
+     * query made during the next tick sees one consistent snapshot.
      */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLevelTick(Post event) {
@@ -116,10 +112,9 @@ public final class AuraZoneEventBridge {
     }
 
     /**
-     * Reports the measured cost of {@link AuraService#getPositionAura} and starts a new ten second
-     * window. The average per query is the number that matters: a memoised tick issues one query per
-     * ticked entity plus one per distinct query position, while an unmemoised tick issues one per
-     * entity and one more per contributing block-emitter source.
+     * Reports the measured cost of {@link AuraService#getPositionAura} and starts a new ten second window.
+     * The average per query is the number that matters, because a memoised tick issues far fewer queries
+     * than an unmemoised one.
      */
     private static void reportQueryStats(long gameTime) {
         long queries = AuraQueryCache.queries();

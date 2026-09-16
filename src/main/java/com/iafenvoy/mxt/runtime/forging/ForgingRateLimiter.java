@@ -13,11 +13,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Per-player, per-table strike rate limit.
- *
- * <p>Prevents both autoclicker spam and a modified client that fires strike packets far faster
- * than a human can. Entries are dropped once their cooldown has elapsed, so the map only ever
- * holds the strikes that are still cooling down.</p>
+ * Per-player, per-table strike rate limit, against autoclicker spam and a modified client that fires
+ * strike packets faster than a human can. Entries are dropped once their cooldown has elapsed.
  */
 public final class ForgingRateLimiter {
     private static final Map<Key, Long> LAST_STRIKE = new LinkedHashMap<>();

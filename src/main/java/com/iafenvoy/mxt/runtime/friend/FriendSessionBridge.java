@@ -9,23 +9,9 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEven
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 
 /**
- * The two ends of a friend session: the session list is cleared when its owner comes back, and the mirror
- * other players' judgements read is refreshed on the way in and on the way out.
- *
- * <p>The attachment saves both lists so that a death does not take the session one with it, which leaves
- * exactly one thing that has to end a session, and clearing at login is it. Doing that at login rather than
- * at logout is deliberate: a logout hook can be missed — a crash, a killed JVM, a player moved between
- * servers — and a list that survives because the server died is a list that outstays its welcome. A login
- * cannot be missed.</p>
- *
- * <p>The mirror is refreshed at both ends, and that pair is what lets {@link FriendCache} stay correct
- * without every writer of friend data having to remember it: the mirror is unused while its owner is
- * online, so its contents only have to be right for the offline stretch, and the logout refresh is the last
- * word before that stretch begins.</p>
- *
- * <p>Reads the attachment without creating it, so a player who has never used the friend system is not
- * handed an empty one for the privilege of joining. The mirror still records them, with an empty list —
- * "no friends" and "unknown player" are different answers.</p>
+ * The two ends of a friend session: the session list is cleared at login, and {@link FriendCache} is refreshed
+ * on the way in and on the way out. Clearing at login rather than at logout is deliberate, because a logout
+ * hook can be missed by a crash or a killed JVM; the attachment is read without creating it.
  */
 @EventBusSubscriber
 public final class FriendSessionBridge {

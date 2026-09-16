@@ -20,9 +20,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Optional runtime dimension loader adapted from ResourceWorld for NeoForge 26.
- * It operates on already decoded LevelStem values and never mutates the dynamic
- * dimension registry, so callers can keep it as a fallback for realm instances.
+ * Optional runtime dimension loader operating on already decoded LevelStem values. It never mutates the
+ * dynamic dimension registry, so callers can keep it as a fallback for realm instances.
  */
 public final class RuntimeDimensionService {
     private RuntimeDimensionService() {

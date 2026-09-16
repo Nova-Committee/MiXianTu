@@ -17,14 +17,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Turns registry ids into the flat identifiers a formula can name, and keeps the name indexes the
- * entity variables resolve {@code caster_<resource>} and {@code caster_<attribute>} against.
- *
- * <p>The attribute registry is static, so its index is built once. The resource registry belongs
- * to one world, and its index is keyed by the registry instance: reads are a plain volatile read
- * of an immutable snapshot and only a registry the process has not seen yet pays for a build. The
- * cached value holds resource keys rather than entries, so an index never keeps an old world's
- * registry alive.</p>
+ * Turns registry ids into the flat identifiers a formula can name, and keeps the name indexes the entity
+ * variables resolve {@code caster_<resource>} and {@code caster_<attribute>} against. The attribute registry
+ * is static, so its index is built once; the resource index is keyed by registry instance and holds resource
+ * keys rather than entries, so it never keeps an old world alive.
  */
 public final class FormulaNames {
     private static final int MAX_CACHED_REGISTRIES = 4;
@@ -37,11 +33,8 @@ public final class FormulaNames {
     }
 
     /**
-     * Flattens a registry id into an exp4j identifier: the namespace and the path joined by an
-     * underscore, with every {@code /}, {@code .} and {@code -} replaced by an underscore.
-     *
-     * <p>{@code mxt:common} becomes {@code mxt_common} and {@code minecraft:max_health} becomes
-     * {@code minecraft_max_health}.</p>
+     * Flattens a registry id into an exp4j identifier: namespace and path joined by an underscore,
+     * with every {@code /}, {@code .} and {@code -} replaced by an underscore.
      */
     public static String flatten(Identifier id) {
         return (id.getNamespace() + "_" + id.getPath()).replace('/', '_').replace('.', '_').replace('-', '_');
@@ -63,8 +56,8 @@ public final class FormulaNames {
     }
 
     /**
-     * Resolves a flattened resource name against the registry access that owns it, or
-     * {@code null} when no resource uses it.
+     * Resolves a flattened resource name against the registry access that owns it, or {@code null}
+     * when no resource uses it.
      */
     @Nullable
     public static Holder<Resource> resource(RegistryAccess access, String name) {
@@ -86,8 +79,8 @@ public final class FormulaNames {
                 put(built, id, ResourceKey.create(MxtResourceKeys.RESOURCE, id), "resource");
             });
             Map<String, ResourceKey<Resource>> index = Map.copyOf(built);
-            // A reloaded world brings a new registry; keeping a handful of indexes is enough for a
-            // client and a server in one process and stops retired registries from piling up.
+            // A reloaded world brings a new registry; a handful of indexes covers a client and a
+            // server in one process and stops retired registries from piling up.
             Map<Registry<?>, Map<String, ResourceKey<Resource>>> updated =
                     cached.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(cached);
             updated.put(registry, index);

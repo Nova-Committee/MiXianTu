@@ -84,7 +84,7 @@ public final class ResourceHolderAttachment extends ShouldSyncAttachment {
     }
 
     /**
-     * Creates a detached draft for validation without changing a live attachment.
+     * A detached draft for validation; the live attachment is unchanged.
      */
     public ResourceHolderAttachment copy() {
         return new ResourceHolderAttachment(this.values, this.audit);

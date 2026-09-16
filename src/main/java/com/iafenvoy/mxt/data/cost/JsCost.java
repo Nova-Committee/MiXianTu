@@ -9,11 +9,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * A cost whose check and payment are server script callbacks.
- *
- * <p>The callback implementations live in the optional KubeJS package, but this type is registered
- * unconditionally like every other {@code mxt:js} entry, so a data pack that uses it always loads
- * and only fails to be paid when the script that defines the id is absent.</p>
+ * A cost whose check and payment are server script callbacks. The implementations live in the optional
+ * KubeJS package, but the type is registered unconditionally like every other {@code mxt:js} entry, so a
+ * data pack that uses it always loads and only fails to be paid when the script is absent.
  */
 public record JsCost(String id, JsonObject params) implements Cost {
     public static final MapCodec<JsCost> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

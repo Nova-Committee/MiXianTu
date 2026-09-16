@@ -13,10 +13,8 @@ import java.util.UUID;
 /**
  * Server-owned flight mount state.
  *
- * <p>What is saved and restored around a flight is the player's flight <em>attribute</em> value, not the
- * {@code Abilities#mayfly} flag: that field is deprecated in favour of
- * {@code NeoForgeMod.CREATIVE_FLIGHT}, and saving the flag while the attribute stayed raised would let a
- * player keep flying after dismounting.</p>
+ * <p>What is saved is the flight <em>attribute</em> value, not the deprecated {@code Abilities#mayfly}
+ * flag; if the attribute stayed raised after dismounting the player would keep flying.
  */
 public final class FlightAttachment extends ShouldSyncAttachment {
     public static final MapCodec<FlightAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

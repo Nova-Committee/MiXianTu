@@ -132,9 +132,8 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     /**
-     * Opens a temporary intake window for one already-matched recipe. Changing the
-     * grid or recipe invalidates any partially supplied aura instead of retaining it
-     * as general-purpose block storage.
+     * Changing the grid or recipe invalidates any partially supplied aura instead of retaining it as
+     * general-purpose block storage.
      */
     public void configureAuraCosts(Map<Holder<Resource>, Integer> costs) {
         if (this.requiredAura.equals(costs)) return;
@@ -153,8 +152,8 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     /**
-     * Deducts one craft's costs together, preserving any remaining active-recipe buffer for the
-     * next craft. This permits unattended repeated production while an output slot has room.
+     * Deducts one craft's costs together, preserving any remaining active-recipe buffer for the next
+     * craft.
      */
     public boolean consumeAura(Map<Holder<Resource>, Integer> costs) {
         if (!this.hasAura(costs)) return false;
@@ -256,12 +255,8 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     /**
-     * Hands out an access, not the entity.
-     *
-     * <p>{@code ContainerLevelAccess} is how a menu reaches the block it belongs to: the server half
-     * resolves the entity on demand, and the client half gets {@code ContainerLevelAccess.NULL}, whose
-     * every lookup is empty. Nothing about the table can leak into the menu's client half, and nothing
-     * has to be null-checked there either. Vanilla does the same for every workstation menu.
+     * Hands out a {@code ContainerLevelAccess}, not the entity, so nothing has to be null-checked in the
+     * menu's client half.
      */
     @Override
     public AbstractContainerMenu createMenu(int id, @NonNull Inventory inventory, @NonNull Player player) {

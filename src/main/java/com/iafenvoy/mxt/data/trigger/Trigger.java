@@ -22,8 +22,7 @@ public interface Trigger {
     Identifier signalType();
 
     /**
-     * Built-in signals carry no additional JSON fields. The registry entry
-     * supplies the signal identifier, keeping the data format extensible.
+     * Built-in signals carry no additional JSON fields; the registry entry supplies the signal identifier.
      */
     record Builtin(Identifier signalType) implements Trigger {
         @Override

@@ -34,47 +34,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The forge table surface.
- *
- * <h2>The texture is the layout</h2>
- * Every panel, slot well, the meter and the two step rows are already drawn in
- * {@code textures/gui/forging_table.png}; this class blits that, and everything it draws on top is
- * either a live icon or a live highlight. No coordinate here is invented: the slot positions come
- * from {@link ForgingMenu}, which measured them off the same image, so a well and the hitbox sitting
- * in it cannot drift apart.
- *
- * <h2>Two passes, two coordinate systems</h2>
- * Vanilla gives a container screen three hooks worth using, and each is in a different space:
- * <ul>
- *   <li>{@link #extractBackground} runs before anything else and is in <b>screen</b> space, so the frame
- *       texture is blitted at {@code leftPos/topPos}.</li>
- *   <li>{@link #extractLabels} runs inside {@code AbstractContainerScreen.extractContents}'s
- *       {@code pose().translate(leftPos, topPos)}, which it pops on the way out. Everything drawn there is
- *       in <b>frame</b> space - the same space {@code Slot.x/y} is written in - so no coordinate below adds
- *       the frame offset. Vanilla calls the hook "labels" because two labels are all it draws; the whole
- *       frame is the same kind of content and belongs in the same space.</li>
- *   <li>{@link #extractTooltip} runs after that translate has been popped, in <b>screen</b> space. A
- *       tooltip is positioned from the cursor and flushed in a later pass, so its coordinates are screen
- *       coordinates wherever it is queued from - which is what lets the grid tooltips live here beside the
- *       slot tooltip vanilla already sets.</li>
- * </ul>
- * Mixing the spaces is what makes a surface look shifted - and it is easy to do, because both use the same
- * numbers. Drawing the frame from {@code extractRenderState}, as this screen used to, means every single
- * coordinate there has to add the frame offset by hand.
+ * The forge table surface: it blits {@code textures/gui/forging_table.png}, which already draws every panel,
+ * slot well, the meter and the two step rows, and adds live icons on top. The slot coordinates come from
+ * {@link ForgingMenu}, measured off the same image, so a well and the hitbox in it cannot drift apart.
  */
 public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/forging_table.png");
 
     /**
-     * The selector options, drawn as the vanilla stonecutter draws its recipe buttons.
-     *
-     * <p>Three states, three sprites, and one of them is always drawn - a plain option included.
-     *
-     * <p>The stonecutter's sprite is 16 wide and is drawn 16 apart, because its own cell pitch <em>is</em>
-     * 16. Here the cell is {@link ForgingMenu#CELL}, so the sprite is taken to the full cell width
-     * instead: at 16 it would leave a two pixel stripe of the recess showing down every option. The
-     * height and the one-pixel rise are the stonecutter's, which is what puts a 16x16 icon in the
-     * middle of the button.
+     * The selector options, drawn as the vanilla stonecutter draws its recipe buttons. The sprite is taken to
+     * the full {@link ForgingMenu#CELL} width, since at 16 it would leave a stripe of the recess showing.
      */
     private static final int OPTION_W = ForgingMenu.CELL;
     private static final int OPTION_H = 18;
@@ -88,27 +57,14 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final int TEXT = 0xFF404040;
 
     /**
-     * The selector scrollbars, taken from the vanilla stonecutter.
-     *
-     * <p>Stonecutter and this surface differ in two numbers, and both are the layout's:
-     * <ul>
-     *   <li>it lists four recipes per row, this lists three. {@link ForgingMenu#CELLS} replaces its
-     *       hard-coded four everywhere the column count appears - the visible count, the offscreen
-     *       row count, and the stride between one scroll row and the next.</li>
-     *   <li>its scroller is drawn <em>inside</em> a 54px track at x=119; here the texture draws the
-     *       bar in the gutter to the <em>right of</em> the recess, a full recess-width further out.
-     *       See {@link #scrollbar}.</li>
-     * </ul>
-     * Everything else - the sprite size, the travel, the drag maths - is the stonecutter's unchanged.
+     * The selector scrollbars, taken from the vanilla stonecutter. The sprite size, travel and drag maths are
+     * the stonecutter's unchanged; the scroller's track is the 54px one - see {@link #scrollbar}.
      */
     private static final int SCROLLER_WIDTH = 12;
     private static final int SCROLLER_HEIGHT = 15;
     /**
-     * The track the scroller slides in, and how far it travels.
-     *
-     * <p>54, the stonecutter's own number - not the recess's 76. The sprite is 12x15 and is drawn at
-     * its natural size; giving it the whole recess instead would <em>stretch</em> it, because
-     * {@code blitSprite} scales the sprite to the rectangle it is handed.
+     * The track the scroller slides in: 54, the stonecutter's number rather than the recess's 76, because
+     * {@code blitSprite} scales the 12x15 sprite to the rectangle it is handed.
      */
     private static final int SCROLLER_FULL_HEIGHT = 54;
     /**
@@ -120,8 +76,7 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final Identifier SCROLLER_DISABLED = Identifier.withDefaultNamespace("container/stonecutter/scroller_disabled");
     /**
      * The meter trough, whose interior the texture draws as one pixel of black border around 160x4 of
-     * {@code C6C6C6}. Measured off the image rather than derived: METER_X is the left border's own
-     * column, so the usable span is what is left after both of them.
+     * {@code C6C6C6}. METER_X is the left border's own column, so the usable span is what is left.
      */
     private static final int METER_X = 80;
     private static final int METER_Y = 76;
@@ -130,26 +85,20 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final int METER_INNER_W = METER_W - 2;
     private static final int METER_H = 4;
     /**
-     * How far a value mark reaches past the trough.
-     *
-     * <p>A mark that stopped at the trough's border would read as something the trough clips; crossing it
-     * makes it read as a mark on a scale. The frame plate is the same {@code C6C6C6} as the interior, so
-     * there is nothing else out there to collide with.</p>
+     * How far a value mark reaches past the trough, so it reads as a mark on a scale rather than as
+     * something the trough clips. The frame plate is the same {@code C6C6C6} as the interior.
      */
     private static final int METER_MARK_OVERHANG = 2;
     /**
-     * The four colours, chosen against that {@code C6C6C6} interior: the green is the one the fill used
-     * before, so it is already known to read on this texture, and the gray is dark enough to be a mark
-     * rather than a shading.
+     * The four colours, chosen against that {@code C6C6C6} interior.
      */
     private static final int METER_TARGET = 0xFF3B8D3B;
     private static final int METER_ZERO = 0xFF6E6E6E;
     private static final int METER_VALUE = 0xFFD63A3A;
     private static final int METER_PREDICTED = 0xFFE8D44D;
     /**
-     * The readout sits in the grey band between the meter and the first step row, not on the meter's
-     * own line: that band is only three pixels tall, and text drawn on it runs into the step cells
-     * underneath. The two captions below it start at {@link #STEP_Y}.
+     * The readout sits in the grey band between the meter and the first step row, not on the meter's own
+     * line: that band is only three pixels tall, and text on it runs into the step cells underneath.
      */
     private static final int READOUT_Y = 85;
     private static final int STEP_X = 135;
@@ -157,24 +106,18 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final int STEP_ROW_PITCH = 22;
     private static final int STEP_CELL_PITCH = 18;
     /**
-     * What an unset cell of a step row is drawn as.
-     *
-     * <p>A row is always six cells wide, so an empty one is not nothing to show - it is a step that has
-     * not been taken yet, or a position the pattern does not ask for. Drawing a hole leaves the row's
-     * alignment to be guessed at; the barrier says the cell is part of the row and deliberately has no
-     * value.</p>
+     * What an unset cell of a step row is drawn as. A row is always six cells wide, so a barrier says the cell
+     * is part of the row and deliberately has no value, where a hole would leave the alignment to be guessed.
      */
     private static final IconReference EMPTY_STEP = IconReference.item(ItemStackTemplate.fromNonEmptyStack(new ItemStack(Items.BARRIER)));
     /**
-     * How far the first cell column starts inside its recess: the left recess starts at column 7 and
-     * its cells at 8.
+     * How far the first cell column starts inside its recess: the left recess starts at column 7 and its
+     * cells at 8.
      */
     private static final int GRID_INSET = 1;
     /**
-     * The action buttons, and the cells in the row under them.
-     *
-     * <p>Named rather than repeated because three things have to agree on them: the two buttons, the
-     * cancel button directly below the first, and the step count directly below the second.</p>
+     * The action buttons, and the cells in the row under them; named because three things have to agree on
+     * them: the two buttons, the cancel button below the first and the step count below the second.
      */
     private static final int ACTION_LEFT_X = 7;
     private static final int ACTION_RIGHT_X = 250;
@@ -188,9 +131,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final int ACTION_TEXT_INSET = 4;
 
     /**
-     * The scroll offset of each grid, as a fraction of the list, exactly as the stonecutter keeps it.
-     * The first visible cell is derived from this rather than stored, so the pixel position and the
-     * content can never disagree.
+     * The scroll offset of each grid, as a fraction of the list, exactly as the stonecutter keeps it: the
+     * first visible cell is derived from this rather than stored.
      */
     private float blueprintOffs;
     private float methodOffs;
@@ -201,17 +143,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private Button useBlueprint, useMethod, cancel;
 
     /**
-     * The two picks, and the whole of the selection model.
-     *
-     * <p>They are ids rather than list positions, because a position is a fact about a list that moves:
-     * placing a second manual shifts every index after it, and a stored index would silently come to
-     * mean a different blueprint. An id either is still offered or is not, which is a question this
-     * screen can answer from the list it is already drawing.</p>
-     *
-     * <p>Neither one is sent anywhere on its own. A pick costs nothing, sends nothing and cannot be
-     * refused; only the two buttons turn a pick into a request. That is what keeps blueprints and
-     * methods independent - picking a blueprint is not starting a session, so the method list does not
-     * have to wait for one.</p>
+     * The two picks, stored as ids rather than list positions because a position is a fact about a list that
+     * moves. Neither is sent on its own; only the buttons turn a pick into a request.
      */
     private Identifier selectedBlueprint;
     private Identifier selectedMethod;
@@ -241,8 +174,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The buttons follow both the session and the picks, and a pick is made by a click rather than by a
-     * packet, so they are re-checked every tick rather than only when something arrives.
+     * The buttons follow both the session and the picks; since a pick is a click rather than a packet, they
+     * are re-checked every tick.
      */
     @Override
     protected void containerTick() {
@@ -251,16 +184,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * Asks the server to open a session for the blueprint picked in the left grid.
-     *
-     * <p>These are requests, not calls: the screen only ever runs on the client, where there is no
-     * {@code ServerPlayer} to act on. {@code ForgingActionC2SPayload} is the existing channel for
-     * exactly this, and the server re-checks the id against its own list before it does anything, so
-     * nothing here is trusted.
-     *
-     * <p>The pick is re-resolved against the list rather than sent raw, so the button can never name
-     * something the grid has stopped showing - a manual removed from its slot takes its blueprint out
-     * of the list, and pressing with a stale id would just be refused.
+     * Asks the server to open a session for the blueprint picked in the left grid. The pick is re-resolved
+     * against the list so the button can never name something the grid has stopped showing.
      */
     private void useBlueprint() {
         Identifier id = this.picked(this.blueprintEntries(), this.selectedBlueprint);
@@ -278,22 +203,16 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * Asks the server to abandon the session.
-     *
-     * <p>It names nothing, because there is only ever one session per table and the server resolves the
-     * table from the menu this player has open. What cancelling <em>costs</em> is the server's decision,
-     * not the screen's: today everything goes back, and the policy behind that is replaceable without the
-     * client knowing.</p>
+     * Asks the server to abandon the session. It names nothing, because there is only ever one session per
+     * table and the server resolves the table from the open menu.
      */
     private void cancel() {
         ClientPacketDistributor.sendToServer(ForgingActionC2SPayload.cancel());
     }
 
     /**
-     * The pick, if the list still offers it, otherwise null.
-     *
-     * <p>A pick outlives the entry it names - a hammer can be taken out of its slot - so it is never
-     * read raw. This is the one place that question is asked, on both the render and the press path.
+     * The pick, if the list still offers it, otherwise null. A pick outlives the entry it names, so it is
+     * never read raw; this is the one place that question is asked, on both the render and press path.
      */
     private Identifier picked(List<Entry> entries, Identifier id) {
         if (id == null) return null;
@@ -303,13 +222,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * A button is enabled exactly when pressing it would name something the server accepts.
-     *
-     * <p>The server checks all of this again - this only keeps the player from pressing something that
-     * cannot work. A blueprint needs a live pick, no session already running, and its materials in the
-     * input slots; a method needs a live pick and a session to strike. The material half is not a
-     * convenience: starting consumes the declared amounts, so a button that lit up without them would
-     * only ever produce a refusal.</p>
+     * A button is enabled exactly when pressing it would name something the server accepts: a blueprint needs
+     * a live pick, no running session and its materials in the input slots, a method a live pick and a session.
      */
     private void refreshButtons() {
         Identifier blueprint = this.picked(this.blueprintEntries(), this.selectedBlueprint);
@@ -317,8 +231,7 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
             this.useBlueprint.active = !this.menu.active() && blueprint != null && this.menu.materialsCovered(blueprint);
         if (this.useMethod != null)
             this.useMethod.active = this.menu.active() && this.picked(this.methodEntries(), this.selectedMethod) != null;
-        // Nothing is locked and nothing has been consumed when no session runs, so there is nothing to
-        // cancel and nothing a cancel could cost.
+        // With no session nothing is locked, so there is nothing to cancel and nothing a cancel could cost.
         if (this.cancel != null) this.cancel.active = this.menu.active();
     }
 
@@ -330,16 +243,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * Everything the frame draws, in the frame's own coordinates.
-     *
-     * <p>See the class comment for why nothing here adds the frame offset. The order is the order they stack:
-     * the two labels with {@code super}, then the recessed grids and the step rows, then the meter on top.
-     * The picks are resolved once each and handed to the two places that draw from them, so a highlight and
-     * the prediction beside it can never disagree about which method is picked.</p>
-     *
-     * <p>Only the bar and the two grids are always drawn. Everything else - the two readouts, the step rows,
-     * their captions - describes a session, so with none running the frame shows the trough with its zero mark
-     * and nothing that would read as a measurement of something that is not happening.</p>
+     * Everything the frame draws, in the frame's own coordinates, with the picks resolved once each so a
+     * highlight and the prediction beside it cannot disagree. Only the bar and the two grids need no session.
      */
     @Override
     protected void extractLabels(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -360,11 +265,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * What the picked method would do to the value, or null when nothing is picked.
-     *
-     * <p>The meter's yellow line and nothing else reads this. It comes from the method's own
-     * {@code value_delta} rather than from any table the session keeps, because the point of drawing it
-     * before the strike is that the strike has not happened yet.</p>
+     * The meter's yellow line, and the only reader of this: the method's own {@code value_delta} rather than
+     * any session table, because the point is to draw it before the strike has happened.
      */
     private Integer deltaOf(Identifier method) {
         if (method == null || this.minecraft.level == null) return null;
@@ -373,15 +275,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The two grids' tooltips, beside whatever slot tooltip vanilla found.
-     *
-     * <p>Nothing here is a slot, so neither grid gets a tooltip for free, and both are worth having: the
-     * blueprint one says what the piece will cost before anything is spent, the method one says what a
-     * strike would do to the value before the step is committed.</p>
-     *
-     * <p>{@code super} runs first and the queue keeps the first tooltip of a frame, so a slot's own tooltip
-     * always wins. That is the right precedence and also an unreachable one - the grids sit in the recesses,
-     * which are not over any slot.</p>
+     * The two grids' tooltips, which no slot provides: the blueprint one says what the piece will cost, the
+     * method one what a strike would do to the value. A slot tooltip still wins, since {@code super} first.
      */
     @Override
     protected void extractTooltip(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -392,15 +287,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * Which method one of the step cells holds.
-     *
-     * <p>A cell draws an icon and nothing else - the same icon the method grid uses - so it names a method only
-     * to someone who already knows the icons. Both rows are read to decide whether a session is finished, which
-     * makes "what is that step" worth answering rather than leaving the player to match pictures by eye.</p>
-     *
-     * <p>The registry id comes out of the same two calls the cells are drawn from, so a cell cannot describe a
-     * different method from the one it is showing. No placeholder answers anything: a barrier is the absence of
-     * a step, not a step.</p>
+     * Which method one of the step cells holds. A cell draws an icon and nothing else, so it names a method
+     * only to someone who knows the icons; the id comes from the same calls the cells are drawn from.
      */
     private void stepTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (this.minecraft.level == null || this.minecraft.player == null) return;
@@ -420,11 +308,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The registry id in the step cell under the cursor, or {@link ForgingMenu#NONE}.
-     *
-     * <p>Row first, then position, so the two rows are one definition rather than two loops that have to agree
-     * about where a cell is. The width is the cell pitch, not the icon's 16, so the cells tile with no dead
-     * strip between them to hover over.</p>
+     * The registry id in the step cell under the cursor, or {@link ForgingMenu#NONE}. The hitbox width is the
+     * cell pitch, not the icon's 16, so the cells tile with no dead strip between them to hover over.
      */
     private int hoveredStep(double mouseX, double mouseY) {
         if (!this.menu.active()) return ForgingMenu.NONE;
@@ -440,15 +325,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The hovered blueprint's material list, as a tooltip on the grid.
-     *
-     * <p>The grid is not made of slots, so nothing shows this for free, and it is the one thing a player
-     * wants before committing anything: what this blueprint is about to take, and which of it the input
-     * slots are still short of. A satisfied entry is green with a tick, a missing one red with a cross -
-     * the same markers {@code ItemBindingTooltipAppender} uses for the conditions it reports.</p>
-     *
-     * <p>Each line carries the count as well, because "missing" and "not enough" are different problems:
-     * one iron where three are wanted is red, and the numbers are what say why.</p>
+     * The hovered blueprint's material list: what it is about to take, and which of it the input slots are
+     * short of. A satisfied entry is green with a tick, a missing one red with a cross, each line with a count.
      */
     private void blueprintTooltip(GuiGraphicsExtractor graphics, List<Entry> blueprints, int mouseX, int mouseY) {
         if (this.minecraft.level == null) return;
@@ -475,12 +353,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The hovered method's name and what it does to the value, as a tooltip on the grid.
-     *
-     * <p>Same reasoning as the blueprint tooltip - the grid is not made of slots, so nothing shows this
-     * for free - but the two things it prints are the two the cell cannot say. The icon only identifies
-     * the method to someone who already knows the icons, and the delta is invisible until the strike has
-     * landed, at which point the step has already been spent and cannot be taken back.</p>
+     * The hovered method's name and what it does to the value, neither of which the cell can say: the icon
+     * identifies the method only to someone who knows the icons, and the delta is invisible before the strike.
      */
     private void methodTooltip(GuiGraphicsExtractor graphics, List<Entry> methods, int mouseX, int mouseY) {
         if (this.minecraft.level == null) return;
@@ -518,18 +392,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * One option: its background and its item, drawn together.
-     *
-     * <p>They belong in one method because they are one widget - a button whose label happens to be an
-     * item. Splitting them is how the two drift apart: the sprite's one-pixel rise is only correct
-     * <em>because</em> the icon is placed against it, and nothing about either is meaningful alone.
-     *
-     * <p>The numbers are the stonecutter's. Its button sprite is 18 tall and is drawn one pixel above
-     * the row it belongs to, so an icon at the row's own y sits in the middle of it; the icon is a
-     * 16x16 sprite, so a cell of {@link ForgingMenu#CELL} centres it with one pixel either side. The
-     * one place the width is not the stonecutter's: its sprites are 16 wide because its cells are 16,
-     * and taking these to the cell width instead stops a two pixel stripe of the recess showing down
-     * the right of every button.
+     * One option: its background and its item together, being one widget - a button whose label is an item.
+     * The width is the stonecutter's sprite taken to {@link ForgingMenu#CELL}, so no recess stripe shows.
      */
     private void option(GuiGraphicsExtractor graphics, int x, int y, @Nullable IconReference icon,
                         boolean selected, boolean hovered) {
@@ -540,20 +404,16 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The index of the first cell the grid shows, from the scroll fraction.
-     *
-     * <p>The stonecutter's line, with {@link ForgingMenu#CELLS} where it writes a hard-coded four:
-     * the offset picks a row, and the row is multiplied by the column count to get an index.
+     * The index of the first cell the grid shows, from the scroll fraction: the stonecutter's line, with
+     * {@link ForgingMenu#CELLS} where it writes a hard-coded four.
      */
     private int startIndex(float offs, int entries) {
         return (int) (offs * this.getOffscreenRows(entries) + 0.5D) * ForgingMenu.CELLS;
     }
 
     /**
-     * How many rows of the list do not fit. The stonecutter writes {@code (n + 4 - 1) / 4 - 3} for
-     * four columns and three visible rows; {@link ForgingMenu#CELLS} is both of those numbers here.
-     *
-     * <p>Clamped at zero, because the stonecutter only ever asks once it knows the bar is active.
+     * How many rows of the list do not fit, clamped at zero because the stonecutter only ever asks once it
+     * knows the bar is active.
      */
     private int getOffscreenRows(int entries) {
         return Math.max(0, (entries + ForgingMenu.CELLS - 1) / ForgingMenu.CELLS - ForgingMenu.CELLS);
@@ -568,18 +428,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The vanilla stonecutter scroller, verbatim: the sprite goes at the measured column and row, and the
-     * scroller slides down that column by the scroll fraction.
-     *
-     * <p>Two things differ from the stonecutter, and only these two:
-     * <ul>
-     *   <li>its column is the magic 119, chosen to land on the track painted inside its own recipe
-     *       list. Here the texture paints the bar in the gutter <em>right of</em> the recess, which is
-     *       the measured column {@link ForgingMenu#SCROLLBAR_X}.</li>
-     *   <li>its track is anchored to its own recipe row; here it is anchored to the recess the texture
-     *       drew. The height is the same 54, because the visible list is three rows either way, and the
-     *       sprite is drawn at its natural 12x15 rather than scaled to the track.</li>
-     * </ul>
+     * The vanilla stonecutter scroller, except that the column is the measured {@link ForgingMenu#SCROLLBAR_X}
+     * rather than its magic 119, and the track is anchored to the recess.
      */
     private void scrollbar(GuiGraphicsExtractor graphics, int barX, float offs, int entries) {
         int offset = (int) (SCROLL_TRAVEL * offs);
@@ -587,15 +437,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * One six-step row.
-     *
-     * <p>Right-aligned within the row, because a finish pattern describes the <em>last</em> steps of
-     * a session: the last cell is the most recent step in both rows.</p>
-     *
-     * <p>Only the required row fills its gaps. A barrier there says something the icon cannot: this position
-     * is part of the pattern's six and the pattern asks for nothing in it. The current row needs no such
-     * statement - a step that has not been taken yet is simply not drawn, and a row of barriers under every
-     * fresh session would read as six things that went wrong.</p>
+     * One six-step row, right-aligned because a finish pattern describes the last steps of a session: the
+     * last cell is the most recent step in both rows. Only the required row fills its gaps, with a barrier.
      */
     private void stepIcons(GuiGraphicsExtractor graphics, int y, boolean target) {
         List<IconReference> icons = this.stepIcons(target);
@@ -616,12 +459,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The two numbers: the value under the meter, and the step count in the cell under the method button.
-     *
-     * <p>They used to share a line, opposite each other. Two numbers side by side read as one readout and
-     * they are not the same kind of thing: the value is where the piece is, the step count is how much of
-     * the session's budget went into getting it there - so the count sits under the button that increments
-     * it, where it reads as a counter rather than as a second gauge.</p>
+     * The two numbers: the value under the meter, and the step count under the method button, because the
+     * count is how much of the session's budget got the value there and so reads as a counter.
      */
     private void readouts(GuiGraphicsExtractor graphics) {
         graphics.text(this.font, Component.translatable("screen.mxt.forging.meter.value", this.menu.meterValue()), ForgingMenu.INVENTORY_X, READOUT_Y, TEXT, false);
@@ -630,28 +469,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The meter: the texture draws the trough and its border, so this adds the target band and the three
-     * marks that turn the trough into a scale.
-     *
-     * <p>The green block is the band the value has to land in. The gray line is zero - the one fixed place
-     * on the bar: the trough's ends are limits rather than places, so without it "how far left am I" has no
-     * answer until the value lands somewhere recognisable. The red line is where the value is; the yellow
-     * one is where the picked method would put it, which is the whole reason the meter is worth drawing: a
-     * strike is a decision, not a reveal.</p>
-     *
-     * <p>The zero mark is a property of the <em>scale</em>, not of the session, so it is drawn whenever there
-     * is a scale to draw it on - which is as soon as a blueprint is picked, before anything is committed.
-     * Everything else is a reading, and there is nothing to read without a session.</p>
-     *
-     * <p>Drawn band first and marks in order of importance, so when two land on the same column the one that
-     * matters more is the one left visible - the value over the prediction, and both over zero. The value
-     * landing exactly on zero is the one case where zero goes under, and it is the right way round: at that
-     * moment the reading and the reference are the same number.</p>
-     *
-     * <p>{@code predictedDelta} is null when nothing is picked, and the yellow line is then simply absent. A
-     * prediction that would leave the trough is clamped to its end rather than hidden: the mark pinned at the
-     * edge is the honest picture of a step that would be refused, and a line that vanished would leave the
-     * player guessing whether they still had a pick.</p>
+     * The meter: the texture draws the trough and its border, so this adds the target band and three marks —
+     * the gray zero, the red value and the yellow prediction.
      */
     private void meter(GuiGraphicsExtractor graphics, Identifier pickedBlueprint, Integer predictedDelta) {
         MeterScale scale = this.scale(pickedBlueprint);
@@ -674,12 +493,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The bounds the bar is drawn against, or null when nothing defines them.
-     *
-     * <p>While a session runs they come from its plan, which was snapshotted when it started: a datapack
-     * reload must not move a bar a player is already reading. Before one starts there is no plan, and the
-     * picked blueprint's own meter is what this bar is about to be - which is the whole of what the zero
-     * mark needs to be placed.</p>
+     * The bounds the bar is drawn against, or null when nothing defines them. A running session supplies
+     * them from its plan, snapshotted at start, so a datapack reload cannot move a bar being read.
      */
     private MeterScale scale(Identifier pickedBlueprint) {
         if (!this.menu.active()) {
@@ -692,11 +507,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * Where a value sits on the trough, clamped to its interior.
-     *
-     * <p>The interior's last column belongs to the scale's maximum, so the span is one pixel shorter than the
-     * interior: mapping the maximum onto {@code METER_INNER_X + METER_INNER_W} would put the mark on the
-     * texture's own right border.</p>
+     * Where a value sits on the trough, clamped to its interior. The interior's last column belongs to the
+     * scale's maximum, so the span is one pixel shorter than the interior.
      */
     private int meterX(MeterScale scale, int value) {
         int span = scale.max() - scale.min();
@@ -713,23 +525,15 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * One grid entry: the id it stands for, and the stack that draws it.
-     *
-     * <p>The two travel together on purpose. The grid is indexed by position, and a click has to name
-     * the entry that is on screen at that position - keeping a list of ids beside a list of icons
-     * would make that a promise about two iterators agreeing, which is exactly the kind of promise
-     * that breaks silently when one of them starts skipping entries.
+     * One grid entry: the id it stands for, and the stack that draws it, travelling together because the grid
+     * is indexed by position and a click has to name the entry on screen there.
      */
     private record Entry(Identifier id, @Nullable IconReference icon) {
     }
 
     /**
-     * Every offered blueprint, with the stack that stands for it: what the manuals in the blueprint
-     * slots provide, and nothing else.
-     *
-     * <p>An id always yields an entry, even when its result item cannot be resolved: the entry is what
-     * a click resolves to, so dropping it would shift every later position and make the grid disagree
-     * with itself. The icon is simply empty in that case, and the cell draws as a blank button.
+     * Every offered blueprint, with the stack that stands for it. An id always yields an entry, even when its
+     * result item cannot be resolved, because dropping it would shift every later position.
      */
     private List<Entry> blueprintEntries() {
         if (this.minecraft.level == null) return List.of();
@@ -745,13 +549,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * Every offered method, with its icon: what the tools in the tool slots unlock, narrowed by what the
-     * picked blueprint allows.
-     *
-     * <p>The pick is resolved first rather than read raw. A manual taken out of its slot takes its
-     * blueprint out of the list, and a pick that is no longer offered must not go on filtering the method
-     * grid - it has to fall back to "nothing is restricting this", which is the same state as having
-     * picked nothing at all.</p>
+     * Every offered method, with its icon. The pick is resolved first rather than read raw: a manual taken out
+     * of its slot removes its blueprint from the list, and a pick no longer offered must restrict nothing.
      */
     private List<Entry> methodEntries() {
         if (this.minecraft.level == null) return List.of();
@@ -888,16 +687,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * Picks whatever is under the cursor.
-     *
-     * <p>A pick is not an action. It used to be: a click on a blueprint sent a session request and a
-     * click on a method struck immediately, which made the two lists into two triggers and left nothing
-     * that could simply be highlighted. Now the click moves a cursor and the buttons do the acting.</p>
-     *
-     * <p>The blueprint pick is frozen while a session runs, because the table has locked a blueprint and
-     * highlighting a different one would claim something the server is not doing. The method pick is not
-     * frozen: what may be struck is decided by the tools, so the pick is just a cursor and the server
-     * re-checks it anyway.</p>
+     * Picks whatever is under the cursor. The blueprint pick is frozen while a session runs, because the table
+     * has locked a blueprint; the method pick is not, since the tools decide what may be struck.
      */
     private boolean clickCell(double mouseX, double mouseY, int gridX, float offs, List<Entry> entries, boolean blueprint) {
         Entry entry = this.hoveredCell(mouseX, mouseY, gridX, offs, entries);
@@ -911,12 +702,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     }
 
     /**
-     * The entry under the cursor in one grid, or null when the cursor is outside it or over a cell the
-     * list does not reach.
-     *
-     * <p>One definition for both the click and the tooltip, so a cell that highlights is a cell that can
-     * be picked and a cell whose tooltip opens - three things that would otherwise be three chances to
-     * place the same rectangle a pixel apart.</p>
+     * The entry under the cursor in one grid, or null when the cursor is outside it or over a cell the list
+     * does not reach. One definition for both the click and the tooltip.
      */
     private Entry hoveredCell(double mouseX, double mouseY, int gridX, float offs, List<Entry> entries) {
         int start = this.startIndex(offs, entries.size());

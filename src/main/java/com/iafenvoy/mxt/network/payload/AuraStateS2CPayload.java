@@ -14,10 +14,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.Map;
 
 /**
- * Server-authoritative aura source, fully resolved pools, and environmental pools for the local
- * player.  The two maps intentionally have different meanings: {@code actual} contains every
- * active source, while {@code environment} contains only the selected zone's environmental
- * template.
+ * Server-authoritative aura source, fully resolved pools, and environmental pools for the local player. The
+ * two maps intentionally have different meanings: {@code actual} contains every active source, while
+ * {@code environment} contains only the selected zone's environmental template.
  */
 public record AuraStateS2CPayload(Identifier source, Map<Identifier, AuraPool> actual,
                                   Map<Identifier, AuraPool> environment) implements CustomPacketPayload {

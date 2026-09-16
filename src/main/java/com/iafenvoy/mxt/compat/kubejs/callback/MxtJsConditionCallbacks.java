@@ -14,11 +14,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 
 /**
- * Callback storage for the JavaScript condition dispatch types.
- *
- * <p>Every callback receives the {@link FormulaContext} the condition was tested with, so a script
- * can read the same event payload variables a data pack condition could. The context is created once
- * by the dispatching system and is not modified by this class.</p>
+ * Callback storage for the JavaScript condition dispatch types. Every callback receives the
+ * {@link FormulaContext} the condition was tested with, so a script reads the same event payload
+ * variables a data pack condition would.
  */
 public final class MxtJsConditionCallbacks {
     private static final Map<String, TriPredicate<Entity, JsonObject, FormulaContext>> ENTITY = new ConcurrentHashMap<>();

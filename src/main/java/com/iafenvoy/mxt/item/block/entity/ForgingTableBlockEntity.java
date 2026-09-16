@@ -37,20 +37,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * Placed forge table: the slot surface plus the shared forging session.
- *
- * <p>The block entity owns both the container and the session, and it is the authority for both. It is
- * not, however, what the open menu reads: the menu half that runs on a client cannot reach a block
- * entity at all, so everything the screen shows is published by the server into the menu's data slots
- * and the two selector lists are derived from the client's own copy of the slot contents. See
- * {@code ForgingMenu}.</p>
- *
- * <p>{@link #forgingChanged()} still sends the block entity update packet, which keeps the client's
- * copy of the session current for anything that inspects the block rather than the menu. Nothing on
- * the forge screen depends on it any more.</p>
- *
- * <p>The menu and the screen are vanilla: see {@code ForgingMenu} and {@code ForgingScreen}, wired
- * up by {@link #createMenu} and {@code MxtRenderers}.</p>
+ * Placed forge table: the slot surface plus the shared forging session, and the authority for both. It is not
+ * what the open menu reads, since the client half cannot reach a block entity, so the server publishes
+ * everything the screen shows into the menu's data slots.
  */
 public final class ForgingTableBlockEntity extends BlockEntity implements ForgingSurface, WorldlyContainer, MenuProvider {
     private final SimpleContainer inventory = new SimpleContainer(TOTAL_SLOTS) {
@@ -106,9 +95,8 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
     }
 
     /**
-     * Method ids offered by the surface, for the selector list: the session's blueprint narrowed by the
-     * tools, or every unlocked method when no session is running. See
-     * {@link ForgingWorkstationService#availableMethodIds}.
+     * Method ids offered by the surface, for the selector list: the session's blueprint narrowed by the tools,
+     * or every unlocked method when no session is running.
      */
     public List<Identifier> availableMethodIds() {
         return this.level == null ? List.of()
@@ -123,19 +111,9 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
     }
 
     /**
-     * Hands out an access, not the entity.
-     *
-     * <p>{@code ContainerLevelAccess} is how a menu reaches the block it belongs to: the server half
-     * resolves the entity on demand, and the client half gets {@code ContainerLevelAccess.NULL}, whose
-     * every lookup is empty. Nothing about the table can therefore leak into the menu's client half,
-     * and nothing has to be null-checked there either - the client reads the data slots the server
-     * publishes instead. Vanilla does the same thing for every workstation menu.
-     *
-     * <p>This is also where a session that is already finished gets settled. A session can be complete
-     * without having been settled - a listener cancelled the settlement, or the world was written before
-     * settlement was automatic - and opening the menu is the one moment the server holds the table and
-     * its player together outside a strike. Without it, such a table would sit locked forever with a
-     * finished piece that nothing ever produces.</p>
+     * Hands out an access, not the entity: the server half resolves it on demand and the client half gets
+     * {@code ContainerLevelAccess.NULL}. A session already finished is settled here, because opening the menu
+     * is the one moment the server holds the table and its player together outside a strike.
      */
     @Override
     public AbstractContainerMenu createMenu(int containerId, @NonNull Inventory inventory, @NonNull Player player) {
@@ -187,11 +165,8 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
     }
 
     /**
-     * Slot filter: the surface is not a generic chest.
-     *
-     * <p>Blueprint slots take blueprint-bound items, tool slots take tool-bound items, input slots
-     * take only materials the selected blueprint declares, and the output slot never accepts. The rule
-     * itself lives on {@link ForgingSurface} so the menu cannot state a different one.</p>
+     * Slot filter: blueprint slots take blueprint-bound items, tool slots tool-bound items, input slots only
+     * materials the selected blueprint declares, and the output slot never accepts.
      */
     @Override
     public boolean canPlaceItem(int index, @NonNull ItemStack stack) {

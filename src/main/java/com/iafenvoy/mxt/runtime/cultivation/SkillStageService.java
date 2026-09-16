@@ -21,26 +21,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Reads a technique's mastery: the abilities each configured level grants and the conditions to climb.
- *
- * <p>The chain belongs to {@link SkillStage}, the technique only annotates it. Every
- * {@code configuration} entry's {@code ability} is a <em>minimum</em> requirement: its abilities are
- * active while the holder stands on that level or a later one, so raising a level adds to what the
- * earlier levels granted instead of replacing it. Ordering comes from {@link ServerCache}, which
- * validates the chain and ranks its levels before anything compares them, so two levels of different
- * chains are never ordered against each other.</p>
- *
- * <p>The entry's {@code condition} is read the other way round: it is the requirement to reach that
- * level, so it is asked for the level a holder advances <em>to</em>.</p>
+ * Reads a technique's mastery: the abilities each configured level grants and the conditions to climb. The
+ * chain belongs to {@link SkillStage}, and an entry's {@code ability} is a minimum requirement — its
+ * abilities are active on that level or any later one — while its {@code condition} is asked for the level a
+ * holder advances to. Ordering comes from {@link ServerCache}.
  */
 public final class SkillStageService {
     private SkillStageService() {
     }
 
     /**
-     * The level a holder currently stands on in this technique: the level it has advanced to, or the
-     * technique's entry level while it never advanced. An empty result means the technique has no
-     * chain at all, so nothing can be granted or climbed.
+     * The level the holder stands on: the one it advanced to, or the technique's entry level while it
+     * never advanced. Empty means the technique has no chain, so nothing can be granted or climbed.
      */
     public static Optional<Holder<SkillStage>> currentStage(SpiritIdentityAttachment spirit, Holder<CultivationTechnique> technique) {
         Holder<SkillStage> stored = spirit.techniqueStage(technique);
@@ -48,9 +40,7 @@ public final class SkillStageService {
     }
 
     /**
-     * Every ability the technique grants at the given level, with item tags already expanded and
-     * duplicates removed. An empty list means nothing is granted - either the technique configures no
-     * abilities, the holder has no level yet, or no chain is available to order the levels.
+     * Every ability granted at the given level, with tags expanded and duplicates removed.
      */
     public static List<Holder<Ability>> unlockedAbilities(CultivationTechnique technique, Holder<SkillStage> current) {
         if (technique.configuration().isEmpty() || current == null) return List.of();
@@ -65,9 +55,8 @@ public final class SkillStageService {
     }
 
     /**
-     * The level this technique advances to from the given one, or empty at the top of the chain. The
-     * technique's chain is the one its {@code default_stage} names, so a level of another chain is
-     * never treated as the next step.
+     * The level this technique advances to, or empty at the top of the chain. The chain is the one its
+     * {@code default_stage} names, so a level of another chain is never the next step.
      */
     public static Optional<Holder<SkillStage>> nextStage(CultivationTechnique technique, Holder<SkillStage> current) {
         if (current == null) return Optional.empty();
@@ -77,9 +66,8 @@ public final class SkillStageService {
     }
 
     /**
-     * The condition required to reach the given level. A level the technique does not configure
-     * requires nothing; the cache rejects a chain whose steps are not all configured, so this only
-     * happens for the entry level, which no holder advances into.
+     * The condition required to reach the given level; an unconfigured level requires nothing. The cache
+     * rejects a chain with unconfigured steps, so that is only the entry level, which none advances into.
      */
     public static EntityCondition advanceCondition(CultivationTechnique technique, Holder<SkillStage> target) {
         return Optional.ofNullable(technique.configuration().get(target))
@@ -87,8 +75,7 @@ public final class SkillStageService {
     }
 
     /**
-     * Whether the holder may advance from its current level to the next one. This is the query the
-     * advancement path uses; it does not change any state by itself.
+     * Whether the holder may advance from its current level to the next. Read-only.
      */
     public static boolean canAdvance(LivingEntity entity, CultivationTechnique technique, Holder<SkillStage> current,
                                      FormulaContext context) {

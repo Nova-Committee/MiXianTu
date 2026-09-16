@@ -54,7 +54,7 @@ public final class PassiveAttributeService {
     }
 
     /**
-     * Reconciles the full generated modifier set. Call only on the server thread.
+     * Reconciles the full generated modifier set. Server thread only.
      */
     public static void reconcile(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
@@ -65,9 +65,9 @@ public final class PassiveAttributeService {
     }
 
     /**
-     * Updates generated attributes without rebuilding unchanged modifiers. Dynamic
-     * entries are evaluated on every server tick; static entries are only added
-     * when missing. This also repairs attributes lost during player replacement.
+     * Updates generated attributes without rebuilding unchanged modifiers: dynamic entries are evaluated
+     * every tick, static ones are only added when missing. Also repairs attributes lost on player
+     * replacement.
      */
     public static void tick(LivingEntity entity) {
         if (entity.level().isClientSide()) return;

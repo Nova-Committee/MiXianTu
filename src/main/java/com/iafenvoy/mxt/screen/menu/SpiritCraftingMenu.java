@@ -35,24 +35,10 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 /**
- * Vanilla-sized crafting menu restricted to the two spirit recipe types.
- *
- * <h2>Reaching the table</h2>
- * The table is reached through {@link ContainerLevelAccess}, the vanilla handle for "the block this
- * menu belongs to", created by {@code SpiritCraftingTableBlockEntity#createMenu}. The server gets a
- * real access and resolves the block on demand; the client gets {@link ContainerLevelAccess#NULL},
- * whose every lookup is empty. Nothing about the block is therefore held across the menu's life, and a
- * table that is broken while its menu is open stops being found instead of lingering here.
- *
- * <p>Both containers the block owns - the crafting grid and the result slot - are resolved the same
- * way, server side through the access and client side as stand-ins that the container content packet
- * fills through the slots.
- *
- * <h2>The aura readout</h2>
- * The aura buffer lives on the block and the recipe is matched by this menu, so the progress rows need
- * both. They are published to data slots, which is also why the client half must not compute them: it
- * can see neither the recipe (matching needs a server level) nor the buffer, and writing the slots
- * there would overwrite what the server had just sent.
+ * A vanilla-sized crafting menu restricted to the two spirit recipe types. The table is reached through
+ * {@link ContainerLevelAccess}, so the server resolves the block on demand and the client gets
+ * {@link ContainerLevelAccess#NULL}. The recipe is matched here while the aura buffer lives on the block,
+ * so the server half alone publishes the progress rows.
  */
 public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private static final int MAX_PROGRESS_ENTRIES = 8;
@@ -109,12 +95,8 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Runs one action against the spirit crafting table, or does nothing when there is none.
-     *
-     * <p>No action means no table: the block was broken or replaced under an open menu, the chunk is
-     * not loaded, or this is the client half, which has no access at all. Every caller here treats that
-     * as "nothing to do" rather than as "nothing to show", which is what keeps a client from writing
-     * over the data slots the server publishes.
+     * Runs one action against the table, or nothing when there is none: the block was broken under an open
+     * menu, the chunk is unloaded, or this is the client half.
      */
     private void withTable(Consumer<SpiritCraftingTableBlockEntity> action) {
         this.access.execute((level, pos) -> {
@@ -123,7 +105,7 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Runs one read against the spirit crafting table, or returns {@code fallback} when there is none.
+     * Runs one read against the table, or returns {@code fallback} when there is none.
      */
     private <T> T fromTable(Function<SpiritCraftingTableBlockEntity, T> reader, T fallback) {
         return this.access
@@ -162,14 +144,8 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Re-matches the grid, hands the matched costs to the block's intake window, and republishes the
-     * rows.
-     *
-     * <p>This runs on both halves - {@code slotsChanged} and {@code broadcastChanges} both call it - and
-     * does almost nothing on the client, which is the point. {@link #findRecipe} needs a server level, so
-     * the client matches nothing; {@link #withTable} finds no block, so it configures nothing; and
-     * {@link #syncProgress} therefore writes nothing. The client's three progress arrays keep whatever
-     * the server published, and the readout on the right of the screen is that.
+     * Re-matches the grid, hands the matched costs to the block's intake window and republishes the rows; on
+     * the client {@link #findRecipe} needs a server level, so the arrays keep what the server published.
      */
     private void updateResult() {
         this.current = this.findRecipe();
@@ -179,9 +155,8 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     }
 
     private void syncProgress() {
-        // The whole row is read in one visit to the block, and no block means no rows written at all -
-        // which is what leaves the client's data slots holding what the server published rather than
-        // being blanked by a half that cannot see either the recipe or the buffer.
+        // The whole row is read in one visit to the block; no block means no rows written at all, which
+        // leaves the client's data slots holding what the server published.
         this.withTable(table -> {
             Registry<Resource> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
             int index = 0;

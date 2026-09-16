@@ -1,6 +1,22 @@
 {
   "structure": [
-    { "offset": [0, 0, 0], "state": "minecraft:gold_block" }
+    { "offset": [0, 0, 0], "state": "minecraft:chiseled_stone_bricks" },
+    { "offset": [-2, 0, -2], "state": "minecraft:obsidian" },
+    { "offset": [-1, 0, -2], "state": "minecraft:obsidian" },
+    { "offset": [0, 0, -2], "state": "minecraft:obsidian" },
+    { "offset": [1, 0, -2], "state": "minecraft:obsidian" },
+    { "offset": [2, 0, -2], "state": "minecraft:obsidian" },
+    { "offset": [-2, 0, -1], "state": "minecraft:obsidian" },
+    { "offset": [2, 0, -1], "state": "minecraft:obsidian" },
+    { "offset": [-2, 0, 0], "state": "minecraft:obsidian" },
+    { "offset": [2, 0, 0], "state": "minecraft:obsidian" },
+    { "offset": [-2, 0, 1], "state": "minecraft:obsidian" },
+    { "offset": [2, 0, 1], "state": "minecraft:obsidian" },
+    { "offset": [-2, 0, 2], "state": "minecraft:obsidian" },
+    { "offset": [-1, 0, 2], "state": "minecraft:obsidian" },
+    { "offset": [0, 0, 2], "state": "minecraft:obsidian" },
+    { "offset": [1, 0, 2], "state": "minecraft:obsidian" },
+    { "offset": [2, 0, 2], "state": "minecraft:obsidian" }
   ],
   "radius": 8,
   "actions": [

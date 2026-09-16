@@ -15,16 +15,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * The objects a formula is evaluated against, plus the values that belong to no object.
- *
- * <p>Formula variables are not stored here. A variable reads its number out of {@link #caster()},
- * {@link #target()}, {@link #resource()} or {@link #random()} when a formula asks for the name.
- * {@link #variables()} therefore only carries explicit values: event payloads such as
- * {@code damage} or {@code block_x}, and anything a caller adds with {@link #with(String, double)}.</p>
- *
- * <p>Deriving a context that only changes an object — a new caster, a target, a resource subject —
- * shares the explicit value map instead of copying it, because those maps are never modified in
- * place. Only {@link #with(String, double)} has to build a new map.</p>
+ * The objects a formula is evaluated against — caster, target, resource subject, random source — plus the
+ * explicit values {@link #variables()} carries: event payloads such as {@code damage}, and anything a caller
+ * adds with {@link #with(String, double)}. Variables read their number out of the objects on demand, and a
+ * context that only changes one shares the explicit value map instead of copying it.
  */
 public final class FormulaContext {
     public static final FormulaContext EMPTY = new FormulaContext(Map.of(), RandomSource.create(), null, null, null, null, false);
@@ -49,7 +43,7 @@ public final class FormulaContext {
     }
 
     /**
-     * Creates a context from its objects. Prefer the factories in {@link FormulaContexts}.
+     * Prefer the factories in {@link FormulaContexts}.
      */
     public FormulaContext(@NotNull Map<String, Double> variables, @NotNull RandomSource random, @Nullable Player player,
                           @Nullable Entity caster, @Nullable Entity target, @Nullable ResourceSubject resource) {
@@ -58,8 +52,7 @@ public final class FormulaContext {
 
     /**
      * @param copy whether the explicit values must be copied; callers that own an immutable or
-     *             freshly built map pass {@code false}. Kept package-private so that only
-     *             {@link FormulaContexts} and this class decide ownership.
+     *             freshly built map pass {@code false}
      */
     FormulaContext(@NotNull Map<String, Double> variables, @NotNull RandomSource random, @Nullable Player player,
                    @Nullable Entity caster, @Nullable Entity target, @Nullable ResourceSubject resource, boolean copy) {
@@ -73,37 +66,37 @@ public final class FormulaContext {
     }
 
     /**
-     * Creates an entity context using its authoritative random source.
+     * Uses the entity's authoritative random source.
      */
     public static FormulaContext of(Entity entity) {
         return FormulaContexts.forEntity(entity, Map.of());
     }
 
     /**
-     * Creates an entity context and adds finite event-specific values.
+     * Adds finite event-specific values.
      */
     public static FormulaContext of(Entity entity, Map<String, Double> extra) {
         return FormulaContexts.forEntity(entity, extra);
     }
 
     /**
-     * Creates a level context using the level's authoritative random source.
+     * Uses the level's authoritative random source.
      */
     public static FormulaContext of(Level level) {
         return of(level, Map.of());
     }
 
     /**
-     * Creates a level context and adds finite event-specific values. A level context carries no
-     * entity, so the entity variables are not available in it.
+     * Adds finite event-specific values. A level context carries no entity, so the entity variables
+     * are not available in it.
      */
     public static FormulaContext of(Level level, Map<String, Double> extra) {
         return new FormulaContext(FormulaContexts.finite(extra), level.getRandom(), null, null, null, null, false);
     }
 
     /**
-     * Explicit values only. Entity and resource variables are resolved on demand and are not
-     * part of this map. The returned map must not be modified.
+     * Explicit values only; entity and resource variables are resolved on demand. The returned map
+     * must not be modified.
      */
     public Map<String, Double> variables() {
         return this.variables;
@@ -139,9 +132,8 @@ public final class FormulaContext {
     }
 
     /**
-     * The explicit value of a name, or {@link Double#NaN} when this context carries none. Explicit
-     * values are validated to be finite, so NaN reliably means "absent" and callers can avoid the
-     * boxed map lookup.
+     * Explicit values are validated to be finite, so NaN reliably means "absent" and callers can
+     * avoid the boxed map lookup.
      */
     public double explicit(String name) {
         Double value = this.variables.get(name);
@@ -189,8 +181,7 @@ public final class FormulaContext {
     }
 
     /**
-     * The cultivation state of a single resource, as read by {@code realm}, {@code realm_rank},
-     * {@code level}, {@code absorbed_aura} and {@code cultivation_progress}.
+     * The cultivation state of a single resource, which is what the resource variables read.
      */
     public record ResourceSubject(CultivationAttachment cultivation, Holder<Resource> resource) {
         public ResourceSubject {

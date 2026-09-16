@@ -68,8 +68,7 @@ public final class TriggerDispatcher {
     }
 
     /**
-     * Returns the current runtime-only subscription count. This is primarily
-     * intended for lifecycle diagnostics; subscriptions themselves are never
+     * Returns the runtime-only subscription count, for lifecycle diagnostics. Subscriptions are never
      * persisted.
      */
     public static int subscriptionCount() {
@@ -126,9 +125,8 @@ public final class TriggerDispatcher {
     }
 
     /**
-     * Publishes a signal to one owner explicitly. This is useful for signals
-     * whose context has no actor (for example a world/system event), while the
-     * normal publish method derives the owner from {@link TriggerContext#actor()}.
+     * Publishes a signal to one owner explicitly, for signals whose context has no actor; the normal
+     * publish method derives the owner from {@link TriggerContext#actor()}.
      */
     public static void publishTo(UUID owner, TriggerSignal signal) {
         if (signal.context().level() != null && signal.context().level().isClientSide()) return;

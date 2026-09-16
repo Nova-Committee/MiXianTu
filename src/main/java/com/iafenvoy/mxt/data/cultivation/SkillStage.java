@@ -14,29 +14,13 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * One level of a skill mastery chain, written like {@link RealmStage}: the stage names the chain it
- * belongs to, may point at the next stage, and carries what that level is worth.
- *
- * <p>{@code skill} is the chain identity rather than a reference to one owner, so several
- * techniques - or a technique and some other system - may share a single chain, and each definition
- * enters that chain through the stage it declares as its default.</p>
- *
- * <p>{@code next_stage} is a holder reference, exactly like {@code next_realm}: the chain is only
- * walked at runtime and never while an entry is being decoded, which is also where a broken chain
- * (a stage that points at another {@code skill}, a cycle, or a missing stage) has to be detected.</p>
- *
- * <p>{@code mastery} is how much mastery this level means: a technique whose
- * {@code mastery_resource} reaches it may advance here once its own condition also holds. The value
- * belongs to the level rather than to a technique, because a shared chain measures the same climb
- * for everyone; {@code 0} means the level asks for no mastery at all.</p>
- *
- * <p>{@code damage_multiplier} is only registered and validated for now: there is no unified ability
- * damage pipeline to consume it (ability damage comes from the {@code NumberProvider} of an
- * {@code mxt:damage} action), so nothing reads it at runtime yet.</p>
+ * One level of a skill mastery chain, written like {@link RealmStage}. {@code skill} is the chain identity,
+ * not one owner, so techniques share a chain and each enters at the stage it declares as default.
+ * {@code next_stage} is a holder reference, so a broken chain is only detectable at runtime. {@code mastery}
+ * belongs to the level, and {@code 0} asks for none.
  */
-//TODO::Consume damage_multiplier. It needs a damage pipeline first: either expose the caster's stage
-// multiplier as a formula value (the FormulaContext would have to carry the stage's owner) or
-// multiply inside DamageAction. See research/audit/technique.md T10.
+//TODO::Consume damage_multiplier once a damage pipeline exists: either expose the caster's stage
+// multiplier as a formula value or multiply inside DamageAction. See research/audit/technique.md T10.
 public record SkillStage(Identifier skill, Optional<Holder<SkillStage>> nextStage, NumberProvider mastery,
                          double damageMultiplier) {
     public static final Codec<Holder<SkillStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SKILL_STAGE);

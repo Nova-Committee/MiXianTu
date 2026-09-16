@@ -93,9 +93,6 @@ public final class CurrencyValueService {
         return OptionalLong.of(unit.getAsLong() * stack.getCount());
     }
 
-    /**
-     * Returns the selected exchange choices for one currency input item.
-     */
     public static List<ExchangeOffer> exchangeOffers(ItemStack input) {
         if (input.isEmpty()) return List.of();
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();

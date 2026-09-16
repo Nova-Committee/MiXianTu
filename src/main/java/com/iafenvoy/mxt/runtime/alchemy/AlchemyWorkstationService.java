@@ -25,9 +25,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Server-side material locking and completion adapter for {@link AlchemyWorkstationState}.
- * Callers already hold a resolved vanilla {@link RecipeHolder}; it is passed straight through
- * to the session so craft events can expose the holder instead of a duplicated id/definition pair.
+ * Server-side material locking and completion adapter for {@link AlchemyWorkstationState}. The already
+ * resolved {@link RecipeHolder} is passed through so craft events can expose it instead of an id pair.
  */
 public final class AlchemyWorkstationService {
     private AlchemyWorkstationService() {
@@ -42,7 +41,7 @@ public final class AlchemyWorkstationService {
     }
 
     /**
-     * Position-aware variant for concrete alchemy blocks.
+     * Position-aware variant for concrete alchemy blocks; the plain overload skips the aura check.
      */
     public static StartResult start(Level level, BlockPos pos, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                     int furnaceTier, FormulaContext context) {
@@ -58,7 +57,7 @@ public final class AlchemyWorkstationService {
     }
 
     /**
-     * Restores the saved session, advances it once, and appends produced stacks exactly once.
+     * Restores the saved session, advances it once, and appends produced stacks at most once.
      */
     public static TickResult tick(AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                   double temperature, FormulaContext context) {

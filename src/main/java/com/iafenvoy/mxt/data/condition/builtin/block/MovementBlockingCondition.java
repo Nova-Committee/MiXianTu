@@ -10,11 +10,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Whether the block stops movement: it occludes motion and has a collision shape.
- *
- * <p>{@code BlockState#blocksMotion} is deprecated and {@code isSolid} is not the same question — cobwebs
- * and bamboo saplings have a collision shape without blocking movement. The pair here is the behaviour
- * this condition has always documented.</p>
+ * Whether the block stops movement: it occludes motion and has a collision shape. {@code isSolid} is not
+ * the same question — cobwebs and bamboo saplings have a collision shape without blocking movement.
  */
 @SuppressWarnings("deprecation")
 public enum MovementBlockingCondition implements BlockCondition {

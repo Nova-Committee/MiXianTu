@@ -7,12 +7,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 
 /**
- * A typed value with an optional translation key. The same wrapper works for every
- * condition and action family because the JSON key used inside the described object is
- * supplied by the caller.
- *
- * <p>Entries without a description are encoded as the value itself, while described
- * entries use an object containing the configured key and {@code description}.</p>
+ * A typed value with an optional translation key. It works for every condition and action family because
+ * the JSON key used inside the described object is supplied by the caller. Entries without a description
+ * are encoded as the value itself, while described entries use an object with the key and description.
  */
 public record DescribedEntry<T>(T value, Optional<String> description) {
     public DescribedEntry(T value) {

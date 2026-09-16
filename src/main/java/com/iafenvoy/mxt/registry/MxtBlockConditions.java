@@ -7,11 +7,8 @@ import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.condition.builtin.block.*;
 import com.iafenvoy.mxt.data.condition.builtin.block.meta.*;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-
-import static com.iafenvoy.mxt.data.condition.SimpleConditions.createBlock;
 
 @SuppressWarnings("unused")
 public final class MxtBlockConditions {

@@ -1,0 +1,26 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:diamond_block" },
+    { "offset": [-2, 0, -2], "state": "minecraft:gold_block" },
+    { "offset": [-1, 0, -2], "state": "minecraft:gold_block" },
+    { "offset": [0, 0, -2], "state": "minecraft:gold_block" },
+    { "offset": [1, 0, -2], "state": "minecraft:gold_block" },
+    { "offset": [2, 0, -2], "state": "minecraft:gold_block" },
+    { "offset": [-2, 0, -1], "state": "minecraft:gold_block" },
+    { "offset": [2, 0, -1], "state": "minecraft:gold_block" },
+    { "offset": [-2, 0, 0], "state": "minecraft:gold_block" },
+    { "offset": [2, 0, 0], "state": "minecraft:gold_block" },
+    { "offset": [-2, 0, 1], "state": "minecraft:gold_block" },
+    { "offset": [2, 0, 1], "state": "minecraft:gold_block" },
+    { "offset": [-2, 0, 2], "state": "minecraft:gold_block" },
+    { "offset": [-1, 0, 2], "state": "minecraft:gold_block" },
+    { "offset": [0, 0, 2], "state": "minecraft:gold_block" },
+    { "offset": [1, 0, 2], "state": "minecraft:gold_block" },
+    { "offset": [2, 0, 2], "state": "minecraft:gold_block" }
+  ],
+  "radius": 8,
+  "maintenance_costs": [
+    { "id": "mxt:common", "amount": 10 }
+  ],
+  "storage": { "capacity": { "mxt:common": 500 } }
+}

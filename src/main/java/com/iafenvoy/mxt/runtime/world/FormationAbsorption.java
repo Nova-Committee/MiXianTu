@@ -12,19 +12,13 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
- * Decides which block aura emitters belong to a formation instead of the environment.
- *
- * <p>An emitter inside a formation's radius supplies that formation. The decision is made when a
- * chunk's block aura is rebuilt, not when aura is queried, because the shared stock subtracts the whole
- * chunk aggregate from the pool: filtering only at query time would leave the absorbed aura in the
- * aggregate and hand it back to every query, letting the same aura be spent twice.</p>
- *
- * <p>The radius is the sphere the formation already claims for its entity actions, so "inside the
- * formation" needs no second definition. A block inside several formations is absorbed once, and the
- * totals are per chunk rather than per formation: the aura is gone from the environment either way, and
- * which formation spends it is decided by whichever one is charging upkeep.</p>
+ * Decides which block aura emitters belong to a formation instead of the environment: an emitter inside a
+ * formation's radius supplies that formation. The decision is made when a chunk's block aura is rebuilt, not
+ * when aura is queried, because the shared stock subtracts the whole chunk aggregate and filtering at query
+ * time would let the same aura be spent twice.
  */
 public final class FormationAbsorption {
     private FormationAbsorption() {
@@ -37,11 +31,11 @@ public final class FormationAbsorption {
     public record Sources(List<Shape> shapes) {
         public static Sources of(ServerLevel level, int minX, int minZ, int maxX, int maxZ) {
             List<Shape> shapes = new ArrayList<>();
-            for (Map.Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet()) {
+            for (Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet()) {
                 BlockPos center = entry.getKey();
                 double radius = entry.getValue().radius();
-                // A formation can only reach this chunk when its centre is within its radius plus the chunk's
-                // own extent of the chunk bounds.
+                // A formation can only reach this chunk when its centre is within its radius plus the chunk
+                // bounds.
                 if (center.getX() < minX - radius || center.getX() > maxX + radius) continue;
                 if (center.getZ() < minZ - radius || center.getZ() > maxZ + radius) continue;
                 shapes.add(new Shape(center, radius * radius));
@@ -58,8 +52,8 @@ public final class FormationAbsorption {
         }
 
         /**
-         * Whether any formation could absorb anything at all. Lets the rebuild skip the distance test
-         * entirely on a level with no formations.
+         * Whether any formation could absorb anything at all, which lets the rebuild skip the distance test on
+         * a level with no formations.
          */
         public boolean empty() {
             return this.shapes.isEmpty();
@@ -70,11 +64,8 @@ public final class FormationAbsorption {
     }
 
     /**
-     * The aura the emitters inside one formation's radius are supplying it.
-     *
-     * <p>Read from the chunks the radius overlaps, which is why the totals live on the chunk rather than
-     * on the formation: the formation only has to ask the level. Summed without distance weighting, so a
-     * block inside the formation gives it everything.</p>
+     * The aura the emitters inside one formation's radius are supplying it, read from the chunks the radius
+     * overlaps. Summed without distance weighting, so a block inside the formation gives it everything.
      */
     public static Map<Holder<Resource>, Double> absorbedFor(ServerLevel level, BlockPos controller, double radius) {
         Map<Holder<Resource>, Double> totals = new LinkedHashMap<>();
@@ -94,12 +85,9 @@ public final class FormationAbsorption {
     }
 
     /**
-     * The ambient aura of the ground a formation stands on, as a supply it can also spend.
-     *
-     * <p>Read from the resolved aura at the controller, which is the aura a player standing there would
-     * see, minus the part the formation's own emitters contribute ({@link AuraPool#supplied()}). Those are
-     * either absorbed — and so not in the pool at all — or field aura the formation does not own, and
-     * handing either back to it would be counting the same aura twice.</p>
+     * The ambient aura of the ground a formation stands on, as a supply it can also spend. Read from the
+     * resolved aura at the controller, minus the part the formation's own emitters contribute
+     * ({@link AuraPool#supplied()}).
      */
     public static Map<Holder<Resource>, Double> environmentSupply(ServerLevel level, BlockPos controller) {
         Map<Holder<Resource>, Double> supply = new LinkedHashMap<>();

@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.event.AbilityUseEvent;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.FriendEvent;
+import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent;
 import net.neoforged.bus.api.Event;
 
@@ -80,7 +81,7 @@ public final class MxtKubeJsEvents {
      * Forwards a friend judgement, which is asked far more often than a lifecycle event and therefore has
      * its own entry point: the KubeJS side is expected to skip the work when no script listens.
      */
-    public static void postFriendRelation(FriendEvent.Relation event) {
+    public static void postFriendRelation(Relation event) {
         Dispatcher current = dispatcher;
         if (current != null) current.postFriendRelation(event);
     }
@@ -94,7 +95,7 @@ public final class MxtKubeJsEvents {
 
         void postAura(AuraZoneEvent event);
 
-        void postFriendRelation(FriendEvent.Relation event);
+        void postFriendRelation(Relation event);
 
         void post(String type, Event event);
     }

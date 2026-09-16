@@ -34,8 +34,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * Client-only registry of hotbar modes. A mode may optionally own a key
- * mapping; this class registers, ticks, and dispatches those mappings.
+ * Client-only registry of hotbar modes; a mode may own a key mapping, which this registers, ticks and
+ * dispatches.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class HotbarModeRegistry {
@@ -105,8 +105,8 @@ public final class HotbarModeRegistry {
         if (id == null || player == null) return List.of();
         ModeEntry mode = MODES.get(id);
         if (mode == null) return List.of();
-        // A configuration provider only supplies selectable candidates for the
-        // editor. The live hotbar must always be resolved from its runtime provider.
+        // The configuration provider only supplies editor candidates; the live hotbar always resolves
+        // from the runtime provider.
         List<HotbarEntry> available = mode.provider().apply(player);
         List<Identifier> saved = player.getData(MxtAttachments.HOTBAR_LAYOUT).slots(id);
         if (saved.isEmpty()) return available.stream().limit(MAX_SLOTS).toList();
@@ -119,9 +119,8 @@ public final class HotbarModeRegistry {
             if (HotbarLayoutAttachment.EMPTY_SLOT.equals(slot)) result.add(EmptyHotbarEntry.INSTANCE);
             else {
                 HotbarEntry entry = byId.remove(slot);
-                // An unavailable saved ID is stale datapack state, not an explicit
-                // empty slot. Keep explicit empty markers intact, then backfill this
-                // position from the current runtime entries below.
+                // An unavailable saved ID is stale datapack state, not an explicit empty slot: keep
+                // explicit markers intact and backfill this position below.
                 result.add(entry);
             }
         }
@@ -142,9 +141,6 @@ public final class HotbarModeRegistry {
         return mode == null ? Optional.empty() : Optional.ofNullable(mode.keyMapping());
     }
 
-    /**
-     * Opens the generic editor for one registered mode using its current entries.
-     */
     public static boolean openConfiguration(Identifier id) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;

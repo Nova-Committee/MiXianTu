@@ -15,8 +15,9 @@ import java.util.Optional;
 
 /**
  * Selects the value source and presentation context for a resource bar.
- * Contexts are Java-owned registry entries so datapacks can select them, but
- * cannot introduce client-side rendering behavior through JSON.
+ *
+ * <p>Contexts are Java-owned registry entries so datapacks can select them but cannot introduce
+ * client-side rendering behaviour through JSON.
  */
 public interface ResourceBarContext {
     Codec<ResourceBarContext> CODEC = MxtRegistries.RESOURCE_BAR_CONTEXT.byNameCodec();

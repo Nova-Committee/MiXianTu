@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.world.FormationAbsorption.Sources;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
@@ -31,9 +32,8 @@ public final class BlockAuraService {
     }
 
     /**
-     * Scans one chunk column and records every block selected by a {@code block_aura} definition.
-     * Block ids and tags are expanded once into a per-block index, so the inner loop performs one
-     * map lookup per block instead of re-testing every definition against every position.
+     * Scans one chunk column and records every block selected by a {@code block_aura} definition. Block ids
+     * and tags are expanded once into a per-block index, so the inner loop does one lookup per block.
      */
     public static void rebuild(ServerLevel level, LevelChunk chunk) {
         Registry<Block> blocks = level.registryAccess().lookupOrThrow(Registries.BLOCK);
@@ -49,10 +49,9 @@ public final class BlockAuraService {
         int minZ = chunk.getPos().getMinBlockZ();
         int minY = level.getMinY();
         int maxY = level.getMaxY();
-        // Formation coverage is decided here rather than when aura is queried: the shared stock subtracts
-        // this chunk's whole aggregate, so an absorbed emitter left in it would be handed back to every
-        // query and the same aura would be spendable twice.
-        FormationAbsorption.Sources absorbed = FormationAbsorption.Sources.of(level, minX, minZ, minX + 15, minZ + 15);
+        // Decided here rather than at query time: the shared stock subtracts this chunk's whole aggregate, so
+        // an absorbed emitter left in it would be handed back to every query and spent twice.
+        Sources absorbed = Sources.of(level, minX, minZ, minX + 15, minZ + 15);
         for (int x = minX; x < minX + 16; x++) {
             for (int z = minZ; z < minZ + 16; z++) {
                 for (int y = minY; y < maxY; y++) {

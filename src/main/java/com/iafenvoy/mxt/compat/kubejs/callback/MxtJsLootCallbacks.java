@@ -10,11 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
 
 /**
- * Callback storage for the JavaScript loot condition and loot function types.
- *
- * <p>Both run on the server while loot is generated. A loot function callback may return a
- * replacement stack; returning {@code null}, a missing callback or a failure leaves the generated
- * stack untouched.</p>
+ * Callback storage for the JavaScript loot condition and loot function types. Both run on the server
+ * while loot is generated; a function returning {@code null}, a missing callback or a failure leaves the
+ * generated stack untouched.
  */
 public final class MxtJsLootCallbacks {
     private static final Map<String, BiPredicate<LootContext, JsonObject>> CONDITIONS = new ConcurrentHashMap<>();

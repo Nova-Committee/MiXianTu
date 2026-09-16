@@ -25,16 +25,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The built-in formula variables.
- *
- * <p>Every entry decomposes a number out of the objects a {@link FormulaContext} carries.
- * Values that belong to no object — damage, a block position, an event payload — are not
- * variables; callers keep those in the context's explicit value map.</p>
- *
- * <p>This is a code registry, so data packs cannot add variables. The two entity families claim
- * a prefix ({@code caster_} and {@code target_}) and receive only the remainder of the name, so a
- * name such as {@code caster_mxt_common} arrives here as {@code mxt_common}. Flattened resource
- * and attribute names are indexed by {@link FormulaNames}.</p>
+ * The built-in formula variables. Every entry decomposes a number out of the objects a
+ * {@link FormulaContext} carries; values that belong to no object - damage, a block position, an event
+ * payload - are not variables, and callers keep those in the context's explicit value map. This is a code
+ * registry, so data packs cannot add variables.
  */
 @SuppressWarnings("unused")
 public final class MxtFormulaVariables {
@@ -47,7 +41,7 @@ public final class MxtFormulaVariables {
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
 
     /**
-     * A plain zero, for formulas that must switch a term off without editing the expression.
+     * For formulas that must switch a term off without editing the expression.
      */
     private record ZeroVariable() implements FormulaVariable {
         private static final Set<String> NAMES = Set.of("zero");
@@ -63,9 +57,6 @@ public final class MxtFormulaVariables {
         }
     }
 
-    /**
-     * The authoritative random source of the current evaluation.
-     */
     private record RandomVariable() implements FormulaVariable {
         private static final Set<String> NAMES = Set.of("random");
 
@@ -81,8 +72,7 @@ public final class MxtFormulaVariables {
     }
 
     /**
-     * The {@code caster_} and {@code target_} families: health, vanilla experience level, and one
-     * name per resource and per attribute the entity has.
+     * Health, vanilla experience level, and one name per resource and per attribute the entity has.
      */
     private static final class EntityVariable implements FormulaVariable {
         private static final Map<EntityType<?>, Set<Holder<Attribute>>> SYNCABLE_ATTRIBUTES = new ConcurrentHashMap<>();
@@ -117,11 +107,7 @@ public final class MxtFormulaVariables {
             };
         }
 
-        /**
-         * Reads one resource or attribute of the entity. Attributes are asked first because the
-         * context used to expose resources before attributes, which let an attribute shadow a
-         * resource with the same flattened name.
-         */
+        // Attributes are asked first, because the context used to expose resources before attributes.
         private static double state(Entity entity, String field) {
             if (!(entity instanceof LivingEntity living)) return Double.NaN;
             Holder<Attribute> attribute = FormulaNames.attribute(field);
@@ -136,9 +122,8 @@ public final class MxtFormulaVariables {
         }
 
         /**
-         * The client only holds the attributes it needs, so a formula must not read a hidden
-         * attribute as if it were up to date. Which attributes those are is a property of the
-         * entity type, so the set is collected once per type instead of once per lookup.
+         * The client only holds the attributes it needs, so a formula must not read a hidden attribute as if
+         * it were up to date.
          */
         private static boolean synchronised(LivingEntity entity, Holder<Attribute> attribute) {
             Set<Holder<Attribute>> syncable = SYNCABLE_ATTRIBUTES.get(entity.getType());

@@ -1,16 +1,20 @@
 package com.iafenvoy.mxt.item;
 
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.formation.FormationCenters;
+import com.iafenvoy.mxt.runtime.formation.FormationCenters.Match;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
-import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Failure;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.BlockPos;
@@ -23,18 +27,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
 /**
- * One portable controller for every datapack formation.
- *
- * <p>The plate is a two-way switch. Clicking the centre of a standing structure activates it; clicking
- * a controller that is already running dismantles it. Activation resolves the centre through
- * {@link FormationCenters}, so a click one block off still finds the structure the player meant instead
- * of reporting that it does not match. Dismantling is checked first, and by position alone: it is the
- * only player-facing way to stop a formation, so it must not depend on the plate's own definition
- * matching whatever is standing there.</p>
+ * One portable controller for every datapack formation. It is a two-way switch: clicking the centre of a
+ * standing structure activates it, and clicking a controller that is already running dismantles it, checked
+ * first and by position alone so a plate whose own definition no longer matches can still stop what stands
+ * there. An unbound plate instead identifies the formation in front of it and raises the nearest match.
  */
 public final class FormationPlateItem extends Item {
     public FormationPlateItem(Properties properties) {
@@ -46,47 +48,80 @@ public final class FormationPlateItem extends Item {
         if (!(context.getPlayer() instanceof ServerPlayer player) || !(context.getLevel() instanceof ServerLevel level))
             return InteractionResult.SUCCESS;
         FormationPlateComponent plate = context.getItemInHand().getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY);
+        BlockPos clicked = context.getClickedPos();
+        // The plate is the off switch as well as the on switch, and this lookup is by position alone, so a
+        // plate whose structure no longer matches can still dismantle what is standing there. Checked before
+        // anything else so nothing is spent discovering the occupancy.
+        if (level.getData(MxtAttachments.FORMATION_WORLD).get(clicked).isPresent()) return dismantle(level, clicked, player);
         Optional<Holder<Formation>> selected = plate.selected();
-        if (selected.isEmpty()) {
-            // Two different situations, and telling them apart is the difference between "pick a formation"
-            // and "this plate was bound to one it is not allowed to run". Plates that admit nothing are a
-            // real configuration, not a broken item.
-            ItemFeedback.send(player, Component.translatable(plate.formation().isPresent()
-                    ? "item.mxt.formation_plate.not_allowed"
-                    : "item.mxt.formation_plate.unbound"));
+        if (selected.isPresent()) return activate(level, clicked, player, selected.get());
+        // Two different situations: "pick a formation" against "this plate was bound to one it is not
+        // allowed to run". Plates that admit nothing are a real configuration, not a broken item.
+        if (plate.formation().isPresent()) {
+            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.not_allowed"));
             return InteractionResult.FAIL;
         }
-        Holder<Formation> formation = selected.get();
-        BlockPos clicked = context.getClickedPos();
-        FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
-        // A stored controller is a running formation, and the plate is the off switch as well as the on
-        // switch: this lookup is by position alone, so a plate whose structure no longer matches can still
-        // dismantle what is standing there. Checked before anything else so nothing is spent discovering
-        // the occupancy.
-        if (world.get(clicked).isPresent()) return dismantle(level, clicked, player);
-        // Nothing is stored at the clicked position, so the player is activating, and the centre they
-        // meant is the clicked block or one of the twenty-six around it. A neighbour that is already
-        // stored is the formation they are standing in and clicking to stop.
+        if (!MxtServerConfig.formationPlateAutoDetect()) {
+            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.unbound"));
+            return InteractionResult.FAIL;
+        }
+        // Sorted, so two definitions describing the same structure resolve to the same one every time.
+        List<Holder<Formation>> admissible = admissibleCandidates(plate);
+        if (admissible.isEmpty()) {
+            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.not_allowed"));
+            return InteractionResult.FAIL;
+        }
+        Optional<Match> match = FormationCenters.resolveAny(level, clicked, admissible);
+        if (match.isEmpty()) {
+            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.no_structure"));
+            return InteractionResult.FAIL;
+        }
+        // The matched centre is the formation the identification found, so it is raised as it stands rather
+        // than searched for a second time.
+        return activateAt(level, match.get().center(), player, match.get().formation());
+    }
+
+    /**
+     * Every formation a plate may try, in the order it tries them. Public because the ordering decides what
+     * the plate raises, and the audit asserts it.
+     */
+    public static List<Holder<Formation>> admissibleCandidates(FormationPlateComponent plate) {
+        return plate.admissible(MxtDatapackRegistries.registry(MxtResourceKeys.FORMATION)).stream()
+                .sorted(Comparator.comparing(HolderHelper::id))
+                .map(formation -> (Holder<Formation>) formation)
+                .toList();
+    }
+
+    /**
+     * Raises a bound formation, resolving the centre the player meant from the clicked block.
+     */
+    private static InteractionResult activate(ServerLevel level, BlockPos clicked, ServerPlayer player, Holder<Formation> formation) {
+        // Nothing is stored at the clicked position, so the centre the player meant is the clicked block or one
+        // of the twenty-six around it.
         Optional<BlockPos> center = FormationCenters.resolve(level, clicked, formation.value());
-        if (center.isPresent() && world.get(center.get()).isPresent())
-            return dismantle(level, center.get(), player);
-        Result result = FormationWorldService.activate(level, center.orElse(clicked), HolderHelper.id(formation),
+        return activateAt(level, center.orElse(clicked), player, formation);
+    }
+
+    /**
+     * Raises a formation whose centre has already been decided. Occupancy is checked here as well as at the
+     * click, because a stored neighbour is the formation the player is clicking to stop.
+     */
+    private static InteractionResult activateAt(ServerLevel level, BlockPos center, ServerPlayer player, Holder<Formation> formation) {
+        if (level.getData(MxtAttachments.FORMATION_WORLD).get(center).isPresent()) return dismantle(level, center, player);
+        Result result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
                 formation.value(), player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
         if (!result.active()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.failed", failure(result.failure())));
             return InteractionResult.FAIL;
         }
-        ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.activated"));
+        ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.activated",
+                DefinitionText.name(formation, "formation")));
         return InteractionResult.SUCCESS;
     }
 
     /**
-     * Turns a failure into something a player can act on.
-     *
-     * <p>The enum constant used to be printed verbatim, so a Chinese client read
-     * {@code 阵法无法激活：INVALID_STRUCTURE}, and the two failures that matter at the click —
-     * the structure not being there, and the cost not being payable — were indistinguishable from a
-     * crash message. The resource case also names the resource that could not be paid.</p>
+     * Turns a failure into a translatable message naming the failure, and the resource where one could not be
+     * paid.
      */
     private static Component failure(Failure failure) {
         if (failure == null) return Component.translatable("item.mxt.formation_plate.failed.unknown");
@@ -94,10 +129,7 @@ public final class FormationPlateItem extends Item {
     }
 
     /**
-     * Takes down the formation occupying the controller.
-     *
-     * <p>Before this existed the plate simply refused the click, which left a running formation with
-     * no way to be stopped short of breaking its structure or starving its upkeep.</p>
+     * Takes down the formation occupying the controller: the only player-facing way to stop one.
      */
     private static InteractionResult dismantle(ServerLevel level, BlockPos controller, ServerPlayer player) {
         FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).get(controller).orElse(null);

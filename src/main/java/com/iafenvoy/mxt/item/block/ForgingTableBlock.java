@@ -18,19 +18,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.NonNull;
 
 /**
- * The forge table.
- *
- * <p>The block entity model is a 12/16 high desk built from the smithing table textures, so the
- * block is a slab rather than a full cube. Without the shape overrides the block would keep a
- * full-cube collision box, which lets players stand on an invisible layer above the model and
- * stops neighbouring faces from culling.</p>
- *
- * <p>The sound, map colour, strength and tool requirement are supplied by
- * {@code MxtBlocks#registerForging} rather than inherited: the vanilla smithing table is a wooden
- * block, which does not match an anvil-and-hammer workstation.</p>
- *
- * <p>The surface is a vanilla {@code AbstractContainerMenu}/{@code AbstractContainerScreen} pair,
- * so the block only has to open the block entity as a menu provider.</p>
+ * The forge table. Its model is a 12/16 high desk built from the smithing table textures, so the collision
+ * shape is a slab: a full-cube box would let players stand on an invisible layer above the model and would
+ * stop neighbouring faces from culling.
  */
 public final class ForgingTableBlock extends EconomyWorkstationBlock implements EntityBlock {
     /**

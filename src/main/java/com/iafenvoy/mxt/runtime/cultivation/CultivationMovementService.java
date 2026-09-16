@@ -41,8 +41,8 @@ public final class CultivationMovementService {
     }
 
     /**
-     * Uses the synchronized vanilla attribute rather than a local config value, so remote
-     * clients predict the server's rule correctly.
+     * Uses the synchronized attribute rather than a local config value, so remote clients predict the
+     * server's rule.
      */
     public static boolean isMovementAllowed(Player player) {
         AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);

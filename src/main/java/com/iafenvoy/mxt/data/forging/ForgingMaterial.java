@@ -11,14 +11,10 @@ import net.minecraft.world.item.Items;
 import java.util.Optional;
 
 /**
- * One entry of a blueprint's order-independent material requirement.
- *
- * <p>This is deliberately a plain {@code id} + {@code count} pair rather than an
- * {@link ItemStack}. Native datapack registries are parsed before item components are bound, so
- * {@code ItemStack.CODEC} cannot be used here; it fails with
- * "Item ... does not have components yet". Resolving the {@link Item} lazily inside
- * {@link #createStack()} keeps the codec loadable while still letting runtime matching compare
- * real stacks.</p>
+ * One entry of a blueprint's order-independent material requirement. Deliberately a plain {@code id} +
+ * {@code count} pair rather than an {@link ItemStack}: native datapack registries are parsed before item
+ * components are bound, so {@code ItemStack.CODEC} fails here; {@link #createStack()} resolves the
+ * {@link Item} lazily instead.
  */
 public record ForgingMaterial(Identifier id, int count) {
     public static final Codec<ForgingMaterial> CODEC = RecordCodecBuilder.create(i -> i.group(

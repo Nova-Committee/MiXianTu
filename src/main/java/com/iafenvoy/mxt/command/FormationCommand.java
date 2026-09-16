@@ -37,36 +37,14 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /mxt formation} subtree: diagnostics, and binding a plate to a formation.
- *
- * <p>Also available as a top-level {@code /formation} when the server option is enabled, matching how the
- * other player-facing subtrees work. The {@code /mxt formation} entry is always complete, so a disabled
- * option removes the alias and never the command itself.</p>
- *
- * <p>The diagnostics matter because a running formation is otherwise invisible — nothing in the world says
- * which instance it is, how much upkeep it has paid, or who owns it — and an operator has no way to tell
- * an overlapping pair of formations from a single one.</p>
- *
- * <p>{@code bind} is the one write in here, and it exists because nothing else could produce a usable
- * plate. A plate carries its formation in a data component, and the only way to set one was the
- * {@code /give} component syntax, which asks a player to know the registry id, the component name and
- * the NBT shape before they can find out whether a formation works. Binding a held plate closes that
- * gap without inventing any content: which formation goes on which plate is still the content pack's
- * decision, and the command only performs the binding they would otherwise have to write as a recipe
- * or a loot table.</p>
- *
- * <p>Dismantling is deliberately <em>not</em> here. It belongs to the plate, which is the player-facing
- * way to control a formation and the only thing that goes through
- * {@link com.iafenvoy.mxt.runtime.formation.FormationRelations#canDismantle}.</p>
+ * The {@code /mxt formation} subtree: diagnostics, and binding a plate to a formation. Also available as
+ * a top-level {@code /formation} when the server option is enabled, and a disabled option removes only
+ * the alias. {@code bind} is the one write, because nothing else could produce a usable plate.
  */
 public final class FormationCommand {
     /**
      * The same subtree as a top-level {@code /formation}, registered only when the server option allows
-     * it.
-     *
-     * <p>Built by the same method as the {@code /mxt} copy rather than restated, so the two can never
-     * drift into offering different arguments. Brigadier permits the two registrations because each
-     * {@code build()} produces a separate node from the same builder.</p>
+     * it, and built by the same method as the {@code /mxt} copy so the two cannot drift.
      */
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("formation")
             .then(literal("list").executes(ctx -> listFormations(ctx.getSource())))
@@ -78,11 +56,8 @@ public final class FormationCommand {
                             .executes(ctx -> bind(ctx.getSource(), IdentifierArgument.getId(ctx, "formation")))));
 
     /**
-     * Offers the formations the held plate admits, rather than every formation in the registry.
-     *
-     * <p>{@code IdentifierArgument} has no suggestions of its own, so without this the argument completes
-     * to nothing at all. What belongs here is the plate's own allow list: it is both the useful answer and
-     * the bounded one, and a plate that admits nothing offers nothing rather than inviting a guess.</p>
+     * Offers the plate's own allow list, because {@code IdentifierArgument} would otherwise complete to
+     * nothing.
      */
     private static CompletableFuture<Suggestions> suggestAllowed(CommandContext<CommandSourceStack> context,
                                                                  SuggestionsBuilder builder) {
@@ -102,14 +77,9 @@ public final class FormationCommand {
     }
 
     /**
-     * Writes a formation into the plate held in the main hand.
-     *
-     * <p>Rebinding an already bound plate is allowed and overwrites: a plate is a tool, and making the
-     * player launder it through a crafting table to change one field would be busywork. The formation id
-     * is resolved before the stack is touched, so a typo leaves the plate exactly as it was.</p>
-     *
-     * <p>Public so the server audit can drive the command body with a {@code FakePlayer}; the command
-     * node is the only caller in the mod.</p>
+     * Writes a formation into the plate held in the main hand. Rebinding is allowed and overwrites, and a
+     * typo leaves the plate as it was because the id is resolved first. Public so the server audit can
+     * drive the command body with a {@code FakePlayer}.
      */
     public static int bind(CommandSourceStack source, Identifier formation) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
@@ -122,8 +92,6 @@ public final class FormationCommand {
             source.sendFailure(Component.translatable("command.mxt.formation.bind.missing"));
             return 0;
         }
-        // Before anything is written, and after the id itself resolved: a plate that does not admit this
-        // formation must come out of a refused command exactly as it went in.
         FormationPlateComponent plate = stack.getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY);
         if (!plate.admits(definition)) {
             source.sendFailure(Component.translatable("command.mxt.formation.bind.denied",
@@ -136,9 +104,6 @@ public final class FormationCommand {
         return 1;
     }
 
-    /**
-     * Every active formation in the source's level.
-     */
     private static int listFormations(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         Map<BlockPos, FormationInstance> formations = level.getData(MxtAttachments.FORMATION_WORLD).formations();
@@ -154,10 +119,8 @@ public final class FormationCommand {
     }
 
     /**
-     * The formations whose range covers the player.
-     *
-     * <p>Reports every match instead of resolving a single winner: overlapping formations are exactly
-     * the case an operator is trying to see, and silently picking one would hide the other.</p>
+     * Every match is reported rather than a single winner, because overlapping formations are exactly
+     * what an operator is trying to see.
      */
     private static int formationCoverage(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
@@ -185,6 +148,7 @@ public final class FormationCommand {
                 + " @ " + controller.getX() + " " + controller.getY() + " " + controller.getZ()
                 + " r=" + formation.radius()
                 + " owner=" + formation.owner().map(UUID::toString).orElse("-")
-                + " upkeep=" + formation.maintenanceCount();
+                + " upkeep=" + formation.maintenanceCount()
+                + (formation.stored().isEmpty() ? "" : " stored=" + formation.stored());
     }
 }

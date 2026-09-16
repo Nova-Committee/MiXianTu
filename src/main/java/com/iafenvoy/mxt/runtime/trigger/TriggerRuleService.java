@@ -13,12 +13,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Runs the datapack event rules of a published signal.
- *
- * <p>Rules are indexed by the signal their trigger names and validated while the server cache is
- * built, so publishing a signal costs one map lookup and a rule is only evaluated when its own
- * signal is published. A rule needs an actor: its condition and its action both belong to one
- * entity, so an actor-less signal reaches subscriptions only.</p>
+ * Runs the datapack event rules of a published signal. Rules are indexed by the signal their trigger names and
+ * validated while the server cache is built, so publishing costs one map lookup; a rule needs an actor, so an
+ * actor-less signal reaches subscriptions only.
  */
 public final class TriggerRuleService {
     /**

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.formation.BuffFormationAction;
 import com.iafenvoy.mxt.data.formation.EmptyFormationAction;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.formation.ProtectionFormationAction;
+import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -21,6 +22,7 @@ public final class MxtFormationActionTypes {
     public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<AttackFormationAction>> ATTACK = REGISTRY.register("attack", () -> AttackFormationAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<BuffFormationAction>> BUFF = REGISTRY.register("buff", () -> BuffFormationAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<ProtectionFormationAction>> PROTECTION = REGISTRY.register("protection", () -> ProtectionFormationAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<RangeDisplayFormationAction>> RANGE_DISPLAY = REGISTRY.register("range_display", () -> RangeDisplayFormationAction.CODEC);
 
     private MxtFormationActionTypes() {
     }

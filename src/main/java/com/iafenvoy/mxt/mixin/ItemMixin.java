@@ -16,30 +16,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Makes any item a technique manual when its {@code technique_binding} declares a hold.
- *
- * <h2>Why this is a mixin rather than an item class</h2>
- * A hold rides the vanilla use cycle, and the cycle asks the <em>item</em> how long it lasts and what
- * pose it plays. Answering those from a subclass would mean only items of that subclass could ever be
- * manuals - which contradicts what this mod promises everywhere else, that a binding applies to any
- * registered item, including one registered by another mod or by KubeJS. Injecting the three questions
- * the cycle asks keeps that promise.
- *
- * <h2>What is deliberately not injected</h2>
- * {@code finishUsingItem} is left alone. A manual is an ordinary item with no {@code CONSUMABLE}
- * component, so vanilla's own implementation already returns the stack unchanged and nothing is eaten.
- * An earlier design put the hold on {@code CONSUMABLE} instead, which made the stack food and forced a
- * race to remove the component before the game consumed it; not using that component removes the race
- * rather than winning it.
- *
- * <p>An item that genuinely is food and also declares a hold is therefore still eaten when the hold
- * finishes. That is vanilla behaviour for that item, and the alternative - quietly disabling its food
- * behaviour - would be a larger surprise than leaving it alone.</p>
- *
- * <h2>Where the values come from</h2>
- * {@link TechniqueHoldLookup}, which is built on both the client and the server from their own copy of
- * the synced data pack registries. Nothing here is written onto a stack, so there is no state for the
- * two sides to disagree about.
+ * Makes any item a technique manual when its {@code technique_binding} declares a hold. A mixin rather than an
+ * item subclass, so a binding applies to any registered item, including one from another mod or KubeJS. The
+ * values come from {@link TechniqueHoldLookup}, built on each side from its own copy of the synced registries,
+ * and nothing is written onto a stack, so there is no state for the two sides to disagree about.
  */
 @Mixin(Item.class)
 public abstract class ItemMixin {
@@ -65,11 +45,7 @@ public abstract class ItemMixin {
     }
 
     /**
-     * The pose the hold plays, from the binding rather than from a component.
-     *
-     * <p>This one matters most: it is called from the render loop and it is the question a plain item
-     * cannot answer on its own, which is precisely what left the client showing nothing while the server
-     * ran a hold.</p>
+     * The pose the hold plays, which is the question a plain item cannot answer on its own.
      */
     @Inject(method = "getUseAnimation", at = @At("HEAD"), cancellable = true)
     private void mxt$techniqueHoldAnimation(ItemStack stack, CallbackInfoReturnable<ItemUseAnimation> cir) {

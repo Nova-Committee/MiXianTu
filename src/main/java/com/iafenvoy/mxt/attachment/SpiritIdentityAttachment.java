@@ -18,11 +18,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Persisted roots, physiques, learned techniques, their mastery levels and titles.
- *
- * <p>A technique's level is stored only once it has advanced: a technique the holder never climbed
- * has no entry and simply stands on its own entry level, so a data pack that moves the entry level
- * moves everyone who never advanced with it.</p>
+ * Persisted roots, physiques, learned techniques, their mastery levels and titles. A technique's level is
+ * stored only once it has advanced: a technique the holder never climbed has no entry and stands on its own
+ * entry level, so a data pack that moves the entry level moves everyone who never advanced.
  */
 public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritIdentityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

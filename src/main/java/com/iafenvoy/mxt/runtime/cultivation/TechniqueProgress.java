@@ -14,15 +14,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The current level and mastery progress of each learned technique, as a plain display model.
- *
- * <p>Nothing here is client-only. The learned techniques and their mastery values are both
- * synchronized attachments, so a client can build the same rows a server would and nothing has to be
- * sent; keeping the walk out of the screen also keeps it testable without a client.</p>
- *
- * <p>The chain order comes from the links rather than from a cache, because {@code ServerCache} is
- * bound to a running server. Chains are short and validated while the cache is built, so walking the
- * links per row is cheap and cannot loop.</p>
+ * The current level and mastery progress of each learned technique, as a plain display model. Nothing here
+ * is client-only: the learned techniques and their mastery values are both synchronized attachments, so a
+ * client builds the same rows a server would. The chain order comes from the links rather than from
+ * {@code ServerCache}, which is bound to a running server; chains are short and validated, so walking the
+ * links per row is cheap and cannot loop.
  */
 public final class TechniqueProgress {
     /**
@@ -34,7 +30,8 @@ public final class TechniqueProgress {
     }
 
     /**
-     * Which numbers the progress display uses.
+     * Which numbers the progress display uses: the stored mastery against the next requirement, or only what
+     * was gained since the current level.
      */
     public enum Mode {
         /** The stored mastery against the next level's requirement, so the bar spans the whole climb. */
@@ -46,13 +43,11 @@ public final class TechniqueProgress {
     /**
      * One learned technique and where its holder stands in the technique's chain.
      *
-     * @param technique         the technique itself
      * @param stage             the level the holder stands on, or {@code null} when there is no chain
      * @param rank              the zero-based rank of {@code stage} in its chain, or {@code -1}
      * @param total             how many levels the technique's chain has, or {@code 0} without one
      * @param currentRequirement what the level the holder stands on asked for, or {@code 0}
      * @param hasMastery        whether the technique names a resource that measures mastery
-     * @param mastery           the holder's stored value of that resource
      * @param required          what the next level asks for, or {@code NaN} at the top of the chain
      */
     public record Entry(Holder<CultivationTechnique> technique, @Nullable Holder<SkillStage> stage, int rank,

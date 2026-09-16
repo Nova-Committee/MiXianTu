@@ -19,9 +19,8 @@ import java.util.Optional;
 /**
  * Persisted cultivation progress and the currently selected cultivation action.
  *
- * <p>Progress and the current realm are keyed by the cultivation profile: a chain belongs to the
- * profile, so storing the profile is the whole identity. The value a profile stores is only read
- * through it, which is what keeps the stored state from duplicating what the data already says.</p>
+ * <p>Progress and the current realm are keyed by the cultivation profile, so storing the profile is the
+ * whole identity and the stored state cannot duplicate what the data already says.
  */
 public final class CultivationAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CultivationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -71,8 +70,7 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
     }
 
     /**
-     * Returns the stage currently associated with the chain, or {@code null} when the holder has not
-     * entered it yet.
+     * The stage the chain is on, or {@code null} while it still stands on the entry stage.
      */
     public @Nullable Holder<RealmStage> realmStage(Holder<CultivationProfile> cultivation) {
         return this.realmStages.get(cultivation);

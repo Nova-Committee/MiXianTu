@@ -10,8 +10,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Built-in trigger matchers. Third-party modules can register additional
- * codecs into the same extensible registry.
+ * Built-in trigger matchers. Third-party modules can register additional codecs into the same registry.
  */
 @SuppressWarnings("unused")
 public final class MxtTriggers {

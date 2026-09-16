@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.event.FormationEvent.Activate;
 import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
+import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPost;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.EnterPre;
 import com.iafenvoy.mxt.event.RealmInstanceEvent.Exit;
@@ -42,11 +43,6 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         MiXianTu.LOGGER.info("MXT KubeJS bridge initialized");
     }
 
-    /**
-     * Installs the concrete event listeners while the optional KubeJS plugin is
-     * initialized.  Keeping this here makes the lifecycle explicit and avoids
-     * registering listeners lazily from script-facing API calls.
-     */
     private static void registerEventForwarders() {
         // NeoForge does not permit listeners for abstract event parents.
         NeoForge.EVENT_BUS.addListener(AbilityUseEvent.Pre.class, MxtKubeJsEvents::postAbility);
@@ -61,7 +57,7 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         NeoForge.EVENT_BUS.addListener(AuraZoneEvent.Override.class, MxtKubeJsEvents::postAura);
         // A judgement rather than a lifecycle notification, so it goes through its own entry point: see
         // MxtKubeJsEventDispatcher#postFriendRelation for why it is not on the generic forwarder.
-        NeoForge.EVENT_BUS.addListener(FriendEvent.Relation.class, MxtKubeJsEvents::postFriendRelation);
+        NeoForge.EVENT_BUS.addListener(Relation.class, MxtKubeJsEvents::postFriendRelation);
         forward(AbilityTriggeredEvent.Pre.class, "abilityTriggered");
         forward(AbilityTriggeredEvent.Post.class, "abilityTriggered");
         forward(CurseRemoveEvent.Pre.class, "curseRemove");
@@ -83,9 +79,8 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         forward(Cancel.class, "forging");
         forward(Activate.class, "formation");
         forward(Deactivate.class, "formation");
-        // All three periods share one script group and are told apart by isCancellable()/getPhase():
-        // Tick is the settled observer, TickEffects is the cancellable half, UpkeepFailed is the
-        // cancellable "let it stand through a period it cannot pay for".
+        // All three share one script group and are told apart by isCancellable()/getPhase(): Tick is the
+        // settled observer, while TickEffects and UpkeepFailed are the cancellable two.
         forward(FormationEvent.Tick.class, "formation");
         forward(TickEffects.class, "formation");
         forward(UpkeepFailed.class, "formation");

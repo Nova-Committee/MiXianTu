@@ -23,25 +23,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * A learnable technique grants named abilities and cultivation modifiers.
- *
- * <p>An ability may be granted unconditionally ({@code granted_abilities}) or by mastery
- * ({@code configuration}). The two are independent: the first list is always active, the second
- * grows as the holder's level in the technique's chain advances.</p>
- *
- * <p>{@code configuration} is the technique's own view of a shared chain: the levels come from
- * {@link SkillStage}, while what each level grants ({@code ability}) and what it takes to reach it
- * ({@code condition}) belong to the technique. {@code condition} is required per entry and names the
- * requirement to reach that level; the entry level itself is where a holder starts, so its condition
- * is decoded but never gates anything. {@code default_stage} is the chain entry point and is
- * mandatory as soon as any level is configured, because the chain a level belongs to is only
- * reachable through it.</p>
- *
- * <p>{@code mastery_resource} names the stored value that measures this technique's mastery. While it
- * is set, the holder advances to the next level once that value reaches the level's own
- * {@code mastery} and the level's {@code condition} holds, which is what makes growth data-driven:
- * a content pack decides how the value grows (a trigger rule, a cultivation profile, a script) and
- * the level follows.</p>
+ * A learnable technique grants named abilities and cultivation modifiers, unconditionally
+ * ({@code granted_abilities}) or by mastery ({@code configuration}), whose levels come from a shared
+ * {@link SkillStage} chain. {@code default_stage} is the chain entry point and is mandatory as soon as any
+ * level is configured; {@code mastery_resource} names the stored value that measures mastery.
  */
 public record CultivationTechnique(String grade, Optional<IconReference> icon, EntityCondition learnCondition,
                                    List<Identifier> exclusiveTags,

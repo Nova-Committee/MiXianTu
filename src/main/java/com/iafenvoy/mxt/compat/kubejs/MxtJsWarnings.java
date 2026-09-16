@@ -6,12 +6,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Warning sink for script misuse that would otherwise repeat on every tick.
- *
- * <p>Script callbacks that fail loudly already log per call; this helper exists for conditions a
- * script can hit repeatedly, such as calling a server-only operation from a client script. Each
- * distinct message is logged once, and the total number of remembered messages is capped so that a
- * broken script cannot grow the set without bound.</p>
+ * Warning sink for script misuse that would otherwise repeat on every tick: each distinct key is logged
+ * once, and the set is capped so a broken script cannot grow it without bound.
  */
 public final class MxtJsWarnings {
     private static final int LIMIT = 256;

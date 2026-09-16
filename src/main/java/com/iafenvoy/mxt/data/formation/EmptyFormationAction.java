@@ -3,11 +3,9 @@ package com.iafenvoy.mxt.data.formation;
 import com.mojang.serialization.MapCodec;
 
 /**
- * The registry's default module: declares nothing and does nothing.
- *
- * <p>Every formation action registry is a defaulted registry, so one entry has to hold the default id.
- * This is that entry, and it is also the honest way to write "this array has no function module of its
- * own" in a definition that only uses the generic action hooks.</p>
+ * The registry's default module: declares nothing and does nothing. Every formation action registry is a
+ * defaulted registry, so one entry has to hold the default id, and this is also how a definition that uses
+ * only the generic action hooks says it has no function module of its own.
  */
 public enum EmptyFormationAction implements FormationActionType {
     INSTANCE;

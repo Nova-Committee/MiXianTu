@@ -45,8 +45,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Native Minecraft datapack registries. Reloading and client synchronisation are
- * owned by the vanilla registry system; this class never stores a registry snapshot.
+ * Native Minecraft datapack registries. Reloading and client synchronisation belong to the vanilla registry
+ * system; this class never stores a registry snapshot.
  */
 @EventBusSubscriber
 public final class MxtDatapackRegistries {

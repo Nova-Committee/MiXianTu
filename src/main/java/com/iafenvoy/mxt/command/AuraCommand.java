@@ -40,12 +40,9 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /aura} command; also reachable as {@code /mxt aura}.
- *
- * <p>Bare {@code /aura} opens the spirit hotbar configuration, because that is the gesture a player
- * repeats while playing, and the diagnostics hang off it rather than the other way round. The subtree
- * is built per call rather than cached: a {@code LiteralArgumentBuilder} is one mutable node, and the
- * two surfaces it is registered in must not share it.</p>
+ * The {@code /aura} command; also reachable as {@code /mxt aura}. The subtree is built per call rather
+ * than cached: a {@code LiteralArgumentBuilder} is one mutable node, and the two surfaces it is
+ * registered in must not share it.
  */
 public final class AuraCommand {
     private static final Identifier SPIRIT_HOTBAR_MODE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit");

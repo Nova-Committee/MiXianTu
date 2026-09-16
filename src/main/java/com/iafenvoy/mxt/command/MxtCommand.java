@@ -58,17 +58,9 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The administration and diagnostics that exist only under {@code /mxt}; it never accepts client
- * attachment payloads.
- *
- * <p>These nodes deliberately have no top-level alias. {@code /registries} or {@code /resource} on
- * their own would claim very short, very generic spellings for what is operator tooling, so the
- * command surface keeps them behind the mod's own prefix.</p>
- *
- * <p>The player-facing subtrees are not built here. Each lives in its own class next to the command it
- * implements - {@link AuraCommand}, {@link AbilityCommand}, {@link TechniqueCommand},
- * {@link DisplayCommand}, {@link TradeCommand}, {@link FormationCommand}, {@link FriendCommand} - and
- * {@code CommandManager} is what attaches them both here and at the top level.</p>
+ * The administration and diagnostics that exist only under {@code /mxt}. These nodes have no top-level alias,
+ * so {@code /registries} or {@code /resource} do not claim short generic spellings for operator tooling; the
+ * player-facing subtrees live in their own classes and {@code CommandManager} attaches them at both roots.
  */
 public final class MxtCommand {
     /**

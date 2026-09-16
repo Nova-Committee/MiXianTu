@@ -10,13 +10,9 @@ import net.minecraft.core.Holder;
 import java.util.Map;
 
 /**
- * Serializable state for one independently stored resource pool.
- *
- * <p>{@code supplied} is how much of {@code amount} the block emitters at this position are contributing.
- * It is carried because a consumer that is allowed to spend the ground it stands on has to know how much
- * of what it sees is already its own: a formation's own emitters are either absorbed, and so absent from
- * the pool entirely, or field aura the formation does not own, and spending it back would count the same
- * aura twice.</p>
+ * Serializable state for one independently stored resource pool. {@code supplied} is how much of
+ * {@code amount} the block emitters at this position are contributing, carried because a consumer allowed to
+ * spend the ground it stands on has to know how much of what it sees is already its own.
  */
 public record AuraPool(double amount, double maximum, double regenPerTick, double supplied) {
     public static final Codec<AuraPool> CODEC = RecordCodecBuilder.<AuraPool>create(i -> i.group(

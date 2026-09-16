@@ -9,18 +9,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Single reporting policy for every formula problem that is only found while the game runs.
- *
- * <p>Problems that can already be decided while a data pack is parsed do not come through here. A
- * number provider reports those as a codec error, which is what lets the loader collect every broken
- * formula of one load and report them together — the same way it reports the other registry errors
- * — instead of stopping at the first one. That path is identical in a development and a production
- * environment.</p>
- *
- * <p>A runtime problem cannot be batched that way; it is found while a formula is evaluated. A
- * development environment logs the whole error, including the cause and its stack trace, and keeps
- * running so one evaluation can show every problem it hits; a production environment logs a single
- * warning line per distinct message and returns the fallback value.</p>
+ * Single reporting policy for every formula problem that is only found while the game runs. Problems
+ * decidable while a data pack is parsed do not come through here: a number provider reports those as
+ * a codec error, which lets the loader collect every broken formula of one load, as it does for the
+ * other registry errors, instead of stopping at the first one.
  */
 public final class FormulaDiagnostics {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -45,12 +37,8 @@ public final class FormulaDiagnostics {
     }
 
     /**
-     * Reports a runtime formula problem.
-     *
-     * <p>Development logs the full error and continues — with the cause supplied by the caller, or
-     * with the reporting call site when the problem has no exception of its own, so the formula and
-     * its evaluation path are still visible. Production logs one line per distinct message and
-     * never throws.</p>
+     * Reports a runtime formula problem: development logs the full error and continues, using the caller's
+     * cause or the call site when there is none; production logs one line per distinct message.
      */
     public static void report(String message, @Nullable Throwable cause) {
         if (development()) {

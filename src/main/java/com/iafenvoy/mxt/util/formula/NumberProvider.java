@@ -11,9 +11,7 @@ import com.mojang.serialization.MapCodec;
 import java.util.function.Function;
 
 /**
- * A number that can be a JSON constant, an exp4j expression, or one of the
- * built-in structured providers.
- *
+ * A number that can be a JSON constant, an exp4j expression, or one of the built-in structured providers.
  */
 public interface NumberProvider {
     Codec<Double> FINITE_DOUBLE_CODEC = Codec.DOUBLE.validate(value -> Double.isFinite(value) ? DataResult.success(value) : DataResult.error(() -> "Number provider value must be finite: " + value));

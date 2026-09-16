@@ -24,8 +24,7 @@ public final class Expression implements NumberProvider {
     ).apply(i, Expression::new));
 
     /**
-     * Decoding collects every problem of the expression and reports them as one error, which is
-     * what lets the data pack loader list all broken formulas of a load at once.
+     * Reports every problem of the expression as one error, so a load lists all broken formulas at once.
      */
     public static final MapCodec<Expression> MAP_CODEC = RAW_CODEC.validate(Expression::validated);
 
@@ -42,11 +41,8 @@ public final class Expression implements NumberProvider {
     }
 
     /**
-     * Builds an expression and records every problem it has instead of failing on the first one.
-     *
-     * <p>The codec turns a non-empty {@link #problems()} list into a decode error, so a data pack
-     * with several broken formulas reports all of them in one load failure, exactly like the other
-     * registry errors.</p>
+     * Records every problem instead of failing on the first, including syntax, which exp4j only
+     * reports on evaluation; a non-empty {@link #problems()} makes the codec a decode error.
      */
     public Expression(@NotNull String source, @NotNull Map<String, NumberProvider> params) {
         this.source = source.trim();
@@ -73,16 +69,12 @@ public final class Expression implements NumberProvider {
         this.problems = List.copyOf(problems);
     }
 
-    /**
-     * Every problem found while building this expression; empty when the expression is usable.
-     */
+    /** Every problem found while building this expression; empty when the expression is usable. */
     public List<String> problems() {
         return this.problems;
     }
 
-    /**
-     * Decodes the shorthand string form, keeping every problem in the error message.
-     */
+    /** Decodes the shorthand string form, keeping every problem in the error message. */
     public static DataResult<Expression> decode(String source) {
         return validated(new Expression(source));
     }
@@ -94,13 +86,8 @@ public final class Expression implements NumberProvider {
     }
 
     /**
-     * Evaluates the expression once with placeholder values on the constructing thread.
-     *
-     * <p>exp4j accepts a structurally broken source when it builds — {@code 1 +}, {@code 1 +* 2}
-     * and {@code (1 + 2} all build fine — and only refuses them when they are evaluated. Doing that
-     * here keeps the documented contract: a malformed formula fails the data pack load, together
-     * with every other malformed formula of the same load. Values only need to exist, so a formula
-     * that divides by a variable stays valid.</p>
+     * exp4j builds structurally broken sources such as {@code 1 +} and only refuses them when they
+     * are evaluated, so this evaluates once with all variables set to 1.0 to catch them at load.
      */
     private List<String> syntaxProblems() {
         try {
@@ -132,9 +119,8 @@ public final class Expression implements NumberProvider {
                     state.expression().setVariable(variable, override.evaluate(context));
                     continue;
                 }
-                // Documented precedence: the expression's own params win, then an explicit value the
-                // context carries, and only then the variable registry. A registered name such as
-                // 'level' must not shadow an event payload that the caller wrote into the context.
+                // Precedence: the expression's own params, then an explicit value the context carries,
+                // and only then the variable registry, so 'level' cannot shadow an event payload.
                 double explicit = context.explicit(variable);
                 state.expression().setVariable(variable, Double.isNaN(explicit)
                         ? FormulaVariables.resolve(variable, context, state.bindings())
@@ -155,11 +141,8 @@ public final class Expression implements NumberProvider {
     }
 
     /**
-     * The compiled expression of one thread, together with the bindings it resolved.
-     *
-     * <p>A binding only depends on the variable registry, so a long lived formula — one evaluated
-     * every tick, for example — resolves each name once and afterwards only re-reads the values
-     * from the current context.</p>
+     * The compiled expression of one thread with the bindings it resolved. A binding depends only on
+     * the variable registry, so a long lived formula resolves each name once and re-reads values after.
      */
     private record Compiled(net.objecthunter.exp4j.Expression expression, Map<String, Binding> bindings) {
     }

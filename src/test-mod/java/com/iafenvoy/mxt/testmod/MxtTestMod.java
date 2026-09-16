@@ -1,11 +1,17 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.attachment.FriendAttachment.AddResult;
+import com.iafenvoy.mxt.attachment.FriendAttachment.RemoveResult;
 import com.iafenvoy.mxt.compat.ftb.FtbTeamsCompat;
+import com.iafenvoy.mxt.config.MxtServerConfig.ClaimLinkage;
 import com.iafenvoy.mxt.data.Formation.RequiredBlock;
+import com.iafenvoy.mxt.data.Formation.Storage;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.Unlimited;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
+import com.iafenvoy.mxt.data.formation.BuffFormationAction.TargetMode;
+import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction.Shape;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent.Allowed.Id;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent.Allowed.Tag;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
@@ -14,9 +20,15 @@ import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
 import com.iafenvoy.mxt.event.FriendEvent;
+import com.iafenvoy.mxt.event.FriendEvent.Relation;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
+import com.iafenvoy.mxt.runtime.formation.FormationCenters.Match;
+import com.iafenvoy.mxt.runtime.formation.FormationProtection.Action;
+import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule;
+import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
+import com.iafenvoy.mxt.runtime.world.FormationAbsorption.Sources;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.util.ProblemReporter.Collector;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -99,10 +111,14 @@ import com.iafenvoy.mxt.data.formation.BuffFormationAction;
 import com.iafenvoy.mxt.data.formation.EmptyFormationAction;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.formation.ProtectionFormationAction;
+import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction;
 import com.iafenvoy.mxt.runtime.formation.FormationCarrier;
+import com.iafenvoy.mxt.item.FormationPlateItem;
+import com.iafenvoy.mxt.runtime.formation.FormationActionRunner;
 import com.iafenvoy.mxt.runtime.formation.FormationCenters;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationProtection;
+import com.iafenvoy.mxt.runtime.formation.FormationRangeDisplay;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
@@ -166,7 +182,9 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
@@ -192,6 +210,8 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -199,7 +219,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.pig.Pig;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.Item;
@@ -213,6 +232,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
@@ -265,11 +285,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Lets the formation audit suppress one period's work to prove that a suppressed period still records
-     * the upkeep it already charged.
-     *
-     * <p>Targets {@code TickEffects}, which is the cancellable half. {@code Tick} is the settled observer
-     * and deliberately cannot be cancelled, so a listener there would be a no-op.</p>
+     * Suppresses one period's work, to prove a suppressed period still records the upkeep it charged.
+     * Cancels {@code TickEffects}: {@code Tick} is the settled observer and cannot be cancelled.
      */
     private static void cancelFormationTick(TickEffects event) {
         if (suppressFormationTick) event.setCanceled(true);
@@ -291,11 +308,10 @@ public final class MxtTestMod {
     }
 
     /**
-     * Lets the friend audit give a verdict of its own, which is the only way to assert that the event and
-     * not the friend list decides. Scoped to the audit's own throwaway candidate, so nothing else in the
-     * run can be answered by it.
+     * Gives a verdict of its own, the only way to assert that the event and not the friend list decides.
+     * Scoped to the audit's own throwaway candidate, so nothing else in the run can be answered by it.
      */
-    private static void overrideFriendVerdict(FriendEvent.Relation event) {
+    private static void overrideFriendVerdict(Relation event) {
         if (event.candidate() == friendVerdictTarget && friendVerdict != TriState.DEFAULT)
             event.setResult(friendVerdict);
     }
@@ -570,10 +586,8 @@ public final class MxtTestMod {
         if (ForgingProbe.materialsCovered(wrongItem, requirement))
             throw new IllegalStateException("Forging audit expected a wrong-item material list to be rejected");
 
-        // The blueprint tooltip prints one line per entry from availableCount, and the button is gated by
-        // materialsCovered - two helpers answering the same question from different directions. If they
-        // ever disagreed, the tooltip would tick every line while the button stayed dark, so they are
-        // compared here on a container that covers the list exactly and on one that falls short.
+        // The tooltip reads availableCount and the button reads materialsCovered; if they disagreed the
+        // tooltip would tick every line while the button stayed dark, so both are compared here.
         Container exact = forgingInputs();
         exact.setItem(ForgingSurface.INPUT_START, new ItemStack(Items.IRON_INGOT, 3));
         exact.setItem(ForgingSurface.INPUT_START + 1, new ItemStack(Items.COAL, 1));
@@ -605,13 +619,8 @@ public final class MxtTestMod {
             throw new IllegalStateException("Forging audit expected an explicit max_steps to survive normalisation");
     }
     /**
-     * Every binding the test items name must actually resolve.
-     *
-     * <p>The items declare their binding as a key rather than a resolved holder - items are built
-     * before the datapack registries load, so that is the only way - and a key that names nothing is
-     * silent: the component simply reads as absent, the table's slot refuses the item, and it looks
-     * like the slot filter is broken rather than like a typo in a file name. Resolving each one here
-     * turns that into a startup failure.
+     * Every binding the test items name must resolve: a key that names nothing reads as an absent
+     * component, which looks like a broken slot filter rather than a typo in a file name.
      */
     private static void verifyForgingBindingsLoaded() {
         List<String> tools = List.of("crude_hammer", "smith_hammer", "master_hammer");
@@ -628,16 +637,8 @@ public final class MxtTestMod {
         }
     }
     /**
-     * The method list is the blueprint's {@code allowed_methods} intersected with the tools', and
-     * declaring nothing - or declaring an empty list - restricts nothing.
-     *
-     * <p>Every way of writing the field is exercised here, because two of them fail quietly. An
-     * {@code allowed_methods} that names a tag nobody loads decodes to an empty set; an item whose
-     * {@code delayedHolderComponent} never resolved carries no binding at all and simply cannot be
-     * placed. Both look like "the slot filter is broken" from in game, so they are pinned here.</p>
-     *
-     * <p>The counts are the test datapacks' own: master unlocks ten, smith five, crude two; iron_sword
-     * lists all ten, and pickaxe declares the three-member tag {@code #mxt_test:pickaxe_methods}.</p>
+     * The method list is the blueprint's {@code allowed_methods} intersected with the tools'; the shapes
+     * that fail silently - an unloaded tag, an unresolved binding - are pinned here too.
      */
     private static void verifyForgingMethodIntersection(RegistryAccess registries) {
         Identifier ironSword = Identifier.parse("mxt_test:iron_sword");
@@ -678,16 +679,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Every test blueprint must be able to build a plan, and that plan must be able to reach its target.
-     *
-     * <p>A plan is built when a session starts, not when the datapack loads, so a blueprint whose target
-     * band cannot be reached - or whose {@code finish_pattern} names a method its {@code allowed_methods}
-     * excludes - only fails once a player has put their materials in and pressed the button. Building each
-     * one here moves that to startup, where it is a crash instead of a lost afternoon.</p>
-     *
-     * <p>That membership check is the one the decode-time validator cannot do: a tag's members are not
-     * known while the entry is being decoded, so it lives in the plan constructor, and this is what
-     * exercises it.</p>
+     * Every test blueprint must build a plan that can reach its target; an unreachable target band or a
+     * {@code finish_pattern} its {@code allowed_methods} exclude would otherwise only fail at the button.
      */
     private static void verifyForgingPlans(RegistryAccess registries) {
         for (Reference<ForgingBlueprint> holder : MxtDatapackRegistries.holders(registries, MxtResourceKeys.FORGING_BLUEPRINT).toList()) {
@@ -703,12 +696,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The 要求 row must show the <em>last</em> {@code required} steps of the finish pattern.
-     *
-     * <p>The server compares the session's last steps against {@code pattern[6 - required .. 5]}. A row
-     * built from the pattern's first {@code required} entries fills exactly the same six cells, so it looks
-     * right while naming a sequence the server never asks for - and the only symptom is a player who
-     * follows the row and is refused. That is why this is pinned rather than eyeballed.</p>
+     * The required row must show the last {@code required} steps of the finish pattern: a row built from the
+     * pattern's first entries fills the same six cells but names a sequence the server never asks for.
      */
     private static void verifyForgingStepRows(RegistryAccess registries) {
         ForgingBlueprint blueprint = MxtDatapackRegistries
@@ -749,15 +738,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Only the <em>last</em> {@code required_suffix_steps} history entries are checked.
-     *
-     * <p>The pattern is always six long and the requirement may be shorter, so the leading entries are the
-     * ones the 要求 row draws as barriers. They must take no part in the rule - and that is only observable
-     * with a pattern whose two halves differ, which is why this builds one instead of reading the test
-     * datapack.</p>
-     *
-     * <p>The plan is hand-built for the same reason: methods only have to be ids and deltas to the rule,
-     * and a plan of my own lets the value land exactly on the target with a history I chose.</p>
+     * Only the last {@code required_suffix_steps} history entries are checked; the leading ones are drawn as
+     * barriers and take no part. Pattern and plan are built here because both halves must differ to show it.
      */
     private static void verifyForgingSuffixWindow() {
         Identifier a = Identifier.parse("mxt_test:probe_a");
@@ -779,9 +761,8 @@ public final class MxtTestMod {
         if (!matched.canComplete())
             throw new IllegalStateException("Forging audit expected [lead, a, b, c] to satisfy a last-three rule of [a, b, c]");
 
-        // The last three are the pattern's *first* three. Same value, so if the rule read the wrong end - or
-        // counted the barriers as positions that have to match something - this is the case that slips
-        // through.
+        // The last three are the pattern's *first* three: same value, so this is the case that slips through
+        // if the rule read the wrong end or counted the barriers as positions that have to match.
         ForgingSession reversed = new ForgingSession(plan);
         for (Identifier method : List.of(lead, b, c, a)) reversed.strike(method);
         if (reversed.canComplete())
@@ -789,18 +770,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A session must answer the same way before and after a save/reload round trip, and a method the plan
-     * does not list must be a refusal rather than an error.
-     *
-     * <p>Both are about the split between the two classes. The session persists only its progress, so the
-     * shortest run and the whole rule set have to come back from the plan beside it - a session that stored
-     * its own {@code optimal_steps} could be restored disagreeing with the plan it was restored against, and
-     * nothing else in the audit would notice. The round trip is therefore compared on the answers, not just
-     * on the numbers: the same strike has to be accepted and the same completion answer given.</p>
-     *
-     * <p>The unlisted method is the other half: the client offers whatever the placed tools resolve to, and
-     * the session is reached through layers that can each see a slightly older plan, so asking about a
-     * method the plan does not list has to be an ordinary <em>no</em>. It used to be raised and caught.</p>
+     * A restored session must answer as the original did - the session persists only its progress, so the
+     * rule comes back from the plan - and a method the plan does not list must be a refusal, not an error.
      */
     private static void verifyForgingSessionRoundTrip() {
         Identifier allowed = Identifier.parse("mxt_test:probe_a");
@@ -843,14 +814,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A method's sound has to survive the datapack: declared when written, the anvil when omitted.
-     *
-     * <p>Two shapes, and the test pack has to keep both - a method that writes {@code sound} and one that
-     * does not - or one of the two branches goes untested while both look fine. So this names the two
-     * methods rather than counting: if either is edited into the other shape, the audit says which.</p>
-     *
-     * <p>The default is the whole point of the field being optional, and a missing key silently falling back
-     * to nothing would be a silent failure - a table that stops making a noise.</p>
+     * A method's sound must survive the datapack: declared when written, the anvil when omitted. The two
+     * methods are named rather than counted, so editing either into the other shape is reported.
      */
     private static void verifyForgingMethodSounds(RegistryAccess registries) {
         ForgingMethod declared = MxtDatapackRegistries
@@ -869,11 +834,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Ending a session must unlock the table - by any route, and in both directions.
-     *
-     * <p>Placement and pickup both end up in {@link ForgingSurface}, and what it asks about a busy table comes
-     * from the session state. That is what makes the two symptoms a stuck table shows - it refuses materials,
-     * and it will not give the blueprint back - testable without a player, as the four calls below.</p>
+     * Ending a session must unlock the table by any route and in both directions: placement and pickup both
+     * end in {@link ForgingSurface}, which reads the session state, so a stuck table shows either symptom.
      */
     private static void verifyForgingUnlocks() {
         ItemStack material = new ItemStack(Items.IRON_INGOT);
@@ -941,10 +903,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The technique panel is client-only, so the audit cannot open it; it can still prove the assets
-     * and the message keys it needs are in the jar. A misspelled texture path or translation key is
-     * otherwise a silent client-side defect: the panel would draw the missing-texture placeholder or
-     * print a raw key.
+     * The panel is client-only, so the audit only proves its assets and message keys are in the jar; a
+     * misspelled path or key would otherwise be silent - a placeholder texture, or a raw key on screen.
      */
     private static void verifyTechniquePanelAssets() {
         for (String path : List.of(
@@ -995,12 +955,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Every definition whose name a panel prints must carry that name in the test pack, in both
-     * languages. A missing key is invisible at runtime: the panel prints the raw key instead, which is
-     * how a realm without a name turned an information line into a wall of text.
-     *
-     * <p>{@code skill_stage} is deliberately absent: a level without a name is a supported case, and
-     * the technique panel falls back to the level's rank.</p>
+     * Every name a panel prints must exist in the test pack in both languages, or the panel prints the raw
+     * key instead; {@code skill_stage} is deliberately absent and falls back to the level's rank.
      */
     private static void verifyDisplayNames() {
         JsonObject en = readTestLang("en_us");
@@ -1060,10 +1016,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A weapon binding must add its own attribute modifiers on top of the item's vanilla ones
-     * instead of replacing the component. The check drives the real entity-tick refresh on a
-     * temporary entity holding a bound diamond sword and asserts that the vanilla +7 attack damage
-     * modifier survives next to the binding's contribution.
+     * A weapon binding must add its modifiers on top of the item's vanilla ones instead of replacing the
+     * component: the check drives the real entity-tick refresh and asserts the vanilla +7 damage survives.
      */
     private static void verifyWeaponAttributeMerge(ServerStartedEvent event) {
         ServerLevel overworld = event.getServer().overworld();
@@ -1119,9 +1073,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Runs the channelled ability assertion on a temporary entity. The lifecycle only needs a
-     * {@link LivingEntity}, so spawning one keeps the check runnable on a dedicated server without
-     * a connected player. The entity is discarded immediately afterwards.
+     * Runs the channelled ability assertion on a temporary entity, since the lifecycle needs only a
+     * {@link LivingEntity}; the entity is discarded immediately afterwards.
      */
     private static void verifyChannelAbility(ServerStartedEvent event) {
         ServerLevel overworld = event.getServer().overworld();
@@ -1139,11 +1092,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Proves the documented aura tier rule with the test datapack content. The biome tier holds the
-     * highest priority in the whole registry (150) while the highest dimension priority is 100, so a
-     * dimension result proves the dimension tier is compared before any biome priority. Same-tier
-     * ordering is then taken from the production ordering helper, so the check also fails if the
-     * priority-then-ID rule changes.
+     * The test pack puts the highest biome priority (150) above the highest dimension one (100), so a
+     * dimension result proves the tiers are compared first; same-tier ordering comes from the helper.
      */
     private static void verifyAuraZonePriority(ServerStartedEvent event) {
         ServerLevel overworld = event.getServer().overworld();
@@ -1186,9 +1136,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The aura memo must never change an answer, and must actually remove repetition. This measures
-     * both, and then asks the resolver to attribute its own cost to stages, because a sampling
-     * profiler cannot tell a hot single computation from a repeated cheap one.
+     * The aura memo must never change an answer and must actually remove repetition, so both are measured;
+     * the resolver then reports its own stage costs, which a sampling profiler cannot separate.
      */
     private static void verifyAuraResolutionMemo(ServerStartedEvent event) {
         ServerLevel overworld = event.getServer().overworld();
@@ -1259,9 +1208,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The entity gate is what keeps a stationary entity from being re-resolved every tick. It must
-     * resolve a new entity, skip a stationary one inside its refresh interval, resolve it again once the
-     * interval elapses, and resolve it immediately when it moves.
+     * The entity gate must resolve a new entity, skip a stationary one inside its refresh interval, resolve
+     * it again once the interval elapses, and resolve it immediately when it moves.
      */
     private static void verifyEntityQueryGate(ServerLevel overworld) {
         UUID id = UUID.randomUUID();
@@ -1471,8 +1419,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The technique panel's rows are computed from synchronized state, so the same walk has to run on
-     * a server. This pins the reported level, the rank pair, and both mastery progress modes.
+     * The panel's rows are computed from synchronized state, so the same walk has to run on a server; this
+     * pins the reported level, the rank pair, and both mastery progress modes.
      */
     private static void verifyTechniqueProgress(LivingEntity student, Holder<CultivationTechnique> technique,
                                                 Holder<SkillStage> entryStage, Holder<SkillStage> stagedStage) {
@@ -1517,9 +1465,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A refusal is part of the contract rather than a silent no-op: the item gate names which of its
-     * three checks refused, and the learning transaction names its own failure. Both are shown to the
-     * player, so the audit pins the exact values the messages are selected from.
+     * A refusal is part of the contract, not a silent no-op: the item gate names which of its checks
+     * refused and the learning transaction names its own failure, so the exact values are pinned here.
      */
     private static void verifyTechniqueRefusals(ServerStartedEvent event) {
         Pig student = new Pig(EntityType.PIG, event.getServer().overworld());
@@ -1547,12 +1494,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The two sample manuals, one held and one instant, and the field that tells them apart.
-     *
-     * <p>The hold is asserted as data rather than as a simulated keypress: what the codec carries is
-     * what the use cycle is built from, so a binding that decoded its {@code learn_time} is a binding
-     * that asks for a hold. That also keeps this audit runnable on a server, where there is no client
-     * to hold a button down.</p>
+     * The two sample manuals, one held and one instant. The hold is asserted as data rather than as a
+     * simulated keypress, which also keeps this runnable on a server where no client holds a button down.
      */
     private static void verifySampleTechniques() {
         Holder<CultivationTechnique> azureWater = requireHolder(MxtResourceKeys.CULTIVATION_TECHNIQUE,
@@ -1577,9 +1520,8 @@ public final class MxtTestMod {
 
         verifyHoldAnimations(held, instant);
 
-        // A hold must not also learn on the click that starts it, or the hold would be decoration. The
-        // click is deliberately left unclaimed for a held binding, so `use` answers false here - that
-        // false is the whole reason the use cycle is allowed to begin.
+        // A hold must not also learn on the click that starts it: the click is deliberately left unclaimed
+        // for a held binding, so `use` answering false here is what lets the use cycle begin.
         Pig student = new Pig(EntityType.PIG,
                 ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
                         .server().overworld());
@@ -1600,11 +1542,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Checks that the repair sweep keeps exactly the references that still resolve.
-     *
-     * <p>This guards a command whose failure mode is doing nothing at all: if {@code resolves} answered
-     * true for a stale id, the sweep would report a clean bill of health and leave the broken data in
-     * place - the worst outcome for a repair tool, because the player is told there is no problem.</p>
+     * Checks that the repair sweep keeps exactly the references that still resolve: if {@code resolves}
+     * answered true for a stale id, the sweep would report a clean bill of health and change nothing.
      */
     private static void verifyRepairSweep() {
         Reference<CultivationTechnique> real = MxtDatapackRegistries
@@ -1666,12 +1605,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Reproduces the reported situation: the azure manual cannot be learned in game.
-     *
-     * <p>Every step of the real path is run against a real entity rather than asserted in the abstract,
-     * so whichever gate is refusing gets named instead of guessed at. The report was "the scroll shows a
-     * downward pose and then aborts immediately, and nothing appears in chat", which rules out a silent
-     * data problem and points at one of the gates that run around the use cycle.</p>
+     * Reproduces the reported situation - the azure manual cannot be learned in game - by running every step
+     * of the real path against a real entity, so whichever gate refuses gets named instead of guessed at.
      */
     private static void verifyAzureManualIsLearnable() {
         ServerLevel level = ServerCache.get()
@@ -1704,17 +1639,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Decodes an attachment payload holding a technique id that no longer exists.
-     *
-     * <p>This is the fact the whole repair story rests on, so it is asserted rather than assumed. The
-     * attachment decodes its technique lists through {@code CollectionCodecs.list}, which is
-     * {@link com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec} - a codec that decodes element by element
-     * and skips the ones that fail. A stale id therefore costs only itself: the rest of the list and
-     * every other field still load.</p>
-     *
-     * <p>That distinction decides what the repair command is for. If a single stale id took the whole
-     * attachment down, the command would be useless - the bad data would already be gone before any
-     * code could look at it - and the only cure would be restoring a backup.</p>
+     * Decodes an attachment payload holding a technique id that no longer exists: the list codec skips the
+     * elements that fail, so a stale id costs only itself and the rest of the attachment still loads.
      */
     private static void verifyStaleReferenceDecode() {
         ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"));
@@ -1739,24 +1665,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Drives a hold through the real vanilla use cycle.
-     *
-     * <p>Earlier versions of this check called the mod's own handlers directly, so they passed while the
-     * in-game hold was broken - twice. A hold is not one call: the item has to say how long the cycle
-     * runs and what it looks like, the cycle has to run that long, and the technique has to be taught at
-     * the end. A test that skips the middle cannot see the middle go wrong, so this one runs the middle:
-     * {@code LivingEntity#tick} is what drives {@code updatingUsingItem}, and the entity here is ticked
-     * until the cycle completes on its own.</p>
-     *
-     * <p>What it therefore covers, for the first time, is the part that was actually broken: the two
-     * answers vanilla asks the <em>item</em> for. {@code getUseDuration} and {@code getUseAnimation} are
-     * supplied by {@code ItemMixin} from the data pack binding, and the tick count assertion pins the
-     * duration behaviourally - a duration of {@code 0}, which is what the client used to compute, would
-     * teach on the first tick instead of the sixtieth.</p>
-     *
-     * <p>The lookup table behind the mixin is populated by {@code TagsUpdatedEvent}, which has already
-     * fired by the time the audit runs, so asserting it is populated also asserts that the build actually
-     * happened. If it silently did not, every hold in the game would do nothing on one side only.</p>
+     * Drives a hold through the real vanilla use cycle, because calling the mod's own handlers directly
+     * passed while the in-game hold was broken; it covers the use duration and animation the item supplies.
      */
     private static void verifyHoldLifecycle() {
         ServerLevel level = ServerCache.get()
@@ -1828,18 +1738,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The reading cooldown, which is charged for the attempt rather than for the result.
-     *
-     * <p>This could not be checked before, because the cooldown lives on a {@link Player} and the audit
-     * could only build animals. A {@code FakePlayer} is a real {@code ServerPlayer} with the parts that
-     * need a connection stubbed out, so the cooldown tracker it carries is the real one and can simply be
-     * read.</p>
-     *
-     * <p>The point of the check is the second read. The first teaches and must cost a cooldown; the
-     * second is refused for being already known and must still cost one, because a refusal that is free
-     * leaves a manual the holder cannot learn free to read over and over. The cooldown is cleared between
-     * the two so that the second observation is about the second read and not about the first one still
-     * running down.</p>
+     * The reading cooldown is charged for the attempt rather than the result: a refused read must still
+     * cost one, or a manual the holder cannot learn would be free to read over and over.
      */
     private static void verifyCooldownOnAnyOutcome() {
         // Disabled by configuration: there is no cooldown to observe, and asserting one would be asserting
@@ -1873,16 +1773,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The percentage shown while a manual is being read.
-     *
-     * <p>This exists because a hold is otherwise guesswork: the allowed poses are fixed motions that
-     * repeat, so nothing on screen says whether the player is a tenth of the way through or one tick
-     * from the end. A duration long enough to read is long enough to give up on early, and giving up
-     * early is a silent cancel.</p>
-     *
-     * <p>The ends matter more than the middle: an off-by-one would show a full bar one tick before the
-     * technique is actually granted, and a duration of zero - an instant binding that somehow reached
-     * the tick handler - must not divide by zero.</p>
+     * The percentage shown while a manual is read, where the ends matter most: an off-by-one would show a
+     * full bar a tick early, and a zero-length hold must not divide by zero.
      */
     private static void verifyHoldProgress() {
         if (TechniqueItemService.holdPercent(60, 60) != 0)
@@ -1896,25 +1788,21 @@ public final class MxtTestMod {
         if (TechniqueItemService.holdPercent(60, -3) != 100 || TechniqueItemService.holdPercent(60, 999) != 0)
             throw new IllegalStateException("The hold percentage is not clamped to its ends");
 
-        // The last tick a read ever sees arrives with one tick left, because the tick after it is the one
-        // that completes the read. Reporting that honestly leaves the bar stuck at 98% on every successful
-        // read, which reads as a read that never finishes.
+        // The last tick a read ever sees arrives with one tick left, since the tick after it completes the
+        // read; reporting that honestly would leave the bar stuck at 98% on every successful read.
         if (TechniqueItemService.displayPercent(60, 1) != 100)
             throw new IllegalStateException("The final tick of a read does not show a full bar");
         if (TechniqueItemService.displayPercent(60, 60) != 0 || TechniqueItemService.displayPercent(60, 30) != 50)
             throw new IllegalStateException("The last-tick rule leaked into the rest of the read");
 
         // Once the client's own count runs out the pose is kept alive by folding the count back into the
-        // positive range. That has to land on the phase the pose would have reached anyway, or the motion
-        // restarts out of step and every loop shows as a stutter - which is what an earlier version, using
-        // an unrelated cycling number, did.
+        // positive range, and it has to land on the phase the pose would have reached anyway.
         for (int remaining = 0; remaining > -25; remaining--) {
             int wrapped = TechniqueItemService.loopingUseRemaining(remaining);
             if (wrapped <= 0)
                 throw new IllegalStateException("A folded count is not positive and would drop the pose: " + wrapped);
-            // The pose code reads the remainder, so the remainder is what has to go on counting down by one
-            // per tick and wrap off the bottom of the loop back onto its top. Keeping that equality is the
-            // whole requirement, and it is what makes the motion continue instead of restart.
+            // The pose code reads the remainder, so the remainder must keep counting down by one per tick
+            // and wrap off the bottom of the loop back onto its top.
             if (Math.floorMod(wrapped, 10) != Math.floorMod(remaining, 10))
                 throw new IllegalStateException("A folded count is out of phase at " + remaining + ": " + wrapped);
         }
@@ -1934,17 +1822,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The feedback a successful learn produces, and the cooldown gate behind it.
-     *
-     * <p>The success message used to be missing entirely: only refusals were reported, so a technique
-     * that <em>was</em> learned looked exactly like the click doing nothing. That is a one-line bug with
-     * no crash and no log, which is precisely the kind this audit exists to hold down - so the message
-     * key is asserted to exist rather than assumed.</p>
-     *
-     * <p>The cooldown itself cannot be exercised here: it applies to {@link Player}, and the only
-     * entity this audit can build is a pig. What is checked instead is the gate it goes through - a
-     * non-positive config disables it - which is the part that could silently rot if the default were
-     * changed to zero.</p>
+     * The feedback a successful learn produces, and the cooldown gate behind it. The success message was once
+     * missing while refusals were reported, a one-line bug with no crash and no log, so its key is asserted.
      */
     private static void verifyLearnFeedback() {
         // Both messages belong to one family and must stay in step: a player who sees the refusal
@@ -1971,11 +1850,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The hold animation field: the declared value, the default, and the values the whitelist refuses.
-     *
-     * <p>The refusals are the point of the whitelist, so they are asserted by decoding JSON rather than
-     * by reading the list. A list that is right but never consulted would pass a check written against
-     * the list itself.</p>
+     * The hold animation field: the declared value, the default, and the values the whitelist refuses. The
+     * refusals are decoded from JSON rather than read off the list, so the list is shown to be consulted.
      */
     private static void verifyHoldAnimations(TechniqueBinding declared, TechniqueBinding instant) {
         if (declared.holdAnimation() != ItemUseAnimation.BRUSH)
@@ -1992,9 +1868,8 @@ public final class MxtTestMod {
             throw new IllegalStateException("An undeclared hold_animation did not take the default: "
                     + undeclared.holdAnimation());
 
-        // Every allowed animation has to survive a round trip, or the whitelist would be advertising
-        // values the codec then rejects. The binding holds a registry reference, so this needs the
-        // server's registry access rather than plain JsonOps.
+        // Every allowed animation has to survive a round trip, or the whitelist would advertise values the
+        // codec rejects; the binding holds a registry reference, so the server's registries are needed.
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE,
                 ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
                         .server().registryAccess());
@@ -2007,15 +1882,13 @@ public final class MxtTestMod {
         }
 
         // SPYGLASS is refused because vanilla reaches outside the item from it: the pose *is*
-        // Player#isScoping, which locks the field of view to 0.1 and drops mouse sensitivity in classes
-        // no mod can reach, and it is the one pose that renders no item at all.
+        // Player#isScoping, and it is the one pose that renders no item at all.
         for (String refused : List.of("spyglass", "eat", "drink", "bow", "trident", "crossbow", "spear")) {
             if (TechniqueBinding.CODEC.parse(ops, holdBindingJson(refused)).result().isPresent())
                 throw new IllegalStateException("The whitelist let through a side-effecting animation: " + refused);
         }
-        // An animation without a hold is rejected too: nothing would ever play it. A non-default value
-        // is used on purpose - "block" *is* the default, so writing it on an instant binding asks for
-        // nothing and is correctly accepted.
+        // An animation without a hold is rejected too, since nothing would ever play it; "block" *is* the
+        // default, so writing it on an instant binding asks for nothing and is correctly accepted.
         Map<JsonElement, JsonElement> instantFields = new LinkedHashMap<>();
         instantFields.put(new JsonPrimitive("items"), new JsonPrimitive("minecraft:stick"));
         instantFields.put(new JsonPrimitive("technique"), new JsonPrimitive("mxt_test:qingxiao_breathing_manual"));
@@ -2079,10 +1952,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The information panel splits each row between its label and its value. The split is pure
-     * arithmetic, so it is audited here with the widths that a narrow window actually produces: a
-     * value must get the room it needs, the label keeps a quarter of the row, and nothing goes
-     * negative. Reserving one global label width for every row is what used to cut values off.
+     * The information panel splits each row between its label and its value; the arithmetic is audited with
+     * the widths a narrow window produces, since one global label width is what used to cut values off.
      */
     private static void verifyInformationColumns() {
         // A narrow window: 90 px of row, the widest label is 36 px, the value wants 54 px.
@@ -2104,8 +1975,7 @@ public final class MxtTestMod {
 
     /**
      * One icon type is shared by abilities, resources, badges, forging methods and techniques, so its two
-     * branches are pinned here: a bare string is a texture, an object is an item, and anything that parses
-     * as neither is rejected. The branches are inlined, so this also pins which one claims a bare string.
+     * branches are pinned here: a bare string is a texture, an object is an item, anything else is rejected.
      */
     private static void verifyIconReferences() {
         if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"mxt:textures/gui/badge/star.png\""))
@@ -2294,13 +2164,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Formation runtime audit.
-     *
-     * <p>Drives {@link FormationWorldTicker#dispatch} directly rather than fabricating a level tick
-     * event, so every assertion runs against the exact method the game calls. Each case uses the same
-     * controller and tears its formation down afterwards, which keeps the whole audit inside the
-     * loaded spawn chunks — entity lookup is chunk scoped, so an out of range probe parked in an
-     * unloaded chunk would silently skip the release path it is meant to exercise.</p>
+     * Formation runtime audit. Drives {@link FormationWorldTicker#dispatch} directly, so every assertion runs
+     * against the method the game calls; probes stay in loaded chunks, where entity lookup can see them.
      */
     private static void verifyFormationRuntime(ServerStartedEvent event) {
         ServerLevel level = event.getServer().overworld();
@@ -2315,12 +2180,16 @@ public final class MxtTestMod {
         verifyFormationGrantLifecycle(level);
         verifyFormationUpkeep(level);
         verifyFormationInlineStructure(level);
+        verifyFormationProbeStructures(level);
         verifyFormationTemplateAir(level);
         verifyFormationPlateBinding(level);
         verifyFormationPlateAllowList(level);
         verifyFormationFriendProtection(level);
         verifyFormationActionTypes(level);
         verifyFormationAbsorption(level);
+        verifyFormationStorage(level);
+        verifyFormationRangeDisplay(level);
+        verifyFormationPlateAutoDetect(level);
         verifyFormationEventSplit();
         verifyFormationUpkeepFailure(level);
         verifyFormationIndexTolerance(level);
@@ -2329,7 +2198,8 @@ public final class MxtTestMod {
                         + "range inside the entity lookup box; mxt:formation_owner distinct from mxt:formation_member; "
                         + "scoped grants released on exit and on teardown; upkeep recorded through a suppressed period; "
                         + "an unpaid period survivable when UpkeepFailed is cancelled; Tick split from TickEffects; "
-                        + "inline and template structures both enforced and mutually exclusive; air entries in a "
+                        + "inline and template structures both enforced and mutually exclusive, with every probe "
+                        + "telling itself apart by a structure of its own; air entries in a "
                         + "template ignored rather than required; a formation centre resolved one block off and "
                         + "binding a formation onto a hand-held plate; a plate's allow list honoured by id, by tag "
                         + "and on the selected formation; a formation's aura_zone and max_bonus reaching the resolved "
@@ -2351,6 +2221,13 @@ public final class MxtTestMod {
                         + "linkage modes staying inert on a server that has no claims rather than turning into "
                         + "\"cannot build\" or \"protect nothing\", with the foreign-claim rule telling a ward from an "
                         + "array that is not one; "
+                        + "a storage field banking what the ground supplies beyond the bill and spending it on the "
+                        + "periods the ground stops, split three ways by resource, carried through a save, and keeping "
+                        + "a formation alive through an unpayable period until the bank itself runs out; a range display "
+                        + "module drawing its boundary on the periods its interval asks for and only to the players "
+                        + "looking at it; and an unbound plate identifying the formation standing in front of it, in a "
+                        + "deterministic order, raising it by name and taking it back down, while the server option "
+                        + "restores the old \"no formation\" answer; "
                         + "and a live index "
                         + "surviving the save path NeoForge "
                         + "writes it through",
@@ -2358,11 +2235,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The carrier has to reach a condition three levels down.
-     *
-     * <p>The ticker only ever hands the carrier to the top level action, so everything nested below it
-     * depends on {@code Context.copyTo} carrying the extension data through {@code if_else} and
-     * {@code not}. That is the assumption the whole design rests on and nothing else asserts it.</p>
+     * The carrier has to reach a condition three levels down: the ticker only hands it to the top level
+     * action, so everything nested below depends on {@code Context.copyTo} carrying the extension data.
      */
     private static void verifyFormationConditionNesting(ServerLevel level) {
         Pig subject = new Pig(EntityType.PIG, level);
@@ -2447,12 +2321,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A grant made by a formation must not outlive it.
-     *
-     * <p>{@code ABILITY_HOLDER} is serialised and copied on death, so a granted ability stays until
-     * something revokes it, and {@code deactivate_action} cannot: its context is a level, not an
-     * entity. This drives the three places that do release it — leaving the range, re-entering, and
-     * tearing the formation down.</p>
+     * A grant made by a formation must not outlive it: {@code ABILITY_HOLDER} is serialised and copied on
+     * death, and {@code deactivate_action} cannot revoke it, so leaving, re-entering and teardown do.
      */
     private static void verifyFormationGrantLifecycle(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_grant_probe");
@@ -2492,11 +2362,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Upkeep is charged and recorded in the same pass, including when a listener cancels the tick.
-     *
-     * <p>The attachment holds the live instance, so the counter moves in place. Before that it was
-     * written back only on the branch that ran the tick, which meant a canceled tick consumed the
-     * resource and then threw the bookkeeping away.</p>
+     * Upkeep is charged and recorded in the same pass, including when a listener cancels the tick: the
+     * attachment holds the live instance, so the counter moves in place.
      */
     private static void verifyFormationUpkeep(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_upkeep_probe");
@@ -2534,17 +2401,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A live formation has to survive a save.
-     *
-     * <p>Drives the same calls NeoForge makes when it writes and reads level attachments: store through
-     * a {@code TagValueOutput} and assert its problem reporter stayed empty, because that reporter is
-     * what decides whether the attachment is written at all. The index is keyed by a packed
-     * {@link BlockPos}, and a map key is a string in both NBT and JSON, so this is the assertion that
-     * catches a key codec which only works while the map happens to be empty.</p>
-     *
-     * <p>The read has to go through the deprecated {@code ValueInput#read(MapCodec)}: the interface has no
-     * non-deprecated whole-object read, and its replacement takes a field name, which would mean wrapping
-     * the codec in a synthetic field and no longer testing the shape NeoForge actually writes.</p>
+     * A live formation has to survive a save: the store and read are driven the way NeoForge does it, with the
+     * writer's problem reporter asserted empty because it decides whether the attachment is written at all.
      */
     @SuppressWarnings("deprecation")
     private static void verifyFormationPersistence(ServerLevel level) {
@@ -2629,13 +2487,35 @@ public final class MxtTestMod {
     }
 
     /**
-     * Air entries inside a structure template must be ignored rather than required.
-     *
-     * <p>A template saved with a structure block carries its whole bounding box, so a formation would
-     * otherwise fail because a torch landed on a cell the template recorded as empty. The template here
-     * requires a gold block at {@code [0, 0, 0]} and air at {@code [1, 0, 0]}, and the audit then puts
-     * stone on the air cell — activation may not care, while breaking the gold block must still take the
-     * formation down. Without the second half, deleting the whole palette check would pass.</p>
+     * The probes have to describe structures of their own. They were once all one gold block, which left the
+     * fixture unable to ask anything that a second definition would have answered differently.
+     */
+    private static void verifyFormationProbeStructures(ServerLevel level) {
+        Registry<Formation> registry = level.registryAccess().lookupOrThrow(MxtResourceKeys.FORMATION);
+        List<String> signatures = new ArrayList<>();
+        List<Identifier> owners = new ArrayList<>();
+        for (Map.Entry<ResourceKey<Formation>, Formation> entry : registry.entrySet()) {
+            Formation definition = entry.getValue();
+            if (definition.structure().isEmpty()) continue;
+            StringBuilder signature = new StringBuilder();
+            definition.structure().stream()
+                    .map(required -> required.offset().toShortString() + "=" + required.state())
+                    .sorted()
+                    .forEach(part -> signature.append(part).append(';'));
+            int duplicate = signatures.indexOf(signature.toString());
+            if (duplicate >= 0)
+                throw new IllegalStateException("Two formations declare the same structure: "
+                        + owners.get(duplicate) + " and " + entry.getKey().identifier());
+            signatures.add(signature.toString());
+            owners.add(entry.getKey().identifier());
+        }
+        if (signatures.size() < 2)
+            throw new IllegalStateException("The formation fixture no longer declares distinct inline structures");
+    }
+
+    /**
+     * Air entries in a structure template must be ignored rather than required: a template carries its whole
+     * bounding box, so a torch on a cell recorded as empty would otherwise fail the formation.
      */
     private static void verifyFormationTemplateAir(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_template_probe");
@@ -2661,18 +2541,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The two halves of "a player can actually get a running formation": where the plate puts the
-     * centre, and how the plate gets its formation in the first place.
-     *
-     * <p>The centre is resolved by {@link FormationCenters}, asserted on a corridor of two gold blocks one
-     * step apart. The search window is only 3x3x3 around the click, so a longer structure would not fit
-     * inside it: the corridor is as long as the window allows and no longer. A single block would not
-     * exercise the search at all, and the inline probe cannot either — its blocks are two apart, so only
-     * the position it was built at is ever a valid centre.</p>
-     *
-     * <p>Binding is driven through the command body with a {@code FakePlayer}, because the bug being
-     * guarded against is not in {@code ItemStack#set} — it is that nothing used to call it at all, and a
-     * plate in survival had no way to stop carrying an empty component.</p>
+     * The two halves of "a player can actually get a running formation": where the plate puts the centre,
+     * resolved on a two-block corridor, and how a plate gets bound, driven through the command body.
      */
     private static void verifyFormationPlateBinding(ServerLevel level) {
         try {
@@ -2688,9 +2558,10 @@ public final class MxtTestMod {
         if (definition.structure().size() != 2 || definition.structureTemplate().isPresent())
             throw new IllegalStateException("The centre probe did not declare exactly its two blocks");
         BlockPos controller = new BlockPos(0, level.getMinY() + 2, 0);
-        BlockPos ahead = controller.offset(0, 0, 1);
-        level.setBlock(controller, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
-        level.setBlock(ahead, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+        BlockPos ahead = controller.offset(definition.structure().get(1).offset());
+        if (controller.distManhattan(ahead) != 1)
+            throw new IllegalStateException("The centre probe's two blocks are no longer a corridor: " + ahead);
+        placeInline(level, controller, definition.structure());
         try {
             // Both blocks of the corridor are centres in their own right, which is what makes "the search
             // works" distinguishable from "the click happened to land on the controller".
@@ -2710,7 +2581,7 @@ public final class MxtTestMod {
             level.removeBlock(ahead, false);
             if (FormationCenters.resolve(level, controller.offset(1, 0, 4), definition).isPresent())
                 throw new IllegalStateException("A broken structure still resolved to a formation centre");
-            level.setBlock(ahead, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+            level.setBlock(ahead, definition.structure().get(1).state(), 3);
 
             FakePlayer holder = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-plate"));
             CommandSourceStack source = new CommandSourceStack(holder.commandSource(), holder.position(), Vec2.ZERO, level,
@@ -2729,11 +2600,8 @@ public final class MxtTestMod {
             holder.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
             if (FormationCommand.bind(source, id) != 0)
                 throw new IllegalStateException("The bind command modified an item that is not a plate");
-            // A typo must be refused before anything is written, so the plate keeps whatever it had: the id
-            // lookup runs first and throws, which is what reaches the operator.
-            // A typo must be refused before anything is written, so a fresh plate stays unbound. Reusing the
-            // stack bound above would make this vacuous: it is already carrying a formation for the wrong
-            // reason.
+            // A typo must be refused before anything is written, so a fresh plate stays unbound; reusing the
+            // stack bound above would make this vacuous.
             holder.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtItems.FORMATION_PLATE.get()));
             try {
                 FormationCommand.bind(source, Identifier.parse("mxt_test:never_existed"));
@@ -2757,9 +2625,8 @@ public final class MxtTestMod {
             if (formation.getChild("list") == null
                     || !formation.getChild("list").getRequirement().test(source.withPermission(PermissionSet.NO_PERMISSIONS)))
                 throw new IllegalStateException("The formation diagnostics stopped being readable without permission");
-            // The top-level alias is a separate registration from the /mxt subtree, and the server option
-            // decides whether it exists. Asserting both directions would fight the option, so the check is
-            // that presence follows the option rather than that it is present.
+            // The top-level alias is a separate registration and the server option decides whether it exists,
+            // so the check is that presence follows the option rather than that it is present.
             CommandNode<CommandSourceStack> alias = overworld.getServer().getCommands().getDispatcher()
                     .getRoot().getChild("formation");
             if ((alias == null) == MxtServerConfig.INSTANCE.commands.formation.getValue())
@@ -2772,19 +2639,14 @@ public final class MxtTestMod {
                 throw new IllegalStateException("The /formation alias and /mxt formation expose different children: "
                         + children(alias) + " vs " + children(formation));
         } finally {
+            removeInline(level, controller, definition.structure());
             level.removeBlock(controller, false);
-            level.removeBlock(ahead, false);
         }
     }
 
     /**
-     * The plate's allow list, which is what keeps "which formation can this run" a property of the item
-     * instead of "every formation in the registry".
-     *
-     * <p>Four things are asserted: an empty list follows the server option, an id in the list admits that
-     * formation and refuses another, a {@code #tag} entry admits by tag rather than by id, and the
-     * selection is only usable when it is itself admitted. The last one is the rule that makes a
-     * hand-edited or stale plate fail closed rather than activate something it should not.</p>
+     * The plate's allow list keeps "which formation can this run" a property of the item: ids and
+     * {@code #tag} entries admit their formations, and a selection is usable only when it is itself admitted.
      */
     private static void verifyFormationPlateAllowList(ServerLevel level) {
         Registry<Formation> registry = level.registryAccess().lookupOrThrow(MxtResourceKeys.FORMATION);
@@ -2831,17 +2693,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A formation's {@code aura_zone} has to reach the aura resolver, and it has to do so through the
-     * cancellable {@link AuraZoneEvent.Override} rather than by being applied unconditionally.
-     *
-     * <p>Nothing asserted this before: the formation audit checked that formations run, and the aura
-     * audit checked the static priority tiers, but the join between them — a formation standing on the
-     * ground changing what aura the position resolves to — had no coverage at all. That join is the only
-     * reason {@code aura_zone} exists on a formation, so it is exactly the kind of wiring that breaks
-     * silently when either side is edited.</p>
-     *
-     * <p>The position is chosen in a far corner rather than at the origin so the run does not disturb the
-     * aura memo benchmark that queries the origin next.</p>
+     * A formation's {@code aura_zone} has to reach the aura resolver through the cancellable
+     * {@link AuraZoneEvent.Override} rather than unconditionally - the join between formations and aura.
      */
     private static void verifyFormationAuraOverride(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_aura_probe");
@@ -2854,7 +2707,7 @@ public final class MxtTestMod {
                 .identifier();
         BlockPos controller = new BlockPos(496, level.getMinY() + 2, 496);
         try {
-            for (Formation.RequiredBlock required : definition.structure())
+            for (RequiredBlock required : definition.structure())
                 level.setBlock(controller.offset(required.offset()), required.state(), 3);
             sweepAuraMemo(level);
             AuraResult before = AuraService.getPositionAura(level, controller);
@@ -2870,9 +2723,8 @@ public final class MxtTestMod {
             if (overridden.sourceKind() != SourceKind.FORMATION || !zone.equals(overridden.source()))
                 throw new IllegalStateException("A standing formation did not override the aura: kind="
                         + overridden.sourceKind() + " source=" + overridden.source() + " expected=" + zone);
-            // The formation's max_bonus rides on the same override: it is added to the zone's own upper
-            // bound for the resource, and only for a resource the zone already provides. Both halves are
-            // asserted so "the bonus is applied" cannot pass by the resource simply being absent.
+            // The formation's max_bonus rides on the same override, added to the zone's own bound and only
+            // for a resource the zone already provides.
             Holder<Resource> bonusResource = MxtDatapackRegistries
                     .holder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))
                     .orElseThrow(() -> new IllegalStateException("The aura probe's bonus resource is missing"));
@@ -2895,7 +2747,7 @@ public final class MxtTestMod {
         } finally {
             refusingFormationAuraOverride = false;
             FormationWorldService.deactivate(level, controller);
-            for (Formation.RequiredBlock required : definition.structure())
+            for (RequiredBlock required : definition.structure())
                 level.removeBlock(controller.offset(required.offset()), false);
         }
         sweepAuraMemo(level);
@@ -2905,12 +2757,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Drops every memoised aura answer for a level by opening a new tick window with the cache switched
-     * off, then switches it back on.
-     *
-     * <p>The audit needs this because the memo is keyed by game time: within one server tick a position
-     * keeps its first answer, so a formation that appears mid-tick cannot be observed. Opening the window
-     * with {@code setEnabled(false)} also clears it, which is the only public way in.</p>
+     * Drops every memoised aura answer for a level by opening a new tick window with the cache switched off
+     * and back on: the memo is keyed by game time, so a formation appearing mid-tick would not be seen.
      */
     private static void sweepAuraMemo(ServerLevel level) {
         AuraQueryCache.setEnabled(false);
@@ -2920,17 +2768,7 @@ public final class MxtTestMod {
 
     /**
      * A block emitter inside a formation supplies the formation, not the environment, and the formation
-     * spends what it supplies on its own upkeep.
-     *
-     * <p>Three separate claims, because they fail independently. The position test decides whether a block
-     * is inside a formation at all. The attachment test decides whether an absorbed emitter is kept out of
-     * the shared stock — it has to be, because the environment subtracts the whole chunk aggregate and an
-     * emitter left in it would be handed back to every query, letting one block's aura be spent twice. The
-     * service test decides whether that aura then reduces the charge, including the case where it covers
-     * the cost entirely and the payer is never asked.</p>
-     *
-     * <p>The last case is the one that matters most in play: a formation standing on enough emitters keeps
-     * running with no owner resources at all, so the payer's balance must be untouched.</p>
+     * spends it on its own upkeep - so an absorbed emitter must also stay out of the shared chunk stock.
      */
     private static void verifyFormationAbsorption(ServerLevel level) {
         Holder<Resource> common = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt:common"));
@@ -2941,13 +2779,13 @@ public final class MxtTestMod {
 
         // The predicate itself, against a real formation in the index.
         BlockPos controller = new BlockPos(16, level.getMinY() + 2, 16);
-        level.setBlock(controller, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+        placeInline(level, controller, definition.structure());
         try {
             FormationWorldService.Result activated = FormationWorldService.activate(level, controller, id, definition,
                     new ResourceHolderAttachment(), FormulaContext.of(level), null);
             if (!activated.active())
                 throw new IllegalStateException("The absorb probe formation would not activate: " + activated.failure());
-            FormationAbsorption.Sources sources = FormationAbsorption.Sources.of(level,
+            Sources sources = Sources.of(level,
                     controller.getX() - 8, controller.getZ() - 8, controller.getX() + 8, controller.getZ() + 8);
             if (!sources.absorbed(controller.offset(4, 0, 0))
                     || sources.absorbed(controller.offset(9, 0, 0)))
@@ -2955,10 +2793,8 @@ public final class MxtTestMod {
                         + sources.absorbed(controller.offset(4, 0, 0)) + " / "
                         + sources.absorbed(controller.offset(9, 0, 0)));
 
-            // End to end through the rebuild: an emitter placed inside the formation must leave the shared
-            // stock and appear in the absorbed totals, and putting a formation up must be what causes the
-            // chunk to be rebuilt at all. Without the invalidation on activation the block would keep
-            // feeding the environment and the formation's share would silently be free.
+            // An emitter placed inside the formation must leave the shared stock and appear in the absorbed
+            // totals, and putting a formation up is what triggers the rebuild.
             Block emitter = BuiltInRegistries.BLOCK.getValue(Identifier.parse("mxt:spirit_stone_block"));
             if (emitter == null || emitter == Blocks.AIR)
                 throw new IllegalStateException("The absorption audit needs the spirit stone block to emit aura");
@@ -2981,8 +2817,9 @@ public final class MxtTestMod {
         } finally {
             FormationWorldService.deactivate(level, controller);
             level.removeBlock(controller, false);
+            removeInline(level, controller, definition.structure());
         }
-        FormationAbsorption.Sources empty = FormationAbsorption.Sources.of(level,
+        Sources empty = Sources.of(level,
                 controller.getX() - 8, controller.getZ() - 8, controller.getX() + 8, controller.getZ() + 8);
         if (!empty.empty())
             throw new IllegalStateException("A dismantled formation still absorbs emitters");
@@ -3001,19 +2838,19 @@ public final class MxtTestMod {
         // The supply reduces the charge, and covers it completely when there is enough of it.
         double cost = definition.maintenanceCosts().getFirst().evaluate(FormulaContext.of(level));
         Identifier costId = definition.maintenanceCosts().getFirst().id();
-        Map<Identifier, Double> reduced = FormationService.MaintainRule.remaining(definition, FormulaContext.of(level),
+        Map<Identifier, Double> reduced = MaintainRule.remaining(definition, FormulaContext.of(level),
                 Map.of(common, cost / 4.0D));
         if (!same(reduced.getOrDefault(costId, 0.0D), cost * 0.75D))
             throw new IllegalStateException("The supplied aura did not reduce the upkeep charge: "
                     + reduced.get(costId) + " instead of " + cost * 0.75D);
         // A fully covered cost drops out of the charge entirely, which is what lets a formation standing on
         // enough emitters keep running with no owner resources at all.
-        if (!FormationService.MaintainRule.remaining(definition, FormulaContext.of(level),
+        if (!MaintainRule.remaining(definition, FormulaContext.of(level),
                 Map.of(common, cost * 2.0D)).isEmpty())
             throw new IllegalStateException("A fully supplied upkeep still demanded payment from its owner");
         // Aura of another resource offsets nothing: the charge is not a generic pool.
         Holder<Resource> qi = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:qi"));
-        if (!same(FormationService.MaintainRule.remaining(definition, FormulaContext.of(level),
+        if (!same(MaintainRule.remaining(definition, FormulaContext.of(level),
                 Map.of(qi, cost * 10.0D)).getOrDefault(costId, 0.0D), cost))
             throw new IllegalStateException("Aura of a resource the upkeep does not cost reduced the charge anyway");
 
@@ -3095,11 +2932,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * One unreadable row must not cost the whole index, and a repeated controller must not cost the index
-     * either.
-     *
-     * <p>This is what the shared tolerant list codec buys, and it is why instance validation had to stop
-     * throwing: a codec that throws escapes the tolerant decoder and takes the attachment down instead.</p>
+     * One unreadable row must not cost the whole index, and a repeated controller must not either: a codec
+     * that throws escapes the tolerant decoder and takes the attachment down with it.
      */
     private static void verifyFormationIndexTolerance(ServerLevel level) {
         BlockPos controller = new BlockPos(0, level.getMinY() + 2, 0);
@@ -3124,11 +2958,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Makes the world match what a test formation declares, so activation validates.
-     *
-     * <p>A template-based formation gets the one-block gold template written into the structure manager,
-     * so the audit owns both halves of the match instead of depending on a shipped {@code .nbt}. An
-     * inline one gets exactly the blocks it lists.</p>
+     * Makes the world match what a test formation declares, so activation validates: a template gets the
+     * one-block gold template written into the structure manager, an inline one exactly the blocks it lists.
      */
     private static BlockPos prepareFormationController(ServerLevel level, Formation definition) {
         BlockPos controller = new BlockPos(0, level.getMinY() + 2, 0);
@@ -3137,9 +2968,22 @@ public final class MxtTestMod {
             template.load(level.registryAccess().lookupOrThrow(Registries.BLOCK), singleBlockTemplate());
             level.setBlock(controller, Blocks.GOLD_BLOCK.defaultBlockState(), 3);
         });
-        for (RequiredBlock required : definition.structure())
-            level.setBlock(controller.offset(required.offset()), required.state(), 3);
+        placeInline(level, controller, definition.structure());
         return controller;
+    }
+
+    /**
+     * Builds or clears the blocks an inline structure requires, so an audit can stand a probe up wherever it
+     * needs it rather than only at the shared controller.
+     */
+    private static void placeInline(ServerLevel level, BlockPos controller, List<RequiredBlock> structure) {
+        for (RequiredBlock required : structure)
+            level.setBlock(controller.offset(required.offset()), required.state(), 3);
+    }
+
+    private static void removeInline(ServerLevel level, BlockPos controller, List<RequiredBlock> structure) {
+        for (RequiredBlock required : structure)
+            level.removeBlock(controller.offset(required.offset()), false);
     }
 
     private static void activateFormation(ServerLevel level, BlockPos controller, Identifier id, UUID owner) {
@@ -3150,28 +2994,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The friend judgement a hostile formation makes about the entities it covers.
-     *
-     * <p>Three pigs and one owner: the owner itself, an entity the identification event calls a friend, and
-     * one it does not. A hostile formation has to spare the first two and affect the third. The owner is
-     * not a special case in the code — {@code FriendService} answers yes for an entity and itself — so
-     * asserting it here asserts that the rule belongs to the friend system rather than to a separate check
-     * that merely agrees with it today.</p>
-     *
-     * <p>The verdict comes from the audit's own event listener rather than from a friend list, which is
-     * also the only way to make a pig friendly: the lists live on players. It is the same route another mod
-     * would take, so this exercises the ticker, the event and the option end to end instead of in pieces.</p>
-     *
-     * <p>The option is exercised in both directions on purpose. It exists to turn the judgement off, and an
-     * off branch that is never run is a branch nobody has checked: turning it off has to restore the
-     * unconditional behaviour, hitting the formation's own owner included.</p>
-     *
-     * <p>The last phase re-points the formation at an owner the level cannot resolve, which is how an
-     * offline owner looks to the ticker, and expects it to stop affecting anybody. That is the opposite of
-     * the unconditional fallback this used to have, so it is the assertion most likely to be lost by a
-     * later edit that reads "no owner" as "no friends". It then turns the verdict around to prove the two
-     * outcomes are not the same: with the owner absent the event still answers by id, so a pair a listener
-     * speaks about is decided, and only a pair nobody speaks about stands down.</p>
+     * The friend judgement a hostile formation makes about the entities it covers: the owner and whoever the
+     * identification event calls a friend are spared, everyone else is affected, and the option runs both ways.
      */
     private static void verifyFormationFriendProtection(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_hostile_probe");
@@ -3190,9 +3014,8 @@ public final class MxtTestMod {
             if (!FriendService.isFriend(owner, friend))
                 throw new IllegalStateException("The audit's own verdict did not make the entity a friend");
 
-            // The rule on its own, without a world: a formation that is not hostile spares nobody whatever
-            // the owner situation, a hostile one with nobody to ask fires at nobody, and one whose instance
-            // records no owner cannot even start asking.
+            // The rule on its own, without a world: a non-hostile formation spares nobody, and a hostile one
+            // with nobody to ask fires at nobody.
             if (!FormationRelations.affects(passive, owner.getUUID(), owner, stranger))
                 throw new IllegalStateException("A formation that is not hostile spared somebody");
             if (!FormationRelations.affects(passive, null, null, stranger))
@@ -3202,9 +3025,8 @@ public final class MxtTestMod {
             if (FormationRelations.affects(definition, null, null, stranger))
                 throw new IllegalStateException("A hostile formation with no owner recorded still fired");
 
-            // The datapack condition asks the same question from inside a formation context, and refuses to
-            // guess outside one. A per-entity action's condition slot is an entity condition, so this is the
-            // only way a pack can write that judgement per action rather than per formation.
+            // The datapack condition asks the same question from inside a formation context and refuses to
+            // guess outside one, so a pack can write the judgement per action.
             FormationCarrier carrier = new FormationCarrier(id, controller,
                     definition.radius().evaluate(FormulaContext.of(level)), Optional.of(owner.getUUID()));
             if (!allied(friend, carrier))
@@ -3213,9 +3035,8 @@ public final class MxtTestMod {
                 throw new IllegalStateException("mxt:formation_ally recognised somebody the owner does not know");
             if (FormationAllyEntityCondition.INSTANCE.test(stranger, FormulaContext.EMPTY))
                 throw new IllegalStateException("mxt:formation_ally answered outside a formation context");
-            // The condition asks the same question the same way, so an owner who is offline is still
-            // answered for by whatever source speaks about the pair — otherwise the two ways of asking
-            // would disagree exactly when it matters most.
+            // An owner who is offline is still answered for by whatever source speaks about the pair, or the
+            // two ways of asking would disagree exactly when it matters most.
             FormationCarrier absent = new FormationCarrier(id, controller,
                     definition.radius().evaluate(FormulaContext.of(level)), Optional.of(UUID.randomUUID()));
             if (!allied(friend, absent))
@@ -3255,10 +3076,8 @@ public final class MxtTestMod {
             if (!owner.hasEffect(MobEffects.GLOWING) || !friend.hasEffect(MobEffects.GLOWING))
                 throw new IllegalStateException("Turning the friend judgement off did not restore the unconditional behaviour");
 
-            // Last, the owner is gone: the formation is re-pointed at an owner this level cannot resolve,
-            // which is exactly how an offline owner looks to the ticker. A hostile formation then has nobody
-            // to ask, so it stands down rather than firing at everybody — hitting the owner's friends is the
-            // one outcome the flag exists to prevent, and it cannot tell who they are any more.
+            // Last, the owner is gone: the formation is re-pointed at an owner this level cannot resolve, which
+            // is how an offline owner looks to the ticker, so it stands down rather than firing at everybody.
             MxtServerConfig.INSTANCE.formations.respectFriends.setValue(true);
             FormationWorldService.deactivate(level, controller);
             UUID absentOwner = UUID.randomUUID();
@@ -3269,10 +3088,8 @@ public final class MxtTestMod {
             FormationWorldTicker.dispatch(level);
             if (stranger.hasEffect(MobEffects.GLOWING) || friend.hasEffect(MobEffects.GLOWING))
                 throw new IllegalStateException("A hostile formation kept firing with no owner to identify anybody");
-            // The two dark outcomes are not the same thing, and only a verdict that *affects* tells them
-            // apart: the stranger above was spared because nobody could answer, while the friend was spared
-            // because the event answered for an owner with no entity. Turning the verdict around has to make
-            // the formation fire at the friend, which is only possible if the id really did reach the source.
+            // The two dark outcomes differ, and only a verdict that *affects* tells them apart: the stranger
+            // was spared because nobody could answer, the friend because a listener answered for an absent owner.
             friendVerdict = TriState.FALSE;
             friend.removeEffect(MobEffects.GLOWING);
             stranger.removeEffect(MobEffects.GLOWING);
@@ -3290,19 +3107,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The function modules: the registry that selects them, and what each of the three does.
-     *
-     * <p>A module is a second way to build a formation, next to the raw action hooks, and the two things
-     * that can go wrong with it are both invisible in play: the {@code type} field may dispatch to the
-     * wrong record (every module is a pile of optional fields, so a wrong one decodes into defaults), and
-     * a module may end up as a field nothing reads. The decode assertions catch the first, and the three
-     * end-to-end phases catch the second — each one goes through the real activation and the real ticker
-     * rather than calling the runtime directly.</p>
-     *
-     * <p>The attack phase also covers the rule that made {@code hostile} optional: nothing in the probe's
-     * JSON declares intent, so the friend judgement can only come from the module itself. The ward phase
-     * covers the one place the same silence is read the other way round — no friend source can answer for
-     * a stranger, and a ward keeps protecting.</p>
+     * The function modules: the registry that selects them, and what each of the three does. A wrong
+     * {@code type} would decode into defaults and an unread module would fail silently, so both are pinned.
      */
     private static void verifyFormationActionTypes(ServerLevel level) {
         Identifier attackId = Identifier.parse("mxt_test:formation_attack_probe");
@@ -3322,7 +3128,7 @@ public final class MxtTestMod {
         Identifier buffId = Identifier.parse("mxt_test:formation_buff_probe");
         Formation buffProbe = formationDefinition(level, buffId);
         BuffFormationAction buff = module(buffProbe, BuffFormationAction.class, buffId);
-        if (buff.target() != BuffFormationAction.TargetMode.ALLIES || buff.abilities().size() != 1)
+        if (buff.target() != TargetMode.ALLIES || buff.abilities().size() != 1)
             throw new IllegalStateException("The benefit probe's target or ability list did not decode");
         if (buff.auraZone().isPresent() || !buff.maxBonus().isEmpty())
             throw new IllegalStateException("A benefit module with no aura fields invented an aura override");
@@ -3357,11 +3163,307 @@ public final class MxtTestMod {
     }
 
     /**
-     * One module list has to survive the codec in both directions, and an unknown type has to be refused.
-     *
-     * <p>The refusal matters more than it looks: a module's fields are all optional, so a dispatch that
-     * silently fell back to the default entry would turn a typo into an array that stands there doing
-     * nothing — and nothing in play distinguishes that from an array whose pack meant it that way.</p>
+     * The stock: what a formation banks, what pays for it, and that the bank survives a save - asserted
+     * separately, since a wrong split or a bank that reset on load is invisible in play.
+     */
+    private static void verifyFormationStorage(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_storage_probe");
+        Formation definition = formationDefinition(level, id);
+        Storage storage = definition.storage()
+                .orElseThrow(() -> new IllegalStateException("The storage probe declares no stock"));
+        Holder<Resource> common = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt:common"));
+        Identifier cost = Identifier.parse("mxt:common");
+        FormulaContext context = FormulaContext.of(level);
+
+        Map<Identifier, Double> capacity = MaintainRule.capacities(storage, context);
+        if (capacity.size() != 1 || !same(capacity.getOrDefault(cost, 0.0D), 500.0D))
+            throw new IllegalStateException("A storage declaration's capacity did not decode: " + capacity);
+        // The stock is a framework field, so a formation that says nothing about it keeps nothing — and one
+        // that declares the object has to name what it stores rather than decoding into a no-op.
+        if (formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe")).storage().isPresent())
+            throw new IllegalStateException("A formation that declares no stock reported one");
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        if (Formation.DIRECT_CODEC.parse(ops, JsonParser.parseString("""
+                {"structure":[{"offset":[0,0,0],"state":"minecraft:gold_block"}],"radius":8,
+                 "storage":{}}
+                """)).result().isPresent())
+            throw new IllegalStateException("A stock with no capacity decoded instead of being reported");
+
+        Map<Identifier, Double> room = Map.of(cost, 500.0D);
+        expectStoragePlan(definition, context, Map.of(common, 50.0D), Map.of(), room,
+                Map.of(), Map.of(), Map.of(cost, 40.0D), "a surplus the capacity can hold");
+        expectStoragePlan(definition, context, Map.of(), Map.of(cost, 30.0D), room,
+                Map.of(cost, 10.0D), Map.of(), Map.of(), "a bill the bank covers on its own");
+        expectStoragePlan(definition, context, Map.of(common, 4.0D), Map.of(cost, 3.0D), room,
+                Map.of(cost, 3.0D), Map.of(cost, 3.0D), Map.of(), "a bill split three ways");
+        expectStoragePlan(definition, context, Map.of(common, 50.0D), Map.of(cost, 490.0D), room,
+                Map.of(), Map.of(), Map.of(cost, 10.0D), "a bank with ten of room left");
+        expectStoragePlan(definition, context, Map.of(common, 50.0D), Map.of(), Map.of(),
+                Map.of(), Map.of(), Map.of(), "a formation with no capacity at all");
+        if (!MaintainRule.remaining(definition, context, Map.of()).equals(Map.of(cost, 10.0D)))
+            throw new IllegalStateException("The payer's share stopped being the bill minus the ground's supply");
+
+        // High above the terrain, and not at the shared controller: the ground here supplies nothing once
+        // the formation's own emitters are gone, while a chunk at the bottom of the world may hold ore.
+        BlockPos controller = new BlockPos(8, level.getMaxY() - 16, 8);
+        placeInline(level, controller, definition.structure());
+        Block emitter = BuiltInRegistries.BLOCK.getValue(Identifier.parse("mxt:spirit_stone_block"));
+        if (emitter == null || emitter == Blocks.AIR)
+            throw new IllegalStateException("The storage audit needs the spirit stone block to emit aura");
+        List<BlockPos> emitters = List.of(controller.offset(3, 0, 3), controller.offset(-3, 0, -3));
+        try {
+            // No payer at all: the ground supplies more than the bill, which is what has to reach the bank.
+            activateFormation(level, controller, id, UUID.randomUUID());
+            for (BlockPos emitterPos : emitters) {
+                level.setBlock(emitterPos, emitter.defaultBlockState(), 3);
+                AuraChunkTicker.markDirty(level, emitterPos);
+            }
+            AuraChunkTicker.flushDirty(level);
+            FormationWorldTicker.dispatch(level);
+            Map<Identifier, Double> banked = stock(level, controller);
+            if (banked.getOrDefault(cost, 0.0D) <= 0.0D)
+                throw new IllegalStateException("A formation standing on emitters banked nothing: " + banked);
+
+            // The index has to carry the bank: it is the only per-instance state that is not a property of the
+            // definition, and a bank that reset on load would make it worthless.
+            Collector writer = new Collector();
+            TagValueOutput output = TagValueOutput.createWithContext(writer, level.registryAccess());
+            output.store(FormationWorldAttachment.MAP_CODEC, level.getData(MxtAttachments.FORMATION_WORLD));
+            if (!writer.isEmpty())
+                throw new IllegalStateException("Saving a formation with a bank reported: " + writer.getReport());
+            FormationWorldAttachment saved = TagValueInput
+                    .create(new Collector(), level.registryAccess(), output.buildResult())
+                    .read(FormationWorldAttachment.MAP_CODEC)
+                    .orElseThrow(() -> new IllegalStateException("Reading a saved bank failed"));
+            if (!saved.get(controller).orElseThrow().stored().equals(banked))
+                throw new IllegalStateException("A saved formation index lost its bank: "
+                        + saved.get(controller).orElseThrow().stored());
+
+            // The emitters go, so the bill is the bank's from now on, with still no owner to ask. Every
+            // position is marked, since the two emitters may sit in different chunks.
+            for (BlockPos emitterPos : emitters) {
+                level.removeBlock(emitterPos, false);
+                AuraChunkTicker.markDirty(level, emitterPos);
+            }
+            AuraChunkTicker.flushDirty(level);
+            Map<Holder<Resource>, Double> afterRemoval = supplyOf(level, controller, definition);
+            if (afterRemoval.getOrDefault(common, 0.0D) > 0.0D)
+                throw new IllegalStateException("The storage audit needs ground that supplies nothing once its own "
+                        + "emitters are gone, but found " + afterRemoval);
+            int paidByBank = 0;
+            while (!stock(level, controller).isEmpty() && paidByBank < 64) {
+                FormationWorldTicker.dispatch(level);
+                paidByBank++;
+                if (level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isEmpty())
+                    throw new IllegalStateException("A formation with a bank was taken down with " + paidByBank
+                            + " periods of it left: " + stock(level, controller));
+            }
+            if (paidByBank == 0)
+                throw new IllegalStateException("A banked supply paid no period once the emitters were gone");
+            if (paidByBank >= 64)
+                throw new IllegalStateException("A bank never drained over " + paidByBank + " periods, with "
+                        + supplyOf(level, controller, definition) + " still supplied per period and "
+                        + stock(level, controller) + " banked");
+            // ... and it is finite: the period after it runs out is the one that ends the formation.
+            FormationWorldTicker.dispatch(level);
+            if (level.getData(MxtAttachments.FORMATION_WORLD).get(controller).isPresent())
+                throw new IllegalStateException("An empty bank still paid a bill its owner could not, with "
+                        + supplyOf(level, controller, definition) + " supplied and " + stock(level, controller) + " banked");
+        } finally {
+            FormationWorldService.deactivate(level, controller);
+            level.removeBlock(controller, false);
+            removeInline(level, controller, definition.structure());
+            for (BlockPos emitterPos : emitters) level.removeBlock(emitterPos, false);
+        }
+    }
+
+    /**
+     * The display module: where the boundary is drawn, how often, and that the ticker reaches it. Geometry is
+     * asserted against the definition, and the periodic pass is asserted to reach the module - or reach none.
+     */
+    private static void verifyFormationRangeDisplay(ServerLevel level) {
+        Identifier id = Identifier.parse("mxt_test:formation_range_probe");
+        Formation definition = formationDefinition(level, id);
+        RangeDisplayFormationAction display = module(definition, RangeDisplayFormationAction.class, id);
+        if (display.shape() != Shape.SPHERE || display.points() != 24
+                || display.intervalPeriods() != 2 || display.particle() != ParticleTypes.END_ROD)
+            throw new IllegalStateException("The range probe's display module did not decode");
+        // The defaults, from the JSON that omits them.
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        Formation bare = Formation.DIRECT_CODEC.parse(ops, JsonParser.parseString("""
+                {"structure":[{"offset":[0,0,0],"state":"minecraft:gold_block"}],"radius":8,
+                 "actions":[{"type":"mxt:range_display","particle":{"type":"minecraft:end_rod"}}]}
+                """)).result().orElseThrow(() -> new IllegalStateException("A display module with only a particle did not decode"));
+        RangeDisplayFormationAction defaults = module(bare, RangeDisplayFormationAction.class, id);
+        if (defaults.shape() != Shape.RING || defaults.points() != 32
+                || defaults.intervalPeriods() != 1)
+            throw new IllegalStateException("A display module did not default to a ring drawn every period");
+
+        Vec3 center = new Vec3(0.5D, 64.0D, 0.5D);
+        double radius = 8.0D;
+        List<Vec3> ring = FormationRangeDisplay.points(Shape.RING, center, radius, 16);
+        expectOnBoundary(ring, center, radius, "A ring outline");
+        for (Vec3 point : ring) {
+            if (!same(point.y, center.y))
+                throw new IllegalStateException("A ring outline left the controller's own level: " + point.y);
+        }
+        List<Vec3> sphere = FormationRangeDisplay.points(Shape.SPHERE, center, radius, 16);
+        expectOnBoundary(sphere, center, radius, "A sphere outline");
+        if (sphere.stream().mapToDouble(Vec3::y).min().orElseThrow() >= center.y
+                || sphere.stream().mapToDouble(Vec3::y).max().orElseThrow() <= center.y)
+            throw new IllegalStateException("A sphere outline never left the controller's own level");
+
+        // Only the players looking at it are sent it, and the margin past the radius is what makes a
+        // boundary legible from just outside itself.
+        double edge = radius + FormationRangeDisplay.VISIBLE_MARGIN;
+        if (!FormationRangeDisplay.visible(center, radius, center.add(edge - 0.5D, 0.0D, 0.0D))
+                || FormationRangeDisplay.visible(center, radius, center.add(edge + 0.5D, 0.0D, 0.0D)))
+            throw new IllegalStateException("The display's visibility rule does not follow its own margin");
+        long period = FormationWorldTicker.PERIOD;
+        // Interval two, counted from the first period: the even periods draw and the odd ones do not, and the
+        // default of one draws on every period.
+        if (!FormationRangeDisplay.due(display, 0L, period)
+                || FormationRangeDisplay.due(display, period, period)
+                || !FormationRangeDisplay.due(display, period * 2L, period)
+                || FormationRangeDisplay.due(display, period * 3L, period))
+            throw new IllegalStateException("A display module drew on a period its interval excludes");
+        if (!FormationRangeDisplay.due(defaults, period, period))
+            throw new IllegalStateException("A display module with the default interval skipped a period");
+
+        BlockPos controller = prepareFormationController(level, definition);
+        try {
+            activateFormation(level, controller, id, null);
+            FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).get(controller)
+                    .orElseThrow(() -> new IllegalStateException("The range probe did not activate"));
+            if (FormationActionRunner.perPeriod(level, definition, instance, controller) != 1)
+                throw new IllegalStateException("A display module was declared but never reached by the periodic pass");
+            Formation plain = formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe"));
+            if (FormationActionRunner.perPeriod(level, plain, instance, controller) != 0)
+                throw new IllegalStateException("A formation with no display module reached one anyway");
+        } finally {
+            clearFormation(level, controller, definition);
+        }
+    }
+
+    /**
+     * An unbound plate identifies the formation standing in front of it: the click path is driven for real,
+     * the order candidates are tried in is pinned, and the server option is checked in both directions.
+     */
+    private static void verifyFormationPlateAutoDetect(ServerLevel level) {
+        FormationPlateComponent unbound = new FormationPlateComponent(List.of(), Optional.empty());
+        List<Holder<Formation>> candidates = FormationPlateItem.admissibleCandidates(unbound);
+        if (candidates.isEmpty())
+            throw new IllegalStateException("An unrestricted plate found nothing it may try");
+        for (int index = 1; index < candidates.size(); index++) {
+            if (HolderHelper.id(candidates.get(index - 1)).compareTo(HolderHelper.id(candidates.get(index))) >= 0)
+                throw new IllegalStateException("The plate's candidates are not in a deterministic order: "
+                        + HolderHelper.id(candidates.get(index - 1)) + " then " + HolderHelper.id(candidates.get(index)));
+        }
+
+        // The probes describe different structures, so standing one of them up here is what makes the
+        // identification a question rather than a formality.
+        Identifier standing = Identifier.parse("mxt_test:formation_range_probe");
+        Formation standingDefinition = formationDefinition(level, standing);
+        BlockPos clicked = new BlockPos(4, level.getMinY() + 2, 4);
+        placeInline(level, clicked, standingDefinition.structure());
+        FakePlayer holder = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-auto"));
+        ItemStack plate = new ItemStack(MxtItems.FORMATION_PLATE.get());
+        holder.setItemInHand(InteractionHand.MAIN_HAND, plate);
+        boolean configured = MxtServerConfig.INSTANCE.formations.plateAutoDetect.getValue();
+        try {
+            // What the identification has to answer is the first admissible definition whose structure is
+            // standing at the clicked block. Everything else about the order is the caller's business.
+            List<Holder<Formation>> matching = candidates.stream()
+                    .filter(candidate -> FormationStructureValidator.STRUCTURE.matches(level, clicked, candidate.value()))
+                    .toList();
+            if (matching.size() != 1 || !HolderHelper.id(matching.getFirst()).equals(standing))
+                throw new IllegalStateException("The structure standing at the clicked block identified "
+                        + matching.stream().map(HolderHelper::id).toList() + " instead of only " + standing);
+            Holder<Formation> expected = matching.getFirst();
+            Optional<Match> match = FormationCenters.resolveAny(level, clicked, candidates);
+            if (match.isEmpty() || !match.get().center().equals(clicked) || !match.get().formation().equals(expected))
+                throw new IllegalStateException("The identification did not answer with the first admissible match");
+
+            MxtServerConfig.INSTANCE.formations.plateAutoDetect.setValue(false);
+            if (plate.useOn(plateClick(holder, clicked)) != InteractionResult.FAIL
+                    || level.getData(MxtAttachments.FORMATION_WORLD).get(clicked).isPresent())
+                throw new IllegalStateException("An unbound plate raised something with the option turned off");
+
+            MxtServerConfig.INSTANCE.formations.plateAutoDetect.setValue(true);
+            if (plate.useOn(plateClick(holder, clicked)) != InteractionResult.SUCCESS)
+                throw new IllegalStateException("An unbound plate refused the formation standing in front of it");
+            Identifier raised = level.getData(MxtAttachments.FORMATION_WORLD).get(clicked)
+                    .orElseThrow(() -> new IllegalStateException("A successful identification raised nothing"))
+                    .formation();
+            if (!raised.equals(HolderHelper.id(expected)))
+                throw new IllegalStateException("An unbound plate raised a formation other than the one it identified: "
+                        + raised + " instead of " + HolderHelper.id(expected));
+            // The same plate is the off switch, which is what makes adding the identification safe.
+            if (plate.useOn(plateClick(holder, clicked)) != InteractionResult.SUCCESS
+                    || level.getData(MxtAttachments.FORMATION_WORLD).get(clicked).isPresent())
+                throw new IllegalStateException("An identifying plate could not take the formation down again");
+        } finally {
+            MxtServerConfig.INSTANCE.formations.plateAutoDetect.setValue(configured);
+            FormationWorldService.deactivate(level, clicked);
+            level.removeBlock(clicked, false);
+            removeInline(level, clicked, standingDefinition.structure());
+        }
+    }
+
+    /**
+     * A right-click on one block, held in the main hand: the plate's own click path, driven without a client.
+     */
+    private static UseOnContext plateClick(ServerPlayer player, BlockPos position) {
+        return new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(position.getCenter(), Direction.UP, position, false));
+    }
+
+    /**
+     * Asserts one period's three-way split of the upkeep: what the bank pays, what is left to the payer, and
+     * what the bank gains.
+     */
+    private static void expectStoragePlan(Formation definition, FormulaContext context,
+                                          Map<Holder<Resource>, Double> supplied, Map<Identifier, Double> stored,
+                                          Map<Identifier, Double> capacity, Map<Identifier, Double> fromStock,
+                                          Map<Identifier, Double> fromOwner, Map<Identifier, Double> deposit,
+                                          String what) {
+        PaymentPlan plan =
+                MaintainRule.plan(definition, context, supplied, stored, capacity);
+        if (!plan.fromStock().equals(fromStock) || !plan.fromOwner().equals(fromOwner) || !plan.deposit().equals(deposit))
+            throw new IllegalStateException("The upkeep split was wrong for " + what + ": bank paid " + plan.fromStock()
+                    + ", owner owes " + plan.fromOwner() + ", bank gains " + plan.deposit());
+    }
+
+    /**
+     * What a standing formation has banked, or nothing when it is not standing.
+     */
+    private static Map<Identifier, Double> stock(ServerLevel level, BlockPos controller) {
+        return level.getData(MxtAttachments.FORMATION_WORLD).get(controller)
+                .map(FormationInstance::stored).orElse(Map.of());
+    }
+
+    /**
+     * What the ground supplies a formation this period, for the assertions that have to say why they failed.
+     */
+    private static Map<Holder<Resource>, Double> supplyOf(ServerLevel level, BlockPos controller, Formation definition) {
+        return FormationAbsorption.absorbedFor(level, controller, definition.radius().evaluate(FormulaContext.of(level)));
+    }
+
+    /**
+     * Asserts every point of an outline sits exactly on the boundary.
+     */
+    private static void expectOnBoundary(List<Vec3> points, Vec3 center, double radius, String what) {
+        if (points.isEmpty())
+            throw new IllegalStateException(what + " produced no points");
+        for (Vec3 point : points) {
+            if (!same(point.distanceTo(center), radius))
+                throw new IllegalStateException(what + " put a point off the boundary: " + point.distanceTo(center));
+        }
+    }
+
+    /**
+     * One module list has to survive the codec in both directions, and an unknown type has to be refused: a
+     * silent fallback to the default entry would turn a typo into an array that stands there doing nothing.
      */
     private static void verifyFormationModuleCodec(ServerLevel level) {
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
@@ -3386,7 +3488,7 @@ public final class MxtTestMod {
         DataResult<Formation> roundTripped = Formation.DIRECT_CODEC.parse(ops,
                 Formation.DIRECT_CODEC.encodeStart(ops, definition).getOrThrow());
         if (roundTripped.result().isEmpty()
-                || !(roundTripped.result().orElseThrow().actions().get(0) instanceof AttackFormationAction restored)
+                || !(roundTripped.result().orElseThrow().actions().getFirst() instanceof AttackFormationAction restored)
                 || !same(restored.damage().evaluate(FormulaContext.EMPTY), 1.0D))
             throw new IllegalStateException("A module list did not survive an encode and a decode");
         DataResult<Formation> unknown = Formation.DIRECT_CODEC.parse(ops, JsonParser.parseString("""
@@ -3398,12 +3500,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * An attack module hurts strangers, spares the owner and his friends, and credits the owner for what
-     * it does.
-     *
-     * <p>The attribution is the half that is easy to lose silently: damage with no attacker leaves no mob
-     * aggro behind and makes a kill look like weather, and nothing throws when it goes missing. It is
-     * asserted through the victim's own record of who hurt it, which is what the rest of the game reads.</p>
+     * An attack module hurts strangers, spares the owner and his friends, and credits the owner for what it
+     * does: damage with no attacker leaves no mob aggro behind, and nothing throws when it goes missing.
      */
     private static void verifyFormationAttackModule(ServerLevel level, Identifier id, Formation definition) {
         BlockPos controller = prepareFormationController(level, definition);
@@ -3438,13 +3536,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A benefit module grants under the formation's own source, respects its target, and takes the grant
-     * back from an entity it stops targeting.
-     *
-     * <p>The last part is the one no other path covers. Walking out of the radius releases a grant, and
-     * so does teardown, but an entity that stays put and simply stops being a friend is only released if
-     * the module reconciles what it handed out — otherwise the gift sits there until the entity happens
-     * to leave, which is a hole nothing in play would report.</p>
+     * A benefit module grants under the formation's own source, respects its target, and takes the grant back
+     * from an entity it stops targeting - the one release path nothing else covers.
      */
     private static void verifyFormationBuffModule(ServerLevel level, Identifier id, Formation definition) {
         BlockPos controller = prepareFormationController(level, definition);
@@ -3481,17 +3574,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A protection ward holds its radius against everyone except its owner and — while the judgement is on —
-     * his friends, and it is asked about both ends of the action.
-     *
-     * <p>The exemptions are asked by id, which is the only shape in which they can be asserted here: the
-     * audit has no logged-in player to swing at a block, and the rule is written so that it does not need
-     * one. The same silence that makes a hostile array hold fire makes a ward keep protecting, and the
-     * option that turns the friend half off must not touch the owner.</p>
-     *
-     * <p>The union is asserted in both directions rather than assumed: a stranger reaching in from outside
-     * is refused for the block's sake, a stranger standing inside is refused for his own, and an action with
-     * no target at all can only be judged by where its actor stands.</p>
+     * A protection ward holds its radius against everyone except its owner and, while the judgement is on, his
+     * friends, and is asked about both ends of an action; exemptions are asked by id, having no player to use.
      */
     private static void verifyFormationProtection(ServerLevel level, Identifier id, Formation definition) {
         BlockPos controller = prepareFormationController(level, definition);
@@ -3506,7 +3590,7 @@ public final class MxtTestMod {
             friendVerdictTarget = friend;
             friendVerdict = TriState.TRUE;
             activateFormation(level, controller, id, owner.getUUID());
-            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+            for (Action action : Action.values()) {
                 if (!FormationProtection.prevented(level, action, inside, stranger.getUUID()))
                     throw new IllegalStateException("A ward let a stranger through: " + action);
                 if (FormationProtection.prevented(level, action, inside, owner.getUUID()))
@@ -3518,21 +3602,21 @@ public final class MxtTestMod {
             }
             // Both ends of the action, each on its own: an outsider reaching in, and an insider reaching
             // out. Looking at only one of them would be watching the wrong end of a ward.
-            if (!FormationProtection.prevented(level, FormationProtection.Action.BREAK, inside, outsider.getUUID()))
+            if (!FormationProtection.prevented(level, Action.BREAK, inside, outsider.getUUID()))
                 throw new IllegalStateException("A ward ignored a stranger reaching into it from outside");
-            if (!FormationProtection.prevented(level, FormationProtection.Action.BREAK, outside, stranger.getUUID()))
+            if (!FormationProtection.prevented(level, Action.BREAK, outside, stranger.getUUID()))
                 throw new IllegalStateException("A ward ignored a stranger acting from inside it");
-            if (!FormationProtection.prevented(level, FormationProtection.Action.ITEM_USE, null, stranger.getUUID()))
+            if (!FormationProtection.prevented(level, Action.ITEM_USE, null, stranger.getUUID()))
                 throw new IllegalStateException("A ward ignored an act with no target by an actor inside it");
-            if (FormationProtection.prevented(level, FormationProtection.Action.ITEM_USE, null, outsider.getUUID()))
+            if (FormationProtection.prevented(level, Action.ITEM_USE, null, outsider.getUUID()))
                 throw new IllegalStateException("A ward answered for an act with no target and an actor outside it");
             // An explosion has no actor to be exempted, which the owner's own blast would otherwise be.
-            if (!FormationProtection.prevented(level, FormationProtection.Action.EXPLOSION, inside, null))
+            if (!FormationProtection.prevented(level, Action.EXPLOSION, inside, null))
                 throw new IllegalStateException("A ward let an actorless action inside it through");
             MxtServerConfig.INSTANCE.formations.respectFriends.setValue(false);
-            if (!FormationProtection.prevented(level, FormationProtection.Action.BREAK, inside, friend.getUUID()))
+            if (!FormationProtection.prevented(level, Action.BREAK, inside, friend.getUUID()))
                 throw new IllegalStateException("Turning the friend judgement off did not restore the ward");
-            if (FormationProtection.prevented(level, FormationProtection.Action.BREAK, inside, owner.getUUID()))
+            if (FormationProtection.prevented(level, Action.BREAK, inside, owner.getUUID()))
                 throw new IllegalStateException("The friend judgement's option locked a ward's owner out");
         } finally {
             friendVerdictTarget = null;
@@ -3543,14 +3627,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * A module that hands its protection to claims enforces none of its own flags — while there is
-     * something to hand it to.
-     *
-     * <p>The whole point of the server option is that "hand it over" must not quietly mean "protect
-     * nothing", so both answers are asserted here. This server has no FTB Chunks, which is exactly the
-     * situation the option exists for: with it on (the default) the ward keeps its own flags, and with it
-     * off the flags are handed over and nothing is enforced. Every action is checked rather than one,
-     * because a half-honoured switch would be worse than either answer.</p>
+     * A module that hands its protection to claims enforces none of its own flags while there is something to
+     * hand it to. With no claim plugin here, both answers of the option are asserted for every action.
      */
     private static void verifyFormationProtectionDelegation(ServerLevel level, Identifier id, Formation definition) {
         BlockPos controller = prepareFormationController(level, definition);
@@ -3563,7 +3641,7 @@ public final class MxtTestMod {
             MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(true);
             if (FormationProtection.delegationHandsOver())
                 throw new IllegalStateException("A formation handed its protection over with no claim protection to hand it to");
-            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+            for (Action action : Action.values()) {
                 if (!FormationProtection.prevented(level, action, inside, stranger.getUUID()))
                     throw new IllegalStateException("A delegating ward fell back to nothing rather than to its own flags: " + action);
             }
@@ -3571,7 +3649,7 @@ public final class MxtTestMod {
             MxtServerConfig.INSTANCE.formations.delegateRequiresClaims.setValue(false);
             if (!FormationProtection.delegationHandsOver())
                 throw new IllegalStateException("A formation refused to hand its protection over with the server option off");
-            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+            for (Action action : Action.values()) {
                 if (FormationProtection.prevented(level, action, inside, stranger.getUUID()))
                     throw new IllegalStateException("A delegated ward enforced a flag it handed over: " + action);
             }
@@ -3582,27 +3660,21 @@ public final class MxtTestMod {
     }
 
     /**
-     * The claim linkage options, as far as a server without a claim plugin can show them.
-     *
-     * <p>Every one of them is about claims and this server has none — which is the case worth pinning,
-     * because the options that restrict or hand over must not degenerate into "cannot build" or "protect
-     * nothing" when the plugin they refer to is missing. {@code claims_only} has to stay inert (and say so
-     * once), the foreign-claim rule has no claim to judge, and {@code claims_precedence} has to find no
-     * claim to prefer and leave the ward's own flags in force. Which formations the rules apply to is the
-     * other half: a ward is a claim of jurisdiction, an attack array is not.</p>
+     * The claim linkage options, as far as a server without a claim plugin can show them: they stay inert
+     * rather than becoming "cannot build", and only a ward counts as a claim of jurisdiction.
      */
     private static void verifyFormationProtectionLinkage(ServerLevel level, Identifier id, Formation definition) {
         Formation attack = formationDefinition(level, Identifier.parse("mxt_test:formation_attack_probe"));
         if (!FormationProtection.hasProtection(definition) || FormationProtection.hasProtection(attack))
             throw new IllegalStateException("The audit could not tell a formation with a ward from one without");
-        MxtServerConfig.ClaimLinkage configured = MxtServerConfig.INSTANCE.formations.claimLinkage.getValue();
+        ClaimLinkage configured = MxtServerConfig.INSTANCE.formations.claimLinkage.getValue();
         boolean configuredPermission = MxtServerConfig.INSTANCE.formations.wardsNeedClaimPermission.getValue();
         BlockPos controller = prepareFormationController(level, definition);
         Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
         Pig stranger = spawnProbe(level, controller.offset(-2, 1, 0));
         BlockPos inside = controller.offset(2, 0, 0);
         try {
-            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(MxtServerConfig.ClaimLinkage.CLAIMS_ONLY);
+            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(ClaimLinkage.CLAIMS_ONLY);
             if (FormationProtection.claimsOnlyRefuses(level, controller))
                 throw new IllegalStateException("claims_only refused a ward with no claim plugin to require");
             // The foreign-claim rule is asked with the option on, so that this asserts the rule and not the
@@ -3612,8 +3684,8 @@ public final class MxtTestMod {
                 throw new IllegalStateException("The foreign-claim rule refused a ward with no claims to judge");
             // The modes have to leave ordinary activation working, not merely report themselves as inert.
             activateFormation(level, controller, id, owner.getUUID());
-            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(MxtServerConfig.ClaimLinkage.CLAIMS_PRECEDENCE);
-            for (FormationProtection.Action action : FormationProtection.Action.values()) {
+            MxtServerConfig.INSTANCE.formations.claimLinkage.setValue(ClaimLinkage.CLAIMS_PRECEDENCE);
+            for (Action action : Action.values()) {
                 if (!FormationProtection.prevented(level, action, inside, stranger.getUUID()))
                     throw new IllegalStateException("claims_precedence handed a ward over with no claim to hand it to: " + action);
             }
@@ -3645,7 +3717,7 @@ public final class MxtTestMod {
                 || ward.entityInteract() != entityInteract || ward.attackEntity() != attackEntity
                 || ward.itemUse() != itemUse || ward.spareFriends() != spareFriends)
             throw new IllegalStateException(what + " did not decode the flags it declares");
-        for (FormationProtection.Action action : FormationProtection.Action.values()) {
+        for (Action action : Action.values()) {
             boolean expected = switch (action) {
                 case BREAK -> blockBreak;
                 case PLACE -> blockPlace;
@@ -3662,9 +3734,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Evaluates {@code mxt:formation_ally} the way a per-entity action does: decoded from its own JSON by
-     * id, with the formation carrier already in the context, which is the only route to the owner a
-     * condition of that shape has.
+     * Evaluates {@code mxt:formation_ally} the way a per-entity action does: decoded from its own JSON by id,
+     * with the formation carrier in the context, which is the only route to the owner that shape has.
      */
     private static boolean allied(Pig entity, FormationCarrier carrier) {
         EntityCondition condition = EntityCondition.SINGLE_CODEC
@@ -3675,23 +3746,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The friend system: what "temporary" means, what the identification event is allowed to override, and
-     * that the command actually reaches a list.
-     *
-     * <p>"Temporary" is invisible in play — nothing tells a player whether a friend survived, and nothing
-     * breaks loudly if the split is wrong — so both halves are asserted at the boundaries that decide it.
-     * The codec is the first: a list holding one of each has to come back whole, because a session friend
-     * that a death takes with it is precisely the bug that putting the list in the codec prevents. The
-     * login event is the second, and it is the one that ends the session: posting a real
-     * {@code PlayerLoggedInEvent} has to empty the session list and leave the saved one alone. Neither
-     * assertion is worth much without the other, since a codec that drops the session list and a login
-     * that keeps it look identical from inside the list.</p>
-     *
-     * <p>The identification pipeline is driven through a listener on the real bus, because the part that
-     * can silently invert is the precedence between the event and the lists: a listener's verdict has to
-     * win, and a listener that abstains has to leave the lists in charge instead of answering "no". The
-     * command is driven through the dispatcher for the reason the plate binding is: the interesting bug is
-     * that nothing calls the list at all.</p>
+     * The friend system: what "temporary" means, what the identification event may override, and that the
+     * command reaches a list - the codec must carry both lists, since a death serialises the attachment.
      */
     private static void verifyFriendIdentification(ServerLevel level) {
         NameAndId saved = new NameAndId(UUID.randomUUID(), "mxt-audit-saved");
@@ -3700,8 +3756,8 @@ public final class MxtTestMod {
         // What the codec holds is the definition of what a death keeps: both lists, because NeoForge copies
         // an attachment on death by serialising and deserialising it.
         FriendAttachment encoded = new FriendAttachment();
-        if (encoded.add(session) != FriendAttachment.AddResult.ADDED
-                || encoded.addPermanent(saved) != FriendAttachment.AddResult.ADDED)
+        if (encoded.add(session) != AddResult.ADDED
+                || encoded.addPermanent(saved) != AddResult.ADDED)
             throw new IllegalStateException("A fresh friend list refused its first entries");
         if (!encoded.isFriend(saved.id()) || !encoded.isFriend(session.id()))
             throw new IllegalStateException("Adding a friend did not make it a friend");
@@ -3726,19 +3782,19 @@ public final class MxtTestMod {
 
         // The two lists describe one player at most: saving a session friend moves it rather than copying it.
         FriendAttachment promoting = new FriendAttachment();
-        if (promoting.add(session) != FriendAttachment.AddResult.ADDED
-                || promoting.addPermanent(session) != FriendAttachment.AddResult.ADDED)
+        if (promoting.add(session) != AddResult.ADDED
+                || promoting.addPermanent(session) != AddResult.ADDED)
             throw new IllegalStateException("Saving a session friend was refused");
         if (!promoting.temporary().isEmpty() || promoting.permanent().size() != 1)
             throw new IllegalStateException("Saving a session friend left it on both lists");
-        if (promoting.add(session) != FriendAttachment.AddResult.ALREADY_PERMANENT
-                || promoting.addPermanent(session) != FriendAttachment.AddResult.ALREADY_PERMANENT)
+        if (promoting.add(session) != AddResult.ALREADY_PERMANENT
+                || promoting.addPermanent(session) != AddResult.ALREADY_PERMANENT)
             throw new IllegalStateException("A saved friend was not reported as already saved");
-        if (promoting.remove(session.id()) != FriendAttachment.RemoveResult.PERMANENT || !promoting.isFriend(session.id()))
+        if (promoting.remove(session.id()) != RemoveResult.PERMANENT || !promoting.isFriend(session.id()))
             throw new IllegalStateException("A session removal took a saved friend away");
-        if (promoting.removePermanent(session.id()) != FriendAttachment.RemoveResult.REMOVED || promoting.isFriend(session.id()))
+        if (promoting.removePermanent(session.id()) != RemoveResult.REMOVED || promoting.isFriend(session.id()))
             throw new IllegalStateException("Removing a saved friend left it behind");
-        if (promoting.removePermanent(session.id()) != FriendAttachment.RemoveResult.NOT_A_FRIEND)
+        if (promoting.removePermanent(session.id()) != RemoveResult.NOT_A_FRIEND)
             throw new IllegalStateException("Removing a saved friend twice reported a change");
 
         FakePlayer judge = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-friend"));
@@ -3777,10 +3833,8 @@ public final class MxtTestMod {
             throw new IllegalStateException("A listener that abstained did not hand the question back to the friend list");
         friendVerdictTarget = null;
 
-        // An id-only question is the form that reaches a source keeping its own per-player data, and the only
-        // form that exists for a judge who is offline. With no listener speaking and no entity to read a list
-        // from, nobody can answer — a real third outcome, not a disguised "no". A judge the mirror has never
-        // seen is exactly that case.
+        // An id-only question is the form that reaches a source with its own per-player data, and the only
+        // form for an offline judge: with no listener and no entity, nobody can answer - not a disguised "no".
         if (FriendService.identify(stranger.getUUID(), null, target) != TriState.DEFAULT)
             throw new IllegalStateException("A question with no judge entity and no listener invented an answer");
         if (FriendService.identify(judge.getUUID(), null, judge) != TriState.TRUE)
@@ -3789,9 +3843,8 @@ public final class MxtTestMod {
             throw new IllegalStateException("A judge nobody has logged in as was already mirrored");
 
         // The FTB Teams source is a soft dependency, and this is what keeps it soft: with FTB Teams absent
-        // the listener has to answer nothing, without a single FTB class being loaded. If an FTB type ever
-        // leaks into the guard class, this is where the NoClassDefFoundError lands.
-        FriendEvent.Relation ftb = new FriendEvent.Relation(UUID.randomUUID(), null, stranger);
+        // the listener must answer nothing, without loading a single FTB class.
+        Relation ftb = new Relation(UUID.randomUUID(), null, stranger);
         FtbTeamsCompat.onRelation(ftb);
         if (ftb.answered())
             throw new IllegalStateException("The FTB Teams source answered for an owner it knows nothing about");
@@ -3802,9 +3855,8 @@ public final class MxtTestMod {
                 || MxtServerConfig.ftbTeamsInvitedCounts() != MxtServerConfig.INSTANCE.friends.ftbTeamsInvited.getValue())
             throw new IllegalStateException("The FTB Teams rank options do not follow their entries");
 
-        // The command has to reach the list, and a name has to resolve while that player is offline. Seeding
-        // the profile cache keeps the lookup off the network; it is the same cache vanilla resolves the
-        // names given to /op and /ban through.
+        // The command has to reach the list, and a name has to resolve while that player is offline; seeding
+        // the profile cache keeps the lookup off the network.
         String name = "MxtAuditFriend";
         UUID named = UUID.randomUUID();
         MinecraftServer server = level.getServer();
@@ -3835,28 +3887,26 @@ public final class MxtTestMod {
         throughCommand.add(new NameAndId(stranger.getUUID(), "mxt-audit-session-target"));
         if (throughCommand.temporary().isEmpty())
             throw new IllegalStateException("A session friend could not be added for the login check");
-        NeoForge.EVENT_BUS.post(new PlayerLoggedInEvent((ServerPlayer) judge));
+        NeoForge.EVENT_BUS.post(new PlayerLoggedInEvent(judge));
         if (!throughCommand.temporary().isEmpty())
             throw new IllegalStateException("Logging in did not end the session friend list");
         if (throughCommand.permanent().stream().noneMatch(friend -> friend.id().equals(target.getUUID())))
             throw new IllegalStateException("Logging in dropped a saved friend");
 
-        // The login is also where the mirror is filled, and the mirror is what lets the built-in system
-        // answer for a player whose entity is gone. Asked with no listener speaking, so the answer can only
-        // have come from the mirror.
+        // The login is also where the mirror is filled, and the mirror is what lets the built-in system answer
+        // for a player whose entity is gone; no listener speaks here, so the answer can only be the mirror's.
         if (FriendCache.lookup(judge.getUUID(), target.getUUID()) != TriState.TRUE
                 || FriendCache.lookup(judge.getUUID(), stranger.getUUID()) != TriState.FALSE)
             throw new IllegalStateException("Logging in did not mirror the friend lists");
         if (FriendService.identify(judge.getUUID(), null, target) != TriState.TRUE)
             throw new IllegalStateException("The built-in system could not answer for an offline judge");
 
-        // The logout end of the session is what makes the mirror correct for the offline stretch: a change
-        // made while the player is online is invisible to the mirror — and harmless, because the live
-        // attachment is what gets read — until the session ends.
+        // The logout end of the session makes the mirror correct for the offline stretch: a change made while
+        // the player is online is invisible to it until the session ends.
         throughCommand.addPermanent(new NameAndId(stranger.getUUID(), "mxt-audit-late"));
         if (FriendCache.lookup(judge.getUUID(), stranger.getUUID()) != TriState.FALSE)
             throw new IllegalStateException("The mirror followed a change made during the session");
-        NeoForge.EVENT_BUS.post(new PlayerLoggedOutEvent((ServerPlayer) judge));
+        NeoForge.EVENT_BUS.post(new PlayerLoggedOutEvent(judge));
         if (FriendCache.lookup(judge.getUUID(), stranger.getUUID()) != TriState.TRUE)
             throw new IllegalStateException("Logging out did not refresh the friend mirror");
 
@@ -3947,12 +3997,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * The template the audit installs for every template-based test formation: a gold block at the
-     * controller and an air entry beside it.
-     *
-     * <p>The air entry is deliberate. A template saved with a structure block records its whole bounding
-     * box, so this is the shape of a real saved template, and it is what lets the audit assert that an
-     * empty cell is not something the world has to reproduce.</p>
+     * The template the audit installs for every template-based test formation: a gold block at the controller
+     * and an air entry beside it, since a saved template records its whole bounding box.
      */
     private static CompoundTag singleBlockTemplate() {
         CompoundTag template = new CompoundTag();

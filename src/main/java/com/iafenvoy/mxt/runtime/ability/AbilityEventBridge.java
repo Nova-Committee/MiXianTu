@@ -107,9 +107,8 @@ public final class AbilityEventBridge {
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         initializeHudResources(entity, resourceHolder);
-        // Regeneration is part of a cultivation profile, so only profiled values are visited at all:
-        // a plain counter is never looked at, and a profiled value that has no stored entry yet is
-        // created by its first change instead of by this loop.
+        // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
+        // with no stored entry yet is created by its first change instead of by this loop.
         for (Reference<CultivationProfile> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION).toList()) {
             Holder<Resource> resource = cultivation.value().resource();
             if (!resourceHolder.contains(resource)) continue;
@@ -191,9 +190,6 @@ public final class AbilityEventBridge {
                         .block(event.getLevel().getBlockState(event.getPos())));
     }
 
-    /**
-     * Keeps equipment-contributed ability sources in sync before dispatching the equip trigger.
-     */
     @SubscribeEvent
     public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
         LivingEntity entity = event.getEntity();
@@ -218,7 +214,7 @@ public final class AbilityEventBridge {
     }
 
     /**
-     * Curios equipment participates in the same source-counted ability model.
+     * Curios gear counts in the same source-counted ability model.
      */
     private static boolean syncCuriosAbilities(LivingEntity entity, AbilityAttachment holder) {
         Set<Holder<Ability>> current = new LinkedHashSet<>();

@@ -9,14 +9,9 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 
 /**
- * A datapack event rule: when a published signal is matched by {@code trigger}, the condition is
- * evaluated against the actor with the event's formula context, and the action runs while it holds.
- *
- * <p>This is the data-driven side of the trigger system. The intrinsic {@code mxt:trigger_type}
- * registry decides how a signal is matched - a built-in signal matches by its type, and a scripted
- * matcher may inspect the whole signal - while abilities use the same matchers for triggers they own.
- * A rule owns nothing: it is a standalone reaction, so a content pack can turn any published signal
- * into an effect such as adding a resource.</p>
+ * A datapack event rule: when a published signal is matched by {@code trigger}, the condition is evaluated
+ * against the actor with the event's formula context, and the action runs while it holds. A rule owns
+ * nothing, so a content pack can turn any published signal into an effect.
  */
 public record TriggerRule(Trigger trigger, EntityCondition condition, EntityAction action) {
     public static final Codec<Holder<TriggerRule>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TRIGGER);

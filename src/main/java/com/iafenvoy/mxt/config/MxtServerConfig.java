@@ -66,35 +66,24 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     }
 
     /**
-     * What an empty allow list on a formation plate means.
-     *
-     * <p>Defaults to true because that is what every plate written before the allow list existed relies
-     * on: a plate with no restriction can bind any formation. Turning it off makes an unrestricted plate
-     * impossible, so every plate has to name what it may run.</p>
+     * What an empty allow list on a formation plate means. Defaults to true, which is what every plate
+     * written before the allow list existed relies on; off means every plate must name what it may run.
      */
     public static boolean emptyPlateAllowsAll() {
         return INSTANCE.formations.emptyAllowsAll.getValue();
     }
 
     /**
-     * Whether the ambient aura of the ground a formation stands on also pays its upkeep.
-     *
-     * <p>Off by default, because it makes a formation cheaper to run than what it stands on: the block
-     * emitters inside it are already supplying it, and this additionally spends the natural aura of the
-     * area. Turned on, a formation over rich ground is cheap or free even with no emitters and no owner
-     * resources, which is a different balance from the one the mechanic ships with.</p>
+     * Whether the ambient aura of the ground a formation stands on also pays its upkeep. Off by default,
+     * which makes a formation over rich ground cheap or free even with no emitters and no owner resources.
      */
     public static boolean formationDrawsEnvironment() {
         return INSTANCE.formations.drawsEnvironment.getValue();
     }
 
     /**
-     * Whether a hostile formation spares whoever its owner counts as a friend.
-     *
-     * <p>On by default, and it changes nothing on its own: a formation only becomes hostile by declaring
-     * {@code hostile}, which is new and therefore absent from every existing definition. Turning it off is
-     * for a server that would rather formations hit everybody than have one player's friend list decide
-     * who a fortification does and does not shoot at.</p>
+     * Whether a hostile formation spares whoever its owner counts as a friend. On by default, and it
+     * changes nothing on its own: a formation only becomes hostile by declaring {@code hostile}.
      */
     public static boolean formationRespectsFriends() {
         return INSTANCE.formations.respectFriends.getValue();
@@ -102,72 +91,51 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
     /**
      * Whether handing a formation's protection to claims requires claim protection to actually be active.
-     *
-     * <p>On by default, and it decides what {@code delegate_to_claims} means when there is nothing to
-     * delegate to. On: the delegation is only honoured while a claim plugin is installed <em>and</em> its
-     * protection is switched on, and otherwise the formation's own flags stay in force — a ward that
-     * silently protects nothing is the one failure worth a server option. Off: the literal reading, where
-     * the formation hands its protection over regardless and therefore protects nothing when no claim
-     * protection exists.</p>
-     *
-     * <p>Like {@link #formationRespectsFriends()}, this changes nothing on its own: it only affects
-     * definitions that declare the switch.</p>
+     * On by default, so the delegation is honoured only while a claim plugin has its protection switched on
+     * and the formation's own flags stay in force otherwise. Like {@link #formationRespectsFriends()}, it only
+     * affects definitions that declare the switch.
      */
     public static boolean formationDelegateRequiresClaims() {
         return INSTANCE.formations.delegateRequiresClaims.getValue();
     }
 
     /**
-     * How a protection formation and the server's claim plugin relate to each other.
-     *
-     * <p>Claim protection is decided per team and per chunk, while a formation protects a sphere of its own,
-     * so a server that runs both has to say which of the two is in charge. {@link ClaimLinkage#NONE} leaves
-     * them independent — both apply, and a position is refused if either refuses it — and is the default
-     * because it changes nothing for a server without a claim plugin. The other two make the claim the
-     * unit of jurisdiction: one refuses to let a ward stand outside one, the other lets the claim's own
-     * rules take over inside it.</p>
+     * How a protection formation and the server's claim plugin relate to each other. Defaults to
+     * {@link ClaimLinkage#NONE}, which leaves them independent: both apply, and either may refuse a position.
      */
     public static ClaimLinkage formationClaimLinkage() {
         return INSTANCE.formations.claimLinkage.getValue();
     }
 
     /**
-     * Whether raising a protection formation on somebody else's land needs their leave.
-     *
-     * <p>On by default, and independent of {@link #formationClaimLinkage()}: that option says how the two
-     * systems share a position, this one says whose land a ward may stand on at all. A ward is a claim of
-     * jurisdiction, not merely a build, so being allowed to place a block somewhere is not the same as being
-     * allowed to legislate there — and a structure that is already standing (a template matching the
-     * terrain, or one somebody else built) would otherwise let anyone raise one anywhere.</p>
-     *
-     * <p>Three ways through, and all of them are the landowner's own answer rather than a second rule
-     * invented here: the claim plugin's own edit permission for that position, a team with no player owner
-     * to ask (an unclaimed position, or a console-owned team), and being recognised as a friend of the
-     * team's owner by the friend system — which is where FTB membership and alliances already arrive from
-     * {@code FtbTeamsRelation}.</p>
+     * Whether raising a protection formation on somebody else's land needs their leave. On by default and
+     * independent of {@link #formationClaimLinkage()}; three ways through, all of them the landowner's own
+     * answer: the claim plugin's edit permission, a team with no player owner to ask, or being a friend.
      */
     public static boolean formationWardsNeedClaimPermission() {
         return INSTANCE.formations.wardsNeedClaimPermission.getValue();
     }
 
     /**
-     * Whether FTB Teams' {@code ALLY} rank counts as a friend.
-     *
-     * <p>On by default, because that rank <em>is</em> FTB Teams' own "this outsider is with us" marker. Off
-     * leaves only real team members as friends, which is the right reading for a server that uses allies
-     * for something else entirely.</p>
+     * Whether an unbound formation plate identifies the formation standing in front of it. On by default,
+     * which makes a plate usable without a command; a bound plate and the allow list are unaffected. The cost
+     * is a structure check per candidate definition per neighbouring position, so it can be turned off.
+     */
+    public static boolean formationPlateAutoDetect() {
+        return INSTANCE.formations.plateAutoDetect.getValue();
+    }
+
+    /**
+     * Whether FTB Teams' {@code ALLY} rank counts as a friend. On by default, because that rank is FTB
+     * Teams' own "this outsider is with us" marker; off leaves only real team members.
      */
     public static boolean ftbTeamsAllyCounts() {
         return INSTANCE.friends.ftbTeamsAlly.getValue();
     }
 
     /**
-     * Whether FTB Teams' {@code INVITED} rank counts as a friend.
-     *
-     * <p>Off by default, and worth understanding before turning on: {@code INVITED} is what a team returns
-     * for a player it has invited and who has not accepted yet, <em>and</em> what
-     * {@code Team#getRankForPlayer} returns for anybody at all while the team is free-to-join. On such a
-     * team this option would make every stranger on the server a friend.</p>
+     * Whether FTB Teams' {@code INVITED} rank counts as a friend. Off by default, because a free-to-join
+     * team returns that rank for anybody at all, which would make every stranger on the server a friend.
      */
     public static boolean ftbTeamsInvitedCounts() {
         return INSTANCE.friends.ftbTeamsInvited.getValue();
@@ -226,6 +194,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final EnumEntry<ClaimLinkage> claimLinkage = EnumEntry.builder("config.mxt.server.formation.claim_linkage", ClaimLinkage.NONE)
                 .nameProvider(value -> Component.translatable("config.mxt.server.formation.claim_linkage." + value.name().toLowerCase())).build();
         public final BooleanEntry wardsNeedClaimPermission = BooleanEntry.builder("config.mxt.server.formation.wards_need_claim_permission", true).build();
+        public final BooleanEntry plateAutoDetect = BooleanEntry.builder("config.mxt.server.formation.plate_auto_detect", true).build();
 
         private Formations() {
             super("formation", "config.mxt.server.formation");

@@ -127,10 +127,6 @@ public final class AbilityService {
         return CommitResult.committed(payment.amounts());
     }
 
-    /**
-     * Canonical server-side path for immediate abilities. The resource transaction commits before
-     * the action, preventing an action from taking effect when its declared costs cannot be paid.
-     */
     public static UseResult use(Holder<Ability> ability, Ability definition, @NotNull Entity actor,
                                 AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                 FormulaContext context) {
@@ -160,9 +156,6 @@ public final class AbilityService {
         return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context);
     }
 
-    /**
-     * Completes a previously scheduled cast after the entity-tick bridge revalidates its definition.
-     */
     public static UseResult finishCast(Holder<Ability> ability, Ability definition, Entity actor,
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context) {
@@ -198,8 +191,8 @@ public final class AbilityService {
             abilities.setChannelledAbility(preparedUse.ability());
             abilities.setComponentState(preparedUse.ability(), "channel_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, adjustedUse.channelIntervalTicks()), gameTime));
         }
-        // A channel owns the ability until it is released, so it never runs the one-shot entity
-        // action. Its target action still fires on activation and then once per upkeep pulse.
+        // A channel owns the ability until released, so it never runs the one-shot entity action; its
+        // target action still fires on activation and then once per upkeep pulse.
         executeEffects(definition, actor, context);
         NeoForge.EVENT_BUS.post(new Post(resources, committed.amounts()));
         NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, preparedUse.ability(), context, committed.amounts()));
@@ -209,7 +202,7 @@ public final class AbilityService {
     }
 
     /**
-     * Runs at most one upkeep pulse. Call this only from the server entity tick bridge.
+     * Call this only from the server entity tick bridge.
      */
     public static ChannelResult tickChannel(Holder<Ability> ability, Ability definition, Entity actor,
                                             AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
@@ -294,12 +287,8 @@ public final class AbilityService {
     }
 
     /**
-     * Applies the effect payload of one ability activation.
-     *
-     * <p>The one-shot entity action runs for every activation, including a channelled ability:
-     * {@link #tickChannel} calls this once on activation and then once per upkeep pulse, and a
-     * channelled ability has no other way to apply its effect. Only {@link WordAbilityType} is
-     * terminal, because its payload replaces the whole effect pipeline.</p>
+     * Applies the effect payload of one activation. The one-shot entity action runs for every
+     * activation, {@link WordAbilityType} excepted because its payload replaces the whole pipeline.
      */
     private static void executeEffects(Ability definition, Entity actor, FormulaContext context) {
         try {
@@ -325,8 +314,8 @@ public final class AbilityService {
     }
 
     /**
-     * Validates every required child against detached drafts, then commits all costs before running
-     * any action. World actions are deliberately never rolled back.
+     * Validates every required child against detached drafts, then commits all costs before any action.
+     * World actions are deliberately never rolled back.
      */
     public static UseResult useComposite(Holder<Ability> composite, Ability compositeDefinition, Entity actor,
                                          AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
@@ -456,8 +445,7 @@ public final class AbilityService {
     }
 
     /**
-     * Applies a bi-entity action to each selected target. One failing action never prevents the
-     * remaining targets from receiving their action.
+     * Applies a bi-entity action to each selected target; one failing action never stops the rest.
      */
     private static void executeTargetAction(Ability definition, Entity actor, FormulaContext context) {
         try {

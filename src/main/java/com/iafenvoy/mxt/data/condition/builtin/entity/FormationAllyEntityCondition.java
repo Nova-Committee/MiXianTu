@@ -12,27 +12,10 @@ import org.jspecify.annotations.NonNull;
 import java.util.UUID;
 
 /**
- * Whether the entity is somebody the owner of the formation being evaluated treats as his own.
- *
- * <p>This exists because the per-entity actions of a formation are {@link
- * com.iafenvoy.mxt.data.action.EntityAction}s, and their condition slot is an {@link EntityCondition}: a
- * two-entity condition has nothing to pair the subject with there. The missing half is the formation's
- * owner, and the formation itself is the only place that is known, so the condition reads the carrier the
- * ticker already hands to every per-entity action.</p>
- *
- * <p>What it buys over the formation-wide {@code hostile} flag is one judgement per action rather than one
- * per formation: a pack can hurt strangers in one branch and help friends in another, which a single flag
- * cannot express.</p>
- *
- * <p>Answers {@code false} outside a formation context and for a formation that records no owner. There is
- * then nobody to be a friend of, and "not an ally" is the reading that keeps a
- * {@code not(mxt:formation_ally)} guard on the damaging branch behaving as written rather than silently
- * letting everyone through.</p>
- *
- * <p>An owner who is merely offline is a different case: the judgement is asked by id, so a source that
- * keeps its own per-player data can still answer, and only "nobody can identify this entity" falls back to
- * {@code false}. That is the same pipeline the formation-wide {@code hostile} flag uses, which is what keeps
- * the two ways of asking the question from disagreeing.</p>
+ * Whether the entity is somebody the owner of the formation being evaluated treats as his own. It reads the
+ * carrier the ticker already hands to every per-entity action, because a formation's per-entity actions take an
+ * {@link EntityCondition}, which has no second entity to pair with the formation's owner. Answers {@code false}
+ * outside a formation context, with no owner, and for an entity nobody can identify.
  */
 public enum FormationAllyEntityCondition implements EntityCondition {
     INSTANCE;

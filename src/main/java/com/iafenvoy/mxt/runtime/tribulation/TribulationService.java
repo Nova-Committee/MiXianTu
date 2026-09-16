@@ -18,8 +18,8 @@ public final class TribulationService {
     }
 
     /**
-     * Adds the local aura influence so every phase is scaled by the environment, not only the
-     * phase that started at breakthrough.
+     * Adds the local aura influence, so every phase is scaled by the environment and not only the phase
+     * that started at breakthrough.
      */
     private static FormulaContext tribulationContext(LivingEntity entity, FormulaContext context) {
         return context.with("aura_tribulation_modifier",
@@ -52,8 +52,8 @@ public final class TribulationService {
         if (data.tribulation().isEmpty() || data.paused()) return TickResult.idle();
         if (gameTime < data.phaseEndsAt()) return TickResult.running(data.phase());
         Holder<Tribulation> tribulation = data.tribulation().orElseThrow();
-        // The aura influence is resampled once per phase transition, so later phases are scaled
-        // by the environment the entity is standing in rather than the breakthrough location.
+        // Resampled once per phase transition, so later phases are scaled by where the entity stands now
+        // rather than by the breakthrough location.
         FormulaContext phaseContext = tribulationContext(entity, context);
         int next = data.phase() + 1;
         if (next >= definition.phases().size()) {

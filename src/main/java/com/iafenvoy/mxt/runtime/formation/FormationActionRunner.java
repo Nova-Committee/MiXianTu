@@ -7,10 +7,13 @@ import com.iafenvoy.mxt.data.action.builtin.entity.ApplyEffectAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.formation.AttackFormationAction;
 import com.iafenvoy.mxt.data.formation.BuffFormationAction;
+import com.iafenvoy.mxt.data.formation.BuffFormationAction.TargetMode;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.friend.FriendService;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -24,18 +27,30 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Runs a formation's function modules against one entity.
- *
- * <p>Called from the periodic pass, once per entity the formation affects, and the modules run before the
- * definition's own {@code entity_tick_action}: a hook is the place to react to what the array did, so it
- * should see the state the modules left behind rather than the state before them.</p>
- *
- * <p>Both halves of the judgement are already spent by the time this runs. Whether the entity is affected
- * at all — the friend rule, the stand-down — belongs to {@link FormationRelations} and gates this call;
- * a module only decides whether it has anything to do with an entity that is already in range.</p>
+ * Runs a formation's function modules against one entity, called from the periodic pass once per entity the
+ * formation affects. Modules run before the definition's own {@code entity_tick_action}, so a hook sees the
+ * state they left behind.
  */
 public final class FormationActionRunner {
     private FormationActionRunner() {
+    }
+
+    /**
+     * Runs the modules that act on the formation itself, once per period. Only the display module lives here;
+     * the stock has no period of its own, because it is settled where the upkeep is charged.
+     *
+     * @return how many modules of that kind were reached, which is how the audit tells a module that ran from
+     * one that is declared and never read; the ticker ignores it
+     */
+    public static int perPeriod(ServerLevel level, Formation definition, FormationInstance instance, BlockPos controller) {
+        int reached = 0;
+        for (FormationActionType module : definition.actions()) {
+            if (module instanceof RangeDisplayFormationAction display) {
+                FormationRangeDisplay.draw(level, display, controller, instance.radius());
+                reached++;
+            }
+        }
+        return reached;
     }
 
     public static void perEntity(ServerLevel level, Formation definition, FormationInstance instance,
@@ -63,50 +78,32 @@ public final class FormationActionRunner {
     }
 
     /**
-     * The damage source a strike is attributed to.
-     *
-     * <p>Without a declared type this is the vanilla reading of "the owner hit it": {@code playerAttack}
-     * carries the player as attacker, which is what makes a kill count as theirs. With no owner loaded
-     * there is nobody to attribute to, so it falls back to the anonymous generic source — the same reading
-     * {@code mxt:damage} has, and the only honest one when the array outlives its owner.</p>
-     *
-     * <p>{@code attribute_to_owner} only matters where there is a type to build from: the untyped branch
-     * already chooses between attributed and generic by whether an owner exists, so the two never
-     * disagree about which of them is in charge.</p>
+     * The damage source a strike is attributed to. With no declared type this is the vanilla reading of "the
+     * owner hit it" — {@code playerAttack} carries the player as attacker, which is what makes a kill count as
+     * theirs — and with no owner loaded it falls back to the anonymous generic source.
      */
     private static DamageSource damageSource(ServerLevel level, AttackFormationAction attack, @Nullable Entity owner) {
         Entity cause = attack.attributeToOwner() ? owner : null;
         return attack.damageType()
-                .map(type -> (DamageSource) new DamageSource(type, cause))
+                .map(type -> new DamageSource(type, cause))
                 .orElseGet(() -> switch (cause) {
                     case Player player -> level.damageSources().playerAttack(player);
-                    // An owner is a player in play, but the rule is written for any living attacker: a
-                    // mob attack carries the attacker too, which is what a non-player owner has to use to
-                    // be credited at all.
+                    // An owner is a player in play, but the rule is written for any living attacker.
                     case LivingEntity living -> level.damageSources().mobAttack(living);
                     case null, default -> level.damageSources().generic();
                 });
     }
 
     /**
-     * Grants the module's abilities, under the source a formation's grants are expected to use.
-     *
-     * <p>Nothing here releases them: that is what the source convention buys. The ticker already drops
-     * every ability of that source for an entity that leaves, for one that was tracked when the formation
-     * was torn down, and for a player the sweep finds outside — so a grant cannot outlive its array even
-     * though the ability attachment is persistent.</p>
+     * Grants the module's abilities under the source convention, which is also what releases them: nothing
+     * here does, because the ticker drops every ability of that source for an entity that leaves.
      */
     private static void buff(BuffFormationAction buff, Entity entity, EntityActionContext context,
                              FormationInstance instance, @Nullable Entity owner, @Nullable UUID ownerId) {
         Identifier source = FormationSources.of(instance.formation());
         if (!targets(buff.target(), entity, owner, ownerId)) {
-            // An entity the module no longer has anything for must not keep the formation's grant: losing
-            // friend status while standing still would otherwise leave the gift behind until the entity
-            // happened to walk out. Releasing an unused source matches nothing, so a stranger costs one map
-            // scan per period.
-            //
-            // A pack that also grants through the same source by hand is unaffected in practice: modules
-            // run before the definition's own hook, so the hook's grant is re-made in the same period.
+            // An entity the module no longer has anything for must not keep the formation's grant, or losing
+            // friend status while standing still leaves the gift behind. Releasing an unused source is cheap.
             FormationEntityActions.release(entity, source);
             return;
         }
@@ -118,15 +115,10 @@ public final class FormationActionRunner {
     }
 
     /**
-     * Whether the module's benefit reaches this entity.
-     *
-     * <p>{@code ALLIES} asks the friend system rather than assuming, and an unidentifiable entity is left
-     * out: handing a stranger the owner's cultivation bonus is the failure this avoids, while the cost of
-     * the other guess is that a friend no source knows about simply receives nothing. The owner is
-     * included because the friend system answers yes for an entity and itself — {@code OWNER} is a
-     * narrower way to say the same thing, not a different rule.</p>
+     * Whether the module's benefit reaches this entity. {@code ALLIES} asks the friend system and leaves out an
+     * unidentifiable entity, because handing a stranger the owner's bonus is the failure this avoids.
      */
-    private static boolean targets(BuffFormationAction.TargetMode mode, Entity entity,
+    private static boolean targets(TargetMode mode, Entity entity,
                                    @Nullable Entity owner, @Nullable UUID ownerId) {
         return switch (mode) {
             case ALL -> true;

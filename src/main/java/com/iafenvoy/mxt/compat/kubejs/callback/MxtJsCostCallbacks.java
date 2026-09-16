@@ -9,10 +9,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Callback storage for the JavaScript cost type.
- *
- * <p>The {@code Cost} interface is checked and consumed with a player only, so a cost callback sees
- * the payer's context rather than the event payload an ability was evaluated with.</p>
+ * Callback storage for the JavaScript cost type. The {@code Cost} interface is checked and consumed with
+ * a player only, so a cost callback sees the payer's context rather than the event payload.
  */
 public final class MxtJsCostCallbacks {
     private static final Map<String, TriPredicate<Player, JsonObject, FormulaContext>> CHECK = new ConcurrentHashMap<>();

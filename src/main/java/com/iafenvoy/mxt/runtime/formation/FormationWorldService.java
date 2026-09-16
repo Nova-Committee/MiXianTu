@@ -19,17 +19,8 @@ import java.util.UUID;
 
 /**
  * The two ends of a formation's life in the world: bringing one into the level index, and taking it out.
- *
- * <p>What used to be here as well was a {@code maintain} that charged one period of upkeep. It was already
- * unused when it was written — the ticker inlined the same steps from the first commit, because it handles
- * every formation in one pass instead of one at a time — and by now its logic is actively wrong: it tears a
- * formation down whenever a charge fails, which is exactly the decision
- * {@link com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed} exists to let a listener reverse. A period's
- * upkeep belongs to {@link FormationWorldTicker}, which is the only place that knows the three events'
- * order.</p>
- *
- * <p>What is left is a pair, and neither half reads or writes resources: the payment and the activation
- * costs live in {@link FormationService}.</p>
+ * Neither half reads or writes resources - the payment and the activation costs live in
+ * {@link FormationService} - and a period's upkeep belongs to {@link FormationWorldTicker}.
  */
 public final class FormationWorldService {
     private FormationWorldService() {
@@ -47,9 +38,7 @@ public final class FormationWorldService {
         if (!FormationStructureValidator.STRUCTURE.matches(level, controller, definition))
             return Result.rejected(Failure.INVALID_STRUCTURE, null);
         // Jurisdiction before payment: a ward this server will not allow here must not charge for the
-        // attempt, and both rules are about where the formation stands rather than about what it costs.
-        // They apply to formations that carry a ward at all: an attack or benefit array is not a claim of
-        // jurisdiction and has nothing to do with anybody's land.
+        // attempt. Both rules apply only to formations that carry a ward at all.
         if (FormationProtection.hasProtection(definition)) {
             if (FormationProtection.claimsOnlyRefuses(level, controller))
                 return Result.rejected(Failure.NOT_CLAIMED, null);
@@ -65,36 +54,21 @@ public final class FormationWorldService {
         if (!activated.active()) return Result.rejected(Failure.ACTIVATION_FAILED, activated.failedResource());
         if (!world.put(controller, activated.instance()))
             throw new IllegalStateException("Formation controller became occupied during activation");
-        // A ward whose delegation cannot be honoured falls back to its own flags, and nothing in play
-        // distinguishes that from a ward leaning on a claim plugin; the report belongs here, where the
-        // definition was just chosen.
+        // A ward whose delegation cannot be honoured falls back to its own flags; the report belongs here,
+        // where the definition was just chosen.
         FormationProtection.warnIfDelegationFallsBack(id, definition);
         // The formation now absorbs the block emitters inside its radius, so every chunk it reaches has to
-        // rebuild its block aura: the absorbed ones must leave the shared stock the same tick the formation
-        // starts drawing on them.
+        // rebuild its block aura, or the absorbed ones would be counted in the shared stock as well.
         invalidateAura(level, controller, activated.instance().radius());
         definition.activateAction().execute(level, controller, context);
         return Result.activated(activated.instance());
     }
 
     /**
-     * Removes the formation registered at the controller, if any, and runs its teardown exactly once.
-     *
-     * <p>This is the single teardown path: the ticker, a dismantling plate and any future command all
-     * go through here, so the deactivate action and the {@link Deactivate} event cannot drift apart
-     * between callers.</p>
-     *
-     * <p>Entities the formation was tracking are released first — their exit actions run and the
-     * abilities it granted are dropped — because {@code deactivate_action} is a block action whose
-     * context is a level and cannot see them. The entry is removed from the index before the teardown
-     * action runs, so a listener reading which formations exist already sees it gone: membership is what
-     * "active" means, and there is no separate flag left to disagree with it.</p>
-     *
-     * <p>There is no overload taking the instance: the attachment holds the live object, so accepting
-     * one from the caller would only allow passing a different instance than the one being removed,
-     * and the release would then read the wrong definition.</p>
-     *
-     * @return whether an instance was actually removed
+     * Removes the formation registered at the controller, if any, running its teardown. This is the single
+     * teardown path, so the deactivate action and the {@link Deactivate} event cannot drift apart between
+     * callers. Entities the formation was tracking are released first, because {@code deactivate_action} is
+     * a block action and cannot see them.
      */
     public static boolean deactivate(ServerLevel level, BlockPos controller) {
         FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).remove(controller).orElse(null);
@@ -110,12 +84,9 @@ public final class FormationWorldService {
     }
 
     /**
-     * Queues a block-aura rebuild for every chunk a formation's radius reaches.
-     *
-     * <p>Called on both ends of a formation's life, because which emitters are absorbed is a property of
-     * the rebuilt cache and nothing else invalidates it when a formation appears or disappears. The
-     * rebuild is queued as a dirty mark instead of run here, so activation never scans chunks during the
-     * click; the aura ticker flushes the queue once per interval.</p>
+     * Queues a block-aura rebuild for every chunk a formation's radius reaches, on both ends of its life,
+     * because which emitters are absorbed is a property of the rebuilt cache. Queued as a dirty mark rather
+     * than run here, so activation never scans chunks during the click.
      */
     private static void invalidateAura(ServerLevel level, BlockPos controller, double radius) {
         int minChunkX = (int) Math.floor((controller.getX() - radius) / 16.0D);

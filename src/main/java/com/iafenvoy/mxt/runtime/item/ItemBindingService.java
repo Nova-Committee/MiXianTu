@@ -253,9 +253,8 @@ public final class ItemBindingService {
     }
 
     /**
-     * The stack attributes that do not come from a weapon binding: the item's own modifiers plus
-     * any attribute another system applied. Binding modifiers are re-derived on every refresh, so
-     * they are stripped here and never accumulated.
+     * The stack attributes that do not come from a weapon binding: the item's own modifiers plus any
+     * attribute another system applied. Binding modifiers are stripped, since they are re-derived.
      */
     private static ItemAttributeModifiers baselineModifiers(ItemStack stack) {
         ItemAttributeModifiers current = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);

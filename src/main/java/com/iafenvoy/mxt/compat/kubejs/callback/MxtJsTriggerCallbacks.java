@@ -14,22 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Runtime trigger subscriptions created by server scripts.
- *
- * <p>They are deliberately runtime-only, exactly like the subscriptions the gameplay modules
- * rebuild from their persisted state: nothing here is saved, and an entity leaving the world, a
- * server stop, a data pack reload and a script reload all drop them. A script that needs a
- * subscription across restarts re-creates it, for example from an entity-spawn or login hook.</p>
- *
- * <p>{@link TriggerDispatcher} is the single source of truth for what exists right now; this class
- * only remembers which owners ever registered, so a script reload can clear exactly its own module.
- * An entity that leaves and rejoins therefore reports no subscription on its return, which is what
- * lets a script re-arm it.</p>
+ * Runtime trigger subscriptions created by server scripts. Nothing here is saved: an entity leaving the
+ * world, a server stop, a data pack reload and a script reload all drop them. {@link TriggerDispatcher} is
+ * the single source of truth for what exists; this class only remembers which owners registered.
  */
 public final class MxtJsTriggerCallbacks {
     /**
-     * Module name used with {@link TriggerDispatcher}; it keeps script subscriptions separate from
-     * the ones the ability and cultivation modules own.
+     * Module name used with {@link TriggerDispatcher}, keeping script subscriptions separate from the
+     * ability and cultivation modules.
      */
     public static final String MODULE = "kubejs";
 
@@ -70,8 +62,8 @@ public final class MxtJsTriggerCallbacks {
     }
 
     /**
-     * Removes every script subscription. Called when server scripts are re-evaluated, because the
-     * callback objects they reference are replaced by the new script evaluation.
+     * Called when server scripts are re-evaluated, because the callback objects they reference are
+     * replaced by the new evaluation.
      */
     public static void clear() {
         OWNERS.forEach(owner -> TriggerDispatcher.clearModule(owner, MODULE));

@@ -41,8 +41,8 @@ public final class ForgingService {
         } catch (IllegalArgumentException exception) {
             return StartResult.rejected(Failure.INVALID_BLUEPRINT);
         }
-        // After the try, and deliberately so: a listener of `Started` throwing an IllegalArgumentException
-        // used to land in that catch and be reported as a broken blueprint.
+        // After the try, and deliberately so: a `Started` listener throwing an IllegalArgumentException
+        // would land in that catch and be reported as a broken blueprint.
         ForgingSession session = new ForgingSession(plan);
         notifyListeners(new Started(player, surface.pos(), new ForgingSessionView(session)));
         return StartResult.started(session);
@@ -98,17 +98,9 @@ public final class ForgingService {
     }
 
     /**
-     * Posts a deciding event: one whose answer is whether the operation may go ahead.
-     *
-     * <p>The exception handling is the point of the helper. NeoForge's bus logs a listener's throwable and
-     * then rethrows it, and every call above sits in the middle of a transaction - {@code Start} before
-     * anything is taken, {@code StrikePre} after the precheck and before the payment, {@code CompletePre}
-     * before the settlement. A throwable escaping from here would leave resources paid for a strike the
-     * table never recorded, or a session that depends on how far the caller got. So a listener that throws
-     * refuses the operation, under its own name, and the caller reports it the way it reports a
-     * cancellation.</p>
-     *
-     * <p>{@link VirtualMachineError} is not a listener bug and is rethrown.</p>
+     * Posts a deciding event. A listener that throws refuses the operation under its own name rather than
+     * escaping, because NeoForge rethrows it and every caller sits inside a transaction; a
+     * {@link VirtualMachineError} is rethrown.
      *
      * @return the refusal to report, or {@code null} when the operation may continue
      */
@@ -125,13 +117,8 @@ public final class ForgingService {
     }
 
     /**
-     * Posts a notification: an event whose operation has already been applied.
-     *
-     * <p>Nothing is left to refuse by the time these go out - the strike is paid for and applied, the
-     * result is built - so a listener that throws is logged and the call returns normally. That is the
-     * difference from {@link #postEvent(ForgingEvent)}: there, a broken listener must not leave a
-     * half-performed action; here, throwing would undo the player's own action on account of a
-     * third-party script.</p>
+     * Posts a notification: an event whose operation has already been applied, so a listener that throws
+     * is logged and the call returns normally rather than undoing the player's own action.
      */
     static void notifyListeners(ForgingEvent event) {
         try {
@@ -187,22 +174,14 @@ public final class ForgingService {
          */
         COOLDOWN,
         /**
-         * A listener for the phase threw, so the operation was refused instead of half-performed.
-         *
-         * <p>Named apart from {@link #CANCELLED} because the two mean different things to whoever reads the
-         * log: one is a script that said no, the other is a script that broke. What they share is where they
-         * stop the operation - before it has done anything - which is what {@link #refusedByListener}
-         * answers, and why the workstation leaves the session alone for both.</p>
+         * A listener for the phase threw, so the operation was refused instead of half-performed. Apart from
+         * {@link #CANCELLED}: one is a script that said no, the other a script that broke.
          */
         LISTENER_ERROR;
 
         /**
-         * Whether this failure is a listener refusing the request, rather than a verdict on the piece.
-         *
-         * <p>The two ways a listener can stop an operation are cancelling the event and throwing out of it,
-         * and the service reports them as {@link #CANCELLED} and {@link #LISTENER_ERROR}. Neither has
-         * consumed or decided anything, so a session they stop is left exactly as it was - which is the
-         * opposite of {@link #NOT_COMPLETE}, a verdict that settles the session by failing it.</p>
+         * Whether this failure is a listener refusing the request, rather than a verdict on the piece. A
+         * session stopped this way is left exactly as it was, unlike one failed with {@link #NOT_COMPLETE}.
          */
         public boolean refusedByListener() {
             return this == CANCELLED || this == LISTENER_ERROR;

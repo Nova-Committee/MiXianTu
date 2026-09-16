@@ -11,9 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Persistable inventory-neutral state for a cauldron or other alchemy workstation.
- * A concrete block entity owns insertion and extraction; this class owns only server-side
- * recipe inputs, the active session snapshot, and completed output stacks.
+ * Persistable, inventory-neutral state for a cauldron or other alchemy workstation: this class owns only
+ * the recipe inputs, the active session snapshot and completed output stacks.
  */
 public final class AlchemyWorkstationState {
     public static final MapCodec<AlchemyWorkstationState> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

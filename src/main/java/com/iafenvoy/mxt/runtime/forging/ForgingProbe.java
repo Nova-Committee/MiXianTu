@@ -11,11 +11,8 @@ import net.neoforged.bus.api.ICancellableEvent;
 import java.util.List;
 
 /**
- * Exposes package-private forging rules to the server audit in {@code mxt_test}.
- *
- * <p>Mirrors {@code AuraZonePriorityProbe}: the audit must be able to exercise the real ordering
- * and matching helpers rather than a reimplementation, and those helpers are intentionally not
- * part of the public API.</p>
+ * Exposes package-private forging rules to the server audit in {@code mxt_test}, which must exercise
+ * the real helpers rather than a reimplementation.
  */
 public final class ForgingProbe {
     private ForgingProbe() {
@@ -53,12 +50,8 @@ public final class ForgingProbe {
     }
 
     /**
-     * Posts a deciding event exactly as the service does, for the listener-failure rule.
-     *
-     * <p>The audit needs a real dispatch: whether a throwing listener becomes a refusal rather than an
-     * escaping exception is a property of the post site, not of anything it could compute. The event it
-     * passes may carry a hollow payload - only the dispatch is under test - but the bus, the listener list
-     * and the handler are the live ones.</p>
+     * Posts a deciding event exactly as the service does, for the listener-failure rule: only a real
+     * dispatch shows whether a throwing listener becomes a refusal rather than an escaping exception.
      *
      * @return the refusal the service would report, or {@code null} when the operation may continue
      */

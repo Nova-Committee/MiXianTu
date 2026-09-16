@@ -9,11 +9,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Callback storage for the JavaScript trigger matcher type.
- *
- * <p>A trigger matcher only decides whether a signal that already reached the owning subscription
- * should fire it, so it runs on the server and receives the signal, whose context carries the same
- * payload values a built-in trigger would read.</p>
+ * Callback storage for the JavaScript trigger matcher type: a matcher only decides whether a signal that
+ * already reached the owning subscription fires.
  */
 public final class MxtJsTriggerMatchers {
     private static final Map<String, TriPredicate<TriggerSignal, JsonObject, FormulaContext>> MATCHERS = new ConcurrentHashMap<>();

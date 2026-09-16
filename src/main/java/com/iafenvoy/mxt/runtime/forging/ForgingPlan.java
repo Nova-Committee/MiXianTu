@@ -65,13 +65,9 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
     }
 
     /**
-     * The method's delta, or {@code null} when this plan does not allow it.
-     *
-     * <p>An unlisted method is an answer, not an accident. The client offers whatever the placed tools
-     * currently resolve to, and the session is struck through several layers that can each see a slightly
-     * older plan, so "is this method allowed" is a question a caller is entitled to ask. That is what this
-     * method is for; {@link #delta} is for callers that have already asked and are entitled to treat the
-     * missing entry as the contract violation it now is.</p>
+     * The method's delta, or {@code null} when this plan does not allow it: an unlisted method is an
+     * answer, not an accident. {@link #delta} is for callers entitled to treat the missing entry as a
+     * contract violation.
      */
     public @Nullable Integer deltaIfAllowed(@NotNull Identifier method) {
         return this.deltas.get(method);
@@ -118,16 +114,9 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
     }
 
     /**
-     * Whether the last {@code requiredSteps} entries of {@code history} equal the last {@code requiredSteps}
-     * entries of the six-long {@code pattern}.
-     *
-     * <p>Only those are compared. The positions in front of them - which the screen draws as barriers when
-     * {@code requiredSteps} is less than six - take no part in the rule, so a pattern's earlier steps are
-     * never asked for and a longer history is only ever judged by its tail.</p>
-     *
-     * <p>One definition, because it has to be one: the optimal-step search below uses this to decide when a
-     * session <em>would be</em> finished, and {@link ForgingSession} uses it to decide that it <em>is</em>.
-     * Two copies could let the search return a path the session then refuses to accept.</p>
+     * Whether the last {@code requiredSteps} entries of {@code history} equal the last
+     * {@code requiredSteps} entries of the six-long {@code pattern}. One definition, because the
+     * optimal-step search and {@link ForgingSession} must agree on when a session is finished.
      */
     public static boolean suffixMatches(List<Identifier> history, List<Identifier> pattern, int requiredSteps) {
         if (requiredSteps == 0) return true;

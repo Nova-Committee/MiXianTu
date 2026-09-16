@@ -11,28 +11,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The players the holder accepts as its own.
- *
- * <p>Two lists. {@code permanent} is meant to be saved. {@code temporary} is saved as well, but it is not
- * meant to last: {@code FriendSessionBridge} empties it when its owner logs in, so a relog or a server
- * restart clears it. Saving it first is what keeps a session friend through a death — NeoForge's
- * copy-on-death is a serialize/deserialize pair, so a field left out of the codec would be lost when the
- * player dies and comes back, which is not what "added for now" should mean. The two mechanisms together
- * are the whole definition: the codec says the list is real state, the login hook says when a session
- * ends.</p>
- *
- * <p>Nothing drops a session entry at logout, so a player who never comes back leaves one in the save.
- * That is the trade for not losing the list to a crash mid-session, and it is only visible to a file
- * reader: the list is meaningless without the owner entity, and it is gone the moment they log in.</p>
- *
- * <p>Not synced to the client. Nothing on the client reads it, and a synced copy would be a snapshot that
- * is stale the moment the next login clears it. With no sync there is nothing for
- * {@code ShouldSyncAttachment}'s dirty flag to do either, so this class does not extend it; see
- * {@code MxtAttachments#entityServerOnly}.</p>
- *
- * <p>An entry is a {@link NameAndId} rather than a bare {@code UUID} so that a list stays readable once
- * the player it names has gone offline. The name is whatever the entry was created with and may go stale
- * after a rename, so it is only ever displayed — every match is made on the id.</p>
+ * The players the holder accepts as its own. {@code temporary} is saved but emptied at login, so saving
+ * it is what keeps a session friend through death. An entry is a {@link NameAndId} so a list stays
+ * readable offline; the name is display-only and every match is made on the id. Not synced to the
+ * client, whose copy would be stale the moment the next login clears it.
  */
 public final class FriendAttachment {
     public static final MapCodec<FriendAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -48,9 +30,7 @@ public final class FriendAttachment {
 
     private FriendAttachment(List<NameAndId> permanent, List<NameAndId> temporary) {
         // A hand-edited file can name the same player on both lists. The saved entry is the stronger
-        // claim and the one a later removal has to speak about, so it wins and the session copy is
-        // dropped: keeping both would make "remove" report a permanent friend while leaving an entry
-        // that still answers yes.
+        // claim, so it wins and the session copy is dropped.
         for (NameAndId friend : permanent) this.permanent.put(friend.id(), friend);
         for (NameAndId friend : temporary)
             if (!this.permanent.containsKey(friend.id())) this.temporary.put(friend.id(), friend);
@@ -78,11 +58,8 @@ public final class FriendAttachment {
     }
 
     /**
-     * Adds a friend for this session only.
-     *
-     * <p>A player who is already a permanent friend is reported as such rather than also being put on the
-     * temporary list: the same player on both lists would mean two answers to "will this still be here
-     * tomorrow", and the permanent one is the only answer that cannot be wrong.</p>
+     * Adds a friend for this session only; a permanent friend is reported as such rather than put on both
+     * lists, where "will this still be here tomorrow" would have two answers.
      */
     public AddResult add(NameAndId friend) {
         if (this.permanent.containsKey(friend.id())) return AddResult.ALREADY_PERMANENT;
@@ -100,7 +77,7 @@ public final class FriendAttachment {
 
     /**
      * Removes a session friend. A permanent one is left alone and reported: forgetting it is a different
-     * command, and silently succeeding here would make a temporary removal look like it took effect.
+     * command, and succeeding here would look like the removal took effect.
      */
     public RemoveResult remove(UUID id) {
         if (this.permanent.containsKey(id)) return RemoveResult.PERMANENT;
@@ -108,8 +85,7 @@ public final class FriendAttachment {
     }
 
     /**
-     * Removes a saved friend. A temporary entry is not one, so it is reported as missing rather than
-     * removed — this command only ever speaks about the saved list.
+     * Removes a saved friend. A temporary entry is not one, so it is reported as missing.
      */
     public RemoveResult removePermanent(UUID id) {
         return this.permanent.remove(id) == null ? RemoveResult.NOT_A_FRIEND : RemoveResult.REMOVED;

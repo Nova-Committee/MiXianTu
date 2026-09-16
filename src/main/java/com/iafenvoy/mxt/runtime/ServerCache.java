@@ -22,8 +22,8 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * Global server-lifetime cache for derived datapack data. It is absent on the
- * client and outside an active server lifecycle.
+ * Global server-lifetime cache for derived datapack data; absent on the client and outside an active
+ * server lifecycle.
  */
 @EventBusSubscriber
 public final class ServerCache {
@@ -69,8 +69,8 @@ public final class ServerCache {
     }
 
     /**
-     * Rebuilds validated linear cultivation chains after datapack data is available.
-     * Invalid chains are rejected so no partial cache can become authoritative.
+     * Rebuilds validated linear cultivation chains after datapack data is available; an invalid chain is
+     * rejected, so no partial cache can become authoritative.
      */
     private void rebuild() {
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
@@ -161,8 +161,7 @@ public final class ServerCache {
 
     /**
      * Returns whether two mastery levels share a skill chain and current is no lower than required.
-     * This is the comparison every stage-gated rule uses: an ability keyed on a level is a minimum
-     * requirement, so it applies while the holder stands on that level or a later one.
+     * This is the comparison every stage-gated rule uses.
      */
     public boolean isStageAtLeast(Identifier current, Identifier required) {
         Identifier currentSkill = this.skillByStage.get(current);
@@ -197,16 +196,10 @@ public final class ServerCache {
     }
 
     /**
-     * Rebuilds validated linear skill chains.
-     *
-     * <p>A skill chain is discovered from its links rather than from whichever level a definition
-     * happens to enter at: a realm chain has one declared first realm per resource, while several
-     * techniques may share a skill and enter it at different levels, so the order has to come from
-     * {@code next_stage} itself. The first level of a chain is the one no other level follows, and
-     * ranks are assigned by walking down from it.</p>
-     *
-     * <p>As with realm chains, an invalid chain is rejected instead of being indexed partially: a
-     * half-ordered chain would silently compare levels that never were comparable.</p>
+     * Rebuilds validated linear skill chains. A chain is discovered from its {@code next_stage} links, not
+     * from the level a definition enters at, because several techniques may share a skill and enter it at
+     * different levels. An invalid chain is rejected, never indexed partially, since a half-ordered chain
+     * would compare levels that never were comparable.
      */
     private void rebuildSkillChains() {
         Map<Identifier, SkillStage> stages = new LinkedHashMap<>();
@@ -242,8 +235,7 @@ public final class ServerCache {
                 if (ranks.containsKey(current))
                     throw new IllegalStateException("Cyclic skill chain for " + stages.get(current).skill() + " at stage " + current);
                 // A later level may not ask for less mastery than an earlier one. Only a constant can be
-                // compared here: a formula cannot, and does not need to be, because advancement always
-                // walks to the next level, so a provider that happens to drop only climbs faster.
+                // compared: a formula provider that drops only makes advancement climb faster.
                 if (stages.get(current).mastery() instanceof Constant(double mastery)) {
                     if (mastery < lastMastery)
                         throw new IllegalStateException("Skill chain " + stages.get(current).skill()
@@ -264,9 +256,9 @@ public final class ServerCache {
     }
 
     /**
-     * A technique annotates one chain: its entry level is where a holder starts, every level after it
-     * must be configured, and nothing may be configured that the technique can never reach. The walk
-     * rejects a partially annotated chain instead of letting a holder reach a level nothing describes.
+     * A technique annotates one chain: its entry level is where a holder starts, every level after it must be
+     * configured, and nothing may be configured that it can never reach. A partially annotated chain is
+     * rejected, so a holder can never reach a level nothing describes.
      */
     private void validateTechniqueChains(Map<Identifier, Identifier> resolved) {
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.CULTIVATION_TECHNIQUE).forEach(holder -> {

@@ -6,9 +6,6 @@ import net.minecraft.core.Holder;
 import java.util.Collection;
 
 public final class InformationHelper {
-    /**
-     * Space kept between the label column and the value column.
-     */
     private static final int COLUMN_GAP = 8;
 
     private InformationHelper() {
@@ -32,14 +29,9 @@ public final class InformationHelper {
     }
 
     /**
-     * Splits the width available to a row into a label column and a value column.
-     *
-     * <p>The value is data while the label is a name that the row can abbreviate and show in full in a
-     * tooltip, so a value that needs room narrows the label instead of being cut off. The label keeps at
-     * least a quarter of the row so the row stays identifiable, and {@code preferredNameWidth} still wins
-     * whenever nothing has to give, which is what keeps the values aligned in one column.</p>
-     *
-     * <p>This is pure arithmetic rather than a {@code Font} call so it can be audited without a client.</p>
+     * Splits the width available to a row into a label column and a value column. The value is data and the
+     * label can be abbreviated and tooltipped, so a long value narrows the label instead of being cut off;
+     * {@code preferredNameWidth} wins whenever nothing has to give, which keeps the values aligned.
      */
     public static Columns columns(int availableWidth, int preferredNameWidth, int valueWidth) {
         int width = Math.max(1, availableWidth);

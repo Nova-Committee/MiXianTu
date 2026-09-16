@@ -8,11 +8,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEve
 import net.neoforged.neoforge.event.tick.ServerTickEvent.Post;
 
 /**
- * Lifecycle hooks for the forge table: strike rate-limit bookkeeping.
- *
- * <p>Session state lives on the block entity, so there is no world-level registry to prune and no
- * cross-dimension input recovery to perform. The only cross-cutting state is the rate limiter,
- * which must not leak entries for players or tables that no longer exist.</p>
+ * Lifecycle hooks for the forge table: strike rate-limit bookkeeping. The rate limiter must not leak
+ * entries for players or tables that no longer exist.
  */
 @EventBusSubscriber
 public final class ForgingEventBridge {

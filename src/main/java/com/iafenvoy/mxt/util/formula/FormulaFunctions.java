@@ -7,10 +7,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Functions allowed by the formula language, collected from the intrinsic registry.
- *
- * <p>The registry is frozen once the game starts, so both the function list and its name set are
- * collected on first use and reused by every expression that is built afterwards.</p>
+ * Functions allowed by the formula language, collected from the intrinsic registry. The registry is
+ * frozen once the game starts, so the list and its name set are collected on first use.
  */
 public final class FormulaFunctions {
     private static volatile List<Function> all;

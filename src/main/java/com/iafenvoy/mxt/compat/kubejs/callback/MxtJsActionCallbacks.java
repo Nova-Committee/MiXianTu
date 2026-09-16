@@ -12,11 +12,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Callback storage for the JavaScript action dispatch types.
- *
- * <p>Every callback receives the {@link FormulaContext} the action was dispatched with, so a script
- * can read the same event payload variables a data pack action could. The context is created once by
- * the dispatching system and is not modified by this class.</p>
+ * Callback storage for the JavaScript action dispatch types. Every callback receives the
+ * {@link FormulaContext} the action was dispatched with, so a script reads the same event payload
+ * variables a data pack action would.
  */
 public final class MxtJsActionCallbacks {
     private static final Map<String, TriConsumer<Entity, JsonObject, FormulaContext>> ENTITY = new ConcurrentHashMap<>();

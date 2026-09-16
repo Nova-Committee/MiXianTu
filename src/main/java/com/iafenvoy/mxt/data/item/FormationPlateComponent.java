@@ -32,21 +32,9 @@ import java.util.function.Consumer;
 
 /**
  * What a portable formation controller is allowed to run, and which formation it currently runs.
- *
- * <p>Two independent fields. {@link #allowed()} is an allow list for the <em>item</em>: it is a property
- * of the plate, the same on every copy, and it bounds the set of formations the plate can ever bind to
- * or suggest. {@link #formation()} is the <em>selection</em>: which one this particular copy was bound
- * to, and it must be a member of the allow list for the plate to be usable.</p>
- *
- * <p>The allow list is what keeps the candidate set small. Without it, both binding and any future
- * selection screen have to consider every formation in the registry, and nothing about a plate says
- * which of them it could plausibly run. Entries are either a formation id or a {@code #tag}, so a
- * content pack can group its formations once and hand the same group to several plates.</p>
- *
- * <p>An empty allow list is the ambiguous case and is therefore configurable: by default it means
- * "unrestricted", which is what every plate written before this field existed relies on, and the
- * {@code formation_plate.empty_allows_all} server option can turn it into "nothing is allowed" for
- * packs that would rather be explicit.</p>
+ * {@link #allowed()} is an allow list for the item, the same on every copy, bounding what the plate can bind
+ * to or suggest; {@link #formation()} is this copy's selection, which must be a member of that list. An empty
+ * allow list means "unrestricted" unless {@code formation_plate.empty_allows_all} turns it into "nothing".
  */
 @EventBusSubscriber(Dist.CLIENT)
 public record FormationPlateComponent(List<Allowed> allowed, Optional<Holder<Formation>> formation) implements TooltipProvider {
@@ -57,11 +45,9 @@ public record FormationPlateComponent(List<Allowed> allowed, Optional<Holder<For
     ).apply(i, FormationPlateComponent::new));
 
     /**
-     * One entry of the allow list: a formation id, or a tag when written with a leading {@code #}.
-     *
-     * <p>The tag form is why this is typed rather than a bare id: the two look identical in JSON apart
-     * from the prefix, so which one was written has to be remembered, and a tag also has to be checked
-     * through {@link Holder#is} rather than by comparing keys.</p>
+     * One entry of the allow list: a formation id, or a tag when written with a leading {@code #}. The tag
+     * form is why this is typed rather than a bare id - the two look identical in JSON apart from the
+     * prefix, and a tag has to be checked through {@link Holder#is} rather than by comparing keys.
      */
     public sealed interface Allowed {
         Codec<Allowed> CODEC = Codec.either(Identifier.CODEC, TagKey.codec(MxtResourceKeys.FORMATION)).xmap(
@@ -106,12 +92,8 @@ public record FormationPlateComponent(List<Allowed> allowed, Optional<Holder<For
     }
 
     /**
-     * Every formation in the registry this plate admits, in registry order.
-     *
-     * <p>This exists so that binding and suggestions do not have to enumerate the registry themselves:
-     * the answer is a filter over the registry rather than "the whole registry". Disabled entries are
-     * left to the caller, because the activation path rejects them with its own message and filtering
-     * them here would make the allow list disagree with the registry for no gain.</p>
+     * Every formation in the registry this plate admits, in registry order, so binding and suggestions do not
+     * enumerate the registry themselves. Disabled entries are left to the caller, which rejects them itself.
      */
     public List<Reference<Formation>> admissible(Registry<Formation> registry) {
         return registry.listElements().filter(this::admits).toList();

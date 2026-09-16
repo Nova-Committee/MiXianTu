@@ -82,13 +82,10 @@ public final class MxtAttachments {
     }
 
     /**
-     * A server-owned attachment: saved and copied on death, but never sent to the client.
-     *
-     * <p>For state the client has no use for and cannot be given a truthful copy of.
-     * {@link FriendAttachment} is the reason this exists — its session-only half is not in the codec, so a
-     * synced copy would carry only the saved half and read as "these are your friends" while being
-     * incomplete. With no sync there is no dirty flag to consume either, so this registration is also how
-     * an attachment opts out of {@link ShouldSyncAttachment}.</p>
+     * A server-owned attachment: saved and copied on death, never sent to the client, and therefore also the
+     * way an attachment opts out of {@link ShouldSyncAttachment}. {@link FriendAttachment} is the reason it
+     * exists - its session-only half is not in the codec, so a synced copy would carry only the saved half and
+     * read as "these are your friends" while being incomplete.
      */
     private static <T> DeferredHolder<AttachmentType<?>, AttachmentType<T>> entityServerOnly(String name, Supplier<T> factory, MapCodec<T> codec) {
         return REGISTRY.register(name, () -> AttachmentType.builder(factory).serialize(codec).copyOnDeath().build());

@@ -11,11 +11,8 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Callback storage for the JavaScript ability target selector type.
- *
- * <p>Target selection runs on the server while an ability executes. A callback returns the
- * entities to affect as an array; {@code null} entries are dropped, and a missing or failing
- * callback selects nobody.</p>
+ * Callback storage for the JavaScript ability target selector type. A callback returns the entities to
+ * affect as an array; {@code null} entries are dropped, and a missing or failing callback selects nobody.
  */
 public final class MxtJsSelectorCallbacks {
     private static final Map<String, TriFunction<Entity, FormulaContext, JsonObject, List<Entity>>> SELECTORS = new ConcurrentHashMap<>();

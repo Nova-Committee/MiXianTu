@@ -42,22 +42,11 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /technique} command; also reachable as {@code /mxt technique}.
- *
- * <p>Its subject is technique data that points at entries the current data pack no longer provides.
- * A stale reference is survivable, but it fails quietly in the wrong way: the lists decode through
- * {@code CollectionCodecs.list}, which is {@code AutoIgnoreListCodec} - it decodes element by element
- * and drops the ones that fail, logging a single warning. A removed technique therefore costs only
- * itself and the player keeps everything else; what they lose is that one technique, with no in-game
- * message saying why it went.</p>
- *
- * <p>{@code repair} makes that state explicit and tidy: it names the dead entries, removes them so the
- * stored data stops carrying references that can never resolve again, and rebuilds the attributes and
- * abilities derived from the techniques that remain. On healthy data it changes nothing.</p>
- *
- * <p>The warning line is the tell for whether this is the right tool at all. If the log never shows
- * {@code Ignoring invalid list element}, there are no stale references, and an empty panel or an inert
- * manual has some other cause entirely.</p>
+ * The {@code /technique} command; also reachable as {@code /mxt technique}. It deals with technique data
+ * that points at entries the current data pack no longer provides: such a reference survives but fails
+ * quietly, since {@code CollectionCodecs.list} drops the elements that fail to decode. {@code repair}
+ * removes them and rebuilds the attributes and abilities derived from what remains; the log line
+ * {@code Ignoring invalid list element} is the tell for whether there is anything to repair.
  */
 public final class TechniqueCommand {
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("technique")
@@ -72,11 +61,8 @@ public final class TechniqueCommand {
             .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
 
     /**
-     * Reports why the item in hand cannot be used, one gate at a time.
-     *
-     * <p>The gates that surround a use cycle are spread across a binding, a quality group and a learn
-     * condition, and each can refuse independently. When an item simply does nothing, "which one said
-     * no" is the whole question, and it is not answerable from outside the game.</p>
+     * Reports why the item in hand cannot be used, one gate at a time: the gates are spread across a
+     * binding, a quality group and a learn condition, and each can refuse independently.
      */
     private static int diagnose(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
@@ -166,10 +152,8 @@ public final class TechniqueCommand {
     }
 
     /**
-     * Removes one named technique from the holder, whether or not it still resolves.
-     *
-     * <p>The sweep above cannot reach a reference that is already gone, and the sweep is also no use to
-     * a player who simply wants a mistaken grant undone. Naming the entry directly covers both.</p>
+     * Removes one named technique from the holder, whether or not it still resolves. The sweep cannot
+     * reach a reference that is already gone, and naming the entry also undoes a mistaken grant.
      */
     private static int drop(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
@@ -197,11 +181,8 @@ public final class TechniqueCommand {
     }
 
     /**
-     * Rebuilds the state derived from the technique list after it changed.
-     *
-     * <p>Removing a technique is not just a list edit: granted abilities, passive attributes and the
-     * resource ceilings all came from the definitions that were just dropped, so they have to be
-     * recomputed or the player keeps buffs from a technique they no longer hold.</p>
+     * Rebuilds the state derived from the technique list after it changed: granted abilities, passive
+     * attributes and resource ceilings all came from the definitions that were just dropped.
      */
     private static void rebuild(ServerPlayer player, SpiritIdentityAttachment identity) {
         CultivationGrantService.recalculate(player, identity, player.getData(MxtAttachments.ABILITY_HOLDER));
@@ -210,8 +191,7 @@ public final class TechniqueCommand {
     /**
      * Drops every stored technique that no longer resolves, keeping the rest in order.
      *
-     * <p>Package-visible so the server audit can exercise the sweep directly: the command itself needs a
-     * real player, and this is the half that decides what a repair actually does.</p>
+     * <p>Package-visible so the server audit can exercise the sweep directly.</p>
      */
     public static List<Holder<CultivationTechnique>> prune(List<Holder<CultivationTechnique>> values, List<Identifier> removed) {
         List<Holder<CultivationTechnique>> kept = new ArrayList<>(values.size());
@@ -241,13 +221,9 @@ public final class TechniqueCommand {
     }
 
     /**
-     * Whether a stored technique still resolves to an enabled definition.
-     *
-     * <p>The check is by id against the live registry rather than by reading the holder's value: a
-     * reference whose entry has been removed from the data pack has no value to read, and asking for
-     * one would throw instead of reporting the entry as stale.</p>
-     *
-     * <p>Package-visible for the server audit, which cannot build a genuine unbound holder.</p>
+     * Whether a stored technique still resolves to an enabled definition, checked by id against the live
+     * registry: a removed entry has no value to read, and asking for one would throw. Package-visible for
+     * the server audit, which cannot build a genuine unbound holder.
      */
     public static boolean resolves(Holder<CultivationTechnique> technique) {
         if (technique == null) return false;

@@ -125,11 +125,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Publishes a server-authoritative custom trigger signal for the supplied
-     * entity. Values are copied into the extensible TriggerContext map, and the
-     * finite numeric ones are added to the formula context as well, so trigger
-     * conditions and chances read the payload exactly like a data pack signal.
-     * The actor and level are always populated by the API and cannot be spoofed.
+     * Publishes a server-authoritative custom trigger signal: finite numeric values are also added to
+     * the formula context, and the actor and level cannot be spoofed.
      */
     public static boolean publishTrigger(@NotNull Entity actor, @NotNull Identifier signal,
                                          Map<String, Object> values) {

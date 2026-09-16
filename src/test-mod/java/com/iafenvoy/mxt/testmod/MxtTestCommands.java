@@ -118,8 +118,8 @@ public final class MxtTestCommands {
     }
 
     /**
-     * Asserts the documented rule: the highest priority wins inside a tier, the registry ID
-     * breaks ties, and a dimension binding is never outranked by a biome binding.
+     * Asserts the documented rule: highest priority wins inside a tier, the registry ID breaks ties, and
+     * a dimension binding is never outranked by a biome binding.
      */
     private static String verifyAuraPriority(ServerPlayer player) {
         Identifier level = player.level().dimension().identifier();

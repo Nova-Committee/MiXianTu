@@ -25,23 +25,16 @@ final class FtbChunksState {
     }
 
     /**
-     * Whether FTB Chunks has its global protection switch on.
-     *
-     * <p>{@code DISABLE_PROTECTION} is a server config value, read here rather than through any API
-     * because FTB Chunks exposes none for it. Its static initialiser only builds the config object and
-     * reads nothing from disk — the file is loaded when the server starts — so a caller that runs while a
-     * server is up sees the value the operator actually configured.</p>
+     * Whether FTB Chunks has its global protection switch on. {@code DISABLE_PROTECTION} is a server config
+     * value read directly, because FTB Chunks exposes no API for it.
      */
     static boolean protectionEnabled() {
         return !FTBChunksWorldConfig.DISABLE_PROTECTION.get();
     }
 
     /**
-     * Whether the chunk containing a position is claimed by anybody.
-     *
-     * <p>Asked through the public API rather than through the claim manager, so that the one query this mod
-     * makes stays on the surface FTB Chunks documents. The manager is only created once the server is about
-     * to start, so a position asked about earlier reads as unclaimed rather than throwing.</p>
+     * Whether the chunk containing a position is claimed by anybody. Asked through the public API so the
+     * one query this mod makes stays on the surface FTB Chunks documents.
      */
     static boolean chunkClaimed(ServerLevel level, BlockPos pos) {
         if (!FTBChunksAPI.api().isManagerLoaded()) return false;
@@ -49,11 +42,8 @@ final class FtbChunksState {
     }
 
     /**
-     * The player to ask about a claimed position, if there is one.
-     *
-     * <p>A claim belongs to a team, and a team belongs to a player: that player's own friend list is the
-     * one that can say whether a stranger is welcome, whatever kind of team it is. A console-owned server
-     * team has no player to ask and is filtered out here rather than answered about by a nil UUID.</p>
+     * The player to ask about a claimed position, if there is one. A console-owned server team has no
+     * player to ask and is filtered out here rather than answered about by a nil UUID.
      */
     static Optional<UUID> claimOwner(ServerLevel level, BlockPos pos) {
         if (!FTBChunksAPI.api().isManagerLoaded()) return Optional.empty();
@@ -63,12 +53,9 @@ final class FtbChunksState {
     }
 
     /**
-     * Whether FTB Chunks itself would let this player edit blocks at the position.
-     *
-     * <p>This is the claim plugin's own answer, asked through its own predicate rather than reimplemented
-     * from the privacy mode: whether a public claim, a rank, an alliance or a permitted fake player applies
-     * is its business, and a second copy of that rule here would only be a copy that drifts. An unclaimed
-     * position counts as editable — there is no claim to require anything of.</p>
+     * Whether FTB Chunks itself would let this player edit blocks at the position. This is the claim
+     * plugin's own answer, asked through its own predicate rather than reimplemented from the privacy mode;
+     * an unclaimed position counts as editable.
      */
     static boolean mayEdit(ServerLevel level, BlockPos pos, UUID actorId) {
         if (!FTBChunksAPI.api().isManagerLoaded()) return true;

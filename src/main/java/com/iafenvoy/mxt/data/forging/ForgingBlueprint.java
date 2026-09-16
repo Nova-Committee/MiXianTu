@@ -26,36 +26,18 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Defines the bounded meter, unordered material requirement, allowed methods and finish rule for one
- * forgeable result.
- *
- * <p>{@code input} is an order-independent material list: the workstation container only has to
- * hold at least the declared amount of every entry. {@code maxSteps} is optional and, when it is
- * omitted, the session can never fail for running too long.</p>
- *
- * <h2>Two axes, and neither replaces the other</h2>
- * A blueprint says <em>where the value has to end up</em> and <em>which techniques this piece may be
- * made with</em>; a {@link ForgingMethod} says <em>how the value moves</em>; a {@link ToolBinding} says
- * <em>which techniques this player can perform</em>. What may actually be struck is the intersection of
- * the last two - see {@code ForgingWorkstationService#availableMethodIds}.
- *
- * <h2>{@code allowed_methods}</h2>
- * Optional, and a {@link HolderSet}: a list of method ids, a single {@code "#namespace:tag"} string, or
- * omitted entirely. <b>Declaring nothing - or declaring an empty list - restricts nothing</b>, so the
- * method list is then decided by the tools alone. That is deliberate: a blueprint that wants a specific
- * set says so, and one that does not care does not have to enumerate the whole registry.
- *
- * <p>A tag that resolves to no methods is <em>not</em> the same as declaring nothing: the blueprint
- * asked for a set and got an empty one, so nothing is allowed. That keeps a mistyped tag from silently
- * opening everything up.</p>
+ * The bounded meter, material requirement, allowed methods and finish rule for one forgeable result.
+ * {@code input} is order-independent: the container only has to hold at least the declared amount of every
+ * entry. {@code allowed_methods} declaring nothing, or an empty list, restricts nothing, while a tag that
+ * resolves to no methods allows nothing.
  */
 public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMethod> allowedMethods, MeterBounds meter,
                                FinishPattern finishPattern, int maxSteps, List<QualityThreshold> qualityByExtraSteps,
                                Identifier result, EntityAction completeAction, EntityAction failAction,
                                FailureSettlement failureSettlement) {
     /**
-     * Marker for "the blueprint defines no failure condition". The forge surface always has 15
-     * input slots, so a session can never exceed this sentinel step count.
+     * Marker for "the blueprint defines no failure condition". The forge surface always has 15 input
+     * slots, so a session can never exceed this sentinel step count.
      */
     public static final int UNLIMITED_STEPS = 0;
     /**
@@ -85,11 +67,8 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
     ).apply(i, ForgingBlueprint::new)).validate(ForgingBlueprint::validate);
 
     /**
-     * Whether this blueprint restricts the method list at all.
-     *
-     * <p>Not the same question as "is the set empty". A tag is a declaration whose members are decided
-     * elsewhere, so it always counts as one, even when it resolves to nothing; an absent field or an
-     * empty list is no declaration at all.</p>
+     * Not the same question as "is the set empty": a tag is a declaration whose members are decided
+     * elsewhere, so it counts even when it resolves to nothing, while an absent field or empty list is none.
      */
     public boolean restrictsMethods() {
         return this.allowedMethods.unwrap().left().isPresent()
@@ -137,14 +116,10 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
     }
 
     /**
-     * Resolves a stable plan for one started session; later datapack reloads do not mutate that session.
-     *
-     * <p>The deltas are this blueprint's allowed methods - every enabled registered method when it
-     * declares none. Both the plan's keys and its finish-pattern check come from that one set, so a
-     * pattern naming a method the blueprint does not allow is rejected here rather than at settlement.</p>
-     *
-     * <p>{@link #UNLIMITED_STEPS} is normalised to {@link Integer#MAX_VALUE} here so the plan keeps
-     * its "positive, bounded" contract even though the datapack field is optional.</p>
+     * Resolves a stable plan for one started session; later datapack reloads do not mutate it. The deltas are
+     * this blueprint's allowed methods, and both the plan's keys and its finish-pattern check come from that
+     * one set, so a pattern naming a disallowed method is rejected here. {@link #UNLIMITED_STEPS} is normalised
+     * to {@link Integer#MAX_VALUE} so the plan keeps its positive, bounded contract.
      */
     public ForgingPlan plan(RegistryAccess registries) {
         Map<Identifier, Integer> deltas = new LinkedHashMap<>();

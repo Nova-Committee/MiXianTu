@@ -52,23 +52,20 @@ public final class ItemAuraService {
     }
 
     /**
-     * Returns the single resource accepted by this fuel or chargeable item.
+     * The resource type of this fuel or chargeable item.
      */
     public static Optional<Holder<Resource>> type(Provider access, ItemStack stack) {
         return find(access, stack).map(holder -> holder.value().type());
     }
 
     /**
-     * Resolves the item's resource type against the active server registry access.
+     * Resolves the type against the active server's registry access.
      */
     public static Optional<Holder<Resource>> type(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server == null ? Optional.empty() : type(server.registryAccess(), stack);
     }
 
-    /**
-     * Resolves the total spirit capacity of the supplied stack.
-     */
     public static int capacity(Provider access, ItemStack stack, FormulaContext context) {
         return find(access, stack)
                 .map(holder -> saturatingMultiply(capacity(holder.value(), context), stack.getCount()))
@@ -76,7 +73,7 @@ public final class ItemAuraService {
     }
 
     /**
-     * Resolves capacity against the active server's datapack registry.
+     * Resolves capacity against the active server's registry.
      */
     public static int capacity(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
@@ -90,9 +87,8 @@ public final class ItemAuraService {
     }
 
     /**
-     * Advances the currently held fuel by one server tick. A missing fuel item
-     * first resumes the smallest partially consumed matching stack, then takes
-     * a fresh matching item from the hands or the rest of the inventory.
+     * Advances the held fuel by one server tick. A missing fuel first resumes the smallest partially
+     * consumed matching stack, then takes a fresh matching item from the hands or the inventory.
      */
     public static TickResult tick(LivingEntity entity, ResourceHolderAttachment resources, FormulaContext context) {
         FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);

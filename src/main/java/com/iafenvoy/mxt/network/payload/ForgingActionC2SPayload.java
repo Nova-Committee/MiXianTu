@@ -13,17 +13,10 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * A forging request uses an enum because it has more than two possible state transitions.
- *
- * <p>{@code definition} is the blueprint id for {@link ForgingAction#SELECT} and the method id for
- * {@link ForgingAction#STRIKE}. Settlement, selection-independent actions and cancellation carry
- * no payload because the server reads everything else from its own session state.</p>
- *
- * <p>The request names no table. The client cannot reach the block - its menu's
- * {@code ContainerLevelAccess} is {@code NULL} - so it would have to be told the coordinates and the
- * server would then have to trust them back. The server instead resolves the table from the menu the
- * sending player has open, which also means a request can only ever act on the table that player is
- * actually standing at.</p>
+ * A forging request. {@code definition} is the blueprint id for {@link ForgingAction#SELECT} and the method id
+ * for {@link ForgingAction#STRIKE}, while the other transitions carry none because the server reads
+ * everything else from its own session state. The request names no table: the server resolves it from the menu
+ * the sending player has open, so it can only act on the table that player is standing at.
  */
 public record ForgingActionC2SPayload(ForgingAction action, Optional<Identifier> definition) implements CustomPacketPayload {
     public static final Type<ForgingActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "forging_action_c2s"));

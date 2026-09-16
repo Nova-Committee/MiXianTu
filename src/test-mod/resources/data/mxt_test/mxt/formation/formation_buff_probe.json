@@ -1,6 +1,14 @@
 {
   "structure": [
-    { "offset": [0, 0, 0], "state": "minecraft:gold_block" }
+    { "offset": [0, 0, 0], "state": "minecraft:lapis_block" },
+    { "offset": [-1, 0, -1], "state": "minecraft:quartz_bricks" },
+    { "offset": [0, 0, -1], "state": "minecraft:quartz_bricks" },
+    { "offset": [1, 0, -1], "state": "minecraft:quartz_bricks" },
+    { "offset": [-1, 0, 0], "state": "minecraft:quartz_bricks" },
+    { "offset": [1, 0, 0], "state": "minecraft:quartz_bricks" },
+    { "offset": [-1, 0, 1], "state": "minecraft:quartz_bricks" },
+    { "offset": [0, 0, 1], "state": "minecraft:quartz_bricks" },
+    { "offset": [1, 0, 1], "state": "minecraft:quartz_bricks" }
   ],
   "radius": 8,
   "actions": [

@@ -74,8 +74,7 @@ public final class ResourceService {
 
     /**
      * Adds resource-specific cultivation variables to a caller-provided formula context.
-     * {@code absorbed_aura} is this resource's accumulated cultivation progress and is
-     * deliberately zero when the player has no realm stage in this resource's chain.
+     * {@code absorbed_aura} is zero when the player has no realm stage in this resource's chain.
      */
     public static FormulaContext formulaContext(CultivationAttachment spirit, Holder<Resource> resource, FormulaContext base) {
         return base.withResource(spirit, resource);

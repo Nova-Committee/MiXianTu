@@ -65,9 +65,8 @@ public final class AuraChunkTicker {
     }
 
     /**
-     * Rebuilds queued block-aura caches once. Queries use this hook so a
-     * placement becomes visible immediately without scanning the chunk for
-     * every individual block event.
+     * Rebuilds queued block-aura caches once, so a placement becomes visible immediately without scanning
+     * the chunk for every individual block event.
      */
     public static void flushDirty(ServerLevel level) {
         Set<LevelChunk> dirty = DIRTY.get(level);
@@ -130,9 +129,8 @@ public final class AuraChunkTicker {
     }
 
     /**
-     * Rebuilds the transient section visitor counts used to split emitter aura
-     * between players. A player is considered an accessor of every loaded
-     * section in the same bounded 7x7x7 query volume used by AuraService.
+     * Rebuilds the transient section visitor counts used to split emitter aura between players. A player
+     * counts as an accessor of every loaded section in the same bounded query volume AuraService uses.
      */
     private static void refreshAuraVisitors(ServerLevel level) {
         Set<LevelChunk> chunks = LOADED.get(level);

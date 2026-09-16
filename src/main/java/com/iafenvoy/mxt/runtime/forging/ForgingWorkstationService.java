@@ -35,20 +35,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Authoritative forge-table transaction boundary.
- *
- * <p>The service owns material matching, tool/blueprint gating, the shared session lifecycle and
- * the strike rate limit. It never touches a block entity type directly: callers hand it a
- * {@link ForgingSurface}.</p>
- *
- * <h2>Shared sessions</h2>
- * A placed table holds exactly one session. Any player standing at the table may strike it,
- * which is what makes cooperative forging possible; {@code starter} is informational only.
- *
- * <h2>Materials</h2>
- * The blueprint input list is order independent. Starting a session removes the declared amounts
- * from the input slots and stores the exact removed stacks on the session, so a cancel or a
- * failure returns precisely what was taken.
+ * Authoritative forge-table transaction boundary: material matching, tool/blueprint gating, the shared session
+ * lifecycle and the strike rate limit, on a {@link ForgingSurface} rather than a block entity type. A placed
+ * table holds one session that any player standing at it may strike, and starting it stores the exact stacks
+ * taken, so a cancel or a failure returns precisely those.
  */
 public final class ForgingWorkstationService {
     /**
@@ -62,19 +52,8 @@ public final class ForgingWorkstationService {
     // ------------------------------------------------------------------ listing
 
     /**
-     * Blueprint ids provided by the blueprint items currently placed in the blueprint slots.
-     *
-     * <p>Nothing placed means nothing offered, and that is the whole rule. The manual is what
-     * <em>grants</em> a blueprint, so a selector that fell back to every registered blueprint inverted
-     * it: the list began at "all of them" and inserting a manual could only ever take entries away,
-     * which reads as a manual that restricts what you may forge rather than one that lets you forge it.
-     * It was also a bypass - leaving the slot empty let a player start any session at all, and this same
-     * list is what {@link #start} validates the pick against.
-     *
-     * <p>Takes the container rather than a {@link ForgingSurface} because the client half of the menu has
-     * no surface and no way to reach one; it has its own copy of the slot contents, which is everything
-     * this needs. The ids it returns on the client are for display - the server re-resolves and
-     * re-validates whatever it is sent.
+     * Blueprint ids provided by the blueprint items in the blueprint slots. Takes the container rather than a
+     * {@link ForgingSurface}, because the client half of the menu has its own copy of the slot contents.
      */
     public static List<Identifier> selectableBlueprintIds(Container container) {
         Set<Identifier> provided = new LinkedHashSet<>();
@@ -87,10 +66,8 @@ public final class ForgingWorkstationService {
     }
 
     /**
-     * Method ids unlocked by the tools currently placed in the tool slots.
-     *
-     * <p>The order is the tool slots' order, then each tool's own declaration order, deduplicated: a
-     * second tool can only ever append, never reorder or remove.</p>
+     * Method ids unlocked by the tools in the tool slots, in the tool slots' order and then each tool's own
+     * declaration order, deduplicated: a second tool can only ever append, never reorder or remove.
      */
     private static List<Identifier> toolMethodIds(Container container) {
         Set<Identifier> unlocked = new LinkedHashSet<>();
@@ -103,23 +80,8 @@ public final class ForgingWorkstationService {
     }
 
     /**
-     * Method ids the surface offers: this blueprint's {@code allowed_methods} intersected with the union
-     * of the placed tools' methods.
-     *
-     * <p>Two axes, and neither replaces the other. The blueprint says which techniques this piece may be
-     * made with; the tools say which techniques this player can perform. A player who can perform
-     * nothing the blueprint wants cannot forge it, and a blueprint that allows nothing they can perform
-     * is a dead end - which is why the tool slots stay open during a session, so a hammer can be added
-     * and the intersection widened after the fact.</p>
-     *
-     * <p>A blueprint that declares nothing restricts nothing, and so does a null id - which is the state
-     * the grid is in before anything is selected. The list is then just the tools' union, so the right
-     * grid is populated from the moment a tool is placed.</p>
-     *
-     * <p>Takes the container and a registry access rather than a {@link ForgingSurface}, because the
-     * client half of the menu has no surface and no way to reach one: it has its own copy of the slot
-     * contents and its own synchronised registries, which is everything this needs. The ids it returns
-     * on the client are for display; the server re-resolves and re-validates before acting.</p>
+     * Method ids the surface offers: this blueprint's {@code allowed_methods} intersected with the placed
+     * tools' methods, and the tools' union alone when the blueprint declares nothing or no id is selected.
      */
     public static List<Identifier> availableMethodIds(Container container, RegistryAccess registries, Identifier blueprintId) {
         List<Identifier> unlocked = toolMethodIds(container);
@@ -134,10 +96,8 @@ public final class ForgingWorkstationService {
     // ------------------------------------------------------------------ materials
 
     /**
-     * How many of one declared material the input slots hold.
-     *
-     * <p>One entry's count is a total and not a share: a blueprint's validation rejects a list that
-     * names the same item twice, so two entries can never compete for the same stacks.</p>
+     * How many of one declared material the input slots hold. One entry's count is a total and not a
+     * share: a blueprint's validation rejects a list that names the same item twice.
      */
     public static int availableCount(Container container, ForgingMaterial entry) {
         int available = 0;
@@ -149,11 +109,8 @@ public final class ForgingWorkstationService {
     }
 
     /**
-     * Whether the input slots cover a whole material list.
-     *
-     * <p>Exactly the resolution {@link #start} performs before it consumes anything, exposed so the
-     * screen can disable the button and explain why without re-deriving the rule - which is how a greyed
-     * button here and a refusal there are guaranteed to be the same verdict rather than two guesses.</p>
+     * Whether the input slots cover a whole material list: exactly the resolution {@link #start} performs
+     * before it consumes anything, so the screen's greyed button and this refusal cannot diverge.
      */
     public static boolean materialsCovered(Container container, List<ForgingMaterial> requirement) {
         return StartupMaterials.resolve(container, requirement) != null;
@@ -173,12 +130,8 @@ public final class ForgingWorkstationService {
     private static volatile ForgingCancellation cancellation = RETURN_EVERYTHING;
 
     /**
-     * Replaces the cancellation policy, or restores the default by passing null.
-     *
-     * <p>Deliberately a plain installed value rather than datapack state: the shape of a policy is still
-     * being decided, and freezing one into the blueprint format now would mean every content pack carries
-     * a field that only one implementation reads. When a variant proves itself, it can be given a field -
-     * the policy is where it will be read from either way.</p>
+     * Replaces the cancellation policy, or restores the default by passing null. Deliberately a plain installed
+     * value rather than datapack state: a policy in the blueprint format would make every pack carry a field.
      */
     public static void setCancellation(ForgingCancellation policy) {
         cancellation = policy == null ? RETURN_EVERYTHING : policy;
@@ -215,10 +168,8 @@ public final class ForgingWorkstationService {
     }
 
     /**
-     * Executes one strike with the selected method.
-     *
-     * <p>A strike that happens also plays the method's sound at the table; a refused one is silent - see
-     * {@link #playMethodSound}.</p>
+     * Executes one strike with the selected method. A strike that happens also plays the method's sound at the
+     * table; a refused one is silent - see {@link #playMethodSound}.
      */
     public static StrikeOutcome strike(ServerPlayer player, ForgingSurface surface, Identifier methodId) {
         if (!canUse(player, surface)) return new StrikeOutcome(Failure.OUT_OF_RANGE, false, 0);
@@ -256,55 +207,24 @@ public final class ForgingWorkstationService {
     }
 
     /**
-     * Plays the struck method's own sound at the table.
-     *
-     * <p>Only ever after a strike that happened: a refusal leaves the world as it was, so it makes no
-     * noise. Played through the level with no excepted player, which is what makes it everyone in range
-     * rather than only the striker - the table is a shared one, and the strike is something the other
-     * players at it should hear too. {@link SoundSource#BLOCKS} because this is a station making a noise,
-     * so the block volume slider governs it like every other machine sound.</p>
+     * Plays the struck method's own sound at the table, only ever after a strike that happened: through the
+     * level with no excepted player, as {@link SoundSource#BLOCKS} so the block volume slider governs it.
      */
     private static void playMethodSound(ServerPlayer player, ForgingSurface surface, ForgingMethod method) {
         player.level().playSound(null, surface.pos(), method.sound(), SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     /**
-     * Settles the session when it now satisfies the blueprint, and does nothing otherwise.
-     *
-     * <p>Checked wherever the session's state can <em>newly</em> satisfy it - after a strike and after a
-     * session starts - because completion is a property of the state rather than of the action that
-     * produced it. Two call sites, one predicate: a rule that only applied on the strike path would make
-     * a session that is already complete behave differently depending on how it got there.</p>
-     *
-     * <p>That also means a blueprint whose target band already contains the starting value, {@code 0}, and
-     * which asks for no suffix settles the moment it starts. That is a blueprint that asks for nothing, not
-     * a hole in the rule, and it is the same predicate either way. The materials are still consumed, so it
-     * is not free.</p>
-     *
-     * <p>There is nothing left to decide once it holds: the value is in the band and the last steps match,
-     * and further strikes could only raise {@code extraSteps}, which the quality curve reads as strictly
-     * worse. Leaving it open would be an opportunity to ruin a finished piece.</p>
-     *
-     * <p>A settlement that fails - a listener cancelling {@code CompletePre} or throwing out of it, or a
-     * blueprint that vanished under a reload - leaves the session exactly as it was. Nothing else in the
-     * system will settle it, so whoever cancelled is responsible for the session they kept alive.</p>
+     * Settles the session when it now satisfies the blueprint, checked after a strike and after a session start
+     * because completion is a property of the state. A blueprint already satisfied at start settles at once.
      */
     private static void settleIfComplete(ServerPlayer player, ForgingSurface surface, ForgingTableState state, ForgingSession session) {
         if (session.canComplete()) settle(player, surface, state);
     }
 
     /**
-     * Settles a session that is already complete, for entry points other than the action that completed
-     * it - opening the GUI being the only one.
-     *
-     * <p>A complete session can outlive the strike that made it so: a listener that cancels
-     * {@code CompletePre} leaves one behind, and so does any world written before settlement was
-     * automatic. The other triggers all need the state to <em>change</em>, so without this the table
-     * would sit locked with a finished piece that nothing ever produces.</p>
-     *
-     * <p>Guarded exactly like {@link #finish}, because it settles the same way: no session, no room in the
-     * output slot, or a player out of range and nothing happens. An <em>incomplete</em> session is left
-     * alone - settling one of those is the failure path, and it must never be reached by opening a menu.</p>
+     * Settles an already-complete session for entry points other than the action that completed it - opening
+     * the GUI being the only one - without which the table would sit locked with a finished piece.
      */
     public static void settleIfComplete(ServerPlayer player, ForgingSurface surface) {
         if (!canUse(player, surface)) return;
@@ -326,11 +246,8 @@ public final class ForgingWorkstationService {
     }
 
     /**
-     * The settlement itself, for callers that have already established that a session exists, that the
-     * player is in range and that the output slot is free.
-     *
-     * <p>Split out because two callers arrive here - an explicit request, and a strike that has just
-     * completed the piece - and they share the body rather than agreeing until one of them is edited.</p>
+     * The settlement itself, for callers that have already established the session, the range and the
+     * free output slot. Two callers share the body rather than agreeing by hand.
      */
     private static FinishOutcome settle(ServerPlayer player, ForgingSurface surface, ForgingTableState state) {
         Identifier blueprintId = state.blueprint().orElse(null);
@@ -360,10 +277,7 @@ public final class ForgingWorkstationService {
 
     /**
      * Cancels the session, settling its locked materials through the installed {@link ForgingCancellation}.
-     *
-     * <p>The blueprint's {@code fail_action} still runs, as it did before there was a policy: cancelling is
-     * a failure to produce anything, and a blueprint that wants to react to that writes it there. What a
-     * policy owns is only the materials.</p>
+     * The blueprint's {@code fail_action} still runs, because cancelling is a failure to produce anything.
      */
     public static CancelOutcome cancel(ServerPlayer player, ForgingSurface surface) {
         if (!canUse(player, surface)) return new CancelOutcome(Failure.OUT_OF_RANGE, false);
@@ -451,11 +365,8 @@ public final class ForgingWorkstationService {
     }
 
     /**
-     * Resolves the declared materials as an order-independent multiset over the input slots.
-     *
-     * <p>Resolution and removal are two separate phases: {@link #resolve} only inspects, so a
-     * partially satisfiable blueprint never consumes anything. Package private so the server audit
-     * can verify the matching rule without a live player.</p>
+     * Resolves the declared materials as an order-independent multiset over the input slots. Resolution
+     * only inspects, so a partially satisfiable blueprint never consumes anything.
      */
     static final class StartupMaterials {
         private final List<ItemStack> declared;

@@ -19,9 +19,7 @@ public interface HotbarEntry {
 
     Component name();
 
-    /**
-     * Stable option ID used by configurable hotbar layouts.
-     */
+    /** Stable option ID for configurable hotbar layouts; null means not selectable there. */
     default Identifier id() {
         return null;
     }
@@ -35,9 +33,8 @@ public interface HotbarEntry {
     }
 
     /**
-     * Returns the remaining cooldown fraction, matching vanilla item cooldown
-     * rendering semantics. A value of {@code 0} means ready and {@code 1}
-     * means the cooldown has just started.
+     * Remaining cooldown fraction, matching vanilla item cooldown rendering: {@code 0} is ready and
+     * {@code 1} means the cooldown has just started.
      */
     default float cooldown(Player player) {
         return 0.0F;
@@ -60,9 +57,8 @@ public interface HotbarEntry {
     }
 
     /**
-     * Renders this entry, including its background, key label, icon/name and
-     * server-authoritative cooldown. Implementations may override this method
-     * to provide a different visual without changing the shared overlay.
+     * Renders this entry: background, key label, icon/name and cooldown. Override to change the visual
+     * without touching the shared overlay.
      */
     default void render(GuiGraphicsExtractor graphics, Font font, Player player,
                         int x, int y, int index, boolean selected) {

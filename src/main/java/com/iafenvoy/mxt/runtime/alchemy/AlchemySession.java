@@ -15,8 +15,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Server-side furnace session. UI and block inventory adapt to this state instead of owning recipe logic.
- * The session keeps the vanilla {@link RecipeHolder} for event reporting while snapshots only persist the id.
+ * Server-side furnace session; the UI and block inventory adapt to this state instead of owning recipe
+ * logic. The {@link RecipeHolder} is kept for event reporting, while snapshots persist only the recipe id.
  */
 public final class AlchemySession {
     private final RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder;
@@ -45,7 +45,7 @@ public final class AlchemySession {
     }
 
     /**
-     * Restores only the runtime state; the caller must resolve the recipe holder by its snapshot id.
+     * Restores runtime state only; the caller must resolve the recipe holder from the snapshot id.
      */
     public static AlchemySession restore(Snapshot snapshot, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder) {
         if (snapshot.remainingTicks() < 0L)

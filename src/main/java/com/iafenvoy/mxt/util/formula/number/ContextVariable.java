@@ -11,9 +11,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
  * Resolves a declared variable directly, with a finite fallback for absent context values.
- *
- * <p>The name is bound to the variable that provides it once, because the split never changes;
- * only the value is read per evaluation.</p>
+ * The binding depends only on the variable registry, so it is resolved once and reused.
  */
 public final class ContextVariable implements NumberProvider {
     private static final MapCodec<ContextVariable> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

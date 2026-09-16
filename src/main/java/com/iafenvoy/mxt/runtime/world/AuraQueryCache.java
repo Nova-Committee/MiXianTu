@@ -19,35 +19,25 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
- * Per-tick memo for the aura resolution pipeline.
- * <p>
- * Resolving one position is expensive: it walks the {@code aura_zone} registry, expands the biome
- * and dimension tiers, rebuilds the environmental pools and then applies the block-emitter falloff
- * over a 7x7 chunk neighbourhood. {@link AuraZoneEventBridge} resolves one position per ticked
- * entity, and one block-emitter query resolves the static tier again for <em>every</em> contributing
- * source, so the same handful of positions used to be recomputed thousands of times per tick.
- * <p>
- * Every entry here is valid for at most one {@link ServerLevel} tick, because the inputs are the
- * chunk's mutable aura stock and the game time. {@link #advance} bumps a per-level epoch at the end
- * of each level tick and any read from an older epoch misses, which keeps the memo equivalent to
- * recomputing for every observation the game can make while removing all repetition inside one tick.
- * {@link #setEnabled} turns every lookup into a miss; the audit uses that to benchmark the uncached
- * pipeline.
+ * Per-tick memo for the aura resolution pipeline: resolving one position walks the {@code aura_zone} registry,
+ * expands the biome and dimension tiers and applies block-emitter falloff over a 7x7 chunk neighbourhood.
+ * Every entry is valid for at most one {@link ServerLevel} tick, because the inputs are the chunk's mutable
+ * aura stock and the game time; {@link #setEnabled} turns every lookup into a miss for the audit benchmark.
  */
 public final class AuraQueryCache {
     private static final Logger LOGGER = LogUtils.getLogger();
     /**
-     * Hard ceiling on entries kept per level and tick. A huge entity count can never blow up memory,
-     * and dropping a table is always safe because a miss only costs a recomputation.
+     * Hard ceiling on entries kept per level and tick. A huge entity count can never blow up memory, and
+     * dropping a table is safe because a miss only costs a recomputation.
      */
     private static final int MAX_ENTRIES = 16_384;
     /**
-     * Session-wide switch. Only the audit flips it.
+     * Session-wide switch, flipped only by the audit.
      */
     private static volatile boolean enabled = true;
     /**
-     * Stage timer switch. The bridge keeps it in step with the config, and the audit turns it on so it
-     * can attribute cost to stages without touching the config file.
+     * Stage timer switch, kept in step with the config by the bridge; the audit turns it on so it can
+     * attribute cost to stages without touching the config file.
      */
     private static volatile boolean timing = false;
 
@@ -65,22 +55,19 @@ public final class AuraQueryCache {
     private static final Map<ServerLevel, Map<LevelPosition, AuraResult>> RESULT = new IdentityHashMap<>();
     private static final Map<ServerLevel, Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Resource>, AuraPool>>>> POOLS = new IdentityHashMap<>();
     /**
-     * Availability of one block emitter for one resource. This is the single most repeated computation
-     * in the resolver: one query visits every source in a 7x7 chunk neighbourhood and asks for every
-     * resource of each source, so the same answer is requested hundreds of times per query. Everything
-     * it reads is either fixed for the tick or already fetched, so it is memoised like the rest.
+     * Availability of one block emitter for one resource: one query asks every source in a 7x7 chunk
+     * neighbourhood for every resource, so the same answer is requested hundreds of times.
      */
     private static final Map<ServerLevel, Map<AvailabilityKey, Double>> AVAILABILITY = new IdentityHashMap<>();
     /**
-     * Biome key per position. Resolving one aura position asks for the biome of every block source in
-     * a 7x7 chunk neighbourhood, and each of those reads is far more expensive than a map lookup, so it
-     * is the first thing the static tier does and the first thing that has to be memoised.
+     * Biome key per position: resolving one aura position asks for the biome of every block source in a 7x7
+     * chunk neighbourhood, and each read is far more expensive than a map lookup.
      */
     private static final Map<ServerLevel, Map<LevelPosition, Identifier>> BIOME = new IdentityHashMap<>();
     /**
-     * Definition to registry holder, memoised per level tick. Locating a holder needs a registry
-     * scan because the selected definition travels as an inline codec value, so without this the
-     * scan would run once per contributing block source.
+     * Definition to registry holder, memoised per level tick: locating a holder needs a registry scan because
+     * the selected definition travels as an inline codec value, so without this the scan would run once per
+     * contributing block source.
      */
     private static final Map<ServerLevel, Map<AuraZone, Optional<Holder<AuraZone>>>> HOLDER = new IdentityHashMap<>();
 
@@ -92,9 +79,8 @@ public final class AuraQueryCache {
     private static final AtomicLong NANOS = new AtomicLong();
 
     /**
-     * Per-layer hit and miss counters, plus the number of level tick windows opened. These exist so a
-     * live server can say which layer is still doing real work: a layer that is nearly all misses is
-     * not being repeated, it is simply expensive on its own.
+     * Per-layer hit and miss counters, plus the number of level tick windows opened, so a live server can
+     * say which layer is still doing real work.
      */
     private static final AtomicLong STATIC_HITS = new AtomicLong();
     private static final AtomicLong STATIC_MISSES = new AtomicLong();
@@ -115,9 +101,8 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Prints one diagnostic line describing what the resolver actually did since the previous call.
-     * The hit ratios are the point: a layer at ninety percent misses cannot be fixed by more caching,
-     * only by making its single computation cheaper.
+     * Prints one diagnostic line describing what the resolver did since the previous call. The hit ratios
+     * are the point: a layer at ninety percent misses needs a cheaper computation, not more caching.
      */
     public static void reportDiagnostics() {
         long ticks = TICKS.getAndSet(0L);
@@ -142,8 +127,7 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Plain snapshot of every layer counter. The audit uses it to prove a layer is actually being
-     * reused instead of trusting a timing that could be noise.
+     * Plain snapshot of every layer counter, used by the audit to prove a layer is actually being reused.
      */
     public record Stats(long availabilityHits, long availabilityMisses, long staticHits, long staticMisses,
                         long poolsHits, long poolsMisses, long resultHits, long formationHits, long formationMisses,
@@ -157,8 +141,7 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Nanosecond totals per pipeline stage, so a live server can say where one query actually spends
-     * its time instead of relying on a sampling profiler's attribution.
+     * Nanosecond totals per pipeline stage, so a live server can say where one query spends its time.
      */
     private static final AtomicLong BIOME_NANOS = new AtomicLong();
     private static final AtomicLong BIOME_CALLS = new AtomicLong();
@@ -199,8 +182,8 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Opens this level's next tick window and drops everything computed under the previous one. Called
-     * once per level tick, at the very end, so nothing computed from an older tick can be observed.
+     * Opens this level's next tick window and drops everything computed under the previous one; called once
+     * per level tick, at the very end, so nothing from an older tick can be observed.
      */
     public static void advance(ServerLevel level, long gameTime) {
         EPOCH.put(level, gameTime);
@@ -214,12 +197,9 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Memoised holder lookup for one definition. An empty optional is a real answer, so only a
-     * missing map entry counts as a miss.
-     *
-     * <p>A null result from the lookup is stored and returned as an empty optional: this method's
-     * contract is "never null", and a caller doing {@code .orElse(null)} on it should be reading a
-     * genuine miss rather than an NPE.</p>
+     * Memoised holder lookup for one definition. An empty optional is a real answer, so only a missing map
+     * entry counts as a miss; a null lookup result is stored as empty, so a caller's {@code .orElse(null)} sees
+     * a miss rather than an NPE.
      */
     static Optional<Holder<AuraZone>> holder(ServerLevel level, AuraZone zone) {
         if (!enabled) return Optional.empty();
@@ -260,18 +240,14 @@ public final class AuraQueryCache {
     }
 
     /**
-     * The last resolution input recorded for one entity, used to decide whether ticking it again can
-     * possibly change its answer. A stationary entity keeps the same block and the same dimension, so
-     * the only way its aura can differ is a chunk stock rebuild, a new formation or an edited custom
-     * area.
+     * The last resolution input recorded for one entity, used to decide whether ticking it again can change
+     * its answer: a stationary entity keeps the same block and dimension.
      */
     private static final Map<ServerLevel, Map<UUID, AuraLocation>> LAST_QUERY = new IdentityHashMap<>();
 
     /**
-     * Whether this entity's next tick can produce a different answer than its last recorded one. True
-     * when the entity is new, moved to another block or dimension, or has not been re-checked within the
-     * configured refresh interval. That interval is the upper bound on how long a zone change goes
-     * unnoticed while the entity stands still.
+     * Whether this entity's next tick can produce a different answer than its last recorded one: true when the
+     * entity is new, moved to another block or dimension, or not re-checked within the configured interval.
      */
     public static boolean needsQuery(ServerLevel level, UUID entity, AuraLocation position, int refreshInterval) {
         Map<UUID, AuraLocation> tracked = LAST_QUERY.get(level);
@@ -281,7 +257,6 @@ public final class AuraQueryCache {
         if (!previous.pos().equals(position.pos())) return true;
         long age = position.gameTime() - previous.gameTime();
         // A zero or negative age means this tick was already resolved, or the level clock did not move.
-        // Both are a skip: re-resolving them is exactly the per-tick repetition this gate exists to stop.
         if (age <= 0L) {
             SKIPPED.incrementAndGet();
             return false;
@@ -292,8 +267,8 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Entity ticks the gate answered with "nothing can have changed". This is the number that says
-     * whether the gate is doing its job on a live server.
+     * Entity ticks the gate answered with "nothing can have changed", which is the number that says whether
+     * the gate is doing its job on a live server.
      */
     private static final AtomicLong SKIPPED = new AtomicLong();
 
@@ -419,17 +394,9 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Memoised formation override for one position, or {@code true} answer {@code false}.
-     *
-     * <p>The result is an {@code Optional} of an {@code Optional} on purpose: the outer one answers
-     * "was this position memoised?" and the inner one is the answer itself, which is very often "no
-     * formation covers here". Both are needed, because a missing formation is a real answer that has
-     * to be cached — most positions have no formation, so recomputing the negative every time would
-     * cost exactly what the memo exists to save. Collapsing the two layers would make a miss and a
-     * cached "nothing here" indistinguishable, which is the same reason {@link #holder} caches an
-     * empty optional rather than omitting the entry.</p>
-     *
-     * <p>Callers should prefer {@link #computeFormationZone}, which keeps this shape internal.</p>
+     * Memoised formation override for one position, or an empty outer optional on a miss. The result is an
+     * {@code Optional} of an {@code Optional} on purpose: the outer answers "was this position memoised?" and
+     * the inner is the answer itself, which is often "no formation covers here" and so must be cached too.
      */
     static Optional<Optional<Resolved>> formationZone(ServerLevel level, AuraLocation location) {
         if (!enabled || !current(level, location)) return Optional.empty();
@@ -445,11 +412,8 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Resolves one position's formation override, computing and memoising it on a miss.
-     *
-     * <p>This is the whole read-through so that the two-layer result never leaves the cache: the
-     * caller supplies the computation and receives an ordinary optional, and the invariant that a
-     * stored entry is never null is enforced here rather than trusted.</p>
+     * Resolves one position's formation override, computing and memoising it on a miss. The caller supplies the
+     * computation and receives an ordinary optional; the two-layer result never leaves the cache.
      */
     static Optional<Resolved> computeFormationZone(ServerLevel level, AuraLocation location,
                                                    Supplier<Optional<Resolved>> compute) {
@@ -461,7 +425,7 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Stores one position's formation override. A null is stored as "no formation", so a caller that
+     * Stores one position's formation override, a null being stored as "no formation" so a caller that
      * never resolved anything cannot plant a null that a later read would trip over.
      */
     static void cacheFormationZone(ServerLevel level, AuraLocation location, Optional<Resolved> value) {
@@ -536,8 +500,8 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Key of one resolution input. The dimension travels with the position so a level can never be
-     * compared against another level's snapshot, and the game time makes the epoch check cheap.
+     * Key of one resolution input. The dimension travels with the position so a level can never be compared
+     * against another level's snapshot, and the game time makes the epoch check cheap.
      */
     public record AuraLocation(Identifier dimension, BlockPos pos, long gameTime) {
     }

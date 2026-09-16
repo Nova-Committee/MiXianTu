@@ -1,6 +1,14 @@
 {
   "structure": [
-    { "offset": [0, 0, 0], "state": "minecraft:gold_block" }
+    { "offset": [0, 0, 0], "state": "minecraft:sea_lantern" },
+    { "offset": [-1, 0, -1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [0, 0, -1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [1, 0, -1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [-1, 0, 0], "state": "minecraft:prismarine_bricks" },
+    { "offset": [1, 0, 0], "state": "minecraft:prismarine_bricks" },
+    { "offset": [-1, 0, 1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [0, 0, 1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [1, 0, 1], "state": "minecraft:prismarine_bricks" }
   ],
   "radius": 8,
   "actions": [

@@ -99,9 +99,8 @@ public final class AuraService {
     }
 
     /**
-     * Resolves the environmental concentration at a position without exposing the mutable
-     * chunk stock. The chunk stock is deliberately kept separate so HUD and fog rendering cannot
-     * make stored aura appear to fluctuate with the environment.
+     * Resolves the environmental concentration at a position without exposing the mutable chunk stock,
+     * which is kept separate so stored aura cannot appear to fluctuate with the environment.
      */
     public static AuraResult getSensedAura(Level level, BlockPos pos) {
         AuraResult resolved = getPositionAura(level, pos);
@@ -147,10 +146,8 @@ public final class AuraService {
     }
 
     /**
-     * Resolves the static environment template. The tier order is fixed and documented: a
-     * dimension binding replaces a biome binding and is never outranked by a biome entry. Within
-     * one tier the highest {@code priority} wins, and the registry ID breaks remaining ties so two
-     * same-priority definitions cannot resolve differently between reloads.
+     * Resolves the static environment template. A dimension binding replaces a biome binding and is never
+     * outranked by a biome entry; within one tier the highest {@code priority} wins.
      */
     private static Resolved staticZone(Level level, BlockPos pos) {
         ServerLevel server = level instanceof ServerLevel value ? value : null;
@@ -185,9 +182,8 @@ public final class AuraService {
     }
 
     /**
-     * The deterministic zone ordering used by {@link #best}. The highest {@code priority} wins and
-     * the registry ID ascending breaks remaining ties, so two zones that declare the same priority
-     * cannot resolve differently between reloads.
+     * The deterministic zone ordering used by {@link #best}: highest {@code priority} wins, then the
+     * registry ID ascending, so two zones cannot resolve differently between reloads.
      */
     static Optional<Reference<AuraZone>> pickHighestPriority(Stream<Reference<AuraZone>> candidates) {
         return candidates.max(Comparator.<Reference<AuraZone>>comparingInt(holder -> holder.value().priority())
@@ -199,9 +195,8 @@ public final class AuraService {
     }
 
     /**
-     * Dimension stems are a writable registry that is not synced to clients. The client can
-     * still resolve direct dimension IDs from its level key, but only the server may expand a
-     * dimension tag through the LEVEL_STEM registry.
+     * Dimension stems are a writable registry that is not synced to clients, so only the server may
+     * expand a dimension tag through the LEVEL_STEM registry; the client resolves direct IDs only.
      */
     private static boolean matchesDimension(Level level, AuraZone zone, Identifier dimension) {
         if (!(level instanceof ServerLevel server)) return RegistryCodecs.matchesKey(zone.dimensions(), dimension);
@@ -219,16 +214,15 @@ public final class AuraService {
     private static Optional<Resolved> formationZone(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel server)) return Optional.empty();
         AuraLocation location = AuraQueryCache.location(server, pos);
-        // The read-through lives in the cache so its two-layer result stays internal, and the caller
-        // states only what to compute on a miss: the highest-priority formation covering this position
-        // that declares an aura zone, or nothing.
+        // The read-through lives in the cache so its two-layer result stays internal; the caller states only
+        // what to compute on a miss — the highest-priority formation covering this position that declares an
+        // aura zone.
         return AuraQueryCache.computeFormationZone(server, location, () -> server.getData(MxtAttachments.FORMATION_WORLD)
                 .formations().entrySet().stream()
                 .filter(entry -> entry.getKey().distSqr(pos) <= entry.getValue().radius() * entry.getValue().radius())
-                // Nearest first, and then resolved in that order until one answers. Asking the nearest
-                // array whether it has a zone and stopping there would let a terrain ward raised inside a
-                // cultivating array hide the zone it is standing in, which is not what "highest-priority
-                // formation that declares an aura zone" has always meant here.
+                // Nearest first, and then resolved in that order until one answers: asking only the nearest
+                // array whether it has a zone would let a terrain ward raised inside a cultivating array hide
+                // the zone it stands in.
                 .sorted(Comparator.comparingDouble(entry -> entry.getKey().distSqr(pos)))
                 .map(entry -> MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation())
                         .flatMap(formation -> auraZone(formation).map(zone -> new Resolved(Optional.of(zone), zone.value(),
@@ -250,11 +244,8 @@ public final class AuraService {
     }
 
     /**
-     * The ceiling bonus a formation applies, summed per resource across its benefit modules with the
-     * highest winning.
-     *
-     * <p>Taking the highest rather than the last is the same rule the resolver already applies between
-     * overlapping formations, so one array with two benefit modules reads exactly like two arrays.</p>
+     * The ceiling bonus a formation applies, summed per resource across its benefit modules with the highest
+     * winning, which is the same rule the resolver applies between overlapping formations.
      */
     private static Map<Holder<Resource>, Double> maximumBonus(Formation formation, FormulaContext context) {
         Map<Holder<Resource>, Double> values = new LinkedHashMap<>();
@@ -277,20 +268,16 @@ public final class AuraService {
     }
 
     /**
-     * The chunk stock is shared, but a block source is local. Replace the
-     * aggregate block portion with its distance-weighted contribution for this
-     * query position. Inverse-square falloff keeps nearby sources useful while
-     * preventing every block in a chunk from contributing at full strength.
+     * The chunk stock is shared, but a block source is local, so the aggregate block portion is replaced
+     * with its distance-weighted contribution for this query position.
      */
     private static final int BLOCK_SEARCH_RADIUS = 3;
     private static final int BLOCK_EXACT_RADIUS = 1;
 
     /**
-     * Resolves block emitters using the same bounded subchunk algorithm as the
-     * research model. Nearby (3x3x3) sections use real source positions; the
-     * remaining sections use their centre and inverse-square falloff. A source
-     * section is only read when its chunk is already loaded, so querying aura
-     * never forces a large new area to load.
+     * Resolves block emitters over the bounded subchunk neighbourhood: nearby (3x3x3) sections use real
+     * source positions, the rest use their centre and inverse-square falloff, and a source section is only
+     * read when its chunk is already loaded.
      */
     private static void applyBlockDistance(Level level, Map<Holder<Resource>, AuraPool> pools,
                                            AuraChunkAttachment currentChunk, AuraZone zone,
@@ -339,8 +326,8 @@ public final class AuraService {
             }
         }
 
-        // The current chunk's stored stock includes its unweighted block portion.
-        // Remove that portion first, then add the spatially weighted view.
+        // The current chunk's stored stock includes its unweighted block portion: remove that first, then add
+        // the spatially weighted view.
         Map<Holder<Resource>, AuraValue> currentBlock = currentChunk.blockAura();
         Set<Holder<Resource>> resources = new LinkedHashSet<>(currentBlock.keySet());
         resources.addAll(weighted.keySet());
@@ -463,10 +450,9 @@ public final class AuraService {
     }
 
     /**
-     * Environmental pools for one zone. This is a pure function of the zone, the position and the
-     * tick, but a single block-emitter query asks for it once per contributing source, so the answer
-     * is memoised per tick under the zone's registry holder and never recomputed within it. A zone
-     * without a holder, such as the empty fallback, is computed without memoising.
+     * Environmental pools for one zone. A pure function of the zone, the position and the tick, but one
+     * block-emitter query asks for it once per contributing source, so it is memoised per tick under the
+     * zone's registry holder; a zone without a holder, such as the empty fallback, is not memoised.
      */
     private static Map<Holder<Resource>, AuraPool> pools(Level level, Holder<AuraZone> holder, AuraZone zone,
                                                          BlockPos pos, long gameTime) {
@@ -485,10 +471,9 @@ public final class AuraService {
     }
 
     /**
-     * The registry holder of one definition, needed to key the pool memo. The selected zone travels
-     * as an inline codec value that does not retain its own holder, so the holder is recovered by
-     * identity from the registry and memoised per level, because the scan would otherwise repeat for
-     * every contributing block source.
+     * The registry holder of one definition, needed to key the pool memo. The selected zone travels as an
+     * inline codec value that does not retain its own holder, so the holder is recovered by identity and
+     * memoised per level, because the scan would otherwise repeat for every block source.
      */
     static Holder<AuraZone> holderOf(Level level, AuraZone zone) {
         if (zone == EMPTY_ZONE || !(level instanceof ServerLevel server)) return null;

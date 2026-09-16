@@ -15,12 +15,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Datapack definition of a stored value: its bounds and how it is displayed.
- *
- * <p>A resource is a number the mod keeps per entity. It stores nothing about where that number
- * comes from or what it is for; the cultivation behaviour of a value is a separate
- * {@link com.iafenvoy.mxt.data.cultivation.CultivationProfile} that references it, so a resource
- * without a profile is simply a counter.</p>
+ * Datapack definition of a stored value: its bounds and how it is displayed. A resource stores nothing about
+ * where it comes from or what it is for — that is the job of the
+ * {@link com.iafenvoy.mxt.data.cultivation.CultivationProfile} referencing it, so one without a profile is
+ * simply a counter.
  */
 public record Resource(NumberProvider defaultValue, NumberProvider min, NumberProvider max,
                        Optional<IconReference> icon, int particleColor, List<ResourceBar> bars) {

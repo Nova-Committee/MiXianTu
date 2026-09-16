@@ -19,17 +19,10 @@ import net.minecraft.world.entity.LivingEntity;
 import java.util.List;
 
 /**
- * Advances a learned technique when its mastery reaches the next level.
- *
- * <p>Only data decides what happens: the level's own {@code mastery} says how much is needed, the
- * technique's {@code configuration} says what else it takes through that level's {@code condition},
- * and the value that measures mastery is the technique's {@code mastery_resource}, which a content
- * pack grows however it likes - a trigger rule, a cultivation profile or a script. Nothing here
- * knows what mastery means.</p>
- *
- * <p>A promotion is committed before the {@code mxt:technique_stage} signal is published, so a
- * reaction already reads the new level; the granted abilities are recalculated once at the end of the
- * pass rather than once per level.</p>
+ * Advances a learned technique when its mastery reaches the next level. Only data decides: the level's
+ * {@code mastery} says how much is needed, its {@code condition} says what else it takes, and
+ * {@code mastery_resource} names the value that measures mastery. A promotion is committed before the
+ * {@code mxt:technique_stage} signal is published, and granted abilities are recalculated once per pass.
  */
 public final class TechniqueMasteryService {
     /**
@@ -41,9 +34,8 @@ public final class TechniqueMasteryService {
     }
 
     /**
-     * One promotion pass over every learned technique of an entity. A technique without a mastery
-     * resource, without a next level, or below the next level's requirement is one comparison away
-     * from being skipped, so this is cheap enough for the periodic tick.
+     * One promotion pass over every learned technique: techniques without a mastery resource, without a
+     * next level, or below its requirement are one comparison away from being skipped.
      */
     public static void tick(LivingEntity entity) {
         if (entity.level().isClientSide()) return;

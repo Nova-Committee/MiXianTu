@@ -18,12 +18,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * Development-only assertion for the channelled ability lifecycle. It drives the production
- * service entry points so the check fails if a channelled ability stops applying its effect on
- * activation or on each due upkeep pulse.
- *
- * <p>The check only needs a {@link LivingEntity}, so it can run at server start on a temporary
- * entity as well as from a command against a real player.</p>
+ * Development-only assertion for the channelled ability lifecycle: it drives the production service
+ * entry points, so the check fails if a channelled ability stops applying its effect on activation or
+ * on a due upkeep pulse. It needs only a {@link LivingEntity}, so it can also run at server start.
  */
 public final class ChannelProbe {
     private static final Identifier PARENT = id("channel_parent");
@@ -35,9 +32,8 @@ public final class ChannelProbe {
     }
 
     /**
-     * Runs the assertion and returns a description of the first failure, or {@code null} when the
-     * expected behaviour is observed. The probe resource starts empty, so the delta at each step is
-     * unambiguous.
+     * Returns a description of the first failure, or {@code null} when the expected behaviour is
+     * observed. The probe resource starts empty, so each step's delta is unambiguous.
      */
     public static String verify(LivingEntity actor) {
         Holder<Ability> parent = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, PARENT).orElse(null);

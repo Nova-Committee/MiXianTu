@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
@@ -66,12 +67,8 @@ public final class FormationWorldTicker {
     }
 
     /**
-     * One dispatch pass over every active formation in the level: validate, charge upkeep, then run
-     * the per-entity actions, followed by the sweep that releases grants from formations a player has
-     * left.
-     *
-     * <p>Public so the server audit can drive the real path instead of a copy of it; nothing else in
-     * the mod calls this directly.</p>
+     * One dispatch pass over every active formation in the level: validate, charge upkeep, run the per-entity
+     * actions, then the sweep that releases grants from formations a player has left.
      */
     public static void dispatch(ServerLevel level) {
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
@@ -86,10 +83,12 @@ public final class FormationWorldTicker {
             FormationInstance instance = entry.getValue();
             if (!definition.get().maintenanceCosts().isEmpty() && !chargeUpkeep(level, entry.getKey(), instance, definition.get()))
                 continue;
-            // Settled and paid for: observers see every period that got this far. Cancellation lives on
-            // the next event, which gates only the work.
+            // Settled and paid for, so observers see it. Cancelling TickEffects skips the work.
             NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance));
             if (!NeoForge.EVENT_BUS.post(new TickEffects(level, entry.getKey(), instance)).isCanceled()) {
+                // Modules run before the definition's own hook here too, for the same reason they do per
+                // entity: a hook is the place to react to what the array did.
+                FormationActionRunner.perPeriod(level, definition.get(), instance, entry.getKey());
                 definition.get().tickAction().execute(level, entry.getKey(), FormulaContext.of(level));
                 executeEntityActions(level, entry.getKey(), instance, definition.get());
             }
@@ -105,34 +104,29 @@ public final class FormationWorldTicker {
      */
     private static boolean chargeUpkeep(ServerLevel level, BlockPos controller, FormationInstance instance, Formation definition) {
         Entity payer = instance.owner().map(level.getEntities()::get).orElse(null);
-        Optional<Identifier> failedResource = Optional.empty();
-        boolean paid = false;
-        if (payer != null) {
-            // The block emitters standing inside this formation supply it instead of the environment, so
-            // what they emit this period pays the upkeep before the owner is charged for the rest.
-            MaintainResult result = FormationService.maintain(instance, definition,
-                    payer.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContext.of(payer),
-                    supply(level, controller, instance.radius()));
-            paid = result.maintained();
-            failedResource = Optional.ofNullable(result.failedResource());
-        }
-        if (paid) return true;
-        // Cancelling keeps the formation registered: it pays nothing and does nothing this period. That is
-        // the hook for content that wants a formation to survive a lean stretch, and it is why failing to
-        // pay is no longer an unconditional teardown.
-        if (NeoForge.EVENT_BUS.post(new UpkeepFailed(level, controller, instance, Optional.ofNullable(payer), failedResource)).isCanceled())
+        // A formation with a store can pay while its owner is absent, which is most of what storing aura is
+        // for; whatever the store cannot cover still fails the period.
+        FormulaContext context = payer == null ? FormulaContext.of(level) : FormulaContext.of(payer);
+        ResourceHolderAttachment resources = payer == null
+                ? new ResourceHolderAttachment()
+                : payer.getData(MxtAttachments.RESOURCE_HOLDER);
+        // The block emitters standing inside this formation supply it instead of the environment, so what
+        // they emit this period pays the upkeep before the store and then the owner are asked for the rest.
+        MaintainResult result = FormationService.maintain(instance, definition, resources, context,
+                supply(level, controller, instance.radius()));
+        if (result.maintained()) return true;
+        // Cancelling keeps the formation registered: it pays nothing and does nothing this period, which is
+        // the hook for content that wants a formation to survive a lean stretch.
+        if (NeoForge.EVENT_BUS.post(new UpkeepFailed(level, controller, instance, Optional.ofNullable(payer),
+                Optional.ofNullable(result.failedResource()))).isCanceled())
             return false;
         FormationWorldService.deactivate(level, controller);
         return false;
     }
 
     /**
-     * What the formation's own ground supplies this period: the emitters inside it, plus — when the server
-     * option allows it — the ambient aura of the position it stands on.
-     *
-     * <p>The two are summed per resource, because they are both spent the same way. The absorbed totals
-     * carry no distance weighting while the pool's own contribution does, so the sum can exceed the second
-     * one alone; that is deliberate, an emitter inside the formation gives it everything.</p>
+     * What the formation's own ground supplies this period: the emitters inside it plus, when the server
+     * option allows it, the ambient aura of the position it stands on, summed per resource.
      */
     private static Map<Holder<Resource>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
         return combine(
@@ -155,12 +149,9 @@ public final class FormationWorldTicker {
     }
 
     /**
-     * Runs the per-entity actions for one formation: enter for entities that were not there last tick,
-     * tick for everyone in range the formation affects, and exit for entities that have left.
-     *
-     * <p>An entity the formation does not affect — a friend of a hostile formation's owner — is treated as
-     * absent rather than as present-but-skipped, which is what makes the exit path release what the
-     * formation granted it. See {@link FormationRelations#affects}.</p>
+     * Runs the per-entity actions for one formation: enter, tick, and exit. An entity the formation does not
+     * affect is treated as absent rather than present-but-skipped, which is what makes the exit path release
+     * what the formation granted it.
      */
     private static void executeEntityActions(ServerLevel level, BlockPos controller, FormationInstance instance,
                                              Formation definition) {
@@ -169,9 +160,8 @@ public final class FormationWorldTicker {
         Vec3 center = controller.getCenter();
         FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owner());
         Identifier source = FormationSources.of(instance.formation());
-        // Resolved once per formation rather than per entity: a hostile formation asks the same owner about
-        // every entity it covers. The id outlives the owner logging out and the entity does not, which is
-        // why the judgement is asked by id: a manager-level source can still answer for an absent owner.
+        // Resolved once per formation rather than per entity: the id outlives the owner logging out and the
+        // entity does not, so a manager-level source can still answer for an absent owner.
         UUID ownerId = instance.owner().orElse(null);
         Entity owner = ownerId == null ? null : level.getEntities().get(ownerId);
         Set<UUID> previous = FormationEntityActions.tracked(level, controller);
@@ -179,17 +169,13 @@ public final class FormationWorldTicker {
         for (Entity entity : level.getEntities(null, AABB.ofSize(center, radius * 2.0D, radius * 2.0D, radius * 2.0D))) {
             double distanceSquared = entity.distanceToSqr(center);
             if (distanceSquared > radiusSquared) continue;
-            // An entity the formation does not affect is not tracked either. The presence set is what
-            // decides who receives an enter and an exit action, and because an exit is also where a
-            // formation-scoped grant is released, leaving a spared entity in the set would hand it back
-            // its actions the moment its owner's list changed. Not tracking it means: the formation stops
-            // seeing it, and picks it up as a newcomer if it ever becomes a stranger again.
+            // An entity the formation does not affect is not tracked either: the exit is where a
+            // formation-scoped grant is released, and a spared entity must not keep one.
             if (!FormationRelations.affects(definition, ownerId, owner, entity)) continue;
             present.add(entity.getUUID());
             EntityActionContext context = FormationEntityActions.context(entity, carrier, radius, distanceSquared);
-            // A formation that has just been activated has no previous set, so everything already
-            // inside receives an enter action. That is the intended reading of "the formation
-            // appeared around you", and it is why enter actions must be idempotent.
+            // A freshly activated formation has no previous set, so everything already inside receives an
+            // enter action - which is why enter actions must be idempotent.
             if (!previous.contains(entity.getUUID())) definition.entityEnterAction().execute(context);
             // The function modules run before the definition's own hook, so a pack customising the tick
             // sees the state the array left behind rather than the state before it acted.
@@ -208,17 +194,12 @@ public final class FormationWorldTicker {
     }
 
     /**
-     * Releases the formation-scoped grants of a player who is no longer inside that formation.
-     *
-     * <p>A player can leave without the formation ever seeing it — logging out, changing dimension or
-     * teleporting between two ticks — and the attachment holding a granted ability is persistent, so
-     * the grant would otherwise outlive the formation. Sweeping on the same cadence is self-healing
-     * and needs no departure tracking at all.</p>
+     * Releases the formation-scoped grants of a player who is no longer inside that formation. A player can
+     * leave without the formation ever seeing it, and the ability attachment is persistent.
      */
     private static void releaseOutside(ServerLevel level, ServerPlayer player) {
-        // A player who never held a granted ability cannot owe a release, and without this guard the
-        // sweep would build a source identifier for every formation in the level, for every player,
-        // every period.
+        // A player who never held a granted ability cannot owe a release, and without this guard the sweep
+        // would build a source identifier for every formation in the level, every period.
         if (player.getExistingData(MxtAttachments.ABILITY_HOLDER).isEmpty()) return;
         BlockPos position = player.blockPosition();
         for (Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet()) {

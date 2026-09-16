@@ -43,7 +43,7 @@ public final class AuraChunkAttachment {
     private final Int2ObjectMap<BlockAuraSectionCache> blockAuraSections;
     private final Map<Holder<Resource>, AuraPool> auras;
     /**
-     * Runtime-only number of players whose bounded aura query includes a section.
+     * Runtime-only; never saved.
      */
     private final Map<SectionPos, Integer> auraVisitors = new LinkedHashMap<>();
 
@@ -164,23 +164,17 @@ public final class AuraChunkAttachment {
     }
 
     /**
-     * Replaces cached block contribution while retaining the already-consumed
-     * portion of every affected resource.
-     *
-     * <p>Emitters marked {@link BlockAuraContribution#absorbed()} are left out of both the shared stock and
-     * the per-section caches, and are totalled separately instead. They stand inside an active formation,
-     * which spends them, and letting them into the shared stock would let the same aura be spent twice:
-     * the environment subtracts this chunk's aggregate from the pool, so an absorbed emitter left in the
-     * aggregate would be handed back to every query. The totals carry no distance weighting, matching the
-     * rule that a block inside a formation gives it everything.</p>
+     * Replaces the cached block contribution while retaining the already-consumed portion of every
+     * affected resource. {@link BlockAuraContribution#absorbed()} emitters stay out of the shared stock
+     * and the per-section caches: the environment subtracts this chunk's aggregate from the pool, so
+     * leaving them in would hand the same aura back to every query.
      */
     public void setBlockContribution(List<BlockAuraContribution> sources, Collection<Identifier> kinds) {
         Map<Holder<Resource>, AuraValue> previous = new LinkedHashMap<>(this.blockAura);
         this.blockAuraSections.clear();
         Map<Integer, List<BlockAuraContribution>> grouped = new LinkedHashMap<>();
         sources.forEach(source -> grouped.computeIfAbsent(SectionPos.blockToSectionCoord(source.position().getY()), ignored -> new LinkedList<>()).add(source));
-        // Iterating the primitive key type picks the primitive put; the Integer overload inherited from Map
-        // is deprecated and would also be the only boxing in the method.
+        // The primitive key type picks the primitive put; the deprecated Integer overload from Map would box.
         grouped.forEach((sectionY, values) -> {
             List<BlockAuraContribution> environment = values.stream().filter(value -> !value.absorbed()).toList();
             if (environment.isEmpty()) return;
@@ -201,7 +195,7 @@ public final class AuraChunkAttachment {
 
     /**
      * Totals of the emitters that stand inside a formation, which the formation spends instead of the
-     * environment. Empty for a chunk with no formation over it.
+     * environment.
      */
     public Map<Holder<Resource>, AuraValue> absorbedAura() {
         return this.absorbedAura;

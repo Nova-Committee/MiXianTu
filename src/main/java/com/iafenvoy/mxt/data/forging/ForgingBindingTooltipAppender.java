@@ -22,15 +22,9 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import java.util.function.Consumer;
 
 /**
- * Explains what a {@code mxt:tool_binding} or {@code mxt:blueprint_binding} actually grants.
- *
- * <p>The two components are what the forge table reads, and on their own they are invisible: a player
- * holds a hammer with no way to know which methods it unlocks, or a manual with no way to know which
- * blueprints it provides, until they have already placed it on a table and looked at the result. This
- * prints that list on the item itself.
- *
- * <p>Both components are datapack holders, so the tooltip is built from the registry the item was
- * decoded against rather than from anything stored on the stack.
+ * Explains what a {@code mxt:tool_binding} or {@code mxt:blueprint_binding} actually grants: the forge table
+ * reads the two components, but on an item they are invisible until it is placed on a table. Both are
+ * datapack holders, so the tooltip is built from the registry the item was decoded against.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class ForgingBindingTooltipAppender {
@@ -70,22 +64,16 @@ public final class ForgingBindingTooltipAppender {
     }
 
     /**
-     * The heading, which says what kind of list follows rather than whose it is.
-     *
-     * <p>A binding has no name of its own to print: it is reached through an item, and that item's name is
-     * already one line above. What the player cannot see is the category - that these are blueprints, or that
-     * these are methods - so that is what goes here.</p>
+     * The heading says what kind of list follows rather than whose it is; the item's own name is already a
+     * line above.
      */
     private static void header(Consumer<Component> builder, String key) {
         builder.accept(Component.translatable(key).withStyle(ChatFormatting.GOLD));
     }
 
     /**
-     * The registry id under the name it belongs to, and only with advanced tooltips on.
-     *
-     * <p>It is what a datapack author needs and what a player never does: the name is the icon already drawn
-     * on the grid, the id is the string that has to be typed into a file. Indented to the name's own column,
-     * so it reads as that entry's id rather than as another entry.</p>
+     * The registry id under the name it belongs to, and only with advanced tooltips on: it is what a
+     * datapack author needs. Indented to the name's own column, so it reads as that entry's id.
      */
     private static void advancedId(Consumer<Component> builder, TooltipFlag flag, Identifier id) {
         if (!flag.isAdvanced()) return;
@@ -97,9 +85,8 @@ public final class ForgingBindingTooltipAppender {
     }
 
     /**
-     * A method is named by the item it draws itself with, because that icon is what the selector grid
-     * shows - and unlike the id it is what the player actually sees. {@link ForgingMethod#displayName}
-     * owns that rule so this list and the grid's own tooltip cannot name the same method differently.
+     * Named by the item it draws itself with, because that is the icon the selector grid shows.
+     * {@link ForgingMethod#displayName} owns that rule, so this list and the grid cannot disagree.
      */
     private static Component methodName(Holder<ForgingMethod> method) {
         return method.value().displayName(HolderHelper.id(method));

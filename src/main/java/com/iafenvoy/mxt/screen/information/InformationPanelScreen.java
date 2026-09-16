@@ -87,7 +87,7 @@ public final class InformationPanelScreen extends Screen {
     }
 
     /**
-     * Recalculate all GUI-space bounds after a window/GUI-scale change.
+     * Recalculates all GUI-space bounds after a window or GUI-scale change.
      */
     private void layoutWidgets() {
         this.panelWidth = Math.max(1, Math.min(PANEL_WIDTH, this.width - 12));
@@ -265,9 +265,8 @@ public final class InformationPanelScreen extends Screen {
                 Font font = Minecraft.getInstance().font;
                 Component name = this.entry.name();
                 int availableWidth = Math.max(1, this.getWidth() - 16);
-                // The width is shared out by need rather than fixed: the value is data and the name is a
-                // label, so a long value narrows the label column instead of being cut off. Reserving one
-                // global name width for every row used to starve values whose own label was short.
+                // Width is shared out per row, not one global name width: the value is data and the name
+                // is a label, so a long value narrows its own label instead of being cut off.
                 Columns columns = InformationHelper.columns(
                         availableWidth, this.nameWidth, font.width(this.entry.value()));
                 int nameAvailableWidth = Math.max(1, columns.nameWidth());
@@ -299,7 +298,7 @@ public final class InformationPanelScreen extends Screen {
             }
 
             /**
-             * One line per distinct too-long entry while the panel stays open. Entries are rebuilt on
+             * One line per distinct too-long entry while the panel stays open: entries are rebuilt on
              * every refresh, so a per-entry flag would report the same overflow once per refresh.
              */
             private static String overflowKey(InformationEntry entry) {

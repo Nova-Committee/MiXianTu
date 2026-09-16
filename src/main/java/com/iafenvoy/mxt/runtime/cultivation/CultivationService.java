@@ -38,11 +38,10 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 /**
- * Server-side breakthrough transaction. Content conditions are evaluated by callers before payment is committed.
+ * Server-side breakthrough transaction; callers evaluate content conditions before payment is committed.
  *
- * <p>A chain is identified by its cultivation profile, so the profile-keyed methods are the core and
- * the value-keyed overloads are the datapack-facing entry points for callers that only know a stored
- * value. Every state read and write goes through the profile the chain already is.</p>
+ * <p>The profile-keyed methods are the core, since a chain is identified by its cultivation profile; the
+ * value-keyed overloads are the datapack-facing entry points for callers that know only a stored value.</p>
  */
 public final class CultivationService {
     private static final double PROGRESS_EPSILON = 1.0E-7D;
@@ -104,8 +103,8 @@ public final class CultivationService {
                     effect.send(level, entity.position().add(0.0D, entity.getBbHeight() * 0.5D, 0.0D));
             });
             target.successAction().execute(entity, context);
-            // TribulationService samples the aura influence itself so every phase is scaled by the
-            // current environment, not only the phase that starts at breakthrough.
+            // TribulationService samples the aura influence itself, so every phase is scaled by the
+            // current environment rather than only the phase that starts at breakthrough.
             target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
         } else {
@@ -145,8 +144,7 @@ public final class CultivationService {
     }
 
     /**
-     * Resolves the pending transition of one cultivation chain. The chain is keyed by the profile
-     * itself, so this reads the state entry directly instead of looking the value up again.
+     * Resolves the pending transition of one cultivation chain, keyed by the profile itself.
      */
     private static Optional<Transition> next(@Nullable Holder<CultivationProfile> cultivation, CultivationAttachment spirit) {
         if (cultivation == null) return Optional.empty();
@@ -162,7 +160,7 @@ public final class CultivationService {
     }
 
     /**
-     * Adds cultivation progress while respecting the active transition's upper bound.
+     * Adds progress while respecting the active transition's upper bound.
      */
     public static double addProgress(LivingEntity entity, Holder<Resource> resource, double amount, FormulaContext context) {
         Reference<CultivationProfile> cultivation = CultivationProfiles.holder(entity, resource).orElse(null);
@@ -179,7 +177,7 @@ public final class CultivationService {
     }
 
     /**
-     * Context-only variant used by server-side service paths without an entity reference.
+     * Variant for server-side service paths without an entity reference.
      */
     public static double addProgress(CultivationAttachment spirit, Holder<Resource> resource, double amount, FormulaContext context) {
         return CultivationProfiles.holderServer(resource)
@@ -209,7 +207,7 @@ public final class CultivationService {
     }
 
     /**
-     * Returns remaining legal progress for this chain's current transition.
+     * Remaining legal progress for this chain's current transition.
      */
     public static double remainingProgressCapacity(CultivationAttachment spirit, Holder<Resource> resource, FormulaContext context) {
         return CultivationProfiles.holderServer(resource)
@@ -232,8 +230,8 @@ public final class CultivationService {
     }
 
     /**
-     * Resolves a chain's breakthrough state without mutating the player. This is shared by the
-     * automatic-breakthrough tick and the information screen.
+     * Resolves a chain's breakthrough state without mutating the player; shared by the automatic
+     * breakthrough tick and the information screen.
      */
     public static BreakthroughStatus breakthroughStatus(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
         Reference<CultivationProfile> cultivation = CultivationProfiles.holder(entity, resource).orElse(null);
@@ -254,9 +252,8 @@ public final class CultivationService {
     }
 
     /**
-     * Returns the conditions belonging to the currently pending transition.
-     * The returned value is datapack state; runtime trigger subscriptions are
-     * rebuilt separately and are never stored in the attachment.
+     * The conditions of the currently pending transition. The returned value is datapack state; runtime
+     * trigger subscriptions are rebuilt separately and never stored in the attachment.
      */
     public static Optional<CultivateConditions> pendingConditions(LivingEntity entity, Holder<Resource> resource) {
         return CultivationProfiles.holder(entity, resource)
@@ -314,7 +311,7 @@ public final class CultivationService {
         }
 
         /**
-         * The stored value this chain belongs to, as named by the profile the chain is keyed by.
+         * The stored value this chain belongs to, as named by the profile that keys the chain.
          */
         private Holder<Resource> resource() {
             return this.cultivation.value().resource();

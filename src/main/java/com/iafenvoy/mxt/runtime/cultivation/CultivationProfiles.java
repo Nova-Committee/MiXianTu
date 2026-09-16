@@ -22,20 +22,17 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * Looks up the cultivation profile of a stored value.
- *
- * <p>The registry is small and is read from either side of the connection, so the lookup scans the
- * synchronised registry instead of keeping a second cache that would have to be invalidated next to
- * it. Every entry point tolerates a missing access and reports "no profile" instead of throwing, so
- * a value without cultivation behaves like a plain counter everywhere.</p>
+ * Looks up the cultivation profile of a stored value. The registry is small and read from both sides, so the
+ * lookup scans the synchronised registry instead of keeping a second cache to invalidate; every entry point
+ * tolerates a missing access and reports "no profile" rather than throwing.
  */
 public final class CultivationProfiles {
     private CultivationProfiles() {
     }
 
     /**
-     * The profile describing a value, keeping its holder: a realm chain is keyed by the profile
-     * holder, so chain comparisons need the reference rather than the decoded value.
+     * Keeps the holder: a realm chain is keyed by the profile holder, so chain comparisons need the
+     * reference rather than the decoded value.
      */
     public static Optional<Reference<CultivationProfile>> holder(@Nullable Provider access, Identifier resource) {
         if (access == null) return Optional.empty();
@@ -68,9 +65,8 @@ public final class CultivationProfiles {
     }
 
     /**
-     * Server-only read for callers that hold no entity, such as commands and administrative paths.
-     * It reads the server registry directly, so it stays valid while the server cache is still being
-     * built during startup.
+     * Server-only read for callers that hold no entity, such as commands: it reads the server registry
+     * directly, so it stays valid while the server cache is still being built.
      */
     public static Optional<Reference<CultivationProfile>> holderServer(Identifier resource) {
         return MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATION)
@@ -90,9 +86,8 @@ public final class CultivationProfiles {
     }
 
     /**
-     * Every profile keyed by the value it describes, for reads that ask about each value of an
-     * entity in one pass. A duplicate resource keeps the first entry; the server cache rejects
-     * duplicates before any runtime read.
+     * Every profile keyed by the value it describes, for reads that ask about each value of an entity in
+     * one pass. A duplicate resource keeps the first entry; the server cache rejects duplicates first.
      */
     public static Map<Identifier, CultivationProfile> byResource(@Nullable Provider access) {
         return collect(access, profile -> HolderHelper.id(profile.value().resource()), Reference::value);
@@ -115,15 +110,15 @@ public final class CultivationProfiles {
     }
 
     /**
-     * The registry access of a running server, or {@code null} when no server is up.
+     * The registry access of a running server, or {@code null} when none is up.
      */
     public static @Nullable Provider serverAccess() {
         return ServerCache.get().map(cache -> (Provider) cache.server().registryAccess()).orElse(null);
     }
 
     /**
-     * The registry access a formula can read the synced registries through: the acting entity first,
-     * then its target, and finally the server when neither is present.
+     * The registry access a formula reads the synced registries through: the acting entity, then its
+     * target, then the server.
      */
     public static @Nullable Provider access(FormulaContext context) {
         Entity caster = context.caster();

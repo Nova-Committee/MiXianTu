@@ -15,12 +15,9 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Custom trigger signals exposed as {@code MxtTriggers}.
- *
- * <p>Publishing is what a data pack does through its ability triggers; subscribing lets a server
- * script wait for the same signal without owning a data pack definition. Both sides enter the
- * runtime {@code TriggerDispatcher}, so script subscriptions and data pack triggers observe the
- * exact same dispatch.</p>
+ * Custom trigger signals exposed as {@code MxtTriggers}: a data pack publishes by declaring ability
+ * triggers, a script subscribes without owning a definition, and both enter the same runtime
+ * {@code TriggerDispatcher}.
  */
 public final class MxtKubeJsTriggerBindings {
     @Info("Registers a script trigger matcher. Datapack type: mxt:js")

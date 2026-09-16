@@ -19,15 +19,9 @@ import org.slf4j.Logger;
 import java.util.Locale;
 
 /**
- * Prints the numbers a screenshot cannot be read reliably for.
- *
- * <p>Whether a drawing is offset because the layout is wrong or because it is written in the wrong
- * coordinate space is not answerable from a picture: the two look identical. The window size, the
- * GUI scale, and where the screen thinks its own frame and slots are do answer it, so this command
- * prints them next to the constants the screen draws with.
- *
- * <p>Dev-only, and inert unless {@code mxt.clientProbe} names it. A command rather than a tick
- * counter on purpose: a tick-based probe races world load, and a command runs exactly when asked.
+ * Prints the window size, GUI scale and screen frame/slot positions, which a screenshot cannot settle:
+ * a layout offset and a wrong coordinate space look identical in a picture. Dev-only, and inert unless
+ * {@code mxt.clientProbe} names it; a command rather than a tick counter, which would race world load.
  */
 @EventBusSubscriber(value = Dist.CLIENT)
 public final class ForgingScreenProbe {

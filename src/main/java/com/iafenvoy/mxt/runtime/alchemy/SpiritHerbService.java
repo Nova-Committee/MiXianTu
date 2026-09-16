@@ -11,8 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Optional;
 
 /**
- * Resolves herb metadata for an existing physical item. Growth,
- * harvesting, and generation are deliberately left to content mods or scripts.
+ * Resolves herb metadata for an existing item; growth, harvesting and generation are left to content mods.
  */
 public final class SpiritHerbService {
     private SpiritHerbService() {
@@ -23,9 +22,6 @@ public final class SpiritHerbService {
                 .map(Reference::value), stack);
     }
 
-    /**
-     * Reads the matching definition from the client-synchronised registry view.
-     */
     public static Optional<SpiritHerb> find(Provider access, ItemStack stack) {
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
                 .map(Reference::value), stack);

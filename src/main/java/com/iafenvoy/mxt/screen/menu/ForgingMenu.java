@@ -31,39 +31,10 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * The forge table's vanilla container menu.
- *
- * <h2>Slots</h2>
- * The nineteen machine slots of {@link ForgingSurface}, then the player inventory. The coordinates
- * here are the screen-space values the surface is painted against; {@code ForgingScreen} owns the
- * frame those coordinates are measured in, and the two are kept in step by the shared constants at
- * the bottom of this file.
- *
- * <h2>State that is not a slot</h2>
- * The session - meter value, step count, the required steps and the steps taken - has no container
- * of its own. It is mirrored onto {@link DataSlot}s, which is the vanilla channel for exactly this:
- * the server writes them in {@link #broadcastChanges()} and the client reads the same indices
- * without knowing what produced them. The server never trusts a value that arrives from the client.
- * The only client input this menu accepts is a request naming one id, and the server re-resolves and
- * re-validates it against its own lists.
- *
- * <h2>What is not synced here</h2>
- * Neither selector's highlight. A pick is the player's cursor over a list they can already see, made
- * and unmade freely, and only pressing a button turns it into a request - so it lives in
- * {@code ForgingScreen} and never crosses the wire. Keeping it there is also what lets the method list
- * exist before a session does: it is filtered by the <em>picked</em> blueprint, not by a locked one.
- *
- * <h2>Reaching the table</h2>
- * Only for the session. The table is reached through {@link ContainerLevelAccess}, which is the vanilla
- * handle for "the block this menu belongs to" - one is created by
- * {@link ForgingTableBlockEntity#createMenu}. The server is handed a real access; the client is handed
- * {@link ContainerLevelAccess#NULL}, whose every lookup is empty. That asymmetry is deliberate and is the
- * whole reason this class holds no block entity: a client-side read of the server's table is impossible
- * by construction rather than by a null check, so every session value has to be published to a data slot
- * first. The two selector lists are the exception, and they do not need the table: both are pure
- * functions of what the client already has - its copy of the slot contents, plus this side's own
- * datapack registries and, for the method list, the blueprint the player has picked. See
- * {@link #blueprints()} and {@link #methods(Identifier)}.
+ * The forge table's menu: the nineteen machine slots of {@link ForgingSurface}, then the player inventory, at
+ * the coordinates the screen paints against. The session has no container, so it is mirrored onto
+ * {@link DataSlot}s by {@link #broadcastChanges()}: the client's {@link ContainerLevelAccess} answers empty to
+ * every lookup, so every session value must be published first.
  */
 public final class ForgingMenu extends AbstractContainerMenu {
     /**
@@ -86,35 +57,16 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     // ---- synced indices
     //
-    // Session state only. Neither selector's highlight is here, and that is deliberate: a pick is the
-    // player's own cursor over a list they can see, made and unmade without telling anyone, and only
-    // the press of a button turns it into a request. Keeping it on the client is what stops the two
-    // lists from having to defer to the server about what "currently selected" means - and stops a
-    // blueprint pick from having to be a session before the method list can exist. See ForgingScreen.
+    // Session state only. Neither selector's highlight is here: a pick is the player's own cursor over a
+    // list they can see, and only the press of a button turns it into a request. See ForgingScreen.
     private static final int IDX_ACTIVE = 0;
     private static final int IDX_VALUE = 1;
     private static final int IDX_STEPS = 2;
 
     /**
-     * The shortest run the running session's frozen plan allows, mirrored to the client.
-     *
-     * <p>This is the plan's {@code optimal_steps}: the length of the best forge, computed by its breadth
-     * first search at load time and frozen into the session's plan. It is the number the quality formula
-     * subtracts from the player's own step count - {@code extra_steps = actual - optimal} - so it is what
-     * "how far from a perfect craft was that" is measured in.</p>
-     *
-     * <p><b>Reserved, not yet read.</b> No screen code reads it today: the two readouts show the meter
-     * value and the step count, and the number a player actually sees is on the finished item, in its
-     * {@code mxt:forging_result} component. The field is kept wired end to end anyway - written in
-     * {@link #syncFromTable()}, carried by the data slot, exposed by {@link #optimalSteps()} - as the
-     * prepared place for a readout like "steps 4 / shortest 3", which is then one label and two lang keys
-     * away rather than a new synced field. It is also the kind of number a designer may prefer to keep off
-     * the screen, since it is the length of the shortest solution; that is a display decision, and this
-     * comment is the note that the plumbing is already there whichever way it goes.</p>
-     *
-     * <p>Deleting it instead would renumber every index behind it, and the finish-pattern rows read their
-     * positions from those indices - so a slot that costs a few bytes per session is the cheaper of the
-     * two mistakes.</p>
+     * The shortest run the session's frozen plan allows, mirrored to the client: the plan's
+     * {@code optimal_steps}, which the quality formula subtracts from the player's step count. Reserved, but
+     * deleting it would renumber every index the finish-pattern rows read from.
      */
     private static final int IDX_OPTIMAL = 3;
 
@@ -145,23 +97,14 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     /**
      * The two recessed selector areas, measured off the texture.
-     *
-     * <p>Left recess: content columns {@code 8..55}, brown right wall {@code 56}. Right recess:
-     * content {@code 251..298}, wall {@code 299}. One column of plate grey follows each wall before
-     * the scrollbar's gutter begins.
      */
     public static final int RECESS_Y = 17;
     public static final int RECESS_W = 49;
     public static final int RECESS_H = 76;
 
     /**
-     * Where the scrollbar sprite's top-left corner goes.
-     *
-     * <p>These are not derived from the recess: the texture draws the bar in the gutter <em>right
-     * of</em> the recess - a plate-grey column, then the bar's own dark edge - so the sprite origin
-     * is four pixels past the recess's right wall. Asserting the measured column directly is what
-     * keeps the sprite on the bar the texture already drew; subtracting a sprite width from the
-     * recess, as the stonecutter does, would put it a full sprite width away, inside the recess.
+     * Where the scrollbar sprite's top-left corner goes. These are not derived from the recess: the texture
+     * draws the bar in the gutter right of it, so the sprite origin is four pixels past the recess's wall.
      */
     public static final int SCROLLBAR_X = 58;
     public static final int SCROLLBAR_X_RIGHT = 301;
@@ -202,9 +145,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
         super(MxtMenus.FORGING_TABLE.get(), containerId);
         this.access = access;
         this.player = inventory.player;
-        // The surface's own container on the server, reached through the access rather than handed in;
-        // a stand-in on the client, where the access is empty and where the container content packet
-        // fills this container in as the slots receive their items - see Slot#set.
+        // The surface's own container on the server, reached through the access; a stand-in on the client,
+        // which the container content packet fills through the slots - see Slot#set.
         this.machine = this.fromTable(ForgingTableBlockEntity::forgingContainer, new SimpleContainer(MACHINE_SLOTS));
         for (int index = 0; index < SYNCED; index++) {
             this.synced[index] = DataSlot.standalone();
@@ -232,19 +174,9 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * One slot on the machine surface.
-     *
-     * <p>This exists because {@code Container#canPlaceItem} is <em>not</em> what a player click asks.
-     * A click goes to {@code AbstractContainerMenu#clicked}, which asks the {@link Slot}, and a plain
-     * {@code Slot} answers yes to everything - so the block entity's filter was only ever consulted by
-     * hoppers and shift-clicks, and the surface accepted anything a hand dragged in. The rule is
-     * therefore asked here too, and it is the same rule object the block entity uses:
-     * {@link ForgingSurface#canPlace}. Two copies would be free to disagree, and the disagreement would
-     * look like a slot that takes an item and then spits it back.
-     *
-     * <p>The one thing this cannot delegate is the container: {@link #machine} is the surface's own on
-     * the server and a stand-in on the client, and the client's is filled by the container content
-     * packet. See the constructor.
+     * One slot on the machine surface. It exists because a plain {@code Slot} answers yes to everything, so
+     * the filter was only consulted by hoppers and shift-clicks; the rule is asked here too, through
+     * {@link ForgingSurface#canPlace}, because two copies would be free to disagree.
      */
     private final class MachineSlot extends Slot {
         MachineSlot(int index, int x, int y) {
@@ -257,9 +189,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
         }
 
         /**
-         * The surface is not a chest: what it holds is locked in for as long as a session runs, and the
-         * session's own snapshot is what a cancel or a failure returns. Taking something out mid-session
-         * would leave the return with nothing to give back.
+         * The surface is not a chest: what it holds is locked in for as long as a session runs, and its
+         * snapshot is what a cancel or a failure returns.
          */
         @Override
         public boolean mayPickup(@NonNull Player player) {
@@ -270,16 +201,9 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Runs one read against the forge table, or returns {@code fallback} when there is none to read.
-     *
-     * <p>This is the only way this class touches the block, and it goes through the menu's
-     * {@link ContainerLevelAccess} every time rather than through a stored reference. Two things follow
-     * from that. A table that was broken while its menu was still open yields {@code fallback} instead
-     * of a stale object, because the lookup is redone each time; and nothing here keeps a block entity
-     * - with its container, its level and its session - alive after the block is gone.
-     *
-     * <p>The client's access answers empty, always: see the class comment for why that is the point
-     * rather than a limitation.
+     * Runs one read against the forge table, or returns {@code fallback} when there is none to read. It always
+     * goes through the {@link ContainerLevelAccess}, so a table broken under an open menu yields
+     * {@code fallback} instead of a stale object.
      */
     private <T> T fromTable(Function<ForgingTableBlockEntity, T> reader, T fallback) {
         return this.access
@@ -291,27 +215,17 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * The table this menu is acting on, resolved on demand, or null when there is none.
-     *
-     * <p>Server side only - the client's access is empty, so this is always null there. It exists for
-     * the packet handler, which has a player and needs the block behind the menu that player has open.
-     * Resolving it from the menu is what lets a forging request be keyed by "the table I am standing
-     * at" rather than by a position the client names, which would mean publishing coordinates to the
-     * client and then trusting them back.
+     * The table this menu is acting on, resolved on demand, or null when there is none: resolving it from the
+     * menu lets a request be keyed by "the table I am standing at" rather than a client-named position.
      */
     public ForgingTableBlockEntity table() {
         return this.fromTable(table -> table, null);
     }
 
     /**
-     * Whether the surface would accept a stack in a slot, by that slot's own rule.
-     *
-     * <p>The rule is {@link ForgingSurface#canPlace}, which sits with the layout it describes, so the
-     * menu and the hopper path cannot enforce two different filters. It needs no block entity: the
-     * locked blueprint is only consulted while the surface is unlocked, and those are the same
-     * condition, so the server resolves it and the client simply has none. That is also what makes both
-     * halves answer alike, which is what matters - {@code Slot#mayPlace} is the only thing a plain
-     * click asks.
+     * Whether the surface would accept a stack in a slot, by that slot's own rule —
+     * {@link ForgingSurface#canPlace}, which sits with the layout it describes, so the menu and the hopper path
+     * cannot enforce two different filters.
      */
     public boolean accepts(int index, ItemStack stack) {
         return ForgingSurface.canPlace(index, stack, this.active(),
@@ -319,11 +233,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Whether a session has locked the surface.
-     *
-     * <p>Read from the synced flag rather than from the block entity so it is the same answer on both
-     * sides - the client half cannot reach the table, and a slot that allowed a pickup the server would
-     * refuse is a desync the player sees as an item bouncing back.
+     * Whether a session has locked the surface, read from the synced flag so both sides answer alike: a slot
+     * that allowed a pickup the server would refuse is a desync the player sees as an item bouncing back.
      */
     public boolean sessionLocked() {
         return this.synced[IDX_ACTIVE].get() != 0;
@@ -332,30 +243,16 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     // ------------------------------------------------------------------ the two lists
     /**
-     * The blueprints offered: what the blueprint items in the blueprint slots provide, and nothing else.
-     *
-     * <p>Derived rather than published, on both halves. The input is the slot contents of the container
-     * this side is showing, and the client has that - the container content packet fills its stand-in
-     * container through the slots. It is derived through the same rule the server validates against
-     * rather than reimplemented, so the two cannot disagree about what the items in the slots mean. A
-     * client showing an id the server would refuse costs a refused request, never a wrong action.
+     * The blueprints offered: what the blueprint items in the blueprint slots provide, derived through the
+     * same rule the server validates against.
      */
     public List<Identifier> blueprints() {
         return ForgingWorkstationService.selectableBlueprintIds(this.machine);
     }
 
     /**
-     * The methods offered: what the tools in the tool slots unlock, narrowed by what the given blueprint
-     * allows.
-     *
-     * <p>Two independent axes rather than two systems: the tools decide what this player can perform, the
-     * blueprint decides what this piece may be made with, and a method has to be on both. A blueprint that
-     * declares nothing - and a null id, which is what this is before anything is picked - restricts
-     * nothing, so the grid fills from the tools alone.</p>
-     *
-     * <p>The blueprint is passed in rather than read from the session, so the list exists before a session
-     * does. Both halves compute it the same way from the same two inputs - the container this side is
-     * showing, and this side's registries - and the client has both.</p>
+     * The methods offered: what the tools unlock, narrowed by what the given blueprint allows. The blueprint is
+     * passed in so the list exists before a session does.
      */
     public List<Identifier> methods(Identifier blueprintId) {
         return ForgingWorkstationService.availableMethodIds(this.machine, this.player.level().registryAccess(), blueprintId);
@@ -369,11 +266,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Whether the inputs cover a blueprint's whole material list.
-     *
-     * <p>The same rule {@code start} applies on the server, so a button disabled by this means a request
-     * that would have been refused rather than a surprise. A blueprint that cannot be resolved counts as
-     * uncovered: there is nothing to start.</p>
+     * Whether the inputs cover a blueprint's whole material list, the same rule {@code start} applies on the
+     * server, so a button disabled by it means a request that would have been refused.
      */
     public boolean materialsCovered(Identifier blueprintId) {
         ForgingBlueprint blueprint = this.blueprint(blueprintId);
@@ -381,8 +275,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * A blueprint as this side's registries see it, or null when nothing is picked or the datapack no
-     * longer has it.
+     * A blueprint as this side's registries see it, or null when nothing is picked or the datapack no longer
+     * has it.
      */
     public ForgingBlueprint blueprint(Identifier id) {
         return id == null ? null
@@ -402,10 +296,7 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * The shortest run the plan allows, or {@code 0} when no session is running.
-     *
-     * <p>The client end of {@link #IDX_OPTIMAL}, which nothing reads yet - see that constant for what the
-     * number is and why the field is kept.</p>
+     * The shortest run the plan allows, or {@code 0} when no session is running. Nothing reads it yet.
      */
     public int optimalSteps() {
         return this.synced[IDX_OPTIMAL].get();
@@ -450,8 +341,7 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Resolves a synced registry id back to its entry, through whichever registry access this side
-     * has: the running server, or the client's own synchronised copy of the datapack registries.
+     * Resolves a synced registry id back to its entry, through whichever registry access this side has.
      */
     public static Identifier methodId(Player player, int registryId) {
         if (registryId == NONE) return null;
@@ -471,10 +361,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     private void syncFromTable() {
-        // Server only. Everything below is the server's answer, and it reaches the client through these
-        // very slots, so a client that recomputed it here would overwrite what the packet had just put
-        // there. The side check is the guard; the client's access being empty would stop it reaching the
-        // table anyway, but it would happily write the fallbacks.
+        // Server only: everything below is the server's answer and reaches the client through these very
+        // slots, so a client that recomputed it would overwrite what the packet had just put there.
         if (this.player.level().isClientSide()) return;
         ForgingTableBlockEntity surface = this.table();
         if (surface == null) return;
@@ -485,8 +373,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
         this.synced[IDX_ACTIVE].set(active ? 1 : 0);
         this.synced[IDX_VALUE].set(snapshot == null ? 0 : snapshot.value());
         this.synced[IDX_STEPS].set(snapshot == null ? 0 : snapshot.steps());
-        // From the plan, because that is where the shortest run is computed and stored; the session only
-        // carries its own progress. Both are dropped together, so this is zero exactly when `snapshot` is.
+        // From the plan, which is where the shortest run is computed and stored; the session only carries
+        // its own progress. Both are dropped together, so this is zero exactly when `snapshot` is.
         this.synced[IDX_OPTIMAL].set(plan == null ? 0 : plan.optimalSteps());
         this.synced[IDX_METER_MIN].set(plan == null ? 0 : plan.meterMin());
         this.synced[IDX_METER_MAX].set(plan == null ? 0 : plan.meterMax());
@@ -499,24 +387,15 @@ public final class ForgingMenu extends AbstractContainerMenu {
         this.synced[IDX_REQUIRED].set(required);
         for (int index = 0; index < SUFFIX_STEPS; index++) {
             // Both rows describe the same six positions and are right-aligned, so position five is the
-            // most recent step in both and the two line up on it.
+            // most recent step in both.
             this.synced[IDX_TARGET_START + index].set(requiredStep(pattern, index, required));
             this.synced[IDX_HISTORY_START + index].set(historyStep(history, index));
         }
     }
 
     /**
-     * The registry id of the required step at display position {@code position}, or {@link #NONE}.
-     *
-     * <p>The rule is about the <em>last</em> {@code required} entries of the six-step pattern - see
-     * {@code ForgingSession#canComplete} - so this shows exactly those, right-aligned, and leaves the
-     * positions in front of them empty.</p>
-     *
-     * <p>It is deliberately not the window the history row uses. That one takes the last {@code count}
-     * entries of a list that may be shorter than six; this one takes a suffix of a pattern that is always
-     * six when it is used at all. Pushing the pattern through the history window shows its <em>first</em>
-     * {@code required} steps instead, which is a sequence the server never asks for - and it lines up on
-     * the same positions, so the row looks right while telling the player to strike the wrong steps.</p>
+     * The registry id of the required step at display position {@code position}, or {@link #NONE}: the last
+     * {@code required} entries of the six-step pattern, not the window the history row uses.
      */
     static int requiredStep(List<Identifier> pattern, int position, int required) {
         if (required <= 0 || pattern.size() != SUFFIX_STEPS) return NONE;
@@ -525,11 +404,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * The registry id of the step taken at display position {@code position}, or {@link #NONE}.
-     *
-     * <p>The window is the <em>last</em> {@code history.size()} entries, so a session that has struck
-     * fewer than six times shows its steps against the right-hand end of the row - the end the finish
-     * pattern is compared against - rather than against the left.</p>
+     * The registry id of the step taken at display position {@code position}, or {@link #NONE}. The window is
+     * the last {@code history.size()} entries, so a short session shows its steps against the right-hand end.
      */
     static int historyStep(List<Identifier> history, int position) {
         int source = position - (SUFFIX_STEPS - history.size());
@@ -538,14 +414,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     /**
-     * The integer registry id the client will resolve the icon from. Sent as a number rather than a
-     * name because a data slot carries an int.
-     *
-     * <p>Server side only, which is worth stating because it is the one place on this path that still
-     * uses a server-only registry handle: it is reached from {@link #syncFromTable}, which the client
-     * returns from. A data slot is also only a signed short on the wire - see
-     * {@code ClientboundContainerSetDataPacket} - which is why a registry id is safe here (they are
-     * dense and small) and why a world coordinate would not have been.
+     * The integer registry id the client will resolve the icon from, sent as a number because a data slot
+     * carries an int — only a signed short on the wire, which is why a registry id is safe here.
      */
     private static int registryId(Identifier id) {
         if (id == null) return NONE;
@@ -556,13 +426,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     // ------------------------------------------------------------------ interaction
 
     /**
-     * No menu buttons.
-     *
-     * <p>There is nothing left for one to carry. A pick is local to {@code ForgingScreen} and is not
-     * sent at all; the two presses name their entry's own id through {@code ForgingActionC2SPayload},
-     * which the server re-resolves and re-validates. A button id would have had to be turned back into
-     * an entry on the far side - and this menu declines every button on the client, so the press would
-     * not even have been sent.
+     * No menu buttons: a pick is local to {@code ForgingScreen} and the two presses name their entry's own id
+     * through {@code ForgingActionC2SPayload}, which the server re-resolves.
      */
     @Override
     public boolean clickMenuButton(@NonNull Player player, int id) {
