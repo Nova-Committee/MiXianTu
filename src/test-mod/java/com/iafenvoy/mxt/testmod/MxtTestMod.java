@@ -70,6 +70,8 @@ import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantPhysiqueAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.RemovePhysiqueAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.RemoveSpiritRootAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.SpawnLightningAction;
+import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasPhysiqueEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasSpiritRootEntityCondition;import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
@@ -214,6 +216,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.pig.Pig;
@@ -232,6 +235,7 @@ import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -504,6 +508,7 @@ public final class MxtTestMod {
         verifyConfigKeyMigration();
         verifyFormationTemplate(event);
         verifyFormationRuntime(event);
+        verifyColoredLightning(event.getServer().overworld());
         verifyFriendIdentification(event.getServer().overworld());
         ItemStack fireGinseng = new ItemStack(Items.RED_MUSHROOM);
         if (SpiritHerbService.find(fireGinseng).filter(herb -> HolderHelper.id(herb.quality()).equals(Identifier.parse("mxt_test:spirit_iron"))
@@ -3809,6 +3814,143 @@ public final class MxtTestMod {
         EntityConditionContext context = new EntityConditionContext(entity, FormulaContext.of(entity));
         context.set(FormationCarrier.KEY, carrier);
         return condition.test(context);
+    }
+
+    /**
+     * A bolt a datapack strikes is vanilla lightning with three of its constants exposed: an omitted look must
+     * be the vanilla one, a value outside its range must be refused at decode, and every visual value must be
+     * set before the bolt enters the level, because that is the moment the client's copy is built.
+     */
+    private static void verifyColoredLightning(ServerLevel level) {
+        if (!BuiltInRegistries.ENTITY_TYPE.getKey(MxtEntityTypes.COLORED_LIGHTNING.get()).equals(Identifier.parse("mxt:colored_lightning")))
+            throw new IllegalStateException("The coloured bolt is not registered under its data-visible id");
+        if (!LightningBolt.class.isAssignableFrom(ColoredLightningBolt.class))
+            throw new IllegalStateException("The coloured bolt stopped being a vanilla bolt, so it lost its vanilla behaviour");
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        SpawnLightningAction plain = lightningAction(ops, "{\"type\":\"mxt:spawn_lightning\"}");
+        if (plain.color() != ColoredLightningBolt.DEFAULT_COLOR
+                || !same(plain.alpha(), ColoredLightningBolt.DEFAULT_ALPHA)
+                || !same(plain.thickness(), ColoredLightningBolt.DEFAULT_THICKNESS)
+                || !(plain.damage() instanceof Constant damage) || !same(damage.value(), 5.0D)
+                || plain.visualOnly() || !plain.cause()) {
+            throw new IllegalStateException("A bolt that declared no look did not fall back to the vanilla one");
+        }
+        // The default is the vanilla 0.45/0.45/0.5 rounded to eight bits, so it may only be one step out.
+        if (Math.abs((ColoredLightningBolt.DEFAULT_COLOR >> 16 & 0xFF) / 255.0F - 0.45F) > 1.0F / 255.0F
+                || Math.abs((ColoredLightningBolt.DEFAULT_COLOR >> 8 & 0xFF) / 255.0F - 0.45F) > 1.0F / 255.0F
+                || Math.abs((ColoredLightningBolt.DEFAULT_COLOR & 0xFF) / 255.0F - 0.5F) > 1.0F / 255.0F) {
+            throw new IllegalStateException("The default bolt colour drifted away from the vanilla constants");
+        }
+        SpawnLightningAction declared = lightningAction(ops, """
+                {"type": "mxt:spawn_lightning", "color": "#FF8800", "alpha": 0.75, "thickness": 2.5,
+                 "damage": 9, "visual_only": true, "cause": false,
+                 "offset_x": 2, "offset_y": 1, "offset_z": -3}""");
+        if (declared.color() != 0xFF8800 || !same(declared.alpha(), 0.75F) || !same(declared.thickness(), 2.5F)
+                || !(declared.damage() instanceof Constant declaredDamage) || !same(declaredDamage.value(), 9.0D)
+                || !declared.visualOnly() || declared.cause()) {
+            throw new IllegalStateException("A declared bolt look did not survive the codec");
+        }
+        for (String json : List.of("{\"type\":\"mxt:spawn_lightning\",\"color\":16777216}",
+                "{\"type\":\"mxt:spawn_lightning\",\"alpha\":1.5}",
+                "{\"type\":\"mxt:spawn_lightning\",\"thickness\":0}")) {
+            if (EntityAction.SINGLE_CODEC.parse(ops, JsonParser.parseString(json)).result().isPresent())
+                throw new IllegalStateException("A bolt value outside its range was accepted: " + json);
+        }
+        Pig probe = spawnProbe(level, new BlockPos(0, level.getMinY() + 6, 0));
+        try {
+            executeWithCarrier(probe, null, declared);
+            ColoredLightningBolt bolt = level.getEntitiesOfClass(ColoredLightningBolt.class, probe.getBoundingBox().inflate(8.0D))
+                    .stream().findFirst()
+                    .orElseThrow(() -> new IllegalStateException("A datapack-struck bolt never reached the level"));
+            if (bolt.color() != 0xFF8800 || !same(bolt.alpha(), 0.75F) || !same(bolt.thickness(), 2.5F)
+                    || !same(bolt.getX(), probe.getX() + 2.0D) || !same(bolt.getY(), probe.getY() + 1.0D)
+                    || !same(bolt.getZ(), probe.getZ() - 3.0D)) {
+                throw new IllegalStateException("The struck bolt did not carry its declared look or its offset");
+            }
+            bolt.discard();
+        } finally {
+            probe.discard();
+        }
+        verifyLightningCommand(level);
+        LOGGER.info("MiXianTu lightning audit: mxt:spawn_lightning carrying its own colour, glow and thickness into "
+                + "the bolt before it enters the level, defaulting to the vanilla look and refusing a value outside "
+                + "a range at decode; and /mxt lightning striking the same bolt through its ordered option chain, "
+                + "with the top-level /lightning alias following its own server option and refusing a colour that is "
+                + "not six hexadecimal digits");
+    }
+
+    /**
+     * The command has to reach the last option of its chain, not just the first, and the bolt it reports has to
+     * be the bolt that exists. Every strike is taken back out of the level straight away, so none of them can
+     * tick into fire or damage while the rest of the audit runs.
+     */
+    private static void verifyLightningCommand(ServerLevel level) {
+        MinecraftServer server = level.getServer();
+        CommandNode<CommandSourceStack> node = server.getCommands().getDispatcher().getRoot().getChild("mxt").getChild("lightning");
+        if (node == null)
+            throw new IllegalStateException("/mxt lightning is not registered");
+        // The respawn point a bare server source carries is not necessarily in a loaded chunk, so the source is
+        // moved to a spot the audit already knows is loaded and the bare form is measured against that.
+        Vec3 origin = new Vec3(0.5D, level.getMinY() + 12.0D, 0.5D);
+        Vec3 moved = new Vec3(3.5D, level.getMinY() + 13.0D, 4.5D);
+        CommandSourceStack source = server.createCommandSourceStack().withPosition(origin).withSuppressedOutput();
+        if (node.getRequirement().test(source.withPermission(PermissionSet.NO_PERMISSIONS)))
+            throw new IllegalStateException("Striking lightning does not require gamemaster permission");
+        // The alias is a separate registration and the server option decides whether it exists, so the check is
+        // that presence follows the option rather than that it is present.
+        CommandNode<CommandSourceStack> alias = server.getCommands().getDispatcher().getRoot().getChild("lightning");
+        if ((alias == null) == MxtServerConfig.INSTANCE.commands.lightning.getValue())
+            throw new IllegalStateException("The top-level /lightning alias does not follow its server option");
+        if (alias != null && !children(alias).equals(children(node)))
+            throw new IllegalStateException("The /lightning alias and /mxt lightning expose different children: "
+                    + children(alias) + " vs " + children(node));
+        try {
+            strikeViaCommand(server, source, level, "mxt lightning", origin,
+                    ColoredLightningBolt.DEFAULT_COLOR, ColoredLightningBolt.DEFAULT_ALPHA, ColoredLightningBolt.DEFAULT_THICKNESS);
+            strikeViaCommand(server, source, level, "mxt lightning " + moved.x() + " " + moved.y() + " " + moved.z(), moved,
+                    ColoredLightningBolt.DEFAULT_COLOR, ColoredLightningBolt.DEFAULT_ALPHA, ColoredLightningBolt.DEFAULT_THICKNESS);
+            strikeViaCommand(server, source, level, "mxt lightning " + origin.x() + " " + origin.y() + " " + origin.z()
+                    + " color FF8800 alpha 0.5 thickness 2 damage 7 visual_only", origin, 0xFF8800, 0.5F, 2.0F);
+            try {
+                server.getCommands().getDispatcher().execute("mxt lightning " + origin.x() + " " + origin.y() + " "
+                        + origin.z() + " color ZZZZZZ", source);
+                throw new IllegalStateException("A colour that is not hexadecimal was accepted");
+            } catch (CommandSyntaxException expected) {
+                // The argument refuses it, which is the point.
+            }
+            if (!level.getEntitiesOfClass(ColoredLightningBolt.class, box(origin)).isEmpty())
+                throw new IllegalStateException("A refused colour still struck a bolt");
+        } catch (CommandSyntaxException exception) {
+            throw new IllegalStateException("The lightning command did not parse: " + exception.getMessage(), exception);
+        }
+    }
+
+    private static void strikeViaCommand(MinecraftServer server, CommandSourceStack source, ServerLevel level,
+                                         String command, Vec3 position, int color, float alpha, float thickness) throws CommandSyntaxException {
+        if (server.getCommands().getDispatcher().execute(command, source) != 1)
+            throw new IllegalStateException("The lightning command did not report a strike: " + command);
+        List<ColoredLightningBolt> bolts = level.getEntitiesOfClass(ColoredLightningBolt.class, box(position));
+        if (bolts.size() != 1)
+            throw new IllegalStateException("The lightning command struck " + bolts.size() + " bolts for: " + command);
+        ColoredLightningBolt bolt = bolts.getFirst();
+        try {
+            if (bolt.color() != color || !same(bolt.alpha(), alpha) || !same(bolt.thickness(), thickness)
+                    || !same(bolt.getX(), position.x()) || !same(bolt.getY(), position.y()) || !same(bolt.getZ(), position.z()))
+                throw new IllegalStateException("The struck bolt did not carry the look the command declared: " + command);
+        } finally {
+            bolt.discard();
+        }
+    }
+
+    private static AABB box(Vec3 position) {
+        return new AABB(position.x() - 1.0D, position.y() - 1.0D, position.z() - 1.0D,
+                position.x() + 1.0D, position.y() + 1.0D, position.z() + 1.0D);
+    }
+
+    private static SpawnLightningAction lightningAction(RegistryOps<JsonElement> ops, String json) {
+        EntityAction action = EntityAction.SINGLE_CODEC.parse(ops, JsonParser.parseString(json)).getOrThrow();
+        if (action instanceof SpawnLightningAction lightning) return lightning;
+        throw new IllegalStateException("A bolt action decoded into something else: " + action);
     }
 
     /**

@@ -213,7 +213,6 @@ public final class AuraQueryCache {
         }
         HOLDER_MISSES.incrementAndGet();
         Optional<Holder<AuraZone>> found = AuraService.findHolder(zone);
-        if (found == null) found = Optional.empty();
         if (cache == null || cache.size() >= MAX_ENTRIES) {
             cache = new IdentityHashMap<>();
             HOLDER.put(level, cache);
@@ -394,48 +393,28 @@ public final class AuraQueryCache {
     }
 
     /**
-     * Memoised formation override for one position, or an empty outer optional on a miss. The result is an
-     * {@code Optional} of an {@code Optional} on purpose: the outer answers "was this position memoised?" and
-     * the inner is the answer itself, which is often "no formation covers here" and so must be cached too.
+     * Resolves one position's formation override through the memo, computing and storing it on a miss. The
+     * outer layer answers "was this position memoised?" and the inner one is the answer itself, which is often
+     * "no array covers here" and so is cached too. Only optionals are ever stored, so a null lookup can only
+     * mean the key is absent, never an answer.
      */
-    static Optional<Optional<Resolved>> formationZone(ServerLevel level, AuraLocation location) {
-        if (!enabled || !current(level, location)) return Optional.empty();
+    @SuppressWarnings("OptionalAssignedToNull")
+    static Optional<Resolved> computeFormationZone(ServerLevel level, AuraLocation location, Supplier<Optional<Resolved>> compute) {
+        if (!enabled || !current(level, location)) return compute.get();
         Map<AuraLocation, Optional<Resolved>> cache = FORMATION.get(level);
         Optional<Resolved> cached = cache == null ? null : cache.get(location);
-        if (cached == null) {
-            FORMATION_MISSES.incrementAndGet();
-            return Optional.empty();
+        if (cached != null) {
+            FORMATION_HITS.incrementAndGet();
+            return cached;
         }
-        FORMATION_HITS.incrementAndGet();
-        // An entry is never stored as null, but a null here would surface as an NPE in Optional.of.
-        return Optional.of(cached);
-    }
-
-    /**
-     * Resolves one position's formation override, computing and memoising it on a miss. The caller supplies the
-     * computation and receives an ordinary optional; the two-layer result never leaves the cache.
-     */
-    static Optional<Resolved> computeFormationZone(ServerLevel level, AuraLocation location,
-                                                   Supplier<Optional<Resolved>> compute) {
-        Optional<Optional<Resolved>> cached = formationZone(level, location);
-        if (cached.isPresent()) return cached.get();
+        FORMATION_MISSES.incrementAndGet();
         Optional<Resolved> resolved = compute.get();
-        cacheFormationZone(level, location, resolved);
-        return resolved;
-    }
-
-    /**
-     * Stores one position's formation override, a null being stored as "no formation" so a caller that
-     * never resolved anything cannot plant a null that a later read would trip over.
-     */
-    static void cacheFormationZone(ServerLevel level, AuraLocation location, Optional<Resolved> value) {
-        if (!enabled || !current(level, location)) return;
-        Map<AuraLocation, Optional<Resolved>> cache = FORMATION.get(level);
         if (cache == null || cache.size() >= MAX_ENTRIES) {
             cache = new HashMap<>();
             FORMATION.put(level, cache);
         }
-        cache.put(location, value == null ? Optional.empty() : value);
+        cache.put(location, resolved);
+        return resolved;
     }
 
     static Optional<Map<Holder<Resource>, AuraPool>> pools(ServerLevel level, AuraLocation location, Holder<AuraZone> zone) {

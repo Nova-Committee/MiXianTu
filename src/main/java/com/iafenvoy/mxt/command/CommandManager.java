@@ -27,6 +27,7 @@ public final class CommandManager {
                 DisplayCommand.ROOT, config.display,
                 FormationCommand.ROOT, config.formation,
                 FriendCommand.ROOT, config.friend,
+                LightningCommand.ROOT, config.lightning,
                 TechniqueCommand.ROOT, config.technique,
                 TradeCommand.ROOT, config.trade
         );

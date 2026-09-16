@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
+import com.iafenvoy.mxt.render.lightning.ColoredLightningBoltRenderer;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle.Provider;
 import com.iafenvoy.mxt.screen.gui.*;
 import net.minecraft.client.player.AbstractClientPlayer;
@@ -26,6 +27,7 @@ public final class MxtRenderers {
         event.registerEntityRenderer(MxtEntityTypes.FLYING_SWORD.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SPIRIT_BURST.get(), NoopRenderer::new);
+        event.registerEntityRenderer(MxtEntityTypes.COLORED_LIGHTNING.get(), ColoredLightningBoltRenderer::new);
 
         event.registerBlockEntityRenderer(MxtBlockEntities.TRADE_STATION.get(), StationBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.SYSTEM_STATION.get(), StationBlockEntityRenderer::new);

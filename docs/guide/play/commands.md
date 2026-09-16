@@ -39,6 +39,29 @@ title: 命令
 | `/friend remove <player>`（= `/mxt friend remove`） | 移除临时好友；对永久好友会拒绝并提示改用下一条。 |
 | `/friend permanent add <player>`（= `/mxt friend permanent add`） | 添加**永久**好友，写入存档；临时好友会被升级。 |
 | `/friend permanent remove <player>`（= `/mxt friend permanent remove`） | 移除永久好友。 |
+| `/mxt lightning [pos] [color …]`（= `/lightning`） | 直接打下一道雷，需要 gamemaster 权限。颜色、亮度、粗细、伤害按固定顺序可选，见下。 |
+
+### `/mxt lightning`
+
+在指定位置打下一道雷，不写 `pos` 时落在命令执行者脚下。除了颜色，它就是原版闪电：伤害、引燃、避雷针充能、铜氧化、雷声、天空闪光，以及村民→女巫、猪→僵尸猪灵、苦力怕充能这些雷击转化全部照旧。
+
+```
+/mxt lightning
+/mxt lightning ~ ~ ~
+/mxt lightning ~ ~ ~ color 66CCFF
+/mxt lightning ~ ~ ~ color 66CCFF alpha 0.5 thickness 2 damage 10 visual_only
+```
+
+| 参数 | 默认 | 说明 |
+| --- | --- | --- |
+| `pos` | 执行者位置 | 落点，支持 `~` 相对坐标。 |
+| `color <六位十六进制>` | `737380`（原版那身冷白） | 不带 `#`，例如 `66CCFF`；Tab 补全会给几个常用色。 |
+| `alpha <0..1>` | `0.3` | 雷的**亮度**。原版闪电是加法混合，顶点色的 `RGB × alpha` 就是发光强度，所以它不是透明度。 |
+| `thickness <0.1..4>` | `1` | 雷柱粗细倍率。 |
+| `damage <≥0>` | `5` | 雷击伤害。 |
+| `visual_only` | 关 | 只打雷，不结算伤害、不引燃，适合做纯装饰。 |
+
+选项是**固定顺序**的一串可选节点：想写后面的就必须把前面的也写出来（Tab 补全会一路提示），例如要 `thickness` 就得先写 `color` 和 `alpha`。数据包侧的同一个行为 `mxt:spawn_lightning` 支持任意组合的字段，见[数据包 JSON 格式](../../数据包格式)。
 
 命令中的注册表 ID 使用原版 `IdentifierArgument`，Tab 补全来自服务端当前注册表。
 
