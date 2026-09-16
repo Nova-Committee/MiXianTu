@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.data.badge.BadgeCodecs;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.mojang.serialization.Codec;
@@ -51,7 +51,7 @@ public record CurrencyValue(List<Entry> items, long value, List<UnavailableWhen>
     public record UnavailableWhen(ItemCondition condition, Component reason) {
         public static final Codec<UnavailableWhen> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ItemCondition.CODEC.fieldOf("condition").forGetter(UnavailableWhen::condition),
-                BadgeCodecs.TRANSLATABLE_COMPONENT.fieldOf("reason").forGetter(UnavailableWhen::reason)
+                MiscCodecs.TRANSLATABLE_COMPONENT.fieldOf("reason").forGetter(UnavailableWhen::reason)
         ).apply(i, UnavailableWhen::new));
     }
 

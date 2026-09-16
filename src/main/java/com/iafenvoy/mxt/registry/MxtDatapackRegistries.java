@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
-import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
@@ -57,7 +56,6 @@ public final class MxtDatapackRegistries {
     public static void newDatapackRegistries(NewRegistry event) {
         register(event, MxtResourceKeys.RESOURCE, Resource.DIRECT_CODEC);
         register(event, MxtResourceKeys.CULTIVATION, CultivationProfile.DIRECT_CODEC);
-        register(event, MxtResourceKeys.BADGE, Badge.DIRECT_CODEC);
         register(event, MxtResourceKeys.REALM_STAGE, RealmStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.ELEMENT, Element.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_ROOT, SpiritRoot.DIRECT_CODEC);
@@ -77,7 +75,6 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
         register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.CODEC);
         register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.CODEC);
-        register(event, MxtResourceKeys.TITLE, Title.DIRECT_CODEC);
         register(event, MxtResourceKeys.SECT, Sect.CODEC);
         register(event, MxtResourceKeys.REALM_INSTANCE, RealmInstance.CODEC);
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);

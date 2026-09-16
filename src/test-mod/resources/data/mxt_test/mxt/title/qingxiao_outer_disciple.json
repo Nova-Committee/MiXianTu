@@ -1,6 +1,0 @@
-{
-  "unlock_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
-  "priority": 2,
-  "exclusive_tags": ["mxt_test:title/sect"],
-  "maximum_level": 3
-}

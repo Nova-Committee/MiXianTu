@@ -5,11 +5,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.RandomSource;
 import org.joml.Matrix4fc;
+import org.jspecify.annotations.NonNull;
 
 /**
  * The vanilla lightning geometry with its three hard-coded colour constants replaced by per-bolt values.
@@ -17,7 +18,7 @@ import org.joml.Matrix4fc;
  * because the pipeline takes its colour from the vertices alone.
  */
 public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightningBolt, ColoredLightningBoltRenderState> {
-    public ColoredLightningBoltRenderer(EntityRendererProvider.Context context) {
+    public ColoredLightningBoltRenderer(Context context) {
         super(context);
     }
 
@@ -36,7 +37,7 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
     }
 
     @Override
-    public void submit(ColoredLightningBoltRenderState state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+    public void submit(ColoredLightningBoltRenderState state, @NonNull PoseStack poseStack, @NonNull SubmitNodeCollector collector, @NonNull CameraRenderState camera) {
         float red = (state.color >> 16 & 0xFF) / 255.0F;
         float green = (state.color >> 8 & 0xFF) / 255.0F;
         float blue = (state.color & 0xFF) / 255.0F;

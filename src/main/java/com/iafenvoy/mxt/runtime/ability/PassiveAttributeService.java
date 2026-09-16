@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -108,8 +107,6 @@ public final class PassiveAttributeService {
             addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers());
         for (Holder<Physique> physique : spirit.physiques())
             addAll(entries, "physique", HolderHelper.id(physique), physique.value().attributeModifiers());
-        for (Holder<Title> title : spirit.titles())
-            addAll(entries, "title", HolderHelper.id(title), title.value().passiveModifiers());
         return entries;
     }
 

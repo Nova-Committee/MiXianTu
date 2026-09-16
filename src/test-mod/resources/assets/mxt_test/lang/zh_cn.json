@@ -1,8 +1,4 @@
 {
-  "badge.mxt_test.tooltip": "测试说明徽章",
-  "badge.mxt_test.keybind": "测试按键徽章",
-  "badge.mxt_test.recipe.prefix": "配方：",
-  "badge.mxt_test.recipe.suffix": "",
   "ability.mxt_test.artifact_guard": "法宝护体",
   "ability.mxt_test.awaken_divine_sense": "觉醒神识",
   "ability.mxt_test.expend_test": "消耗测试",

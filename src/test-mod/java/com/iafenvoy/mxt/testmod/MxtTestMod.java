@@ -59,7 +59,6 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.FriendAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.IconReference;
-import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
@@ -1644,14 +1643,15 @@ public final class MxtTestMod {
 
     /**
      * Decodes an attachment payload holding a technique id that no longer exists: the list codec skips the
-     * elements that fail, so a stale id costs only itself and the rest of the attachment still loads.
+     * elements that fail, so a stale id costs only itself and the rest of the attachment still loads. The
+     * unknown key is there to pin that an unrecognised field is skipped instead of failing the payload.
      */
     private static void verifyStaleReferenceDecode() {
         ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"));
         String json = """
                 {
                   "learned_techniques": ["mxt_test:sword_manual", "mxt_test:never_existed"],
-                  "titles": []
+                  "not_a_real_field": []
                 }
                 """;
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE,
@@ -1978,13 +1978,13 @@ public final class MxtTestMod {
     }
 
     /**
-     * One icon type is shared by abilities, resources, badges, forging methods and techniques, so its two
+     * One icon type is shared by abilities, resources, forging methods and techniques, so its two
      * branches are pinned here: a bare string is a texture, an object is an item, anything else is rejected.
      */
     private static void verifyIconReferences() {
-        if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"mxt:textures/gui/badge/star.png\""))
+        if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("\"mxt:textures/gui/icon_fixture.png\""))
                 .result().flatMap(IconReference::texture)
-                .filter(Identifier.parse("mxt:textures/gui/badge/star.png")::equals).isEmpty())
+                .filter(Identifier.parse("mxt:textures/gui/icon_fixture.png")::equals).isEmpty())
             throw new IllegalStateException("An icon did not decode a bare string as its texture branch");
         if (IconReference.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString("{\"id\":\"minecraft:diamond\"}"))
                 .result().flatMap(IconReference::stack)
@@ -2007,9 +2007,6 @@ public final class MxtTestMod {
         Holder<Resource> spiritPower = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"));
         if (spiritPower.value().icon().flatMap(IconReference::texture).isEmpty())
             throw new IllegalStateException("A resource did not keep its texture icon");
-        Holder<Badge> badge = requireHolder(MxtResourceKeys.BADGE, Identifier.parse("mxt_test:sprite"));
-        if (badge.value().icon().texture().filter(Identifier.parse("mxt:textures/gui/badge/star.png")::equals).isEmpty())
-            throw new IllegalStateException("A badge did not keep its icon");
         ForgingMethod polish = MxtDatapackRegistries.get(MxtResourceKeys.FORGING_METHOD, Identifier.parse("mxt_test:polish"))
                 .orElseThrow(() -> new IllegalStateException("The icon audit needs mxt_test:polish"));
         if (!polish.iconStack().is(Items.DIAMOND)
@@ -3831,7 +3828,7 @@ public final class MxtTestMod {
         if (plain.color() != ColoredLightningBolt.DEFAULT_COLOR
                 || !same(plain.alpha(), ColoredLightningBolt.DEFAULT_ALPHA)
                 || !same(plain.thickness(), ColoredLightningBolt.DEFAULT_THICKNESS)
-                || !(plain.damage() instanceof Constant damage) || !same(damage.value(), 5.0D)
+                || !(plain.damage() instanceof Constant(double value)) || !same(value, 5.0D)
                 || plain.visualOnly() || !plain.cause()) {
             throw new IllegalStateException("A bolt that declared no look did not fall back to the vanilla one");
         }
@@ -3846,7 +3843,7 @@ public final class MxtTestMod {
                  "damage": 9, "visual_only": true, "cause": false,
                  "offset_x": 2, "offset_y": 1, "offset_z": -3}""");
         if (declared.color() != 0xFF8800 || !same(declared.alpha(), 0.75F) || !same(declared.thickness(), 2.5F)
-                || !(declared.damage() instanceof Constant declaredDamage) || !same(declaredDamage.value(), 9.0D)
+                || !(declared.damage() instanceof Constant(double value1)) || !same(value1, 9.0D)
                 || !declared.visualOnly() || declared.cause()) {
             throw new IllegalStateException("A declared bolt look did not survive the codec");
         }

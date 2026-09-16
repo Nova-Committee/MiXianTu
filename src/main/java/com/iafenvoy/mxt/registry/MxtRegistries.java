@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.aura.AuraMaximum;
-import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.curse.CurseType;
@@ -62,7 +61,6 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarRenderData>> RESOURCE_BAR_RENDER_DATA_TYPE = create("missing", MxtResourceKeys.RESOURCE_BAR_RENDER_DATA_TYPE);
     public static final DefaultedRegistry<ResourceBarContext> RESOURCE_BAR_CONTEXT = create("self_hud", MxtResourceKeys.RESOURCE_BAR_CONTEXT);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = create("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends Badge>> BADGE_TYPE = create("empty", MxtResourceKeys.BADGE_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = create("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends FormationActionType>> FORMATION_ACTION_TYPE = create("none", MxtResourceKeys.FORMATION_ACTION_TYPE);
 

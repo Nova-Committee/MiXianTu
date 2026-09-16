@@ -3,11 +3,20 @@ package com.iafenvoy.mxt.util.codec;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 
 import java.util.function.Function;
 
 public final class MiscCodecs {
     public static final Codec<Integer> COLOR = color(true), COLOR_NO_ALPHA = color(false);
+
+    /**
+     * A datapack display string: a bare JSON string is a translation key, an object is a full component, so a
+     * definition stays readable without losing styling when a pack needs it.
+     */
+    public static final Codec<Component> TRANSLATABLE_COMPONENT = Codec.either(Codec.STRING, ComponentSerialization.CODEC)
+            .xmap(value -> value.map(Component::translatable, component -> component), Either::right);
 
     private static Codec<Integer> color(boolean alpha) {
         int digits = alpha ? 8 : 6;

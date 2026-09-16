@@ -16,7 +16,6 @@ import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
-import com.iafenvoy.mxt.data.badge.Badge;
 import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.creature.ContractType;
@@ -80,14 +79,12 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends ResourceBarRenderData>>> RESOURCE_BAR_RENDER_DATA_TYPE = create("resource_bar_render_data_type");
     public static final ResourceKey<Registry<ResourceBarContext>> RESOURCE_BAR_CONTEXT = create("resource_bar_context");
     public static final ResourceKey<Registry<MapCodec<? extends ResourceBarVisibility>>> RESOURCE_BAR_VISIBILITY_TYPE = create("resource_bar_visibility_type");
-    public static final ResourceKey<Registry<MapCodec<? extends Badge>>> BADGE_TYPE = create("badge_type");
     public static final ResourceKey<Registry<MapCodec<? extends Entry>>> ITEM_MATCHER_ENTRY_TYPE = create("item_matcher_entry_type");
     public static final ResourceKey<Registry<MapCodec<? extends FormationActionType>>> FORMATION_ACTION_TYPE = create("formation_action_type");
 
     // Datapack registries
     public static final ResourceKey<Registry<Resource>> RESOURCE = create("resource");
     public static final ResourceKey<Registry<CultivationProfile>> CULTIVATION = create("cultivation");
-    public static final ResourceKey<Registry<Badge>> BADGE = create("badge");
     public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = create("realm_stage");
     public static final ResourceKey<Registry<Element>> ELEMENT = create("element");
     public static final ResourceKey<Registry<SpiritRoot>> SPIRIT_ROOT = create("spirit_root");
@@ -107,7 +104,6 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<Tribulation>> TRIBULATION = create("tribulation");
     public static final ResourceKey<Registry<CreatureProfile>> CREATURE_PROFILE = create("creature_profile");
     public static final ResourceKey<Registry<ContractType>> CONTRACT_TYPE = create("contract_type");
-    public static final ResourceKey<Registry<Title>> TITLE = create("title");
     public static final ResourceKey<Registry<Sect>> SECT = create("sect");
     public static final ResourceKey<Registry<RealmInstance>> REALM_INSTANCE = create("realm_instance");
     public static final ResourceKey<Registry<CurrencyValue>> CURRENCY = create("currency");

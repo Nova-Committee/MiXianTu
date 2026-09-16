@@ -1,7 +1,0 @@
-{
-  "type": "mxt:crafting_recipe",
-  "icon": "mxt:textures/gui/badge/recipe.png",
-  "recipe": "minecraft:stick",
-  "prefix": "badge.mxt_test.recipe.prefix",
-  "suffix": "badge.mxt_test.recipe.suffix"
-}

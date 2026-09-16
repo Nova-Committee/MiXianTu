@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SectAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.Title;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
@@ -22,7 +21,6 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
-import com.iafenvoy.mxt.runtime.cultivation.TitleService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.sect.SectService;
 import com.iafenvoy.mxt.runtime.sect.SectService.Result;
@@ -67,7 +65,6 @@ public final class MxtTestCommands {
     private static final Identifier WATER_ROOT = id("water_root");
     private static final Identifier PHYSIQUE = id("qingxiao_body");
     private static final Identifier TECHNIQUE = id("qingxiao_breathing_manual");
-    private static final Identifier TITLE = id("qingxiao_outer_disciple");
     private static final Identifier CULTIVATE = id("qingxiao_meditation");
     private static final Identifier SECT = id("qingxiao_sect");
     private static final Identifier SECT_TASK = id("meditate");
@@ -223,12 +220,10 @@ public final class MxtTestCommands {
         HolderLookup<SpiritRoot> waterRoot = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, WATER_ROOT);
         HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
         HolderLookup<CultivationTechnique> technique = new HolderLookup<>(MxtResourceKeys.CULTIVATION_TECHNIQUE, TECHNIQUE);
-        HolderLookup<Title> title = new HolderLookup<>(MxtResourceKeys.TITLE, TITLE);
         CultivationIdentityService.grantSpiritRoot(player, ROOT, root.value());
         CultivationIdentityService.grantSpiritRoot(player, WATER_ROOT, waterRoot.value());
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
         TechniqueService.learn(player, spirit, technique.holder(), context);
-        TitleService.grant(player, spirit, TITLE, title.value(), ignored -> null, context);
         spirit.addLearnedTechnique(technique.holder());
         CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
         TEST_ACTIVE_ABILITIES.forEach(id -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)

@@ -31,7 +31,6 @@ public final class MiXianTu {
         MxtCosts.REGISTRY.register(bus);
         MxtAttachments.REGISTRY.register(bus);
         MxtAuraMaximums.REGISTRY.register(bus);
-        MxtBadges.REGISTRY.register(bus);
         MxtBiEntityActions.REGISTRY.register(bus);
         MxtBiEntityConditions.REGISTRY.register(bus);
         MxtBlockActions.REGISTRY.register(bus);

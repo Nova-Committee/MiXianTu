@@ -1,8 +1,4 @@
 {
-  "badge.mxt_test.tooltip": "Test tooltip badge",
-  "badge.mxt_test.keybind": "Test keybind badge",
-  "badge.mxt_test.recipe.prefix": "Recipe: ",
-  "badge.mxt_test.recipe.suffix": "",
   "ability.mxt_test.artifact_guard": "Artifact Guard",
   "ability.mxt_test.awaken_divine_sense": "Awaken Divine Sense",
   "ability.mxt_test.expend_test": "Cost Test",

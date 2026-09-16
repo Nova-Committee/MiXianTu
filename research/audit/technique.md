@@ -26,6 +26,7 @@
 > - 2026-09-13：**新增 `/mxt technique repair`**：引用已删除定义的功法会让整个 `SpiritIdentityAttachment` 解码失败并静默回退到空（面板空白、书没反应、无报错）。命令清理失效引用与重复项并重建派生状态（见 §19）。
 > - 2026-09-13：**修掉"长按拿手上没反应/刚 Start 就没了"的真正原因**：hold 的时长与动作原本靠"点击事件里往 stack 写 `CONSUMABLE`"，而那个写入**只在服务端**执行——客户端因此算出 duration=0、animation=NONE，玩家从头到尾没有进入过真正的 hold。改为 `TechniqueManualItem` 重写 `use`/`getUseDuration`/`getUseAnimation`，两边跑同一段代码（见 §20）。**约束：声明 `learn_time` 的物品必须是该类**，否则记录 ERROR 点名绑定。
 > - 2026-09-13：**定案为 mixin**（见 §21）。§20 的物品类方案**取消**——它破坏了"绑定作用于任何已注册物品（含 KubeJS）"这一承诺。改为 `ItemMixin` 注入 `Item.use`/`getUseDuration`/`getUseAnimation` 三处，取值来自两端各自捕获的数据包绑定；不再写任何组件，也就不再有"抢在游戏吃掉它之前摘组件"的竞态。`TechniqueManualItem`、`TechniqueHoldComponent`、`TECHNIQUE_HOLD` 全部删除。
+> - 2026-09-16：**称号与徽章预留彻底删除**。本文 §8.2 记录过的 `Title.maximum_level`（"只有上限、没有等级系统"）与 §14 记录过的 `Badge.sprite`（"全仓零渲染器"）都不再需要跟踪——`title`、`badge` 两个数据包注册表、`badge_type` 固有注册表、`Title`/`TitleService`/`Badge` 及其五个实现、附件里的 `titles` 字段、测试夹具与相关纹理全部移除，`BadgeCodecs` 里仍在使用的 `TRANSLATABLE_COMPONENT` 迁到 `util/codec/MiscCodecs.java`（杂项 Codec 的归处）。原条目保留在下方作为留档，见 `research/02_动态注册表清单.md` 的追加记录。
 
 ## 0. 边界澄清（避免概念混淆）
 
@@ -50,7 +51,7 @@
 | --- | --- | --- | --- |
 | `grade` | String `common` | **无任何读取点**，纯存储元数据（等级方案见 §8） | 全仓 `.grade()` 零调用（唯一同名调用是 `SpiritStoneVein.Grade`，无关） |
 | `learn_condition` | `EntityCondition` `always_true` | 学习时校验，失败 → `CONDITIONS` | `runtime/cultivation/TechniqueService.java:50-51` |
-| `exclusive_tags` | `Identifier[]` `[]` | 互斥：汇总已学功法的标签集合，与新功法求交集，命中 → `CONFLICT` | `TechniqueService.java:33-36`；另见 `runtime/cultivation/CultivationIdentityService.java:46-48`、`TitleService.java:31-33`（同型机制） |
+| `exclusive_tags` | `Identifier[]` `[]` | 互斥：汇总已学功法的标签集合，与新功法求交集，命中 → `CONFLICT` | `TechniqueService.java:33-36`；另见 `runtime/cultivation/CultivationIdentityService.java:46-48`（同型机制） |
 | `cultivation_modifier` | `NumberProvider` `1` | 修炼速度倍率，**逐功法连乘**进 affinity；非有限或负数 → NaN → 修炼中断 `INVALID_FORMULA` | `runtime/cultivation/CultivationAffinity.java:49-53, 76-80`；被 `CultivationActionService.java:99-101, 120-122` 调用 |
 | `passive_modifiers` | `AttributeEntry[]` `[]` | 常驻被动属性，修饰符来源标识 `technique` | `runtime/ability/PassiveAttributeService.java:107-108` |
 | `granted_abilities` | `HolderOrTag<ability>[]` `[]` | 学习后授予能力；支持 `#tag`，经 `RegistryCodecs.resolve` 展开去重；source = `mxt:grant/technique/<ns>/<path>`，重算时先撤销全部 `grant/` 来源再重建。**始终生效** | `runtime/cultivation/CultivationGrantService.java:36-37, 45-47, 60-70` |
