@@ -25,8 +25,8 @@ public final class MxtTestTechniqueItems {
     }
 
     /**
-     * A plain item, because a technique binding finds its carrier by name and {@code ItemMixin} supplies
-     * the use behaviour of any item that declares a hold.
+     * A plain item, because a technique binding finds its carrier by name and the click path supplies the use
+     * behaviour of any item that declares a hold.
      */
     private static DeferredItem<Item> register(String path) {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM,

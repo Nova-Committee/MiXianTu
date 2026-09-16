@@ -75,6 +75,7 @@ import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasPhysiqueEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasSpiritRootEntityCondition;import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
+import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -147,7 +148,8 @@ import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueHoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
@@ -227,6 +229,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.block.Blocks;
@@ -241,9 +244,11 @@ import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 import org.jspecify.annotations.NonNull;
@@ -1514,7 +1519,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("The held manual did not keep its learn_time: " + held.learnTime());
         TechniqueBinding instant = ItemBindingService.technique(new ItemStack(MxtTestTechniqueItems.IRON_BODY_MANUAL.get()))
                 .orElseThrow(() -> new IllegalStateException("The instant manual did not resolve its binding"));
-        if (instant.learnTime() != TechniqueBinding.NO_HOLD || instant.requiresHold())
+        if (instant.learnTime() != HoldBinding.NO_HOLD || instant.requiresHold())
             throw new IllegalStateException("An unheld manual reported a hold: " + instant.learnTime());
 
         verifyHoldAnimations(held, instant);
@@ -1666,7 +1671,10 @@ public final class MxtTestMod {
 
     /**
      * Drives a hold through the real vanilla use cycle, because calling the mod's own handlers directly
-     * passed while the in-game hold was broken; it covers the use duration and animation the item supplies.
+     * passed while the in-game hold was broken. The duration and the pose are the stack's own vanilla
+     * component now, so this pins the three things that could quietly stop being true - an unarmed stack
+     * answers nothing, arming answers the binding to the tick, and the component is gone before anything
+     * could eat the manual - plus the client-side top-up and the click path that arms in the first place.
      */
     private static void verifyHoldLifecycle() {
         ServerLevel level = ServerCache.get()
@@ -1680,40 +1688,61 @@ public final class MxtTestMod {
         if (held.learnTime() != 60 || !held.requiresHold())
             throw new IllegalStateException("The held manual did not keep its learn_time: " + held.learnTime());
 
-        // Step 0: the lookup the mixin reads was built, from the data pack, for the right items only.
-        if (TechniqueHoldLookup.hold(manual) == null)
+        // Step 0: the lookup the click path reads was built, from the data pack, for the right items only.
+        if (HoldLookup.hold(manual) == null)
             throw new IllegalStateException("The hold lookup has no entry for the held manual");
-        if (TechniqueHoldLookup.hold(instant) != null)
+        if (HoldLookup.hold(instant) != null)
             throw new IllegalStateException("The hold lookup listed an instant manual as a hold");
 
-        // Step 1: the item answers the two questions the use cycle asks, from the binding's own values.
-        // A plain item would answer 0 and NONE here, so this is also what proves the mixin applied.
+        // Step 1: an unarmed stack answers nothing at all. This is the inverse of what the retired patch did,
+        // and it is what proves the duration and the pose now come from the stack's own component.
         Pig probe = new Pig(EntityType.PIG, level);
-        int duration = manual.getItem().getUseDuration(manual, probe);
-        if (duration != held.learnTime())
-            throw new IllegalStateException("The manual reported a duration of " + duration
-                    + " instead of its learn_time of " + held.learnTime());
-        if (manual.getItem().getUseAnimation(manual) != held.holdAnimation())
-            throw new IllegalStateException("The manual reported the wrong pose: "
-                    + manual.getItem().getUseAnimation(manual) + " instead of " + held.holdAnimation());
+        if (manual.getItem().getUseDuration(manual, probe) != 0
+                || manual.getItem().getUseAnimation(manual) != ItemUseAnimation.NONE)
+            throw new IllegalStateException("An unarmed manual already reports a hold, so something other than "
+                    + "its component is answering");
 
-        // Step 2: the real cycle. It must not finish early, and it must finish at the binding's duration.
+        // Step 2: the component is the whole answer, and it is the binding's duration to the tick. The
+        // component counts in seconds, so the durations that do not divide evenly are the ones worth asking.
+        for (int learnTime : List.of(1, 3, 7, 20, 60, 999, 72_000)) {
+            TechniqueBinding variant = new TechniqueBinding(held.entries(), held.technique(), held.qualityGroup(),
+                    held.conditions(), learnTime, held.holdAnimation(), held.holdSound());
+            ItemStack armed = new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get());
+            HoldService.arm(armed, variant);
+            int reported = armed.getItem().getUseDuration(armed, probe);
+            if (reported != learnTime)
+                throw new IllegalStateException("An armed manual reported a duration of " + reported
+                        + " instead of its learn_time of " + learnTime);
+            if (armed.getItem().getUseAnimation(armed) != held.holdAnimation())
+                throw new IllegalStateException("An armed manual reported the wrong pose: "
+                        + armed.getItem().getUseAnimation(armed) + " instead of " + held.holdAnimation());
+        }
+
+        // Step 3: the real cycle. It must not finish early, and it must finish at the binding's duration.
         Pig reader = new Pig(EntityType.PIG, level);
         reader.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()));
         ItemStack handStack = reader.getItemInHand(InteractionHand.MAIN_HAND);
         int before = handStack.getCount();
+        HoldService.arm(handStack, held);
         if (handStack.getItem().getUseDuration(handStack, reader) != 60)
             throw new IllegalStateException("The held manual did not report a hold to run");
 
         reader.startUsingItem(InteractionHand.MAIN_HAND);
         if (!reader.isUsingItem())
             throw new IllegalStateException("The hold did not start, so no cycle can complete");
+        // The server lets go of the component as the cycle starts, so the duration has to have been read by
+        // now; for the rest of the read the entity's own count is the only place it lives.
+        if (handStack.getItem().getUseDuration(handStack, reader) != 0)
+            throw new IllegalStateException("The server kept the component past the start of the hold");
+        if (reader.getUseItemRemainingTicks() != 60)
+            throw new IllegalStateException("The hold started with " + reader.getUseItemRemainingTicks()
+                    + " ticks instead of the binding's 60");
         for (int i = 0; i < 30; i++) reader.tick();
         if (taught(reader, "mxt_test:azure_water_manual"))
             throw new IllegalStateException("The hold taught after 30 ticks, so its duration is not being honoured");
         for (int i = 0; i < 35; i++) reader.tick();
 
-        // Step 3: it taught at the end, and the manual survived - nothing in this design is edible.
+        // Step 4: it taught at the end, and the manual survived - nothing in this design is edible.
         if (!taught(reader, "mxt_test:azure_water_manual"))
             throw new IllegalStateException("A completed hold taught nothing");
         if (reader.getItemInHand(InteractionHand.MAIN_HAND).getCount() != before)
@@ -1721,17 +1750,155 @@ public final class MxtTestMod {
         if (reader.isUsingItem())
             throw new IllegalStateException("A completed hold left the entity still using the manual");
 
-        // Step 4: reading a manual that is already known is a harmless no-op, not a way to lose it.
+        // Step 5: reading a manual that is already known is a harmless no-op, not a way to lose it. Each
+        // round arms first, because that is what the click path does before vanilla starts the cycle.
         Pig veteran = new Pig(EntityType.PIG, level);
         veteran.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()));
         ItemStack second = veteran.getItemInHand(InteractionHand.MAIN_HAND);
         int count = second.getCount();
         for (int round = 0; round < 2; round++) {
+            HoldService.arm(second, held);
             veteran.startUsingItem(InteractionHand.MAIN_HAND);
             for (int i = 0; i < 65; i++) veteran.tick();
         }
         if (veteran.getItemInHand(InteractionHand.MAIN_HAND).getCount() != count)
             throw new IllegalStateException("Re-reading a known manual destroyed it");
+
+        // Step 6: the client tops its own copy back up. The server strips the component as the cycle starts
+        // and that strip can be synchronised over the client's copy, which is the one the pose is drawn from,
+        // so losing it mid-read is exactly what would drop the pose.
+        ItemStack clientCopy = new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get());
+        HoldService.keepArmed(clientCopy);
+        if (clientCopy.getItem().getUseDuration(clientCopy, probe) != 60)
+            throw new IllegalStateException("A copy that lost the component mid-read was not topped back up");
+        ItemStack stillArmed = clientCopy.copy();
+        HoldService.keepArmed(clientCopy);
+        if (!ItemStack.matches(clientCopy, stillArmed))
+            throw new IllegalStateException("Top-up rewrote a copy that was still armed");
+        ItemStack unbound = new ItemStack(Items.STICK);
+        HoldService.keepArmed(unbound);
+        if (unbound.getItem().getUseDuration(unbound, probe) != 0)
+            throw new IllegalStateException("An item that declares no hold was armed");
+
+        // Step 7: the click path itself arms the stack, through the two handlers in the order the bus runs them:
+        // this module's gate first, which claims an instant manual and leaves a held one alone, and the hold
+        // module's arming last. Driving the events is the only way to show that wiring, since a handler that
+        // never arms looks the same as one that does when the audit arms by hand.
+        FakePlayer clicker = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-hold-audit"));
+        clicker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()));
+        PlayerInteractEvent.RightClickItem click =
+                new PlayerInteractEvent.RightClickItem(clicker, InteractionHand.MAIN_HAND);
+        TechniqueItemService.onItemUse(click);
+        if (click.isCanceled())
+            throw new IllegalStateException("A hold binding claimed the click instead of leaving it to vanilla");
+        HoldService.onItemUse(click);
+        ItemStack clicked = clicker.getItemInHand(InteractionHand.MAIN_HAND);
+        if (clicked.getItem().getUseDuration(clicked, clicker) != held.learnTime())
+            throw new IllegalStateException("The click path left the manual without a hold to run");
+        // The server's copy must be quiet: the reader's own client plays the same sound off its own copy, so a
+        // server copy that made one as well would be heard twice.
+        Consumable clickedComponent = clicked.get(DataComponents.CONSUMABLE);
+        if (clickedComponent == null || clickedComponent.sound().value() != SoundEvents.EMPTY)
+            throw new IllegalStateException("The server's copy of the hold carries an audible sound");
+
+        // ...and an instant manual is claimed outright rather than armed, because it declares no hold. The bus
+        // would not run the hold module's handler on a cancelled event at all; driving it here covers the other
+        // half of that guarantee, that there is nothing to arm either way.
+        FakePlayer instantClicker = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-instant-audit"));
+        instantClicker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtTestTechniqueItems.IRON_BODY_MANUAL.get()));
+        PlayerInteractEvent.RightClickItem instantClick =
+                new PlayerInteractEvent.RightClickItem(instantClicker, InteractionHand.MAIN_HAND);
+        TechniqueItemService.onItemUse(instantClick);
+        if (!instantClick.isCanceled())
+            throw new IllegalStateException("An instant manual did not claim its own click");
+        HoldService.onItemUse(instantClick);
+        ItemStack instantStack = instantClicker.getItemInHand(InteractionHand.MAIN_HAND);
+        if (instantStack.getItem().getUseDuration(instantStack, instantClicker) != 0)
+            throw new IllegalStateException("An instant manual was armed for a hold it does not declare");
+
+        // Step 8: releasing early reports the total the read was measured against. That total used to be read
+        // off the stack, which no longer carries it once the read has started, so reading it there would now
+        // report "30 of 0 ticks left".
+        Pig quitter = new Pig(EntityType.PIG, level);
+        quitter.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get()));
+        ItemStack quitting = quitter.getItemInHand(InteractionHand.MAIN_HAND);
+        HoldService.arm(quitting, held);
+        quitter.startUsingItem(InteractionHand.MAIN_HAND);
+        for (int i = 0; i < 30; i++) quitter.tick();
+        int left = quitter.getUseItemRemainingTicks();
+        if (left <= 0 || left >= held.learnTime())
+            throw new IllegalStateException("The released read did not stop part-way: " + left + " ticks left");
+        TechniqueItemService.onUseStop(new LivingEntityUseItemEvent.Stop(quitter, quitting, left));
+        String ending = TechniqueItemService.lastEnding(quitter).orElse("");
+        if (!ending.endsWith("of " + held.learnTime() + " ticks left"))
+            throw new IllegalStateException("A released read did not report the binding's total: " + ending);
+
+        // Step 9: the sound the hold makes. The reader hears it from their own client's copy of the component,
+        // and the players around them hear it from the server, which leaves three things to pin: the reader's
+        // copy must carry the binding's sound, the server's must stay silent, and the server must actually play
+        // it - on the ticks vanilla would and no others.
+        ItemStack sounding = new ItemStack(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get());
+        HoldService.arm(sounding, held);
+        Consumable readerComponent = sounding.get(DataComponents.CONSUMABLE);
+        if (readerComponent == null)
+            throw new IllegalStateException("An armed manual carries no component at all");
+        if (readerComponent.sound().value() != SoundEvents.BOOK_PAGE_TURN)
+            throw new IllegalStateException("The reader's copy would not make the hold's sound: "
+                    + readerComponent.sound().value());
+        if (readerComponent.hasConsumeParticles())
+            throw new IllegalStateException("A hold asks for the eating particles");
+
+        // The cadence is vanilla's own predicate, so what is worth pinning is that it fires at all. For a 60 tick
+        // hold the window opens after 13 ticks, so 44 is inside it and on the four-tick cadence, 45 is inside but
+        // off the cadence, and the very first tick is before the window opens.
+        Pig listener = new Pig(EntityType.PIG, level);
+        if (!HoldService.playHoldSound(listener, held, held.learnTime() - 16))
+            throw new IllegalStateException("The hold played no sound on a tick vanilla would play it on");
+        if (HoldService.playHoldSound(listener, held, held.learnTime() - 15))
+            throw new IllegalStateException("The hold played a sound on a tick vanilla would not");
+        if (HoldService.playHoldSound(listener, held, held.learnTime()))
+            throw new IllegalStateException("The hold played a sound before its sound window opened");
+
+        // The binding's sound field: the shipped default, a declared value, and the refusal of a sound on a
+        // binding that has no hold to play it during - the same three cases the animation next to it is held to.
+        if (held.holdSound().value() != SoundEvents.BOOK_PAGE_TURN)
+            throw new IllegalStateException("A hold did not fall back to the shipped sound: " + held.holdSound().value());
+        RegistryOps<JsonElement> soundOps = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        if (TechniqueBinding.CODEC.parse(soundOps, JsonParser.parseString("""
+                        {"items":"minecraft:stick","technique":"mxt_test:qingxiao_breathing_manual",
+                         "learn_time":20,"hold_sound":"minecraft:entity.player.levelup"}"""))
+                .getOrThrow().holdSound().value() != SoundEvents.PLAYER_LEVELUP)
+            throw new IllegalStateException("A declared hold_sound was not the one the binding carries");
+        if (TechniqueBinding.CODEC.parse(soundOps, JsonParser.parseString("""
+                        {"items":"minecraft:stick","technique":"mxt_test:qingxiao_breathing_manual",
+                         "learn_time":20}""")).getOrThrow().holdSound().value() != SoundEvents.BOOK_PAGE_TURN)
+            throw new IllegalStateException("An undeclared hold_sound did not take the shipped default");
+        if (TechniqueBinding.CODEC.parse(soundOps, JsonParser.parseString("""
+                        {"items":"minecraft:stick","technique":"mxt_test:qingxiao_breathing_manual",
+                         "hold_sound":"minecraft:entity.player.levelup"}""")).result().isPresent())
+            throw new IllegalStateException("A sound on an instant binding must not decode");
+
+        // Step 10: the hold module only ever takes the component off its own stacks. That component is the one
+        // every vanilla consumable uses, so taking it off anything else stops the item from being used up at all:
+        // food would never feed anybody again and the stack would stay in hand forever.
+        Pig bystander = new Pig(EntityType.PIG, level);
+        ItemStack steak = new ItemStack(Items.COOKED_BEEF);
+        HoldService.onUseStart(new LivingEntityUseItemEvent.Start(bystander, steak, InteractionHand.MAIN_HAND, 32));
+        if (!steak.has(DataComponents.CONSUMABLE))
+            throw new IllegalStateException("Starting a use took the vanilla consumable off an item the hold "
+                    + "module does not own");
+
+        // ...and eating still works, which is what that guard protects: the item is used up and the eater is fed.
+        FakePlayer diner = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-eat-audit"));
+        diner.getFoodData().setFoodLevel(0);
+        ItemStack meal = new ItemStack(Items.COOKED_BEEF);
+        int meals = meal.getCount();
+        meal.finishUsingItem(level, diner);
+        if (meal.getCount() != meals - 1)
+            throw new IllegalStateException("A food item was not used up by its own use");
+        if (diner.getFoodData().getFoodLevel() != 8)
+            throw new IllegalStateException("A food item did not feed the entity that ate it: "
+                    + diner.getFoodData().getFoodLevel());
 
         verifyHoldProgress();
         verifyCooldownOnAnyOutcome();
@@ -1777,35 +1944,23 @@ public final class MxtTestMod {
      * full bar a tick early, and a zero-length hold must not divide by zero.
      */
     private static void verifyHoldProgress() {
-        if (TechniqueItemService.holdPercent(60, 60) != 0)
+        if (HoldService.holdPercent(60, 60) != 0)
             throw new IllegalStateException("A hold that has not started is not at zero percent");
-        if (TechniqueItemService.holdPercent(60, 30) != 50)
+        if (HoldService.holdPercent(60, 30) != 50)
             throw new IllegalStateException("A half-finished hold is not at fifty percent");
-        if (TechniqueItemService.holdPercent(60, 0) != 100)
+        if (HoldService.holdPercent(60, 0) != 100)
             throw new IllegalStateException("A finished hold is not at full");
-        if (TechniqueItemService.holdPercent(0, 5) != 100)
+        if (HoldService.holdPercent(0, 5) != 100)
             throw new IllegalStateException("A zero-length hold did not resolve to full without dividing by zero");
-        if (TechniqueItemService.holdPercent(60, -3) != 100 || TechniqueItemService.holdPercent(60, 999) != 0)
+        if (HoldService.holdPercent(60, -3) != 100 || HoldService.holdPercent(60, 999) != 0)
             throw new IllegalStateException("The hold percentage is not clamped to its ends");
 
         // The last tick a read ever sees arrives with one tick left, since the tick after it completes the
         // read; reporting that honestly would leave the bar stuck at 98% on every successful read.
-        if (TechniqueItemService.displayPercent(60, 1) != 100)
+        if (HoldService.displayPercent(60, 1) != 100)
             throw new IllegalStateException("The final tick of a read does not show a full bar");
-        if (TechniqueItemService.displayPercent(60, 60) != 0 || TechniqueItemService.displayPercent(60, 30) != 50)
+        if (HoldService.displayPercent(60, 60) != 0 || HoldService.displayPercent(60, 30) != 50)
             throw new IllegalStateException("The last-tick rule leaked into the rest of the read");
-
-        // Once the client's own count runs out the pose is kept alive by folding the count back into the
-        // positive range, and it has to land on the phase the pose would have reached anyway.
-        for (int remaining = 0; remaining > -25; remaining--) {
-            int wrapped = TechniqueItemService.loopingUseRemaining(remaining);
-            if (wrapped <= 0)
-                throw new IllegalStateException("A folded count is not positive and would drop the pose: " + wrapped);
-            // The pose code reads the remainder, so the remainder must keep counting down by one per tick
-            // and wrap off the bottom of the loop back onto its top.
-            if (Math.floorMod(wrapped, 10) != Math.floorMod(remaining, 10))
-                throw new IllegalStateException("A folded count is out of phase at " + remaining + ": " + wrapped);
-        }
 
         String key = "actionbar.mxt.technique.holding";
         if (Component.translatable(key).getString().equals(key))
@@ -1857,14 +2012,14 @@ public final class MxtTestMod {
         if (declared.holdAnimation() != ItemUseAnimation.BRUSH)
             throw new IllegalStateException("A held manual did not keep its declared hold_animation: "
                     + declared.holdAnimation());
-        if (instant.holdAnimation() != TechniqueBinding.DEFAULT_HOLD_ANIMATION)
+        if (instant.holdAnimation() != HoldBinding.DEFAULT_HOLD_ANIMATION)
             throw new IllegalStateException("An instant manual did not fall back to the default animation: "
                     + instant.holdAnimation());
 
         // The jade slip asks for a hold without naming an animation, which is the case the default covers.
         TechniqueBinding undeclared = ItemBindingService.technique(new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get()))
                 .orElseThrow(() -> new IllegalStateException("The jade slip did not resolve its binding"));
-        if (!undeclared.requiresHold() || undeclared.holdAnimation() != TechniqueBinding.DEFAULT_HOLD_ANIMATION)
+        if (!undeclared.requiresHold() || undeclared.holdAnimation() != HoldBinding.DEFAULT_HOLD_ANIMATION)
             throw new IllegalStateException("An undeclared hold_animation did not take the default: "
                     + undeclared.holdAnimation());
 
@@ -1873,7 +2028,7 @@ public final class MxtTestMod {
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE,
                 ServerCache.get().orElseThrow(() -> new IllegalStateException("The sample audit needs the server cache"))
                         .server().registryAccess());
-        for (ItemUseAnimation animation : TechniqueBinding.ALLOWED_ANIMATIONS) {
+        for (ItemUseAnimation animation : HoldBinding.ALLOWED_ANIMATIONS) {
             DataResult<TechniqueBinding> decoded = TechniqueBinding.CODEC.parse(ops,
                     holdBindingJson(animation.getSerializedName()));
             if (decoded.result().isEmpty() || decoded.result().orElseThrow().holdAnimation() != animation)

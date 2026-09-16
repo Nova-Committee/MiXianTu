@@ -3,43 +3,55 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
+import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService.Failure;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.mojang.logging.LogUtils;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import org.slf4j.Logger;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Stop;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Stop;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
+import org.slf4j.Logger;
 
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Locale;
-import java.util.Optional;
 
 /**
  * Server-side use path for books, jade slips and other technique items. A matching binding claims the
  * interaction, but a refusal is reported on the action bar, since it changes nothing else.
- * {@link ItemQualityService} watches the same interaction at a higher priority, so the gate check here
- * speaks for direct callers of {@link #use}. A binding teaches on the click, or on a hold.
+ * {@link ItemQualityService} watches the same interaction at a higher priority, so the gate check here speaks
+ * for direct callers of {@link #use}. A binding teaches on the click, or on a hold.
+ * <p>
+ * The hold itself is not this class's work. This module only declares how long a read lasts and what it looks
+ * and sounds like - {@link TechniqueBinding} implements {@link HoldBinding} and is registered as a hold source -
+ * and the hold module drives the whole gesture without knowing what a technique is. What is left here is what
+ * only this module can answer: which of its own holds this item is, how far through it is, what to teach, and
+ * what to report afterwards.
  */
 @EventBusSubscriber
 public final class TechniqueItemService {
@@ -75,27 +87,44 @@ public final class TechniqueItemService {
         }
     }
 
+    /**
+     * Hands this module's holds to the hold module, once, at construction. This is the whole of the wiring
+     * between the two: the hold module drives the gesture and never learns what a technique is, and this module
+     * never touches the use cycle.
+     */
+    public static void initialize() {
+        HoldLookup.register(registries -> MxtDatapackRegistries.holders(registries, MxtResourceKeys.TECHNIQUE_BINDING)
+                .map(Reference::value)
+                .filter(HoldBinding::requiresHold)
+                .map(HoldBinding.class::cast)
+                .toList());
+    }
+
+    /**
+     * Claims the click for a technique item, and nothing else: a binding that asks for a hold answers
+     * {@code false}, so the click falls through to the hold module, which arms the stack for it.
+     */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onItemUse(RightClickItem event) {
         if (use(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) event.setCanceled(true);
     }
 
     /**
-     * Shows how far a hold has come, because the use pose does not: a player can see that something is
-     * happening but not how near the end they are.
+     * Shows how far a read has come, because the use pose does not: a player can see that something is
+     * happening but not how near the end they are. Only this module's own holds get the bar - another module's
+     * hold is not a technique being read, and its own percentage would be a lie here.
      */
     @SubscribeEvent
     public static void onUseTick(Tick event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
-        TechniqueBinding binding = TechniqueHoldLookup.hold(event.getItem());
-        if (binding == null) return;
+        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueBinding binding)) return;
         // Recorded for every entity, not just players: the audit drives a hold on a pig.
         int remaining = event.getDuration();
         HOLD_TIMING.merge(entity.getUUID(), HoldTiming.started(remaining),
                 (existing, added) -> existing.ticked(remaining));
         if (!(entity instanceof ServerPlayer player)) return;
-        int percent = displayPercent(binding.learnTime(), remaining);
+        int percent = HoldService.displayPercent(binding.learnTime(), remaining);
         if (LAST_PROGRESS.getOrDefault(player.getUUID(), -1) == percent) return;
         LAST_PROGRESS.put(player.getUUID(), percent);
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.holding", bar(percent), percent)
@@ -103,36 +132,8 @@ public final class TechniqueItemService {
     }
 
     /**
-     * How far a hold has come, as a whole percentage of a total duration. Public because the edges matter:
-     * a non-positive duration must not divide by zero, and the ends must not read one percent off.
+     * The bar the reading message draws, ten cells wide.
      */
-    public static int holdPercent(int total, int remaining) {
-        if (total <= 0) return 100;
-        return Mth.clamp((total - remaining) * 100 / total, 0, 100);
-    }
-
-    /**
-     * The elapsed fraction, except on the last tick: the event fires with one tick still to run, and
-     * reporting that honestly would leave the bar one percent short on every successful read.
-     */
-    public static int displayPercent(int total, int remaining) {
-        return remaining <= 1 ? 100 : holdPercent(total, remaining);
-    }
-
-    /**
-     * The period of the repeating use poses. Vanilla's brush sweep loops over this many ticks.
-     */
-    private static final int POSE_LOOP_TICKS = 10;
-
-    /**
-     * A run-out use counter, folded back into the positive range so a repeating pose keeps repeating. The
-     * modulo lands exactly where the client's own count left off, so the motion carries on without a seam.
-     */
-    public static int loopingUseRemaining(int remaining) {
-        int phase = Math.floorMod(remaining, POSE_LOOP_TICKS);
-        return phase == 0 ? POSE_LOOP_TICKS : phase;
-    }
-
     private static String bar(int percent) {
         int filled = Mth.clamp(percent / 10, 0, 10);
         return "#".repeat(filled) + "-".repeat(10 - filled);
@@ -174,19 +175,22 @@ public final class TechniqueItemService {
         if (entity.level().isClientSide()) return;
         LAST_PROGRESS.remove(entity.getUUID());
         reportTiming(entity, "released early");
-        if (TechniqueHoldLookup.hold(event.getItem()) == null) return;
+        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueBinding binding)) return;
         // The bar is left where it stopped otherwise, and an overlay message lingers for seconds after its
         // last update, so a cancelled read would keep showing a half-filled bar as if it were still going.
         if (entity instanceof ServerPlayer player) player.sendSystemMessage(Component.empty(), true);
+        // The binding's own duration rather than the stack's: the component that carried it was taken off when
+        // the read started, so asking the stack here would report a total of zero.
         record(entity, "Released early with " + entity.getUseItemRemainingTicks() + " of "
-                + event.getItem().getUseDuration(entity) + " ticks left");
+                + binding.learnTime() + " ticks left");
     }
 
     /**
-     * How the last reading gesture ended for this player, or empty when none was seen.
+     * How the last reading gesture ended for this entity, or empty when none was seen. Wider than a player
+     * because {@link #record} keys any entity that reads, and the audit drives a hold on a pig.
      */
-    public static Optional<String> lastEnding(Player player) {
-        return Optional.ofNullable(LAST_ENDING.get(player.getUUID()));
+    public static Optional<String> lastEnding(LivingEntity entity) {
+        return Optional.ofNullable(LAST_ENDING.get(entity.getUUID()));
     }
 
     private static void record(LivingEntity entity, String ending) {
@@ -209,8 +213,8 @@ public final class TechniqueItemService {
 
     /**
      * Attempts to learn a matching technique; a matching binding claims the interaction even when learning
-     * is rejected by its conditions. A binding that asks for a hold answers {@code false} so {@code
-     * ItemMixin} can start the use cycle the hold is measured by.
+     * is rejected by its conditions. A binding that asks for a hold answers {@code false} so the click falls
+     * through to the hold module, which starts the cycle the hold is measured by.
      */
     public static boolean use(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return false;

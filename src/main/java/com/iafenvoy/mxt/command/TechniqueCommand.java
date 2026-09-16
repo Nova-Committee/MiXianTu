@@ -18,7 +18,7 @@ import java.util.Optional;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueHoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -107,9 +107,10 @@ public final class TechniqueCommand {
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.cooldown",
                 cooldown ? "YES" : "no"), false);
 
-        // 6. Does the server recognise this item as a hold manual at all? This is what the mixin reads,
-        // and an empty answer here means no hold can start on this side no matter what the data pack says.
-        boolean recognised = TechniqueHoldLookup.hold(stack) != null;
+        // 6. Does the server recognise this item as one of this module's held manuals at all? This is what the
+        // hold module resolves, and an empty answer here means no hold can start on this side no matter what the
+        // data pack says.
+        boolean recognised = HoldLookup.hold(stack) instanceof TechniqueBinding;
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.hold",
                 recognised ? "YES" : "no"), false);
 

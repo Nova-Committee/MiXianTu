@@ -1,6 +1,5 @@
-package com.iafenvoy.mxt.render;
+package com.iafenvoy.mxt.runtime.hold;
 
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueHoldLookup;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -14,10 +13,14 @@ import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import org.slf4j.Logger;
 
 /**
- * Reports why the first-person reading pose stops being drawn while the read is still going. The pose needs
- * four things at once - the entity using an item, remaining duration above zero, the used hand being the
- * rendered one, and an animation other than {@code NONE} - but the server asks none of them and grants the
- * technique anyway, so this logs transitions rather than state.
+ * Reports why the first-person hold pose stops being drawn while the hold is still going. The pose needs four
+ * things at once - the entity using an item, remaining duration above zero, the used hand being the rendered one,
+ * and an animation other than {@code NONE} - but the server asks none of them and grants the hold's outcome
+ * anyway, so this logs transitions rather than state.
+ * <p>
+ * The count the pose reads is the client's own while the read itself is timed by the server, so a server that is
+ * not keeping up can end the pose before the read ends. That used to be patched over and is not any more, which
+ * makes a {@code hold pose lost} line here the signature of it happening.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class HoldPoseDiagnostic {
@@ -37,7 +40,7 @@ public final class HoldPoseDiagnostic {
             return;
         }
         ItemStack useItem = player.getUseItem();
-        if (TechniqueHoldLookup.hold(useItem) == null) {
+        if (HoldLookup.hold(useItem) == null) {
             lastState = "";
             return;
         }
@@ -55,15 +58,15 @@ public final class HoldPoseDiagnostic {
         lastState = state;
 
         if (drawn) {
-            LOGGER.info("[mxt] reading pose {}: animation={}, remaining={}",
+            LOGGER.info("[mxt] hold pose {}: animation={}, remaining={}",
                     first ? "started" : "resumed", animation, remaining);
         } else if (remaining <= 0) {
-            // The read ran its full course and the pose stopped with it, which looks exactly like a break.
-            // INFO, not WARN: reporting this as a loss would fire on every successful read.
-            LOGGER.info("[mxt] reading pose ended after the full read: animation={}", animation);
+            // The hold ran its full course and the pose stopped with it, which looks exactly like a break.
+            // INFO, not WARN: reporting this as a loss would fire on every successful hold.
+            LOGGER.info("[mxt] hold pose ended after the full hold: animation={}", animation);
         } else {
-            // Still reading with no animation at all: the only signature of a real mid-read break.
-            LOGGER.warn("[mxt] reading pose lost with {} of the read left: animation={}, hand={}, "
+            // Still holding with no animation at all: the only signature of a real mid-hold break.
+            LOGGER.warn("[mxt] hold pose lost with {} of the hold left: animation={}, hand={}, "
                             + "useItemIsHandStack={}, screen={}",
                     remaining, animation, hand, useItem == player.getItemInHand(hand), minecraft.screen);
         }

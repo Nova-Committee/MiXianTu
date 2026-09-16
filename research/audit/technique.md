@@ -26,6 +26,13 @@
 > - 2026-09-13：**新增 `/mxt technique repair`**：引用已删除定义的功法会让整个 `SpiritIdentityAttachment` 解码失败并静默回退到空（面板空白、书没反应、无报错）。命令清理失效引用与重复项并重建派生状态（见 §19）。
 > - 2026-09-13：**修掉"长按拿手上没反应/刚 Start 就没了"的真正原因**：hold 的时长与动作原本靠"点击事件里往 stack 写 `CONSUMABLE`"，而那个写入**只在服务端**执行——客户端因此算出 duration=0、animation=NONE，玩家从头到尾没有进入过真正的 hold。改为 `TechniqueManualItem` 重写 `use`/`getUseDuration`/`getUseAnimation`，两边跑同一段代码（见 §20）。**约束：声明 `learn_time` 的物品必须是该类**，否则记录 ERROR 点名绑定。
 > - 2026-09-13：**定案为 mixin**（见 §21）。§20 的物品类方案**取消**——它破坏了"绑定作用于任何已注册物品（含 KubeJS）"这一承诺。改为 `ItemMixin` 注入 `Item.use`/`getUseDuration`/`getUseAnimation` 三处，取值来自两端各自捕获的数据包绑定；不再写任何组件，也就不再有"抢在游戏吃掉它之前摘组件"的竞态。`TechniqueManualItem`、`TechniqueHoldComponent`、`TECHNIQUE_HOLD` 全部删除。
+> - 2026-09-16：**删掉 `LivingEntityMixin`（姿势循环补偿）**（见 §22 与 §23 尾部的更新注）。用户把注入注释掉后实测正常，遂正式删除；`HoldService.loopingUseRemaining` 与 `POSE_LOOP_TICKS` 随之没有调用者，一并删掉，审计里那组相位断言也移除。代价说清楚：客户端姿势读的是**客户端自己的计数**，服务端判定另算，服务端跑不满 20 TPS 时姿势仍可能比判定早一点收掉。原来补住这段的就是这个 mixin，现在不补了——真出现时由客户端日志里的 `HoldPoseDiagnostic`（`[mxt] hold pose lost ...`）报出来。
+>
+> - 2026-09-16：**长按机制独立成 `runtime/hold` 模块**（见 §24）。`minecraft:consumable` 那套长按驱动从功法系统里抽出来：`HoldBinding`（契约与共有词汇，`data/item`）＋ `HoldSource`/`HoldLookup`（各模块把自己的声明交上来，模块本身不认识任何具体模块）＋ `HoldService`（点击武装、`Start` 摘除、`Tick` 保活与广播、进度数学）。`TechniqueBinding implements HoldBinding`，用 `holdTicks()` 适配 `learn_time`；功法侧只剩右键门槛、进度条、教什么与事后诊断。`TechniqueHoldLookup` 删除，`HoldPoseDiagnostic` 从 `render/` 迁入该模块。
+>
+> - 2026-09-16：**修掉"吃东西完全失效"**（同一次重构中发现，见 §24 末）。`onUseStart` 原本**无条件**摘掉栈上的 `CONSUMABLE`，而那是原版**所有**消耗品共用的驱动组件——`FoodProperties implements ConsumableListener`，食物的营养、饱和度与效果全挂在它的 `onConsume` 上。后果是吃东西不消耗、不加饱食、不触发效果，物品永远留在手上。现在只在 `HoldLookup.hold(...)` 认得这张栈时才摘，审计第 10 步用"牛排的组件必须还在"+"`FakePlayer` 吃一口必须掉一个并回到 8 点饱食"钉住。
+>
+> - 2026-09-16：**改回组件驱动，`ItemMixin` 退役**（见 §23）。§21 的三处 `Item` 注入全部删除，长按改由原版组件 `minecraft:consumable` 驱动：点击时按绑定把它写到手持堆上，原版四个钩子（`use` / `getUseDuration` / `getUseAnimation` / `finishUsingItem`）都从它取值。§20 失败的原因是**只在服务端写**，这次两端各自写（`RightClickItem` 两端都触发且在 `Item.use` 之前），所以两端算出同一个时长。服务端在 `LivingEntityUseItemEvent.Start` 里立刻摘掉组件，`finishUsingItem` 便读不到它——不消耗、不加 `ITEM_USED` 统计、不发 EAT 游戏事件、不生成粒子。**但声音不在其列**：`ItemStack.onUseTick` 也会放组件的声音。首版沿用了组件的默认咀嚼音（`GENERIC_EAT`），实测"太阴"；继而按用户要求改成**按绑定可配、附近所有人都听得到、且阅读者客户端本身也有声**（`technique_binding.hold_sound`：阅读者听自己客户端的，其他人听服务端广播且被排除在外的阅读者），见 §23 末。客户端每 tick 补齐自己的副本，以扛住那次摘除被同步回来。§22 的 `LivingEntityMixin` 当时判断为**必须保留**（三处客户端硬门见 §23），但稍后被实测推翻并删除，见上一条。
 > - 2026-09-16：**称号与徽章预留彻底删除**。本文 §8.2 记录过的 `Title.maximum_level`（"只有上限、没有等级系统"）与 §14 记录过的 `Badge.sprite`（"全仓零渲染器"）都不再需要跟踪——`title`、`badge` 两个数据包注册表、`badge_type` 固有注册表、`Title`/`TitleService`/`Badge` 及其五个实现、附件里的 `titles` 字段、测试夹具与相关纹理全部移除，`BadgeCodecs` 里仍在使用的 `TRANSLATABLE_COMPONENT` 迁到 `util/codec/MiscCodecs.java`（杂项 Codec 的归处）。原条目保留在下方作为留档，见 `research/02_动态注册表清单.md` 的追加记录。
 
 ## 0. 边界澄清（避免概念混淆）
@@ -762,6 +769,8 @@ Failed to load datapacks, can't proceed with server load
 
 **代价（说清楚）**：三处注入 vanilla `Item`，而这块区域**变动频繁**（1.21.2 的 `Consumable` 重构就是例子），每次升 MC 都要重验。好在 `mxt.mixins.json` 里 `required: true` + `defaultRequire: 1`，目标方法一旦改名/消失会**直接启动失败**，而不是静默失效。
 
+> **2026-09-16 更新**：这笔代价已经付清——`ItemMixin` 已删除，长按改由原版 `minecraft:consumable` 组件驱动，见 §23。本节以下内容作为留档保留。
+
 ## 22. 以服务端为准结束阅读姿势（2026-09-13）
 
 **起因**：用户报"学习正常了，但中途动画会中断"，随后又报"进度条到 100% 好像不止三秒"，并自己用 tick query 对齐后判断"**应该就是服务端跑不满**"。
@@ -779,6 +788,8 @@ Failed to load datapacks, can't proceed with server load
 
 **修法（`LivingEntityMixin`）**：注入 `LivingEntity.getUseItemRemainingTicks()`，**只在客户端、且确实还在使用中、且本地计数已 ≤ 0 时**，返回一个 1..9 的循环值而不是 0。
 
+> **2026-09-16 更新：本节的修法已经删除**，连同 `HoldService.loopingUseRemaining`。原因与代价见 §23 尾部那条更新。以下内容作为留档保留——它记的是"为什么会有这段尾巴"和"当年怎么补的"。
+
 - 姿势因此一直挂着，直到**松手**或**服务端读完**——两者都会清掉 using 标记，姿势随之结束
 - 服务端的计数**完全不动**：它才是"读完没有、学会没有、`Stop` 报多少"的依据（审计三项都钉着）
 - 返回值取循环值而不是常数：允许的姿势都是短循环动作，返回常数会把姿势冻住一帧，看起来和断掉一样糟
@@ -795,6 +806,122 @@ Failed to load datapacks, can't proceed with server load
 **测试**：审计新增 `displayPercent(60,1)==100`，以及"最后 tick 规则不外溢"（`displayPercent(60,60)==0`、`(60,30)==50`）。**服务端不受影响由既有断言保证**：30 tick 不得学会、约 60 tick 必须学会——如果这个 clamp 泄漏到了服务端，这两条会立刻失败。
 
 **这里的教训**：客户端姿势和服务端判定用了两个独立计时器，是 vanilla 的固有设计（吃食物同理）。任何把"时长"赋予意义的 mod 都会撞上它；靠"两边各自数 60"是默认它就同步，而它不同步。
+
+## 23. 改回组件驱动：`ItemMixin` 退役（2026-09-16）
+
+**起因**：用户要求不再用 Mixin 改物品的长按代码，改成 `DataComponents.CONSUMABLE`，"这样更通用"。
+
+**先确认的事实**（全部读 `minecraft-patched-26.1.2.99-sources.jar`，不是记忆）：
+
+| 事实 | 出处 |
+| --- | --- |
+| `Item.use` 读栈上的 `CONSUMABLE`，非空就 `startConsuming(player, stack, hand)`——也就是**开始使用** | `Item.java` 的 `use(Level, Player, InteractionHand)` |
+| `Item.getUseDuration(stack, user)` → `consumable.consumeTicks()`（`= (int)(consumeSeconds * 20)`） | 同上 |
+| `Item.getUseAnimation(stack)` → `consumable.animation()` | 同上 |
+| `Item.finishUsingItem` → `consumable.onConsume(...)`，其中有一句**无条件**的 `stack.consume(1, user)` | `Consumable.java:91` |
+| 同一句附近还 `awardStat(ITEM_USED)`、触发 `CONSUME_ITEM` 进度、`gameEvent(EAT/DRINK)`、放粒子与音效 | 同上 |
+| `RightClickItem` 在**两侧**都触发，且都在 `itemStack.use(...)` **之前** | `MultiPlayerGameMode`、`ServerPlayerGameMode:332`、`CommonHooks.onItemRightClick` |
+| `Finish` 在消耗**之后**才触发，但带 `setResultStack(...)`，且 `getItem()` 是使用前的副本 | `LivingEntityUseItemEvent.Finish` |
+| NeoForge 的物品扩展**没有** use duration / animation 钩子 | 扫过 `IItemExtension` / `IClientItemExtensions` / `IItemStackExtension` |
+
+**关键判断：§20 失败的原因不是"组件方案错"，而是"只在服务端写"**——客户端因此算出 duration=0、animation=NONE。这次两端各自写。
+
+**最终形态**（全在 `TechniqueItemService`）：
+
+| 环节 | 做法 |
+| --- | --- |
+| 点击 | `onItemUse`（`RightClickItem`，HIGH）：非 hold 绑定照旧；hold 绑定**不取消事件**，而是把 `Consumable` 写到手持堆上，再交给原版 `Item.use` |
+| 开始 | `onUseStart`（`LivingEntityUseItemEvent.Start`）：**仅服务端**把组件摘掉。时长在上一行已经读完、计数已经是 `learn_time`；此后它唯一还能做的就是把手册喂给 `onConsume` |
+| 每 tick | `onUseTick`：客户端分支把自己那份堆补齐（服务端那次摘除可能被槽位同步盖过来，而姿势正是从这份堆读的）；服务端分支照旧算进度、发进度条 |
+| 结束 | `onUseFinish` 不变 |
+
+**为什么两侧都得写**：`getUseDuration` / `getUseAnimation` 在两侧都会被问到（渲染循环每帧一次），而 `Item.use` 只在服务端真正建立 use 周期。两侧从**同一份同步注册表**读绑定，所以答案一致——这与 §20 的"服务端写、客户端不知道"是本质区别。
+
+**为什么不消耗**：摘除发生在使用开始之后，于是 `Item.finishUsingItem` 里 `itemStack.get(CONSUMABLE)` 是 `null`，直接原样返回——`consume`、`awardStat`、`CONSUME_ITEM`、`gameEvent(EAT)` 与**粒子**都不会发生。（`ServerPlayerGameMode.useItem` 之后那条 `getUseDuration(player) <= 0` 的提前返回确认无害：它跳过的 `else` 里只有 `if (!player.isUsingItem()) sendAllDataToRemote()`，而此时玩家正在使用。）
+
+**降级测试抓到的第一个错：声音并没有被摘掉**。首版上线后用户实测"功能完全正常，音效太阴"。查下来漏了一条路径——组件被读取的不止 `onConsume`：
+
+```java
+// ItemStack.onUseTick
+Consumable consumable = this.get(DataComponents.CONSUMABLE);
+if (consumable != null && consumable.shouldEmitParticlesAndSounds(ticksRemaining)) {
+    consumable.emitParticlesAndSounds(livingEntity.getRandom(), livingEntity, this, 5);
+}
+```
+
+客户端那份堆在整个长按期间都是武装的（正是 `keepArmed` 在维持），于是组件的默认音——vanilla 给食物用的咀嚼音 `GENERIC_EAT`——在读完之前**每隔 4 tick 响一次**（`shouldEmitParticlesAndSounds`：过了约 21.9% 之后，`remaining % 4 == 0`）。3 秒的阅读约 11 下。上面"音效一个都不会发生"的结论是错的：`has_consume_particles=false` 只关掉粒子，声音照放。
+
+**声音的最终形态**（用户依次追加三条要求：**附近所有人都要听得到**、**音效按内容可配**、**客户端本身也要有声音**）：
+
+| 环节 | 做法 |
+| --- | --- |
+| 配置位置 | `technique_binding` 新增 `hold_sound`（`Holder<SoundEvent>`，`SoundEvent.CODEC.optionalFieldOf`，默认 `TechniqueBinding.DEFAULT_HOLD_SOUND` = `minecraft:item.book.page_turn`）。与 `hold_animation` 完全对称，连 `validate` 里"没有 `learn_time` 却写了非默认音效 → 拒绝"那条也照搬；音效按 **id** 比较而非 Holder 身份，这样把默认值原样写出来不会被误拒 |
+| 阅读者 | 他自己**客户端**那份组件携带 `hold_sound`，由 vanilla 的 `ItemStack.onUseTick` 播放——与原版放吃东西声同一条路，因此**必然能听到** |
+| 其他人 | **服务端**在 `Tick` 里按 vanilla 的 `shouldEmitParticlesAndSounds` 判据，调 `level.playSound(reader, ...)` 广播，并把**阅读者排除在外**（`except` 参数） |
+| 服务端那份组件 | 携带 `SoundEvents.EMPTY`，只负责时长与姿势；服务端在整个长按期间从不持有可发声的组件 |
+
+**中途翻过一次车，值得记**。最初的形态是"服务端广播给所有人（含阅读者）＋客户端静音"，理由是"所有人听到的是同一次播放，没有双响风险"。上线后用户报**客户端完全没声音**。问题在于：这个形态把"阅读者能不能听到"完全押在"阅读者会收到关于自己的那次广播"上，而这条在无头服务端里**验不了**——第 9 步只能证明服务端确实执行了发射（vanilla 那一步必广播），证明不了包到达客户端。于是改成"阅读者听自己客户端的，其他人听广播（排除阅读者）"：**阅读者那一路是原版吃东西声的同一条路，是被证明过能响的**；广播那一路照样覆盖其他人（本模组的 `PlaySoundAction` 就是同一形状，早已在跑）。两处刻意不重叠，所以不会双响。
+
+**音量与音高是模组自己定的**（音量 `1.0`，音高用 `RandomSource.triangle(1.0, 0.2)` 抖动）。本想继续调 `emitParticlesAndSounds` 以复用 vanilla 的随机化，但那个方法内部固定传 `except = null`，没法排除阅读者；改为自己发，就必然要自己定这两个值。抖动的音高是必需的——这个声音会重复十几次，固定音高听起来像机关枪。
+
+**审计第 9 步**因此钉四件事：阅读者那份组件必须携带 `hold_sound`、服务端那份必须静音、发射判据真的会触发（`playHoldSound` 返回是否播放：60 tick 长按里 `44` 响、`45` 不响、`60` 不响），以及 `hold_sound` 的三个分支（默认 / 声明 / 无 `learn_time` 时拒绝）。**广播是否到达客户端仍然只有真机能验。**
+
+## 24. 长按机制独立成 `runtime/hold` 模块（2026-09-16）
+
+**起因**：用户要求把整套 `CONSUMABLE`（长按）逻辑独立成一个模块，不要再和功法强耦合、"方便和其他模块接驳"，并让 `TechniqueBinding` 实现一个接口来输入参数。
+
+**边界**：模块只认"手势"，不认这个手势是干什么用的。
+
+| 文件 | 职责 |
+| --- | --- |
+| `data/item/HoldBinding`（新） | 契约与共有词汇：`holdTicks()` / `holdAnimation()` / `holdSound()` / `requiresHold()`，外加 `NO_HOLD`、`DEFAULT_HOLD_ANIMATION`、`DEFAULT_HOLD_SOUND`、`ALLOWED_ANIMATIONS` 与静态 `validate`。放 `data` 是因为它是**数据契约**（与 `util.matcher.ItemMatcher` 同类）；放 `runtime` 会让 `data` 反向依赖运行期。它 `extends ItemMatcher`——长按本来就是靠匹配物品找到的，这样 `HoldSource` 一次就能把"匹配器 + 参数"交出来 |
+| `runtime/hold/HoldSource`（新） | 函数式接口 `List<HoldBinding> holds(Provider)`。各模块把自己的声明交上来 |
+| `runtime/hold/HoldLookup`（新，取代 `TechniqueHoldLookup`） | 汇总所有 source、按物品缓存答案、在 `TagsUpdatedEvent`/`ServerStartedEvent` 重建。**不认识任何具体模块** |
+| `runtime/hold/HoldService`（新） | 驱动整个手势：`RightClickItem`(LOWEST) 武装、`Start` 摘除、`Tick` 客户端保活 ＋ 服务端广播；进度数学（`holdPercent`/`displayPercent`）也归它 |
+| `runtime/hold/HoldPoseDiagnostic`（迁移） | 原本在 `render/`，只看长按姿势，因此搬进模块 |
+| `runtime/cultivation/TechniqueItemService`（瘦身） | 只剩功法：右键门槛、进度条文案、`Finish` 教书、`Stop` 诊断、冷却、`/mxt technique diagnose` 的 ending |
+
+**接驳方式**（第二个模块要做的全部）：自己的绑定 record `implements HoldBinding`，在构造期调一次 `HoldLookup.register(...)`，就获得长按、姿势、音效、不消耗的完整行为；想在结束时做事就自己订阅 `Finish`/`Stop`，用 `HoldLookup.hold(stack)` 判断是不是自己的——本模块现在就是这么做的。功法侧的注册只有一处，在 `MiXianTu` 构造里的 `TechniqueItemService.initialize()`。
+
+**两个刻意的取舍**：
+
+- **右键武装跑在 `EventPriority.LOWEST`**：模块自己的门槛（功法的是 `HIGH`）若取消了事件，取消过的事件不会送进没声明 `receiveCanceled` 的处理器，于是"被别人认领过的点击"不会被武装。顺序就是契约，写在 `HoldService.onItemUse` 的注释里。
+- **`TechniqueItemService.onUseTick` 用 `instanceof TechniqueBinding` 认自己的长按**：进度条只该出现在本模块的手册上，而 `HoldLookup` 的答案是按物品缓存的（O(1)），拿它做类型判断比每 tick 再扫一遍注册表便宜。
+
+**同一次重构里抓到的严重 bug：吃东西完全失效**。`onUseStart` 原本**无条件**执行 `event.getItem().remove(DataComponents.CONSUMABLE)`。而那个组件根本不是功法的东西——它是原版**所有**消耗品共用的驱动组件：
+
+```java
+// Consumable.onConsume
+stack.getAllOfType(ConsumableListener.class).forEach(component -> component.onConsume(level, user, stack, this));
+...
+stack.consume(1, user);
+```
+
+`FoodProperties implements ConsumableListener`，也就是说**食物的营养、饱和度、药水效果、金苹果再生、牛奶清效果全都挂在 `CONSUMABLE` 的 `onConsume` 上**（`FoodProperties.java:40-49`）。摘掉它 = 吃东西不消耗、不加饱食、不触发效果，物品永远留在手上。这个 bug 从"服务端 `Start` 摘除"那一版就存在，而当时的功能测试没吃到东西，所以没暴露；审计此前也**没有任何一条**覆盖"原版食物仍然可用"。
+
+**修法**：只在 `HoldLookup.hold(...)` 认得这张栈时才摘。**审计第 10 步**钉两件事——把 `Start` 事件喂给一张牛排，组件必须还在；再用 `FakePlayer` 把饱食度清零后吃一口，物品必须少一个、饱食度必须变成 8（熟牛肉 8 点）。
+
+**这条的教训**：摘别人的组件和 patch 别人的方法一样，作用域必须收得比自己以为的更紧。改成"组件驱动"之后，`HoldService` 手里的 `CONSUMABLE` 与食物手里的是**同一个组件**，所以每一处读写都要问一次"这张栈是不是我的"。
+
+**秒 → tick 的取整**：`consumeTicks()` 是截断，直接写 `learn_time / 20.0F` 会在某些值上少一 tick。改成 `(ticks + 0.5F) / 20.0F`——半 tick 的余量远大于浮点误差，截断后仍精确等于 `learn_time`。审计对 `1 / 3 / 7 / 20 / 60 / 999 / 72000` 逐个断言。
+
+**`LivingEntityMixin` 删不掉**（用户要求顺便试删）。查客户端渲染源码，有**三处**硬门要求计数为正：
+
+- `ItemInHandRenderer`：`player.isUsingItem() && player.getUseItemRemainingTicks() > 0 && player.getUsedItemHand() == hand && !charged`
+- `ItemInHandRenderer`：`player.isUsingItem() && player.getUseItemRemainingTicks() > 0 && player.getUsedItemHand() == hand`
+- `AvatarRenderer`：`avatar.getUsedItemHand() == hand && avatar.getUseItemRemainingTicks() > 0`
+
+计数掉到 0 就不再绘制使用姿势。而"客户端本地计数先跑完"是 §22 记的两个独立计时器问题，与时长从哪来无关，换成组件并不能去掉它。**保留。**
+
+> **2026-09-16 更新：这条结论被实测推翻了，`LivingEntityMixin` 已删除。** 用户把注入注释掉后实测"正常运行"，遂正式移除（`HoldService.loopingUseRemaining` 与 `POSE_LOOP_TICKS` 也就没有调用者，一并删掉）。上面那三处硬门确实存在，所以**服务端跑不满 20 TPS 时姿势仍可能比判定早一点收掉**——只是这段尾巴短、且只在服务端掉帧或延迟大时才看得出来，正常服务器上肉眼无法分辨。原来补住它的就是这个 mixin，现在不补了；真出现时由 `HoldPoseDiagnostic`（客户端日志 `[mxt] hold pose lost ...`）报出来，要回滚就是把 §22 的注入连同 `loop` 一起加回来。
+
+**审计改了什么**（`verifyHoldLifecycle` 重写为七步）：未武装的堆必须答 0 / NONE（把旧的"证明 mixin 生效"反过来断言）、武装后逐 tick 精确答出 `learn_time` 与 `hold_animation`、真实周期跑完数量不变、客户端补齐只补缺的、以及**真的构造并派发 `RightClickItem`** 核对点击路径确实武装（handler 不武装与审计手动武装长得一模一样，只有驱动事件才能区分），外加"即时手册不被武装"。
+
+**代价（说清楚）**：
+
+- 客户端那份堆在长按期间带 `minecraft:consumable`（不存盘；服务端那份只在同一 tick 内短暂带一次）。§21 记的"不再写任何组件、没有竞态"这条好处**让掉了**，换回来的是不再 patch `Item`。
+- 绑定到**食物**物品上多出一个边角：原版 `Consumable.canConsume` 会先问"现在能不能吃"，玩家不饿时 `startConsuming` 直接返回 `FAIL`，长按根本不会开始。这类绑定不受支持，`docs/数据包格式.md` 已写明。
+- 曾经的变异测试"从 `mxt.mixins.json` 移除 `ItemMixin`"随文件一起消失；顶替它的是"未武装的堆答 0 / NONE"这条断言——它同样只有在注入存在时才会失败。
 
 
 
