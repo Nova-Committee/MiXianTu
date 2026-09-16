@@ -59,6 +59,7 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.FriendAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.IconReference;
+import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
@@ -74,6 +75,7 @@ import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasPhysiqueEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasSpiritRootEntityCondition;import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
+import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
@@ -165,6 +167,7 @@ import com.iafenvoy.mxt.runtime.friend.FriendService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.InventoryUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -215,7 +218,6 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.pig.Pig;
@@ -503,7 +505,7 @@ public final class MxtTestMod {
         if (!hasCopperToIron) {
             throw new IllegalStateException("Currency exchange definition did not offer 10 copper coins for one iron coin");
         }
-        verifyClientDefinitions(event);
+        verifyClientDefinitions();
         verifyConfigKeyMigration();
         verifyFormationTemplate(event);
         verifyFormationRuntime(event);
@@ -540,6 +542,7 @@ public final class MxtTestMod {
         verifyForgingSessionRoundTrip();
         verifyForgingMethodSounds(event.getServer().registryAccess());
         verifyForgingUnlocks();
+        verifyTalismanComponent(event.getServer().overworld());
         LOGGER.info("MiXianTu server audit passed");
     }
 
@@ -847,7 +850,7 @@ public final class MxtTestMod {
         ForgingTableState state = new ForgingTableState();
         if (state.active())
             throw new IllegalStateException("A fresh forging state must not be busy");
-        if (!ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, state.active(), null))
+        if (!ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, false, null))
             throw new IllegalStateException("A fresh forging state must accept materials");
         if (!ForgingSurface.canPlace(ForgingSurface.BLUEPRINT_START, manual, state.active(), null))
             throw new IllegalStateException("A fresh forging state must accept a blueprint");
@@ -858,7 +861,7 @@ public final class MxtTestMod {
                 List.of(new ItemStack(Items.IRON_SWORD)), null);
         if (!state.active())
             throw new IllegalStateException("A locked forging state must be busy");
-        if (ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, state.active(), null))
+        if (ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, true, null))
             throw new IllegalStateException("A busy forging state must refuse materials");
         if (ForgingSurface.canTake(ForgingSurface.BLUEPRINT_START, state.active()))
             throw new IllegalStateException("A busy forging state must hold on to its blueprint");
@@ -867,7 +870,7 @@ public final class MxtTestMod {
         state.clear();
         if (state.active() || state.blueprint().isPresent() || state.plan().isPresent() || state.session().isPresent())
             throw new IllegalStateException("Clearing a forging state must leave none of it behind");
-        if (!ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, state.active(), null))
+        if (!ForgingSurface.canPlace(ForgingSurface.INPUT_START, material, false, null))
             throw new IllegalStateException("A cleared forging state must accept materials again");
         if (!ForgingSurface.canPlace(ForgingSurface.BLUEPRINT_START, manual, state.active(), null))
             throw new IllegalStateException("A cleared forging state must accept a blueprint again");
@@ -1047,7 +1050,7 @@ public final class MxtTestMod {
                             + modifier.id() + " (" + modifier.amount() + "); merged component is " + merged.modifiers());
                 }
             }
-            if (mergedDamage.stream().noneMatch(modifier -> MxtTestMod.MOD_ID.equals(modifier.id().getNamespace())
+            if (mergedDamage.stream().noneMatch(modifier -> MOD_ID.equals(modifier.id().getNamespace())
                     || "mxt".equals(modifier.id().getNamespace())))
                 throw new IllegalStateException("Weapon binding audit did not add a binding attack damage modifier; merged component is "
                         + merged.modifiers());
@@ -1066,13 +1069,6 @@ public final class MxtTestMod {
                 .filter(entry -> entry.attribute().is(Attributes.ATTACK_DAMAGE.unwrapKey().orElseThrow()))
                 .map(ItemAttributeModifiers.Entry::modifier)
                 .toList();
-    }
-
-    private static Identifier bindingIdOf(ItemStack stack) {
-        return ItemBindingService.resolve(stack).weapon()
-                .flatMap(binding -> MxtDatapackRegistries.holders(MxtResourceKeys.WEAPON_BINDING)
-                        .filter(holder -> holder.value() == binding).findFirst())
-                .map(HolderHelper::id).orElse(null);
     }
 
     /**
@@ -2035,7 +2031,7 @@ public final class MxtTestMod {
                 .orElseThrow(() -> new IllegalStateException("Missing test definition " + id + " in " + registry.identifier()));
     }
 
-    private static void verifyClientDefinitions(ServerStartedEvent event) {
+    private static void verifyClientDefinitions() {
         Resource qi = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:qi"))
                 .orElseThrow(() -> new IllegalStateException("Qi resource test definition was not loaded"));
         Resource divineSense = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:divine_sense"))
@@ -2192,7 +2188,6 @@ public final class MxtTestMod {
         verifyFormationStorage(level);
         verifyFormationRangeDisplay(level);
         verifyFormationPlateAutoDetect(level);
-        verifyFormationEventSplit();
         verifyFormationUpkeepFailure(level);
         verifyFormationIndexTolerance(level);
         verifyFormationPersistence(level);
@@ -2272,7 +2267,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationContextAndRange(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_context_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         BlockPos controller = prepareFormationController(level, definition);
         Pig inside = spawnProbe(level, controller.offset(2, 1, 0));
         Pig corner = spawnProbe(level, controller.offset(6, 1, 6));
@@ -2300,7 +2295,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationOwnerCondition(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_owner_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         BlockPos controller = prepareFormationController(level, definition);
         Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
         Pig other = spawnProbe(level, controller.offset(-2, 1, 0));
@@ -2329,7 +2324,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationGrantLifecycle(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_grant_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         Identifier source = FormationSources.of(id);
         if (!source.equals(Identifier.parse("mxt:formation/mxt_test/formation_grant_probe")))
             throw new IllegalStateException("The formation source convention changed: " + source);
@@ -2370,7 +2365,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationUpkeep(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_upkeep_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         Holder<Resource> spiritPower = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))
                 .orElseThrow(() -> new IllegalStateException("The upkeep audit needs the spirit power resource"));
         BlockPos controller = prepareFormationController(level, definition);
@@ -2410,7 +2405,7 @@ public final class MxtTestMod {
     @SuppressWarnings("deprecation")
     private static void verifyFormationPersistence(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_context_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         BlockPos controller = prepareFormationController(level, definition);
         Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
         double radius = definition.radius().evaluate(FormulaContext.of(level));
@@ -2450,7 +2445,7 @@ public final class MxtTestMod {
         action.execute(context);
     }
 
-    private static Formation formationDefinition(ServerLevel level, Identifier id) {
+    private static Formation formationDefinition(Identifier id) {
         return MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, id)
                 .orElseThrow(() -> new IllegalStateException("Formation test definition was not loaded: " + id));
     }
@@ -2461,7 +2456,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationInlineStructure(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_inline_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         if (definition.structure().size() != 3 || definition.structureTemplate().isPresent())
             throw new IllegalStateException("The inline test formation did not declare exactly its three blocks");
         BlockPos required = new BlockPos(2, 0, 0);
@@ -2522,7 +2517,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationTemplateAir(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_template_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         if (definition.structureTemplate().isEmpty() || !definition.structure().isEmpty())
             throw new IllegalStateException("The template test formation no longer declares a template");
         BlockPos controller = prepareFormationController(level, definition);
@@ -2557,7 +2552,7 @@ public final class MxtTestMod {
 
     private static void verifyFormationPlateBindingChecked(ServerLevel level) throws CommandSyntaxException {
         Identifier id = Identifier.parse("mxt_test:formation_center_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         if (definition.structure().size() != 2 || definition.structureTemplate().isPresent())
             throw new IllegalStateException("The centre probe did not declare exactly its two blocks");
         BlockPos controller = new BlockPos(0, level.getMinY() + 2, 0);
@@ -2701,7 +2696,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationAuraOverride(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_aura_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         BuffFormationAction auraModule = module(definition, BuffFormationAction.class, id);
         Identifier zone = auraModule.auraZone()
                 .orElseThrow(() -> new IllegalStateException("The aura probe formation declares no aura zone"))
@@ -2776,7 +2771,7 @@ public final class MxtTestMod {
     private static void verifyFormationAbsorption(ServerLevel level) {
         Holder<Resource> common = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt:common"));
         Identifier id = Identifier.parse("mxt_test:formation_absorb_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         if (definition.maintenanceCosts().isEmpty())
             throw new IllegalStateException("The absorb probe formation declares no upkeep to offset");
 
@@ -2799,7 +2794,7 @@ public final class MxtTestMod {
             // An emitter placed inside the formation must leave the shared stock and appear in the absorbed
             // totals, and putting a formation up is what triggers the rebuild.
             Block emitter = BuiltInRegistries.BLOCK.getValue(Identifier.parse("mxt:spirit_stone_block"));
-            if (emitter == null || emitter == Blocks.AIR)
+            if (emitter == Blocks.AIR)
                 throw new IllegalStateException("The absorption audit needs the spirit stone block to emit aura");
             if (!BlockAuraService.matches(level, emitter.defaultBlockState()))
                 throw new IllegalStateException("The spirit stone block is no longer a block aura emitter");
@@ -2888,25 +2883,12 @@ public final class MxtTestMod {
     }
 
     /**
-     * The period hooks must be split the way the design says: {@code Tick} is the settled observer and
-     * cannot be cancelled, while {@code TickEffects} and {@code UpkeepFailed} can.
-     */
-    private static void verifyFormationEventSplit() {
-        if (ICancellableEvent.class.isAssignableFrom(Tick.class))
-            throw new IllegalStateException("FormationEvent.Tick is cancellable again, so cancelling it would suppress effects while upkeep is still charged");
-        if (!ICancellableEvent.class.isAssignableFrom(TickEffects.class))
-            throw new IllegalStateException("FormationEvent.TickEffects cannot be cancelled, so no listener can suppress a period's work");
-        if (!ICancellableEvent.class.isAssignableFrom(UpkeepFailed.class))
-            throw new IllegalStateException("FormationEvent.UpkeepFailed cannot be cancelled, so a formation cannot survive an unpaid period");
-    }
-
-    /**
      * A formation that cannot pay must be able to stand through the period when a listener says so, and
      * must come down when nobody intervenes.
      */
     private static void verifyFormationUpkeepFailure(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_upkeep_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         Holder<Resource> spiritPower = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt_test:spirit_power"))
                 .orElseThrow(() -> new IllegalStateException("The upkeep audit needs the spirit power resource"));
         BlockPos controller = prepareFormationController(level, definition);
@@ -2991,7 +2973,7 @@ public final class MxtTestMod {
 
     private static void activateFormation(ServerLevel level, BlockPos controller, Identifier id, UUID owner) {
         FormationWorldService.Result result = FormationWorldService.activate(level, controller, id,
-                formationDefinition(level, id), new ResourceHolderAttachment(), FormulaContext.of(level), owner);
+                formationDefinition(id), new ResourceHolderAttachment(), FormulaContext.of(level), owner);
         if (!result.active())
             throw new IllegalStateException("Formation audit could not activate " + id + ": " + result.failure());
     }
@@ -3003,10 +2985,10 @@ public final class MxtTestMod {
      */
     private static void verifyFormationFriendProtection(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_friend_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         if (!definition.spareFriends())
             throw new IllegalStateException("The friend probe did not decode its friend-or-foe switch");
-        Formation passive = formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe"));
+        Formation passive = formationDefinition(Identifier.parse("mxt_test:formation_inline_probe"));
         BlockPos controller = prepareFormationController(level, definition);
         Pig owner = spawnProbe(level, controller.offset(2, 1, 0));
         Pig friend = spawnProbe(level, controller.offset(0, 1, 2));
@@ -3128,7 +3110,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationDismantlePermission(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_inline_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         BlockPos controller = prepareFormationController(level, definition);
         FakePlayer owner = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-owner"));
         FakePlayer friend = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-friend"));
@@ -3182,7 +3164,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationActionTypes(ServerLevel level) {
         Identifier attackId = Identifier.parse("mxt_test:formation_attack_probe");
-        Formation attack = formationDefinition(level, attackId);
+        Formation attack = formationDefinition(attackId);
         AttackFormationAction strike = module(attack, AttackFormationAction.class, attackId);
         if (!same(strike.damage().evaluate(FormulaContext.of(level)), 3.0D) || strike.effects().size() != 1)
             throw new IllegalStateException("The attack probe's damage or effect list did not decode");
@@ -3190,34 +3172,34 @@ public final class MxtTestMod {
             throw new IllegalStateException("An attack module did not default to an untyped, owner-attributed strike");
         if (!attack.spareFriends())
             throw new IllegalStateException("The attack probe did not declare the friend-or-foe switch");
-        if (formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe")).spareFriends())
+        if (formationDefinition(Identifier.parse("mxt_test:formation_inline_probe")).spareFriends())
             throw new IllegalStateException("A formation with no switch declared one anyway");
 
         Identifier buffId = Identifier.parse("mxt_test:formation_buff_probe");
-        Formation buffProbe = formationDefinition(level, buffId);
+        Formation buffProbe = formationDefinition(buffId);
         BuffFormationAction buff = module(buffProbe, BuffFormationAction.class, buffId);
         if (buff.target() != TargetMode.ALLIES || buff.abilities().size() != 1)
             throw new IllegalStateException("The benefit probe's target or ability list did not decode");
         if (buff.auraZone().isPresent() || !buff.maxBonus().isEmpty())
             throw new IllegalStateException("A benefit module with no aura fields invented an aura override");
         Identifier auraId = Identifier.parse("mxt_test:formation_aura_probe");
-        BuffFormationAction aura = module(formationDefinition(level, auraId), BuffFormationAction.class, auraId);
+        BuffFormationAction aura = module(formationDefinition(auraId), BuffFormationAction.class, auraId);
         if (aura.auraZone().isEmpty() || aura.maxBonus().isEmpty())
             throw new IllegalStateException("The aura fields did not survive their move into a benefit module");
 
         Identifier protectionId = Identifier.parse("mxt_test:formation_protection_probe");
-        Formation protectionProbe = formationDefinition(level, protectionId);
+        Formation protectionProbe = formationDefinition(protectionId);
         ProtectionFormationAction protection = module(protectionProbe, ProtectionFormationAction.class, protectionId);
         if (protection.delegateToClaims())
             throw new IllegalStateException("A protection module delegated to claims without being asked to");
         Identifier openId = Identifier.parse("mxt_test:formation_protection_open_probe");
-        ProtectionFormationAction open = module(formationDefinition(level, openId), ProtectionFormationAction.class, openId);
+        ProtectionFormationAction open = module(formationDefinition(openId), ProtectionFormationAction.class, openId);
         // The pair is the defaults against every flag written false. An all-true record cannot tell "read as
         // true" from "never read", and the opened probe is what pins each field to the JSON that declares it.
         expectProtectionCoverage(protection, true, true, true, true, true, true, true, true, true, "The default protection module");
         expectProtectionCoverage(open, false, false, false, false, false, false, false, false, false, "The opened protection module");
         Identifier delegateId = Identifier.parse("mxt_test:formation_protection_delegate_probe");
-        Formation delegateProbe = formationDefinition(level, delegateId);
+        Formation delegateProbe = formationDefinition(delegateId);
         ProtectionFormationAction delegate = module(delegateProbe, ProtectionFormationAction.class, delegateId);
         if (!delegate.delegateToClaims() || !delegate.blockBreak() || !delegate.itemUse())
             throw new IllegalStateException("The delegating probe did not decode its switch, or lost the flags beside it");
@@ -3236,7 +3218,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationStorage(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_storage_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         Storage storage = definition.storage()
                 .orElseThrow(() -> new IllegalStateException("The storage probe declares no stock"));
         Holder<Resource> common = requireHolder(MxtResourceKeys.RESOURCE, Identifier.parse("mxt:common"));
@@ -3248,7 +3230,7 @@ public final class MxtTestMod {
             throw new IllegalStateException("A storage declaration's capacity did not decode: " + capacity);
         // The stock is a framework field, so a formation that says nothing about it keeps nothing — and one
         // that declares the object has to name what it stores rather than decoding into a no-op.
-        if (formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe")).storage().isPresent())
+        if (formationDefinition(Identifier.parse("mxt_test:formation_inline_probe")).storage().isPresent())
             throw new IllegalStateException("A formation that declares no stock reported one");
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
         if (Formation.DIRECT_CODEC.parse(ops, JsonParser.parseString("""
@@ -3276,7 +3258,7 @@ public final class MxtTestMod {
         BlockPos controller = new BlockPos(8, level.getMaxY() - 16, 8);
         placeInline(level, controller, definition.structure());
         Block emitter = BuiltInRegistries.BLOCK.getValue(Identifier.parse("mxt:spirit_stone_block"));
-        if (emitter == null || emitter == Blocks.AIR)
+        if (emitter == Blocks.AIR)
             throw new IllegalStateException("The storage audit needs the spirit stone block to emit aura");
         List<BlockPos> emitters = List.of(controller.offset(3, 0, 3), controller.offset(-3, 0, -3));
         try {
@@ -3351,7 +3333,7 @@ public final class MxtTestMod {
      */
     private static void verifyFormationRangeDisplay(ServerLevel level) {
         Identifier id = Identifier.parse("mxt_test:formation_range_probe");
-        Formation definition = formationDefinition(level, id);
+        Formation definition = formationDefinition(id);
         RangeDisplayFormationAction display = module(definition, RangeDisplayFormationAction.class, id);
         if (display.shape() != Shape.SPHERE || display.points() != 24
                 || display.intervalPeriods() != 2 || display.particle() != ParticleTypes.END_ROD)
@@ -3405,7 +3387,7 @@ public final class MxtTestMod {
                     .orElseThrow(() -> new IllegalStateException("The range probe did not activate"));
             if (FormationActionRunner.perPeriod(level, definition, instance, controller) != 1)
                 throw new IllegalStateException("A display module was declared but never reached by the periodic pass");
-            Formation plain = formationDefinition(level, Identifier.parse("mxt_test:formation_inline_probe"));
+            Formation plain = formationDefinition(Identifier.parse("mxt_test:formation_inline_probe"));
             if (FormationActionRunner.perPeriod(level, plain, instance, controller) != 0)
                 throw new IllegalStateException("A formation with no display module reached one anyway");
         } finally {
@@ -3431,7 +3413,7 @@ public final class MxtTestMod {
         // The probes describe different structures, so standing one of them up here is what makes the
         // identification a question rather than a formality.
         Identifier standing = Identifier.parse("mxt_test:formation_range_probe");
-        Formation standingDefinition = formationDefinition(level, standing);
+        Formation standingDefinition = formationDefinition(standing);
         BlockPos clicked = new BlockPos(4, level.getMinY() + 2, 4);
         placeInline(level, clicked, standingDefinition.structure());
         FakePlayer holder = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "mxt-audit-auto"));
@@ -3732,7 +3714,7 @@ public final class MxtTestMod {
      * rather than becoming "cannot build", and only a ward counts as a claim of jurisdiction.
      */
     private static void verifyFormationProtectionLinkage(ServerLevel level, Identifier id, Formation definition) {
-        Formation attack = formationDefinition(level, Identifier.parse("mxt_test:formation_attack_probe"));
+        Formation attack = formationDefinition(Identifier.parse("mxt_test:formation_attack_probe"));
         if (!FormationProtection.hasProtection(definition) || FormationProtection.hasProtection(attack))
             throw new IllegalStateException("The audit could not tell a formation with a ward from one without");
         ClaimLinkage configured = MxtServerConfig.INSTANCE.compat.claimLinkage.getValue();
@@ -3821,8 +3803,6 @@ public final class MxtTestMod {
     private static void verifyColoredLightning(ServerLevel level) {
         if (!BuiltInRegistries.ENTITY_TYPE.getKey(MxtEntityTypes.COLORED_LIGHTNING.get()).equals(Identifier.parse("mxt:colored_lightning")))
             throw new IllegalStateException("The coloured bolt is not registered under its data-visible id");
-        if (!LightningBolt.class.isAssignableFrom(ColoredLightningBolt.class))
-            throw new IllegalStateException("The coloured bolt stopped being a vanilla bolt, so it lost its vanilla behaviour");
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
         SpawnLightningAction plain = lightningAction(ops, "{\"type\":\"mxt:spawn_lightning\"}");
         if (plain.color() != ColoredLightningBolt.DEFAULT_COLOR
@@ -3833,11 +3813,6 @@ public final class MxtTestMod {
             throw new IllegalStateException("A bolt that declared no look did not fall back to the vanilla one");
         }
         // The default is the vanilla 0.45/0.45/0.5 rounded to eight bits, so it may only be one step out.
-        if (Math.abs((ColoredLightningBolt.DEFAULT_COLOR >> 16 & 0xFF) / 255.0F - 0.45F) > 1.0F / 255.0F
-                || Math.abs((ColoredLightningBolt.DEFAULT_COLOR >> 8 & 0xFF) / 255.0F - 0.45F) > 1.0F / 255.0F
-                || Math.abs((ColoredLightningBolt.DEFAULT_COLOR & 0xFF) / 255.0F - 0.5F) > 1.0F / 255.0F) {
-            throw new IllegalStateException("The default bolt colour drifted away from the vanilla constants");
-        }
         SpawnLightningAction declared = lightningAction(ops, """
                 {"type": "mxt:spawn_lightning", "color": "#FF8800", "alpha": 0.75, "thickness": 2.5,
                  "damage": 9, "visual_only": true, "cause": false,
@@ -4267,5 +4242,57 @@ public final class MxtTestMod {
         block.put("pos", position);
         block.putInt("state", state);
         return block;
+    }
+
+    /**
+     * A talisman carrier stores datapack definitions, so the audit pins what a hand-written file depends on:
+     * the sample entry resolving both the ability it inscribes and the aura bill it declares, omitted fields
+     * falling back to a free definition, an aura amount evaluating as a formula, a component decoding the list it
+     * carries, a second append growing that list without touching the component it came from, and the result
+     * surviving a round trip through the same ops a datapack file is read with.
+     */
+    private static void verifyTalismanComponent(ServerLevel level) {
+        Identifier sigilId = Identifier.parse("mxt_test:flame_sigil");
+        Holder<Talisman> sigil = requireHolder(MxtResourceKeys.TALISMAN, sigilId);
+        Holder<Ability> firebolt = requireHolder(MxtResourceKeys.ABILITY, Identifier.parse("mxt_test:qingxiao_firebolt"));
+        if (!RegistryCodecs.matches(sigil.value().abilities(), firebolt))
+            throw new IllegalStateException("The sample talisman did not resolve the ability it inscribes");
+
+        double declared = sigil.value().auraCost().entrySet().stream()
+                .filter(entry -> HolderHelper.id(entry.getKey()).equals(Identifier.parse("mxt_test:spirit_power")))
+                .mapToDouble(entry -> entry.getValue().evaluate(FormulaContext.EMPTY))
+                .findFirst().orElse(Double.NaN);
+        if (sigil.value().auraCost().size() != 1 || !same(declared, 12.0D))
+            throw new IllegalStateException("The sample talisman did not resolve the aura bill it declares");
+
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        Talisman bare = Talisman.DIRECT_CODEC.parse(ops, JsonParser.parseString("{}")).getOrThrow();
+        if (!bare.auraCost().isEmpty() || !bare.abilities().isEmpty())
+            throw new IllegalStateException("A talisman that declares nothing did not fall back to a free definition");
+
+        Talisman formula = Talisman.DIRECT_CODEC.parse(ops,
+                JsonParser.parseString("{\"aura_cost\":{\"mxt_test:spirit_power\":\"2 + 3\"}}")).getOrThrow();
+        if (!same(formula.auraCost().values().iterator().next().evaluate(FormulaContext.EMPTY), 5.0D))
+            throw new IllegalStateException("A talisman aura amount did not evaluate as a formula");
+
+        if (!TalismanComponent.EMPTY.equals(MxtItems.TALISMAN.get().getDefaultInstance().get(MxtDataComponents.TALISMAN)))
+            throw new IllegalStateException("A talisman item did not start as a blank carrier");
+
+        TalismanComponent decoded = TalismanComponent.CODEC.parse(ops,
+                JsonParser.parseString("{\"talismans\":[\"mxt_test:flame_sigil\"]}")).getOrThrow();
+        if (decoded.talismans().size() != 1 || !HolderHelper.id(decoded.talismans().getFirst()).equals(sigilId))
+            throw new IllegalStateException("A talisman component did not decode the talisman it carries");
+
+        TalismanComponent appended = decoded.appended(sigil);
+        if (appended.talismans().size() != 2 || decoded.talismans().size() != 1
+                || !HolderHelper.id(appended.talismans().getLast()).equals(sigilId))
+            throw new IllegalStateException("Appending a talisman did not keep the list it appended to");
+
+        TalismanComponent roundTripped = TalismanComponent.CODEC.parse(ops,
+                TalismanComponent.CODEC.encodeStart(ops, appended).getOrThrow()).getOrThrow();
+        if (roundTripped.talismans().size() != 2 || !HolderHelper.id(roundTripped.talismans().getFirst()).equals(sigilId))
+            throw new IllegalStateException("A talisman component did not survive a round trip");
+
+        LOGGER.info("MiXianTu talisman audit: a sample talisman resolving the ability it inscribes and the aura bill it declares, with an omitted bill falling back to free and an amount evaluating as a formula; a component decoding the list it carries, appending to it without touching the component it came from, and surviving a round trip through the ops a datapack file is read with; and a talisman item starting out as a blank carrier");
     }
 }

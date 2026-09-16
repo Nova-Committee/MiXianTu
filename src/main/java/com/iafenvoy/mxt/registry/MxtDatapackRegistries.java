@@ -87,6 +87,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
         register(event, MxtResourceKeys.ITEM_QUALITY, ItemQuality.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
+        register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
     }
 
     private static <T> void register(NewRegistry event, ResourceKey<Registry<T>> key, Codec<T> codec) {

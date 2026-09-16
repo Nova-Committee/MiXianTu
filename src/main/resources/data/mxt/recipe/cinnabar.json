@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    "minecraft:redstone",
+    "minecraft:redstone",
+    "minecraft:sand"
+  ],
+  "result": {
+    "id": "mxt:cinnabar"
+  }
+}
