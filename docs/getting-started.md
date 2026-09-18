@@ -11,7 +11,7 @@ title: 基本信息与安装
 | NeoForge | `26.1.2.99` |
 | Java | `25` |
 | Mod ID | `mxt` |
-| 版本 | `1.0-alpha.1` |
+| 版本 | `1.0-alpha.2` |
 | 许可证 | `All Rights Reserved` |
 
 项目仍未发布，数据包 Codec、附件和网络协议暂不承诺旧版本兼容。

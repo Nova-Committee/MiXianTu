@@ -31,7 +31,7 @@ import java.util.function.Consumer;
  * <p>
  * Item stores that count in whole units are a different thing and keep their amounts in
  * {@code SpiritStorageComponent} - a spirit stone's fill and a talisman carrier's progress. That protocol is
- * {@code AuraItemAccess}, its contract is whole units, and its capacity comes from the item or its data
+ * {@code ItemAuraAccess}, its contract is whole units, and its capacity comes from the item or its data
  * rather than from a constant here.
  */
 @EventBusSubscriber(Dist.CLIENT)

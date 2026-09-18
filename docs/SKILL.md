@@ -26,6 +26,6 @@ MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.92` 的服务端权威修仙�
 
 ## 公开接口重点
 
-`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`AbilityService` 执行技能（`useCarried` 是"由物品代持能力"的入口），`MxtDatapackRegistries` 查询动态表，`AuraAccess`/`AuraItemAccess` 处理灵气存取（键是 `Holder<Aura>`），`ManualAuraAccess` 是物品"按住右键被灌注"的接口（`pour` 自定义容量、`canPourInto` 在付灵气前否掉一 tick、`onCharged` 汇报已写入），`SpiritChargeService` 把持有者灵气灌注进可充能物品，`TalismanService` 在符箓载体灌满时发动铭刻的能力并烧掉一张，`HoldService` 驱动"按住使用"手势，`Cost` 处理行为消耗，`HotbarEntry` 是纯客户端条目回调。
+`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`AbilityService` 执行技能（`useCarried` 是"由物品代持能力"的入口），`MxtDatapackRegistries` 查询动态表，`AuraAccess`/`ItemAuraAccess` 处理灵气存取（键是 `Holder<Aura>`），`UseItemAuraAccess` 是物品"按住右键被灌注"的接口（`pour` 自定义容量、`canPourInto` 在付灵气前否掉一 tick、`onCharged` 汇报已写入），`SpiritChargeService` 把持有者灵气灌注进可充能物品，`TalismanService` 在符箓载体灌满时发动铭刻的能力并烧掉一张，`HoldService` 驱动"按住使用"手势，`Cost` 处理行为消耗，`HotbarEntry` 是纯客户端条目回调。
 
 完整规则见 [`docs/ai/SKILL.md`](ai/SKILL.md)。

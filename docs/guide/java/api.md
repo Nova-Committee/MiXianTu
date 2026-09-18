@@ -13,7 +13,8 @@ title: Java 公开 API
 | `FormationActionType` / `MxtFormationActionTypes` | 阵法的**功能模块**：`formation.actions` 用 `type` 选中一种模块，每种的独有字段放在自己的记录里。新增一种模块 = 一条记录 + 一次 `DeferredRegister` 注册；运行时按记录类型分派，`data` 包因此不碰世界。 |
 | `FormationProtection` | 查询一个动作是否被阵法的守御模块拦下：行为者与被作用的一方**任一**在半径内即生效；`delegate_to_claims` 置真且当前有生效的领地保护时（`FtbChunksCompat.claimsProtect()`，受服务端配置 `formation.delegate_requires_claims` 约束）整个让给领地插件，因此那时它永远投"不拦"。收的是行为者 UUID 而不是 `ServerPlayer`，所以其他模组自己接事件时也能复用同一条判定（含阵主恒定豁免、好友按配置豁免）。 |
 | `CurrencyValueService` | 计算物品货币价值并处理不可用原因。 |
-| `ItemMatcher` / `UniversalMatcher` | 匹配物品、标签、通配符、正则和混合数组。 |
+| `ItemMatcher` | 数据定义的物品匹配语法：`ItemMatcher.Entry` 有 `item`、`tag`、`wildcard`、`regex`、`spirit_storage` 五种，支持单项简写（物品 id 或标签）与混合数组；`find`/`findAll` 按 `priority` 升序取第一个/全部。 |
 | `NumberProvider` | 常量、表达式、注册表类型分派和有限值处理。 |
+| `DefinitionText` | 把数据包定义翻成名字：手里有 `Holder` / `ResourceKey` 时直接 `name(holder)`，类别默认取注册表自己的 path（`mxt:aura` 里的 `mxt:fire` 查 `aura.mxt.fire`）；少数不按注册表 path 翻译的在它内部的 `CATEGORIES` 里登记一次（如 `mxt:item_quality` → `quality`），所以同一个定义在提示框和物品选择器里不会有两种叫法。 |
 
 除非接口明确标记为客户端 API，不要在渲染线程调用服务端生命周期注册表查询。

@@ -4,11 +4,8 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SectAttachment;
-import com.iafenvoy.mxt.attachment.SectTerritoryAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
@@ -23,9 +20,6 @@ import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
-import com.iafenvoy.mxt.runtime.sect.SectService;
-import com.iafenvoy.mxt.runtime.sect.SectService.Result;
-import com.iafenvoy.mxt.runtime.sect.SectTerritoryEventBridge;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.SoulService;
@@ -97,8 +91,6 @@ public final class MxtCommand {
                         .then(literal("set").then(argument("realm", IdentifierArgument.id())
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_STAGE))
                                 .executes(ctx -> setRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "realm"))))))
-                .then(literal("sect").then(literal("claim").executes(ctx -> claimTerritory(ctx.getSource(), false)))
-                        .then(literal("release").executes(ctx -> claimTerritory(ctx.getSource(), true))))
                 .then(literal("soul").then(literal("reclaim").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .executes(ctx -> reclaimSoul(ctx.getSource()))));
     }
@@ -289,27 +281,6 @@ public final class MxtCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", DefinitionText.name(realm, "realm_stage")), true);
-        return 1;
-    }
-
-    private static int claimTerritory(CommandSourceStack source, boolean release) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) return 0;
-        SectAttachment membership = player.getData(MxtAttachments.SECT);
-        Holder<Sect> sect = membership.sect().orElse(null);
-        if (sect == null) {
-            source.sendFailure(Component.translatable("command.mxt.sect.not_member"));
-            return 0;
-        }
-        SectTerritoryAttachment territory = player.level().getChunkAt(player.blockPosition()).getData(MxtAttachments.SECT_TERRITORY);
-        Result result = release
-                ? SectService.releaseTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM)
-                : SectService.claimTerritory(membership, sect, territory, SectTerritoryEventBridge.CLAIM);
-        if (!result.changed()) {
-            source.sendFailure(Component.translatable("command.mxt.sect.territory_failed", result.failure()));
-            return 0;
-        }
-        source.sendSuccess(() -> Component.translatable(release ? "command.mxt.sect.territory_released" : "command.mxt.sect.territory_claimed"), true);
         return 1;
     }
 

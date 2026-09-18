@@ -84,8 +84,6 @@
   "command.mxt_test.kit.realm_failed": "无法初始化青霄试炼境界；请在空白测试角色上使用该命令。",
   "command.mxt_test.cultivate.success": "青霄吐纳已开始。灵晶会作为隐藏灵气燃料持续消耗。",
   "command.mxt_test.cultivate.failed": "无法开始青霄吐纳：%s",
-  "command.mxt_test.task.success": "已完成青霄宗门日课，当前贡献：%s",
-  "command.mxt_test.task.failed": "无法完成青霄宗门日课：%s",
   "command.mxt_test.verify.aura_ok": "灵气环境优先级规则与实际解算结果一致。",
   "command.mxt_test.verify.aura_failed": "灵气环境优先级校验失败：%s",
   "command.mxt_test.verify.channel_ok": "引导技的维持脉冲已正常产生效果。",
@@ -93,7 +91,7 @@
   "command.mxt_test.guide.1": "青霄试炼：1. 执行 /mxt_test kit 领取身份、资源与道具。",
   "command.mxt_test.guide.2": "2. 主手持有青霄灵晶，执行 /mxt_test cultivate；随后可用 /mxt breakthrough mxt_test:qi 尝试突破。",
   "command.mxt_test.guide.3": "3. 金块上使用阵盘激活聚灵阵；契约卷轴可绑定狼，秘境令牌可进入末地试炼。",
-  "command.mxt_test.guide.4": "4. 使用 /mxt ability cast mxt_test:qingxiao_firebolt、/mxt_test task 和 /mxt sect claim 验证技能、宗门与领地。",
+  "command.mxt_test.guide.4": "4. 使用 /mxt ability cast mxt_test:qingxiao_firebolt 验证技能，用 /mxt attachment status 查看玩家运行时状态。",
   "condition.mxt_test.fire_root_item": "需要满足火灵根物品条件",
   "condition.mxt_test.toxicity_pill": "丹药使用条件满足",
   "condition.mxt_test.locked_carrot": "该物品当前不可使用"

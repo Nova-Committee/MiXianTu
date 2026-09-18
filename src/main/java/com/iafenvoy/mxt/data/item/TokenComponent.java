@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * Generic identity and permission payload for sect, realm and trading tokens.
+ * Generic identity and permission payload for realm and trading tokens.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public record TokenComponent(Optional<String> kind, Optional<String> value,

@@ -115,25 +115,23 @@ public double value(String name) {
 
 结论：**改 `FormationWorldTicker` 里那个 `Map.of(...)` 就够了**，3 个 key。
 
-### 2.3 ❌ "区域保护移出基座，交 FTB Utilities" —— 基座已经做了
+### 2.3 ❌ "区域保护移出基座，交 FTB Utilities" —— 基座曾实现过宗门领地，现已删除
 
-工作区已经有一套**完整的宗门领地保护**：
+> 🔁 **本节已作废（删除宗门系统时更新）。** 基座曾有一套完整的宗门领地保护：`SectTerritoryEventBridge.java:34-50`
+> 拦 `BreakBlockEvent` / `EntityPlaceEvent` / `PlayerInteractEvent.RightClickBlock`（`EventPriority.HIGH`），
+> `:55-63` 判定未认领区块公开、已认领区块走阵主宗门的 rank 权限，认领 / 释放由
+> `SectService.claimTerritory` / `releaseTerritory` 提供，数据存在 `MxtAttachments.SECT_TERRITORY`（`LevelChunk` 附件），
+> 命令入口是 `/mxt sect claim` 与 `/mxt sect release`。
+>
+> 但这套实现完全建立在 `mxt:sect` 数据包注册表之上，而玩家**没有任何正式入口能加入宗门**
+> （`SectService.join` 只被测试模组调用，测试数据的权限 id `mxt:claim` 还与代码硬编码的 `mxt:territory_*` 不一致），
+> 于是它随 `sect` 注册表一起被整体删除。**基座现在不自带任何领地保护。**
 
-| 环节 | 位置 |
-| --- | --- |
-| 拦截破坏 / 放置 / 交互 | `SectTerritoryEventBridge.java:34-50`（`BreakBlockEvent` / `EntityPlaceEvent` / `PlayerInteractEvent.RightClickBlock`，`EventPriority.HIGH`） |
-| 权限判定 | 同文件 `:55-63`，未认领区块公开，已认领区块走阵主宗门的 rank 权限 |
-| 认领 / 释放 | `SectService.claimTerritory` / `releaseTerritory`（校验 `sect.territory_permissions` + rank） |
-| 数据 | `MxtAttachments.SECT_TERRITORY`（`LevelChunk` 附件） |
-| 命令入口 | `/mxt sect claim` / `/mxt sect release` |
+按"基座没有领地保护"重新读 §3：
 
-于是 §3 的三条论据现在都反了：
-
-- §3.3 理由 2 说"`MxtEvents` 18 个事件族没有任何方块破坏/交互事件" → **不成立**，桥接层用的是 NeoForge 原生事件，一行都不用补。
-- §3.5 说"原建议与 `sect.territory_permissions` 合并设计 → **取消**" → **已经被代码推翻**，现状正是合并设计。
-- §3.2 的 FTB Utilities / FTB Chunks 版本映射是给 **1.12.2 模组包**看的；基座目标版本是 26.1.2，这张表对基座没有指导意义。
-
-**对 10 守家阵的影响**：它不需要任何 FTB 就能成立 —— 降级为"一个 `formation` + 一次 `sect claim`"即可，甚至不需要新代码。§3.5 说的"保护功能移除"也随之作废。真正仍然在范围外的只有**区块认领的可视化 / 队伍 UI**，那确实不该基座造。
+- 要拦草方格级别的破坏 / 放置 / 交互，只能靠外部领地模组（FTB Chunks 之类）或内容包自己实现。
+- 《10 守家阵》原来说"一个 `formation` + 一次 `sect claim` 就能当守家阵，一行代码都不用补"——**不再成立**；
+  阵法自身的九个开关仍然有效，但它们只是阵法的保护，不是领地系统。
 
 > 仍然成立的一点：§3.3 的技术证据（旧模组依赖每 tick 生成临时实体，被取消 `EntityJoinWorld` 就失效）—— 但那描述的是**旧模组**，基座没有这个问题。
 
@@ -406,6 +404,6 @@ public boolean reconcileSource(Identifier source, Collection<Holder<Ability>> de
 | `src/main/java/com/iafenvoy/mxt/data/action/builtin/entity/DamageAction.java:11-22` | generic 伤害与既有决策 |
 | `src/main/java/com/iafenvoy/mxt/attachment/AbilityAttachment.java:96` | `reconcileSource` |
 | `src/main/java/com/iafenvoy/mxt/registry/MxtAttachments.java:37,66-71` | `ABILITY_HOLDER` 序列化 + `copyOnDeath` |
-| `src/main/java/com/iafenvoy/mxt/runtime/sect/SectTerritoryEventBridge.java:34-63` | 领地保护已实现 |
+| ~~`src/main/java/com/iafenvoy/mxt/runtime/sect/SectTerritoryEventBridge.java:34-63`~~ | 领地保护曾已实现，**该文件已随宗门系统删除**（见 §2.3） |
 | `src/main/java/com/iafenvoy/mxt/item/FormationPlateItem.java:28-46` | 激活路径、无所有权校验 |
 | `docs/模块实现审计.md:174` | 四个无消费者的能力组件 |

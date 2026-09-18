@@ -12,4 +12,4 @@ void onPressTick(Player player);
 void onRelease(Player player);
 ```
 
-资源条和灵气浓度条由服务端同步状态驱动，客户端只负责绘制。服务端每秒同步当前位置灵气，雾效和粒子不会反向决定灵气数值。
+资源条和灵气浓度条由服务端同步状态驱动，客户端只负责绘制。服务端按 `config/mxt-server.json` 的 `aura.sync_interval`（默认每 5 tick）同步当前位置灵气，雾效和粒子不会反向决定灵气数值。

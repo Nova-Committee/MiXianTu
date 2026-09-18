@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * Displays the current charge of item stacks that implement {@code AuraItemAccess}. The reading itself is
+ * Displays the current charge of item stacks that implement {@code ItemAuraAccess}. The reading itself is
  * {@link SpiritChargeService}'s, so what is shown here is the same number the pour writes and the item
  * conditions test.
  */

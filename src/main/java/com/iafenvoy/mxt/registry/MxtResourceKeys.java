@@ -106,7 +106,6 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<Tribulation>> TRIBULATION = create("tribulation");
     public static final ResourceKey<Registry<CreatureProfile>> CREATURE_PROFILE = create("creature_profile");
     public static final ResourceKey<Registry<ContractType>> CONTRACT_TYPE = create("contract_type");
-    public static final ResourceKey<Registry<Sect>> SECT = create("sect");
     public static final ResourceKey<Registry<RealmInstance>> REALM_INSTANCE = create("realm_instance");
     public static final ResourceKey<Registry<CurrencyValue>> CURRENCY = create("currency");
     public static final ResourceKey<Registry<ItemBinding>> ITEM_BINDING = create("item_binding");

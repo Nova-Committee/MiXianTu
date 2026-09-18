@@ -38,7 +38,7 @@ import java.util.Map;
  * <p>
  * Further fields (charges, a use condition) are added as optional fields, which keeps the files written today
  * parsing. The display name is deliberately not a field: like every other definition it resolves from the entry
- * id, as {@code mxt.talisman.<path>}.
+ * id through {@link com.iafenvoy.mxt.util.DefinitionText}, as {@code talisman.<namespace>.<path>}.
  */
 public record Talisman(List<Either<Holder<Ability>, TagKey<Ability>>> abilities,
                        Map<Holder<Aura>, NumberProvider> auraCost) {

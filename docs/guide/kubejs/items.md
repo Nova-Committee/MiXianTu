@@ -9,7 +9,7 @@ StartupEvents.registry('item', event => {
 })
 ```
 
-随后在数据包中用 `item_binding`、`weapon_binding` 或 `pill_binding` 匹配 `example:jade_token`。KubeJS 负责注册物品，MiXianTu 负责行为、条件、灵气、货币和 Tooltip。
+随后在数据包中用 `item_binding`、`weapon_binding`、`pill_binding` 或 `technique_binding` 匹配 `example:jade_token`。KubeJS 负责注册物品，MiXianTu 负责行为、条件、灵气、货币和 Tooltip。
 
 ```js
 // kubejs/server_scripts/mxt_reload_notice.js

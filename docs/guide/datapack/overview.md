@@ -39,7 +39,7 @@ data/mxt/tags/mxt/<registry>/disabled.json
 {
   "damage": 8.0,
   "speed": "2 + level * 0.1",
-  "amount": {"type": "minecraft:constant", "value": 10}
+  "amount": {"type": "mxt:constant", "value": 10}
 }
 ```
 
@@ -56,8 +56,8 @@ data/mxt/tags/mxt/<registry>/disabled.json
 | 资源与修炼 | `resource`、`aura`、`element`、`realm_stage`、`spirit_root`、`physique`、`technique`、`skill_stage`、`cultivate_action` |
 | 技能与规则 | `ability`、`curse`、`formation`、`tribulation`、`trigger`、`talisman` |
 | 灵气与世界 | `aura_zone`、`block_aura`、`item_aura`、`realm_instance` |
-| 物品与品质 | `item_binding`、`weapon_binding`、`pill_binding`、`technique_binding`、`item_archetype`、`item_quality` |
-| 经济与内容 | `currency`、`spirit_herb`、`forging_method`、`forging_blueprint`、`creature_profile`、`contract_type`、`sect` |
+| 物品与品质 | `item_binding`、`weapon_binding`、`pill_binding`、`technique_binding`、`tool_binding`、`blueprint_binding`、`item_archetype`、`item_quality` |
+| 经济与内容 | `currency`、`spirit_herb`、`forging_method`、`forging_blueprint`、`creature_profile`、`contract_type` |
 
 ## 模块页面
 

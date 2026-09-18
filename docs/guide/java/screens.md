@@ -2,7 +2,7 @@
 title: 客户端界面
 ---
 
-客户端界面统一放在 `com.iafenvoy.mxt.screen` 下：容器界面在 `screen.menu` / `screen.gui`，纯客户端列表界面在 `screen.gui` 与 `screen.information`，物品选择器在 `screen.picker`。新增界面优先复用现成的 `Screen` 基类和原版组件，不要自己造滚动和文本输入。
+客户端界面统一放在 `com.iafenvoy.mxt.screen` 下：容器**菜单**在 `screen.menu`、它们的**界面**在 `screen.gui`，纯客户端信息界面在 `screen.information`，物品选择器在 `screen.picker`，HUD 覆盖层（快捷栏、资源条）在 `screen.overlay.hotbar` / `screen.overlay.resourcebar`。新增界面优先复用现成的 `Screen` 基类和原版组件，不要自己造滚动和文本输入。
 
 ## 物品选择界面 `ItemPickerScreen`
 
@@ -61,7 +61,7 @@ if (screen != null) Minecraft.getInstance().setScreen(screen);
 
 `/picker` 仍然要求 gamemaster 权限，并要求 `player.hasInfiniteMaterials()`——后者不是额外的保守，而是和那个包被检查的条件对齐：开一个服务端每个动作都会拒绝的面板，比不开更糟。
 
-`ItemPickerManager` 只负责「注册表 → 可选项」的映射，现在只是**界面内容**的来源，服务端不再需要它。它产出的每一项是 `PickerItem(stack, names)`：**要画的堆**，加上**这一行能被哪些名字搜到**。名字交给目录自己给：
+`ItemPickerManager` 只负责「注册表 → 可选项」的映射，现在只是**界面内容**的来源，服务端不再需要它。它产出的每一项是 `PickerItem(stack, names)`：**要画的堆**，加上**这一行能被哪些名字搜到**。堆本身保持原样，**不往物品上写任何东西**（没有自定义名称、没有后缀）——同一件替身物品代表好几个定义时靠搜索区分，不靠名字上的标记。名字交给目录自己给：
 
 - 物品/方块注册表的条目本身就是物品，堆上已经写着它叫什么，于是名字就是「它显示的名字 + 它的注册 id」；
 - 数据驱动定义没有自己的物品，堆上根本看不出它代表谁，于是名字由 `DefinitionText` 从它的 `Holder` / `ResourceKey` 生成翻译键得到——`mxt:fire` 在 `mxt:aura` 里就查 `aura.mxt.fire`——再补上它的 id。定义有自己名字的（品质，名字写在数据包里）就用那个名字；

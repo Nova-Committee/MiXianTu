@@ -11,7 +11,7 @@ import net.minecraft.core.Holder;
 import java.util.Optional;
 
 /**
- * Persistent store written into an item stack that implements {@code AuraItemAccess}: which auras the stack
+ * Persistent store written into an item stack that implements {@code ItemAuraAccess}: which auras the stack
  * holds, and how much of each.
  * <p>
  * The key is an {@link Aura} rather than the {@code resource} it is counted in, because what is stored is
@@ -69,7 +69,7 @@ public record SpiritStorageComponent(Object2IntMap<Holder<Aura>> amounts) {
     /**
      * The one aura this store holds, when it holds exactly one. An item that stores a single aura - a spirit
      * stone - reads what is in it from this, so that a store written under one aura is never answered for
-     * another; an item that stores several answers for itself instead ({@code ManualAuraAccess#pour}).
+     * another; an item that stores several answers for itself instead ({@code UseItemAuraAccess#pour}).
      * <p>
      * Empty when the store holds nothing or names several auras, and the caller then has only its own
      * declaration to go on - which is exactly right: a drained stone is empty of what it declares, and a store

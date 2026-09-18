@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.testmod;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SectAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.aura.AuraZone;
@@ -22,8 +21,6 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.sect.SectService;
-import com.iafenvoy.mxt.runtime.sect.SectService.Result;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -52,7 +49,7 @@ import java.util.Optional;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * Commands that assemble a playable, development-only Qingxiao Sect scenario.
+ * Commands that assemble a playable, development-only Qingxiao cultivation scenario.
  */
 public final class MxtTestCommands {
     private static final Identifier QI = id("qi");
@@ -66,8 +63,6 @@ public final class MxtTestCommands {
     private static final Identifier PHYSIQUE = id("qingxiao_body");
     private static final Identifier TECHNIQUE = id("qingxiao_breathing_manual");
     private static final Identifier CULTIVATE = id("qingxiao_meditation");
-    private static final Identifier SECT = id("qingxiao_sect");
-    private static final Identifier SECT_TASK = id("meditate");
     private static final Identifier FORMATION = id("spirit_gathering");
     private static final Identifier REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
@@ -85,7 +80,6 @@ public final class MxtTestCommands {
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                 .then(literal("kit").executes(context -> giveKit(context.getSource())))
                 .then(literal("cultivate").executes(context -> startCultivation(context.getSource())))
-                .then(literal("task").executes(context -> completeSectTask(context.getSource())))
                 .then(literal("verify").executes(context -> verify(context.getSource())))
                 .then(literal("guide").executes(context -> showGuide(context.getSource()))));
     }
@@ -180,7 +174,6 @@ public final class MxtTestCommands {
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, WATER_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SOUL_POWER), 20.0D);
-        joinSect(player);
 
         // These attachments are mutable; explicit sync is handled by the attachment dispatcher.
         player.setData(MxtAttachments.RESOURCE_HOLDER, resources);
@@ -227,19 +220,6 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static int completeSectTask(CommandSourceStack source) {
-        ServerPlayer player = player(source);
-        if (player == null) return 0;
-        SectAttachment data = player.getData(MxtAttachments.SECT);
-        Result result = SectService.completeTask(data, require(MxtResourceKeys.SECT, SECT), SECT_TASK);
-        if (!result.changed()) {
-            source.sendFailure(Component.translatable("command.mxt_test.task.failed", result.failure().name()));
-            return 0;
-        }
-        source.sendSuccess(() -> Component.translatable("command.mxt_test.task.success", data.contribution()), true);
-        return 1;
-    }
-
     private static int showGuide(CommandSourceStack source) {
         if (player(source) == null) return 0;
         source.sendSuccess(() -> Component.translatable("command.mxt_test.guide.1"), false);
@@ -254,12 +234,6 @@ public final class MxtTestCommands {
         ResourceService.initialize(resources, resource, context);
         double missing = minimum - resources.get(resource);
         if (missing > 0.0D) ResourceService.change(resources, resource, missing, context);
-    }
-
-    private static void joinSect(ServerPlayer player) {
-        SectAttachment data = player.getData(MxtAttachments.SECT);
-        if (data.member()) return;
-        SectService.join(data, require(MxtResourceKeys.SECT, SECT));
     }
 
     private static ItemStack formationPlate() {

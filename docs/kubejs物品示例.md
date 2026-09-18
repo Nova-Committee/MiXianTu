@@ -7,17 +7,19 @@
 StartupEvents.registry('item', event => {
   event.create('fire_root_pellet')
     .displayName('Fire Root Pellet')
-    .food(food => food.hunger(2).saturation(0.2))
+    .food(food => food.nutrition(2).saturation(0.2))
 
   event.create('returning_pill')
     .displayName('Returning Pill')
-    .food(food => food.hunger(1).saturation(0.1))
+    .food(food => food.nutrition(1).saturation(0.1))
 
   event.create('firebound_sword', 'sword')
     .displayName('Firebound Sword')
-    .tier('diamond')
+    .modifyTier(tier => tier.setAttackDamageBonus(3))
 })
 ```
+
+`food` 回调里的方法是 `nutrition(int)` 和 `saturation(float)`（也可以直接用 `.food(2, 0.2)` 简写）；`.tier(...)` 只接受 `MutableToolTier` 对象，字符串（如 `.tier('diamond')`）没有可用重载，要改材质或数值请用 `.modifyTier(tier => …)`，可调 `setUses`、`setSpeed`、`setAttackDamageBonus`、`setEnchantmentValue` 等。
 
 对应的数据包绑定：
 

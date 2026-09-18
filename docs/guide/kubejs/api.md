@@ -133,8 +133,7 @@ MxtActions.executeEntity(player, {
 const enoughQi = MxtConditions.testEntity(player, {
   type: 'mxt:resource_compare',
   resource: 'mxt:spirit_power',
-  comparison: '>=',
-  value: 10
+  min: 10
 })
 ```
 
@@ -219,7 +218,7 @@ MxtCosts.register('example:quest_token',
 // 消耗资源。完整写法
 { type: 'mxt:resource', resource: 'mxt:spirit_power', amount: 10 }
 
-// 消耗资源。兼容简写；仅 Cost API 可以使用 id 字段。
+// 消耗资源。兼容简写（`Cost` 的简写与 `MxtResources.consume` 都用 `id` 字段）。
 { id: 'mxt:spirit_power', amount: 10 }
 
 // 消耗物品。items 接受物品 ID、物品 tag，或 ItemMatcher 对象。
@@ -234,12 +233,12 @@ MxtCosts.register('example:quest_token',
 | --- | --- | --- | --- |
 | `consume(entity, costs)` | `Entity`、`ResourceCost[]` | `ResourceTransactions.Result` | 原子支付一组资源；任一项不足时整组不扣除。 |
 
-`costs` 的每个元素遵循 `ResourceCost` 格式，字段名是 `resource`，不是 `id`：
+`costs` 的每个元素遵循 `ResourceCost` 格式，字段名是 `id`（`ResourceCost.CODEC` 的 `fieldOf("id")`），与 `Cost` 的简写一致；这里**不是**带 `type` 的 Cost 数组，所以没有 `resource` 字段。写错的元素**不会报错**：列表 Codec（`AutoIgnoreListCodec`）解码失败时只打一条 WARN 并**丢掉那一项**，于是这一项等于没写、整笔仍然提交成功。字段名请照着下面的例子抄。
 
 ```js
 const result = MxtResources.consume(player, [
-  { resource: 'mxt:spirit_power', amount: 10 },
-  { resource: 'mxt:fire_aura', amount: 'level + 2' }
+  { id: 'mxt:spirit_power', amount: 10 },
+  { id: 'mxt:fire_aura', amount: 'level + 2' }
 ])
 
 if (result.committed()) {
@@ -384,7 +383,7 @@ function publishPillTaken(player, toxicity) {
 
 一个 key 在每个实体上只对应一个订阅，请为每个信号使用独立的 key：用同一个 key 再次注册会替换掉旧的订阅，无论它原本监听的是哪个信号。
 
-回调收到一个 `TriggerSignal`，其访问器为 `type()`（信号 ID）、`gameTime()` 与 `context()`。上下文提供 `actor()`、`target()`、`level()`、`position()`、`item()`、`block()`、`damageSource()`、`formula()`，以及读取发布值的 `get(key)`（返回 `Optional`）与 `data()`（原始扩展表）。请把上下文当作只读对象：它会被同一信号的多个订阅者共享。
+回调收到一个 `TriggerSignal`，其访问器为 `type()`（信号 ID）、`gameTime()`、`context()` 与 `source()`（可空的来源 ID）。上下文提供 `actor()`、`target()`、`level()`、`position()`、`item()`、`block()`、`damageSource()`、`formula()`，以及读取发布值的 `get(key)`（返回 `Optional`）与 `data()`（原始扩展表）。请把上下文当作只读对象：它会被同一信号的多个订阅者共享。
 
 触发器订阅只存在于运行时，永不存档：实体离开世界、服务器关闭、数据包重载或服务器脚本重载都会丢掉它们——重载会替换订阅所引用的回调对象。请使用稳定的 key，并从运行时钩子重新注册，例如上面的写法。一次性订阅在首次匹配后自行移除，适合只能完成一次的任务步骤。
 
@@ -494,10 +493,9 @@ MxtEvents.friendRelation(event => {
 | `alchemyCraft` | `Pre`、`Post` | `recipe()`（`RecipeHolder<AlchemyRecipe>`）；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
 | `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
-| `formation` | `Activate`、`Deactivate`、`Tick`、`TickEffects`、`UpkeepFailed` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate`、`TickEffects`、`UpkeepFailed` 可取消，`Deactivate` 与 `Tick` 不可取消。`Tick` 是"本周期已付费"的观察点，`TickEffects` 只挡这一周期的效果且不退费，`UpkeepFailed` 取消表示让阵法撑过付不出钱的这一周期。 |
+| `formation` | `Activate`、`Deactivate`、`Tick`、`TickEffects`、`UpkeepFailed` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate`、`TickEffects`、`UpkeepFailed` 可取消，`Deactivate` 与 `Tick` 不可取消。`Tick` 是"本周期已付费"的观察点，`TickEffects` 只挡这一周期的效果且不退费，`UpkeepFailed` 取消表示让阵法撑过付不出钱的这一周期；`UpkeepFailed` 另有 `payer()`（`Optional<Entity>`，无人付款时为空）与 `failedResource()`（`Optional<Identifier>`，没有付款者时为空），脚本据此知道谁欠费、欠的是哪种资源。 |
 | `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Pre` 可取消结束，取消后寿元会被设为不受限。 |
 | `realmInstance` | `EnterPre`、`EnterPost`、`Exit` | `level()`、`definition()`（`Holder<RealmInstance>`）、`member()`；只有 `EnterPre` 可取消。 |
-| `sect` | `JoinPre`、`JoinPost`、`LeavePre`、`LeavePost`、`PromotePre`、`PromotePost` | `sect()`、`data()`；所有 `*Pre` 可取消。 |
 | `soul` | `TransferPre`、`TransferPost`、`ReclaimPre`、`ReclaimPost` | `entity()`、`soul()`；所有 `*Pre` 可取消。 |
 | `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`BREAK`、`RECALL`、`RELEASE`；`Pre` 可取消。 |
 | `tribulation` | `StartPre`、`StartPost`、`PhasePre`、`PhasePost`、`Complete` | `tribulation()`（`Holder<Tribulation>`）、`phase()`、`data()`；`StartPre`、`PhasePre` 可取消。 |
@@ -528,7 +526,7 @@ MxtEvents.cultivationBreak(event => {
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
 
-只在服务端才有意义的操作遇到客户端脚本时不会抛异常，而是只记录一次警告并拒绝执行，避免脚本把客户端状态改坏：`MxtCosts.consume`，以及 `MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtAura`、`MxtSouls`、`MxtTriggers` 中所有会改动状态的方法。
+只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtSouls` 以及 `MxtTriggers.publish` 直接返回 `false`，或把结果里的 `failure()` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
 
 `MxtActions.execute*` 故意不设该保护，因为内置 Action 自己决定作用端：JSON 里声明了客户端执行的 Action（例如带 `client` 标志的速度 Action）本来就应当就地运行。
 

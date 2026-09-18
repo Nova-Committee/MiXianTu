@@ -176,7 +176,7 @@
 
 | 系统 | 结构 | 可复用性 |
 | --- | --- | --- |
-| `Sect.ranks`（`data/Sect.java:36-45`） | `Rank(id, priority, min_contribution, permissions, promotion_costs)`：按贡献阈值定位职级 + 晋升消耗 + 每级权限 | **最接近现成阶梯**，但它是 `Sect` 的内联字段而非独立注册表，且没有 next 指针（顺序由阈值隐含） |
+| ~~`Sect.ranks`（`data/Sect.java:36-45`）~~ | ~~`Rank(id, priority, min_contribution, permissions, promotion_costs)`：按贡献阈值定位职级 + 晋升消耗 + 每级权限~~ | **已删除**（`sect` 注册表与 `data/Sect.java` 随宗门系统整体移除），不能再作为参考 |
 | `ForgingBlueprint.quality_by_extra_steps`（`ForgingBlueprint.java:80, 118-119, 209-222`） | `QualityThreshold(maxExtraSteps, quality)` 升序阈值表，校验必须以 `Integer.MAX_VALUE` 收尾 | 纯"阈值 → `item_quality`"映射，无状态、无升级行为；可作为阈值表写法参考 |
 | `Title.maximum_level`（`data/Title.java:24`） | 单字段等级上限（1..1000） | 只有上限，**没有等级系统**（审计已记"等级上限缺少消费者"） |
 | `Curse.max_stacks` + `StackingMode`（`data/curse/Curse.java:21, 30-31, 49-57`） | 层数上限 + 堆叠策略 | 层数语义，不是等级链 |
@@ -233,7 +233,7 @@
 - 事件：`src/main/java/com/iafenvoy/mxt/event/TechniqueLearnEvent.java`
 - 注册：`src/main/java/com/iafenvoy/mxt/registry/{MxtResourceKeys,MxtDatapackRegistries,MxtItems}.java`
 - 展示：`src/main/java/com/iafenvoy/mxt/data/item/ItemBindingTooltipAppender.java`、`src/main/java/com/iafenvoy/mxt/screen/information/InformationManager.java`
-- 等级链参考（§8）：`data/cultivation/RealmStage.java`、`runtime/cultivation/CultivationService.java`、`attachment/CultivationAttachment.java`、`data/Sect.java`、`data/quality/ItemQuality.java`、`data/forging/ForgingBlueprint.java`、`data/Tribulation.java`
+- 等级链参考（§8）：`data/cultivation/RealmStage.java`、`runtime/cultivation/CultivationService.java`、`attachment/CultivationAttachment.java`、`data/quality/ItemQuality.java`、`data/forging/ForgingBlueprint.java`、`data/Tribulation.java`
 - 测试夹具：`src/test-mod/resources/data/mxt_test/mxt/technique/{qingxiao_breathing_manual,sword_manual,body_manual}.json`、`.../mxt/technique_binding/qingxiao_breathing_jade_slip.json`、`.../mxt/skill_stage/{sword_art_1,sword_art_2}.json`、`.../mxt/resource/sword_mastery.json`、`.../mxt/trigger/sword_mastery_from_break.json`
 - 相关文档：`docs/数据包格式.md`（`skill_stage` 段 + `technique` 字段）、`docs/guide/datapack/overview.md:56`、`docs/模块实现审计.md:74-75`、`docs/item-bindings.md:10-16, 65-78`、`docs/guide/datapack/cultivation.md:5`、`docs/curios槽位.md`、`E:\Website\docs\docs\mod\mxt\datapack\json\{technique,skill_stage,index}.md`、`...\datapack\overview.md`、`...\player-guide\curios-slots.md`
 

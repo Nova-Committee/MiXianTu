@@ -10,6 +10,7 @@ title: 命令
 | --- | --- |
 | `/mxt registries list` | 列出动态注册表及条目数量。 |
 | `/mxt registries validate` | 显示当前数据包注册表校验状态。 |
+| `/picker [<category>]`（= `/mxt picker`） | 打开物品选择器，列出所选数据包注册表定义对应的物品；`category` 是注册表 ID（如 `mxt:aura`、`mxt:currency`、`mxt:item_binding`），不填列出全部已注册分类。需要 gamemaster 权限，且只在创造模式下可用。 |
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
 | `/mxt resource <id>` | 查询资源值。 |
 | `/mxt resource <id> set <value>` | 设置资源值。 |
@@ -23,7 +24,6 @@ title: 命令
 | `/ability cast <id>`（= `/mxt ability cast <id>`） | 强制施放技能。 |
 | `/mxt breakthrough <resource>` | 尝试突破指定资源对应的境界。 |
 | `/mxt realm set <realm>` | 设置线性境界。 |
-| `/mxt sect claim` / `release` | 占领或释放宗门领地。 |
 | `/mxt soul reclaim` | 回收可回收的灵魂。 |
 | `/mxt formation list`（= `/formation list`） | 列出当前维度所有已激活阵法：ID、阵心坐标、半径、阵主与已付费的维持次数。 |
 | `/mxt formation info`（= `/formation info`） | 列出覆盖玩家所在位置的阵法；重叠时全部列出，不做取舍。 |

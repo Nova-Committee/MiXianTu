@@ -4,7 +4,7 @@
 
 MiXianTu is a **cultivation mod framework**: it provides the **generic rules and runtime** that cultivation gameplay
 needs — cultivation, aura environment, realms and resources, abilities, formations, tribulations, forging, alchemy,
-economy and sects — without prescribing any particular setting or numbers.
+economy — without prescribing any particular setting or numbers.
 
 The actual items, blocks and recipes are provided by datapacks, KubeJS or other content mods, and MiXianTu's data tables
 and binding tables give them gameplay.
@@ -50,8 +50,8 @@ the changelog.**
   selector and where a projectile is launched from all use the stand, not whoever filled it.
 - **Slots**: three Curios slots — Back Weapon, Belt Item and Cultivation Technique — swappable with the main hand by
   keybind.
-- **Commands**: the `/mxt` family (registry validation, resource and aura queries, cultivation status, breakthrough,
-  sect territory and more) and `/display` to show equipment.
+- **Commands**: the `/mxt` family (registry validation, resource and aura queries, cultivation status, breakthrough
+  and more) and `/display` to show equipment.
 
 The actual gameplay content — realm values, aura distribution, abilities, formations and recipes — is provided by
 datapacks or content packs; installing the mod alone does not give you a complete progression.
@@ -102,7 +102,6 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Item Quality                    |   🚧   | Items can carry a quality shown in their tooltip, can be grouped and sorted by quality, and a quality group can also be read as a condition by other gameplay.                                                                                                                                                                                                                                                                                                                                                                                      |
 | Artifacts                       |   🚧   | Artifacts can store spirit power, carry the player in flight or provide abilities, and come with a refining gameplay.                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Economy                         |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                                                                                                                                                                                                                                                                                                                |
-| Sects                           |   🚧   | A sect has members and ranks, contribution accumulation, sect tasks and exchange, and can claim and release territory.                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Curios Slots                    |   ✅    | Players have four Curios slots — Back Weapon and Belt Item — rendered on the character, and swappable with the main hand by keybind.                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Friend and Foe Identification   |   ✅    | Every player can keep a list of the players they treat as their own, for the session or saved with the world, and other mods or scripts can answer the same question through a TriState event; it is asked by **player id**, so with FTB Teams installed it can answer for somebody who is offline.                                                                                                                                                                                                                                                 |
 

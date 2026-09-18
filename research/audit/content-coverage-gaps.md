@@ -24,7 +24,7 @@
 
 ## 1. 一页结论
 
-基座的**内核是齐的**：34 个数据包注册表、4 类 Action / 5 类 Condition / `NumberProvider` + exp4j、
+基座的**内核是齐的**：33 个数据包注册表、4 类 Action / 5 类 Condition / `NumberProvider` + exp4j、
 统一 `Ability`、灵气与资源、附件与同步、事件与 KubeJS 回调、25 个固有类型注册表都跑得起来，
 而且对象之间是**引用而非硬编码**。按内容表逐类对照之后，欠缺集中在三处：
 
@@ -66,11 +66,11 @@
 | `部件` | 2 / 4 | 1 方块 + `part` blockstate | 原版 blockstate | ✅ |
 | `结构变体` | 2 / 4 | 同一结构集 | 见 §4.8（只有一处矿石 worldgen） | 见 §4.8 |
 | `功能模式` | 1 / 4 | 1 方块 + `mode` | 基座做法是 2 个方块 + `StationMenu.Mode` 四态（`registry/MxtMenus.java:18-21`），已是"一类方块+模式" | ✅ |
-| `门派` | 1 / 6 | 1 物品 + 门派组件 | `sect` 数据包注册表已存在（`data/Sect.java`，`MxtDatapackRegistries.java:78`）；`TokenComponent` 可带 `kind/value`（`data/item/TokenComponent.java:25`） | ✅ |
+| `门派` | 1 / 6 | 1 物品 + 门派组件 | 基座不再提供 `sect`（数据包注册表与运行时已整体删除）；`TokenComponent` 可带 `kind/value`（`data/item/TokenComponent.java:25`），内容包可据此自建门派标识 | **B（轻）** |
 | `群系变体` | 1 / 2 | 群系 | 原版；`AuraZone.biomes` 可按群系 Holder 或标签（`data/aura/AuraZone.java:36`） | ✅ |
 | `同族变种` / `(存疑)` / `效果编号(存疑)` | 11 族 / 29 行 | —— | 轴未定，属内容决策 | 待人工 |
 
-**小结**：19 轴里 **6 轴已经能表达**（命令参数、部件、功能模式、门派、群系变体、外观），
+**小结**：19 轴里 **5 轴已经能表达**（命令参数、部件、功能模式、群系变体、外观），
 **5 轴卡在同一处**——基座没有「一个物品/方块带上一个通用档位值」这个概念。
 把 §4.9 的「通用变体组件」补上，`年份档`、`等阶`、`品相`、`结果状态`、`等级`
 合计 **82 族 / 235 行**一起解锁。
@@ -383,10 +383,9 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
   - `skill_stage` 的**比较条件**不存在（`MxtEntityConditions` 里没有；境界侧有
     `mxt:realm` 的 EXACT/AT_LEAST/AT_MOST 与 `mxt:has_realm` 可照抄，`RealmEntityCondition.java:24-29,57-66`）。
   - **公式变量**里没有阶段 rank（`MxtFormulaVariables.RealmVariable:146-166` 只在有 `ResourceSubject` 时给境界）。
-  - **通用"累加 → 阈值 → 升级"原语**不存在。现成的是**四套 bespoke**：
+  - **通用"累加 → 阈值 → 升级"原语**不存在。现成的是**三套 bespoke**：
     境界（`CultivationService.addProgress:165-207` + `threshold:283-297` + `commit:116-144`）、
-    功法熟练度（`TechniqueMasteryService.promote:56-75`）、丹药毒性（`PillService.java:20-27`）、
-    宗门职级（`SectService.promote:59-70`）。
+    功法熟练度（`TechniqueMasteryService.promote:56-75`）、丹药毒性（`PillService.java:20-27`）。
   - **没有"写等级"的动作**：`MxtEntityActions` 里没有 set-skill-stage 一类动作，
     `CultivationService.setRealm:271-281` 只作用于境界且只被 `/mxt` 管理命令调用（`MxtCommand.java:277-280`）。
     后果很具体：**「画符经验 ≥ 300 → 画符 1 级」今天无法纯数据包实现**——
@@ -485,9 +484,9 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | 23 | `TalismanComponent.appended()` | 铭刻的写入缝：`src/main` **零调用者**（唯一调用在 test-mod `MxtTestMod.java:5070`） | `data/item/TalismanComponent.java:44-48` |
 | 24 | `IdentificationComponent` | 只有读（`item/IdentificationMirrorItem.java:29-33`），**没有写入方** | `data/item/IdentificationComponent.java` |
 
-另有一条**文档承诺但代码没有**：`research/04_数据包与KubeJS边界.md:28-29` 写的
+另有一条曾经**文档承诺但代码没有**的 API：`research/04_数据包与KubeJS边界.md` 的设计稿里写过的
 `Mxt.registries().registerJson("ability", "example:fire_ball", …)` 在 `compat/kubejs/MxtKubeJsApi.java`
-里**不存在**（该 API 只有 `ability/curse/useAbility/…/addAuraBox/removeAuraArea` 等运行时方法）。
+里**不存在**（该 API 只有 `ability/curse/useAbility/…/addAuraBox/removeAuraArea` 等运行时方法）——该文档的 API 一节现已按实际形状改写并注明这一点。
 即 **KubeJS 不能注入数据包定义**，只能扩展固有类型；数据定义一律走数据包。
 
 ---
@@ -509,7 +508,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | 11 | `research/00_策划整理与范围.md:19-23` | 「明确不在本期：预置的…具体内容」 | `MxtItems` 已预置 38 件具体物品（四档灵石、令牌、符纸…），`data/mxt/mxt/` 已有 17 个默认定义，`data/mxt/worldgen/` 有基座自己的矿石 |
 | 12 | `runtime/cultivation/TechniqueCommand.java:184-187` 类注释 | `rebuild` 重建「granted abilities, **passive attributes and resource ceilings**」 | `rebuild`（`:188-190`）只调 `CultivationGrantService.recalculate`；被动属性靠每 tick 的 `PassiveAttributeService.tick`（`AbilityEventBridge.java:120`），资源上限来自 `resource` 定义（`ResourceService.resolveBounds:101-105`） |
 | 13 | `docs/通用物品.md:23` | 物品 id 写作 `mxt:blank_talisman_paper` | **不存在这个物品**：id 是 `mxt:blank_talisman`（`MxtItems.java:47`），只有模型文件与语言键叫 `..._paper`。见 §4.12-D3 |
-| 14 | `docs/guide/datapack/overview.md:54-60` | 注册表索引列 **32** 条 | 代码是 **34** 条（`MxtResourceKeys.java:86-119`），表里漏了 `tool_binding` 与 `blueprint_binding` |
+| 14 | `docs/guide/datapack/overview.md:54-60` | 注册表索引列 **32** 条 | 代码当时是 **34** 条（`MxtResourceKeys.java:86-119`），表里漏了 `tool_binding` 与 `blueprint_binding`；该表已补齐，现为 **33** 条（`sect` 注册表已删除） |
 | 15 | `docs/getting-started.md:48` vs `:51` | 同一文件里 `:48` 写「灵植、炼丹和自然生成规则仍缺少完整消费者」，`:51` 又写「阵法、锻造、炼丹」完成 | **文件内自相矛盾**；`:48` 是对的 |
 | 16 | `docs/guide/play/interaction.md:7` | 灵材台"输入**保留**…**取出结果时**扣除灵气" | 代码是**每 tick 自动**推进：9 格各 `shrink(1)`、产物直接进结果槽、灵气在 tick 内扣（`SpiritCraftingTableBlockEntity.java:96-99`） |
 
@@ -566,7 +565,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 | 位置 | 内容 |
 | --- | --- |
-| `registry/MxtResourceKeys.java:85-119` | 34 个数据包注册表的唯一清单 |
+| `registry/MxtResourceKeys.java:86-120` | 33 个数据包注册表的唯一清单 |
 | `runtime/alchemy/AlchemyWorkstation.java` | 零实现的炼丹工作台契约 |
 | `data/alchemy/AlchemyRecipe.java` / `SpiritHerb.java` | 炼丹配方 / 灵植定义 |
 | `recipe/SpiritRecipe.java` | 唯一把产物写成 `ItemStackTemplate` 的配方 |

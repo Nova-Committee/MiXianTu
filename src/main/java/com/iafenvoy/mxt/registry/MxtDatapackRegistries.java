@@ -76,7 +76,6 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
         register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.CODEC);
         register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.CODEC);
-        register(event, MxtResourceKeys.SECT, Sect.CODEC);
         register(event, MxtResourceKeys.REALM_INSTANCE, RealmInstance.CODEC);
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);
         register(event, MxtResourceKeys.ITEM_BINDING, ItemBinding.CODEC);

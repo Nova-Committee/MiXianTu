@@ -141,10 +141,9 @@ public static void onRelation(FriendEvent.Relation event) {
     // 判断者可能离线，所以按 id 走；需要实体时才取，取不到就交给别的来源。
     Player judge = event.judge().filter(Player.class::isInstance).map(Player.class::cast).orElse(null);
     if (judge == null) return;
-    Holder<Sect> mine = judge.getData(MxtAttachments.SECT).sect().orElse(null);
-    Holder<Sect> theirs = candidate.getData(MxtAttachments.SECT).sect().orElse(null);
-    // 同宗门算自己人；其余情况不表态，交回好友名单。
-    if (mine != null && mine.equals(theirs)) event.setResult(TriState.TRUE);
+    // 同一支计分板队伍算自己人；其余情况不表态，交回好友名单。
+    Team team = judge.getTeam();
+    if (team != null && team.isAlliedTo(candidate.getTeam())) event.setResult(TriState.TRUE);
 }
 
 public static boolean mayHarm(Entity attacker, Entity victim) {

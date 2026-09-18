@@ -32,7 +32,7 @@ title: 修炼、境界与灵根
 // data/example/mxt/realm_stage/foundation.json
 {
   "aura": "example:qi",
-  "cultivate_condition": {"type": "minecraft:always_true"},
+  "cultivate_condition": {"type": "mxt:always_true"},
   "aura_share_weight": 1.0,
   "breakthrough_exp": 100,
   "max_experience": 250,
