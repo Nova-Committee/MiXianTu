@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraValue;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -15,7 +15,7 @@ import java.util.Map;
  * marks an emitter inside an active formation, which supplies the formation instead and is therefore left out
  * of the shared stock and of the weighted view, set when the chunk is rebuilt.
  */
-public record BlockAuraContribution(BlockPos position, Map<Holder<Resource>, AuraValue> aura, boolean absorbed) {
+public record BlockAuraContribution(BlockPos position, Map<Holder<Aura>, AuraValue> aura, boolean absorbed) {
     public static final Codec<BlockAuraContribution> CODEC = RecordCodecBuilder.create(i -> i.group(
             BlockPos.CODEC.fieldOf("position").forGetter(BlockAuraContribution::position),
             AuraValue.MAP_CODEC.fieldOf("aura").forGetter(BlockAuraContribution::aura),

@@ -64,7 +64,8 @@ public final class FormationCenters {
                     double distance = distanceSquared(candidate, clicked);
                     if (distance >= bestDistance) continue;
                     for (Holder<Formation> formation : candidates) {
-                        if (!FormationStructureValidator.STRUCTURE.matches(level, candidate, formation.value())) continue;
+                        if (!FormationStructureValidator.STRUCTURE.matches(level, candidate, formation.value()))
+                            continue;
                         best = new Match(candidate, formation);
                         bestDistance = distance;
                         break;

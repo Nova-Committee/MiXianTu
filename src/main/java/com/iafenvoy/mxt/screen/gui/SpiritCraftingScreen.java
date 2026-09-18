@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -44,13 +44,13 @@ public final class SpiritCraftingScreen extends AbstractContainerScreen<SpiritCr
                 PANEL_WIDTH, PANEL_HEIGHT, PANEL_WIDTH, PANEL_HEIGHT);
         int row = 0;
         for (int index = 0; index < 8; index++) {
-            Holder<Resource> resource = this.menu.progressResource(index);
-            if (resource == null) continue;
+            Holder<Aura> aura = this.menu.progressAura(index);
+            if (aura == null) continue;
             int required = this.menu.progressRequirement(index);
             int amount = Math.min(this.menu.progressAmount(index), required);
-            int color = 0xFF000000 | resource.value().particleColor();
+            int color = 0xFF000000 | aura.value().resource().value().particleColor();
             int y = panelY + PANEL_PADDING + row * 26;
-            Component name = DefinitionText.name(resource, "resource");
+            Component name = DefinitionText.name(aura, "aura");
             Component progress = Component.literal(amount + " / " + required);
             int progressX = panelX + PANEL_WIDTH - PANEL_PADDING - this.font.width(progress);
             graphics.text(this.font, name, panelX + PANEL_PADDING, y, color, true);

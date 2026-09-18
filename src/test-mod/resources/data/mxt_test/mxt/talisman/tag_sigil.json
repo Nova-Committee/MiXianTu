@@ -1,0 +1,4 @@
+{
+  "abilities": ["#mxt_test:sigil/manifold_arts"],
+  "aura_cost": { "mxt_test:spirit_power": 3 }
+}

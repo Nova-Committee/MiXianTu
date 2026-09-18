@@ -273,7 +273,7 @@ public final class TechniquePanelScreen extends Screen {
              * for the level's short display name or its rank.
              */
             private Component tooltip() {
-                MutableComponent line = DefinitionText.name(this.row.technique(), "cultivation_technique").copy();
+                MutableComponent line = DefinitionText.name(this.row.technique(), "technique").copy();
                 if (this.row.hasStage())
                     line.append(" ").append(Component.literal(HolderHelper.id(this.row.stage()).toString())
                             .withStyle(ChatFormatting.DARK_GRAY));
@@ -282,7 +282,7 @@ public final class TechniquePanelScreen extends Screen {
 
             @Override
             public @NonNull Component getNarration() {
-                return DefinitionText.name(this.row.technique(), "cultivation_technique");
+                return DefinitionText.name(this.row.technique(), "technique");
             }
         }
     }

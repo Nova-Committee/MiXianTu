@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -24,9 +25,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * One named realm stage. Conditions and outcomes are resolved by the cultivation runtime.
+ * One named realm stage, belonging to one {@link Aura}: the chain it is a link of, what it costs, and what
+ * happens when it gives way to the next. Conditions and outcomes are resolved by the cultivation runtime.
  */
-public record RealmStage(Holder<CultivationProfile> cultivation, NumberProvider auraShareWeight, EntityCondition cultivateCondition,
+public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight, EntityCondition cultivateCondition,
                          Optional<Holder<RealmStage>> nextRealm,
                          NumberProvider breakthroughExp, NumberProvider maxExperience,
                          CultivateConditions breakthrough,
@@ -44,7 +46,7 @@ public record RealmStage(Holder<CultivationProfile> cultivation, NumberProvider 
 
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            CultivationProfile.CODEC.fieldOf("cultivation").forGetter(RealmStage::cultivation),
+            Aura.CODEC.fieldOf("aura").forGetter(RealmStage::aura),
             NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
             EntityCondition.optionalCodec("cultivate_condition").forGetter(RealmStage::cultivateCondition),
             RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
@@ -66,7 +68,7 @@ public record RealmStage(Holder<CultivationProfile> cultivation, NumberProvider 
      */
     @Override
     public @NonNull String toString() {
-        return "RealmStage[cultivation=" + HolderHelper.id(this.cultivation) + ", hasNextRealm=" + this.nextRealm.isPresent()
+        return "RealmStage[aura=" + HolderHelper.id(this.aura) + ", hasNextRealm=" + this.nextRealm.isPresent()
                 + ", breakthroughConditions=" + this.breakthrough.conditions().size() + ", costs=" + this.breakthroughCosts.size()
                 + ", abilityRequirements=" + this.abilityRequirements.size() + ", hasTribulation=" + this.tribulation.isPresent() + "]";
     }

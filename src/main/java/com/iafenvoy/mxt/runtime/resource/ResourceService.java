@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -112,13 +112,13 @@ public final class ResourceService {
      * Rank of this entity's stage in the chain, or {@code -1} when it has no stage in it. The chain
      * holder is the state key, so no registry lookup is needed. Read by the resource formula variables.
      */
-    public static int realmRank(CultivationAttachment spirit, Holder<CultivationProfile> cultivation) {
-        Holder<RealmStage> current = spirit.realmStage(cultivation);
+    public static int realmRank(CultivationAttachment spirit, Holder<Aura> aura) {
+        Holder<RealmStage> current = spirit.realmStage(aura);
         if (current != null) {
             Identifier currentId = HolderHelper.id(current);
             Optional<Integer> cached = ServerCache.get().flatMap(cache -> cache.rankForRealm(currentId));
             if (cached.isPresent()) return cached.get();
-            Holder<RealmStage> stage = cultivation.value().firstRealm().orElse(null);
+            Holder<RealmStage> stage = aura.value().firstRealm().orElse(null);
             for (int rank = 0; stage != null && rank < 1024; rank++) {
                 if (stage.equals(current)) return rank;
                 stage = stage.value().nextRealm().orElse(null);
@@ -127,7 +127,7 @@ public final class ResourceService {
         }
         // A null realm stage represents a mortal, whose formulas still use the
         // chain's first realm as the pending cultivation stage.
-        return cultivation.value().firstRealm()
+        return aura.value().firstRealm()
                 .map(first -> ServerCache.get().flatMap(cache -> cache.rankForRealm(HolderHelper.id(first))).orElse(0))
                 .orElse(-1);
     }

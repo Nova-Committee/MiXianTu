@@ -26,7 +26,7 @@
 | --- | --- | --- |
 | `structure_template` | `structureTemplate`（`Identifier`，必填） | ✅ 一致 |
 | `radius` | `radius`（`NumberProvider`，必填） | ✅ 一致 |
-| `max_bonus` | `maxBonus`（`Map<Holder<Resource>, NumberProvider>`，默认空） | ✅ 一致 |
+| `max_bonus` | `maxBonus`（`Map<Holder<Aura>, NumberProvider>`，默认空） | ✅ 一致 |
 | `activation_costs` | `activationCosts`（默认空） | ✅ 一致 |
 | `maintenance_costs` | `maintenanceCosts`（默认空） | ✅ 一致 |
 | `activate_action` / `tick_action` / `deactivate_action` | 同名字段（`BlockAction`，默认 `no_op`） | ✅ 一致 |

@@ -35,6 +35,7 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
 public final class ServerNetworkHandler {
     public static final Logger MXT_DEBUG = LogUtils.getLogger();
+
     static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
         Player player = context.player();
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);

@@ -7,6 +7,6 @@
   "burst_amount": 10,
   "use_condition": {
     "type": "mxt:has_realm",
-    "resource": "mxt_test:spirit_power"
+    "aura": "mxt_test:spirit_power"
   }
 }

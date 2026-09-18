@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.compat.kubejs;
 
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
@@ -85,23 +85,23 @@ public final class MxtKubeJsApi {
         return !entity.level().isClientSide() && SoulService.reclaim(entity);
     }
 
-    public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier resource, FormulaContext context) {
+    public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier auraId, FormulaContext context) {
         if (entity.level().isClientSide())
             return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
-        if (MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, resource).isEmpty())
+        if (MxtDatapackRegistries.get(MxtResourceKeys.AURA, auraId).isEmpty())
             return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
         return CultivationService.attempt(entity, entity.getData(MxtAttachments.CULTIVATION),
-                entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context, () -> true);
+                entity.getData(MxtAttachments.RESOURCE_HOLDER), auraId, context, () -> true);
     }
 
     /**
      * Adds non-negative cultivation only; content scripts cannot set arbitrary negative or non-finite state.
      */
-    public static boolean addCultivation(LivingEntity entity, Identifier resource, double amount) {
+    public static boolean addCultivation(LivingEntity entity, Identifier auraId, double amount) {
         if (entity == null || entity.level().isClientSide() || !Double.isFinite(amount) || amount < 0.0D) return false;
-        Holder<Resource> holder = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource).orElse(null);
-        if (holder == null) return false;
-        CultivationService.addProgress(entity, holder, amount, FormulaContext.of(entity));
+        Holder<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId).orElse(null);
+        if (aura == null) return false;
+        CultivationService.addProgressForChain(entity, aura, amount, FormulaContext.of(entity));
         return true;
     }
 

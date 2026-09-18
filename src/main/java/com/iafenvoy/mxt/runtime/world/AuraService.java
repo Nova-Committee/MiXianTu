@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -9,7 +10,6 @@ import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.*;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.data.formation.BuffFormationAction;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -88,12 +88,12 @@ public final class AuraService {
                 formation.get().holder().get())).isCanceled()) {
             resolved = formation.get();
         }
-        Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
+        Map<Holder<Aura>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
         if (pools.isEmpty())
             pools.putAll(pools(level, resolved.holder().orElse(null), resolved.definition(), pos, level.getGameTime()));
         applyBlockDistance(level, pools, chunk, resolved.definition(), pos, level.getGameTime());
         applyMaximumBonus(pools, resolved.maxBonus());
-        return new AuraResult(pools, resolved.definition().auraKinds(),
+        return new AuraResult(pools,
                 resolved.definition().rules(), resolved.definition().elementFitBonus(), resolved.definition().elementConflictPenalty(),
                 resolved.definition().cultivateCondition(), resolved.definition().distribution(), resolved.id(), resolved.kind());
     }
@@ -105,42 +105,42 @@ public final class AuraService {
     public static AuraResult getSensedAura(Level level, BlockPos pos) {
         AuraResult resolved = getPositionAura(level, pos);
         AuraZone zone = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, resolved.source()).orElse(null);
-        if (zone == null) return new AuraResult(Map.of(), resolved.auraKinds(), resolved.rules(),
+        if (zone == null) return new AuraResult(Map.of(), resolved.rules(),
                 resolved.elementFitBonus(), resolved.elementConflictPenalty(), resolved.cultivateCondition(),
                 resolved.distribution(), resolved.source(), resolved.sourceKind());
-        Map<Holder<Resource>, AuraPool> pools = pools(level, holderOf(level, zone), zone, pos, level.getGameTime());
-        return new AuraResult(pools, resolved.auraKinds(), resolved.rules(), resolved.elementFitBonus(),
+        Map<Holder<Aura>, AuraPool> pools = pools(level, holderOf(level, zone), zone, pos, level.getGameTime());
+        return new AuraResult(pools, resolved.rules(), resolved.elementFitBonus(),
                 resolved.elementConflictPenalty(), resolved.cultivateCondition(), resolved.distribution(),
                 resolved.source(), resolved.sourceKind());
     }
 
     private static AuraResult preview(Resolved resolved, Level level, BlockPos pos) {
         return new AuraResult(pools(level, resolved.holder().orElse(null), resolved.definition(), pos, level.getGameTime()),
-                resolved.definition().auraKinds(), resolved.definition().rules(),
+                resolved.definition().rules(),
                 resolved.definition().elementFitBonus(), resolved.definition().elementConflictPenalty(),
                 resolved.definition().cultivateCondition(), resolved.definition().distribution(), resolved.id(), resolved.kind());
     }
 
     /**
-     * Consumes each requested resource pool atomically.
+     * Consumes each requested aura pool atomically.
      */
-    public static boolean consume(Level level, BlockPos pos, Map<Holder<Resource>, Double> costs) {
+    public static boolean consume(Level level, BlockPos pos, Map<Holder<Aura>, Double> costs) {
         if (costs.values().stream().anyMatch(value -> !Double.isFinite(value) || value < 0.0D)) return false;
         return level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).consume(costs);
     }
 
     /**
-     * Applies independent resource deltas. Missing resources are never implicitly created.
+     * Applies independent aura deltas. Missing auras are never implicitly created.
      */
-    public static void change(Level level, BlockPos pos, Map<Holder<Resource>, Double> amounts) {
+    public static void change(Level level, BlockPos pos, Map<Holder<Aura>, Double> amounts) {
         if (amounts.values().stream().anyMatch(value -> !Double.isFinite(value))) return;
         level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).change(amounts);
     }
 
     public static void initialize(AuraChunkAttachment chunk, Resolved resolved, BlockPos pos) {
         AuraZone zone = resolved.definition();
-        Map<Holder<Resource>, AuraPool> pools = computePools(zone, pos, 0L);
-        chunk.initializeAuras(pools, zone.auraKinds());
+        Map<Holder<Aura>, AuraPool> pools = computePools(zone, pos, 0L);
+        chunk.initializeAuras(pools);
         chunk.setTemplate(resolved.holder());
         chunk.setInitialized(true);
     }
@@ -244,14 +244,14 @@ public final class AuraService {
     }
 
     /**
-     * The ceiling bonus a formation applies, summed per resource across its benefit modules with the highest
+     * The ceiling bonus a formation applies, summed per aura across its benefit modules with the highest
      * winning, which is the same rule the resolver applies between overlapping formations.
      */
-    private static Map<Holder<Resource>, Double> maximumBonus(Formation formation, FormulaContext context) {
-        Map<Holder<Resource>, Double> values = new LinkedHashMap<>();
-        buffModules(formation).forEach(buff -> buff.maxBonus().forEach((resource, provider) -> {
+    private static Map<Holder<Aura>, Double> maximumBonus(Formation formation, FormulaContext context) {
+        Map<Holder<Aura>, Double> values = new LinkedHashMap<>();
+        buffModules(formation).forEach(buff -> buff.maxBonus().forEach((aura, provider) -> {
             double value = provider.evaluate(context);
-            if (Double.isFinite(value) && value > 0.0D) values.merge(resource, value, Math::max);
+            if (Double.isFinite(value) && value > 0.0D) values.merge(aura, value, Math::max);
         }));
         return values;
     }
@@ -262,8 +262,8 @@ public final class AuraService {
                 .map(BuffFormationAction.class::cast);
     }
 
-    private static void applyMaximumBonus(Map<Holder<Resource>, AuraPool> pools, Map<Holder<Resource>, Double> bonuses) {
-        bonuses.forEach((resource, bonus) -> pools.computeIfPresent(resource, (ignored, pool) ->
+    private static void applyMaximumBonus(Map<Holder<Aura>, AuraPool> pools, Map<Holder<Aura>, Double> bonuses) {
+        bonuses.forEach((aura, bonus) -> pools.computeIfPresent(aura, (ignored, pool) ->
                 pool.maximum() == Double.POSITIVE_INFINITY ? pool : pool.withMaximum(pool.maximum() + bonus)));
     }
 
@@ -279,11 +279,11 @@ public final class AuraService {
      * source positions, the rest use their centre and inverse-square falloff, and a source section is only
      * read when its chunk is already loaded.
      */
-    private static void applyBlockDistance(Level level, Map<Holder<Resource>, AuraPool> pools,
+    private static void applyBlockDistance(Level level, Map<Holder<Aura>, AuraPool> pools,
                                            AuraChunkAttachment currentChunk, AuraZone zone,
                                            BlockPos query, long gameTime) {
         SectionPos querySection = SectionPos.of(query);
-        Map<Holder<Resource>, double[]> weighted = new LinkedHashMap<>();
+        Map<Holder<Aura>, double[]> weighted = new LinkedHashMap<>();
         int queryChunkX = querySection.x();
         int queryChunkZ = querySection.z();
 
@@ -328,28 +328,28 @@ public final class AuraService {
 
         // The current chunk's stored stock includes its unweighted block portion: remove that first, then add
         // the spatially weighted view.
-        Map<Holder<Resource>, AuraValue> currentBlock = currentChunk.blockAura();
-        Set<Holder<Resource>> resources = new LinkedHashSet<>(currentBlock.keySet());
-        resources.addAll(weighted.keySet());
-        if (resources.isEmpty()) return;
-        Map<Holder<Resource>, AuraPool> environment = pools(level, holderOf(level, zone), zone, query, gameTime);
-        for (Holder<Resource> resource : resources) {
-            AuraPool shared = pools.get(resource);
-            AuraValue aggregate = currentBlock.getOrDefault(resource, AuraValue.ZERO);
+        Map<Holder<Aura>, AuraValue> currentBlock = currentChunk.blockAura();
+        Set<Holder<Aura>> auras = new LinkedHashSet<>(currentBlock.keySet());
+        auras.addAll(weighted.keySet());
+        if (auras.isEmpty()) return;
+        Map<Holder<Aura>, AuraPool> environment = pools(level, holderOf(level, zone), zone, query, gameTime);
+        for (Holder<Aura> aura : auras) {
+            AuraPool shared = pools.get(aura);
+            AuraValue aggregate = currentBlock.getOrDefault(aura, AuraValue.ZERO);
             double aggregateAmount = aggregate.amount();
             double aggregateMaximum = aggregate.max().resolve(aggregate.amount());
-            double baseAmount = shared == null ? environment.getOrDefault(resource, zeroPool()).amount()
+            double baseAmount = shared == null ? environment.getOrDefault(aura, zeroPool()).amount()
                     : Math.max(0.0D, shared.amount() - aggregateAmount);
-            double baseMaximum = shared == null ? environment.getOrDefault(resource, zeroPool()).maximum()
+            double baseMaximum = shared == null ? environment.getOrDefault(aura, zeroPool()).maximum()
                     : subtractMaximum(shared.maximum(), aggregateMaximum);
-            double baseRegen = shared == null ? environment.getOrDefault(resource, zeroPool()).regenPerTick()
+            double baseRegen = shared == null ? environment.getOrDefault(aura, zeroPool()).regenPerTick()
                     : Math.max(0.0D, shared.regenPerTick() - aggregate.regenPerTick());
-            double[] contribution = weighted.getOrDefault(resource, new double[3]);
+            double[] contribution = weighted.getOrDefault(aura, new double[3]);
             double maximum = baseMaximum == Double.POSITIVE_INFINITY || Double.isInfinite(contribution[1])
                     ? Double.POSITIVE_INFINITY : baseMaximum + contribution[1];
             // The block part of this pool is recorded as supplied, not as environment: a consumer allowed to
             // spend the ground it stands on must not also spend the field aura it is itself emitting.
-            pools.put(resource, new AuraPool(baseAmount + contribution[0], maximum, baseRegen + contribution[2],
+            pools.put(aura, new AuraPool(baseAmount + contribution[0], maximum, baseRegen + contribution[2],
                     contribution[0]));
         }
     }
@@ -379,15 +379,15 @@ public final class AuraService {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    private static void addWeighted(Map<Holder<Resource>, double[]> weighted,
+    private static void addWeighted(Map<Holder<Aura>, double[]> weighted,
                                     AuraChunkAttachment attachment,
-                                    Map<Holder<Resource>, AuraValue> values,
+                                    Map<Holder<Aura>, AuraValue> values,
                                     BlockPos sourcePosition, double falloff,
                                     Level level, long gameTime) {
-        values.forEach((resource, value) -> {
-            double availability = sourceAvailability(level, attachment, resource, sourcePosition, gameTime);
+        values.forEach((aura, value) -> {
+            double availability = sourceAvailability(level, attachment, aura, sourcePosition, gameTime);
             if (availability <= 0.0D) return;
-            double[] contribution = weighted.computeIfAbsent(resource, ignored -> new double[3]);
+            double[] contribution = weighted.computeIfAbsent(aura, ignored -> new double[3]);
             contribution[0] += value.amount() * availability * falloff;
             contribution[1] += value.max().resolve(value.amount()) * availability * falloff;
             contribution[2] += value.regenPerTick() * availability * falloff;
@@ -395,24 +395,24 @@ public final class AuraService {
     }
 
     private static double sourceAvailability(Level level, AuraChunkAttachment attachment,
-                                             Holder<Resource> resource, BlockPos sourcePosition, long gameTime) {
-        // One query asks for this once per source and per resource, so the static tier lookup and the
+                                             Holder<Aura> aura, BlockPos sourcePosition, long gameTime) {
+        // One query asks for this once per source and per aura, so the static tier lookup and the
         // environmental pools behind it are memoised rather than repeated. The aggregate and the shared
         // stock stay live reads: only the environment they are compared against is fixed for the tick.
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         try {
             ServerLevel server = level instanceof ServerLevel value ? value : null;
             AvailabilityKey key = server == null ? null
-                    : new AvailabilityKey(attachment, sourcePosition.immutable(), resource);
+                    : new AvailabilityKey(attachment, sourcePosition.immutable(), aura);
             if (key != null) {
                 Optional<Double> cached = AuraQueryCache.availability(server, key);
-                if (cached.isPresent()) return availability(attachment, resource, cached.get(), sourcePosition);
+                if (cached.isPresent()) return availability(attachment, aura, cached.get(), sourcePosition);
             }
             Resolved zone = staticZone(level, sourcePosition);
             double environmental = pools(level, zone.holder().orElse(null), zone.definition(), sourcePosition, gameTime)
-                    .getOrDefault(resource, zeroPool()).amount();
+                    .getOrDefault(aura, zeroPool()).amount();
             if (key != null) AuraQueryCache.cacheAvailability(server, key, environmental);
-            return availability(attachment, resource, environmental, sourcePosition);
+            return availability(attachment, aura, environmental, sourcePosition);
         } finally {
             if (started != 0L) AuraQueryCache.countSource(System.nanoTime() - started);
         }
@@ -422,10 +422,10 @@ public final class AuraService {
      * Turns the memoised environmental concentration and the live shared stock into an availability
      * between zero and one, split between the players that can currently see the source section.
      */
-    private static double availability(AuraChunkAttachment attachment, Holder<Resource> resource,
+    private static double availability(AuraChunkAttachment attachment, Holder<Aura> aura,
                                        double environmental, BlockPos sourcePosition) {
-        AuraValue aggregate = attachment.blockAura().get(resource);
-        AuraPool shared = attachment.auras().get(resource);
+        AuraValue aggregate = attachment.blockAura().get(aura);
+        AuraPool shared = attachment.auras().get(aura);
         if (aggregate == null || shared == null || aggregate.amount() <= 0.0D) return 0.0D;
         double available = Math.clamp((shared.amount() - environmental) / aggregate.amount(), 0.0D, 1.0D);
         int visitors = attachment.auraVisitors(SectionPos.of(sourcePosition));
@@ -454,15 +454,15 @@ public final class AuraService {
      * block-emitter query asks for it once per contributing source, so it is memoised per tick under the
      * zone's registry holder; a zone without a holder, such as the empty fallback, is not memoised.
      */
-    private static Map<Holder<Resource>, AuraPool> pools(Level level, Holder<AuraZone> holder, AuraZone zone,
-                                                         BlockPos pos, long gameTime) {
+    private static Map<Holder<Aura>, AuraPool> pools(Level level, Holder<AuraZone> holder, AuraZone zone,
+                                                     BlockPos pos, long gameTime) {
         if (!(level instanceof ServerLevel server) || holder == null) return computePools(zone, pos, gameTime);
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         try {
             AuraLocation location = AuraQueryCache.location(server, pos);
-            Optional<Map<Holder<Resource>, AuraPool>> cached = AuraQueryCache.pools(server, location, holder);
+            Optional<Map<Holder<Aura>, AuraPool>> cached = AuraQueryCache.pools(server, location, holder);
             if (cached.isPresent()) return cached.get();
-            Map<Holder<Resource>, AuraPool> pools = computePools(zone, pos, gameTime);
+            Map<Holder<Aura>, AuraPool> pools = computePools(zone, pos, gameTime);
             AuraQueryCache.cachePools(server, location, holder, pools);
             return pools;
         } finally {
@@ -489,12 +489,12 @@ public final class AuraService {
         return MxtDatapackRegistries.holders(MxtResourceKeys.AURA_ZONE).filter(holder -> holder.value() == zone).findFirst().map(holder -> holder);
     }
 
-    private static Map<Holder<Resource>, AuraPool> computePools(AuraZone zone, BlockPos pos, long gameTime) {
-        Map<Holder<Resource>, AuraPool> pools = new LinkedHashMap<>();
+    private static Map<Holder<Aura>, AuraPool> computePools(AuraZone zone, BlockPos pos, long gameTime) {
+        Map<Holder<Aura>, AuraPool> pools = new LinkedHashMap<>();
         double fluctuation = factor(zone, gameTime);
-        zone.aura().forEach((resource, value) -> {
+        zone.aura().forEach((aura, value) -> {
             double initial = Math.max(0.0D, (value.amount() + perlin(pos.getX(), pos.getZ(), zone.noise())) / 10.0D - 5.0D);
-            pools.put(resource, AuraPool.natural(initial * fluctuation, value.max().resolve(initial), value.regenPerTick()));
+            pools.put(aura, AuraPool.natural(initial * fluctuation, value.max().resolve(initial), value.regenPerTick()));
         });
         return pools;
     }
@@ -518,13 +518,13 @@ public final class AuraService {
     }
 
     public record Resolved(Optional<Holder<AuraZone>> holder, AuraZone definition, SourceKind kind,
-                           Map<Holder<Resource>, Double> maxBonus) {
+                           Map<Holder<Aura>, Double> maxBonus) {
         public Identifier id() {
             return this.holder.map(HolderHelper::id).orElse(EMPTY);
         }
     }
 
-    private static final AuraZone EMPTY_ZONE = new AuraZone(Map.of(), List.of(),
+    private static final AuraZone EMPTY_ZONE = new AuraZone(Map.of(),
             List.of(), List.of(),
             Fluctuation.NONE, Rules.DEFAULT, AlwaysTrueCondition.INSTANCE, Distribution.EQUAL,
             0, 0, Noise.NONE, Optional.empty(), ClientRender.DEFAULT, ClientHud.NONE, Integer.MIN_VALUE);

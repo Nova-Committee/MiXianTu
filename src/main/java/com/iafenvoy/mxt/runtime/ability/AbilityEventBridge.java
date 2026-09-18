@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
@@ -109,7 +109,7 @@ public final class AbilityEventBridge {
         initializeHudResources(entity, resourceHolder);
         // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
         // with no stored entry yet is created by its first change instead of by this loop.
-        for (Reference<CultivationProfile> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION).toList()) {
+        for (Reference<Aura> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).toList()) {
             Holder<Resource> resource = cultivation.value().resource();
             if (!resourceHolder.contains(resource)) continue;
             if (CultivationActionService.handlesNaturalRegeneration(entity, cultivation)) continue;

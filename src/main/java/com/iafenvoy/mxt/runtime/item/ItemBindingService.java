@@ -258,10 +258,12 @@ public final class ItemBindingService {
      */
     private static ItemAttributeModifiers baselineModifiers(ItemStack stack) {
         ItemAttributeModifiers current = stack.get(DataComponents.ATTRIBUTE_MODIFIERS);
-        if (current == null) return stack.getPrototype().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        if (current == null)
+            return stack.getPrototype().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
         Builder builder = ItemAttributeModifiers.builder();
         current.modifiers().forEach(entry -> {
-            if (!isBindingModifier(entry.modifier().id())) builder.add(entry.attribute(), entry.modifier(), entry.slot());
+            if (!isBindingModifier(entry.modifier().id()))
+                builder.add(entry.attribute(), entry.modifier(), entry.slot());
         });
         return builder.build();
     }

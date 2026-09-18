@@ -1,0 +1,4 @@
+{
+  "abilities": ["mxt_test:pos_pulse"],
+  "aura_cost": { "mxt_test:spirit_power": 2 }
+}

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.world.AuraService.Resolved;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
@@ -53,10 +53,10 @@ public final class AuraQueryCache {
     private static final Map<ServerLevel, Map<AuraLocation, Resolved>> STATIC = new IdentityHashMap<>();
     private static final Map<ServerLevel, Map<AuraLocation, Optional<Resolved>>> FORMATION = new IdentityHashMap<>();
     private static final Map<ServerLevel, Map<LevelPosition, AuraResult>> RESULT = new IdentityHashMap<>();
-    private static final Map<ServerLevel, Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Resource>, AuraPool>>>> POOLS = new IdentityHashMap<>();
+    private static final Map<ServerLevel, Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Aura>, AuraPool>>>> POOLS = new IdentityHashMap<>();
     /**
-     * Availability of one block emitter for one resource: one query asks every source in a 7x7 chunk
-     * neighbourhood for every resource, so the same answer is requested hundreds of times.
+     * Availability of one block emitter for one aura: one query asks every source in a 7x7 chunk
+     * neighbourhood for every aura, so the same answer is requested hundreds of times.
      */
     private static final Map<ServerLevel, Map<AvailabilityKey, Double>> AVAILABILITY = new IdentityHashMap<>();
     /**
@@ -417,11 +417,11 @@ public final class AuraQueryCache {
         return resolved;
     }
 
-    static Optional<Map<Holder<Resource>, AuraPool>> pools(ServerLevel level, AuraLocation location, Holder<AuraZone> zone) {
+    static Optional<Map<Holder<Aura>, AuraPool>> pools(ServerLevel level, AuraLocation location, Holder<AuraZone> zone) {
         if (!enabled || !current(level, location)) return Optional.empty();
-        Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Resource>, AuraPool>>> zones = POOLS.get(level);
-        Map<Holder<AuraZone>, Map<Holder<Resource>, AuraPool>> byZone = zones == null ? null : zones.get(location);
-        Map<Holder<Resource>, AuraPool> cached = byZone == null ? null : byZone.get(zone);
+        Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Aura>, AuraPool>>> zones = POOLS.get(level);
+        Map<Holder<AuraZone>, Map<Holder<Aura>, AuraPool>> byZone = zones == null ? null : zones.get(location);
+        Map<Holder<Aura>, AuraPool> cached = byZone == null ? null : byZone.get(zone);
         if (cached == null) {
             POOLS_MISSES.incrementAndGet();
             return Optional.empty();
@@ -431,9 +431,9 @@ public final class AuraQueryCache {
     }
 
     static void cachePools(ServerLevel level, AuraLocation location, Holder<AuraZone> zone,
-                           Map<Holder<Resource>, AuraPool> pools) {
+                           Map<Holder<Aura>, AuraPool> pools) {
         if (!enabled || !current(level, location)) return;
-        Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Resource>, AuraPool>>> zones = POOLS.get(level);
+        Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Aura>, AuraPool>>> zones = POOLS.get(level);
         if (zones == null || zones.size() >= MAX_ENTRIES) {
             zones = new HashMap<>();
             POOLS.put(level, zones);
@@ -472,10 +472,10 @@ public final class AuraQueryCache {
     }
 
     /**
-     * One block emitter's availability for one resource. The chunk attachment is part of the key, so
+     * One block emitter's availability for one aura. The chunk attachment is part of the key, so
      * two chunks that happen to describe the same source position can never share an entry.
      */
-    record AvailabilityKey(Object attachment, BlockPos source, Holder<Resource> resource) {
+    record AvailabilityKey(Object attachment, BlockPos source, Holder<Aura> aura) {
     }
 
     /**

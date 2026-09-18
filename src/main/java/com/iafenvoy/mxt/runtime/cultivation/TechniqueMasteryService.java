@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
@@ -45,7 +45,7 @@ public final class TechniqueMasteryService {
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext context = FormulaContext.of(entity);
         boolean advanced = false;
-        for (Holder<CultivationTechnique> technique : List.copyOf(spirit.learnedTechniques()))
+        for (Holder<Technique> technique : List.copyOf(spirit.learnedTechniques()))
             for (int step = 0; step < MAX_PROMOTIONS_PER_PASS; step++) {
                 if (!promote(entity, spirit, resources, technique, context)) break;
                 advanced = true;
@@ -54,8 +54,8 @@ public final class TechniqueMasteryService {
     }
 
     private static boolean promote(LivingEntity entity, SpiritIdentityAttachment spirit, ResourceHolderAttachment resources,
-                                   Holder<CultivationTechnique> technique, FormulaContext context) {
-        CultivationTechnique definition = technique.value();
+                                   Holder<Technique> technique, FormulaContext context) {
+        Technique definition = technique.value();
         Holder<Resource> mastery = definition.masteryResource().orElse(null);
         if (mastery == null) return false;
         Holder<SkillStage> target = SkillStageService.currentStage(spirit, technique)

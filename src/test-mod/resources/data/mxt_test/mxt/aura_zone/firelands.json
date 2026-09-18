@@ -5,7 +5,6 @@
   },
   "distribution": "random",
   "cultivate_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:spirit_power": { "min": 0, "max": 100 } } },
-  "aura_kinds": ["mxt_test:aura_kind/fire"],
   "biomes": "#minecraft:is_overworld",
   "fluctuation": {
     "enable": true,

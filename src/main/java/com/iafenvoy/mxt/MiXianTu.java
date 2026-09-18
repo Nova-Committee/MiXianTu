@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
+import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -25,6 +26,7 @@ public final class MiXianTu {
         AbilityEventBridge.initialize();
         CultivationTriggerService.initialize();
         TechniqueItemService.initialize();
+        SpiritChargeService.initialize();
 
         MxtAbilityComponents.REGISTRY.register(bus);
         MxtTriggers.REGISTRY.register(bus);

@@ -1,6 +1,5 @@
 {
   "overcomes": ["mxt_test:water"],
   "adapted_to": ["mxt_test:fire"],
-  "aura_kinds": ["mxt_test:aura_kind/fire"],
   "color": "#ff5522"
 }

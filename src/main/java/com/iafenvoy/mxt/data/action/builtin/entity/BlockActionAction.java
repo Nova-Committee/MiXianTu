@@ -4,11 +4,13 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Runs a block action at the acting entity's block position.
+ * Runs a block action at the block the activation happens in - the acting entity's own, or the place an item
+ * cast it from.
  */
 public record BlockActionAction(BlockAction action) implements EntityAction {
     public static final MapCodec<BlockActionAction> CODEC = BlockAction.CODEC.fieldOf("action").xmap(BlockActionAction::new, BlockActionAction::action);
@@ -16,7 +18,7 @@ public record BlockActionAction(BlockAction action) implements EntityAction {
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        this.action.execute(entity.level(), entity.blockPosition(), ctx);
+        this.action.execute(entity.level(), BlockPos.containing(ctx.position()), ctx);
     }
 
     @Override

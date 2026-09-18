@@ -1,20 +1,23 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.resource.Resource;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 
-import java.util.List;
 import java.util.Map;
 
 /**
  * Fully resolved aura at one position. Consumers must use this instead of raw chunk data.
+ * <p>
+ * What is present here is the whole answer to "which auras is this place made of": {@link #aura}'s key set.
+ * There is no second vocabulary of aura kinds, because a place that names an aura it does not hold is a claim
+ * nothing could check.
  */
-public record AuraResult(Map<Holder<Resource>, AuraPool> aura,
-                         List<Identifier> auraKinds, Rules rules, double elementFitBonus,
+public record AuraResult(Map<Holder<Aura>, AuraPool> aura,
+                         Rules rules, double elementFitBonus,
                          double elementConflictPenalty, EntityCondition cultivateCondition, Distribution distribution,
                          Identifier source, SourceKind sourceKind) {
     public enum SourceKind {BIOME, DIMENSION, CUSTOM, FORMATION, CHUNK}
@@ -31,8 +34,8 @@ public record AuraResult(Map<Holder<Resource>, AuraPool> aura,
         return this.aura.values().stream().mapToDouble(AuraPool::regenPerTick).sum();
     }
 
-    public AuraPool pool(Holder<Resource> resource) {
-        return this.aura.getOrDefault(resource, AuraPool.empty());
+    public AuraPool pool(Holder<Aura> aura) {
+        return this.aura.getOrDefault(aura, AuraPool.empty());
     }
 
     public boolean suppressCultivate() {

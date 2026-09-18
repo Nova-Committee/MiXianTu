@@ -1,0 +1,10 @@
+{
+  "type": "mxt:active",
+  "entity_action": {
+    "type": "mxt:sequence",
+    "actions": [
+      { "type": "mxt:add_resource", "resource": "mxt:common", "amount": "block_x" },
+      { "type": "mxt:spawn_projectile", "entity_type": "minecraft:arrow", "velocity_x": 0, "velocity_y": 0, "velocity_z": 0 }
+    ]
+  }
+}

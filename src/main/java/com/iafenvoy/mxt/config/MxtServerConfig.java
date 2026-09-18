@@ -23,6 +23,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
     public final Curios curios = new Curios();
     public final Cultivation cultivation = new Cultivation();
+    public final Talisman talisman = new Talisman();
     public final Aura aura = new Aura();
     public final Formations formations = new Formations();
     public final Commands commands = new Commands();
@@ -80,6 +81,21 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     }
 
     /**
+     * How a carrier behaves when it is used by hand rather than poured into. The pour has a price of its own, so
+     * the only thing left to state here is how often the click may be spent.
+     */
+    public static final class Talisman extends AutoInitConfigCategoryBase {
+        public final IntegerEntry useCooldown = IntegerEntry.builder("config.mxt.server.talisman.use_cooldown", 20)
+                .key("use_cooldown")
+                .tooltip("config.mxt.server.talisman.use_cooldown.tooltip")
+                .range(0, 72_000).build();
+
+        private Talisman() {
+            super("talisman", "config.mxt.server.talisman");
+        }
+    }
+
+    /**
      * How often the aura world is recomputed and how much of that work reports itself. Every switch here trades
      * responsiveness for server time, so they are grouped away from the gameplay tabs.
      */
@@ -115,7 +131,9 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 .key("plate_auto_detect")
                 .tooltip("config.mxt.server.formation.plate_auto_detect.tooltip")
                 .build();
-        /** What an empty allow list means; every plate written before the list existed relies on the default. */
+        /**
+         * What an empty allow list means; every plate written before the list existed relies on the default.
+         */
         public final BooleanEntry emptyAllowsAll = BooleanEntry.builder("config.mxt.server.formation.empty_plate_allows_all", true)
                 .key("empty_plate_allows_all")
                 .tooltip("config.mxt.server.formation.empty_plate_allows_all.tooltip")
@@ -132,7 +150,9 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 .key("respect_friends")
                 .tooltip("config.mxt.server.formation.respect_friends.tooltip")
                 .build();
-        /** Whether the owner's friends may take a formation down as well; off leaves it to the owner and operators. */
+        /**
+         * Whether the owner's friends may take a formation down as well; off leaves it to the owner and operators.
+         */
         public final BooleanEntry teammatesCanDismantle = BooleanEntry.builder("config.mxt.server.formation.teammates_can_dismantle", false)
                 .key("teammates_can_dismantle")
                 .tooltip("config.mxt.server.formation.teammates_can_dismantle.tooltip")
@@ -154,6 +174,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry formation = BooleanEntry.builder("config.mxt.server.commands.formation", true).key("formation").tooltip("config.mxt.server.commands.formation.tooltip").build();
         public final BooleanEntry friend = BooleanEntry.builder("config.mxt.server.commands.friend", true).key("friend").tooltip("config.mxt.server.commands.friend.tooltip").build();
         public final BooleanEntry lightning = BooleanEntry.builder("config.mxt.server.commands.lightning", true).key("lightning").tooltip("config.mxt.server.commands.lightning.tooltip").build();
+        public final BooleanEntry talisman = BooleanEntry.builder("config.mxt.server.commands.talisman", true).key("talisman").tooltip("config.mxt.server.commands.talisman.tooltip").build();
         public final BooleanEntry technique = BooleanEntry.builder("config.mxt.server.commands.technique", true).key("technique").tooltip("config.mxt.server.commands.technique.tooltip").build();
         public final BooleanEntry trade = BooleanEntry.builder("config.mxt.server.commands.trade", true).key("trade").tooltip("config.mxt.server.commands.trade.tooltip").build();
 
@@ -168,12 +189,16 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
      * the equipment slots are part of this mod's own model, not an integration.
      */
     public static final class Compat extends AutoInitConfigCategoryBase {
-        /** FTB Teams' own "this outsider is with us" rank; off leaves only real team members. */
+        /**
+         * FTB Teams' own "this outsider is with us" rank; off leaves only real team members.
+         */
         public final BooleanEntry ftbTeamsAlly = BooleanEntry.builder("config.mxt.server.compat.ftb_teams_ally", true)
                 .key("ftb_teams_ally")
                 .tooltip("config.mxt.server.compat.ftb_teams_ally.tooltip")
                 .build();
-        /** Off by default: a free-to-join team reports that rank for anybody at all. */
+        /**
+         * Off by default: a free-to-join team reports that rank for anybody at all.
+         */
         public final BooleanEntry ftbTeamsInvited = BooleanEntry.builder("config.mxt.server.compat.ftb_teams_invited", false)
                 .key("ftb_teams_invited")
                 .tooltip("config.mxt.server.compat.ftb_teams_invited.tooltip")
@@ -183,12 +208,16 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 .tooltip("config.mxt.server.compat.claim_linkage.tooltip")
                 .nameProvider(value -> Component.translatable("config.mxt.server.compat.claim_linkage." + value.name().toLowerCase()))
                 .build();
-        /** Off hands protection over even where there is nothing to hand it to, protecting nothing at all. */
+        /**
+         * Off hands protection over even where there is nothing to hand it to, protecting nothing at all.
+         */
         public final BooleanEntry delegateRequiresClaims = BooleanEntry.builder("config.mxt.server.compat.delegate_requires_claims", true)
                 .key("delegate_requires_claims")
                 .tooltip("config.mxt.server.compat.delegate_requires_claims.tooltip")
                 .build();
-        /** Three ways through, all of them the landowner's own answer; inert without a claim plugin. */
+        /**
+         * Three ways through, all of them the landowner's own answer; inert without a claim plugin.
+         */
         public final BooleanEntry wardsNeedClaimPermission = BooleanEntry.builder("config.mxt.server.compat.wards_need_claim_permission", true)
                 .key("wards_need_claim_permission")
                 .tooltip("config.mxt.server.compat.wards_need_claim_permission.tooltip")

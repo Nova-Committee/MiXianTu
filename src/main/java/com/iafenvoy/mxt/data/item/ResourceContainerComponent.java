@@ -25,7 +25,14 @@ import org.jspecify.annotations.NonNull;
 import java.util.function.Consumer;
 
 /**
- * Portable, resource-agnostic energy storage used by stones, batteries and future artifacts.
+ * Portable, resource-agnostic energy storage for the item that carries it: a vessel rather than a battery. It
+ * holds whatever the holder's own pool holds, fractional values included, and moves them to and from that pool
+ * on a click.
+ * <p>
+ * Item stores that count in whole units are a different thing and keep their amounts in
+ * {@code SpiritStorageComponent} - a spirit stone's fill and a talisman carrier's progress. That protocol is
+ * {@code AuraItemAccess}, its contract is whole units, and its capacity comes from the item or its data
+ * rather than from a constant here.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public record ResourceContainerComponent(Object2DoubleMap<Holder<Resource>> values) implements TooltipProvider {

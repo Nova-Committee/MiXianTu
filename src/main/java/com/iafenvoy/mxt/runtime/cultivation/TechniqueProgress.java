@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -34,23 +34,27 @@ public final class TechniqueProgress {
      * was gained since the current level.
      */
     public enum Mode {
-        /** The stored mastery against the next level's requirement, so the bar spans the whole climb. */
+        /**
+         * The stored mastery against the next level's requirement, so the bar spans the whole climb.
+         */
         ABSOLUTE,
-        /** Only what was gained since the current level, so every level starts from an empty bar. */
+        /**
+         * Only what was gained since the current level, so every level starts from an empty bar.
+         */
         WITHIN_LEVEL
     }
 
     /**
      * One learned technique and where its holder stands in the technique's chain.
      *
-     * @param stage             the level the holder stands on, or {@code null} when there is no chain
-     * @param rank              the zero-based rank of {@code stage} in its chain, or {@code -1}
-     * @param total             how many levels the technique's chain has, or {@code 0} without one
+     * @param stage              the level the holder stands on, or {@code null} when there is no chain
+     * @param rank               the zero-based rank of {@code stage} in its chain, or {@code -1}
+     * @param total              how many levels the technique's chain has, or {@code 0} without one
      * @param currentRequirement what the level the holder stands on asked for, or {@code 0}
-     * @param hasMastery        whether the technique names a resource that measures mastery
-     * @param required          what the next level asks for, or {@code NaN} at the top of the chain
+     * @param hasMastery         whether the technique names a resource that measures mastery
+     * @param required           what the next level asks for, or {@code NaN} at the top of the chain
      */
-    public record Entry(Holder<CultivationTechnique> technique, @Nullable Holder<SkillStage> stage, int rank,
+    public record Entry(Holder<Technique> technique, @Nullable Holder<SkillStage> stage, int rank,
                         int total, double currentRequirement, boolean hasMastery, double mastery, double required) {
         /**
          * Whether the technique has a level to display at all.
@@ -82,14 +86,14 @@ public final class TechniqueProgress {
      */
     public static List<Entry> rows(SpiritIdentityAttachment spirit, ResourceHolderAttachment resources, FormulaContext context) {
         List<Entry> rows = new ArrayList<>(spirit.learnedTechniques().size());
-        for (Holder<CultivationTechnique> technique : spirit.learnedTechniques())
+        for (Holder<Technique> technique : spirit.learnedTechniques())
             rows.add(row(technique, spirit, resources, context));
         return rows;
     }
 
-    private static Entry row(Holder<CultivationTechnique> technique, SpiritIdentityAttachment spirit,
+    private static Entry row(Holder<Technique> technique, SpiritIdentityAttachment spirit,
                              ResourceHolderAttachment resources, FormulaContext context) {
-        CultivationTechnique definition = technique.value();
+        Technique definition = technique.value();
         Holder<SkillStage> stage = SkillStageService.currentStage(spirit, technique).orElse(null);
         // A level of another chain (a data pack changed the technique's entry level) is not part of
         // this technique's climb, so it is reported as no level rather than as rank -1 of this one.
@@ -134,7 +138,7 @@ public final class TechniqueProgress {
      * How many levels the technique's chain has. The chain is validated when the server cache is
      * built, so this only walks the links.
      */
-    private static int chainLength(CultivationTechnique definition) {
+    private static int chainLength(Technique definition) {
         Holder<SkillStage> current = definition.defaultStage().orElse(null);
         int count = 0;
         while (current != null && count < MAX_CHAIN_LENGTH) {
@@ -147,7 +151,7 @@ public final class TechniqueProgress {
     /**
      * The zero-based rank of a level in this technique's chain, or {@code -1} for another chain's level.
      */
-    private static int rankOf(CultivationTechnique definition, @Nullable Holder<SkillStage> stage) {
+    private static int rankOf(Technique definition, @Nullable Holder<SkillStage> stage) {
         if (stage == null) return -1;
         Holder<SkillStage> current = definition.defaultStage().orElse(null);
         for (int rank = 0; current != null && rank < MAX_CHAIN_LENGTH; rank++) {

@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
@@ -36,7 +36,7 @@ public final class InformationManager {
         register("cultivating", Side.CULTIVATION, c -> c.add("info.mxt.cultivating", Component.translatable(c.getData(MxtAttachments.CULTIVATION).cultivating() ? "info.mxt.yes" : "info.mxt.no")));
         register("spirit_roots", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.spirit_roots", c.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots(), "spirit_root"));
         register("physiques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.physiques", c.getData(MxtAttachments.SPIRIT_IDENTITY).physiques(), "physique"));
-        register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques(), "cultivation_technique"));
+        register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques(), "technique"));
     }
 
     public static void register(@NotNull String id, @NotNull Side side, Consumer<InformationCollector> collector) {
@@ -73,7 +73,7 @@ public final class InformationManager {
         }
         boolean first = true;
         FormulaContext context = FormulaContexts.forEntity(collector.getPlayer());
-        for (Entry<Holder<CultivationProfile>> entry : cultivation.cultivationProgresses().object2DoubleEntrySet()) {
+        for (Entry<Holder<Aura>> entry : cultivation.cultivationProgresses().object2DoubleEntrySet()) {
             // The state is keyed by the chain itself, so nothing has to be looked up again here.
             if (!entry.getKey().value().showCultivationInfo()) continue;
             BreakthroughStatus status = CultivationService.breakthroughStatusForChain(collector.getPlayer(), entry.getKey(), context);
@@ -93,14 +93,14 @@ public final class InformationManager {
      */
     private static void realmLines(InformationCollector collector) {
         CultivationAttachment cultivation = collector.getData(MxtAttachments.CULTIVATION);
-        Set<Holder<CultivationProfile>> chains = new LinkedHashSet<>(cultivation.cultivationProgresses().keySet());
+        Set<Holder<Aura>> chains = new LinkedHashSet<>(cultivation.cultivationProgresses().keySet());
         chains.addAll(cultivation.realmStages().keySet());
         if (chains.isEmpty()) {
             collector.add("info.mxt.realm", Component.translatable("info.mxt.mortal"));
             return;
         }
         boolean first = true;
-        for (Holder<CultivationProfile> chain : chains) {
+        for (Holder<Aura> chain : chains) {
             if (!chain.value().showCultivationInfo()) continue;
             Holder<?> realm = cultivation.realmStage(chain);
             Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.name(realm, "realm_stage");

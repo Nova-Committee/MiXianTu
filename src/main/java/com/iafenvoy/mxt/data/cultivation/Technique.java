@@ -28,29 +28,29 @@ import java.util.Optional;
  * {@link SkillStage} chain. {@code default_stage} is the chain entry point and is mandatory as soon as any
  * level is configured; {@code mastery_resource} names the stored value that measures mastery.
  */
-public record CultivationTechnique(String grade, Optional<IconReference> icon, EntityCondition learnCondition,
-                                   List<Identifier> exclusiveTags,
-                                   NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,
-                                   List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
-                                   Optional<Holder<SkillStage>> defaultStage,
-                                   Optional<Holder<Resource>> masteryResource,
-                                   Map<Holder<SkillStage>, StageConfiguration> configuration) {
-    public static final Codec<Holder<CultivationTechnique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CULTIVATION_TECHNIQUE);
-    public static final Codec<CultivationTechnique> DIRECT_CODEC = RecordCodecBuilder.<CultivationTechnique>create(i -> i.group(
-            Codec.STRING.optionalFieldOf("grade", "common").forGetter(CultivationTechnique::grade),
-            IconReference.CODEC.optionalFieldOf("icon").forGetter(CultivationTechnique::icon),
-            EntityCondition.optionalCodec("learn_condition").forGetter(CultivationTechnique::learnCondition),
-            Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(CultivationTechnique::exclusiveTags),
-            NumberProvider.CODEC.optionalFieldOf("cultivation_modifier", new Constant(1.0D)).forGetter(CultivationTechnique::cultivationModifier),
-            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(CultivationTechnique::passiveModifiers),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(CultivationTechnique::grantedAbilities),
-            SkillStage.CODEC.optionalFieldOf("default_stage").forGetter(CultivationTechnique::defaultStage),
-            Resource.CODEC.optionalFieldOf("mastery_resource").forGetter(CultivationTechnique::masteryResource),
+public record Technique(String grade, Optional<IconReference> icon, EntityCondition learnCondition,
+                        List<Identifier> exclusiveTags,
+                        NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,
+                        List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
+                        Optional<Holder<SkillStage>> defaultStage,
+                        Optional<Holder<Resource>> masteryResource,
+                        Map<Holder<SkillStage>, StageConfiguration> configuration) {
+    public static final Codec<Holder<Technique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TECHNIQUE);
+    public static final Codec<Technique> DIRECT_CODEC = RecordCodecBuilder.<Technique>create(i -> i.group(
+            Codec.STRING.optionalFieldOf("grade", "common").forGetter(Technique::grade),
+            IconReference.CODEC.optionalFieldOf("icon").forGetter(Technique::icon),
+            EntityCondition.optionalCodec("learn_condition").forGetter(Technique::learnCondition),
+            Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Technique::exclusiveTags),
+            NumberProvider.CODEC.optionalFieldOf("cultivation_modifier", new Constant(1.0D)).forGetter(Technique::cultivationModifier),
+            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(Technique::passiveModifiers),
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Technique::grantedAbilities),
+            SkillStage.CODEC.optionalFieldOf("default_stage").forGetter(Technique::defaultStage),
+            Resource.CODEC.optionalFieldOf("mastery_resource").forGetter(Technique::masteryResource),
             Codec.unboundedMap(SkillStage.CODEC, StageConfiguration.CODEC)
-                    .optionalFieldOf("configuration", Map.of()).forGetter(CultivationTechnique::configuration)
-    ).apply(i, CultivationTechnique::new)).validate(CultivationTechnique::validate);
+                    .optionalFieldOf("configuration", Map.of()).forGetter(Technique::configuration)
+    ).apply(i, Technique::new)).validate(Technique::validate);
 
-    private static DataResult<CultivationTechnique> validate(CultivationTechnique technique) {
+    private static DataResult<Technique> validate(Technique technique) {
         if (technique.defaultStage().isEmpty() && !technique.configuration().isEmpty())
             return DataResult.error(() -> "configuration needs default_stage to name the skill chain it belongs to");
         if (technique.defaultStage().isEmpty() && technique.masteryResource().isPresent())

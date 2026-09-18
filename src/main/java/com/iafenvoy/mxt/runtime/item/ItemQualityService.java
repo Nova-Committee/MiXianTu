@@ -116,11 +116,17 @@ public final class ItemQualityService {
      * checks, so it reports which one refused instead of only that the item is unusable.
      */
     public enum Failure {
-        /** A matching binding's own conditions did not all pass. */
+        /**
+         * A matching binding's own conditions did not all pass.
+         */
         BINDING_CONDITIONS,
-        /** The condition of the item's resolved quality did not pass. */
+        /**
+         * The condition of the item's resolved quality did not pass.
+         */
         QUALITY_CONDITIONS,
-        /** The item's resolved quality is missing, or is not a member of the binding's quality group. */
+        /**
+         * The item's resolved quality is missing, or is not a member of the binding's quality group.
+         */
         QUALITY_GROUP
     }
 

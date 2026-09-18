@@ -1,5 +1,4 @@
 {
-  "aura_kinds": ["mxt_test:aura_kind/void"],
   "dimensions": ["minecraft:the_end"],
   "rules": { "cultivate_suppress": true, "tribulation_modify": -0.20 },
   "particle": { "particle": { "type": "minecraft:portal" }, "count": 1 },

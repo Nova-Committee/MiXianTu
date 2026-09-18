@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.item.block.entity;
 
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
-import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
+import com.iafenvoy.mxt.runtime.spirit.AuraAccess;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -41,9 +41,9 @@ import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 /**
- * Stores the crafting grid and independently buffered resource aura inside the placed block.
+ * Stores the crafting grid and independently buffered aura inside the placed block.
  */
-public final class SpiritCraftingTableBlockEntity extends BlockEntity implements MenuProvider, SpiritAccess, WorldlyContainer {
+public final class SpiritCraftingTableBlockEntity extends BlockEntity implements MenuProvider, AuraAccess, WorldlyContainer {
     private final SimpleContainer grid = new SimpleContainer(9) {
         @Override
         public void setChanged() {
@@ -51,7 +51,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
             SpiritCraftingTableBlockEntity.this.markChangedAndSync();
         }
     };
-    private final Map<Holder<Resource>, Integer> aura = new LinkedHashMap<>();
+    private final Map<Holder<Aura>, Integer> aura = new LinkedHashMap<>();
     private final SimpleContainer result = new SimpleContainer(1) {
         @Override
         public void setChanged() {
@@ -59,7 +59,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
             SpiritCraftingTableBlockEntity.this.markChangedAndSync();
         }
     };
-    private Map<Holder<Resource>, Integer> requiredAura = Map.of();
+    private Map<Holder<Aura>, Integer> requiredAura = Map.of();
 
     public SpiritCraftingTableBlockEntity(BlockPos pos, BlockState state) {
         super(MxtBlockEntities.SPIRIT_CRAFTING_TABLE.get(), pos, state);
@@ -86,7 +86,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
             this.clearAura();
             return;
         }
-        Map<Holder<Resource>, Integer> costs = this.costs(recipe.aura());
+        Map<Holder<Aura>, Integer> costs = this.costs(recipe.aura());
         this.configureAuraCosts(costs);
         ItemStack produced = recipe.result().create();
         ItemStack stored = this.result.getItem(0);
@@ -101,9 +101,9 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         this.result.setChanged();
     }
 
-    private Map<Holder<Resource>, Integer> costs(Map<Holder<Resource>, NumberProvider> aura) {
-        Map<Holder<Resource>, Integer> costs = new LinkedHashMap<>();
-        for (Entry<Holder<Resource>, NumberProvider> entry : aura.entrySet()) {
+    private Map<Holder<Aura>, Integer> costs(Map<Holder<Aura>, NumberProvider> aura) {
+        Map<Holder<Aura>, Integer> costs = new LinkedHashMap<>();
+        for (Entry<Holder<Aura>, NumberProvider> entry : aura.entrySet()) {
             double value = entry.getValue().evaluate(FormulaContext.of(this.level));
             if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
             costs.put(entry.getKey(), (int) Math.ceil(value));
@@ -111,22 +111,22 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         return costs;
     }
 
-    public int aura(Holder<Resource> resource) {
-        return this.aura.getOrDefault(resource, 0);
+    public int aura(Holder<Aura> aura) {
+        return this.aura.getOrDefault(aura, 0);
     }
 
-    public Map<Holder<Resource>, Integer> auras() {
+    public Map<Holder<Aura>, Integer> auras() {
         return this.aura;
     }
 
-    public Map<Holder<Resource>, Integer> requiredAura() {
+    public Map<Holder<Aura>, Integer> requiredAura() {
         return this.requiredAura;
     }
 
     @Override
-    public Object2IntMap<Holder<Resource>> getCapacity(@Nullable LivingEntity entity) {
-        Object2IntMap<Holder<Resource>> result = new Object2IntOpenHashMap<>();
-        this.requiredAura.forEach((resource, amount) -> result.put(resource,
+    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity) {
+        Object2IntMap<Holder<Aura>> result = new Object2IntOpenHashMap<>();
+        this.requiredAura.forEach((aura, amount) -> result.put(aura,
                 (int) Math.clamp((long) amount * 99L, 0L, Integer.MAX_VALUE)));
         return result;
     }
@@ -135,7 +135,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
      * Changing the grid or recipe invalidates any partially supplied aura instead of retaining it as
      * general-purpose block storage.
      */
-    public void configureAuraCosts(Map<Holder<Resource>, Integer> costs) {
+    public void configureAuraCosts(Map<Holder<Aura>, Integer> costs) {
         if (this.requiredAura.equals(costs)) return;
         this.requiredAura = new LinkedHashMap<>(costs);
         this.clearAura();
@@ -147,7 +147,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         this.markChangedAndSync();
     }
 
-    public boolean hasAura(Map<Holder<Resource>, Integer> costs) {
+    public boolean hasAura(Map<Holder<Aura>, Integer> costs) {
         return costs.entrySet().stream().allMatch(entry -> entry.getValue() >= 0 && this.aura(entry.getKey()) >= entry.getValue());
     }
 
@@ -155,12 +155,12 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
      * Deducts one craft's costs together, preserving any remaining active-recipe buffer for the next
      * craft.
      */
-    public boolean consumeAura(Map<Holder<Resource>, Integer> costs) {
+    public boolean consumeAura(Map<Holder<Aura>, Integer> costs) {
         if (!this.hasAura(costs)) return false;
-        costs.forEach((resource, amount) -> {
-            int remaining = this.aura(resource) - amount;
-            if (remaining == 0) this.aura.remove(resource);
-            else this.aura.put(resource, remaining);
+        costs.forEach((aura, amount) -> {
+            int remaining = this.aura(aura) - amount;
+            if (remaining == 0) this.aura.remove(aura);
+            else this.aura.put(aura, remaining);
         });
         this.markChangedAndSync();
         return true;
@@ -224,26 +224,26 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int add(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
-        SpiritAccess.requireNonNegative(amount);
-        int required = (int) Math.clamp((long) this.requiredAura.getOrDefault(resource, 0) * 99L,
+    public int insert(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+        AuraAccess.requireNonNegative(amount);
+        int required = (int) Math.clamp((long) this.requiredAura.getOrDefault(aura, 0) * 99L,
                 0L, Integer.MAX_VALUE);
-        int accepted = Math.min(amount, Math.max(0, required - this.aura(resource)));
+        int accepted = Math.min(amount, Math.max(0, required - this.aura(aura)));
         if (!simulate && accepted > 0) {
-            this.aura.put(resource, this.aura(resource) + accepted);
+            this.aura.put(aura, this.aura(aura) + accepted);
             this.markChangedAndSync();
         }
         return amount - accepted;
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
-        SpiritAccess.requireNonNegative(amount);
-        int extracted = Math.min(amount, this.aura(resource));
+    public int extract(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+        AuraAccess.requireNonNegative(amount);
+        int extracted = Math.min(amount, this.aura(aura));
         if (!simulate && extracted > 0) {
-            int remaining = this.aura(resource) - extracted;
-            if (remaining == 0) this.aura.remove(resource);
-            else this.aura.put(resource, remaining);
+            int remaining = this.aura(aura) - extracted;
+            if (remaining == 0) this.aura.remove(aura);
+            else this.aura.put(aura, remaining);
             this.markChangedAndSync();
         }
         return amount - extracted;

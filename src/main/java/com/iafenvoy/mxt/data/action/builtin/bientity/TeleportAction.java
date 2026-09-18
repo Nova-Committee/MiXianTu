@@ -7,6 +7,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Set;
@@ -27,7 +28,9 @@ public record TeleportAction(boolean teleportActor, boolean teleportTarget, bool
         Entity target = ctx.target();
         if (actor.level().isClientSide() || (!this.teleportActor && !this.teleportTarget) || !(actor.level() instanceof ServerLevel actorLevel) || !(target.level() instanceof ServerLevel targetLevel))
             return;
-        Position actorPosition = Position.of(actorLevel, actor);
+        // "The actor's position" is where the activation happened: an item cast from a display stand pulls a
+        // target to the stand rather than to whoever filled it.
+        Position actorPosition = Position.at(actorLevel, actor, ctx.position());
         Position targetPosition = Position.of(targetLevel, target);
         if (this.teleportActor) targetPosition.teleport(actor, this.rotate);
         if (this.teleportTarget) actorPosition.teleport(target, this.rotate);
@@ -40,7 +43,11 @@ public record TeleportAction(boolean teleportActor, boolean teleportTarget, bool
 
     private record Position(ServerLevel level, double x, double y, double z, float yRot, float xRot) {
         private static Position of(ServerLevel level, Entity entity) {
-            return new Position(level, entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), entity.getXRot());
+            return at(level, entity, entity.position());
+        }
+
+        private static Position at(ServerLevel level, Entity entity, Vec3 position) {
+            return new Position(level, position.x, position.y, position.z, entity.getYRot(), entity.getXRot());
         }
 
         private void teleport(Entity entity, boolean rotate) {

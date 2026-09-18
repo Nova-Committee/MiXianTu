@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
@@ -128,7 +128,7 @@ public final class FormationWorldTicker {
      * What the formation's own ground supplies this period: the emitters inside it plus, when the server
      * option allows it, the ambient aura of the position it stands on, summed per resource.
      */
-    private static Map<Holder<Resource>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
+    private static Map<Holder<Aura>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
         return combine(
                 FormationAbsorption.absorbedFor(level, controller, radius),
                 FormationAbsorption.environmentSupply(level, controller),
@@ -139,12 +139,12 @@ public final class FormationWorldTicker {
      * Sums the two supply sources. Split from the lookup so the rule is assertable without a level: the
      * option either adds the ambient aura or leaves the formation with only what its own emitters give it.
      */
-    public static Map<Holder<Resource>, Double> combine(Map<Holder<Resource>, Double> absorbed,
-                                                       Map<Holder<Resource>, Double> environment,
-                                                       boolean drawsEnvironment) {
-        Map<Holder<Resource>, Double> supply = new LinkedHashMap<>(absorbed);
+    public static Map<Holder<Aura>, Double> combine(Map<Holder<Aura>, Double> absorbed,
+                                                    Map<Holder<Aura>, Double> environment,
+                                                    boolean drawsEnvironment) {
+        Map<Holder<Aura>, Double> supply = new LinkedHashMap<>(absorbed);
         if (!drawsEnvironment) return supply;
-        environment.forEach((resource, amount) -> supply.merge(resource, amount, Double::sum));
+        environment.forEach((aura, amount) -> supply.merge(aura, amount, Double::sum));
         return supply;
     }
 

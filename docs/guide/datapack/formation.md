@@ -68,7 +68,7 @@ title: 阵法、锻造与炼丹
 | `abilities`  | `List<ability>`                 | `[]`  | 授予范围内实体。**source 自动取 `mxt:formation/<命名空间>/<路径>`**，离开半径、阵法拆除、或不再被选中时自动撤销 |
 | `target`     | `all` / `allies` / `owner`      | `all` | 谁吃到这份增益。`allies` 走好友判定，**认不出就不给**                            |
 | `aura_zone`  | aura_zone                       | 无     | 高优先级运行时灵气覆写（见「灵气覆写」）                                        |
-| `max_bonus`  | `Map<resource, NumberProvider>` | `{}`  | 范围内区块的灵气上限加成（重叠取最高）                                         |
+| `max_bonus`  | `Map<aura, NumberProvider>` | `{}`  | 范围内区块的灵气上限加成（重叠取最高）                                         |
 
 三档 `target` 是同一条规则的不同宽度：`all` 不筛；`allies` 要求好友判定给出 `true`，而**阵主在好友判定里算自己的好友**，
 所以 `allies` 包含阵主；`owner` 只认 UUID，是同样效果的更窄写法。
@@ -367,7 +367,7 @@ title: 阵法、锻造与炼丹
 
 | 字段         | 类型                              | 默认  | 含义                       |
 |------------|---------------------------------|-----|--------------------------|
-| `capacity` | `Map<resource, NumberProvider>` | **必填** | 每种资源最多存多少；**没列出的资源不存** |
+| `capacity` | `Map<aura, NumberProvider>` | **必填** | 每种灵气最多存多少；**没列出的灵气不存** |
 
 ```json
 {
@@ -419,7 +419,7 @@ title: 阵法、锻造与炼丹
 上限是加在「覆盖后选中的那个 zone」所提供的资源上的，因此：
 
 - 没有 `aura_zone` → 没有覆盖 → `max_bonus` 无处可加。
-- 有 `aura_zone` 但该 zone 不提供某个资源 → 对这个资源加不上（不会凭空创造资源）。
+- 有 `aura_zone` 但该 zone 不提供某个灵气 → 对这个灵气加不上（不会凭空创造灵气）。
 
 两者都已在服务端审计里断言。
 

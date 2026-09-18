@@ -4,16 +4,17 @@ import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.aura.AuraGain;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.resource.ResourceGain;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
@@ -22,12 +23,12 @@ import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -43,6 +44,7 @@ import java.util.function.BooleanSupplier;
  * Authoritative lifecycle for the selected cultivation action; each realm resource chain is processed
  * independently while the action runs.
  */
+//TODO::May be removed together with CultivateAction - see that record for the cluster it lives in.
 public final class CultivationActionService {
     private CultivationActionService() {
     }
@@ -76,9 +78,9 @@ public final class CultivationActionService {
      * Checks resource-level conflicts and other rules before entering cultivation mode.
      */
     public static boolean canStartCultivation(LivingEntity entity, FormulaContext context) {
-        return CultivationProfiles.byResource(entity.level().registryAccess()).values().stream()
-                .filter(profile -> profile.firstRealm().isPresent())
-                .allMatch(profile -> profile.startCultivateConditions().test(entity, context));
+        return AuraLookup.all(entity).map(Reference::value)
+                .filter(aura -> aura.firstRealm().isPresent())
+                .allMatch(aura -> aura.startCultivateConditions().test(entity, context));
     }
 
     /**
@@ -98,7 +100,7 @@ public final class CultivationActionService {
                               BooleanSupplier conditionsMet) {
         double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context, entity.level().registryAccess(),
                 id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id),
-                id -> MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATION_TECHNIQUE, id));
+                id -> MxtDatapackRegistries.get(MxtResourceKeys.TECHNIQUE, id));
         return tick(spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, affinity);
     }
 
@@ -120,7 +122,7 @@ public final class CultivationActionService {
             return stop(entity, spirit, action, definition, gameTime, Failure.ENVIRONMENT);
         double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context, entity.level().registryAccess(),
                 id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id),
-                id -> MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATION_TECHNIQUE, id));
+                id -> MxtDatapackRegistries.get(MxtResourceKeys.TECHNIQUE, id));
         return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
     }
 
@@ -131,8 +133,6 @@ public final class CultivationActionService {
             return Result.rejected(Failure.NOT_ACTIVE, null);
         if (!conditionsMet.getAsBoolean())
             return stop(entity, spirit, action, definition, gameTime, Failure.CONDITIONS);
-        if (!CollectionHelper.containsAllFast(aura.auraKinds(), definition.auraKinds()))
-            return Result.rejected(Failure.ENVIRONMENT, null);
         ItemAuraService.tick(entity, resources, context);
         Recovery recovery = recover(entity, spirit, resources, aura, definition, affinity, context);
         if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
@@ -140,13 +140,13 @@ public final class CultivationActionService {
         if (gameTime < spirit.nextCultivateTick()) {
             return Result.waitingResult();
         }
-        Map<Holder<Resource>, Double> auraCosts = evaluateAuraCosts(definition, context);
+        Map<Holder<Aura>, Double> auraCosts = evaluateAuraCosts(definition, context);
         if (auraCosts == null) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         Evaluation costs;
-        Map<Identifier, Double> gains;
+        Map<Holder<Aura>, Double> gains;
         try {
             costs = ResourceTransactions.evaluate(entity, definition.costs(), context);
             gains = evaluateGains(definition.auraGains(), context);
@@ -186,19 +186,18 @@ public final class CultivationActionService {
         if (!spirit.cultivating() || spirit.cultivateAction().filter(action::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
         if (!conditionsMet.getAsBoolean()) return stop(spirit, actionId, definition, gameTime, Failure.CONDITIONS);
-        if (!aura.hasAuraKinds(definition.auraKinds())) return Result.rejected(Failure.ENVIRONMENT, null);
         if (gameTime < spirit.nextCultivateTick()) {
             convertAll(spirit, resources, context);
             return Result.waitingResult();
         }
         double gain = definition.absorbAmount().evaluate(context) * affinity;
-        Map<Holder<Resource>, Double> auraCosts = evaluateAuraCosts(definition, context);
+        Map<Holder<Aura>, Double> auraCosts = evaluateAuraCosts(definition, context);
         if (auraCosts == null) return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(gain) || gain < 0.0D)
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         Evaluation costs;
-        Map<Identifier, Double> gains;
+        Map<Holder<Aura>, Double> gains;
         try {
             costs = ResourceTransactions.evaluate(definition.costs(), context);
             gains = evaluateGains(definition.auraGains(), context);
@@ -254,16 +253,16 @@ public final class CultivationActionService {
         return copy;
     }
 
-    private static Map<Identifier, Double> evaluateGains(List<ResourceGain> entries, FormulaContext context) {
-        Map<Identifier, Double> amounts = new LinkedHashMap<>();
-        for (ResourceGain entry : entries) amounts.merge(entry.id(), entry.evaluate(context), Double::sum);
+    private static Map<Holder<Aura>, Double> evaluateGains(List<AuraGain> entries, FormulaContext context) {
+        Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
+        for (AuraGain entry : entries) amounts.merge(entry.aura(), entry.evaluate(context), Double::sum);
         return amounts;
     }
 
-    private static Map<Holder<Resource>, Double> evaluateAuraCosts(CultivateAction definition,
-                                                                   FormulaContext context) {
-        Map<Holder<Resource>, Double> values = new LinkedHashMap<>();
-        for (Entry<Holder<Resource>, NumberProvider> entry : definition.auraCosts().entrySet()) {
+    private static Map<Holder<Aura>, Double> evaluateAuraCosts(CultivateAction definition,
+                                                               FormulaContext context) {
+        Map<Holder<Aura>, Double> values = new LinkedHashMap<>();
+        for (Entry<Holder<Aura>, NumberProvider> entry : definition.auraCosts().entrySet()) {
             double value = entry.getValue().evaluate(context);
             if (!Double.isFinite(value) || value < 0.0D) return null;
             if (value > 0.0D) values.put(entry.getKey(), value);
@@ -271,13 +270,13 @@ public final class CultivationActionService {
         return values;
     }
 
-    private static boolean hasAura(AuraChunkAttachment aura, Map<Holder<Resource>, Double> costs) {
+    private static boolean hasAura(AuraChunkAttachment aura, Map<Holder<Aura>, Double> costs) {
         return costs.entrySet().stream().allMatch(entry -> aura.auras().getOrDefault(entry.getKey(), AuraPool.empty()).amount() >= entry.getValue());
     }
 
-    private static Map<Holder<Resource>, Double> scaleAuraCosts(Map<Holder<Resource>, Double> values,
-                                                                double multiplier) {
-        Map<Holder<Resource>, Double> result = new LinkedHashMap<>();
+    private static Map<Holder<Aura>, Double> scaleAuraCosts(Map<Holder<Aura>, Double> values,
+                                                            double multiplier) {
+        Map<Holder<Aura>, Double> result = new LinkedHashMap<>();
         values.forEach((element, amount) -> result.put(element, amount * multiplier));
         return result;
     }
@@ -286,9 +285,9 @@ public final class CultivationActionService {
      * Realm chains are regenerated by cultivation itself, so each value's overflow can be committed to
      * that chain's cultivation progress.
      */
-    public static boolean handlesNaturalRegeneration(LivingEntity entity, Holder<CultivationProfile> cultivation) {
+    public static boolean handlesNaturalRegeneration(LivingEntity entity, Holder<Aura> aura) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        Holder<RealmStage> stage = stageFor(spirit, cultivation);
+        Holder<RealmStage> stage = stageFor(spirit, aura);
         return spirit.cultivating() && stage != null
                 && stage.value().cultivateCondition().test(entity, FormulaContexts.forEntity(entity));
     }
@@ -304,7 +303,7 @@ public final class CultivationActionService {
                 .anyMatch(stage -> stage.value().cultivateCondition().test(entity, context));
         if (!realmEligible && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue()) return false;
         if (!(aura.cultivateCondition() instanceof AuraRangeEntityCondition(
-                Map<Holder<Resource>, AuraRequirement> aura1
+                Map<Holder<Aura>, AuraRequirement> aura1
         )))
             return aura.cultivateCondition().test(entity, context);
         boolean anyEligible = aura1.isEmpty() || aura1.entrySet().stream()
@@ -323,11 +322,13 @@ public final class CultivationActionService {
         double multiplier = action.absorbAmount().evaluate(context);
         if (!Double.isFinite(multiplier) || multiplier < 0.0D || !Double.isFinite(affinity) || affinity < 0.0D)
             return Recovery.INVALID;
-        for (Holder<CultivationProfile> chain : eligibleRealmCultivations(spirit, entity, context)) {
-            CultivationProfile profile = chain.value();
-            Holder<Resource> resource = profile.resource();
+        for (Holder<Aura> chain : eligibleRealmCultivations(spirit, entity, context)) {
+            // The parameter is the ambient aura read for this position, so the chain's own definition needs a
+            // name of its own here.
+            Aura definition = chain.value();
+            Holder<Resource> resource = definition.resource();
             FormulaContext resourceContext = ResourceService.formulaContext(entity, resource, context);
-            double regen = profile.regen().evaluate(resourceContext);
+            double regen = definition.regen().evaluate(resourceContext);
             double recovered = regen * multiplier * affinity * aura.cultivationSpeed();
             if (!Double.isFinite(regen) || !Double.isFinite(recovered)) return Recovery.INVALID;
             if (recovered <= 0.0D) continue;
@@ -348,58 +349,57 @@ public final class CultivationActionService {
      * Each requested aura source contributes independently; a missing source reduces only its own share
      * instead of rejecting the whole tick.
      */
-    private static double allocationFactor(Map<Holder<Resource>, Double> requested,
-                                           Map<Holder<Resource>, Double> allocated) {
+    private static double allocationFactor(Map<Holder<Aura>, Double> requested,
+                                           Map<Holder<Aura>, Double> allocated) {
         return requested.entrySet().stream()
                 .filter(entry -> entry.getValue() > 0.0D)
                 .mapToDouble(entry -> Math.clamp(allocated.getOrDefault(entry.getKey(), 0.0D) / entry.getValue(), 0.0D, 1.0D))
                 .average().orElse(1.0D);
     }
 
-    private static boolean canApplyGains(ResourceHolderAttachment resources, Map<Identifier, Double> gains, FormulaContext context) {
-        for (Entry<Identifier, Double> gain : gains.entrySet()) {
-            Resource definition = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey()).orElse(null);
-            if (definition == null || !ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context).valid())
-                return false;
+    private static boolean canApplyGains(ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains, FormulaContext context) {
+        for (Entry<Holder<Aura>, Double> gain : gains.entrySet()) {
+            Holder<Resource> resource = gain.getKey().value().resource();
+            if (!ResourceService.change(resources, resource, gain.getValue(), context).valid()) return false;
         }
         return true;
     }
 
-    private static boolean canApplyGains(LivingEntity entity, ResourceHolderAttachment resources, Map<Identifier, Double> gains,
+    private static boolean canApplyGains(LivingEntity entity, ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains,
                                          FormulaContext context) {
-        for (Entry<Identifier, Double> gain : gains.entrySet()) {
-            Resource definition = MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey()).orElse(null);
-            if (definition == null || !ResourceService.change(resources, gain.getKey(), definition, gain.getValue(),
-                    ResourceService.formulaContext(entity, gain.getKey(), definition, context)).valid())
+        for (Entry<Holder<Aura>, Double> gain : gains.entrySet()) {
+            Holder<Resource> resource = gain.getKey().value().resource();
+            if (!ResourceService.change(resources, resource, gain.getValue(),
+                    ResourceService.formulaContext(entity, resource, context)).valid())
                 return false;
         }
         return true;
     }
 
-    private static void applyGains(ResourceHolderAttachment resources, Map<Identifier, Double> gains, FormulaContext context) {
-        for (Entry<Identifier, Double> gain : gains.entrySet())
-            MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey())
-                    .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(), context));
+    private static void applyGains(ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains, FormulaContext context) {
+        for (Entry<Holder<Aura>, Double> gain : gains.entrySet())
+            ResourceService.change(resources, gain.getKey().value().resource(), gain.getValue(), context);
     }
 
-    private static void applyGains(LivingEntity entity, ResourceHolderAttachment resources, Map<Identifier, Double> gains,
+    private static void applyGains(LivingEntity entity, ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains,
                                    FormulaContext context) {
-        for (Entry<Identifier, Double> gain : gains.entrySet())
-            MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, gain.getKey())
-                    .ifPresent(definition -> ResourceService.change(resources, gain.getKey(), definition, gain.getValue(),
-                            ResourceService.formulaContext(entity, gain.getKey(), definition, context)));
+        for (Entry<Holder<Aura>, Double> gain : gains.entrySet()) {
+            Holder<Resource> resource = gain.getKey().value().resource();
+            ResourceService.change(resources, resource, gain.getValue(),
+                    ResourceService.formulaContext(entity, resource, context));
+        }
     }
 
     private static boolean canConvertAbsorption(CultivationAttachment spirit, ResourceHolderAttachment resources, double absorbed,
                                                 FormulaContext context) {
-        return realmCultivations(spirit).stream().allMatch(cultivation -> conversion(
-                active(cultivation), context, spirit, resources).valid());
+        return realmCultivations(spirit).stream().allMatch(aura -> conversion(
+                active(aura), context, spirit, resources).valid());
     }
 
     private static boolean canConvertAbsorption(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                                 double absorbed, FormulaContext context) {
-        return realmCultivations(spirit).stream().allMatch(cultivation -> {
-            ActiveCultivation active = active(cultivation);
+        return realmCultivations(spirit).stream().allMatch(aura -> {
+            ActiveCultivation active = active(aura);
             return conversion(active, ResourceService.formulaContext(entity, active.resource(), context), spirit, resources).valid();
         });
     }
@@ -410,8 +410,8 @@ public final class CultivationActionService {
      */
     private static void restoreAbsorption(CultivationAttachment spirit, ResourceHolderAttachment resources, double absorbed,
                                           FormulaContext context) {
-        for (Holder<CultivationProfile> cultivation : realmCultivations(spirit)) {
-            ActiveCultivation active = active(cultivation);
+        for (Holder<Aura> aura : realmCultivations(spirit)) {
+            ActiveCultivation active = active(aura);
             ResourceService.change(resources, active.id(), active.definition(), absorbed,
                     ResourceService.formulaContext(spirit, active.resource(), context));
         }
@@ -419,8 +419,8 @@ public final class CultivationActionService {
 
     private static void restoreAbsorption(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                           double absorbed, FormulaContext context) {
-        for (Holder<CultivationProfile> cultivation : realmCultivations(spirit)) {
-            ActiveCultivation active = active(cultivation);
+        for (Holder<Aura> aura : realmCultivations(spirit)) {
+            ActiveCultivation active = active(aura);
             ResourceService.change(resources, active.id(), active.definition(), absorbed,
                     ResourceService.formulaContext(entity, active.resource(), context));
         }
@@ -428,11 +428,11 @@ public final class CultivationActionService {
 
     private static Conversion conversion(ActiveCultivation active, FormulaContext context, CultivationAttachment spirit,
                                          ResourceHolderAttachment resources) {
-        CultivationProfile profile = active.profile();
-        double cultivationToResource = profile.cultivationToResource().multiplier().evaluate(context);
-        double cultivationToResourceMaxPerTick = profile.cultivationToResource().maxPerTick().evaluate(context);
-        double resourceToCultivation = profile.resourceToCultivation().multiplier().evaluate(context);
-        double resourceToCultivationMaxPerTick = profile.resourceToCultivation().maxPerTick().evaluate(context);
+        Aura aura = active.auraValue();
+        double cultivationToResource = aura.cultivationToResource().multiplier().evaluate(context);
+        double cultivationToResourceMaxPerTick = aura.cultivationToResource().maxPerTick().evaluate(context);
+        double resourceToCultivation = aura.resourceToCultivation().multiplier().evaluate(context);
+        double resourceToCultivationMaxPerTick = aura.resourceToCultivation().maxPerTick().evaluate(context);
         return Double.isFinite(cultivationToResource) && cultivationToResource >= 0.0D
                 && Double.isFinite(cultivationToResourceMaxPerTick) && cultivationToResourceMaxPerTick >= 0.0D
                 && Double.isFinite(resourceToCultivation) && resourceToCultivation >= 0.0D
@@ -443,15 +443,15 @@ public final class CultivationActionService {
     }
 
     private static void convertAll(CultivationAttachment spirit, ResourceHolderAttachment resources, FormulaContext context) {
-        for (Holder<CultivationProfile> cultivation : realmCultivations(spirit)) {
-            ActiveCultivation active = active(cultivation);
+        for (Holder<Aura> aura : realmCultivations(spirit)) {
+            ActiveCultivation active = active(aura);
             convert(active, spirit, resources, ResourceService.formulaContext(spirit, active.resource(), context));
         }
     }
 
     private static void convertAll(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                    FormulaContext context) {
-        for (Holder<CultivationProfile> chain : eligibleRealmCultivations(spirit, entity, context)) {
+        for (Holder<Aura> chain : eligibleRealmCultivations(spirit, entity, context)) {
             ActiveCultivation active = active(chain);
             convert(active, spirit, resources, ResourceService.formulaContext(entity, active.resource(), context));
         }
@@ -461,7 +461,7 @@ public final class CultivationActionService {
                                 FormulaContext context) {
         Conversion conversion = conversion(active, context, spirit, resources);
         if (!conversion.valid()) return;
-        Holder<CultivationProfile> cultivation = active.cultivation();
+        Holder<Aura> aura = active.aura();
         Resource definition = active.definition();
         Holder<Resource> resource = active.resource();
         Bounds bounds = ResourceService.resolveBounds(definition, context).orElseThrow();
@@ -470,13 +470,13 @@ public final class CultivationActionService {
         // the reverse conversion can restore a usable amount.
         if (conversion.resourceToCultivation() > 0.0D) {
             double available = Math.max(0.0D, resources.get(resource) - bounds.min());
-            double remainingProgress = CultivationService.remainingProgressForChain(spirit, cultivation, context);
+            double remainingProgress = CultivationService.remainingProgressForChain(spirit, aura, context);
             if (remainingProgress <= 0.0D) return;
             double consumed = Math.min(conversion.resourceToCultivationMaxPerTick(),
                     Math.min(available, remainingProgress / conversion.resourceToCultivation()));
             if (consumed > 0.0D) {
                 ResourceService.change(resources, active.id(), definition, -consumed, context);
-                CultivationService.addProgressForChain(spirit, cultivation, consumed * conversion.resourceToCultivation(), context);
+                CultivationService.addProgressForChain(spirit, aura, consumed * conversion.resourceToCultivation(), context);
                 return;
             }
         }
@@ -484,9 +484,9 @@ public final class CultivationActionService {
         if (conversion.cultivationToResource() > 0.0D) {
             double capacity = Math.max(0.0D, bounds.max() - resources.get(resource));
             double extracted = Math.min(conversion.cultivationToResourceMaxPerTick(),
-                    Math.min(spirit.cultivationProgress(cultivation), capacity / conversion.cultivationToResource()));
+                    Math.min(spirit.cultivationProgress(aura), capacity / conversion.cultivationToResource()));
             if (extracted > 0.0D) {
-                spirit.setCultivationProgress(cultivation, Math.max(0.0D, spirit.cultivationProgress(cultivation) - extracted));
+                spirit.setCultivationProgress(aura, Math.max(0.0D, spirit.cultivationProgress(aura) - extracted));
                 ResourceService.change(resources, active.id(), definition, extracted * conversion.cultivationToResource(), context);
             }
         }
@@ -495,16 +495,16 @@ public final class CultivationActionService {
     /**
      * Every chain the holder has entered, read from the state keyed by them.
      */
-    private static List<Holder<CultivationProfile>> realmCultivations(CultivationAttachment spirit) {
+    private static List<Holder<Aura>> realmCultivations(CultivationAttachment spirit) {
         return spirit.realmStages().values().stream()
-                .map(stage -> stage.value().cultivation()).distinct().toList();
+                .map(stage -> stage.value().aura()).distinct().toList();
     }
 
-    private static List<Holder<CultivationProfile>> eligibleRealmCultivations(CultivationAttachment spirit, LivingEntity entity,
-                                                                             FormulaContext context) {
+    private static List<Holder<Aura>> eligibleRealmCultivations(CultivationAttachment spirit, LivingEntity entity,
+                                                                FormulaContext context) {
         return cultivationStages(entity, spirit).stream()
                 .filter(stage -> stage.value().cultivateCondition().test(entity, context))
-                .map(stage -> stage.value().cultivation()).distinct().toList();
+                .map(stage -> stage.value().aura()).distinct().toList();
     }
 
     public static boolean realmCultivateCondition(CultivationAttachment spirit, LivingEntity entity, FormulaContext context) {
@@ -512,39 +512,39 @@ public final class CultivationActionService {
     }
 
     /**
-     * The active stage, falling back to the profile's first realm for mortals.
+     * The active stage, falling back to the aura's first realm for mortals.
      */
-    private static Holder<RealmStage> stageFor(CultivationAttachment spirit, Holder<CultivationProfile> cultivation) {
-        Holder<RealmStage> current = spirit.realmStage(cultivation);
-        return current != null ? current : cultivation.value().firstRealm().orElse(null);
+    private static Holder<RealmStage> stageFor(CultivationAttachment spirit, Holder<Aura> aura) {
+        Holder<RealmStage> current = spirit.realmStage(aura);
+        return current != null ? current : aura.value().firstRealm().orElse(null);
     }
 
     private static List<Holder<RealmStage>> cultivationStages(LivingEntity entity, CultivationAttachment spirit) {
-        Map<Holder<CultivationProfile>, Holder<RealmStage>> stages = new LinkedHashMap<>(spirit.realmStages());
-        CultivationProfiles.holdersByResource(entity.level().registryAccess()).values().forEach(cultivation ->
-                cultivation.value().firstRealm().ifPresent(first -> stages.putIfAbsent(cultivation, first)));
+        Map<Holder<Aura>, Holder<RealmStage>> stages = new LinkedHashMap<>(spirit.realmStages());
+        AuraLookup.all(entity).forEach(aura ->
+                aura.value().firstRealm().ifPresent(first -> stages.putIfAbsent(aura, first)));
         return List.copyOf(stages.values());
     }
 
-    private static ActiveCultivation active(Holder<CultivationProfile> cultivation) {
-        return new ActiveCultivation(cultivation);
+    private static ActiveCultivation active(Holder<Aura> aura) {
+        return new ActiveCultivation(aura);
     }
 
-    private record ActiveCultivation(Holder<CultivationProfile> cultivation) {
+    private record ActiveCultivation(Holder<Aura> aura) {
         private Identifier id() {
-            return HolderHelper.id(this.cultivation.value().resource());
+            return HolderHelper.id(this.aura.value().resource());
         }
 
         private Resource definition() {
-            return this.cultivation.value().resource().value();
+            return this.aura.value().resource().value();
         }
 
         private Holder<Resource> resource() {
-            return this.cultivation.value().resource();
+            return this.aura.value().resource();
         }
 
-        private CultivationProfile profile() {
-            return this.cultivation.value();
+        private Aura auraValue() {
+            return this.aura.value();
         }
     }
 

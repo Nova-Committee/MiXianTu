@@ -54,7 +54,7 @@ public record SpawnLightningAction(NumberProvider offsetX, NumberProvider offset
         bolt.setVisualOnly(this.visualOnly);
         bolt.setDamage((float) Math.max(0.0D, damage));
         if (this.cause && entity instanceof ServerPlayer player) bolt.setCause(player);
-        bolt.setPos(entity.getX() + x, entity.getY() + y, entity.getZ() + z);
+        bolt.setPos(ctx.position().add(x, y, z));
         level.addFreshEntity(bolt);
     }
 

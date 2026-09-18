@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -8,7 +7,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 
@@ -17,13 +15,14 @@ import java.util.Map;
 
 /**
  * Per-block aura contribution, accumulated and cached for each loaded chunk.
+ * <p>
+ * The auras it names are its whole vocabulary: which auras a block emits is the key set of {@link #aura},
+ * so a block cannot claim a kind of aura it does not actually supply.
  */
-public record BlockAura(List<Either<Holder<Block>, TagKey<Block>>> blocks, Map<Holder<Resource>, AuraValue> aura,
-                        List<Identifier> auraKinds) {
+public record BlockAura(List<Either<Holder<Block>, TagKey<Block>>> blocks, Map<Holder<Aura>, AuraValue> aura) {
     public static final Codec<BlockAura> CODEC = RecordCodecBuilder.<BlockAura>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.BLOCK).fieldOf("blocks").forGetter(BlockAura::blocks),
-            AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(BlockAura::aura),
-            Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(BlockAura::auraKinds)
+            AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(BlockAura::aura)
     ).apply(i, BlockAura::new)).validate(BlockAura::validate);
 
     private static DataResult<BlockAura> validate(BlockAura definition) {

@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.FloatHoldingItemAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -10,7 +11,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
+import com.iafenvoy.mxt.runtime.spirit.ItemAuraAccess;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -52,16 +53,16 @@ public final class ItemAuraService {
     }
 
     /**
-     * The resource type of this fuel or chargeable item.
+     * The aura this fuel or chargeable item carries.
      */
-    public static Optional<Holder<Resource>> type(Provider access, ItemStack stack) {
+    public static Optional<Holder<Aura>> type(Provider access, ItemStack stack) {
         return find(access, stack).map(holder -> holder.value().type());
     }
 
     /**
      * Resolves the type against the active server's registry access.
      */
-    public static Optional<Holder<Resource>> type(ItemStack stack) {
+    public static Optional<Holder<Aura>> type(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server == null ? Optional.empty() : type(server.registryAccess(), stack);
     }
@@ -170,7 +171,7 @@ public final class ItemAuraService {
                 giveItem(entity, item);
                 return ItemStack.EMPTY;
             }
-            if (item.getItem() instanceof SpiritItemAccess access) {
+            if (item.getItem() instanceof ItemAuraAccess access) {
                 int capacity = Math.max(0, access.getCapacity(entity, item).getInt(definition.value().type()));
                 int unavailable = access.extract(entity, item, definition.value().type(), capacity, true);
                 int available = Math.max(0, capacity - unavailable);
@@ -261,7 +262,7 @@ public final class ItemAuraService {
 
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
-        if (item.getItem() instanceof SpiritItemAccess access) {
+        if (item.getItem() instanceof ItemAuraAccess access) {
             access.extract(entity, item, active.value().type(), Integer.MAX_VALUE, false);
             item.remove(MxtDataComponents.ITEM_AURA);
             giveItem(entity, item);
@@ -276,9 +277,12 @@ public final class ItemAuraService {
         active.value().exhaustedAction().execute(entity, context);
     }
 
-    private static double release(LivingEntity entity, ResourceHolderAttachment resources, Holder<Resource> resource,
+    private static double release(LivingEntity entity, ResourceHolderAttachment resources, Holder<Aura> aura,
                                   double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        // The pool holds values, so the aura names which value is credited: this is the one direction the two
+        // convert in without a lookup.
+        Holder<Resource> resource = aura.value().resource();
         double before = resources.get(resource);
         ResourceService.change(resources, resource, amount, ResourceService.formulaContext(entity, resource, context));
         return Math.max(0.0D, resources.get(resource) - before);

@@ -1,0 +1,5 @@
+{
+  "type": "mxt:active",
+  "costs": [{ "type": "mxt:item", "items": "minecraft:apple", "amount": 1 }],
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 1 }
+}

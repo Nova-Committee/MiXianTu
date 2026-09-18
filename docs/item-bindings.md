@@ -13,7 +13,7 @@ KubeJS / mod item registry
 - `mxt:item_binding` maps existing items to an ordered generic action list, executed after vanilla consumption finishes.
 - `mxt:weapon_binding` maps one existing item to weapon-only fields.
 - `mxt:pill_binding` maps one existing item to pill-only fields.
-- `mxt:technique_binding` maps an existing book, jade slip, or other item to one `cultivation_technique`. Right-clicking it attempts to learn the technique; every learned technique remains enabled and contributes its passive effects.
+- `mxt:technique_binding` maps an existing book, jade slip, or other item to one `technique`. Right-clicking it attempts to learn the technique; every learned technique remains enabled and contributes its passive effects.
 - All four bindings may declare an optional `quality_group` reference to an `mxt:item_quality` tag. It selects the permitted quality group for that physical item; the tag's member order defines quality order, while an explicit stack component or forge result still determines the current quality.
 - `conditions` is optional on every binding. Every matching binding condition and the current quality's condition must pass before the item can be used. Each entry may be an inline `EntityCondition`, or an object with `condition` and an optional translation-key `description`. Described entries are shown in the item tooltip in green when true and red when false. The check blocks right-click use, block interaction, attacks, data-driven item effects, weapon tick effects, technique learning, and binding-added weapon attributes.
 
@@ -75,4 +75,4 @@ Every binding uses the `items` matcher. It accepts one item ID, one item tag (su
 
 `conditions` is optional on every binding. Each entry may be an inline `EntityCondition`, or an object with `condition` and an optional translation-key `description`. Described entries are shown in the item tooltip with a green `✓` when true or a red `✗` when false; the description text itself keeps its normal style.
 
-`technique` is a required holder reference to `mxt:cultivation_technique`. Its own `learn_condition`, already-learned check, exclusive-tag conflict check, and event cancellation remain authoritative. A matching technique binding claims the item interaction even when learning fails, so the item's normal right-click behavior cannot bypass these checks.
+`technique` is a required holder reference to `mxt:technique`. Its own `learn_condition`, already-learned check, exclusive-tag conflict check, and event cancellation remain authoritative. A matching technique binding claims the item interaction even when learning fails, so the item's normal right-click behavior cannot bypass these checks.

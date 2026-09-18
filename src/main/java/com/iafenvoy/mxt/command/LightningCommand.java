@@ -33,7 +33,9 @@ import static net.minecraft.commands.Commands.literal;
 public final class LightningCommand {
     private static final DynamicCommandExceptionType INVALID_COLOR = new DynamicCommandExceptionType(
             value -> Component.translatable("command.mxt.lightning.invalid_color", value));
-    /** The colours offered for completion; any six hexadecimal digits are accepted. */
+    /**
+     * The colours offered for completion; any six hexadecimal digits are accepted.
+     */
     private static final List<String> COLORS = List.of("737380", "FFFFFF", "000000", "66CCFF", "7A5CFF", "FF4444", "44FF88", "FFCC00");
     private static final double DEFAULT_DAMAGE = 5.0D;
 
@@ -53,7 +55,7 @@ public final class LightningCommand {
                         .then(visualOnly));
         LiteralArgumentBuilder<CommandSourceStack> thickness = literal("thickness")
                 .then(argument("thickness", DoubleArgumentType.doubleArg(
-                                ColoredLightningBolt.MIN_THICKNESS, ColoredLightningBolt.MAX_THICKNESS))
+                        ColoredLightningBolt.MIN_THICKNESS, ColoredLightningBolt.MAX_THICKNESS))
                         .executes(ctx -> strike(ctx, position(ctx), color(ctx), alpha(ctx), thickness(ctx), DEFAULT_DAMAGE, false))
                         .then(damage));
         LiteralArgumentBuilder<CommandSourceStack> alpha = literal("alpha")

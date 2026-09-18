@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -249,10 +249,10 @@ public final class TechniqueItemService {
     /**
      * Success uses the action bar as the refusals do, because it is transient state.
      */
-    private static void notifyLearned(LivingEntity entity, Holder<CultivationTechnique> technique) {
+    private static void notifyLearned(LivingEntity entity, Holder<Technique> technique) {
         if (!(entity instanceof ServerPlayer player)) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.learned",
-                DefinitionText.name(technique, "cultivation_technique")).withStyle(ChatFormatting.GREEN), true);
+                DefinitionText.name(technique, "technique")).withStyle(ChatFormatting.GREEN), true);
     }
 
     /**
@@ -265,10 +265,10 @@ public final class TechniqueItemService {
         player.getCooldowns().addCooldown(stack, ticks);
     }
 
-    private static void notifyLearnFailure(LivingEntity entity, Holder<CultivationTechnique> technique, Result result) {
+    private static void notifyLearnFailure(LivingEntity entity, Holder<Technique> technique, Result result) {
         if (!(entity instanceof ServerPlayer player) || result.failure() == null) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.failed",
-                        DefinitionText.name(technique, "cultivation_technique"),
+                        DefinitionText.name(technique, "technique"),
                         Component.translatable("actionbar.mxt.technique.failure." + result.failure().name().toLowerCase(Locale.ROOT)))
                 .withStyle(ChatFormatting.RED), true);
     }

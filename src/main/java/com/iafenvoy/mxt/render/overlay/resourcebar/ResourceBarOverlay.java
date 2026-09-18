@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.render.overlay.resourcebar;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Bar;
@@ -15,6 +16,7 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
@@ -22,6 +24,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
@@ -84,7 +87,10 @@ public enum ResourceBarOverlay implements GuiLayer {
                                          LivingEntity entity, Layout layout) {
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
-            if (!ResourceUseService.canUse(entity, resource)) continue;
+            // A bar is declared on a value; the use gate belongs to the aura that value carries, and a value
+            // without one is ungated.
+            Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+            if (aura != null && !ResourceUseService.canUse(entity, aura)) continue;
             Identifier id = HolderHelper.idOrNull(resource);
             if (id == null) continue;
             List<ResourceBar> definitions = resource.value().bars();
@@ -153,7 +159,8 @@ public enum ResourceBarOverlay implements GuiLayer {
         // The tag overload is deprecated and NeoForge does not ship a water FluidType constant: the
         // registered water type is the replacement, and asking the player about a type rather than a tag
         // is also what the client can answer without a registry lookup.
-        if (player.isEyeInFluid(NeoForgeMod.WATER_TYPE.value()) || player.getAirSupply() < player.getMaxAirSupply()) y -= 8;
+        if (player.isEyeInFluid(NeoForgeMod.WATER_TYPE.value()) || player.getAirSupply() < player.getMaxAirSupply())
+            y -= 8;
         int x;
         x = state.anchor() == Anchor.LEFT ? width / 2 - 20 - state.renderData().width() : width / 2 + 20;
         return new Position(x, y - offset);

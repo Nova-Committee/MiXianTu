@@ -1,12 +1,10 @@
 package com.iafenvoy.mxt.command;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -32,7 +30,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -72,7 +69,7 @@ public final class AuraCommand {
         ServerPlayer player = source.getPlayerOrException();
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
         if (type != null) {
-            Reference<Resource> holder = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, type).orElse(null);
+            Reference<Aura> holder = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, type).orElse(null);
             if (holder == null) {
                 source.sendFailure(Component.translatable("command.mxt.aura.unknown_type", type.toString()));
                 return 0;
@@ -99,10 +96,9 @@ public final class AuraCommand {
         return cleared;
     }
 
-    private static Component auraReport(AuraResult aura, Map<? extends Holder<Resource>, AuraPool> pools) {
+    private static Component auraReport(AuraResult aura, Map<? extends Holder<Aura>, AuraPool> pools) {
         MutableComponent report = Component.translatable("command.mxt.aura.query.header").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", sourceName(aura), Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
-        report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.kinds", aura.auraKinds().isEmpty() ? Component.translatable("command.mxt.none") : auraKinds(aura.auraKinds())));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.suppressed", aura.suppressCultivate()));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.elements").withStyle(ChatFormatting.GRAY));
         if (pools.isEmpty()) {
@@ -114,9 +110,9 @@ public final class AuraCommand {
         return report;
     }
 
-    private static Component resourceName(Holder<Resource> resource) {
-        MutableComponent base = DefinitionText.name(resource, "resource");
-        return CultivationProfiles.findServer(resource).flatMap(CultivationProfile::auraType)
+    private static Component resourceName(Holder<Aura> aura) {
+        MutableComponent base = DefinitionText.name(aura, "aura");
+        return aura.value().auraType()
                 .map(type -> base.copy().append(" (").append(DefinitionText.name(type, "element")).append(")")).orElse(base);
     }
 
@@ -128,15 +124,6 @@ public final class AuraCommand {
             case CUSTOM, CHUNK -> "aura_zone";
         };
         return DefinitionText.name(aura.source(), category);
-    }
-
-    private static Component auraKinds(List<Identifier> kinds) {
-        MutableComponent result = Component.empty();
-        for (int index = 0; index < kinds.size(); index++) {
-            if (index > 0) result.append(", ");
-            result.append(DefinitionText.name(kinds.get(index), "aura_kind"));
-        }
-        return result;
     }
 
     private static String auraNumber(double value) {

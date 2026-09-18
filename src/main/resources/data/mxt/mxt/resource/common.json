@@ -1,7 +1,5 @@
 {
   "default_value": 0,
   "min": 0,
-  "max": 1000000,
-  "regen": 0,
-  "aura_type": "mxt:common"
+  "max": 1000000
 }

@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.runtime.trigger;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -61,7 +61,7 @@ public final class CultivationTriggerService {
         if (!cultivation.cultivating()) return;
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         // Only chains that exist are candidates; a value without a profile has no breakthrough.
-        for (Reference<CultivationProfile> chain : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION).toList()) {
+        for (Reference<Aura> chain : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).toList()) {
             FormulaContext formula = FormulaContext.of(entity);
             BreakthroughStatus status = CultivationService.breakthroughStatusForChain(entity, chain, formula);
             if (!status.reached() || !status.conditionsMet()) continue;
@@ -79,7 +79,7 @@ public final class CultivationTriggerService {
 
 
     private static void register(LivingEntity entity, CultivationAttachment cultivation,
-                                 ResourceHolderAttachment resources, Holder<CultivationProfile> chain,
+                                 ResourceHolderAttachment resources, Holder<Aura> chain,
                                  CultivateConditions conditions, FormulaContext formula) {
         int index = 0;
         for (Trigger trigger : conditions.triggers()) {

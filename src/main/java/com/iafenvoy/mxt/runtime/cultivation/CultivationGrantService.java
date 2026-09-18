@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -42,7 +42,7 @@ public final class CultivationGrantService {
         for (Holder<Physique> physique : spirit.physiques()) {
             granted += grantAll(abilities, physique.value().grantedAbilities(), source("physique", HolderHelper.id(physique)));
         }
-        for (Holder<CultivationTechnique> technique : spirit.learnedTechniques()) {
+        for (Holder<Technique> technique : spirit.learnedTechniques()) {
             Identifier source = source("technique", HolderHelper.id(technique));
             granted += grantAll(abilities, technique.value().grantedAbilities(), source);
             // Mastery adds to the same source: a technique's grants are revoked and rebuilt together,

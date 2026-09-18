@@ -114,7 +114,8 @@ public final class FriendCommand {
      * The list as one clickable name per entry, so leaving a list is the same gesture as entering it.
      */
     private static Component listing(List<NameAndId> friends, boolean permanent) {
-        if (friends.isEmpty()) return Component.translatable("command.mxt.friend.list.none").withStyle(ChatFormatting.DARK_GRAY);
+        if (friends.isEmpty())
+            return Component.translatable("command.mxt.friend.list.none").withStyle(ChatFormatting.DARK_GRAY);
         MutableComponent row = Component.empty();
         for (int index = 0; index < friends.size(); index++) {
             if (index > 0) row.append(Component.literal(", ").withStyle(ChatFormatting.DARK_GRAY));

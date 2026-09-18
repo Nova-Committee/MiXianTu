@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime;
 
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
@@ -76,8 +76,8 @@ public final class ServerCache {
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
         Map<Identifier, Integer> ranks = new LinkedHashMap<>();
         Map<Identifier, Identifier> profiles = new LinkedHashMap<>();
-        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.CULTIVATION).forEach(profileHolder -> {
-            CultivationProfile profile = profileHolder.value();
+        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.AURA).forEach(profileHolder -> {
+            Aura profile = profileHolder.value();
             Identifier resource = HolderHelper.id(profile.resource());
             Identifier previous = profiles.putIfAbsent(resource, profileHolder.key().identifier());
             if (previous != null)
@@ -180,7 +180,7 @@ public final class ServerCache {
                 throw new IllegalStateException("Cyclic cultivation realm chain for " + cultivation + " at realm " + current);
             }
             RealmStage stage = MxtDatapackRegistries.get(MxtResourceKeys.REALM_STAGE, current).orElse(null);
-            if (stage == null || !HolderHelper.id(stage.cultivation()).equals(cultivation)) {
+            if (stage == null || !HolderHelper.id(stage.aura()).equals(cultivation)) {
                 throw new IllegalStateException("Invalid cultivation realm chain for " + cultivation + " at realm " + current);
             }
             Identifier previous = resolved.get(current);
@@ -261,8 +261,8 @@ public final class ServerCache {
      * rejected, so a holder can never reach a level nothing describes.
      */
     private void validateTechniqueChains(Map<Identifier, Identifier> resolved) {
-        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.CULTIVATION_TECHNIQUE).forEach(holder -> {
-            CultivationTechnique technique = holder.value();
+        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TECHNIQUE).forEach(holder -> {
+            Technique technique = holder.value();
             Identifier entry = technique.defaultStage().map(HolderHelper::id).orElse(null);
             if (entry == null) return;
             Identifier techniqueId = holder.key().identifier();

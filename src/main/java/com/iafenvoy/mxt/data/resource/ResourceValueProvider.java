@@ -1,19 +1,18 @@
 package com.iafenvoy.mxt.data.resource;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.function.Function;
@@ -73,7 +72,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
 
         @Override
         public double resolve(ResourceHolderAttachment holder, Holder<Resource> resource, FormulaContext context) {
-            return CultivationProfiles.find(CultivationProfiles.access(context), resource)
+            return AuraLookup.find(AuraLookup.access(context), resource)
                     .map(profile -> profile.regen().evaluate(context)).orElse(0.0D);
         }
 
@@ -112,12 +111,13 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
 
         @Override
         public double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-            Identifier id = HolderHelper.idOrNull(resource);
-            if (id == null) return 0.0D;
+            // The value names the aura it carries; the environment is pooled per aura.
+            Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+            if (aura == null) return 0.0D;
             if (entity.level().isClientSide()) {
-                return AuraClientState.current().environmentPool(id).amount();
+                return AuraClientState.current().environmentPool(aura).amount();
             }
-            return AuraService.getSensedAura(entity.level(), entity.blockPosition()).pool(resource).amount();
+            return AuraService.getSensedAura(entity.level(), entity.blockPosition()).pool(aura).amount();
         }
 
         @Override
@@ -140,12 +140,12 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
 
         @Override
         public double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-            Identifier id = HolderHelper.idOrNull(resource);
-            if (id == null) return 0.0D;
+            Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+            if (aura == null) return 0.0D;
             if (entity.level().isClientSide()) {
-                return AuraClientState.current().actualPool(id).amount();
+                return AuraClientState.current().actualPool(aura).amount();
             }
-            return AuraService.getPositionAura(entity.level(), entity.blockPosition()).pool(resource).amount();
+            return AuraService.getPositionAura(entity.level(), entity.blockPosition()).pool(aura).amount();
         }
 
         @Override

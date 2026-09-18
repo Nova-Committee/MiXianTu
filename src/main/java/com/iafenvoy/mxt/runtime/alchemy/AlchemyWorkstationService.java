@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.StartResult;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.TickResult.State;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -51,8 +50,7 @@ public final class AlchemyWorkstationService {
             double minimum = entry.getValue().evaluate(context);
             return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
         });
-        if (!auraMet || !CollectionHelper.containsAllFast(aura.auraKinds(), recipe.auraKinds()))
-            return StartResult.rejected(Failure.ENVIRONMENT);
+        if (!auraMet) return StartResult.rejected(Failure.ENVIRONMENT);
         return start(state, holder, furnaceTier, context);
     }
 

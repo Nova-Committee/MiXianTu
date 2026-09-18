@@ -20,7 +20,8 @@ public record DamageTargetBiEntityAction(NumberProvider amount) implements BiEnt
         // Damage is a server decision; the deprecated {@code Entity#hurt} only ever applied on a server
         // anyway, so asking for the server level first is the same behaviour stated outright.
         if (!(target.level() instanceof ServerLevel level)) return;
-        if (Double.isFinite(amount) && amount > 0.0D) target.hurtServer(level, target.damageSources().generic(), (float) amount);
+        if (Double.isFinite(amount) && amount > 0.0D)
+            target.hurtServer(level, target.damageSources().generic(), (float) amount);
     }
 
     @Override

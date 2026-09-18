@@ -23,7 +23,8 @@ public record DamageAction(NumberProvider amount) implements EntityAction {
         // Damage is a server decision: {@code Entity#hurt} still routes to the server and is deprecated,
         // and an action running on a client level must not pretend it dealt damage.
         if (!(entity.level() instanceof ServerLevel level)) return;
-        if (Double.isFinite(amount) && amount > 0.0D) entity.hurtServer(level, entity.damageSources().generic(), (float) amount);
+        if (Double.isFinite(amount) && amount > 0.0D)
+            entity.hurtServer(level, entity.damageSources().generic(), (float) amount);
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -25,18 +25,18 @@ public final class TechniqueService {
     private TechniqueService() {
     }
 
-    public static Result learn(SpiritIdentityAttachment spirit, Holder<CultivationTechnique> technique) {
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.CULTIVATION_TECHNIQUE, technique))
+    public static Result learn(SpiritIdentityAttachment spirit, Holder<Technique> technique) {
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.TECHNIQUE, technique))
             return Result.rejected(Failure.DISABLED);
-        CultivationTechnique definition = technique.value();
+        Technique definition = technique.value();
         if (spirit.learnedTechniques().contains(technique)) return Result.rejected(Failure.ALREADY_LEARNED);
         Set<Identifier> existing = new HashSet<>();
-        for (Holder<CultivationTechnique> known : spirit.learnedTechniques())
+        for (Holder<Technique> known : spirit.learnedTechniques())
             existing.addAll(known.value().exclusiveTags());
         if (definition.exclusiveTags().stream().anyMatch(existing::contains)) return Result.rejected(Failure.CONFLICT);
         if (NeoForge.EVENT_BUS.post(new Pre(spirit, technique)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
-        List<Holder<CultivationTechnique>> values = new LinkedList<>(spirit.learnedTechniques());
+        List<Holder<Technique>> values = new LinkedList<>(spirit.learnedTechniques());
         values.add(technique);
         spirit.setLearnedTechniques(values);
         NeoForge.EVENT_BUS.post(new Post(spirit, technique));
@@ -46,7 +46,7 @@ public final class TechniqueService {
     /**
      * Entity-aware learning entry point that evaluates every declared fixed cultivation condition.
      */
-    public static Result learn(LivingEntity entity, SpiritIdentityAttachment spirit, Holder<CultivationTechnique> technique, FormulaContext context) {
+    public static Result learn(LivingEntity entity, SpiritIdentityAttachment spirit, Holder<Technique> technique, FormulaContext context) {
         boolean allowed = technique.value().learnCondition().test(entity, context);
         if (!allowed) return Result.rejected(Failure.CONDITIONS);
         Result result = learn(spirit, technique);

@@ -1,12 +1,20 @@
 package com.iafenvoy.mxt.data.context;
 
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
 public class Context {
+    /**
+     * The extension key an activation's own place travels under, when it is not the acting entity's position.
+     * Read it through {@link #origin()}, never directly: the extension map is untyped.
+     */
+    public static final String ORIGIN = "mxt:origin";
+
     private final Map<String, Object> data;
 
     /**
@@ -58,5 +66,22 @@ public class Context {
     public <T extends Context> T copyTo(T target) {
         this.data.forEach(target::set);
         return target;
+    }
+
+    /**
+     * The place this context was told to happen at, or empty when it is the acting entity's own. A subclass is
+     * what turns this into a position, because only it knows which entity to fall back to.
+     */
+    public Optional<Vec3> origin() {
+        return this.get(ORIGIN);
+    }
+
+    /**
+     * States the place this context happens at. It travels as extension data, so a nested action - a sequence,
+     * a composite, anything that hands its own context on - inherits it without being told again.
+     */
+    public Context origin(@Nullable Vec3 value) {
+        this.set(ORIGIN, value);
+        return this;
     }
 }

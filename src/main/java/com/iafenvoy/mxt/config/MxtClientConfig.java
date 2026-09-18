@@ -69,7 +69,9 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     }
 
     public static final class Information extends AutoInitConfigCategoryBase {
-        /** Ticks between two rebuilds of the information panel. */
+        /**
+         * Ticks between two rebuilds of the information panel.
+         */
         public final IntegerEntry refreshInterval = IntegerEntry.builder("config.mxt.client.information.refresh_interval", 20)
                 .key("refresh_interval")
                 .tooltip("config.mxt.client.information.refresh_interval.tooltip")

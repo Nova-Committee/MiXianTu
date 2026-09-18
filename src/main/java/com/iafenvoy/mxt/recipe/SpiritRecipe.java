@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.recipe;
 
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.world.item.ItemStack;
@@ -16,7 +16,7 @@ import java.util.Map;
  * Common contract for recipes accepted by the spirit crafting table.
  */
 public interface SpiritRecipe extends Recipe<SpiritCraftingInput> {
-    Map<Holder<Resource>, NumberProvider> aura();
+    Map<Holder<Aura>, NumberProvider> aura();
 
     ItemStackTemplate result();
 

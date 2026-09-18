@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
@@ -116,11 +116,11 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
                 .orElse(fallback);
     }
 
-    public Holder<Resource> progressResource(int index) {
+    public Holder<Aura> progressAura(int index) {
         if (index < 0 || index >= MAX_PROGRESS_ENTRIES) return null;
         int rawId = this.progressTypes[index].get();
         if (rawId < 0) return null;
-        Registry<Resource> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+        Registry<Aura> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA);
         return registry.get(rawId).orElse(null);
     }
 
@@ -149,7 +149,7 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
      */
     private void updateResult() {
         this.current = this.findRecipe();
-        Map<Holder<Resource>, Integer> costs = this.current == null ? Map.of() : this.current.costs();
+        Map<Holder<Aura>, Integer> costs = this.current == null ? Map.of() : this.current.costs();
         this.withTable(table -> table.configureAuraCosts(costs));
         this.syncProgress();
     }
@@ -158,10 +158,10 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         // The whole row is read in one visit to the block; no block means no rows written at all, which
         // leaves the client's data slots holding what the server published.
         this.withTable(table -> {
-            Registry<Resource> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+            Registry<Aura> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA);
             int index = 0;
             if (this.current != null) {
-                for (Entry<Holder<Resource>, Integer> entry : this.current.costs().entrySet()) {
+                for (Entry<Holder<Aura>, Integer> entry : this.current.costs().entrySet()) {
                     if (index >= MAX_PROGRESS_ENTRIES) break;
                     this.progressTypes[index].set(registry.getId(entry.getKey().value()));
                     this.progressAmounts[index].set(Math.clamp(table.aura(entry.getKey()), 0, Short.MAX_VALUE));
@@ -192,9 +192,9 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         return new RecipeMatch(recipe, this.costs(recipe.aura()));
     }
 
-    private Map<Holder<Resource>, Integer> costs(Map<Holder<Resource>, NumberProvider> aura) {
-        Map<Holder<Resource>, Integer> costs = new LinkedHashMap<>();
-        for (Entry<Holder<Resource>, NumberProvider> entry : aura.entrySet()) {
+    private Map<Holder<Aura>, Integer> costs(Map<Holder<Aura>, NumberProvider> aura) {
+        Map<Holder<Aura>, Integer> costs = new LinkedHashMap<>();
+        for (Entry<Holder<Aura>, NumberProvider> entry : aura.entrySet()) {
             double value = entry.getValue().evaluate(FormulaContext.of(this.player));
             if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
             costs.put(entry.getKey(), (int) Math.ceil(value));
@@ -230,6 +230,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         return stillValid(this.access, player, MxtBlocks.SPIRIT_CRAFTING_TABLE.get());
     }
 
-    private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Resource>, Integer> costs) {
+    private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Aura>, Integer> costs) {
     }
 }

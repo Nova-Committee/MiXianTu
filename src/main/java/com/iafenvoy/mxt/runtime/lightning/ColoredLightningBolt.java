@@ -17,9 +17,13 @@ import org.jspecify.annotations.NonNull;
  * non-default synched values at that moment, so a later change costs a tick of the vanilla look.
  */
 public final class ColoredLightningBolt extends LightningBolt {
-    /** The vanilla bolt colour {@code 0.45, 0.45, 0.5}, rounded to eight bits per channel. */
+    /**
+     * The vanilla bolt colour {@code 0.45, 0.45, 0.5}, rounded to eight bits per channel.
+     */
     public static final int DEFAULT_COLOR = 0x737380;
-    /** The vanilla vertex alpha, which additive blending turns into glow strength rather than transparency. */
+    /**
+     * The vanilla vertex alpha, which additive blending turns into glow strength rather than transparency.
+     */
     public static final float DEFAULT_ALPHA = 0.3F;
     public static final float DEFAULT_THICKNESS = 1.0F;
     public static final float MIN_THICKNESS = 0.1F, MAX_THICKNESS = 4.0F;

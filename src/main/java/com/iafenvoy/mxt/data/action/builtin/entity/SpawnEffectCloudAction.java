@@ -33,7 +33,7 @@ public record SpawnEffectCloudAction(float radius, float radiusOnUse, int waitTi
         if (!(entity.level() instanceof ServerLevel level)) return;
         AreaEffectCloud cloud = EntityType.AREA_EFFECT_CLOUD.create(level, EntitySpawnReason.TRIGGERED);
         if (cloud == null) return;
-        cloud.setPos(entity.getX(), entity.getY(), entity.getZ());
+        cloud.setPos(ctx.position());
         cloud.setRadius(this.radius);
         cloud.setRadiusOnUse(this.radiusOnUse);
         cloud.setWaitTime(this.waitTime);

@@ -4,8 +4,8 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique.StageConfiguration;
+import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.data.cultivation.Technique.StageConfiguration;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -34,7 +34,7 @@ public final class SkillStageService {
      * The level the holder stands on: the one it advanced to, or the technique's entry level while it
      * never advanced. Empty means the technique has no chain, so nothing can be granted or climbed.
      */
-    public static Optional<Holder<SkillStage>> currentStage(SpiritIdentityAttachment spirit, Holder<CultivationTechnique> technique) {
+    public static Optional<Holder<SkillStage>> currentStage(SpiritIdentityAttachment spirit, Holder<Technique> technique) {
         Holder<SkillStage> stored = spirit.techniqueStage(technique);
         return Optional.ofNullable(stored != null ? stored : technique.value().defaultStage().orElse(null));
     }
@@ -42,7 +42,7 @@ public final class SkillStageService {
     /**
      * Every ability granted at the given level, with tags expanded and duplicates removed.
      */
-    public static List<Holder<Ability>> unlockedAbilities(CultivationTechnique technique, Holder<SkillStage> current) {
+    public static List<Holder<Ability>> unlockedAbilities(Technique technique, Holder<SkillStage> current) {
         if (technique.configuration().isEmpty() || current == null) return List.of();
         ServerCache cache = ServerCache.get().orElse(null);
         if (cache == null) return List.of();
@@ -58,7 +58,7 @@ public final class SkillStageService {
      * The level this technique advances to, or empty at the top of the chain. The chain is the one its
      * {@code default_stage} names, so a level of another chain is never the next step.
      */
-    public static Optional<Holder<SkillStage>> nextStage(CultivationTechnique technique, Holder<SkillStage> current) {
+    public static Optional<Holder<SkillStage>> nextStage(Technique technique, Holder<SkillStage> current) {
         if (current == null) return Optional.empty();
         Identifier skill = technique.defaultStage().map(stage -> stage.value().skill()).orElse(current.value().skill());
         if (!current.value().skill().equals(skill)) return Optional.empty();
@@ -69,7 +69,7 @@ public final class SkillStageService {
      * The condition required to reach the given level; an unconfigured level requires nothing. The cache
      * rejects a chain with unconfigured steps, so that is only the entry level, which none advances into.
      */
-    public static EntityCondition advanceCondition(CultivationTechnique technique, Holder<SkillStage> target) {
+    public static EntityCondition advanceCondition(Technique technique, Holder<SkillStage> target) {
         return Optional.ofNullable(technique.configuration().get(target))
                 .map(StageConfiguration::condition).orElse(AlwaysTrueCondition.INSTANCE);
     }
@@ -77,7 +77,7 @@ public final class SkillStageService {
     /**
      * Whether the holder may advance from its current level to the next. Read-only.
      */
-    public static boolean canAdvance(LivingEntity entity, CultivationTechnique technique, Holder<SkillStage> current,
+    public static boolean canAdvance(LivingEntity entity, Technique technique, Holder<SkillStage> current,
                                      FormulaContext context) {
         Holder<SkillStage> target = nextStage(technique, current).orElse(null);
         return target != null && advanceCondition(technique, target).test(entity, context);

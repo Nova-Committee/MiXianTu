@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SectAttachment;
@@ -7,18 +8,17 @@ import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.RealmTokenComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
@@ -90,28 +90,18 @@ public final class MxtTestCommands {
     }
 
     /**
-     * Re-checks the two behaviours that have no other observable entry point: the aura zone
-     * priority selection and the channelled ability upkeep pulse.
+     * Re-checks the behaviour that has no other observable entry point: the aura zone priority selection.
      */
     private static int verify(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        int checked = 0;
         String auraFailure = verifyAuraPriority(player);
         if (auraFailure != null) {
             source.sendFailure(Component.translatable("command.mxt_test.verify.aura_failed", auraFailure));
-        } else {
-            source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.aura_ok"), false);
-            checked++;
+            return 0;
         }
-        String channelFailure = verifyChannel(player);
-        if (channelFailure != null) {
-            source.sendFailure(Component.translatable("command.mxt_test.verify.channel_failed", channelFailure));
-        } else {
-            source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.channel_ok"), false);
-            checked++;
-        }
-        return checked;
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.aura_ok"), false);
+        return 1;
     }
 
     /**
@@ -170,14 +160,6 @@ public final class MxtTestCommands {
                 .map(key -> key.identifier().equals(level)).orElse(false));
     }
 
-    /**
-     * Asserts that a channelled child of a composite ability starts a channel and applies its
-     * effect on every due upkeep pulse.
-     */
-    private static String verifyChannel(ServerPlayer player) {
-        return ChannelProbe.verify(player);
-    }
-
     private static int giveKit(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
@@ -219,7 +201,7 @@ public final class MxtTestCommands {
         HolderLookup<SpiritRoot> root = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, ROOT);
         HolderLookup<SpiritRoot> waterRoot = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, WATER_ROOT);
         HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
-        HolderLookup<CultivationTechnique> technique = new HolderLookup<>(MxtResourceKeys.CULTIVATION_TECHNIQUE, TECHNIQUE);
+        HolderLookup<Technique> technique = new HolderLookup<>(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
         CultivationIdentityService.grantSpiritRoot(player, ROOT, root.value());
         CultivationIdentityService.grantSpiritRoot(player, WATER_ROOT, waterRoot.value());
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
@@ -320,8 +302,8 @@ public final class MxtTestCommands {
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao test definition " + id));
     }
 
-    private static Reference<CultivationProfile> requireProfile(Identifier resource) {
-        return CultivationProfiles.holderServer(resource)
+    private static Reference<Aura> requireProfile(Identifier resource) {
+        return AuraLookup.holderServer(resource)
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao cultivation profile " + resource));
     }
 

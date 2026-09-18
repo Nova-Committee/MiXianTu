@@ -8,6 +8,9 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.Stream;
 
@@ -26,10 +29,19 @@ public record AreaTargetSelector(NumberProvider radius, boolean includeActor) im
 
     @Override
     public Stream<Entity> select(Entity actor, FormulaContext context) {
+        return this.select(actor, context, null);
+    }
+
+    @Override
+    public Stream<Entity> select(Entity actor, FormulaContext context, @Nullable Vec3 origin) {
         double value = this.radius.evaluate(context);
         if (!Double.isFinite(value) || value < 0.0D) return Stream.empty();
         double radius = Math.min(value, 128.0D);
-        Stream<Entity> entities = actor.level().getEntities(actor, actor.getBoundingBox().inflate(radius)).stream();
+        // An area around the place the activation happens at: an item cast from a display stand covers the
+        // stand, not whoever wound it there. With no such place this is exactly the actor's own box.
+        AABB area = origin == null ? actor.getBoundingBox().inflate(radius)
+                : AABB.ofSize(origin, radius * 2.0D, radius * 2.0D, radius * 2.0D);
+        Stream<Entity> entities = actor.level().getEntities(actor, area).stream();
         if (this.includeActor) return Stream.concat(Stream.of(actor), entities);
         return entities;
     }

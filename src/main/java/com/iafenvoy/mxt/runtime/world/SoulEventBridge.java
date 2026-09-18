@@ -11,6 +11,8 @@ public final class SoulEventBridge {
 
     @SubscribeEvent
     public static void onDeath(LivingDeathEvent event) {
-        if (!event.getEntity().level().isClientSide()) SoulService.transfer(event.getEntity(), "death");
+        // Suspended: death no longer manifests a soul. The attachment is not written either, so a death leaves
+        // nothing behind to reclaim and /mxt soul reclaim has nothing to find. Uncomment to bring it back.
+        // if (!event.getEntity().level().isClientSide()) SoulService.transfer(event.getEntity(), "death");
     }
 }

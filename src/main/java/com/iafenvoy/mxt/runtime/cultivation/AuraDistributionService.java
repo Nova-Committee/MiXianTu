@@ -2,14 +2,13 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.CollectionHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -44,9 +43,8 @@ public final class AuraDistributionService {
             FormulaContext context = FormulaContexts.forEntity(player);
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
             if (!CultivationActionService.canCultivateInEnvironment(spirit, player, aura, context)
-                    || !definition.condition().test(player, context)
-                    || !CollectionHelper.containsAllFast(aura.auraKinds(), definition.auraKinds())) continue;
-            Map<Holder<Resource>, Double> requested = evaluateCosts(definition, context);
+                    || !definition.condition().test(player, context)) continue;
+            Map<Holder<Aura>, Double> requested = evaluateCosts(definition, context);
             if (requested == null || requested.isEmpty()) continue;
             double weight = shareWeight(spirit, context);
             claimsByChunk.computeIfAbsent(chunkKey(player), ignored -> new ArrayList<>())
@@ -58,7 +56,7 @@ public final class AuraDistributionService {
     /**
      * Returns a pre-reserved share for this tick, or empty when there was no prepass.
      */
-    public static Optional<Map<Holder<Resource>, Double>> take(ServerPlayer player) {
+    public static Optional<Map<Holder<Aura>, Double>> take(ServerPlayer player) {
         Allocation allocation = ALLOCATIONS.remove(player.getUUID());
         return allocation == null || allocation.gameTime() != player.level().getGameTime()
                 ? Optional.empty() : Optional.of(allocation.amounts());
@@ -71,16 +69,16 @@ public final class AuraDistributionService {
         // The pool is chunk-scoped, so it follows the first active claimant's resolved zone policy when
         // overlapping dynamic zones disagree.
         Distribution distribution = claims.getFirst().aura().distribution();
-        Map<Integer, Map<Holder<Resource>, Double>> allocations = new HashMap<>();
+        Map<Integer, Map<Holder<Aura>, Double>> allocations = new HashMap<>();
         for (int index = 0; index < claims.size(); index++) allocations.put(index, new LinkedHashMap<>());
-        Set<Holder<Resource>> resources = new LinkedHashSet<>();
-        claims.forEach(claim -> resources.addAll(claim.requested().keySet()));
-        for (Holder<Resource> resource : resources) {
-            double available = stored.auras().getOrDefault(resource, AuraPool.empty()).amount();
-            List<Double> allocated = distribute(claims.stream().map(claim -> claim.requested().getOrDefault(resource, 0.0D)).toList(),
+        Set<Holder<Aura>> auras = new LinkedHashSet<>();
+        claims.forEach(claim -> auras.addAll(claim.requested().keySet()));
+        for (Holder<Aura> aura : auras) {
+            double available = stored.auras().getOrDefault(aura, AuraPool.empty()).amount();
+            List<Double> allocated = distribute(claims.stream().map(claim -> claim.requested().getOrDefault(aura, 0.0D)).toList(),
                     claims.stream().map(Claim::weight).toList(), available, distribution, level.getRandom());
             for (int index = 0; index < claims.size(); index++) {
-                if (allocated.get(index) > 0.0D) allocations.get(index).put(resource, allocated.get(index));
+                if (allocated.get(index) > 0.0D) allocations.get(index).put(aura, allocated.get(index));
             }
         }
         for (int index = 0; index < claims.size(); index++)
@@ -163,9 +161,9 @@ public final class AuraDistributionService {
                 .max(Double::compareTo).orElse(1.0D);
     }
 
-    private static Map<Holder<Resource>, Double> evaluateCosts(CultivateAction action, FormulaContext context) {
-        Map<Holder<Resource>, Double> result = new LinkedHashMap<>();
-        for (Entry<Holder<Resource>, NumberProvider> entry : action.auraCosts().entrySet()) {
+    private static Map<Holder<Aura>, Double> evaluateCosts(CultivateAction action, FormulaContext context) {
+        Map<Holder<Aura>, Double> result = new LinkedHashMap<>();
+        for (Entry<Holder<Aura>, NumberProvider> entry : action.auraCosts().entrySet()) {
             double value = entry.getValue().evaluate(context);
             if (!Double.isFinite(value) || value < 0.0D) return null;
             if (value > 0.0D) result.put(entry.getKey(), value);
@@ -173,9 +171,9 @@ public final class AuraDistributionService {
         return result;
     }
 
-    private record Claim(ServerPlayer player, Map<Holder<Resource>, Double> requested, double weight, AuraResult aura) {
+    private record Claim(ServerPlayer player, Map<Holder<Aura>, Double> requested, double weight, AuraResult aura) {
     }
 
-    private record Allocation(long gameTime, Map<Holder<Resource>, Double> amounts) {
+    private record Allocation(long gameTime, Map<Holder<Aura>, Double> amounts) {
     }
 }

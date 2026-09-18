@@ -40,7 +40,7 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
                 return condition.test(entity.level(), pos, ctx) ? Optional.of(Math.max(original.orElse(0.0F), 3_600_000.0F)) : original;
             }
         }).orElseGet(ExplosionDamageCalculator::new);
-        level.explode(entity, level.damageSources().explosion(entity, null), calculator, entity.position(), this.power, this.createFire, this.interaction);
+        level.explode(entity, level.damageSources().explosion(entity, null), calculator, ctx.position(), this.power, this.createFire, this.interaction);
     }
 
     @Override

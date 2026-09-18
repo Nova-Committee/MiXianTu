@@ -5,6 +5,8 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -17,6 +19,15 @@ public interface TargetSelector {
             .byNameCodec().dispatch("type", TargetSelector::codec, Function.identity());
 
     Stream<Entity> select(Entity actor, FormulaContext context);
+
+    /**
+     * The same selection, for an activation that happens somewhere other than where the actor stands - an item
+     * cast from a display stand. A selector that works off the actor's own place overrides this; the default
+     * ignores it, because most selectors ask about the actor itself rather than about a place.
+     */
+    default Stream<Entity> select(Entity actor, FormulaContext context, @Nullable Vec3 origin) {
+        return this.select(actor, context);
+    }
 
     MapCodec<? extends TargetSelector> codec();
 }

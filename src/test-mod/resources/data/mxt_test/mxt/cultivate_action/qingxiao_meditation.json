@@ -1,7 +1,6 @@
 {
   "default": true,
   "tick_interval": 20,
-  "aura_kinds": ["mxt_test:aura_kind/common"],
   "absorb_amount": "2 + level * 0.05",
   "aura_costs": {},
   "aura_gains": [{ "id": "mxt_test:qi", "amount": "1 + level * 0.05" }],

@@ -1,11 +1,9 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -31,28 +29,28 @@ public final class SpiritBurstClient {
     private SpiritBurstClient() {
     }
 
-    public static List<Reference<Resource>> resources(Player player) {
-        return resourcesAvailable(player).stream().limit(MAX_SLOTS).toList();
+    public static List<Reference<Aura>> auras(Player player) {
+        return aurasAvailable(player).stream().limit(MAX_SLOTS).toList();
     }
 
     /**
-     * Every resource available for selection; the runtime hotbar still uses nine.
+     * Every aura available for selection; the runtime hotbar still uses nine.
      */
-    public static List<Reference<Resource>> resourcesAvailable(Player player) {
-        return MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE)
-                .filter(resource -> canBurst(player, resource))
-                .sorted(Comparator.comparing(resource -> HolderHelper.id(resource).toString()))
+    public static List<Reference<Aura>> aurasAvailable(Player player) {
+        return MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.AURA)
+                .filter(aura -> canBurst(player, aura))
+                .sorted(Comparator.comparing(aura -> HolderHelper.id(aura).toString()))
                 .toList();
     }
 
     /**
-     * {@code aura_type} selects the elemental relation, while {@code burst_amount} opts a resource in.
+     * {@code aura_type} selects the elemental relation, while {@code burst_amount} opts an aura in.
      */
-    private static boolean canBurst(Player player, Reference<Resource> resource) {
-        CultivationProfile profile = CultivationProfiles.find(player, resource).orElse(null);
-        if (profile == null || profile.auraType().isEmpty() || !ResourceUseService.canUse(player, resource)) return false;
+    private static boolean canBurst(Player player, Reference<Aura> aura) {
+        Aura profile = aura.value();
+        if (profile.auraType().isEmpty() || !ResourceUseService.canUse(player, aura)) return false;
         double amount = profile.burstAmount().evaluate(
-                ResourceService.formulaContext(player, resource, FormulaContext.of(player)));
+                ResourceService.formulaContext(player, profile.resource(), FormulaContext.of(player)));
         return Double.isFinite(amount) && amount >= 1.0D;
     }
 
@@ -60,11 +58,11 @@ public final class SpiritBurstClient {
         return selectedIndex;
     }
 
-    public static Optional<Holder<Resource>> selected(Player player) {
-        List<Reference<Resource>> resources = resources(player);
-        if (resources.isEmpty()) return Optional.empty();
-        selectedIndex = Math.max(0, Math.min(selectedIndex, resources.size() - 1));
-        return Optional.of(resources.get(selectedIndex));
+    public static Optional<Holder<Aura>> selected(Player player) {
+        List<Reference<Aura>> auras = auras(player);
+        if (auras.isEmpty()) return Optional.empty();
+        selectedIndex = Math.max(0, Math.min(selectedIndex, auras.size() - 1));
+        return Optional.of(auras.get(selectedIndex));
     }
 
     public static void select(int index, boolean firing) {
@@ -72,10 +70,10 @@ public final class SpiritBurstClient {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
         if (player == null) return;
-        List<Reference<Resource>> resources = resources(player);
-        if (index >= resources.size()) return;
+        List<Reference<Aura>> auras = auras(player);
+        if (index >= auras.size()) return;
         selectedIndex = index;
-        Identifier id = HolderHelper.id(resources.get(index));
+        Identifier id = HolderHelper.id(auras.get(index));
         ClientPacketDistributor.sendToServer(new SpiritBurstC2SPayload(firing, Optional.of(id)));
     }
 

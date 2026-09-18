@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
@@ -24,8 +24,8 @@ import java.util.Optional;
  */
 public final class CultivationAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CultivationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.doubleMap(CultivationProfile.CODEC).optionalFieldOf("cultivation_progress", Object2DoubleMaps.emptyMap()).forGetter(CultivationAttachment::cultivationProgresses),
-            CollectionCodecs.map(CultivationProfile.CODEC, RealmStage.CODEC).optionalFieldOf("realm_stages", Map.of()).forGetter(CultivationAttachment::realmStages),
+            CollectionCodecs.doubleMap(Aura.CODEC).optionalFieldOf("cultivation_progress", Object2DoubleMaps.emptyMap()).forGetter(CultivationAttachment::cultivationProgresses),
+            CollectionCodecs.map(Aura.CODEC, RealmStage.CODEC).optionalFieldOf("realm_stages", Map.of()).forGetter(CultivationAttachment::realmStages),
             CultivateAction.CODEC.optionalFieldOf("cultivate_action").forGetter(CultivationAttachment::cultivateAction),
             Codec.BOOL.optionalFieldOf("cultivating", false).forGetter(CultivationAttachment::cultivating),
             Codec.LONG.optionalFieldOf("cultivate_started_at", 0L).forGetter(CultivationAttachment::cultivateStartedAt),
@@ -33,8 +33,8 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
             CollectionCodecs.longMap(CultivateAction.CODEC).optionalFieldOf("cultivate_cooldowns", Object2LongMaps.emptyMap()).forGetter(CultivationAttachment::cultivateCooldowns)
     ).apply(i, CultivationAttachment::new));
 
-    private final Object2DoubleMap<Holder<CultivationProfile>> cultivationProgresses;
-    private final Map<Holder<CultivationProfile>, Holder<RealmStage>> realmStages;
+    private final Object2DoubleMap<Holder<Aura>> cultivationProgresses;
+    private final Map<Holder<Aura>, Holder<RealmStage>> realmStages;
     private Optional<Holder<CultivateAction>> cultivateAction;
     private boolean cultivating;
     private long cultivateStartedAt, nextCultivateTick;
@@ -44,7 +44,7 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
         this(Object2DoubleMaps.emptyMap(), Map.of(), Optional.empty(), false, 0L, 0L, Object2LongMaps.emptyMap());
     }
 
-    private CultivationAttachment(Object2DoubleMap<Holder<CultivationProfile>> cultivationProgresses, Map<Holder<CultivationProfile>, Holder<RealmStage>> realmStages,
+    private CultivationAttachment(Object2DoubleMap<Holder<Aura>> cultivationProgresses, Map<Holder<Aura>, Holder<RealmStage>> realmStages,
                                   Optional<Holder<CultivateAction>> cultivateAction, boolean cultivating,
                                   long cultivateStartedAt, long nextCultivateTick,
                                   Map<Holder<CultivateAction>, Long> cultivateCooldowns) {
@@ -57,23 +57,23 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
         this.cultivateCooldowns = new Object2LongOpenHashMap<>(cultivateCooldowns);
     }
 
-    public Object2DoubleMap<Holder<CultivationProfile>> cultivationProgresses() {
+    public Object2DoubleMap<Holder<Aura>> cultivationProgresses() {
         return this.cultivationProgresses;
     }
 
-    public double cultivationProgress(Holder<CultivationProfile> cultivation) {
-        return this.cultivationProgresses.getDouble(cultivation);
+    public double cultivationProgress(Holder<Aura> aura) {
+        return this.cultivationProgresses.getDouble(aura);
     }
 
-    public Map<Holder<CultivationProfile>, Holder<RealmStage>> realmStages() {
+    public Map<Holder<Aura>, Holder<RealmStage>> realmStages() {
         return this.realmStages;
     }
 
     /**
      * The stage the chain is on, or {@code null} while it still stands on the entry stage.
      */
-    public @Nullable Holder<RealmStage> realmStage(Holder<CultivationProfile> cultivation) {
-        return this.realmStages.get(cultivation);
+    public @Nullable Holder<RealmStage> realmStage(Holder<Aura> aura) {
+        return this.realmStages.get(aura);
     }
 
     public Optional<Holder<CultivateAction>> cultivateAction() {
@@ -96,20 +96,20 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
         return this.cultivateCooldowns;
     }
 
-    public void setCultivationProgress(Holder<CultivationProfile> cultivation, double value) {
+    public void setCultivationProgress(Holder<Aura> aura, double value) {
         if (!Double.isFinite(value) || value < 0.0D)
             throw new IllegalArgumentException("Cultivation progress must be finite and non-negative");
-        this.cultivationProgresses.put(cultivation, value);
+        this.cultivationProgresses.put(aura, value);
         this.markDirty();
     }
 
     public void setRealmStage(Holder<RealmStage> value) {
         if (value == null) return;
-        this.realmStages.put(value.value().cultivation(), value);
+        this.realmStages.put(value.value().aura(), value);
         this.markDirty();
     }
 
-    public void setRealmStages(Map<Holder<CultivationProfile>, Holder<RealmStage>> values) {
+    public void setRealmStages(Map<Holder<Aura>, Holder<RealmStage>> values) {
         this.realmStages.clear();
         this.realmStages.putAll(values);
         this.markDirty();

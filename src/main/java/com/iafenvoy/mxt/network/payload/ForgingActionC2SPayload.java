@@ -18,7 +18,8 @@ import java.util.Optional;
  * everything else from its own session state. The request names no table: the server resolves it from the menu
  * the sending player has open, so it can only act on the table that player is standing at.
  */
-public record ForgingActionC2SPayload(ForgingAction action, Optional<Identifier> definition) implements CustomPacketPayload {
+public record ForgingActionC2SPayload(ForgingAction action,
+                                      Optional<Identifier> definition) implements CustomPacketPayload {
     public static final Type<ForgingActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "forging_action_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ForgingActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ForgingAction.STREAM_CODEC, ForgingActionC2SPayload::action,

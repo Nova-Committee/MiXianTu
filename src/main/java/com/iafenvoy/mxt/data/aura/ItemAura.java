@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -17,14 +16,18 @@ import java.util.Optional;
 /**
  * Defines how an item supplies temporary aura fuel while an entity cultivates.
  * The definition is matched by item or item tag, like the currency registry.
+ * <p>
+ * {@code type} names the {@link Aura} the item carries rather than the value it is counted in: that is what
+ * "which aura is this fuel" means, and the value - with its bounds - is read from {@code Aura#resource()}
+ * wherever the pool is written.
  */
-public record ItemAura(List<Entry> items, Holder<Resource> type, NumberProvider aura, NumberProvider consumeSpeed,
+public record ItemAura(List<Entry> items, Holder<Aura> type, NumberProvider aura, NumberProvider consumeSpeed,
                        NumberProvider releaseSpeed,
                        Optional<ItemStackTemplate> resultStack, EntityAction exhaustedAction) implements ItemMatcher {
     public static final Codec<Holder<ItemAura>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_AURA);
     public static final Codec<ItemAura> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(ItemAura::items),
-            Resource.CODEC.fieldOf("type").forGetter(ItemAura::type),
+            Aura.CODEC.fieldOf("type").forGetter(ItemAura::type),
             NumberProvider.CODEC.fieldOf("aura").forGetter(ItemAura::aura),
             NumberProvider.CODEC.fieldOf("consume_speed").forGetter(ItemAura::consumeSpeed),
             NumberProvider.CODEC.fieldOf("release_speed").forGetter(ItemAura::releaseSpeed),

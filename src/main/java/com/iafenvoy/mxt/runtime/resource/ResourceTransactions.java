@@ -2,10 +2,12 @@ package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -70,8 +72,13 @@ public final class ResourceTransactions {
         for (Entry<Identifier, Double> entry : evaluation.amounts.entrySet()) {
             Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, entry.getKey()).orElse(null);
             if (resource == null) return Result.rejected(entry.getKey(), evaluation.amounts);
-            if (entity != null && !ResourceUseService.canUse(entity, resource))
-                return Result.rejected(entry.getKey(), evaluation.amounts);
+            // The gate belongs to the aura a value carries; a value without one has no gate to ask, and a
+            // server system without an entity has nobody to ask.
+            if (entity != null) {
+                Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+                if (aura != null && !ResourceUseService.canUse(entity, aura))
+                    return Result.rejected(entry.getKey(), evaluation.amounts);
+            }
             double amount = entry.getValue();
             double current = holder.get(resource);
             if (!Double.isFinite(amount) || amount <= 0.0D || !Double.isFinite(current)

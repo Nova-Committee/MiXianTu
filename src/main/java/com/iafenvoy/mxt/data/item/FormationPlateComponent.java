@@ -37,7 +37,8 @@ import java.util.function.Consumer;
  * allow list means "unrestricted" unless {@code formation_plate.empty_allows_all} turns it into "nothing".
  */
 @EventBusSubscriber(Dist.CLIENT)
-public record FormationPlateComponent(List<Allowed> allowed, Optional<Holder<Formation>> formation) implements TooltipProvider {
+public record FormationPlateComponent(List<Allowed> allowed,
+                                      Optional<Holder<Formation>> formation) implements TooltipProvider {
     public static final FormationPlateComponent EMPTY = new FormationPlateComponent(List.of(), Optional.empty());
     public static final Codec<FormationPlateComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             Allowed.CODEC.listOf().optionalFieldOf("allowed", List.of()).forGetter(FormationPlateComponent::allowed),

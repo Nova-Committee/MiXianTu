@@ -1,15 +1,12 @@
 package com.iafenvoy.mxt.render;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -68,13 +65,12 @@ public final class AuraZoneRenderer {
         double green = 0.0D;
         double blue = 0.0D;
         boolean hasExplicitColor = false;
-        for (Entry<Holder<Resource>, AuraValue> entry : zone.aura().entrySet()) {
-            double amount = snapshot.environmentPool(HolderHelper.id(entry.getKey())).amount();
+        for (Entry<Holder<Aura>, AuraValue> entry : zone.aura().entrySet()) {
+            double amount = snapshot.environmentPool(entry.getKey()).amount();
             if (!Double.isFinite(amount) || amount <= 0.0D) continue;
             int color = entry.getValue().color();
             if (color == 0xFFFFFF) {
-                color = CultivationProfiles.find(Minecraft.getInstance().level, entry.getKey())
-                        .flatMap(CultivationProfile::auraType).map(type -> type.value().color()).orElse(0xFFFFFF);
+                color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);
             }
             hasExplicitColor |= color != 0xFFFFFF;
             red += ((color >>> 16) & 0xFF) * amount;

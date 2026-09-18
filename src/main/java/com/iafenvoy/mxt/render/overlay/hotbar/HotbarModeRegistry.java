@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.render.overlay.hotbar;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.HotbarLayoutAttachment;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.network.payload.HotbarLayoutC2SPayload;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -62,13 +62,13 @@ public final class HotbarModeRegistry {
         });
         register(SPIRIT, player -> {
             List<HotbarEntry> entries = new ArrayList<>();
-            for (Reference<Resource> resource : SpiritBurstClient.resources(player))
+            for (Reference<Aura> resource : SpiritBurstClient.auras(player))
                 entries.add(new SpiritHotbarEntry(HolderHelper.id(resource)));
             return entries;
         }, SPIRIT_KEY, _ -> ClientPacketDistributor.sendToServer(
                 new SpiritBurstC2SPayload(false, Optional.empty())), player -> {
             List<HotbarEntry> entries = new ArrayList<>();
-            for (Reference<Resource> resource : SpiritBurstClient.resourcesAvailable(player))
+            for (Reference<Aura> resource : SpiritBurstClient.aurasAvailable(player))
                 entries.add(new SpiritHotbarEntry(HolderHelper.id(resource)));
             return entries;
         });

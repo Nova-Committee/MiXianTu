@@ -22,6 +22,7 @@ import java.util.Optional;
 /**
  * Owns the player-controlled cultivation mode around a selected cultivation action.
  */
+//TODO::May be removed together with CultivateAction - see that record for the cluster it lives in.
 public final class CultivationModeService {
     private CultivationModeService() {
     }

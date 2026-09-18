@@ -242,6 +242,7 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
 
     // ------------------------------------------------------------------ the two lists
+
     /**
      * The blueprints offered: what the blueprint items in the blueprint slots provide, derived through the
      * same rule the server validates against.

@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
@@ -25,7 +24,6 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -98,11 +96,7 @@ public final class AuraZoneEventBridge {
             if (level.getGameTime() % syncInterval == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
                 AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
-                Map<Identifier, AuraPool> actual = new LinkedHashMap<>();
-                aura.aura().forEach((resource, pool) -> actual.put(HolderHelper.id(resource), pool));
-                Map<Identifier, AuraPool> environment = new LinkedHashMap<>();
-                sensed.aura().forEach((resource, pool) -> environment.put(HolderHelper.id(resource), pool));
-                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), actual, environment));
+                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), aura.aura(), sensed.aura()));
             }
             boolean cultivating = player.getData(MxtAttachments.CULTIVATION).cultivating();
             boolean emitParticle = cultivating ? level.getGameTime() % 5L < 3L : level.getGameTime() % 5L == 0L;

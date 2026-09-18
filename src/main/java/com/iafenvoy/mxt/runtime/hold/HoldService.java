@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.hold;
 
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvent;
@@ -31,6 +32,12 @@ import java.util.List;
  * after the duration was read, so {@code Item.finishUsingItem} finds nothing to eat. A module that wants to know
  * how a hold ended subscribes to {@code LivingEntityUseItemEvent.Finish} and {@code Stop} itself and asks
  * {@link HoldLookup} whether the item is one of its own.
+ * <p>
+ * Every question is asked through the declaration, including "is this stack one of yours" - see
+ * {@link HoldBinding#claims(Provider, ItemStack)} - because a declaration may drive only some of the stacks that
+ * match it. Nothing is written for a stack the declaration does not claim, and a stack that carries a use
+ * component of its own is never written over: that component is what makes the item edible, drinkable or
+ * throwable, and replacing it would silently cancel the item's own use.
  */
 @EventBusSubscriber
 public final class HoldService {
@@ -58,18 +65,31 @@ public final class HoldService {
      * cancelled ones - so nothing is armed for a click somebody else claimed, and no component is left on a stack
      * nothing will ever come back for.
      * <p>
+     * A sneaking click is never a hold: shift is how a player asks an item for its <em>other</em> behaviour, and a
+     * hold that armed itself here would swallow that click - the item's own {@code use} is not reached while a
+     * cycle is running, so the only way to let it answer is not to start one. This is also why the check is here
+     * rather than in the hold's own {@code claims}: whether a stack is holdable is a property of the stack, while
+     * who is clicking it is not.
+     * <p>
      * Both sides write it, because each answers its own copy of the cycle; writing it on the server alone is what
-     * broke the first attempt at this, where the client ran a zero-length, animation-less cycle.
+     * broke the first attempt at this, where the client ran a zero-length, animation-less cycle. Both sides ask
+     * the same questions of the same registry view, so a stack one of them declines is declined by the other.
      */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onItemUse(RightClickItem event) {
+        if (event.getEntity().isShiftKeyDown()) return;
         ItemStack stack = event.getEntity().getItemInHand(event.getHand());
         HoldBinding hold = HoldLookup.hold(stack);
         if (hold == null) return;
+        Provider registries = event.getEntity().level().registryAccess();
+        if (!hold.claims(registries, stack)) return;
+        // An item that declares its own use keeps it. Nothing is armed here, which also means nothing is taken
+        // off it later: the hold module only ever takes back the component it wrote itself.
+        if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, hold)) return;
         // The reader's copy is the one that makes the sound, so it carries the declaration's own; the server's
         // copy only has to answer "how long" and "which pose" before it is taken off again, so it stays quiet.
-        if (event.getEntity().level().isClientSide()) arm(stack, hold);
-        else armQuietly(stack, hold);
+        if (event.getEntity().level().isClientSide()) arm(registries, stack, hold);
+        else armQuietly(registries, stack, hold);
     }
 
     /**
@@ -77,15 +97,17 @@ public final class HoldService {
      * is already right, and from here the component could only let {@code Consumable.onConsume} eat the item,
      * award the item-used stat and fire the eat game event.
      * <p>
-     * Only the server's copy is touched - the client needs its own for the pose - and only for stacks this module
-     * armed. The component is the one every vanilla consumable uses, so taking it off anything else would stop
+     * Only the server's copy is touched - the client needs its own for the pose - and only what this module put
+     * there. The component is the one every vanilla consumable uses, so taking it off anything else would stop
      * that item from being used up at all: food would never feed anybody again.
      */
     @SubscribeEvent
     public static void onUseStart(Start event) {
         if (event.getEntity().level().isClientSide()) return;
-        if (HoldLookup.hold(event.getItem()) == null) return;
-        event.getItem().remove(DataComponents.CONSUMABLE);
+        ItemStack stack = event.getItem();
+        HoldBinding hold = HoldLookup.hold(stack);
+        if (hold == null || !ours(stack, hold)) return;
+        stack.remove(DataComponents.CONSUMABLE);
     }
 
     /**
@@ -94,18 +116,23 @@ public final class HoldService {
     @SubscribeEvent
     public static void onUseTick(Tick event) {
         LivingEntity entity = event.getEntity();
+        Provider registries = entity.level().registryAccess();
         if (entity.level().isClientSide()) {
             // Two stacks can carry the read on this side: the entity's own use stack, and whatever the hand slot
             // holds now - a slot sync can replace the latter mid-read, and the pose is drawn from it.
-            keepArmed(event.getItem());
-            keepArmed(entity.getItemInHand(entity.getUsedItemHand()));
+            keepArmed(registries, event.getItem());
+            keepArmed(registries, entity.getItemInHand(entity.getUsedItemHand()));
             return;
         }
-        HoldBinding hold = HoldLookup.hold(event.getItem());
+        ItemStack stack = event.getItem();
+        HoldBinding hold = HoldLookup.hold(stack);
         if (hold == null) return;
+        // A stack that still carries a use component on this side is one this module did not arm - it was never
+        // claimed, or it declares its own use - and it is not a hold of ours to make a sound for.
+        if (stack.has(DataComponents.CONSUMABLE)) return;
         // The sound belongs to the read rather than to the reader: played from here so the server plays it for
         // the players around the reader, since the server's own stack carries no component to play it from.
-        playHoldSound(entity, hold, event.getDuration());
+        playHoldSound(entity, hold, stack, event.getDuration());
     }
 
     /**
@@ -117,8 +144,8 @@ public final class HoldService {
      * consumable's sound off the stack during the hold, and the reader's client is the one place that can be
      * relied on to hear it.
      */
-    public static void arm(ItemStack stack, HoldBinding hold) {
-        arm(stack, hold, hold.holdSound());
+    public static void arm(Provider registries, ItemStack stack, HoldBinding hold) {
+        arm(registries, stack, hold, hold.holdSound());
     }
 
     /**
@@ -126,18 +153,37 @@ public final class HoldService {
      * taken off again the moment the cycle starts, and the sound for everyone else is played by the server itself
      * (see {@link #playHoldSound}) rather than from a stack's component.
      */
-    public static void armQuietly(ItemStack stack, HoldBinding hold) {
-        arm(stack, hold, SILENT_SOUND);
+    public static void armQuietly(Provider registries, ItemStack stack, HoldBinding hold) {
+        arm(registries, stack, hold, SILENT_SOUND);
     }
 
-    private static void arm(ItemStack stack, HoldBinding hold, Holder<SoundEvent> sound) {
-        stack.set(DataComponents.CONSUMABLE, consumable(hold, sound));
+    private static void arm(Provider registries, ItemStack stack, HoldBinding hold, Holder<SoundEvent> sound) {
+        // The same refusal the click path makes, kept here as well so the one writer in this class cannot be used
+        // to take an item's own use away from it: see {@link #ours}.
+        if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, hold)) return;
+        stack.set(DataComponents.CONSUMABLE, consumable(hold, sound, hold.holdTicks(registries, stack)));
     }
 
-    private static Consumable consumable(HoldBinding hold, Holder<SoundEvent> sound) {
+    private static Consumable consumable(HoldBinding hold, Holder<SoundEvent> sound, int ticks) {
         // The particle flag is off because the component's own emitter also throws item particles, which none of
         // the poses want.
-        return new Consumable(consumeSeconds(hold.holdTicks()), hold.holdAnimation(), sound, false, List.of());
+        return new Consumable(consumeSeconds(ticks), hold.holdAnimation(), sound, false, List.of());
+    }
+
+    /**
+     * Whether the use component on this stack is the one this module writes for this declaration. An item's own
+     * component - food, a potion - is not, and is left exactly as it was found: reading is what distinguishes
+     * the two, since nothing about the stack records who wrote it.
+     * <p>
+     * The duration is deliberately not part of the comparison: a declaration may size the component from the
+     * stack, and a stack whose count changes mid-read would otherwise stop looking like ours.
+     */
+    private static boolean ours(ItemStack stack, HoldBinding hold) {
+        Consumable component = stack.get(DataComponents.CONSUMABLE);
+        if (component == null) return false;
+        return !component.hasConsumeParticles() && component.onConsumeEffects().isEmpty()
+                && component.animation() == hold.holdAnimation()
+                && (component.sound().value() == SILENT_SOUND.value() || component.sound().value() == hold.holdSound().value());
     }
 
     /**
@@ -155,10 +201,10 @@ public final class HoldService {
      * loop asks for the duration and the pose. Re-supplying it on every client tick is what keeps the pose alive
      * across that sync; a stack that still has it, or that is no hold, is left alone.
      */
-    public static void keepArmed(ItemStack stack) {
+    public static void keepArmed(Provider registries, ItemStack stack) {
         if (stack.isEmpty() || stack.has(DataComponents.CONSUMABLE)) return;
         HoldBinding hold = HoldLookup.hold(stack);
-        if (hold != null) arm(stack, hold);
+        if (hold != null && hold.claims(registries, stack)) arm(registries, stack, hold);
     }
 
     /**
@@ -170,11 +216,13 @@ public final class HoldService {
      * component, and hearing both would double it. Returns whether it played, which is the only way to see the
      * cadence from outside.
      */
-    public static boolean playHoldSound(LivingEntity entity, HoldBinding hold, int remaining) {
-        Consumable emitter = consumable(hold, hold.holdSound());
+    public static boolean playHoldSound(LivingEntity entity, HoldBinding hold, ItemStack stack, int remaining) {
+        Holder<SoundEvent> sound = hold.holdSound();
+        int ticks = hold.holdTicks(entity.level().registryAccess(), stack);
+        Consumable emitter = consumable(hold, sound, ticks);
         if (!emitter.shouldEmitParticlesAndSounds(remaining)) return false;
         entity.level().playSound(entity instanceof Player reader ? reader : null,
-                entity.getX(), entity.getY(), entity.getZ(), emitter.sound().value(), entity.getSoundSource(),
+                entity.getX(), entity.getY(), entity.getZ(), sound.value(), entity.getSoundSource(),
                 SOUND_VOLUME, entity.getRandom().triangle(1.0F, SOUND_PITCH_SPREAD));
         return true;
     }

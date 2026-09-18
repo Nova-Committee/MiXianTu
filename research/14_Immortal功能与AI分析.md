@@ -76,7 +76,7 @@ MiXianTu 已有 Action、Condition、Cost 和 NumberProvider，但复杂技能�
 ### 分页秘籍
 
 `SecretManual` 由多个 `SecretScroll` 组成，每页通过 `ScrollContent` 分派内容，并支持页级学习条件、标题、描述和跳页控制。MiXianTu
-的 `cultivation_technique` 适合保存功法状态与修炼倍率；秘籍阅读层应独立实现，或桥接外部书籍 UI。
+的 `technique` 适合保存功法状态与修炼倍率；秘籍阅读层应独立实现，或桥接外部书籍 UI。
 
 源码：
 

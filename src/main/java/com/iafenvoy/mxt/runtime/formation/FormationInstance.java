@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +30,7 @@ public final class FormationInstance {
             // Written only when something is actually banked, so a save of the common case does not grow a
             // field per formation. Strict rather than tolerant: this map is written by the mod itself, so a
             // row that does not read back is a bug worth seeing, not a row to drop silently.
-            Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).optionalFieldOf("stored")
+            Codec.unboundedMap(Aura.CODEC, Codec.DOUBLE).optionalFieldOf("stored")
                     .forGetter(instance -> instance.stored.isEmpty() ? Optional.empty() : Optional.of(instance.stored))
     ).apply(i, FormationInstance::new)).flatXmap(FormationInstance::validate, FormationInstance::validate);
 
@@ -41,10 +43,10 @@ public final class FormationInstance {
             return DataResult.error(() -> "Formation radius must be finite and positive: " + instance.radius);
         if (instance.maintenanceCount < 0L)
             return DataResult.error(() -> "Formation upkeep count must not be negative: " + instance.maintenanceCount);
-        for (Entry<Identifier, Double> entry : instance.stored.entrySet()) {
+        for (Entry<Holder<Aura>, Double> entry : instance.stored.entrySet()) {
             if (entry.getKey() == null || entry.getValue() == null
                     || !Double.isFinite(entry.getValue()) || entry.getValue() < 0.0D)
-                return DataResult.error(() -> "Formation stock must be a finite, non-negative amount of a named resource: "
+                return DataResult.error(() -> "Formation stock must be a finite, non-negative amount of a named aura: "
                         + entry.getKey() + "=" + entry.getValue());
         }
         return DataResult.success(instance);
@@ -55,9 +57,9 @@ public final class FormationInstance {
     private final Optional<UUID> owner;
     private long maintenanceCount;
     /**
-     * Aura the array has banked but not spent, per resource id.
+     * Aura the array has banked but not spent, per aura.
      */
-    private final Map<Identifier, Double> stored;
+    private final Map<Holder<Aura>, Double> stored;
 
     FormationInstance(Identifier formation, double radius) {
         this(formation, radius, Optional.empty(), 0L, Map.of());
@@ -68,12 +70,12 @@ public final class FormationInstance {
     }
 
     private FormationInstance(@NotNull Identifier formation, double radius, @NotNull Optional<UUID> owner,
-                              long maintenanceCount, @NotNull Optional<Map<Identifier, Double>> stored) {
+                              long maintenanceCount, @NotNull Optional<Map<Holder<Aura>, Double>> stored) {
         this(formation, radius, owner, maintenanceCount, stored.orElse(Map.of()));
     }
 
     private FormationInstance(@NotNull Identifier formation, double radius, @NotNull Optional<UUID> owner,
-                              long maintenanceCount, @NotNull Map<Identifier, Double> stored) {
+                              long maintenanceCount, @NotNull Map<Holder<Aura>, Double> stored) {
         this.formation = formation;
         this.radius = radius;
         this.owner = owner;
@@ -101,7 +103,7 @@ public final class FormationInstance {
      * What the array has banked, per resource id, as the live map the upkeep pass reads and writes through
      * {@link #deposit} / {@link #withdraw}. Empty for a formation that declares no storage.
      */
-    public Map<Identifier, Double> stored() {
+    public Map<Holder<Aura>, Double> stored() {
         return this.stored;
     }
 
@@ -113,7 +115,7 @@ public final class FormationInstance {
      * Banks a period's surplus, dropping an entry that rounds to nothing. The capacity is the caller's
      * business: it was already applied when the amount was worked out.
      */
-    void deposit(Map<Identifier, Double> amounts) {
+    void deposit(Map<Holder<Aura>, Double> amounts) {
         amounts.forEach((resource, amount) -> {
             if (resource == null || amount == null || !Double.isFinite(amount) || amount <= 0.0D) return;
             double total = this.stored.getOrDefault(resource, 0.0D) + amount;
@@ -126,7 +128,7 @@ public final class FormationInstance {
      * Spends banked aura, removing an entry that reaches zero. The amount was already clamped to what is on
      * hand when the period was planned, and the removal keeps a drained bank out of the save.
      */
-    void withdraw(Map<Identifier, Double> amounts) {
+    void withdraw(Map<Holder<Aura>, Double> amounts) {
         amounts.forEach((resource, amount) -> {
             if (resource == null || amount == null || !Double.isFinite(amount) || amount <= 0.0D) return;
             double left = this.stored.getOrDefault(resource, 0.0D) - amount;

@@ -137,7 +137,8 @@ public final class FormationProtection {
      * copy of its rule here would drift. Everything else is refused, including an unresolvable actor.
      */
     public static boolean foreignClaimRefuses(ServerLevel level, BlockPos controller, @Nullable UUID actorId) {
-        if (!MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.getValue() || !FtbChunksCompat.loaded()) return false;
+        if (!MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.getValue() || !FtbChunksCompat.loaded())
+            return false;
         // Nobody to judge and no permission of anybody's to check: an activation with no player behind it.
         if (actorId == null) return false;
         if (FtbChunksCompat.mayEdit(level, controller, actorId)) return false;

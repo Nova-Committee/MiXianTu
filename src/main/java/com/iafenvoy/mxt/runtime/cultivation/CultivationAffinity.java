@@ -2,8 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -35,15 +34,14 @@ public final class CultivationAffinity {
     public static double multiplier(SpiritIdentityAttachment spirit, AuraChunkAttachment aura, FormulaContext context,
                                     @Nullable Provider access,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
-                                    Function<Identifier, Optional<CultivationTechnique>> techniques) {
+                                    Function<Identifier, Optional<Technique>> techniques) {
         double total = 0.0D;
         int count = 0;
         for (Holder<SpiritRoot> rootHolder : spirit.spiritRoots()) {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
             AuraPool pool = aura.auras().entrySet().stream()
-                    .filter(entry -> CultivationProfiles.find(access, entry.getKey())
-                            .flatMap(CultivationProfile::auraType).filter(root.element()::equals).isPresent())
+                    .filter(entry -> entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
                     .map(Entry::getValue).findFirst().orElse(AuraPool.empty());
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
@@ -51,7 +49,7 @@ public final class CultivationAffinity {
             count++;
         }
         double result = count == 0 ? 1.0D : total / count;
-        for (Holder<CultivationTechnique> techniqueHolder : spirit.learnedTechniques()) {
+        for (Holder<Technique> techniqueHolder : spirit.learnedTechniques()) {
             double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
             if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
             result *= modifier;
@@ -62,15 +60,14 @@ public final class CultivationAffinity {
     public static double multiplier(SpiritIdentityAttachment spirit, AuraResult aura, FormulaContext context,
                                     @Nullable Provider access,
                                     Function<Identifier, Optional<SpiritRoot>> roots,
-                                    Function<Identifier, Optional<CultivationTechnique>> techniques) {
+                                    Function<Identifier, Optional<Technique>> techniques) {
         double total = 0.0D;
         int count = 0;
         for (Holder<SpiritRoot> rootHolder : spirit.spiritRoots()) {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
             AuraPool pool = aura.aura().entrySet().stream()
-                    .filter(entry -> CultivationProfiles.find(access, entry.getKey())
-                            .flatMap(CultivationProfile::auraType).filter(root.element()::equals).isPresent())
+                    .filter(entry -> entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
                     .map(Entry::getValue).findFirst().orElse(AuraPool.empty());
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
@@ -80,7 +77,7 @@ public final class CultivationAffinity {
             count++;
         }
         double result = count == 0 ? 1.0D : total / count;
-        for (Holder<CultivationTechnique> techniqueHolder : spirit.learnedTechniques()) {
+        for (Holder<Technique> techniqueHolder : spirit.learnedTechniques()) {
             double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
             if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
             result *= modifier;

@@ -1,0 +1,5 @@
+{
+  "type": "mxt:active",
+  "target_selector": { "type": "mxt:area", "radius": 4 },
+  "bi_entity_action": { "type": "mxt:teleport", "teleport_target": true, "rotate": false }
+}

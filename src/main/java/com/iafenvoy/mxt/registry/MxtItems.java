@@ -44,7 +44,7 @@ public final class MxtItems {
     public static final DeferredItem<TokenItem> STONE_TOKEN = register("stone_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenComponent.EMPTY)));
     public static final DeferredItem<Item> SPIRIT_ROOT = register("spirit_root", Item::new);
     public static final DeferredItem<Item> CULTIVATION_JADE_SLIP = register("cultivation_jade_slip", Item::new);
-    public static final DeferredItem<Item> BLANK_TALISMAN_PAPER = register("blank_talisman_paper", Item::new);
+    public static final DeferredItem<Item> BLANK_TALISMAN = register("blank_talisman", Item::new);
     public static final DeferredItem<Item> ALCHEMY_DREGS = register("alchemy_dregs", Item::new);
     public static final DeferredItem<Item> IMPURITY = register("impurity", Item::new);
     public static final DeferredItem<ContractScrollItem> CONTRACT_SCROLL = register("contract_scroll", properties -> new ContractScrollItem(properties.component(MxtDataComponents.CONTRACT_SCROLL, ContractScrollComponent.EMPTY)));
@@ -59,7 +59,7 @@ public final class MxtItems {
     public static final DeferredItem<Item> TALISMAN_BRUSH = register("talisman_brush", Item::new);
     public static final DeferredItem<Item> TALISMAN_INK = register("talisman_ink", Item::new);
     public static final DeferredItem<Item> CINNABAR = register("cinnabar", Item::new);
-    public static final DeferredItem<Item> TALISMAN = register("talisman", properties -> new Item(properties.component(MxtDataComponents.TALISMAN, TalismanComponent.EMPTY)));
+    public static final DeferredItem<TalismanItem> TALISMAN = register("talisman", properties -> new TalismanItem(properties.component(MxtDataComponents.TALISMAN, TalismanComponent.EMPTY)));
     public static final DeferredItem<ChequeItem> CHEQUE = register("cheque", ChequeItem::new);
 
     public static <T extends Item> DeferredItem<T> register(String path, Function<Properties, T> factory) {

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -21,7 +21,7 @@ public record AuraPool(double amount, double maximum, double regenPerTick, doubl
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraPool::regenPerTick),
             Codec.DOUBLE.optionalFieldOf("supplied", 0.0D).forGetter(AuraPool::supplied)
     ).apply(i, AuraPool::new)).validate(AuraPool::validate);
-    public static final Codec<Map<Holder<Resource>, AuraPool>> GROUPED_CODEC = CollectionCodecs.map(Resource.CODEC, CODEC);
+    public static final Codec<Map<Holder<Aura>, AuraPool>> GROUPED_CODEC = CollectionCodecs.map(Aura.CODEC, CODEC);
 
     public AuraPool {
         if (!Double.isFinite(amount) || amount < 0.0D || (!Double.isFinite(maximum) && maximum != Double.POSITIVE_INFINITY)

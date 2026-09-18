@@ -9,6 +9,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
@@ -30,7 +31,8 @@ public record PlaySoundAction(SoundEvent sound, Optional<SoundSource> category, 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), this.sound, this.category.orElse(entity.getSoundSource()), this.volume, this.pitch);
+        Vec3 at = ctx.position();
+        entity.level().playSound(null, at.x, at.y, at.z, this.sound, this.category.orElse(entity.getSoundSource()), this.volume, this.pitch);
     }
 
     @Override

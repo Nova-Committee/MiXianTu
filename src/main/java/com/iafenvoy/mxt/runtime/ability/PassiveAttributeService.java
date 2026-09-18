@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -103,7 +103,7 @@ public final class PassiveAttributeService {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         for (Holder<RealmStage> realm : cultivation.realmStages().values())
             addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers());
-        for (Holder<CultivationTechnique> technique : spirit.learnedTechniques())
+        for (Holder<Technique> technique : spirit.learnedTechniques())
             addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers());
         for (Holder<Physique> physique : spirit.physiques())
             addAll(entries, "physique", HolderHelper.id(physique), physique.value().attributeModifiers());

@@ -34,7 +34,7 @@ public record SpawnParticlesAction(ParticleOptions particle, BiEntityCondition b
         Entity entity = ctx.entity();
         if (!(entity.level() instanceof ServerLevel level)) return;
         Vec3 delta = this.spread.multiply(entity.getBbWidth(), entity.getEyeHeight(), entity.getBbWidth());
-        Vec3 position = entity.position().add(this.offsetX, this.offsetY, this.offsetZ);
+        Vec3 position = ctx.position().add(this.offsetX, this.offsetY, this.offsetZ);
         for (ServerPlayer player : level.players()) {
             if (this.biEntityCondition.test(entity, player, ctx))
                 level.sendParticles(player, this.particle, this.force, false, position.x, position.y, position.z, this.count, delta.x, delta.y, delta.z, this.speed);

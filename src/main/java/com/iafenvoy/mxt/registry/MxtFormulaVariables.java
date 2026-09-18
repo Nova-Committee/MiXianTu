@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationProfiles;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
@@ -101,7 +101,8 @@ public final class MxtFormulaVariables {
             if (entity == null) return Double.NaN;
             return switch (suffix) {
                 case "health" -> entity instanceof LivingEntity living ? (double) living.getHealth() : Double.NaN;
-                case "max_health" -> entity instanceof LivingEntity living ? (double) living.getMaxHealth() : Double.NaN;
+                case "max_health" ->
+                        entity instanceof LivingEntity living ? (double) living.getMaxHealth() : Double.NaN;
                 case "level" -> entity instanceof ServerPlayer player ? (double) player.experienceLevel : 0.0D;
                 default -> state(entity, suffix);
             };
@@ -156,11 +157,11 @@ public final class MxtFormulaVariables {
             if (!suffix.isEmpty()) return Double.NaN;
             ResourceSubject subject = context.resource();
             if (subject == null) return Double.NaN;
-            Holder<CultivationProfile> cultivation = CultivationProfiles
-                    .holder(CultivationProfiles.access(context), subject.resource()).orElse(null);
-            int rank = cultivation == null ? -1 : ResourceService.realmRank(subject.cultivation(), cultivation);
+            Holder<Aura> aura = AuraLookup
+                    .holder(AuraLookup.access(context), subject.resource()).orElse(null);
+            int rank = aura == null ? -1 : ResourceService.realmRank(subject.cultivation(), aura);
             if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
-                return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(cultivation);
+                return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(aura);
             return Math.max(0, rank);
         }
     }

@@ -490,7 +490,7 @@ MxtEvents.friendRelation(event => {
 | `abilityTriggered` | `Pre`、`Post` | `getEntity()`、`getAbility()`、`signalType()`、`context()`；`Pre` 可取消触发的技能。原生事件的 `ability()` 返回 `Holder<Ability>`，需要 ID 时使用 `HolderHelper.id(...)` 或 KubeJS 包装器的 `getAbility()`。 |
 | `curseRemove` | `Pre`、`Post` | `curse()`（`Holder<Curse>`）、`state()`、`reason()`、`gameTime()`、`holder()`；`Pre` 可取消移除。reason 为 `EXPLICIT`、`EXPIRED`、`CLEANSED`、`REPLACED`、`CONTENT_ACTION`、`ADMIN`。 |
 | `cultivationBreak` | `Pre`、`Post` | `target()`（`Holder<RealmStage>`）、`threshold()`、`context()`、`spirit()`、`resources()`；`Pre` 另有 `originalCosts()`、`costs()`、`setCost(resource, amount)`，可取消；`Post` 有 `paidCosts()`。 |
-| `techniqueLearn` | `Pre`、`Post` | `technique()`（`Holder<CultivationTechnique>`）、`spirit()`；`Pre` 可取消。 |
+| `techniqueLearn` | `Pre`、`Post` | `technique()`（`Holder<Technique>`）、`spirit()`；`Pre` 可取消。 |
 | `alchemyCraft` | `Pre`、`Post` | `recipe()`（`RecipeHolder<AlchemyRecipe>`）；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
 | `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |

@@ -50,7 +50,8 @@ public final class Expression implements NumberProvider {
         List<String> problems = new ArrayList<>();
         if (this.source.isEmpty()) problems.add("the expression is empty");
         for (String name : this.params.keySet())
-            if (!FormulaVariables.isValidName(name)) problems.add("parameter name '" + name + "' is not a valid variable name");
+            if (!FormulaVariables.isValidName(name))
+                problems.add("parameter name '" + name + "' is not a valid variable name");
         this.variables = new LinkedHashSet<>(FormulaVariables.find(this.source));
         for (String name : this.params.keySet())
             if (!this.variables.contains(name)) problems.add("parameter '" + name + "' is not used by the expression");
@@ -69,12 +70,16 @@ public final class Expression implements NumberProvider {
         this.problems = List.copyOf(problems);
     }
 
-    /** Every problem found while building this expression; empty when the expression is usable. */
+    /**
+     * Every problem found while building this expression; empty when the expression is usable.
+     */
     public List<String> problems() {
         return this.problems;
     }
 
-    /** Decodes the shorthand string form, keeping every problem in the error message. */
+    /**
+     * Decodes the shorthand string form, keeping every problem in the error message.
+     */
     public static DataResult<Expression> decode(String source) {
         return validated(new Expression(source));
     }

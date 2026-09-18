@@ -38,7 +38,8 @@ public final class FormationWorldAttachment {
         for (Stored entry : stored) {
             FormationInstance previous = this.formations.putIfAbsent(entry.position(), entry.formation());
             // A repeated controller is a hand-edited save; losing that row is better than losing the index.
-            if (previous != null) LOGGER.warn("Ignoring duplicate formation controller in the saved index: {}", entry.position());
+            if (previous != null)
+                LOGGER.warn("Ignoring duplicate formation controller in the saved index: {}", entry.position());
         }
     }
 

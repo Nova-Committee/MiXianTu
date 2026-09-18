@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
@@ -84,7 +85,7 @@ public final class MxtResourceKeys {
 
     // Datapack registries
     public static final ResourceKey<Registry<Resource>> RESOURCE = create("resource");
-    public static final ResourceKey<Registry<CultivationProfile>> CULTIVATION = create("cultivation");
+    public static final ResourceKey<Registry<Aura>> AURA = create("aura");
     public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = create("realm_stage");
     public static final ResourceKey<Registry<Element>> ELEMENT = create("element");
     public static final ResourceKey<Registry<SpiritRoot>> SPIRIT_ROOT = create("spirit_root");
@@ -95,8 +96,9 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<ForgingBlueprint>> FORGING_BLUEPRINT = create("forging_blueprint");
     public static final ResourceKey<Registry<ToolBinding>> TOOL_BINDING = create("tool_binding");
     public static final ResourceKey<Registry<BlueprintBinding>> BLUEPRINT_BINDING = create("blueprint_binding");
-    public static final ResourceKey<Registry<CultivationTechnique>> CULTIVATION_TECHNIQUE = create("cultivation_technique");
+    public static final ResourceKey<Registry<Technique>> TECHNIQUE = create("technique");
     public static final ResourceKey<Registry<SkillStage>> SKILL_STAGE = create("skill_stage");
+    //TODO::May be removed together with CultivateAction - see that record for the cluster it lives in.
     public static final ResourceKey<Registry<CultivateAction>> CULTIVATE_ACTION = create("cultivate_action");
     public static final ResourceKey<Registry<ItemArchetype>> ITEM_ARCHETYPE = create("item_archetype");
     public static final ResourceKey<Registry<SpiritHerb>> SPIRIT_HERB = create("spirit_herb");

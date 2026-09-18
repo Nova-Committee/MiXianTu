@@ -7,8 +7,9 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SectAttachment;
 import com.iafenvoy.mxt.attachment.SectTerritoryAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.Sect;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.Sect;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
@@ -18,6 +19,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
@@ -88,9 +90,9 @@ public final class MxtCommand {
                                                 IntegerArgumentType.getInteger(ctx, "index"))))))
                 .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
                 .then(literal("breakthrough").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(argument("resource", IdentifierArgument.id())
-                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.RESOURCE))
-                                .executes(ctx -> attemptBreakthrough(ctx.getSource(), IdentifierArgument.getId(ctx, "resource")))))
+                        .then(argument("aura", IdentifierArgument.id())
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.AURA))
+                                .executes(ctx -> attemptBreakthrough(ctx.getSource(), IdentifierArgument.getId(ctx, "aura")))))
                 .then(literal("realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(literal("set").then(argument("realm", IdentifierArgument.id())
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_STAGE))
@@ -220,12 +222,17 @@ public final class MxtCommand {
 
     private static Optional<Values> extractResourceBarValues(ServerPlayer player, Reference<Resource> resource,
                                                              ResourceBarContext context) {
+        // A bar is declared on a value, but the two concentration sources are aura pools: the value names the
+        // aura it carries, and a value that carries none has no concentration to report.
+        Holder<Aura> aura = AuraLookup.holder(player, resource).orElse(null);
         if (context == ActualConcentrationContext.INSTANCE) {
-            AuraPool pool = AuraService.getPositionAura(player.level(), player.blockPosition()).pool(resource);
+            if (aura == null) return Optional.empty();
+            AuraPool pool = AuraService.getPositionAura(player.level(), player.blockPosition()).pool(aura);
             return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));
         }
         if (context == EnvironmentConcentrationContext.INSTANCE) {
-            AuraPool pool = AuraService.getSensedAura(player.level(), player.blockPosition()).pool(resource);
+            if (aura == null) return Optional.empty();
+            AuraPool pool = AuraService.getSensedAura(player.level(), player.blockPosition()).pool(aura);
             return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));
         }
         return context.extract(player, resource);
@@ -248,7 +255,7 @@ public final class MxtCommand {
         Component action = spirit.cultivateAction().<Component>map(id -> DefinitionText.name(id, "cultivate_action")).orElseGet(() -> Component.translatable("command.mxt.none"));
         Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.none")
                 : Component.literal(spirit.cultivationProgresses().object2DoubleEntrySet().stream()
-                .map(entry -> DefinitionText.name(entry.getKey().value().resource(), "resource").getString() + "="
+                .map(entry -> DefinitionText.name(entry.getKey(), "aura").getString() + "="
                         + String.format(Locale.ROOT, "%.2f", entry.getDoubleValue()))
                 .collect(Collectors.joining(", ")));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, progress, spirit.nextCultivateTick()), false);
@@ -257,7 +264,7 @@ public final class MxtCommand {
 
     private static int attemptBreakthrough(CommandSourceStack source, Identifier id) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.get(MxtResourceKeys.RESOURCE, id).isEmpty())
+        if (player == null || MxtDatapackRegistries.get(MxtResourceKeys.AURA, id).isEmpty())
             return 0;
         BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
@@ -270,7 +277,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(id, "resource")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(id, "aura")), true);
         return 1;
     }
 

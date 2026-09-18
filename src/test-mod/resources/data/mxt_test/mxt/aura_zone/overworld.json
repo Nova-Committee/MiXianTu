@@ -8,7 +8,6 @@
     "mxt_test:spirit_power": { "min": 0, "max": 100 },
     "mxt_test:water_power": { "min": 0, "max": 100 }
   } },
-  "aura_kinds": ["mxt_test:aura_kind/common"],
   "dimensions": "minecraft:overworld",
   "noise": {
     "enable": true,

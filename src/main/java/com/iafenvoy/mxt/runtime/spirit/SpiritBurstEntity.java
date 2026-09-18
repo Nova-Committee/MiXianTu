@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
@@ -27,9 +28,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
@@ -37,6 +38,11 @@ import java.util.Optional;
 /**
  * Server-authoritative spirit-power projectile. Its visible beam is a client-side
  * particle trail sampled between two consecutive projectile positions.
+ * <p>
+ * What it carries is a {@link Resource} - the stored value it was fired from and will pour into whatever it
+ * reaches. That is the aura <em>kind</em>, which is a resource; the <em>element</em> a value is attuned to is
+ * the cultivation profile's {@code aura_type} and is not what this projectile names, so the two are not the
+ * same field and must not share a name.
  */
 public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final int MAX_LIFETIME_TICKS = 100;
@@ -44,16 +50,16 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final float TRAIL_PARTICLE_SIZE = 0.085F;
     private static final EntityDataAccessor<Integer> AMOUNT = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PARTICLE_COLOR = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<String> AURA_TYPE = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<String> AURA = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.STRING);
 
     public SpiritBurstEntity(EntityType<? extends SpiritBurstEntity> type, Level level) {
         super(type, level);
     }
 
-    public SpiritBurstEntity(Level level, Player owner, Holder<Resource> auraType, int amount, int particleColor) {
+    public SpiritBurstEntity(Level level, Player owner, Holder<Aura> aura, int amount, int particleColor) {
         this(MxtEntityTypes.SPIRIT_BURST.get(), level);
         this.setOwner(owner);
-        this.setAuraType(auraType);
+        this.setAura(aura);
         this.setAmount(amount);
         this.setParticleColor(particleColor);
         this.setPos(owner.getX(), owner.getEyeY() - 0.1D, owner.getZ());
@@ -64,12 +70,12 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     protected void defineSynchedData(@NonNull Builder builder) {
         builder.define(AMOUNT, 0);
         builder.define(PARTICLE_COLOR, 0xFFFFFF);
-        builder.define(AURA_TYPE, "");
+        builder.define(AURA, "");
     }
 
     @Override
     public void tick() {
-        if (!this.level().isClientSide() && this.tryHitSpiritAccess()) return;
+        if (!this.level().isClientSide() && this.tryHitAuraAccess()) return;
         super.tick();
         if (this.level().isClientSide()) {
             this.spawnTrailParticles();
@@ -88,8 +94,8 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         if (!this.level().isClientSide()) {
             BlockPos pos = hit.getBlockPos();
             BlockEntity blockEntity = this.level().getBlockEntity(pos);
-            if (blockEntity instanceof SpiritAccess accessor) {
-                this.auraType().ifPresent(type -> accessor.add(this.ownerLivingEntity(), type, this.amount(), false));
+            if (blockEntity instanceof AuraAccess accessor) {
+                this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), type, this.amount(), false));
             }
             this.discard();
         }
@@ -104,14 +110,14 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
         this.setAmount(input.getIntOr("amount", 0));
         this.setParticleColor(input.getIntOr("particle_color", 0xFFFFFF));
-        this.getEntityData().set(AURA_TYPE, input.getStringOr("aura_type", ""));
+        this.getEntityData().set(AURA, input.getStringOr("aura", ""));
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
         output.putInt("amount", this.amount());
         output.putInt("particle_color", this.particleColor());
-        output.putString("aura_type", this.getEntityData().get(AURA_TYPE));
+        output.putString("aura", this.getEntityData().get(AURA));
     }
 
     @Override
@@ -124,7 +130,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     }
 
     public void setAmount(int amount) {
-        this.getEntityData().set(AMOUNT, SpiritAccess.requireNonNegative(amount));
+        this.getEntityData().set(AMOUNT, AuraAccess.requireNonNegative(amount));
     }
 
     public int particleColor() {
@@ -137,17 +143,21 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         this.getEntityData().set(PARTICLE_COLOR, particleColor);
     }
 
-    public void setAuraType(Holder<Resource> type) {
-        Identifier id = type.unwrapKey().map(ResourceKey::identifier)
-                .orElseThrow(() -> new IllegalArgumentException("Spirit burst aura type must be a registry holder"));
-        this.getEntityData().set(AURA_TYPE, id.toString());
+    /**
+     * The aura this burst carries and pours. What travels is the aura itself - which aura is the whole
+     * question - and the value it is counted in is read from the definition where the target store needs it.
+     */
+    public void setAura(Holder<Aura> aura) {
+        Identifier id = aura.unwrapKey().map(ResourceKey::identifier)
+                .orElseThrow(() -> new IllegalArgumentException("Spirit burst aura must be a registry holder"));
+        this.getEntityData().set(AURA, id.toString());
     }
 
-    private Optional<Reference<Resource>> auraType() {
-        Identifier id = Identifier.tryParse(this.getEntityData().get(AURA_TYPE));
+    private Optional<Reference<Aura>> aura() {
+        Identifier id = Identifier.tryParse(this.getEntityData().get(AURA));
         if (id == null) return Optional.empty();
-        return this.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE)
-                .get(ResourceKey.create(MxtResourceKeys.RESOURCE, id));
+        return this.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA)
+                .get(ResourceKey.create(MxtResourceKeys.AURA, id));
     }
 
     private void spawnTrailParticles() {
@@ -179,11 +189,21 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     }
 
     /**
-     * Vanilla projectile ray casts only test the block cell currently crossed. A display
-     * stand's visual and collision shape extends above that cell, so test accessor shapes
-     * from neighbouring cells as well. A regular block hit still wins when it is closer.
+     * Where a spirit burst reaches a container it could be poured into: the whole cell the block stands in, and
+     * the cell above it. A block's collision shape answers a different question - where a player would bump into
+     * it - and the two disagree exactly where it matters: a display stand shows the item it holds 1.65 above its
+     * own block, above a shape that stops at 1.4375, so a burst aimed at the item a player can see used to fly
+     * straight over the stand and pour into nothing. A container is a place to pour into rather than a wall, so
+     * anything within two blocks of its floor is reached.
      */
-    private boolean tryHitSpiritAccess() {
+    private static final double SPIRIT_REACH_HEIGHT = 2.0D;
+
+    /**
+     * Vanilla projectile ray casts only test the block cell currently crossed, and a block that can be poured
+     * into is reached as a place rather than as its collision shape. A regular block hit still wins when it is
+     * closer, so a burst cannot pour through a wall.
+     */
+    private boolean tryHitAuraAccess() {
         Vec3 start = this.position();
         Vec3 end = start.add(this.getDeltaMovement());
         double closestDistance = Double.POSITIVE_INFINITY;
@@ -195,13 +215,13 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
                 Math.max(start.z, end.z) + 1.0D);
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
             BlockEntity blockEntity = this.level().getBlockEntity(pos);
-            if (!(blockEntity instanceof SpiritAccess)) continue;
+            if (!(blockEntity instanceof AuraAccess)) continue;
 
-            VoxelShape shape = this.level().getBlockState(pos).getCollisionShape(this.level(), pos);
-            BlockHitResult hit = shape.clip(start, end, pos);
-            if (hit == null) continue;
+            AABB reach = new AABB(pos).expandTowards(0.0D, SPIRIT_REACH_HEIGHT - 1.0D, 0.0D);
+            Optional<Vec3> reached = reach.clip(start, end);
+            if (reached.isEmpty()) continue;
 
-            double distance = start.distanceToSqr(hit.getLocation());
+            double distance = start.distanceToSqr(reached.get());
             if (distance < closestDistance) {
                 closestDistance = distance;
                 closestPos = pos.immutable();
@@ -216,8 +236,8 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
             return false;
 
         BlockEntity blockEntity = this.level().getBlockEntity(closestPos);
-        if (!(blockEntity instanceof SpiritAccess accessor)) return false;
-        this.auraType().ifPresent(type -> accessor.add(this.ownerLivingEntity(), type, this.amount(), false));
+        if (!(blockEntity instanceof AuraAccess accessor)) return false;
+        this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), type, this.amount(), false));
         this.discard();
         return true;
     }

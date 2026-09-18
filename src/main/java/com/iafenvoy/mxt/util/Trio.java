@@ -19,7 +19,9 @@ import java.util.function.Function;
  * operations; no nullable sentinel or parallel optional fields are needed.</p>
  */
 public sealed interface Trio<F, S, T> permits First, Second, Third {
-    /** Builds a three-way codec; decoding is attempted in the supplied codec order. */
+    /**
+     * Builds a three-way codec; decoding is attempted in the supplied codec order.
+     */
     static <F, S, T> Codec<Trio<F, S, T>> codec(Codec<F> first, Codec<S> second, Codec<T> third) {
         return new TrioCodec<>(first, second, third);
     }

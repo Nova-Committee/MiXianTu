@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
@@ -16,35 +16,35 @@ import net.minecraft.core.Holder;
  */
 public final class SpiritBurstCooldownAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritBurstCooldownAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.longMap(Resource.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap())
+            CollectionCodecs.longMap(Aura.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap())
                     .forGetter(SpiritBurstCooldownAttachment::cooldowns)
     ).apply(i, SpiritBurstCooldownAttachment::new));
-    private final Object2LongMap<Holder<Resource>> cooldowns;
+    private final Object2LongMap<Holder<Aura>> cooldowns;
 
     public SpiritBurstCooldownAttachment() {
         this(Object2LongMaps.emptyMap());
     }
 
-    private SpiritBurstCooldownAttachment(Object2LongMap<Holder<Resource>> cooldowns) {
+    private SpiritBurstCooldownAttachment(Object2LongMap<Holder<Aura>> cooldowns) {
         this.cooldowns = new Object2LongOpenHashMap<>(cooldowns);
     }
 
-    public Object2LongMap<Holder<Resource>> cooldowns() {
+    public Object2LongMap<Holder<Aura>> cooldowns() {
         return this.cooldowns;
     }
 
-    public boolean isOnCooldown(Holder<Resource> resource, long gameTime) {
-        return this.cooldowns.getOrDefault(resource, -1L) > gameTime;
+    public boolean isOnCooldown(Holder<Aura> aura, long gameTime) {
+        return this.cooldowns.getOrDefault(aura, -1L) > gameTime;
     }
 
-    public void setCooldownUntil(Holder<Resource> resource, long gameTime) {
-        this.cooldowns.put(resource, gameTime);
+    public void setCooldownUntil(Holder<Aura> aura, long gameTime) {
+        this.cooldowns.put(aura, gameTime);
         this.markDirty();
     }
 
     /**
      * Removes expired entries, mirroring {@code ItemCooldowns.tick()} so long-running servers do
-     * not retain a key for every resource a player has ever fired.
+     * not retain a key for every aura a player has ever fired.
      */
     public boolean clearExpired(long gameTime) {
         boolean changed = this.cooldowns.object2LongEntrySet().removeIf(entry -> entry.getLongValue() <= gameTime);

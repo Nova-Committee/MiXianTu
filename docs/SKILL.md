@@ -19,12 +19,13 @@ MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.92` 的服务端权威修仙�
 - 数据包对象和 Codec 集合视为不可变；不做无意义的 Mutable 转换或 `copyOf`。
 - 跨表引用优先 Holder；可选引用用 optional Codec，列表/Map 用容错集合 Codec。
 - 行为叫 `action`，判断叫 `condition`，消耗叫 `Cost`。
+- 术语固定：载体与定义一律写「符箓」（`talisman`），配「符纸」「符笔」「符墨」；「符篆」是误用，不要出现在任何文案或文档里。
 - 所有资源/灵气按类型独立存储；除非语义明确，不要把 Map 求和成单值。
 - 服务端负责 Cost、资源扣除、修炼、境界、交易和实体行为；客户端只渲染和发请求。
 - 颜色使用 `MiscCodecs.COLOR`；有限值加载失败，运行期 NaN/Infinity 警告并返回 0。
 
 ## 公开接口重点
 
-`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`AbilityService` 执行技能，`MxtDatapackRegistries` 查询动态表，`SpiritAccess`/`SpiritItemAccess` 处理灵气存取，`Cost` 处理行为消耗，`HotbarEntry` 是纯客户端条目回调。
+`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`AbilityService` 执行技能（`useCarried` 是"由物品代持能力"的入口），`MxtDatapackRegistries` 查询动态表，`AuraAccess`/`AuraItemAccess` 处理灵气存取（键是 `Holder<Aura>`），`ManualAuraAccess` 是物品"按住右键被灌注"的接口（`pour` 自定义容量、`canPourInto` 在付灵气前否掉一 tick、`onCharged` 汇报已写入），`SpiritChargeService` 把持有者灵气灌注进可充能物品，`TalismanService` 在符箓载体灌满时发动铭刻的能力并烧掉一张，`HoldService` 驱动"按住使用"手势，`Cost` 处理行为消耗，`HotbarEntry` 是纯客户端条目回调。
 
 完整规则见 [`docs/ai/SKILL.md`](ai/SKILL.md)。

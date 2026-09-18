@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
-import com.iafenvoy.mxt.data.cultivation.CultivationProfile;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.CultivationBreakEvent.Post;
@@ -40,8 +40,9 @@ import java.util.function.BooleanSupplier;
 /**
  * Server-side breakthrough transaction; callers evaluate content conditions before payment is committed.
  *
- * <p>The profile-keyed methods are the core, since a chain is identified by its cultivation profile; the
- * value-keyed overloads are the datapack-facing entry points for callers that know only a stored value.</p>
+ * <p>A chain is identified by its aura, so the aura-keyed methods are the core. The id-keyed overloads exist
+ * for callers that hold only a name - a command or a content script - and resolve that name against the aura
+ * registry; nothing here is keyed by the value a chain is counted in, because that is not what a chain is.</p>
  */
 public final class CultivationService {
     private static final double PROGRESS_EPSILON = 1.0E-7D;
@@ -50,22 +51,22 @@ public final class CultivationService {
     }
 
     /**
-     * Attempts the only legal next realm of the value's cultivation chain.
+     * Attempts the only legal next realm of the named aura's chain.
      */
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
-                                             Identifier resource, FormulaContext context, BooleanSupplier conditionsMet) {
-        Reference<CultivationProfile> cultivation = CultivationProfiles.holder(entity.level().registryAccess(), resource).orElse(null);
-        return cultivation == null ? BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null)
-                : attempt(entity, spirit, resources, cultivation, context, conditionsMet);
+                                             Identifier auraId, FormulaContext context, BooleanSupplier conditionsMet) {
+        Reference<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId).orElse(null);
+        return aura == null ? BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null)
+                : attempt(entity, spirit, resources, aura, context, conditionsMet);
     }
 
     /**
      * Attempts the only legal next realm of one cultivation chain.
      */
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
-                                             Holder<CultivationProfile> cultivation, FormulaContext context, BooleanSupplier conditionsMet) {
+                                             Holder<Aura> aura, FormulaContext context, BooleanSupplier conditionsMet) {
         if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failure.SERVER_ONLY, null);
-        Transition transition = next(cultivation, spirit).orElse(null);
+        Transition transition = next(aura, spirit).orElse(null);
         if (transition == null) return BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null);
         return attempt(entity, spirit, resources, transition, context, conditionsMet);
     }
@@ -79,17 +80,17 @@ public final class CultivationService {
         Holder<RealmStage> targetHolder = transition.target();
         Identifier targetId = HolderHelper.id(targetHolder);
         RealmStage target = targetHolder.value();
-        if (!HolderHelper.id(target.cultivation()).equals(HolderHelper.id(transition.cultivation())))
-            return BreakthroughResult.rejected(Failure.WRONG_RESOURCE, null);
-        Holder<Resource> targetResource = transition.resource();
-        FormulaContext resourceContext = ResourceService.formulaContext(entity, targetResource, context);
+        if (!HolderHelper.id(target.aura()).equals(HolderHelper.id(transition.aura())))
+            return BreakthroughResult.rejected(Failure.WRONG_AURA, null);
+        Holder<Resource> targetValue = transition.value();
+        FormulaContext resourceContext = ResourceService.formulaContext(entity, targetValue, context);
         Threshold threshold = threshold(transition, resourceContext);
         if (threshold == null) return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
         double minimum = threshold.breakthroughExp();
         double maximum = threshold.maxExperience();
         if (!Double.isFinite(minimum) || !Double.isFinite(maximum) || minimum < 0.0D || maximum < 0.0D || minimum > maximum)
             return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
-        double progress = spirit.cultivationProgress(transition.cultivation());
+        double progress = spirit.cultivationProgress(transition.aura());
         if (progress < minimum) return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
         boolean configuredConditions = transition.conditions().test(entity, context);
         boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
@@ -121,8 +122,8 @@ public final class CultivationService {
         if (threshold == null)
             return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
         double minimum = threshold.breakthroughExp();
-        Holder<CultivationProfile> cultivation = transition.cultivation();
-        double progress = spirit.cultivationProgress(cultivation);
+        Holder<Aura> aura = transition.aura();
+        double progress = spirit.cultivationProgress(aura);
         if (progress < minimum)
             return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
         if (!conditionsMet.getAsBoolean()) return BreakthroughResult.rejected(Failure.CONDITIONS, null);
@@ -138,7 +139,7 @@ public final class CultivationService {
         if (!payment.committed())
             return BreakthroughResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         spirit.setRealmStage(targetHolder);
-        spirit.setCultivationProgress(cultivation, 0.0D);
+        spirit.setCultivationProgress(aura, 0.0D);
         eventBus.post(new Post(spirit, resources, targetHolder, context, minimum, payment.amounts()));
         return BreakthroughResult.committed(payment.amounts());
     }
@@ -146,84 +147,70 @@ public final class CultivationService {
     /**
      * Resolves the pending transition of one cultivation chain, keyed by the profile itself.
      */
-    private static Optional<Transition> next(@Nullable Holder<CultivationProfile> cultivation, CultivationAttachment spirit) {
-        if (cultivation == null) return Optional.empty();
-        Identifier cultivationId = HolderHelper.id(cultivation);
-        Holder<RealmStage> current = spirit.realmStage(cultivation);
+    private static Optional<Transition> next(@Nullable Holder<Aura> aura, CultivationAttachment spirit) {
+        if (aura == null) return Optional.empty();
+        Identifier cultivationId = HolderHelper.id(aura);
+        Holder<RealmStage> current = spirit.realmStage(aura);
         if (current != null) {
-            return current.value().nextRealm().filter(value -> HolderHelper.id(value.value().cultivation()).equals(cultivationId))
-                    .map(value -> Transition.realm(current, value, cultivation));
+            return current.value().nextRealm().filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
+                    .map(value -> Transition.realm(current, value, aura));
         }
-        return cultivation.value().firstRealm()
-                .filter(value -> HolderHelper.id(value.value().cultivation()).equals(cultivationId))
-                .map(value -> Transition.mortal(cultivation, value));
+        return aura.value().firstRealm()
+                .filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
+                .map(value -> Transition.mortal(aura, value));
     }
 
     /**
-     * Adds progress while respecting the active transition's upper bound.
+     * Adds progress to the named aura's chain.
      */
-    public static double addProgress(LivingEntity entity, Holder<Resource> resource, double amount, FormulaContext context) {
-        Reference<CultivationProfile> cultivation = CultivationProfiles.holder(entity, resource).orElse(null);
-        return cultivation == null ? 0.0D : addProgressForChain(entity, cultivation, amount, context);
+    public static double addProgress(LivingEntity entity, Holder<Aura> aura, double amount, FormulaContext context) {
+        return addProgressForChain(entity, aura, amount, context);
     }
 
-    public static double addProgressForChain(LivingEntity entity, Holder<CultivationProfile> cultivation, double amount, FormulaContext context) {
+    public static double addProgressForChain(LivingEntity entity, Holder<Aura> aura, double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        Transition transition = next(cultivation, spirit).orElse(null);
+        Transition transition = next(aura, spirit).orElse(null);
         if (transition == null) return 0.0D;
-        return addProgress(spirit, cultivation, amount, transition,
-                ResourceService.formulaContext(entity, cultivation.value().resource(), context));
+        return addProgress(spirit, aura, amount, transition,
+                ResourceService.formulaContext(entity, aura.value().resource(), context));
     }
 
-    /**
-     * Variant for server-side service paths without an entity reference.
-     */
-    public static double addProgress(CultivationAttachment spirit, Holder<Resource> resource, double amount, FormulaContext context) {
-        return CultivationProfiles.holderServer(resource)
-                .map(cultivation -> addProgressForChain(spirit, cultivation, amount, context)).orElse(0.0D);
-    }
-
-    public static double addProgressForChain(CultivationAttachment spirit, Holder<CultivationProfile> cultivation, double amount, FormulaContext context) {
+    public static double addProgressForChain(CultivationAttachment spirit, Holder<Aura> aura, double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
-        Transition transition = next(cultivation, spirit).orElse(null);
-        return transition == null ? 0.0D : addProgress(spirit, cultivation, amount, transition, context);
+        Transition transition = next(aura, spirit).orElse(null);
+        return transition == null ? 0.0D : addProgress(spirit, aura, amount, transition, context);
     }
 
-    private static double addProgress(CultivationAttachment spirit, Holder<CultivationProfile> cultivation, double amount,
+    private static double addProgress(CultivationAttachment spirit, Holder<Aura> aura, double amount,
                                       Transition transition, FormulaContext context) {
         Threshold threshold = threshold(transition, context);
         if (threshold == null) return 0.0D;
         double maximum = threshold.maxExperience();
-        double before = spirit.cultivationProgress(cultivation);
+        double before = spirit.cultivationProgress(aura);
         if (before >= maximum - PROGRESS_EPSILON) {
-            if (Double.compare(before, maximum) != 0) spirit.setCultivationProgress(cultivation, maximum);
+            if (Double.compare(before, maximum) != 0) spirit.setCultivationProgress(aura, maximum);
             return 0.0D;
         }
         double accepted = Math.max(0.0D, Math.min(amount, maximum - before));
         if (maximum - (before + accepted) <= PROGRESS_EPSILON) accepted = maximum - before;
-        if (accepted > 0.0D) spirit.setCultivationProgress(cultivation, before + accepted);
+        if (accepted > 0.0D) spirit.setCultivationProgress(aura, before + accepted);
         return accepted;
     }
 
     /**
      * Remaining legal progress for this chain's current transition.
      */
-    public static double remainingProgressCapacity(CultivationAttachment spirit, Holder<Resource> resource, FormulaContext context) {
-        return CultivationProfiles.holderServer(resource)
-                .map(cultivation -> remainingProgressForChain(spirit, cultivation, context)).orElse(0.0D);
-    }
-
-    public static double remainingProgressForChain(CultivationAttachment spirit, Holder<CultivationProfile> cultivation, FormulaContext context) {
-        Transition transition = next(cultivation, spirit).orElse(null);
+    public static double remainingProgressForChain(CultivationAttachment spirit, Holder<Aura> aura, FormulaContext context) {
+        Transition transition = next(aura, spirit).orElse(null);
         if (transition == null) return 0.0D;
         Threshold threshold = threshold(transition, context);
         if (threshold == null) return 0.0D;
         double maximum = threshold.maxExperience();
-        double current = spirit.cultivationProgress(cultivation);
+        double current = spirit.cultivationProgress(aura);
         double remaining = maximum - current;
         if (remaining >= 0.0D && remaining <= PROGRESS_EPSILON) {
-            if (Double.compare(current, maximum) != 0) spirit.setCultivationProgress(cultivation, maximum);
+            if (Double.compare(current, maximum) != 0) spirit.setCultivationProgress(aura, maximum);
             return 0.0D;
         }
         return remaining <= PROGRESS_EPSILON ? 0.0D : remaining;
@@ -233,18 +220,13 @@ public final class CultivationService {
      * Resolves a chain's breakthrough state without mutating the player; shared by the automatic
      * breakthrough tick and the information screen.
      */
-    public static BreakthroughStatus breakthroughStatus(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-        Reference<CultivationProfile> cultivation = CultivationProfiles.holder(entity, resource).orElse(null);
-        return cultivation == null ? BreakthroughStatus.UNAVAILABLE : breakthroughStatusForChain(entity, cultivation, context);
-    }
-
-    public static BreakthroughStatus breakthroughStatusForChain(LivingEntity entity, Holder<CultivationProfile> cultivation, FormulaContext context) {
+    public static BreakthroughStatus breakthroughStatusForChain(LivingEntity entity, Holder<Aura> aura, FormulaContext context) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        Transition transition = next(cultivation, spirit).orElse(null);
+        Transition transition = next(aura, spirit).orElse(null);
         if (transition == null) return BreakthroughStatus.UNAVAILABLE;
-        Threshold threshold = threshold(transition, ResourceService.formulaContext(entity, transition.resource(), context));
+        Threshold threshold = threshold(transition, ResourceService.formulaContext(entity, transition.value(), context));
         if (threshold == null) return BreakthroughStatus.UNAVAILABLE;
-        double progress = spirit.cultivationProgress(cultivation);
+        double progress = spirit.cultivationProgress(aura);
         boolean reached = progress + PROGRESS_EPSILON >= threshold.breakthroughExp();
         boolean conditions = reached && transition.conditions().test(entity, context);
         return new BreakthroughStatus(reached, conditions, transition.autoBreakthrough(),
@@ -255,13 +237,8 @@ public final class CultivationService {
      * The conditions of the currently pending transition. The returned value is datapack state; runtime
      * trigger subscriptions are rebuilt separately and never stored in the attachment.
      */
-    public static Optional<CultivateConditions> pendingConditions(LivingEntity entity, Holder<Resource> resource) {
-        return CultivationProfiles.holder(entity, resource)
-                .flatMap(cultivation -> pendingConditionsForChain(entity, cultivation));
-    }
-
-    public static Optional<CultivateConditions> pendingConditionsForChain(LivingEntity entity, Holder<CultivationProfile> cultivation) {
-        Transition transition = next(cultivation, entity.getData(MxtAttachments.CULTIVATION)).orElse(null);
+    public static Optional<CultivateConditions> pendingConditionsForChain(LivingEntity entity, Holder<Aura> aura) {
+        Transition transition = next(aura, entity.getData(MxtAttachments.CULTIVATION)).orElse(null);
         return transition == null ? Optional.empty() : Optional.of(transition.conditions());
     }
 
@@ -272,11 +249,11 @@ public final class CultivationService {
         ServerCache cache = ServerCache.get().orElse(null);
         Identifier cultivationId = cache == null ? null : cache.cultivationForRealm(target).orElse(null);
         if (cultivationId == null) return false;
-        Reference<CultivationProfile> cultivation = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION, cultivationId).orElse(null);
+        Reference<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, cultivationId).orElse(null);
         Holder<RealmStage> targetHolder = MxtDatapackRegistries.holder(MxtResourceKeys.REALM_STAGE, target).orElse(null);
-        if (cultivation == null || targetHolder == null) return false;
+        if (aura == null || targetHolder == null) return false;
         spirit.setRealmStage(targetHolder);
-        spirit.setCultivationProgress(cultivation, 0.0D);
+        spirit.setCultivationProgress(aura, 0.0D);
         return true;
     }
 
@@ -300,21 +277,21 @@ public final class CultivationService {
     }
 
     private record Transition(@NotNull Holder<RealmStage> current, @NotNull Holder<RealmStage> target,
-                              @NotNull Holder<CultivationProfile> cultivation, @Nullable CultivationProfile profile,
+                              @NotNull Holder<Aura> aura, @Nullable Aura profile,
                               boolean mortal) {
-        private static Transition realm(Holder<RealmStage> current, Holder<RealmStage> target, Holder<CultivationProfile> cultivation) {
-            return new Transition(current, target, cultivation, null, false);
+        private static Transition realm(Holder<RealmStage> current, Holder<RealmStage> target, Holder<Aura> aura) {
+            return new Transition(current, target, aura, null, false);
         }
 
-        private static Transition mortal(Holder<CultivationProfile> cultivation, Holder<RealmStage> target) {
-            return new Transition(target, target, cultivation, cultivation.value(), true);
+        private static Transition mortal(Holder<Aura> aura, Holder<RealmStage> target) {
+            return new Transition(target, target, aura, aura.value(), true);
         }
 
         /**
-         * The stored value this chain belongs to, as named by the profile that keys the chain.
+         * The stored value this chain is counted in, as named by the aura that keys the chain.
          */
-        private Holder<Resource> resource() {
-            return this.cultivation.value().resource();
+        private Holder<Resource> value() {
+            return this.aura.value().resource();
         }
 
         private CultivateConditions conditions() {
@@ -333,7 +310,7 @@ public final class CultivationService {
     }
 
     public enum Failure {
-        DISABLED, WRONG_RESOURCE, NO_NEXT_REALM, INSUFFICIENT_PROGRESS, MAX_PROGRESS, CONDITIONS, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CANCELLED, SERVER_ONLY
+        DISABLED, WRONG_AURA, NO_NEXT_REALM, INSUFFICIENT_PROGRESS, MAX_PROGRESS, CONDITIONS, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CANCELLED, SERVER_ONLY
     }
 
     public record BreakthroughResult(boolean advanced, Failure failure, Identifier failedResource,

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.*;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.ItemArchetype;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
@@ -55,7 +56,7 @@ public final class MxtDatapackRegistries {
     @SubscribeEvent
     public static void newDatapackRegistries(NewRegistry event) {
         register(event, MxtResourceKeys.RESOURCE, Resource.DIRECT_CODEC);
-        register(event, MxtResourceKeys.CULTIVATION, CultivationProfile.DIRECT_CODEC);
+        register(event, MxtResourceKeys.AURA, Aura.DIRECT_CODEC);
         register(event, MxtResourceKeys.REALM_STAGE, RealmStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.ELEMENT, Element.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_ROOT, SpiritRoot.DIRECT_CODEC);
@@ -66,7 +67,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.FORGING_BLUEPRINT, ForgingBlueprint.DIRECT_CODEC);
         register(event, MxtResourceKeys.TOOL_BINDING, ToolBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding.DIRECT_CODEC);
-        register(event, MxtResourceKeys.CULTIVATION_TECHNIQUE, CultivationTechnique.DIRECT_CODEC);
+        register(event, MxtResourceKeys.TECHNIQUE, Technique.DIRECT_CODEC);
         register(event, MxtResourceKeys.SKILL_STAGE, SkillStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.CULTIVATE_ACTION, CultivateAction.DIRECT_CODEC);
         register(event, MxtResourceKeys.ITEM_ARCHETYPE, ItemArchetype.DIRECT_CODEC);

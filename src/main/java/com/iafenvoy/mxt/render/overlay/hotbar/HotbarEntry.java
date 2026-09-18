@@ -19,7 +19,9 @@ public interface HotbarEntry {
 
     Component name();
 
-    /** Stable option ID for configurable hotbar layouts; null means not selectable there. */
+    /**
+     * Stable option ID for configurable hotbar layouts; null means not selectable there.
+     */
     default Identifier id() {
         return null;
     }

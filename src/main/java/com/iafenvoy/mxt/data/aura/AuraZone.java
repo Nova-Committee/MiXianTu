@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.aura;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
@@ -14,7 +14,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -30,8 +29,7 @@ import java.util.Optional;
 /**
  * Immutable datapack template for one aura environment.
  */
-public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
-                       List<Identifier> auraKinds,
+public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                        EntityCondition cultivateCondition, Distribution distribution,
@@ -41,7 +39,6 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
     public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.AURA_ZONE);
     private static final MapCodec<Core> CORE_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(Core::aura),
-            Identifier.CODEC.listOf().optionalFieldOf("aura_kinds", List.of()).forGetter(Core::auraKinds),
             RegistryCodecs.keyOrTagList(Registries.LEVEL_STEM).optionalFieldOf("dimensions", List.of()).forGetter(Core::dimensions),
             RegistryCodecs.holderOrTagList(Registries.BIOME).optionalFieldOf("biomes", List.of()).forGetter(Core::biomes),
             Fluctuation.CODEC.optionalFieldOf("fluctuation", Fluctuation.NONE).forGetter(Core::fluctuation),
@@ -64,7 +61,7 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
     ).apply(i, AuraZone::from)).validate(AuraZone::validate);
 
     private Core core() {
-        return new Core(this.aura, this.auraKinds, this.dimensions,
+        return new Core(this.aura, this.dimensions,
                 this.biomes, this.fluctuation, this.rules, this.cultivateCondition, this.distribution, this.priority);
     }
 
@@ -73,20 +70,20 @@ public record AuraZone(Map<Holder<Resource>, AuraValue> aura,
     }
 
     private static AuraZone from(Core core, Visual visual) {
-        return new AuraZone(core.aura, core.auraKinds, core.dimensions,
+        return new AuraZone(core.aura, core.dimensions,
                 core.biomes, core.fluctuation, core.rules, core.cultivateCondition, core.distribution, visual.elementFitBonus,
                 visual.elementConflictPenalty, visual.noise, visual.particle, visual.clientRender, visual.clientHud, core.priority);
     }
 
-    private record Core(Map<Holder<Resource>, AuraValue> aura,
-                        List<Identifier> auraKinds, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
+    private record Core(Map<Holder<Aura>, AuraValue> aura,
+                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                         List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                         EntityCondition cultivateCondition, Distribution distribution, int priority) {
-        private static Core from(Map<Holder<Resource>, AuraValue> aura,
-                                 List<Identifier> auraKinds, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
+        private static Core from(Map<Holder<Aura>, AuraValue> aura,
+                                 List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                                  List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                                  EntityCondition cultivateCondition, Distribution distribution, int priority) {
-            return new Core(aura, auraKinds, dimensions, biomes, fluctuation, rules,
+            return new Core(aura, dimensions, biomes, fluctuation, rules,
                     cultivateCondition, distribution, priority);
         }
     }

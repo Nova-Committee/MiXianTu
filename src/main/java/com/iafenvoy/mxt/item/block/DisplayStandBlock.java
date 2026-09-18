@@ -41,21 +41,17 @@ public final class DisplayStandBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos,
-                                           @NonNull CollisionContext context) {
+    protected @NonNull VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected @NonNull VoxelShape getCollisionShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos,
-                                                    @NonNull CollisionContext context) {
+    protected @NonNull VoxelShape getCollisionShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected @NonNull InteractionResult useItemOn(@NonNull ItemStack stack, @NonNull BlockState state, @NonNull Level level,
-                                                   @NonNull BlockPos pos, @NonNull Player player, @NonNull InteractionHand hand,
-                                                   @NonNull BlockHitResult hit) {
+    protected @NonNull InteractionResult useItemOn(@NonNull ItemStack stack, @NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull InteractionHand hand, @NonNull BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof DisplayStandBlockEntity stand)) return InteractionResult.PASS;
         if (!stand.displayedItem().isEmpty()) {
             if (!level.isClientSide()) dropDisplayedItem(level, pos, stand.removeDisplayedItem());
@@ -69,8 +65,7 @@ public final class DisplayStandBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos,
-                                                        @NonNull Player player, @NonNull BlockHitResult hit) {
+    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof DisplayStandBlockEntity stand) || stand.displayedItem().isEmpty())
             return InteractionResult.PASS;
         if (!level.isClientSide()) dropDisplayedItem(level, pos, stand.removeDisplayedItem());

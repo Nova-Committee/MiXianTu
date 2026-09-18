@@ -13,16 +13,13 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Rebuilds the bounded, per-chunk cache for datapack-defined aura-emitting blocks.
@@ -39,11 +36,10 @@ public final class BlockAuraService {
         Registry<Block> blocks = level.registryAccess().lookupOrThrow(Registries.BLOCK);
         Index index = index(level, blocks);
         if (index.definitions().isEmpty()) {
-            chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(List.of(), Set.of());
+            chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(List.of());
             return;
         }
         List<BlockAuraContribution> contributions = new ArrayList<>();
-        Set<Identifier> auraKinds = new LinkedHashSet<>();
         MutableBlockPos pos = new MutableBlockPos();
         int minX = chunk.getPos().getMinBlockX();
         int minZ = chunk.getPos().getMinBlockZ();
@@ -62,12 +58,11 @@ public final class BlockAuraService {
                     boolean insideFormation = !absorbed.empty() && absorbed.absorbed(pos);
                     for (BlockAura definition : definitions) {
                         contributions.add(new BlockAuraContribution(pos.immutable(), definition.aura(), insideFormation));
-                        auraKinds.addAll(definition.auraKinds());
                     }
                 }
             }
         }
-        chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(contributions, auraKinds);
+        chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(contributions);
     }
 
     /**

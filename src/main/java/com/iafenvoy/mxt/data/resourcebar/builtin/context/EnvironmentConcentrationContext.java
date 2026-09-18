@@ -1,11 +1,12 @@
 package com.iafenvoy.mxt.data.resourcebar.builtin.context;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -22,9 +23,10 @@ public enum EnvironmentConcentrationContext implements ResourceBarContext {
     @Override
     public Optional<Values> extract(LivingEntity entity, Holder<Resource> resource) {
         if (!entity.level().isClientSide()) return Optional.empty();
-        Identifier id = HolderHelper.idOrNull(resource);
-        if (id == null) return Optional.empty();
-        AuraPool pool = AuraClientState.current().environmentPool(id);
+        // The bar is declared on a value; what it shows is the concentration of the aura that value carries.
+        Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+        if (aura == null) return Optional.empty();
+        AuraPool pool = AuraClientState.current().environmentPool(aura);
         if (pool.maximum() <= 0.0D && pool.amount() <= 0.0D) return Optional.empty();
         return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));
     }

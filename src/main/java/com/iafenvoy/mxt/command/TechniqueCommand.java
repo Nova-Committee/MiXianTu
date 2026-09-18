@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.command;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.cultivation.CultivationTechnique;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService.Failure;
@@ -131,8 +131,8 @@ public final class TechniqueCommand {
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         List<Identifier> removed = new ArrayList<>();
 
-        List<Holder<CultivationTechnique>> techniques = prune(identity.learnedTechniques(), removed);
-        Map<Holder<CultivationTechnique>, Holder<SkillStage>> stages = pruneStages(identity.techniqueStages(), removed);
+        List<Holder<Technique>> techniques = prune(identity.learnedTechniques(), removed);
+        Map<Holder<Technique>, Holder<SkillStage>> stages = pruneStages(identity.techniqueStages(), removed);
 
         if (!dryRun) {
             identity.setLearnedTechniques(techniques);
@@ -161,12 +161,12 @@ public final class TechniqueCommand {
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         int before = identity.learnedTechniques().size() + identity.techniqueStages().size();
 
-        List<Holder<CultivationTechnique>> techniques = new ArrayList<>();
-        for (Holder<CultivationTechnique> technique : identity.learnedTechniques())
+        List<Holder<Technique>> techniques = new ArrayList<>();
+        for (Holder<Technique> technique : identity.learnedTechniques())
             if (!HolderHelper.id(technique).equals(id)) techniques.add(technique);
 
-        Map<Holder<CultivationTechnique>, Holder<SkillStage>> stages = new LinkedHashMap<>();
-        for (Entry<Holder<CultivationTechnique>, Holder<SkillStage>> entry : identity.techniqueStages().entrySet())
+        Map<Holder<Technique>, Holder<SkillStage>> stages = new LinkedHashMap<>();
+        for (Entry<Holder<Technique>, Holder<SkillStage>> entry : identity.techniqueStages().entrySet())
             if (!HolderHelper.id(entry.getKey()).equals(id)) stages.put(entry.getKey(), entry.getValue());
 
         int after = techniques.size() + stages.size();
@@ -194,10 +194,10 @@ public final class TechniqueCommand {
      *
      * <p>Package-visible so the server audit can exercise the sweep directly.</p>
      */
-    public static List<Holder<CultivationTechnique>> prune(List<Holder<CultivationTechnique>> values, List<Identifier> removed) {
-        List<Holder<CultivationTechnique>> kept = new ArrayList<>(values.size());
+    public static List<Holder<Technique>> prune(List<Holder<Technique>> values, List<Identifier> removed) {
+        List<Holder<Technique>> kept = new ArrayList<>(values.size());
         Set<Identifier> seen = new LinkedHashSet<>();
-        for (Holder<CultivationTechnique> technique : values) {
+        for (Holder<Technique> technique : values) {
             Identifier id = HolderHelper.id(technique);
             if (!resolves(technique) || !seen.add(id)) {
                 removed.add(id);
@@ -208,10 +208,10 @@ public final class TechniqueCommand {
         return kept;
     }
 
-    public static Map<Holder<CultivationTechnique>, Holder<SkillStage>> pruneStages(Map<Holder<CultivationTechnique>, Holder<SkillStage>> values, List<Identifier> removed) {
-        Map<Holder<CultivationTechnique>, Holder<SkillStage>> kept = new LinkedHashMap<>();
-        for (Entry<Holder<CultivationTechnique>, Holder<SkillStage>> entry : values.entrySet()) {
-            Holder<CultivationTechnique> technique = entry.getKey();
+    public static Map<Holder<Technique>, Holder<SkillStage>> pruneStages(Map<Holder<Technique>, Holder<SkillStage>> values, List<Identifier> removed) {
+        Map<Holder<Technique>, Holder<SkillStage>> kept = new LinkedHashMap<>();
+        for (Entry<Holder<Technique>, Holder<SkillStage>> entry : values.entrySet()) {
+            Holder<Technique> technique = entry.getKey();
             if (!resolves(technique) || !resolvesStage(entry.getValue())) {
                 removed.add(HolderHelper.id(technique));
                 continue;
@@ -226,11 +226,11 @@ public final class TechniqueCommand {
      * registry: a removed entry has no value to read, and asking for one would throw. Package-visible for
      * the server audit, which cannot build a genuine unbound holder.
      */
-    public static boolean resolves(Holder<CultivationTechnique> technique) {
+    public static boolean resolves(Holder<Technique> technique) {
         if (technique == null) return false;
         Identifier id = HolderHelper.id(technique);
         if (id.equals(HolderHelper.EMPTY)) return false;
-        return MxtDatapackRegistries.get(MxtResourceKeys.CULTIVATION_TECHNIQUE, id).isPresent();
+        return MxtDatapackRegistries.get(MxtResourceKeys.TECHNIQUE, id).isPresent();
     }
 
     public static boolean resolvesStage(Holder<SkillStage> stage) {

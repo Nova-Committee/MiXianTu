@@ -1,9 +1,11 @@
 package com.iafenvoy.mxt.item.block.entity;
 
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
-import com.iafenvoy.mxt.runtime.spirit.SpiritAccess;
-import com.iafenvoy.mxt.runtime.spirit.SpiritItemAccess;
+import com.iafenvoy.mxt.runtime.spirit.AuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.ItemAuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.UseItemAuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
@@ -25,7 +27,7 @@ import org.jspecify.annotations.NonNull;
 /**
  * Persistent displayed stack shared by every wooden display stand variant.
  */
-public final class DisplayStandBlockEntity extends BlockEntity implements SpiritAccess {
+public final class DisplayStandBlockEntity extends BlockEntity implements AuraAccess {
     private ItemStack displayedItem = ItemStack.EMPTY;
 
     public DisplayStandBlockEntity(BlockPos pos, BlockState state) {
@@ -48,25 +50,33 @@ public final class DisplayStandBlockEntity extends BlockEntity implements Spirit
     }
 
     @Override
-    public Object2IntMap<Holder<Resource>> getCapacity(@Nullable LivingEntity entity) {
-        if (this.displayedItem.getItem() instanceof SpiritItemAccess access)
+    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity) {
+        if (this.displayedItem.getItem() instanceof ItemAuraAccess access)
             return access.getCapacity(entity, this.displayedItem);
         return new Object2IntOpenHashMap<>();
     }
 
     @Override
-    public int add(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
-        SpiritAccess.requireNonNegative(amount);
-        if (!(this.displayedItem.getItem() instanceof SpiritItemAccess access)) return amount;
+    public int insert(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+        AuraAccess.requireNonNegative(amount);
+        // A store that has something to say about being filled is one that asked to be poured into: the reading
+        // is the storing interface, the report is the manual one.
+        if (!(this.displayedItem.getItem() instanceof ItemAuraAccess access)) return amount;
         if (this.level == null) return amount;
-        int remaining = access.add(entity, this.displayedItem, resource, amount, simulate);
-        if (!simulate && remaining != amount) this.markChangedAndSync();
+        int remaining = access.insert(entity, this.displayedItem, aura, amount, simulate);
+        if (!simulate && remaining != amount && access instanceof UseItemAuraAccess manual) {
+            // The store is not in anybody's hands: whatever filled it can be standing somewhere else entirely,
+            // so the place it is at travels with the report instead of being read off the entity - and the item
+            // may spend itself in answer, which is a change this stand has to publish.
+            manual.onCharged(SpiritSource.placed(this.level, this.worldPosition.getCenter(), entity), this.displayedItem);
+            this.markChangedAndSync();
+        }
         return remaining;
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, Holder<Resource> resource, int amount, boolean simulate) {
-        return SpiritAccess.requireNonNegative(amount);
+    public int extract(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+        return AuraAccess.requireNonNegative(amount);
     }
 
     @Override

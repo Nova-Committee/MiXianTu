@@ -118,7 +118,7 @@ public final class ItemBindingTooltipAppender {
     }
 
     private static void appendTechnique(Consumer<Component> builder, TechniqueBinding technique) {
-        builder.accept(Component.translatable("tooltip.mxt.item.cultivation_technique",
-                DefinitionText.name(technique.technique(), "cultivation_technique")).withStyle(ChatFormatting.GREEN));
+        builder.accept(Component.translatable("tooltip.mxt.item.technique",
+                DefinitionText.name(technique.technique(), "technique")).withStyle(ChatFormatting.GREEN));
     }
 }

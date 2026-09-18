@@ -6,6 +6,57 @@ Three scripts live here, none of which is part of the mod build:
 | --- | --- |
 | `mxt_bendable_cuboids_animation.js` | A Blockbench companion plugin. Documented below. |
 | `generate_classic_gui_textures.py` | Regenerates `src/main/resources/assets/mxt/textures/gui/classic/` with Pillow. |
+| `codex_token_usage.py` | Tallies Codex token spend from local rollout logs, filtered by working directory. |
+
+## Codex Token Usage (`codex_token_usage.py`)
+
+Reads the JSONL rollout logs Codex writes under `~/.codex/sessions/` and reports how many tokens
+were spent in a given working directory.
+
+```bash
+python tools/codex_token_usage.py E:/Java/MiXianTu        # one project
+python tools/codex_token_usage.py E:/Java/MiXianTu --json # machine readable
+python tools/codex_token_usage.py --list-dirs             # every project, ranked
+python tools/codex_token_usage.py E:/Java/MiXianTu --index # most accurate attribution
+```
+
+Useful flags: `--subdirs` (include sessions in nested working directories), `--since` /
+`--until` (`YYYY-MM-DD`), `--by-dir`, `--main-only` (exclude sub-agent rollouts),
+`--no-archived`, and `--sessions-root` to point at a different Codex home.
+
+Two details of the log format make a naive sum of file totals wrong, and the script handles both:
+
+* **Resumed sessions span several files.** Resuming continues the same session id in a new
+  `rollout-…-<session-id>_<new-thread-id>.jsonl` whose `total_token_usage` counter starts from an
+  inherited baseline rather than zero. Files are grouped by session id and only each file's
+  *growth* is counted, so resumed tokens are counted once.
+* **Some `token_count` events are written twice** within a second with an identical cumulative
+  total. The script reads the cumulative `total_token_usage` instead of summing the per-call
+  `last_token_usage`, which would over-count.
+
+Sub-agent rollouts carry their own counters and are *not* included in their parent's totals, so
+they are reported as a separate line rather than being folded in. `input + output = total`, and
+`cached` / `reasoning` are already-contained, discounted subsets of `input` / `output`.
+
+### Where the logs live, and why `--index` exists
+
+Rollouts are split across **two** stores, both of which are scanned by default:
+
+| Store | Contents |
+| --- | --- |
+| `~/.codex/sessions/<YYYY>/<MM>/<DD>/` | live threads |
+| `~/.codex/archived_sessions/` | threads archived in the UI — still real spend |
+
+For directory attribution, prefer `--index`, which reads the per-thread totals from Codex's
+`~/.codex/state_*.sqlite` index instead of the rollout files. It is authoritative because the
+index records the **project** directory, while a rollout's `session_meta.cwd` can be a scratch
+folder: Codex Desktop sometimes opens `~/Documents/Codex/<date>/<name>` and drives the real
+project from there, so a rollout-only scan silently misses those threads. The index also covers
+threads whose rollout file has been deleted.
+
+The two modes differ slightly and reconcile exactly: the index reports one `tokens_used` per
+thread (a resumed thread's total does not re-include the pre-resume tail), whereas the rollout
+scan diffs each file, so it can be a few percent higher on heavily resumed threads.
 
 ## Bendable Cuboids Animation (`mxt_bendable_cuboids_animation.js`)
 

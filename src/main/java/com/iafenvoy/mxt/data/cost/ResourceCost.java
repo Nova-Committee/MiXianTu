@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
@@ -29,7 +30,10 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
     @Override
     public boolean check(Player player) {
         double value = this.evaluate(player);
-        return ResourceUseService.canUse(player, this.resource) && Double.isFinite(value) && value > 0.0D
+        // The use gate belongs to the aura a value carries; a value without one - a plain counter - has no gate.
+        boolean allowed = AuraLookup.holder(player, this.resource)
+                .map(aura -> ResourceUseService.canUse(player, aura)).orElse(true);
+        return allowed && Double.isFinite(value) && value > 0.0D
                 && player.getData(MxtAttachments.RESOURCE_HOLDER).get(this.resource) >= value;
     }
 

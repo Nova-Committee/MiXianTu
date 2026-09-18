@@ -103,7 +103,7 @@ public final class CultivationActionEventBridge {
     private static void attemptAutomaticBreakthrough(ServerPlayer player, CultivationAttachment spirit) {
         if (!spirit.cultivating()) return;
         FormulaContext context = FormulaContexts.forEntity(player);
-        MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATION).forEach(cultivation -> {
+        MxtDatapackRegistries.holders(MxtResourceKeys.AURA).forEach(cultivation -> {
             BreakthroughStatus status = CultivationService.breakthroughStatusForChain(player, cultivation, context);
             if (!status.automatic() || !status.reached() || !status.conditionsMet()) return;
             CultivationService.attempt(player, spirit, player.getData(MxtAttachments.RESOURCE_HOLDER),

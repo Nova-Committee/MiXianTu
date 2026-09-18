@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.data;
 
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
@@ -68,9 +68,9 @@ public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlo
      * {@code capacity} is per resource and required, so a {@code storage} with no {@code capacity} does not
      * decode, and stocked aura only offsets a bill of the same resource (see {@code FormationService.MaintainRule}).
      */
-    public record Storage(Map<Holder<Resource>, NumberProvider> capacity) {
+    public record Storage(Map<Holder<Aura>, NumberProvider> capacity) {
         public static final Codec<Storage> CODEC = RecordCodecBuilder.create(i -> i.group(
-                CollectionCodecs.map(Resource.CODEC, NumberProvider.CODEC).fieldOf("capacity").forGetter(Storage::capacity)
+                CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).fieldOf("capacity").forGetter(Storage::capacity)
         ).apply(i, Storage::new));
     }
 

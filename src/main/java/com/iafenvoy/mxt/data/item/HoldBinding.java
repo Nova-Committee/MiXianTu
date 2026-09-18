@@ -4,9 +4,11 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 
 import java.util.List;
@@ -25,38 +27,39 @@ import java.util.List;
  * interface is named after the gesture, not after what the gesture is for.
  */
 public interface HoldBinding extends ItemMatcher {
-    /**
-     * How long a hold lasts when a declaration does not say. Absent means "used at once", so this is the value
-     * an absent field is not - the constant only names the default.
-     */
     int NO_HOLD = 0;
-
-    /**
-     * The gesture an undeclared hold plays: raising the item in front of the chest reads as studying it, and it
-     * is the only fitting animation with no side effects, see {@link #ALLOWED_ANIMATIONS}.
-     */
     ItemUseAnimation DEFAULT_HOLD_ANIMATION = ItemUseAnimation.BLOCK;
-
-    /**
-     * What an undeclared hold sounds like: a page turning, which is what reading is. Vanilla's own default for a
-     * consumable is the chewing sound it uses for food, which is not.
-     */
     Holder<SoundEvent> DEFAULT_HOLD_SOUND = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.BOOK_PAGE_TURN);
+    List<ItemUseAnimation> ALLOWED_ANIMATIONS = List.of(ItemUseAnimation.BLOCK, ItemUseAnimation.BRUSH, ItemUseAnimation.BUNDLE, ItemUseAnimation.NONE, ItemUseAnimation.TOOT_HORN);
 
     /**
-     * The animations a hold may ask for. Vanilla drives far more than the arm pose from this value and those
-     * extras cannot be suppressed, so anything reaching outside the held item is left out: {@code SPYGLASS}
-     * locks the field of view, {@code EAT}, {@code DRINK} and {@code SPEAR} skip the arm transform the pose
-     * needs, and {@code BOW}, {@code TRIDENT} and {@code CROSSBOW} scale the pose by an absent charge.
-     */
-    List<ItemUseAnimation> ALLOWED_ANIMATIONS = List.of(
-            ItemUseAnimation.BLOCK, ItemUseAnimation.BRUSH, ItemUseAnimation.BUNDLE,
-            ItemUseAnimation.NONE, ItemUseAnimation.TOOT_HORN);
-
-    /**
-     * The ticks the use cycle lasts.
+     * The ticks the use cycle lasts. A declaration whose length depends on the stack answers
+     * {@link #NO_HOLD} here and overrides {@link #requiresHold} to say outright that it does ask for a hold;
+     * its real length is the stack-level {@link #holdTicks(Provider, ItemStack)}.
      */
     int holdTicks();
+
+    /**
+     * The ticks this stack's use cycle lasts, when the declaration's length depends on the stack rather than
+     * on the item - a charge that lasts as long as the item takes to fill, for instance. The registry view is
+     * the one the declaration was captured from, so both sides answer the same; a declaration that has no
+     * stack-level length simply answers its item-level one.
+     * <p>
+     * {@link #NO_HOLD} means "not this stack": nothing is armed for it, and a stack that already carries the
+     * component is left alone.
+     */
+    default int holdTicks(Provider registries, ItemStack stack) {
+        return this.holdTicks();
+    }
+
+    /**
+     * Whether this declaration drives this stack at all. A declaration that answers for every stack that
+     * matches it keeps the default; one that only takes some of them - everything that is chargeable, say -
+     * answers through {@link #holdTicks(Provider, ItemStack)}.
+     */
+    default boolean claims(Provider registries, ItemStack stack) {
+        return this.holdTicks(registries, stack) > NO_HOLD;
+    }
 
     /**
      * The pose the use cycle plays.
@@ -90,13 +93,11 @@ public interface HoldBinding extends ItemMatcher {
                     .map(ItemUseAnimation::getSerializedName).toList());
         if (hold.requiresHold()) return DataResult.success(hold);
         if (hold.holdAnimation() != DEFAULT_HOLD_ANIMATION)
-            return DataResult.error(() -> "a hold animation on a declaration that asks for no hold would never "
-                    + "be played: " + hold.holdAnimation().getSerializedName());
+            return DataResult.error(() -> "a hold animation on a declaration that asks for no hold would never be played: " + hold.holdAnimation().getSerializedName());
         // Compared by id rather than by holder: a file that writes the default sound out in full is asking for
         // nothing, exactly as writing the default animation is, and it must not be rejected for spelling it.
         if (!HolderHelper.id(hold.holdSound()).equals(HolderHelper.id(DEFAULT_HOLD_SOUND)))
-            return DataResult.error(() -> "a hold sound on a declaration that asks for no hold would never be "
-                    + "played: " + HolderHelper.id(hold.holdSound()));
+            return DataResult.error(() -> "a hold sound on a declaration that asks for no hold would never be played: " + HolderHelper.id(hold.holdSound()));
         return DataResult.success(hold);
     }
 }

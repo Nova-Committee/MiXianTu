@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import net.minecraft.core.BlockPos;
@@ -67,8 +67,8 @@ public final class FormationAbsorption {
      * The aura the emitters inside one formation's radius are supplying it, read from the chunks the radius
      * overlaps. Summed without distance weighting, so a block inside the formation gives it everything.
      */
-    public static Map<Holder<Resource>, Double> absorbedFor(ServerLevel level, BlockPos controller, double radius) {
-        Map<Holder<Resource>, Double> totals = new LinkedHashMap<>();
+    public static Map<Holder<Aura>, Double> absorbedFor(ServerLevel level, BlockPos controller, double radius) {
+        Map<Holder<Aura>, Double> totals = new LinkedHashMap<>();
         int minChunkX = (int) Math.floor((controller.getX() - radius) / 16.0D);
         int maxChunkX = (int) Math.floor((controller.getX() + radius) / 16.0D);
         int minChunkZ = (int) Math.floor((controller.getZ() - radius) / 16.0D);
@@ -89,8 +89,8 @@ public final class FormationAbsorption {
      * resolved aura at the controller, minus the part the formation's own emitters contribute
      * ({@link AuraPool#supplied()}).
      */
-    public static Map<Holder<Resource>, Double> environmentSupply(ServerLevel level, BlockPos controller) {
-        Map<Holder<Resource>, Double> supply = new LinkedHashMap<>();
+    public static Map<Holder<Aura>, Double> environmentSupply(ServerLevel level, BlockPos controller) {
+        Map<Holder<Aura>, Double> supply = new LinkedHashMap<>();
         AuraService.getPositionAura(level, controller).aura().forEach((resource, pool) -> {
             double available = pool.amount() - pool.supplied();
             if (available > 0.0D) supply.put(resource, available);

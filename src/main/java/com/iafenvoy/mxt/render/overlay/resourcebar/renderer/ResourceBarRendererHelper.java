@@ -23,7 +23,8 @@ final class ResourceBarRendererHelper {
         ResourceBarRenderState state = context.state();
         icon(state).ifPresent(icon -> renderIcon(context, icon));
         if (showValueDisplay && state.valueDisplay() != ValueDisplay.NONE) renderValueDisplay(context);
-        if (MxtClientConfig.INSTANCE.resourceBars.showNames.getValue()) state.name().ifPresent(name -> renderName(context, name));
+        if (MxtClientConfig.INSTANCE.resourceBars.showNames.getValue())
+            state.name().ifPresent(name -> renderName(context, name));
     }
 
     static void value(Context context, int color, boolean showMaximum, String valueFormat) {
