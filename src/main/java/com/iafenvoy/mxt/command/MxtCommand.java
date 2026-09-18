@@ -12,14 +12,19 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
+import com.iafenvoy.mxt.data.trigger.TriggerContext;
+import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
+import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.SoulService;
@@ -34,6 +39,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -43,10 +49,13 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.entity.Entity;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -59,6 +68,11 @@ import static net.minecraft.commands.Commands.literal;
  * player-facing subtrees live in their own classes and {@code CommandManager} attaches them at both roots.
  */
 public final class MxtCommand {
+    /**
+     * A chat report lists at most this many problems; the log keeps all of them.
+     */
+    private static final int MAX_REPORTED_PROBLEMS = 12;
+
     /**
      * Attaches the diagnostic-only nodes to an existing root.
      */
@@ -92,7 +106,23 @@ public final class MxtCommand {
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_STAGE))
                                 .executes(ctx -> setRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "realm"))))))
                 .then(literal("soul").then(literal("reclaim").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .executes(ctx -> reclaimSoul(ctx.getSource()))));
+                        .executes(ctx -> reclaimSoul(ctx.getSource()))))
+                .then(literal("trigger")
+                        .then(literal("list")
+                                .executes(ctx -> listTriggers(ctx.getSource(), null))
+                                .then(argument("entity", EntityArgument.entity())
+                                        .executes(ctx -> listTriggers(ctx.getSource(), EntityArgument.getEntity(ctx, "entity")))))
+                        .then(literal("rules")
+                                .then(argument("signal", IdentifierArgument.id())
+                                        .suggests((ctx, builder) -> suggestRuleSignals(builder))
+                                        .executes(ctx -> listTriggerRules(ctx.getSource(), IdentifierArgument.getId(ctx, "signal")))))
+                        .then(literal("publish").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                                .then(argument("signal", IdentifierArgument.id())
+                                        .suggests((ctx, builder) -> suggestPublishedSignals(builder))
+                                        .executes(ctx -> publishTrigger(ctx.getSource(), IdentifierArgument.getId(ctx, "signal"), null))
+                                        .then(argument("entity", EntityArgument.entity())
+                                                .executes(ctx -> publishTrigger(ctx.getSource(), IdentifierArgument.getId(ctx, "signal"),
+                                                        EntityArgument.getEntity(ctx, "entity")))))));
     }
 
     private static int listRegistries(CommandSourceStack source) {
@@ -116,9 +146,43 @@ public final class MxtCommand {
         int registryCount = MxtDatapackRegistries.registries().size();
         int entryCount = MxtDatapackRegistries.registries().stream()
                 .mapToInt(MxtDatapackRegistries::size).sum();
-        source.sendSuccess(() -> Component.translatable("command.mxt.registries.validation_passed", registryCount, entryCount,
-                "native datapack registries loaded"), false);
-        return 1;
+        // The cache collects every problem it finds while it builds its indexes, so this reports the whole
+        // list instead of the first thing that failed.
+        List<String> problems = ServerCache.get().map(ServerCache::problems).orElse(List.of());
+        if (problems.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.mxt.registries.validation_passed", registryCount, entryCount,
+                    Component.translatable("command.mxt.registries.no_problems")), false);
+            return 1;
+        }
+        source.sendFailure(Component.translatable("command.mxt.registries.validation_failed", registryCount, entryCount,
+                Component.literal(summarize(problems))));
+        return 0;
+    }
+
+    private static String summarize(List<String> problems) {
+        int shown = Math.min(problems.size(), MAX_REPORTED_PROBLEMS);
+        String text = String.join("; ", problems.subList(0, shown));
+        return problems.size() > shown ? text + "; ...(+" + (problems.size() - shown) + ")" : text;
+    }
+
+    /**
+     * Offers the signals a datapack rule reacts to.
+     */
+    private static CompletableFuture<Suggestions> suggestRuleSignals(SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(ServerCache.get()
+                .map(cache -> cache.triggerSignals().stream().map(Identifier::toString).toList())
+                .orElse(List.of()), builder);
+    }
+
+    /**
+     * Offers every signal a rule reacts to or a subscription listens to: the two sets a signal can be
+     * published against.
+     */
+    private static CompletableFuture<Suggestions> suggestPublishedSignals(SuggestionsBuilder builder) {
+        Set<String> ids = new LinkedHashSet<>();
+        ServerCache.get().ifPresent(cache -> cache.triggerSignals().forEach(signal -> ids.add(signal.toString())));
+        TriggerDispatcher.signals().forEach(signal -> ids.add(signal.toString()));
+        return SharedSuggestionProvider.suggest(ids, builder);
     }
 
     private static int attachmentStatus(CommandSourceStack source) {
@@ -292,6 +356,54 @@ public final class MxtCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.soul.reclaimed"), true);
+        return 1;
+    }
+
+    /**
+     * Lists the runtime trigger subscriptions of one entity. They are never persisted, so this is the only
+     * way to see what a running server currently has armed.
+     */
+    private static int listTriggers(CommandSourceStack source, Entity target) {
+        Entity entity = target == null ? source.getPlayer() : target;
+        if (entity == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        List<TriggerSubscription> subscriptions = TriggerDispatcher.subscriptions(entity.getUUID());
+        source.sendSuccess(() -> Component.translatable("command.mxt.trigger.list.header",
+                entity.getDisplayName(), subscriptions.size()), false);
+        subscriptions.forEach(subscription -> source.sendSuccess(() -> Component.translatable("command.mxt.trigger.list.entry",
+                subscription.module(), subscription.identity(), subscription.trigger().signalType().toString(),
+                subscription.state().name()), false));
+        return subscriptions.size();
+    }
+
+    /**
+     * Lists the datapack rules that react to one signal, in the order they run.
+     */
+    private static int listTriggerRules(CommandSourceStack source, Identifier signal) {
+        List<Reference<TriggerRule>> rules = ServerCache.get().map(cache -> cache.triggerRules(signal)).orElse(List.of());
+        source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.header", signal.toString(), rules.size()), false);
+        rules.forEach(rule -> source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.entry",
+                HolderHelper.id(rule).toString(),
+                String.valueOf(MxtRegistries.ENTITY_ACTION_TYPE.getKey(rule.value().action().codec()))), false));
+        return rules.size();
+    }
+
+    /**
+     * Publishes a signal by hand, which is how an author checks a reaction without waiting for the event.
+     */
+    private static int publishTrigger(CommandSourceStack source, Identifier signal, Entity target) {
+        Entity entity = target == null ? source.getPlayer() : target;
+        if (entity == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        boolean heard = TriggerDispatcher.hasListener(signal);
+        TriggerDispatcher.publish(signal, new TriggerContext().actor(entity).level(entity.level())
+                .formula(FormulaContext.of(entity)), entity.level().getGameTime());
+        source.sendSuccess(() -> Component.translatable(heard ? "command.mxt.trigger.published"
+                : "command.mxt.trigger.published_unheard", signal.toString(), entity.getDisplayName()), true);
         return 1;
     }
 }

@@ -6,6 +6,9 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 
 import java.util.Map;
 
@@ -21,6 +24,12 @@ public record AuraPool(double amount, double maximum, double regenPerTick, doubl
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraPool::regenPerTick),
             Codec.DOUBLE.optionalFieldOf("supplied", 0.0D).forGetter(AuraPool::supplied)
     ).apply(i, AuraPool::new)).validate(AuraPool::validate);
+    public static final StreamCodec<RegistryFriendlyByteBuf, AuraPool> STREAM_CODEC = StreamCodec.composite(
+            ByteBufCodecs.DOUBLE, AuraPool::amount,
+            ByteBufCodecs.DOUBLE, AuraPool::maximum,
+            ByteBufCodecs.DOUBLE, AuraPool::regenPerTick,
+            ByteBufCodecs.DOUBLE, AuraPool::supplied,
+            AuraPool::new);
     public static final Codec<Map<Holder<Aura>, AuraPool>> GROUPED_CODEC = CollectionCodecs.map(Aura.CODEC, CODEC);
 
     public AuraPool {

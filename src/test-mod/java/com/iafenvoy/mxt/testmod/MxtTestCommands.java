@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.RealmTokenComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
@@ -204,6 +205,9 @@ public final class MxtTestCommands {
         CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
         TEST_ACTIVE_ABILITIES.forEach(id -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)
                 .ifPresent(ability -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, TEST_ABILITY_SOURCE)));
+        // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt
+        // where the ability sources actually change.
+        AbilityEventBridge.rebuildTriggerSubscriptions(player);
     }
 
     private static int startCultivation(CommandSourceStack source) {

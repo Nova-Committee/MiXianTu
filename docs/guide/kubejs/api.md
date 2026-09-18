@@ -381,7 +381,7 @@ function publishPillTaken(player, toxicity) {
 
 `values` 会被复制进触发上下文作为扩展数据，其中每个有限数值还会写入触发器的公式上下文。因此脚本回调可以用 `signal.context().formula().explicit('toxicity')` 读到上面的 `toxicity`，与数据包信号携带 `damage` 的方式完全一致。
 
-一个 key 在每个实体上只对应一个订阅，请为每个信号使用独立的 key：用同一个 key 再次注册会替换掉旧的订阅，无论它原本监听的是哪个信号。
+一个 key 在每个实体上只对应一个订阅，请为每个信号使用独立的 key：用同一个 key 再次注册会替换掉旧订阅，无论它原本监听的是哪个信号。key 的作用域只到实体，**不同实体用同一个 key 互不影响**；运行中的服务器可以用 `/mxt trigger list [<实体>]` 查看当前实际挂着的订阅。
 
 回调收到一个 `TriggerSignal`，其访问器为 `type()`（信号 ID）、`gameTime()`、`context()` 与 `source()`（可空的来源 ID）。上下文提供 `actor()`、`target()`、`level()`、`position()`、`item()`、`block()`、`damageSource()`、`formula()`，以及读取发布值的 `get(key)`（返回 `Optional`）与 `data()`（原始扩展表）。请把上下文当作只读对象：它会被同一信号的多个订阅者共享。
 

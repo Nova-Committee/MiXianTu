@@ -16,8 +16,7 @@ public record FlightToggleC2SPayload(Identifier archetype, boolean enabled) impl
     public static final StreamCodec<RegistryFriendlyByteBuf, FlightToggleC2SPayload> STREAM_CODEC = StreamCodec.composite(
             Identifier.STREAM_CODEC, FlightToggleC2SPayload::archetype,
             ByteBufCodecs.BOOL, FlightToggleC2SPayload::enabled,
-            FlightToggleC2SPayload::new
-    );
+            FlightToggleC2SPayload::new);
 
     @Override
     public @NonNull Type<FlightToggleC2SPayload> type() {

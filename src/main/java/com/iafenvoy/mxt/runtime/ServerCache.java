@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime;
 
+import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -10,7 +12,9 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -35,6 +39,7 @@ public final class ServerCache {
     private Map<Identifier, Identifier> skillByStage = new LinkedHashMap<>();
     private Map<Identifier, Integer> rankByStage = new LinkedHashMap<>();
     private Map<Identifier, List<Reference<TriggerRule>>> triggerRulesBySignal = Map.of();
+    private List<String> problems = List.of();
 
     private ServerCache(MinecraftServer server) {
         this.server = server;
@@ -49,6 +54,14 @@ public final class ServerCache {
 
     public MinecraftServer server() {
         return this.server;
+    }
+
+    /**
+     * Problems the last rebuild found, each naming the file an author has to fix. They are reported instead of
+     * aborting the build, so one broken definition cannot hide every other problem.
+     */
+    public List<String> problems() {
+        return this.problems;
     }
 
     @SubscribeEvent
@@ -69,10 +82,12 @@ public final class ServerCache {
     }
 
     /**
-     * Rebuilds validated linear cultivation chains after datapack data is available; an invalid chain is
-     * rejected, so no partial cache can become authoritative.
+     * Rebuilds the derived indexes after datapack data is available. Every check collects its problem and
+     * carries on with the next definition: an invalid chain is never indexed, but the definitions around it
+     * still are, so an author sees the whole list at once instead of one problem per restart.
      */
     private void rebuild() {
+        List<String> problems = new ArrayList<>();
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
         Map<Identifier, Integer> ranks = new LinkedHashMap<>();
         Map<Identifier, Identifier> profiles = new LinkedHashMap<>();
@@ -80,26 +95,64 @@ public final class ServerCache {
             Aura profile = profileHolder.value();
             Identifier resource = HolderHelper.id(profile.resource());
             Identifier previous = profiles.putIfAbsent(resource, profileHolder.key().identifier());
-            if (previous != null)
-                throw new IllegalStateException("Resource " + resource + " has more than one cultivation profile: "
-                        + previous + " and " + profileHolder.key().identifier());
+            if (previous != null) {
+                problems.add(problem(MxtResourceKeys.AURA, profileHolder.key().identifier(),
+                        "resource " + resource + " already has the cultivation profile " + previous));
+                return;
+            }
             // The chain belongs to the profile: every stage reachable from its first realm must name it.
-            profile.firstRealm().ifPresent(first -> this.indexChain(profileHolder.key().identifier(), HolderHelper.id(first), resolved, ranks));
+            profile.firstRealm().ifPresent(first -> {
+                try {
+                    this.indexChain(profileHolder.key().identifier(), HolderHelper.id(first), resolved, ranks);
+                } catch (RuntimeException exception) {
+                    problems.add(problem(MxtResourceKeys.AURA, profileHolder.key().identifier(), message(exception)));
+                }
+            });
         });
         this.cultivationByRealm = resolved;
         this.rankByRealm = ranks;
-        this.rebuildTriggerRules();
-        this.rebuildSkillChains();
+        this.rebuildTriggerRules(problems);
+        this.rebuildSkillChains(problems);
+        this.problems = List.copyOf(problems);
+        if (problems.isEmpty()) {
+            MiXianTu.LOGGER.info("Datapack validation passed: {} cultivation realms, {} skill stages, {} trigger rules",
+                    this.cultivationByRealm.size(), this.skillByStage.size(),
+                    this.triggerRulesBySignal.values().stream().mapToInt(List::size).sum());
+        } else {
+            MiXianTu.LOGGER.warn("Found {} datapack validation problem(s):\n{}", problems.size(), String.join("\n", problems));
+        }
+    }
+
+    /**
+     * Renders one problem the way its author can act on it: the file the definition is read from, then the
+     * reason. It is the same path shape the game uses for its own datapack reports.
+     */
+    private static String problem(ResourceKey<? extends Registry<?>> registry, Identifier id, String message) {
+        Identifier directory = registry.identifier();
+        return "data/" + id.getNamespace() + "/" + directory.getNamespace() + "/" + directory.getPath()
+                + "/" + id.getPath() + ": " + message;
+    }
+
+    private static String message(RuntimeException exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
     }
 
     /**
      * Indexes datapack trigger rules by the signal their trigger names, so publishing a signal never
      * walks the whole registry.
      */
-    private void rebuildTriggerRules() {
+    private void rebuildTriggerRules(List<String> problems) {
         Map<Identifier, List<Reference<TriggerRule>>> rules = new LinkedHashMap<>();
-        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TRIGGER).forEach(rule ->
-                rules.computeIfAbsent(rule.value().trigger().signalType(), ignored -> new ArrayList<>()).add(rule));
+        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TRIGGER).forEach(rule -> {
+            TriggerRule value = rule.value();
+            // A rule without an action reads like a reaction but can never do anything: the default action is
+            // a no-op, so the author almost certainly forgot the field.
+            if (value.action() instanceof NoOpAction)
+                problems.add(problem(MxtResourceKeys.TRIGGER, rule.key().identifier(),
+                        "has no action, so nothing happens when " + value.trigger().signalType() + " is published"));
+            rules.computeIfAbsent(value.trigger().signalType(), ignored -> new ArrayList<>()).add(rule);
+        });
         Map<Identifier, List<Reference<TriggerRule>>> indexed = new LinkedHashMap<>();
         rules.forEach((signal, entries) -> indexed.put(signal, List.copyOf(entries)));
         this.triggerRulesBySignal = Collections.unmodifiableMap(indexed);
@@ -110,6 +163,13 @@ public final class ServerCache {
      */
     public List<Reference<TriggerRule>> triggerRules(Identifier signal) {
         return this.triggerRulesBySignal.getOrDefault(signal, List.of());
+    }
+
+    /**
+     * Every signal at least one rule reacts to, in a stable order, for command completion.
+     */
+    public List<Identifier> triggerSignals() {
+        return this.triggerRulesBySignal.keySet().stream().sorted(Comparator.comparing(Identifier::toString)).toList();
     }
 
     /**
@@ -198,10 +258,10 @@ public final class ServerCache {
     /**
      * Rebuilds validated linear skill chains. A chain is discovered from its {@code next_stage} links, not
      * from the level a definition enters at, because several techniques may share a skill and enter it at
-     * different levels. An invalid chain is rejected, never indexed partially, since a half-ordered chain
-     * would compare levels that never were comparable.
+     * different levels. A chain that cannot be walked is reported and left out, never indexed partially,
+     * since a half-ordered chain would compare levels that never were comparable.
      */
-    private void rebuildSkillChains() {
+    private void rebuildSkillChains(List<String> problems) {
         Map<Identifier, SkillStage> stages = new LinkedHashMap<>();
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.SKILL_STAGE)
                 .forEach(holder -> stages.put(holder.key().identifier(), holder.value()));
@@ -210,47 +270,72 @@ public final class ServerCache {
             Identifier next = entry.getValue().nextStage().map(HolderHelper::id).orElse(null);
             if (next == null) continue;
             SkillStage target = stages.get(next);
-            if (target == null)
-                throw new IllegalStateException("Skill stage " + entry.getKey() + " points at the unknown stage " + next);
-            if (!target.skill().equals(entry.getValue().skill()))
-                throw new IllegalStateException("Skill stage " + entry.getKey() + " of skill " + entry.getValue().skill()
-                        + " points at " + next + " of skill " + target.skill());
+            if (target == null) {
+                problems.add(problem(MxtResourceKeys.SKILL_STAGE, entry.getKey(), "next_stage " + next + " is not a skill stage"));
+                continue;
+            }
+            if (!target.skill().equals(entry.getValue().skill())) {
+                problems.add(problem(MxtResourceKeys.SKILL_STAGE, entry.getKey(),
+                        "next_stage " + next + " belongs to skill " + target.skill() + " instead of " + entry.getValue().skill()));
+                continue;
+            }
             Identifier other = previous.putIfAbsent(next, entry.getKey());
             if (other != null && !other.equals(entry.getKey()))
-                throw new IllegalStateException("Skill stage " + next + " follows both " + other + " and " + entry.getKey());
+                problems.add(problem(MxtResourceKeys.SKILL_STAGE, next,
+                        "follows both " + other + " and " + entry.getKey()));
         }
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
         Map<Identifier, Integer> ranks = new LinkedHashMap<>();
         Map<Identifier, Identifier> firstBySkill = new LinkedHashMap<>();
+        Set<Identifier> unwalked = new LinkedHashSet<>();
         for (Identifier first : stages.keySet()) {
             if (previous.containsKey(first)) continue;
             Identifier known = firstBySkill.putIfAbsent(stages.get(first).skill(), first);
-            if (known != null)
-                throw new IllegalStateException("Skill " + stages.get(first).skill() + " has more than one first stage: "
-                        + known + " and " + first);
+            if (known != null) {
+                problems.add(problem(MxtResourceKeys.SKILL_STAGE, first,
+                        "shares skill " + stages.get(first).skill() + " with the first stage " + known));
+                unwalked.add(first);
+                continue;
+            }
+            Map<Identifier, Identifier> chain = new LinkedHashMap<>();
+            Map<Identifier, Integer> chainRanks = new LinkedHashMap<>();
             Identifier current = first;
             int rank = 0;
             double lastMastery = Double.NEGATIVE_INFINITY;
+            String failure = null;
             while (current != null) {
-                if (ranks.containsKey(current))
-                    throw new IllegalStateException("Cyclic skill chain for " + stages.get(current).skill() + " at stage " + current);
+                if (chain.containsKey(current) || ranks.containsKey(current)) {
+                    failure = "chain is cyclic, or joins another chain, at stage " + current;
+                    break;
+                }
                 // A later level may not ask for less mastery than an earlier one. Only a constant can be
                 // compared: a formula provider that drops only makes advancement climb faster.
                 if (stages.get(current).mastery() instanceof Constant(double mastery)) {
-                    if (mastery < lastMastery)
-                        throw new IllegalStateException("Skill chain " + stages.get(current).skill()
-                                + " lowers its mastery requirement at stage " + current);
+                    if (mastery < lastMastery) {
+                        failure = "lowers its mastery requirement at stage " + current;
+                        break;
+                    }
                     lastMastery = mastery;
                 }
-                resolved.put(current, stages.get(current).skill());
-                ranks.put(current, rank++);
+                chain.put(current, stages.get(current).skill());
+                chainRanks.put(current, rank++);
                 current = stages.get(current).nextStage().map(HolderHelper::id).orElse(null);
             }
+            if (failure != null) {
+                problems.add(problem(MxtResourceKeys.SKILL_STAGE, first, failure));
+                unwalked.addAll(chain.keySet());
+                if (current != null) unwalked.add(current);
+                continue;
+            }
+            // A chain is merged only once it has been walked to its end, so a failure never indexes a prefix.
+            resolved.putAll(chain);
+            ranks.putAll(chainRanks);
         }
         for (Identifier id : stages.keySet())
-            if (!ranks.containsKey(id))
-                throw new IllegalStateException("Skill stage " + id + " cannot be reached from a first stage: the chain is cyclic");
-        this.validateTechniqueChains(resolved);
+            if (!ranks.containsKey(id) && !unwalked.contains(id))
+                problems.add(problem(MxtResourceKeys.SKILL_STAGE, id,
+                        "cannot be reached from a first stage: the chain is cyclic or split"));
+        this.validateTechniqueChains(resolved, stages, problems);
         this.skillByStage = resolved;
         this.rankByStage = ranks;
     }
@@ -258,39 +343,52 @@ public final class ServerCache {
     /**
      * A technique annotates one chain: its entry level is where a holder starts, every level after it must be
      * configured, and nothing may be configured that it can never reach. A partially annotated chain is
-     * rejected, so a holder can never reach a level nothing describes.
+     * reported, so a holder can never reach a level nothing describes.
      */
-    private void validateTechniqueChains(Map<Identifier, Identifier> resolved) {
+    private void validateTechniqueChains(Map<Identifier, Identifier> resolved, Map<Identifier, SkillStage> stages,
+                                         List<String> problems) {
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TECHNIQUE).forEach(holder -> {
             Technique technique = holder.value();
             Identifier entry = technique.defaultStage().map(HolderHelper::id).orElse(null);
             if (entry == null) return;
             Identifier techniqueId = holder.key().identifier();
             Identifier skill = resolved.get(entry);
-            if (skill == null)
-                throw new IllegalStateException("Technique " + techniqueId + " enters the unknown skill stage " + entry);
+            if (skill == null) {
+                // A stage that exists but was not indexed belongs to a chain that was already reported.
+                if (!stages.containsKey(entry))
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "enters the unknown skill stage " + entry));
+                return;
+            }
             Set<Identifier> configured = new LinkedHashSet<>();
             technique.configuration().keySet().forEach(stage -> configured.add(HolderHelper.id(stage)));
             Set<Identifier> reached = new LinkedHashSet<>();
             Identifier current = entry;
             while (current != null) {
-                if (!reached.add(current))
-                    throw new IllegalStateException("Technique " + techniqueId + " walks a cyclic skill chain at stage " + current);
-                if (!entry.equals(current) && !configured.contains(current))
-                    throw new IllegalStateException("Technique " + techniqueId + " does not configure the skill stage " + current);
+                if (!reached.add(current)) {
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks a cyclic skill chain at stage " + current));
+                    return;
+                }
+                if (!entry.equals(current) && !configured.contains(current)) {
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "does not configure the skill stage " + current));
+                    return;
+                }
                 Identifier stageSkill = resolved.get(current);
-                if (!skill.equals(stageSkill))
-                    throw new IllegalStateException("Technique " + techniqueId + " walks stage " + current + " of skill " + stageSkill
-                            + " instead of " + skill);
-                SkillStage stage = MxtDatapackRegistries.get(MxtResourceKeys.SKILL_STAGE, current).orElse(null);
-                if (stage == null)
-                    throw new IllegalStateException("Technique " + techniqueId + " walks the unknown skill stage " + current);
+                if (!skill.equals(stageSkill)) {
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId,
+                            "walks stage " + current + " of skill " + stageSkill + " instead of " + skill));
+                    return;
+                }
+                SkillStage stage = stages.get(current);
+                if (stage == null) {
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks the unknown skill stage " + current));
+                    return;
+                }
                 current = stage.nextStage().map(HolderHelper::id).orElse(null);
             }
             for (Identifier configuredStage : configured)
                 if (!reached.contains(configuredStage))
-                    throw new IllegalStateException("Technique " + techniqueId + " configures skill stage " + configuredStage
-                            + ", which it can never reach from " + entry);
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId,
+                            "configures skill stage " + configuredStage + ", which it can never reach from " + entry));
         });
     }
 }

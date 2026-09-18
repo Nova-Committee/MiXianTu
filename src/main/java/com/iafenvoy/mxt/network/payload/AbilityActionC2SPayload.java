@@ -16,8 +16,7 @@ public record AbilityActionC2SPayload(Identifier ability, boolean cancel) implem
     public static final StreamCodec<RegistryFriendlyByteBuf, AbilityActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
             Identifier.STREAM_CODEC, AbilityActionC2SPayload::ability,
             ByteBufCodecs.BOOL, AbilityActionC2SPayload::cancel,
-            AbilityActionC2SPayload::new
-    );
+            AbilityActionC2SPayload::new);
 
     public static AbilityActionC2SPayload use(Identifier ability) {
         return new AbilityActionC2SPayload(ability, false);

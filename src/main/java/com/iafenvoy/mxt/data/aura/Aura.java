@@ -12,6 +12,9 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.RegistryFixedCodec;
 import org.jspecify.annotations.NonNull;
 
@@ -50,6 +53,7 @@ public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> first
             EntityCondition.optionalCodec("use_condition").forGetter(Aura::useCondition),
             Codec.BOOL.optionalFieldOf("show_cultivation_info", true).forGetter(Aura::showCultivationInfo)
     ).apply(i, Aura::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<Aura>> STREAM_CODEC = ByteBufCodecs.holderRegistry(MxtResourceKeys.AURA);
 
     @Override
     public @NonNull String toString() {

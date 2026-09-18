@@ -12,7 +12,6 @@ import org.jspecify.annotations.NonNull;
  */
 public enum CultivationToggleC2SPayload implements CustomPacketPayload {
     INSTANCE;
-
     public static final Type<CultivationToggleC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "cultivation_toggle_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, CultivationToggleC2SPayload> STREAM_CODEC = StreamCodec.unit(INSTANCE);
 

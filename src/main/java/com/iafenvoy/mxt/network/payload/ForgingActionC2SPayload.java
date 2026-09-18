@@ -24,8 +24,7 @@ public record ForgingActionC2SPayload(ForgingAction action,
     public static final StreamCodec<RegistryFriendlyByteBuf, ForgingActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ForgingAction.STREAM_CODEC, ForgingActionC2SPayload::action,
             ByteBufCodecs.optional(Identifier.STREAM_CODEC), ForgingActionC2SPayload::definition,
-            ForgingActionC2SPayload::new
-    );
+            ForgingActionC2SPayload::new);
 
     public ForgingActionC2SPayload {
         if (action == null)

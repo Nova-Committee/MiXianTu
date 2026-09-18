@@ -58,7 +58,6 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 /**
  * Centralizes vanilla-event subscriptions and dispatches only abilities held by the affected entity.
@@ -95,10 +94,8 @@ public final class AbilityEventBridge {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
         FormulaContext context = FormulaContext.of(entity, Map.of("damage", (double) event.getInflictedDamage()));
-        dispatch(TriggerSignals.HURT, entity, context,
-                definition -> definition.damageCondition().test(event.getSource(), event.getInflictedDamage(), context),
-                triggerContext -> triggerContext.damageSource(event.getSource())
-                        .set("damage", (double) event.getInflictedDamage()));
+        dispatch(TriggerSignals.HURT, entity, context, triggerContext -> triggerContext.damageSource(event.getSource())
+                .set("damage", (double) event.getInflictedDamage()));
     }
 
     @SubscribeEvent
@@ -116,10 +113,12 @@ public final class AbilityEventBridge {
             ResourceService.regenerate(resourceHolder, resource, cultivation.value().regen(), 1L,
                     ResourceService.formulaContext(entity, resource, FormulaContext.EMPTY));
         }
-        dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity), definition -> true);
+        dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity));
         PassiveAttributeService.tick(entity);
         if (entity.level().getGameTime() % 20L == 0L) {
-            syncCuriosAbilities(entity, abilities);
+            // Curios is reconciled on a slow cadence, so the index has to follow it here: it is no longer
+            // rebuilt as a side effect of the next publication.
+            if (syncCuriosAbilities(entity, abilities)) rebuildTriggerSubscriptions(entity);
             // Mastery is measured by a stored value, so it is re-read on the same slow cadence.
             TechniqueMasteryService.tick(entity);
         }
@@ -140,7 +139,7 @@ public final class AbilityEventBridge {
         values.put("target_is_living", event.getTarget() instanceof LivingEntity ? 1.0D : 0.0D);
         if (event.getTarget() instanceof LivingEntity target) values.put("target_health", (double) target.getHealth());
         dispatch(TriggerSignals.ATTACK, event.getEntity(), FormulaContext.of(event.getEntity(), values),
-                definition -> true, triggerContext -> {
+                triggerContext -> {
                     triggerContext.target(event.getTarget());
                     triggerContext.set("target_is_living", values.get("target_is_living"));
                     triggerContext.set("target_health", values.getOrDefault("target_health", 0.0D));
@@ -152,10 +151,10 @@ public final class AbilityEventBridge {
         LivingEntity victim = event.getEntity();
         if (victim.level().isClientSide()) return;
         FormulaContext victimContext = FormulaContext.of(victim, Map.of("victim_health", Math.max(0.0D, victim.getHealth())));
-        dispatch(TriggerSignals.DEATH, victim, victimContext, definition -> true);
+        dispatch(TriggerSignals.DEATH, victim, victimContext);
         if (event.getSource().getEntity() instanceof LivingEntity attacker && attacker != victim) {
             FormulaContext attackerContext = FormulaContext.of(attacker, Map.of("target_health", Math.max(0.0D, victim.getHealth())));
-            dispatch(TriggerSignals.KILL, attacker, attackerContext, definition -> true,
+            dispatch(TriggerSignals.KILL, attacker, attackerContext,
                     triggerContext -> {
                         triggerContext.target(victim);
                         triggerContext.set("target_health", Math.max(0.0D, victim.getHealth()));
@@ -168,7 +167,7 @@ public final class AbilityEventBridge {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide() || !ItemQualityService.canUse(entity, event.getItem())) return;
         dispatch(TriggerSignals.ITEM_USE, entity, FormulaContext.of(entity, Map.of("use_duration", (double) event.getDuration())),
-                definition -> true, triggerContext -> {
+                triggerContext -> {
                     triggerContext.item(event.getItem());
                     triggerContext.set("use_duration", (double) event.getDuration());
                 });
@@ -178,7 +177,7 @@ public final class AbilityEventBridge {
     public static void onBlockUse(RightClickBlock event) {
         if (event.getLevel().isClientSide()) return;
         dispatch(TriggerSignals.BLOCK_USE, event.getEntity(), blockContext(event.getEntity(), event.getPos()),
-                definition -> true, triggerContext -> triggerContext.position(event.getPos())
+                triggerContext -> triggerContext.position(event.getPos())
                         .block(event.getLevel().getBlockState(event.getPos())));
     }
 
@@ -186,7 +185,7 @@ public final class AbilityEventBridge {
     public static void onBlockBreak(BreakBlockEvent event) {
         if (event.getLevel().isClientSide()) return;
         dispatch(TriggerSignals.BLOCK_BREAK, event.getPlayer(), blockContext(event.getPlayer(), event.getPos()),
-                definition -> true, triggerContext -> triggerContext.position(event.getPos())
+                triggerContext -> triggerContext.position(event.getPos())
                         .block(event.getLevel().getBlockState(event.getPos())));
     }
 
@@ -202,7 +201,7 @@ public final class AbilityEventBridge {
                 .flatMap(Optional::stream).forEach(ability -> holder.grant(ability, source));
         rebuildTriggerSubscriptions(entity);
         FormulaContext context = FormulaContext.of(entity, Map.of("equipment_slot", (double) event.getSlot().ordinal()));
-        dispatch(TriggerSignals.EQUIP, entity, context, definition -> true,
+        dispatch(TriggerSignals.EQUIP, entity, context,
                 triggerContext -> triggerContext.item(event.getTo())
                         .set("equipment_slot", (double) event.getSlot().ordinal()));
     }
@@ -236,7 +235,7 @@ public final class AbilityEventBridge {
      * Called by server-side cultivation entry points after a successful breakthrough.
      */
     public static void onBreakthrough(LivingEntity entity, Identifier target, FormulaContext context) {
-        dispatch(TriggerSignals.BREAKTHROUGH, entity, context.with("breakthrough", 1.0D), definition -> true);
+        dispatch(TriggerSignals.BREAKTHROUGH, entity, context.with("breakthrough", 1.0D));
     }
 
     private static FormulaContext blockContext(Entity entity, BlockPos pos) {
@@ -300,19 +299,21 @@ public final class AbilityEventBridge {
         return changed;
     }
 
-    private static void dispatch(Identifier signalType, LivingEntity entity, FormulaContext context, Predicate<Ability> extraCondition) {
-        dispatch(signalType, entity, context, extraCondition, ignored -> {
+    private static void dispatch(Identifier signalType, LivingEntity entity, FormulaContext context) {
+        dispatch(signalType, entity, context, ignored -> {
         });
     }
 
     private static void dispatch(Identifier signalType, LivingEntity entity, FormulaContext context,
-                                 Predicate<Ability> extraCondition, Consumer<TriggerContext> enrich) {
+                                 Consumer<TriggerContext> enrich) {
+        // Nothing to react with, so nothing to build: the tick signal is published by every living entity on
+        // every tick, and only the entities something listens to pay for a context.
+        if (!TriggerDispatcher.hasListener(signalType)) return;
         TriggerContext triggerContext = new TriggerContext()
                 .actor(entity)
                 .level(entity.level())
                 .formula(context);
         enrich.accept(triggerContext);
-        syncAbilitySubscriptions(entity, extraCondition);
         TriggerDispatcher.publish(new TriggerSignal(
                 signalType,
                 triggerContext, null, entity.level().getGameTime()));
@@ -322,13 +323,16 @@ public final class AbilityEventBridge {
      * Rebuilds the runtime ability subscriptions from the persisted ability
      * attachment. This is intentionally idempotent and can be called after
      * datapack reloads or source reconciliation.
+     *
+     * <p>Reconciliation is the only thing that registers ability subscriptions: publishing a signal never
+     * mutates the index, so a publication reads exactly what the last reconciliation built.</p>
      */
     public static void rebuildTriggerSubscriptions(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
-        syncAbilitySubscriptions(entity, _ -> true);
+        syncAbilitySubscriptions(entity);
     }
 
-    private static void syncAbilitySubscriptions(LivingEntity entity, Predicate<Ability> extraCondition) {
+    private static void syncAbilitySubscriptions(LivingEntity entity) {
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         TriggerDispatcher.clearModule(entity.getUUID(), "ability");
@@ -339,9 +343,15 @@ public final class AbilityEventBridge {
             for (Trigger trigger : definition.triggers()) {
                 String identity = abilityId + "/" + triggerIndex++;
                 TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), "ability", identity,
-                        trigger, _ -> extraCondition.test(definition),
+                        trigger, signal -> true,
                         signal -> {
                             FormulaContext formula = signal.context().formula();
+                            // A damage condition belongs to the hurt signal that carries it, so it is read from
+                            // the signal instead of being baked into the subscription by the publisher.
+                            if (TriggerSignals.HURT.equals(signal.type())
+                                    && !definition.damageCondition().test(signal.context().damageSource(),
+                                    (float) formula.value("damage"), signal.context()))
+                                return;
                             if (!passesTriggerChance(entity, definition, formula)) return;
                             Set<DispatchKey> active = DISPATCHING.get();
                             DispatchKey key = new DispatchKey(entity.getUUID(), abilityId);

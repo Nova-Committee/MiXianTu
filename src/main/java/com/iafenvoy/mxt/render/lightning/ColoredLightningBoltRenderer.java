@@ -8,16 +8,26 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import org.joml.Matrix4fc;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
- * The vanilla lightning geometry with its three hard-coded colour constants replaced by per-bolt values.
+ * The vanilla lightning geometry with its three hard-coded colour constants replaced by per-bolt values, plus
+ * an optional palette that tints the strand seam by seam.
  * Strand generation, the render type and the additive blending are copied from {@code LightningBoltRenderer},
  * because the pipeline takes its colour from the vertices alone.
  */
 public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightningBolt, ColoredLightningBoltRenderState> {
+    /**
+     * The bolt spans eight blocks, so its geometry has nine horizontal seams to tint.
+     */
+    private static final int SEAMS = 8;
+
     public ColoredLightningBoltRenderer(Context context) {
         super(context);
     }
@@ -34,13 +44,15 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
         state.color = entity.color();
         state.alpha = entity.alpha();
         state.thickness = entity.thickness();
+        state.palette = entity.palette();
     }
 
     @Override
     public void submit(ColoredLightningBoltRenderState state, @NonNull PoseStack poseStack, @NonNull SubmitNodeCollector collector, @NonNull CameraRenderState camera) {
-        float red = (state.color >> 16 & 0xFF) / 255.0F;
-        float green = (state.color >> 8 & 0xFF) / 255.0F;
-        float blue = (state.color & 0xFF) / 255.0F;
+        float[] reds = new float[SEAMS + 1];
+        float[] greens = new float[SEAMS + 1];
+        float[] blues = new float[SEAMS + 1];
+        tints(state, reds, greens, blues);
         float[] xOffsets = new float[8];
         float[] zOffsets = new float[8];
         float xOffset = 0.0F;
@@ -77,10 +89,10 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
                         if (strand == 0) bottom *= (height - 1.0F) * 0.1F + 1.0F;
                         float topWidth = top * state.thickness;
                         float bottomWidth = bottom * state.thickness;
-                        quad(matrix, buffer, currentX, currentZ, height, previousX, previousZ, red, green, blue, state.alpha, topWidth, bottomWidth, false, false, true, false);
-                        quad(matrix, buffer, currentX, currentZ, height, previousX, previousZ, red, green, blue, state.alpha, topWidth, bottomWidth, true, false, true, true);
-                        quad(matrix, buffer, currentX, currentZ, height, previousX, previousZ, red, green, blue, state.alpha, topWidth, bottomWidth, true, true, false, true);
-                        quad(matrix, buffer, currentX, currentZ, height, previousX, previousZ, red, green, blue, state.alpha, topWidth, bottomWidth, false, true, false, false);
+                        quad(matrix, buffer, reds, greens, blues, currentX, currentZ, height, previousX, previousZ, state.alpha, topWidth, bottomWidth, false, false, true, false);
+                        quad(matrix, buffer, reds, greens, blues, currentX, currentZ, height, previousX, previousZ, state.alpha, topWidth, bottomWidth, true, false, true, true);
+                        quad(matrix, buffer, reds, greens, blues, currentX, currentZ, height, previousX, previousZ, state.alpha, topWidth, bottomWidth, true, true, false, true);
+                        quad(matrix, buffer, reds, greens, blues, currentX, currentZ, height, previousX, previousZ, state.alpha, topWidth, bottomWidth, false, true, false, false);
                     }
                 }
             }
@@ -88,15 +100,56 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
     }
 
     /**
+     * One tint per seam, index zero being the ground and {@link #SEAMS} the top. A palette is read from its
+     * first entry at the top seam to its last at the ground, so the strand reads as a gradient; with no palette
+     * every seam takes the flat colour. Branch strands reuse the same seams, which is what keeps a branch the
+     * same colour as the trunk it leaves.
+     */
+    private static void tints(ColoredLightningBoltRenderState state, float[] reds, float[] greens, float[] blues) {
+        List<Integer> palette = state.palette;
+        if (palette.isEmpty()) {
+            Arrays.fill(reds, channel(state.color, 16));
+            Arrays.fill(greens, channel(state.color, 8));
+            Arrays.fill(blues, channel(state.color, 0));
+            return;
+        }
+        for (int seam = 0; seam <= SEAMS; seam++) {
+            float position = (1.0F - seam / (float) SEAMS) * (palette.size() - 1);
+            int index = Mth.floor(position);
+            float fraction = position - index;
+            int from = palette.get(index);
+            int to = palette.get(Math.min(index + 1, palette.size() - 1));
+            reds[seam] = mix(from, to, fraction, 16);
+            greens[seam] = mix(from, to, fraction, 8);
+            blues[seam] = mix(from, to, fraction, 0);
+        }
+    }
+
+    private static float channel(int color, int shift) {
+        return (color >> shift & 0xFF) / 255.0F;
+    }
+
+    /**
+     * One channel of one seam, between the two palette entries the seam falls between.
+     */
+    private static float mix(int from, int to, float fraction, int shift) {
+        int start = from >> shift & 0xFF, end = to >> shift & 0xFF;
+        return (start + (end - start) * fraction) / 255.0F;
+    }
+
+    /**
      * One side of a bolt segment. The lower end is the wider one, which is what tapers the strand.
      */
-    private static void quad(Matrix4fc pose, VertexConsumer buffer, float x0, float z0, int height, float x1, float z1,
-                             float red, float green, float blue, float alpha, float topWidth, float bottomWidth,
+    private static void quad(Matrix4fc pose, VertexConsumer buffer, float[] reds, float[] greens, float[] blues,
+                             float x0, float z0, int height, float x1, float z1, float alpha,
+                             float topWidth, float bottomWidth,
                              boolean xFirst, boolean zFirst, boolean xSecond, boolean zSecond) {
-        buffer.addVertex(pose, x0 + (xFirst ? bottomWidth : -bottomWidth), height * 16.0F, z0 + (zFirst ? bottomWidth : -bottomWidth)).setColor(red, green, blue, alpha);
-        buffer.addVertex(pose, x1 + (xFirst ? topWidth : -topWidth), (height + 1) * 16.0F, z1 + (zFirst ? topWidth : -topWidth)).setColor(red, green, blue, alpha);
-        buffer.addVertex(pose, x1 + (xSecond ? topWidth : -topWidth), (height + 1) * 16.0F, z1 + (zSecond ? topWidth : -topWidth)).setColor(red, green, blue, alpha);
-        buffer.addVertex(pose, x0 + (xSecond ? bottomWidth : -bottomWidth), height * 16.0F, z0 + (zSecond ? bottomWidth : -bottomWidth)).setColor(red, green, blue, alpha);
+        float bottomRed = reds[height], bottomGreen = greens[height], bottomBlue = blues[height];
+        float topRed = reds[height + 1], topGreen = greens[height + 1], topBlue = blues[height + 1];
+        buffer.addVertex(pose, x0 + (xFirst ? bottomWidth : -bottomWidth), height * 16.0F, z0 + (zFirst ? bottomWidth : -bottomWidth)).setColor(bottomRed, bottomGreen, bottomBlue, alpha);
+        buffer.addVertex(pose, x1 + (xFirst ? topWidth : -topWidth), (height + 1) * 16.0F, z1 + (zFirst ? topWidth : -topWidth)).setColor(topRed, topGreen, topBlue, alpha);
+        buffer.addVertex(pose, x1 + (xSecond ? topWidth : -topWidth), (height + 1) * 16.0F, z1 + (zSecond ? topWidth : -topWidth)).setColor(topRed, topGreen, topBlue, alpha);
+        buffer.addVertex(pose, x0 + (xSecond ? bottomWidth : -bottomWidth), height * 16.0F, z0 + (zSecond ? bottomWidth : -bottomWidth)).setColor(bottomRed, bottomGreen, bottomBlue, alpha);
     }
 
     @Override

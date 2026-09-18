@@ -16,8 +16,7 @@ public record PlayerTradeActionC2SPayload(PlayerTradeAction action) implements C
     public static final Type<PlayerTradeActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "player_trade_action_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, PlayerTradeActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
             PlayerTradeAction.STREAM_CODEC, PlayerTradeActionC2SPayload::action,
-            PlayerTradeActionC2SPayload::new
-    );
+            PlayerTradeActionC2SPayload::new);
 
     @Override
     public @NonNull Type<PlayerTradeActionC2SPayload> type() {

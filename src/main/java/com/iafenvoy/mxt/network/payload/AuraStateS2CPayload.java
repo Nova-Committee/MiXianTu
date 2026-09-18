@@ -13,6 +13,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -29,8 +30,11 @@ public record AuraStateS2CPayload(Identifier source, Map<Holder<Aura>, AuraPool>
             Codec.unboundedMap(Aura.CODEC, AuraPool.CODEC).fieldOf("actual").forGetter(AuraStateS2CPayload::actual),
             Codec.unboundedMap(Aura.CODEC, AuraPool.CODEC).fieldOf("environment").forGetter(AuraStateS2CPayload::environment)
     ).apply(i, AuraStateS2CPayload::new));
-    public static final StreamCodec<RegistryFriendlyByteBuf, AuraStateS2CPayload> STREAM_CODEC =
-            ByteBufCodecs.fromCodecWithRegistries(CODEC);
+    public static final StreamCodec<RegistryFriendlyByteBuf, AuraStateS2CPayload> STREAM_CODEC = StreamCodec.composite(
+            Identifier.STREAM_CODEC, AuraStateS2CPayload::source,
+            ByteBufCodecs.map(LinkedHashMap::new, Aura.STREAM_CODEC, AuraPool.STREAM_CODEC), AuraStateS2CPayload::actual,
+            ByteBufCodecs.map(LinkedHashMap::new, Aura.STREAM_CODEC, AuraPool.STREAM_CODEC), AuraStateS2CPayload::environment,
+            AuraStateS2CPayload::new);
 
     @Override
     public @NonNull Type<AuraStateS2CPayload> type() {

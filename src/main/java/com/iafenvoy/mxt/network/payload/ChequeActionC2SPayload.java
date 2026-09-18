@@ -15,8 +15,7 @@ public record ChequeActionC2SPayload(boolean checkIn) implements CustomPacketPay
     public static final Type<ChequeActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "cheque_action_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ChequeActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.BOOL, ChequeActionC2SPayload::checkIn,
-            ChequeActionC2SPayload::new
-    );
+            ChequeActionC2SPayload::new);
 
     @Override
     public @NonNull Type<ChequeActionC2SPayload> type() {

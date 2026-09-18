@@ -18,8 +18,7 @@ public record SpiritBurstC2SPayload(boolean firing, Optional<Identifier> resourc
     public static final StreamCodec<RegistryFriendlyByteBuf, SpiritBurstC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.BOOL, SpiritBurstC2SPayload::firing,
             ByteBufCodecs.optional(Identifier.STREAM_CODEC), SpiritBurstC2SPayload::resource,
-            SpiritBurstC2SPayload::new
-    );
+            SpiritBurstC2SPayload::new);
 
     @Override
     public @NonNull Type<SpiritBurstC2SPayload> type() {
