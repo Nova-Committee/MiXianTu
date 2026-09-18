@@ -1,0 +1,13 @@
+{
+  "timeline": [
+    { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 1 } },
+    { "type": "mxt:idle", "duration": 60 },
+    { "type": "mxt:wait_for", "condition": { "type": "mxt:exposed_to_sky" } },
+    { "type": "mxt:action", "action": { "type": "mxt:spawn_lightning", "palette": ["#7A5CFF", "#66CCFF"], "alpha": 0.45, "thickness": 1.6, "damage": 8 } },
+    { "type": "mxt:idle", "duration": "20 + level" },
+    { "type": "mxt:action", "action": { "type": "mxt:apply_effect", "effect": "minecraft:glowing", "duration_ticks": 200 } }
+  ],
+  "difficulty_scale": "1 + level * 0.05",
+  "success_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 5 },
+  "fail_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 }
+}

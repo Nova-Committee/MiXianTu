@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
 import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
@@ -80,9 +81,7 @@ public final class AbilityHotbarClient {
         Optional<Holder<Ability>> ability = holder.sources().keySet().stream().filter(value -> HolderHelper.id(value).equals(id)).findFirst();
         if (ability.isEmpty()) return false;
         if (holder.channelledAbility().filter(ability.get()::equals).isPresent()) return true;
-        return holder.componentState(ability.get(), "cast_ends_at")
-                .map(state -> state.value() < Double.MAX_VALUE)
-                .orElse(false);
+        return AbilityStorage.hasCast(holder, ability.get());
     }
 
     public record ResolvedAbility(Identifier id, Ability definition) {

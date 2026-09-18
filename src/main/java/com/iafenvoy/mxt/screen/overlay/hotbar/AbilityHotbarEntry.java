@@ -3,9 +3,10 @@ package com.iafenvoy.mxt.screen.overlay.hotbar;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityComponentState;
+import com.iafenvoy.mxt.data.storage.CooldownDataStorage;
 import com.iafenvoy.mxt.network.payload.AbilityActionC2SPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
@@ -40,8 +41,7 @@ public record AbilityHotbarEntry(Identifier id, Ability definition) implements H
         if (ability == null) return 0.0F;
         long remaining = holder.cooldowns().getOrDefault(ability, -1L) - player.level().getGameTime();
         if (remaining <= 0L) return 0.0F;
-        double duration = holder.componentState(ability, "cooldown_duration")
-                .map(AbilityComponentState::value).orElse(0.0D);
+        double duration = AbilityStorage.get(holder, ability, CooldownDataStorage.class).flatMap(CooldownDataStorage::duration).orElse(0.0D);
         if (!Double.isFinite(duration) || duration <= 0.0D) return 0.0F;
         return (float) Math.max(0.0D, Math.min(1.0D, remaining / duration));
     }

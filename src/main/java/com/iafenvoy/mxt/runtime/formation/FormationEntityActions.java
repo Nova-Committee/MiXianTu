@@ -62,7 +62,8 @@ final class FormationEntityActions {
         if (!(entity instanceof LivingEntity living)) return;
         AbilityAttachment abilities = living.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (abilities == null || !abilities.sources().containsValue(source)) return;
-        if (abilities.reconcileSource(source, Set.of())) AbilityEventBridge.rebuildTriggerSubscriptions(living);
+        if (abilities.reconcileSource(source, Set.of()))
+            AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }
 
     /**

@@ -4,10 +4,10 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityComponentState;
+import com.iafenvoy.mxt.data.storage.DataStorageHolder;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -22,29 +22,35 @@ import java.util.stream.Collectors;
 
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability.
+ *
+ * <p>The state a granted ability keeps lives here too, in a {@link DataStorageHolder} addressed by the ability's
+ * id: the values belong to the attachment that owns the ability, so they are saved and synced with it rather than
+ * in a store every family shares. Revoking the ability's last source drops that state with it, so a re-granted
+ * ability does not come back with the charges it had before.</p>
  */
 public final class AbilityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<AbilityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.multiMap(Ability.CODEC, Identifier.CODEC).optionalFieldOf("sources", ImmutableMultimap.of()).forGetter(AbilityAttachment::sources),
             CollectionCodecs.longMap(Ability.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityAttachment::cooldowns),
-            CollectionCodecs.map(Ability.CODEC, CollectionCodecs.map(Codec.STRING, AbilityComponentState.CODEC)).optionalFieldOf("component_states", Map.of()).forGetter(AbilityAttachment::componentStates),
-            Ability.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility)
+            Ability.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility),
+            DataStorageHolder.CODEC.optionalFieldOf("storage").forGetter(attachment -> Optional.of(attachment.storage))
     ).apply(i, AbilityAttachment::new));
     private final Multimap<Holder<Ability>, Identifier> sources;
     private final Object2LongMap<Holder<Ability>> cooldowns;
-    private final Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates;
+    private final DataStorageHolder storage;
     private Optional<Holder<Ability>> channelledAbility;
 
     public AbilityAttachment() {
-        this(ArrayListMultimap.create(), Object2LongMaps.emptyMap(), Map.of(), Optional.empty());
+        this(ArrayListMultimap.create(), Object2LongMaps.emptyMap(), Optional.empty(), Optional.empty());
     }
 
-    private AbilityAttachment(Multimap<Holder<Ability>, Identifier> sources, Object2LongMap<Holder<Ability>> cooldowns, Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates, Optional<Holder<Ability>> channelledAbility) {
+    private AbilityAttachment(Multimap<Holder<Ability>, Identifier> sources, Object2LongMap<Holder<Ability>> cooldowns,
+                              Optional<Holder<Ability>> channelledAbility, Optional<DataStorageHolder> storage) {
         this.sources = ArrayListMultimap.create(sources);
         this.cooldowns = new Object2LongOpenHashMap<>(cooldowns);
-        this.componentStates = new LinkedHashMap<>();
-        componentStates.forEach((ability, values) -> this.componentStates.put(ability, new LinkedHashMap<>(values)));
         this.channelledAbility = channelledAbility;
+        this.storage = storage.orElseGet(DataStorageHolder::new);
+        this.storage.ownedBy(this);
     }
 
     public Multimap<Holder<Ability>, Identifier> sources() {
@@ -55,8 +61,11 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return this.cooldowns;
     }
 
-    public Map<Holder<Ability>, Map<String, AbilityComponentState>> componentStates() {
-        return this.componentStates;
+    /**
+     * The state every granted ability keeps, addressed by the ability's id.
+     */
+    public DataStorageHolder storage() {
+        return this.storage;
     }
 
     public Optional<Holder<Ability>> channelledAbility() {
@@ -83,11 +92,14 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return true;
     }
 
+    /**
+     * Removes one source of an ability and, when it was the last one, drops the state the ability owned.
+     */
     public boolean revoke(Holder<Ability> ability, Identifier source) {
         if (!this.sources.remove(ability, source)) return false;
         if (!this.sources.containsKey(ability)) {
             this.cooldowns.removeLong(ability);
-            this.componentStates.remove(ability);
+            this.storage.clear(HolderHelper.id(ability));
         }
         this.markDirty();
         return true;
@@ -115,26 +127,16 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         this.markDirty();
     }
 
-    public Optional<AbilityComponentState> componentState(Holder<Ability> ability, String key) {
-        return Optional.ofNullable(this.componentStates.getOrDefault(ability, Map.of()).get(key));
-    }
-
-    public void setComponentState(Holder<Ability> ability, String key, AbilityComponentState value) {
-        Map<String, AbilityComponentState> values = new LinkedHashMap<>(this.componentStates.getOrDefault(ability, Map.of()));
-        values.put(key, value);
-        this.componentStates.put(ability, values);
-        this.markDirty();
-    }
-
     public void setChannelledAbility(Holder<Ability> ability) {
         this.channelledAbility = Optional.ofNullable(ability);
         this.markDirty();
     }
 
     /**
-     * Creates a detached draft for validation. It is never installed on an entity or synchronised.
+     * Creates a detached draft for validation. It is never installed on an entity or synchronised, and its
+     * storage is a copy as well, so a rejected sequence of writes leaves the real values alone.
      */
     public AbilityAttachment copy() {
-        return new AbilityAttachment(this.sources, this.cooldowns, this.componentStates, this.channelledAbility);
+        return new AbilityAttachment(this.sources, this.cooldowns, this.channelledAbility, Optional.of(this.storage.copy()));
     }
 }

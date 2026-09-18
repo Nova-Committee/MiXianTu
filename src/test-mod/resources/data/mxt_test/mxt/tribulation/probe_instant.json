@@ -1,0 +1,8 @@
+{
+  "timeline": [
+    { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 1 } },
+    { "type": "mxt:action", "action": { "type": "mxt:heal", "amount": 4 } },
+    { "type": "mxt:action", "action": { "type": "mxt:spawn_lightning", "color": "#44FF88", "visual_only": true } }
+  ],
+  "success_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 1 }
+}

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.registry;
 
-import com.iafenvoy.mxt.data.ability.AbilityComponent;
 import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.TargetSelector;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
@@ -16,6 +15,8 @@ import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
+import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.data.timeline.TimelineEntry;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -42,7 +43,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends TargetSelector>> ABILITY_TARGET_SELECTOR_TYPE = create("self", MxtResourceKeys.ABILITY_TARGET_SELECTOR_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Cost>> COST_TYPE = create("resource", MxtResourceKeys.COST_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends CurseType>> CURSE_TYPE = create("empty", MxtResourceKeys.CURSE_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends AbilityComponent>> ABILITY_COMPONENT_TYPE = create("empty", MxtResourceKeys.ABILITY_COMPONENT_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends DataStorage>> DATA_STORAGE_TYPE = create("empty", MxtResourceKeys.DATA_STORAGE_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Trigger>> TRIGGER_TYPE = create("use", MxtResourceKeys.TRIGGER_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends NumberProvider>> NUMBER_PROVIDER_TYPE = create("constant", MxtResourceKeys.NUMBER_PROVIDER_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends AuraMaximum>> AURA_MAXIMUM_TYPE = create("initial_multiplier", MxtResourceKeys.AURA_MAXIMUM_TYPE);
@@ -63,6 +64,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = create("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = create("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends FormationActionType>> FORMATION_ACTION_TYPE = create("none", MxtResourceKeys.FORMATION_ACTION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends TimelineEntry>> TIMELINE_ENTRY_TYPE = create("idle", MxtResourceKeys.TIMELINE_ENTRY_TYPE);
 
     private static <T> DefaultedRegistry<T> create(String defaultKey, ResourceKey<? extends Registry<T>> key) {
         DefaultedRegistry<T> registry = new DefaultedMappedRegistry<>(defaultKey, key, Lifecycle.stable(), false);

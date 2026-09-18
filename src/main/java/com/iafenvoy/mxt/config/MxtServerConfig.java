@@ -178,6 +178,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry talisman = BooleanEntry.builder("config.mxt.server.commands.talisman", true).key("talisman").tooltip("config.mxt.server.commands.talisman.tooltip").build();
         public final BooleanEntry technique = BooleanEntry.builder("config.mxt.server.commands.technique", true).key("technique").tooltip("config.mxt.server.commands.technique.tooltip").build();
         public final BooleanEntry trade = BooleanEntry.builder("config.mxt.server.commands.trade", true).key("trade").tooltip("config.mxt.server.commands.trade.tooltip").build();
+        public final BooleanEntry tribulation = BooleanEntry.builder("config.mxt.server.commands.tribulation", true).key("tribulation").tooltip("config.mxt.server.commands.tribulation.tooltip").build();
 
         private Commands() {
             super("commands", "config.mxt.server.commands");

@@ -65,21 +65,22 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
         return true;
     }
 
-    public record State(int stacks, long appliedAt, long expiresAt, String source, Map<String, String> componentState,
-                        boolean unknownDefinition) {
+    /**
+     * One applied curse: how many stacks it holds, when it was applied and when it expires, and which source put
+     * it there.
+     */
+    public record State(int stacks, long appliedAt, long expiresAt, String source, boolean unknownDefinition) {
         public static final Codec<State> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(1, 256).fieldOf("stacks").forGetter(State::stacks), Codec.LONG.fieldOf("applied_at").forGetter(State::appliedAt),
                 Codec.LONG.fieldOf("expires_at").forGetter(State::expiresAt), Codec.STRING.optionalFieldOf("source", "unknown").forGetter(State::source),
-                CollectionCodecs.map(Codec.STRING, Codec.STRING).optionalFieldOf("component_state", Map.of()).forGetter(State::componentState),
                 Codec.BOOL.optionalFieldOf("unknown_definition", false).forGetter(State::unknownDefinition)
         ).apply(i, State::new));
 
         public State(int stacks, long appliedAt, long expiresAt, String source) {
-            this(stacks, appliedAt, expiresAt, source, Map.of(), false);
+            this(stacks, appliedAt, expiresAt, source, false);
         }
 
         public State {
-            componentState = new LinkedHashMap<>(componentState);
             if (source == null || source.isBlank())
                 throw new IllegalArgumentException("Invalid curse state");
         }
@@ -89,11 +90,11 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
         }
 
         public State markedKnown() {
-            return new State(this.stacks, this.appliedAt, this.expiresAt, this.source, this.componentState, false);
+            return new State(this.stacks, this.appliedAt, this.expiresAt, this.source, false);
         }
 
         public State markedUnknown() {
-            return new State(this.stacks, this.appliedAt, this.expiresAt, this.source, this.componentState, true);
+            return new State(this.stacks, this.appliedAt, this.expiresAt, this.source, true);
         }
     }
 }

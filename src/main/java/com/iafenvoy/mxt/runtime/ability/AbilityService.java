@@ -5,10 +5,6 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityComponent;
-import com.iafenvoy.mxt.data.ability.AbilityComponentState;
-import com.iafenvoy.mxt.data.ability.component.ChargesAbilityComponent;
-import com.iafenvoy.mxt.data.ability.component.CooldownAbilityComponent;
 import com.iafenvoy.mxt.data.ability.type.ChannelledAbilityType;
 import com.iafenvoy.mxt.data.ability.type.CompositeAbilityType;
 import com.iafenvoy.mxt.data.ability.type.WordAbilityType;
@@ -18,6 +14,11 @@ import com.iafenvoy.mxt.data.cost.ItemCost;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.storage.CastDeadline;
+import com.iafenvoy.mxt.data.storage.ChannelPulse;
+import com.iafenvoy.mxt.data.storage.ChargesDataStorage;
+import com.iafenvoy.mxt.data.storage.CooldownDataStorage;
+import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.event.AbilityUseEvent;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Post;
@@ -58,18 +59,12 @@ public final class AbilityService {
     private AbilityService() {
     }
 
-    public static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityAttachment abilities,
-                                        ResourceHolderAttachment resources, long gameTime, FormulaContext context) {
-        return prepare(ability, definition, abilities, resources, gameTime, context, null, true);
-    }
-
-    private static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityAttachment abilities,
-                                         ResourceHolderAttachment resources, long gameTime, FormulaContext context,
-                                         LivingEntity payer, boolean requiresGrant) {
+    private static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
+                                         FormulaContext context, LivingEntity payer, boolean requiresGrant) {
         if (requiresGrant && !abilities.has(ability)) return PrepareResult.rejected(Failure.NOT_GRANTED, null);
         if (abilities.isOnCooldown(ability, gameTime)) return PrepareResult.rejected(Failure.COOLDOWN, null);
         double castTime = definition.castTime().evaluate(context);
-        double cooldown = component(definition, CooldownAbilityComponent.class).map(component -> component.ticks().evaluate(context)).orElseGet(() -> definition.cooldown().evaluate(context));
+        double cooldown = kind(definition, CooldownDataStorage.class).map(kind -> kind.ticks().evaluate(context)).orElseGet(() -> definition.cooldown().evaluate(context));
         if (!Double.isFinite(castTime) || castTime < 0.0D || !Double.isFinite(cooldown) || cooldown < 0.0D) {
             return PrepareResult.rejected(Failure.INVALID_FORMULA, null);
         }
@@ -81,11 +76,11 @@ public final class AbilityService {
             }
             channelInterval = Math.max(1L, Math.round(interval));
         }
-        Optional<ChargesAbilityComponent> charges = component(definition, ChargesAbilityComponent.class);
+        Optional<ChargesDataStorage> charges = kind(definition, ChargesDataStorage.class);
         double chargeBefore = Double.NaN;
         if (charges.isPresent()) {
             double maximum = charges.get().maximum().evaluate(context);
-            double available = abilities.componentState(ability, "charges").map(AbilityComponentState::value).orElse(maximum);
+            double available = AbilityStorage.get(abilities, ability, ChargesDataStorage.class).flatMap(ChargesDataStorage::remaining).orElse(maximum);
             if (!Double.isFinite(maximum) || maximum < 1.0D || !Double.isFinite(available) || available < 1.0D) {
                 return PrepareResult.rejected(Failure.NO_CHARGES, null);
             }
@@ -105,12 +100,8 @@ public final class AbilityService {
     }
 
     /**
-     * Commits cost, component state and cooldown as one server-thread operation.
+     * Commits cost, stored state and cooldown as one server-thread operation.
      */
-    public static CommitResult commit(PreparedUse use, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime) {
-        return commit(use, abilities, resources, gameTime, null);
-    }
-
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime, LivingEntity payer) {
         Player player = payer instanceof Player value ? value : null;
         if (abilities.isOnCooldown(use.ability(), gameTime)) return CommitResult.rejected(Failure.COOLDOWN, null);
@@ -124,9 +115,9 @@ public final class AbilityService {
                 .filter(cost -> !(cost instanceof com.iafenvoy.mxt.data.cost.ResourceCost))
                 .forEach(cost -> cost.consume(player));
         abilities.setCooldownUntil(use.ability(), Math.addExact(gameTime, use.cooldownTicks));
-        abilities.setComponentState(use.ability(), "cooldown_duration", AbilityComponentState.initial(use.cooldownTicks(), gameTime));
+        AbilityStorage.set(abilities, use.ability(), AbilityStorage.cooldown(abilities, use.ability(), use.cooldownTicks()), gameTime);
         if (use.consumeCharge) {
-            abilities.setComponentState(use.ability(), "charges", AbilityComponentState.initial(Math.max(0.0D, use.chargeBefore - 1.0D), gameTime));
+            AbilityStorage.set(abilities, use.ability(), AbilityStorage.charges(abilities, use.ability(), Math.max(0.0D, use.chargeBefore - 1.0D)), gameTime);
         }
         return CommitResult.committed(payment.amounts());
     }
@@ -184,7 +175,7 @@ public final class AbilityService {
                 actor instanceof LivingEntity living ? living : null, requiresGrant);
         if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         if (prepared.use().castTimeTicks() > 0L) {
-            abilities.setComponentState(ability, "cast_ends_at", AbilityComponentState.initial(Math.addExact(gameTime, prepared.use().castTimeTicks()), gameTime));
+            AbilityStorage.set(abilities, ability, new CastDeadline(Math.addExact(gameTime, prepared.use().castTimeTicks())), gameTime);
             return UseResult.castingResult();
         }
         return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context, origin);
@@ -199,10 +190,10 @@ public final class AbilityService {
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
-        if (abilities.componentState(ability, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE) > gameTime) {
+        if (!AbilityStorage.castDue(abilities, ability, gameTime)) {
             return UseResult.castingResult();
         }
-        abilities.setComponentState(ability, "cast_ends_at", AbilityComponentState.initial(Double.MAX_VALUE, gameTime));
+        AbilityStorage.clearCast(abilities, ability, gameTime);
         if (!definition.condition().test(actor, context)) return UseResult.rejected(Failure.CONDITION_FAILED, null);
         if (!validateWord(definition, actor, context)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
         // A cast this far along was started by something that could start one, so the grant it was approved
@@ -225,7 +216,8 @@ public final class AbilityService {
         if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelledAbilityType) {
             abilities.setChannelledAbility(preparedUse.ability());
-            abilities.setComponentState(preparedUse.ability(), "channel_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, adjustedUse.channelIntervalTicks()), gameTime));
+            AbilityStorage.set(abilities, preparedUse.ability(),
+                    new ChannelPulse(Math.addExact(gameTime, adjustedUse.channelIntervalTicks())), gameTime);
         }
         // A channel owns the ability until released, so it never runs the one-shot entity action; its
         // target action still fires on activation and then once per upkeep pulse.
@@ -258,7 +250,7 @@ public final class AbilityService {
             stopChannel(abilities);
             return ChannelResult.stopped(Failure.NOT_GRANTED);
         }
-        long nextTick = Math.round(abilities.componentState(ability, "channel_next_tick").map(AbilityComponentState::value).orElse((double) gameTime));
+        long nextTick = Math.round(AbilityStorage.get(abilities, ability, ChannelPulse.class).map(ChannelPulse::nextTick).orElse((double) gameTime));
         if (gameTime < nextTick) return ChannelResult.waiting(nextTick);
         if (!definition.condition().test(actor, context)) {
             stopChannel(abilities);
@@ -287,7 +279,7 @@ public final class AbilityService {
         NeoForge.EVENT_BUS.post(new Post(resources, payment.amounts()));
         long intervalTicks = Math.max(1L, Math.round(interval));
         long followingTick = Math.addExact(gameTime, intervalTicks);
-        abilities.setComponentState(ability, "channel_next_tick", AbilityComponentState.initial(followingTick, gameTime));
+        AbilityStorage.set(abilities, ability, new ChannelPulse(followingTick), gameTime);
         return ChannelResult.pulsed(followingTick, payment.amounts());
     }
 
@@ -298,12 +290,11 @@ public final class AbilityService {
     }
 
     /**
-     * Clears a pending cast without touching resources, cooldowns or unrelated component state.
+     * Clears a pending cast without touching resources, cooldowns or unrelated stored state.
      */
     public static boolean cancelCast(Holder<Ability> ability, AbilityAttachment abilities, long gameTime) {
-        double endsAt = abilities.componentState(ability, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE);
-        if (endsAt == Double.MAX_VALUE) return false;
-        abilities.setComponentState(ability, "cast_ends_at", AbilityComponentState.initial(Double.MAX_VALUE, gameTime));
+        if (!AbilityStorage.hasCast(abilities, ability)) return false;
+        AbilityStorage.clearCast(abilities, ability, gameTime);
         return true;
     }
 
@@ -358,12 +349,6 @@ public final class AbilityService {
      * Validates every required child against detached drafts, then commits all costs before any action.
      * World actions are deliberately never rolled back.
      */
-    public static UseResult useComposite(Holder<Ability> composite, Ability compositeDefinition, Entity actor,
-                                         AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
-                                         FormulaContext context) {
-        return useComposite(composite, compositeDefinition, actor, abilities, resources, gameTime, context, true, null);
-    }
-
     private static UseResult useComposite(Holder<Ability> composite, Ability compositeDefinition, Entity actor,
                                           AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                           FormulaContext context, boolean requiresGrant, @Nullable Vec3 origin) {
@@ -423,8 +408,8 @@ public final class AbilityService {
         for (CompositeStep step : steps) {
             if (step.definition().type() instanceof ChannelledAbilityType) {
                 abilities.setChannelledAbility(step.use().ability());
-                abilities.setComponentState(step.use().ability(), "channel_next_tick",
-                        AbilityComponentState.initial(Math.addExact(gameTime, step.use().channelIntervalTicks()), gameTime));
+                AbilityStorage.set(abilities, step.use().ability(),
+                        new ChannelPulse(Math.addExact(gameTime, step.use().channelIntervalTicks())), gameTime);
             } else {
                 executeEffects(step.definition(), actor, step.context(), origin);
             }
@@ -443,9 +428,9 @@ public final class AbilityService {
 
     private static void applyAbilityState(PreparedUse use, AbilityAttachment abilities, long gameTime) {
         abilities.setCooldownUntil(use.ability(), Math.addExact(gameTime, use.cooldownTicks()));
-        abilities.setComponentState(use.ability(), "cooldown_duration", AbilityComponentState.initial(use.cooldownTicks(), gameTime));
+        AbilityStorage.set(abilities, use.ability(), AbilityStorage.cooldown(abilities, use.ability(), use.cooldownTicks()), gameTime);
         if (use.consumeCharge())
-            abilities.setComponentState(use.ability(), "charges", AbilityComponentState.initial(Math.max(0.0D, use.chargeBefore() - 1.0D), gameTime));
+            AbilityStorage.set(abilities, use.ability(), AbilityStorage.charges(abilities, use.ability(), Math.max(0.0D, use.chargeBefore() - 1.0D)), gameTime);
     }
 
     private static boolean reserveItemCosts(List<Cost> costs, Player player, ItemCostDraft draft) {
@@ -487,8 +472,8 @@ public final class AbilityService {
         return context.with("element_modifier", modifier);
     }
 
-    private static <T extends AbilityComponent> Optional<T> component(Ability definition, Class<T> type) {
-        return definition.components().stream().filter(type::isInstance).map(type::cast).findFirst();
+    private static <T extends DataStorage> Optional<T> kind(Ability definition, Class<T> type) {
+        return definition.storages().stream().filter(type::isInstance).map(type::cast).findFirst();
     }
 
     /**

@@ -34,7 +34,8 @@ public final class CultivationGrantService {
         int revoked = 0;
         // Revocation mutates the multimap, so iterate a stable snapshot of its entries.
         for (Entry<Holder<Ability>, Identifier> entry : List.copyOf(abilities.sources().entries()))
-            if (isCultivationSource(entry.getValue()) && abilities.revoke(entry.getKey(), entry.getValue())) revoked++;
+            if (isCultivationSource(entry.getValue()) && abilities.revoke(entry.getKey(), entry.getValue()))
+                revoked++;
         int granted = 0;
         for (Holder<SpiritRoot> root : spirit.spiritRoots()) {
             granted += grantAll(abilities, root.value().grantedAbilities(), source("spirit_root", HolderHelper.id(root)));

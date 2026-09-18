@@ -11,6 +11,8 @@ import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.data.storage.DataStorageDeclaration;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -29,13 +31,17 @@ import java.util.Optional;
 
 /**
  * A named ability. Behaviour is selected by the built-in type identifier.
+ *
+ * <p>An ability declares the state it keeps through {@link DataStorageDeclaration}. The data-pack key of that
+ * list stays {@code components} for compatibility, even though the values themselves are now held by the ability
+ * attachment, next to the grants that own them.</p>
  */
 public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTime, NumberProvider cooldown,
                       Optional<IconReference> icon,
-                      List<AbilityComponent> components, List<AttributeEntry> modifiers,
+                      List<DataStorage> storages, List<AttributeEntry> modifiers,
                       DamageCondition damageCondition, EntityCondition condition, EntityAction entityAction,
                       TargetSelector targetSelector, BiEntityCondition targetCondition, BiEntityAction biEntityAction,
-                      List<Either<Holder<Element>, TagKey<Element>>> elementAffinity) {
+                      List<Either<Holder<Element>, TagKey<Element>>> elementAffinity) implements DataStorageDeclaration {
     public static final Codec<Holder<Ability>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ABILITY);
     public static final Codec<Ability> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             AbilityType.CODEC.forGetter(Ability::type),
@@ -43,7 +49,7 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
             NumberProvider.CODEC.optionalFieldOf("cast_time", new Constant(0.0D)).forGetter(Ability::castTime),
             NumberProvider.CODEC.optionalFieldOf("cooldown", new Constant(0.0D)).forGetter(Ability::cooldown),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(Ability::icon),
-            AbilityComponent.CODEC.listOf().optionalFieldOf("components", List.of()).forGetter(Ability::components),
+            DataStorage.CODEC.listOf().optionalFieldOf("components", List.of()).forGetter(Ability::storages),
             AttributeEntry.CODEC.listOf().optionalFieldOf("modifiers", List.of()).forGetter(Ability::modifiers),
             DamageCondition.optionalCodec("damage_condition").forGetter(Ability::damageCondition),
             EntityCondition.optionalCodec("condition").forGetter(Ability::condition),
@@ -65,7 +71,7 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
     @Override
     public @NonNull String toString() {
         return "Ability[type=" + this.type.getClass().getSimpleName() + ", costs=" + this.costs.size()
-                + ", components=" + this.components.size() + ", modifiers=" + this.modifiers.size()
+                + ", storages=" + this.storages.size() + ", modifiers=" + this.modifiers.size()
                 + ", elementAffinity=" + this.elementAffinity.size() + "]";
     }
 }

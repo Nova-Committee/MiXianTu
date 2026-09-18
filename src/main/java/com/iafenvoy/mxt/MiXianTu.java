@@ -28,7 +28,7 @@ public final class MiXianTu {
         TechniqueItemService.initialize();
         SpiritChargeService.initialize();
 
-        MxtAbilityComponents.REGISTRY.register(bus);
+        MxtDataStorages.REGISTRY.register(bus);
         MxtTriggers.REGISTRY.register(bus);
         MxtAbilityTypes.REGISTRY.register(bus);
         MxtAbilityTargetSelectors.REGISTRY.register(bus);
@@ -68,5 +68,6 @@ public final class MiXianTu {
         MxtResourceBarContexts.REGISTRY.register(bus);
         MxtResourceBarVisibilities.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
+        MxtTimelineEntries.REGISTRY.register(bus);
     }
 }

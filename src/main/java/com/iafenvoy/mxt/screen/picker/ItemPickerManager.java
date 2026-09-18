@@ -17,7 +17,6 @@ import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;

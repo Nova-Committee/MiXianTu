@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.command;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -21,18 +23,19 @@ import static net.minecraft.commands.Commands.literal;
 public final class CommandManager {
     private static final Map<LiteralArgumentBuilder<CommandSourceStack>, BooleanEntry> NODES = Util.make(() -> {
         Commands config = MxtServerConfig.INSTANCE.commands;
-        return Map.of(
-                AbilityCommand.ROOT, config.ability,
-                AuraCommand.ROOT, config.aura,
-                DisplayCommand.ROOT, config.display,
-                FormationCommand.ROOT, config.formation,
-                FriendCommand.ROOT, config.friend,
-                LightningCommand.ROOT, config.lightning,
-                PickerCommand.ROOT, config.picker,
-                TalismanCommand.ROOT, config.talisman,
-                TechniqueCommand.ROOT, config.technique,
-                TradeCommand.ROOT, config.trade
-        );
+        Builder<LiteralArgumentBuilder<CommandSourceStack>, BooleanEntry> builder = ImmutableMap.builder();
+        builder.put(AbilityCommand.ROOT, config.ability);
+        builder.put(AuraCommand.ROOT, config.aura);
+        builder.put(DisplayCommand.ROOT, config.display);
+        builder.put(FormationCommand.ROOT, config.formation);
+        builder.put(FriendCommand.ROOT, config.friend);
+        builder.put(LightningCommand.ROOT, config.lightning);
+        builder.put(PickerCommand.ROOT, config.picker);
+        builder.put(TalismanCommand.ROOT, config.talisman);
+        builder.put(TechniqueCommand.ROOT, config.technique);
+        builder.put(TradeCommand.ROOT, config.trade);
+        builder.put(TribulationCommand.ROOT, config.tribulation);
+        return builder.build();
     });
 
     @SubscribeEvent

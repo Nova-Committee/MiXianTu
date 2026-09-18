@@ -96,8 +96,8 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         forward(SpiritContractEvent.Post.class, "spiritContract");
         forward(StartPre.class, "tribulation");
         forward(StartPost.class, "tribulation");
-        forward(PhasePre.class, "tribulation");
-        forward(PhasePost.class, "tribulation");
+        forward(EntryPre.class, "tribulation");
+        forward(EntryPost.class, "tribulation");
         forward(Complete.class, "tribulation");
     }
 

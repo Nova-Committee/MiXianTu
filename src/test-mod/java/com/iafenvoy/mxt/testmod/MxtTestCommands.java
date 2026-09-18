@@ -17,6 +17,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
@@ -214,7 +215,7 @@ public final class MxtTestCommands {
         ServerPlayer player = player(source);
         if (player == null) return 0;
         CultivateAction action = require(MxtResourceKeys.CULTIVATE_ACTION, CULTIVATE).value();
-        CultivationActionService.Result result = CultivationActionService.start(player, player.getData(MxtAttachments.CULTIVATION),
+        Result result = CultivationActionService.start(player, player.getData(MxtAttachments.CULTIVATION),
                 CULTIVATE, action, player.level().getGameTime(), FormulaContext.of(player));
         if (!result.started()) {
             source.sendFailure(Component.translatable("command.mxt_test.cultivate.failed", result.failure().name()));

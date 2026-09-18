@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.*;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityComponent;
 import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.TargetSelector;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
@@ -39,6 +38,8 @@ import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
+import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.data.timeline.TimelineEntry;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
@@ -61,7 +62,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends TargetSelector>>> ABILITY_TARGET_SELECTOR_TYPE = create("ability_target_selector_type");
     public static final ResourceKey<Registry<MapCodec<? extends Cost>>> COST_TYPE = create("cost_type");
     public static final ResourceKey<Registry<MapCodec<? extends CurseType>>> CURSE_TYPE = create("curse_type");
-    public static final ResourceKey<Registry<MapCodec<? extends AbilityComponent>>> ABILITY_COMPONENT_TYPE = create("ability_component_type");
+    public static final ResourceKey<Registry<MapCodec<? extends DataStorage>>> DATA_STORAGE_TYPE = create("data_storage_type");
     public static final ResourceKey<Registry<MapCodec<? extends Trigger>>> TRIGGER_TYPE = create("trigger_type");
     public static final ResourceKey<Registry<MapCodec<? extends NumberProvider>>> NUMBER_PROVIDER_TYPE = create("number_provider_type");
     public static final ResourceKey<Registry<MapCodec<? extends AuraMaximum>>> AURA_MAXIMUM_TYPE = create("aura_maximum_type");
@@ -82,6 +83,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends ResourceBarVisibility>>> RESOURCE_BAR_VISIBILITY_TYPE = create("resource_bar_visibility_type");
     public static final ResourceKey<Registry<MapCodec<? extends Entry>>> ITEM_MATCHER_ENTRY_TYPE = create("item_matcher_entry_type");
     public static final ResourceKey<Registry<MapCodec<? extends FormationActionType>>> FORMATION_ACTION_TYPE = create("formation_action_type");
+    public static final ResourceKey<Registry<MapCodec<? extends TimelineEntry>>> TIMELINE_ENTRY_TYPE = create("timeline_entry_type");
 
     // Datapack registries
     public static final ResourceKey<Registry<Resource>> RESOURCE = create("resource");

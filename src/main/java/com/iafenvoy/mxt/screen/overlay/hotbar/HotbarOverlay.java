@@ -3,8 +3,9 @@ package com.iafenvoy.mxt.screen.overlay.hotbar;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityComponentState;
+import com.iafenvoy.mxt.data.storage.CastDeadline;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.screen.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -62,19 +63,18 @@ public enum HotbarOverlay implements GuiLayer {
     private static void drawCastBar(GuiGraphicsExtractor graphics, Minecraft minecraft, Player player,
                                     int x, int y, List<ResolvedAbility> abilities, long gameTime) {
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        ResolvedAbility casting = abilities.stream().filter(value -> {
+       ResolvedAbility casting = abilities.stream().filter(value -> {
             Optional<Holder<Ability>> bound = holder.sources().keySet().stream().filter(ability -> ability.value() == value.definition()).findFirst();
-            return bound.isPresent() && holder.componentState(bound.get(), "cast_ends_at")
-                    .map(state -> state.value() < Double.MAX_VALUE && state.value() > gameTime).orElse(false);
+            return bound.isPresent() && AbilityStorage.casting(holder, bound.get(), gameTime);
         }).findFirst().orElse(null);
         if (casting == null) return;
 
         Optional<Holder<Ability>> bound = holder.sources().keySet().stream().filter(ability -> ability.value() == casting.definition()).findFirst();
         if (bound.isEmpty()) return;
-        AbilityComponentState state = holder.componentState(bound.get(), "cast_ends_at").orElse(null);
-        if (state == null) return;
-        long end = Math.round(state.value());
-        long start = state.changedAt();
+        double deadline = AbilityStorage.castDeadline(holder, bound.get());
+        if (deadline >= AbilityStorage.NO_CAST) return;
+        long end = Math.round(deadline);
+        long start = AbilityStorage.changedAt(holder, bound.get(), CastDeadline.class);
         double progress = end <= start ? 1.0D : Math.max(0.0D, Math.min(1.0D, (gameTime - start) / (double) (end - start)));
         int barWidth = HotbarOverlayRenderer.width(abilities.size());
         graphics.fill(x, y, x + barWidth, y + 5, 0xCC10131D);

@@ -1,0 +1,11 @@
+{
+  "condition": { "type": "mxt:sneaking" },
+  "timeline": [
+    { "type": "mxt:action", "action": { "type": "mxt:spawn_lightning", "color": "#FFCC00", "visual_only": true } },
+    { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 1 } },
+    { "type": "mxt:action", "action": { "type": "mxt:apply_effect", "effect": "minecraft:speed", "duration_ticks": 100 } },
+    { "type": "mxt:idle", "duration": 40 },
+    { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 3 } }
+  ],
+  "fail_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 }
+}

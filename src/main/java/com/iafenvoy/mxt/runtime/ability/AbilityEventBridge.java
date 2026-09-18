@@ -5,8 +5,8 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityComponentState;
 import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
+import com.iafenvoy.mxt.data.storage.AuraPulse;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -102,7 +102,7 @@ public final class AbilityEventBridge {
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+       ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         initializeHudResources(entity, resourceHolder);
         // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
         // with no stored entry yet is created by its first change instead of by this loop.
@@ -196,7 +196,8 @@ public final class AbilityEventBridge {
         AbilityAttachment holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = equipmentSource(event.getSlot(), event.getTo());
         itemAbilities(event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
-                .flatMap(Optional::stream).forEach(ability -> holder.revoke(ability, source));
+                .flatMap(Optional::stream)
+                .forEach(ability -> holder.revoke(ability, source));
         itemAbilities(event.getTo()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                 .flatMap(Optional::stream).forEach(ability -> holder.grant(ability, source));
         rebuildTriggerSubscriptions(entity);
@@ -267,7 +268,7 @@ public final class AbilityEventBridge {
                     NumberProvider radius1
             )) || !definition.condition().test(actor, FormulaContext.of(actor)))
                 continue;
-            long dueAt = Math.round(abilities.componentState(ability, "aura_next_tick").map(AbilityComponentState::value).orElse((double) gameTime));
+            long dueAt = Math.round(AbilityStorage.get(abilities, ability, AuraPulse.class).map(AuraPulse::nextTick).orElse((double) gameTime));
             if (gameTime < dueAt) continue;
             FormulaContext actorContext = FormulaContext.of(actor);
             double interval = interval1.evaluate(actorContext);
@@ -282,17 +283,18 @@ public final class AbilityEventBridge {
                     AbilityService.executeTargetAction(definition, actor, target, targetContext);
                 }
             }
-            abilities.setComponentState(ability, "aura_next_tick", AbilityComponentState.initial(Math.addExact(gameTime, Math.max(1L, Math.round(interval))), gameTime));
+            AbilityStorage.set(abilities, ability,
+                    new AuraPulse(Math.addExact(gameTime, Math.max(1L, Math.round(interval)))), gameTime);
             changed = true;
         }
         return changed;
     }
 
-    private static boolean finishDueCasts(LivingEntity actor, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime) {
+    private static boolean finishDueCasts(LivingEntity actor, AbilityAttachment abilities,
+                                          ResourceHolderAttachment resources, long gameTime) {
         boolean changed = false;
         for (Holder<Ability> ability : abilities.sources().keySet()) {
-            if (abilities.componentState(ability, "cast_ends_at").map(AbilityComponentState::value).orElse(Double.MAX_VALUE) > gameTime)
-                continue;
+            if (!AbilityStorage.castDue(abilities, ability, gameTime)) continue;
             AbilityService.finishCast(ability, ability.value(), actor, abilities, resources, gameTime, FormulaContext.of(actor));
             changed = true;
         }

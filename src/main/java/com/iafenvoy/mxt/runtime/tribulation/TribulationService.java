@@ -2,24 +2,39 @@ package com.iafenvoy.mxt.runtime.tribulation;
 
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.data.Tribulation.Phase;
-import com.iafenvoy.mxt.event.TribulationEvent.*;
+import com.iafenvoy.mxt.data.storage.EntryBegan;
+import com.iafenvoy.mxt.data.timeline.TimelineContext;
+import com.iafenvoy.mxt.data.timeline.TimelineEntry;
+import com.iafenvoy.mxt.data.timeline.TimelineEntry.Outcome;
+import com.iafenvoy.mxt.data.timeline.TimelineState;
+import com.iafenvoy.mxt.event.TribulationEvent.Complete;
+import com.iafenvoy.mxt.event.TribulationEvent.EntryPost;
+import com.iafenvoy.mxt.event.TribulationEvent.EntryPre;
+import com.iafenvoy.mxt.event.TribulationEvent.StartPost;
+import com.iafenvoy.mxt.event.TribulationEvent.StartPre;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
 
+import java.util.List;
+
 /**
- * Drives a persisted, multi-phase tribulation without embedding effect callbacks in attachment data.
+ * Consumer for a persisted tribulation timeline: a run is installed by copying the definition's timeline into the
+ * attachment, and the beats at the head of that queue are consumed until it is empty or a beat fails.
+ *
+ * <p>The attachment owns the queue and the state of the beat at its head, so nothing here is remembered between
+ * ticks: every decision is read from, and written back to, the attachment. The beat being consumed works on a
+ * draft of that state, which is committed once the beat has answered, so a tick is the only thing that can change
+ * what is stored.</p>
  */
 public final class TribulationService {
     private TribulationService() {
     }
 
     /**
-     * Adds the local aura influence, so every phase is scaled by the environment and not only the phase
-     * that started at breakthrough.
+     * Adds the local aura influence, so every wait is scaled by the environment the run currently stands in.
      */
     private static FormulaContext tribulationContext(LivingEntity entity, FormulaContext context) {
         return context.with("aura_tribulation_modifier",
@@ -29,96 +44,105 @@ public final class TribulationService {
     public static StartResult start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         Tribulation definition = tribulation.value();
         if (data.tribulation().isPresent()) return StartResult.rejected(Failure.ALREADY_ACTIVE);
-        if (definition.phases().isEmpty()) return StartResult.rejected(Failure.INVALID_FORMULA);
-        if (!definition.triggerCondition().test(entity, context)) return StartResult.rejected(Failure.CONDITIONS);
-        // Every phase duration is validated before the tribulation begins. A phase duration is a
-        // pure function of the definition and the context, so a phase that cannot resolve would
-        // otherwise become an unresolvable failure later.
-        FormulaContext phaseContext = tribulationContext(entity, context);
-        for (Phase phase : definition.phases()) {
-            if (duration(phase, definition, phaseContext) < 0L) return StartResult.rejected(Failure.INVALID_FORMULA);
+        List<TimelineEntry> timeline = definition.timeline();
+        if (timeline.isEmpty()) return StartResult.rejected(Failure.EMPTY_TIMELINE);
+        if (!definition.condition().test(entity, context)) return StartResult.rejected(Failure.CONDITIONS);
+        // Every entry is asked whether it can run before the run begins. An entry that cannot resolve is a
+        // content error, and this is the only moment it can be reported as a refusal instead of a failure
+        // halfway through a timeline the player has already committed to.
+        FormulaContext runContext = tribulationContext(entity, context);
+        TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
+                definition.difficultyScale().evaluate(runContext), new TimelineState());
+        for (TimelineEntry entry : timeline) {
+            if (!entry.validate(probe)) return StartResult.rejected(Failure.INVALID_ENTRY);
         }
-        long duration = duration(definition.phases().getFirst(), definition, phaseContext);
         if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
-        data.start(tribulation, 0, Math.addExact(gameTime, duration));
-        definition.phases().getFirst().startAction().execute(entity, phaseContext);
+        // Nothing is consumed here: the timeline is copied into the attachment and its first entry begins on
+        // the next tick, like every other one.
+        data.start(tribulation, timeline);
         NeoForge.EVENT_BUS.post(new StartPost(data, tribulation));
-        return StartResult.started(0);
+        return StartResult.accepted();
     }
 
-    public static TickResult tick(LivingEntity entity, TribulationAttachment data, Tribulation definition, long gameTime, FormulaContext context) {
-        // A paused attachment can only come from a legacy save; no runtime path pauses it now.
-        if (data.tribulation().isEmpty() || data.paused()) return TickResult.idle();
-        if (gameTime < data.phaseEndsAt()) return TickResult.running(data.phase());
-        Holder<Tribulation> tribulation = data.tribulation().orElseThrow();
-        // Resampled once per phase transition, so later phases are scaled by where the entity stands now
-        // rather than by the breakthrough location.
-        FormulaContext phaseContext = tribulationContext(entity, context);
-        int next = data.phase() + 1;
-        if (next >= definition.phases().size()) {
-            int previous = data.phase();
-            definition.phases().get(previous).endAction().execute(entity, phaseContext);
-            data.clear();
-            definition.successAction().execute(entity, phaseContext);
-            NeoForge.EVENT_BUS.post(new Complete(data, tribulation, previous));
-            return TickResult.completed();
+    public static TickResult tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+        // A run with nothing left to consume cannot progress: a save whose timeline the codec reduced to nothing,
+        // or a cursor that outlived its beats. Dropping it is what keeps a dead run from blocking the next
+        // breakthrough, and no ending runs, because this run never reached one.
+        if (data.peek() == null) {
+            if (data.tribulation().isPresent()) data.clear();
+            return TickResult.idle();
         }
-        long duration = duration(definition.phases().get(next), definition, phaseContext);
-        if (duration < 0L) {
-            // Defensive only: start() already rejects definitions whose phases cannot resolve.
-            data.clear();
-            definition.failAction().execute(entity, phaseContext);
-            return TickResult.paused(Failure.INVALID_FORMULA);
+        Tribulation definition = tribulation.value();
+        FormulaContext runContext = tribulationContext(entity, context);
+        double scale = definition.difficultyScale().evaluate(runContext);
+        // The head of the queue is the beat being consumed, so this only ever moves forward: beats that finish
+        // on their first tick are consumed in the same tick that reaches them.
+        while (true) {
+            TimelineEntry entry = data.peek();
+            if (entry == null) {
+                data.clear();
+                definition.successAction().execute(entity, runContext);
+                NeoForge.EVENT_BUS.post(new Complete(data, tribulation));
+                return TickResult.completed();
+            }
+            // The beat reads and writes a draft of the run's state, committed once it has answered its tick: a
+            // beat that changes nothing leaves the stored value untouched, and nothing has to be saved or
+            // synced for it.
+            TimelineState state = new TimelineState(data.state().orElse(null));
+            TimelineContext entryContext = new TimelineContext(entity, runContext, gameTime, scale, state);
+            if (!state.isPresent()) {
+                if (NeoForge.EVENT_BUS.post(new EntryPre(data, tribulation, data.consumed(), entry)).isCanceled()) {
+                    data.poll();
+                    continue;
+                }
+                // "This beat began" is stored before the beat itself runs, so a restart cannot consume the start
+                // of the same beat twice, and a beat that keeps no numbers of its own is still begun.
+                state.set(EntryBegan.INSTANCE);
+                entry.begin(entryContext);
+            }
+            Outcome outcome = entry.consume(entryContext);
+            data.setState(state.get());
+            if (outcome == Outcome.RUNNING) return TickResult.running();
+            if (outcome == Outcome.FAILED) {
+                data.clear();
+                definition.failAction().execute(entity, runContext);
+                return TickResult.failed(Failure.INVALID_ENTRY);
+            }
+            NeoForge.EVENT_BUS.post(new EntryPost(data, tribulation, data.consumed(), entry));
+            data.poll();
         }
-        if (NeoForge.EVENT_BUS.post(new PhasePre(data, tribulation, next)).isCanceled())
-            return TickResult.running(data.phase());
-        data.start(tribulation, next, Math.addExact(gameTime, duration));
-        definition.phases().get(next - 1).endAction().execute(entity, phaseContext);
-        definition.phases().get(next).startAction().execute(entity, phaseContext);
-        NeoForge.EVENT_BUS.post(new PhasePost(data, tribulation, next));
-        return TickResult.advanced(next);
     }
 
-    private static long duration(Phase phase, Tribulation definition, FormulaContext context) {
-        double scale = definition.difficultyScale().evaluate(context);
-        double value = phase.duration().evaluate(context) * scale * Math.max(0.0D, 1.0D + context.value("aura_tribulation_modifier"));
-        return !Double.isFinite(value) || value <= 0.0D || value > Long.MAX_VALUE ? -1L : Math.max(1L, Math.round(value));
-    }
+    public enum Failure {ALREADY_ACTIVE, EMPTY_TIMELINE, CONDITIONS, INVALID_ENTRY, CANCELLED}
 
-    public enum Failure {ALREADY_ACTIVE, DISABLED, CONDITIONS, INVALID_FORMULA, CANCELLED}
-
-    public record StartResult(boolean started, int phase, Failure failure) {
-        static StartResult started(int phase) {
-            return new StartResult(true, phase, null);
+    public record StartResult(boolean started, Failure failure) {
+        static StartResult accepted() {
+            return new StartResult(true, null);
         }
 
         static StartResult rejected(Failure failure) {
-            return new StartResult(false, -1, failure);
+            return new StartResult(false, failure);
         }
     }
 
-    public record TickResult(State state, int phase, Failure failure) {
+    public record TickResult(State state, Failure failure) {
         static TickResult idle() {
-            return new TickResult(State.IDLE, -1, null);
+            return new TickResult(State.IDLE, null);
         }
 
-        static TickResult running(int phase) {
-            return new TickResult(State.RUNNING, phase, null);
-        }
-
-        static TickResult advanced(int phase) {
-            return new TickResult(State.ADVANCED, phase, null);
+        static TickResult running() {
+            return new TickResult(State.RUNNING, null);
         }
 
         static TickResult completed() {
-            return new TickResult(State.COMPLETED, -1, null);
+            return new TickResult(State.COMPLETED, null);
         }
 
-        static TickResult paused(Failure failure) {
-            return new TickResult(State.PAUSED, -1, failure);
+        static TickResult failed(Failure failure) {
+            return new TickResult(State.FAILED, failure);
         }
     }
 
-    public enum State {IDLE, RUNNING, ADVANCED, COMPLETED, PAUSED}
+    public enum State {IDLE, RUNNING, COMPLETED, FAILED}
 }
