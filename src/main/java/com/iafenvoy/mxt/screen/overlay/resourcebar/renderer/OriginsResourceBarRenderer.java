@@ -1,7 +1,7 @@
-package com.iafenvoy.mxt.render.overlay.resourcebar.renderer;
+package com.iafenvoy.mxt.screen.overlay.resourcebar.renderer;
 
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer;
+import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderer;
 import net.minecraft.client.renderer.RenderPipelines;
 
 public final class OriginsResourceBarRenderer extends ResourceBarRenderer<OriginsRenderData> {

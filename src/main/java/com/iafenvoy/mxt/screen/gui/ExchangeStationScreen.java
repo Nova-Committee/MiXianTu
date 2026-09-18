@@ -75,6 +75,8 @@ public final class ExchangeStationScreen extends AbstractContainerScreen<Exchang
                 double x = event.x() - (this.leftPos + 52 + offset % 4 * 16);
                 //noinspection IntegerDivisionInFloatingPointContext
                 double y = event.y() - (this.topPos + 14 + offset / 4 * 18);
+                assert this.minecraft.player != null;
+                assert this.minecraft.gameMode != null;
                 if (x >= 0.0D && y >= 0.0D && x < 16.0D && y < 18.0D && this.menu.clickMenuButton(this.minecraft.player, index)) {
                     Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_STONECUTTER_SELECT_RECIPE, 1.0F));
                     this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, index);

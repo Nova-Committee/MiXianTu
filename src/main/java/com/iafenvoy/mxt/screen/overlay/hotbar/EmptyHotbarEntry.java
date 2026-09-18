@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.hotbar;
+package com.iafenvoy.mxt.screen.overlay.hotbar;
 
 import net.minecraft.network.chat.Component;
 

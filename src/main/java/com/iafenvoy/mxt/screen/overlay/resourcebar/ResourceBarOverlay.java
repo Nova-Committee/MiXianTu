@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.overlay.resourcebar;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.MiXianTu;
@@ -15,7 +15,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
+import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderer.Context;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;

@@ -111,13 +111,12 @@ public final class FormationProtectionBridge {
      */
     @SubscribeEvent
     public static void onDetonate(Detonate event) {
-        if (!(event.getExplosion().level() instanceof ServerLevel level)) return;
         List<BlockPos> affected = event.getAffectedBlocks();
         if (affected.isEmpty()) return;
         List<BlockPos> kept = new ArrayList<>(affected.size());
         boolean removed = false;
         for (BlockPos pos : affected) {
-            if (FormationProtection.prevented(level, Action.EXPLOSION, pos, null)) removed = true;
+            if (FormationProtection.prevented(event.getExplosion().level(), Action.EXPLOSION, pos, null)) removed = true;
             else kept.add(pos);
         }
         if (!removed) return;

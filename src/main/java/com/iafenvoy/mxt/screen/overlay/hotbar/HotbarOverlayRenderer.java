@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.hotbar;
+package com.iafenvoy.mxt.screen.overlay.hotbar;
 
 /**
  * Shared compact dimensions used by the ability and spirit-burst hotbars.

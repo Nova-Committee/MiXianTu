@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.hotbar;
+package com.iafenvoy.mxt.screen.overlay.hotbar;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.MiXianTu;
@@ -7,10 +7,9 @@ import com.iafenvoy.mxt.network.payload.HotbarLayoutC2SPayload;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtKeyMappings.KeyMappingHolder;
-import com.iafenvoy.mxt.render.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
-import com.iafenvoy.mxt.screen.gui.HotbarConfigurationScreen;
-import com.iafenvoy.mxt.screen.gui.HotbarConfigurationScreen.HotbarAccess;
-import com.iafenvoy.mxt.screen.gui.HotbarConfigurationScreen.Option;
+import com.iafenvoy.mxt.screen.overlay.hotbar.AbilityHotbarClient.ResolvedAbility;
+import com.iafenvoy.mxt.screen.overlay.hotbar.HotbarConfigurationScreen.HotbarAccess;
+import com.iafenvoy.mxt.screen.overlay.hotbar.HotbarConfigurationScreen.Option;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;

@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.overlay.resourcebar;
 
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import net.minecraft.client.Minecraft;

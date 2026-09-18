@@ -1,8 +1,7 @@
-package com.iafenvoy.mxt.screen.gui;
+package com.iafenvoy.mxt.screen.overlay.hotbar;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.render.IconRenderer;
-import com.iafenvoy.mxt.render.overlay.hotbar.HotbarEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;

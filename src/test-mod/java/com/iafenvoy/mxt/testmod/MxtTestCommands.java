@@ -71,7 +71,8 @@ public final class MxtTestCommands {
     private static final Identifier FORMATION = id("spirit_gathering");
     private static final Identifier REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
-    private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");    private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
+    private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");
+    private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
             id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence")
     );
 

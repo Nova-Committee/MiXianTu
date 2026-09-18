@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.hotbar;
+package com.iafenvoy.mxt.screen.overlay.hotbar;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;

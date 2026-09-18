@@ -1,12 +1,12 @@
-package com.iafenvoy.mxt.render.overlay.resourcebar.renderer;
+package com.iafenvoy.mxt.screen.overlay.resourcebar.renderer;
 
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtClientConfig.ResourceBarIconLayout;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderState;
-import com.iafenvoy.mxt.render.overlay.resourcebar.ResourceBarRenderer.Context;
+import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderState;
+import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderer.Context;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;

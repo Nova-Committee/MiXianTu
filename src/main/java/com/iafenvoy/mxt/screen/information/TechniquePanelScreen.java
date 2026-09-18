@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.gui;
+package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;

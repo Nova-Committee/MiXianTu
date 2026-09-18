@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.hotbar;
+package com.iafenvoy.mxt.screen.overlay.hotbar;
 
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.render.IconRenderer;

@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render.overlay.hotbar;
+package com.iafenvoy.mxt.screen.overlay.hotbar;
 
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtClientConfig.HotbarMode;
@@ -126,6 +126,7 @@ public final class HotbarController {
         return mode != null;
     }
 
+    @SuppressWarnings("StatementWithEmptyBody")
     private static void suppressVanillaHotbarKey(int index) {
         if (!isHotbarOpen() || MxtClientConfig.INSTANCE.hotbar.allowVanillaHotbarSelection.getValue()) return;
         Minecraft minecraft = Minecraft.getInstance();

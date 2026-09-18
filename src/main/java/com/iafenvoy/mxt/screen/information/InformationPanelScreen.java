@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationHelper.Columns;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
-import com.iafenvoy.mxt.screen.gui.TechniquePanelScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
