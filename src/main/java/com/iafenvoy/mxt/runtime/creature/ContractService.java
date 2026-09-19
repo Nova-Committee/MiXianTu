@@ -21,6 +21,11 @@ public final class ContractService {
     private ContractService() {
     }
 
+    /**
+     * Applies predicates supplied by an integration layer. This overload never sees the creature itself, so it
+     * cannot consult a creature profile; callers that hold the entity must use the overload below to get the
+     * profile route of creature eligibility.
+     */
     public static Result bind(ContractAttachment data, Holder<ContractType> type, UUID owner, long gameTime,
                               BooleanSupplier ownerAllowed, BooleanSupplier creatureAllowed) {
         if (data.bound()) return Result.rejected(Failure.ALREADY_BOUND);
@@ -34,13 +39,21 @@ public final class ContractService {
     }
 
     /**
-     * Evaluates both sides against the contract's fixed condition registry before binding.
+     * Evaluates both sides before binding. The owner side keeps the contract's fixed condition registry, while
+     * the creature side is a union of two routes: the creature qualifies when the contract type's own
+     * {@code creature_condition} passes, or when the creature profile applied to it lists that contract kind in
+     * {@code contract_tags} - either as the contract type's id or as a native {@code mxt:contract_type} tag that
+     * type declares. Both routes only ever add eligibility, so a creature that could be contracted before the
+     * profile was read still can be, and a profile can widen a contract's reach but never narrow it. When no
+     * profile is applied, its tag list is empty, or its entries name nothing, the profile route reports no match
+     * and the contract type's own condition decides alone, exactly as it did before.
      */
     public static Result bind(ContractAttachment data, Holder<ContractType> type, LivingEntity owner,
                               LivingEntity creature, long gameTime, FormulaContext context) {
         ContractType definition = type.value();
         boolean ownerAllowed = definition.ownerCondition().test(owner, context);
-        boolean creatureAllowed = definition.creatureCondition().test(creature, context);
+        boolean creatureAllowed = definition.creatureCondition().test(creature, context)
+                || CreatureProfileService.declaresContract(creature, type);
         return bind(data, type, owner.getUUID(), gameTime, () -> ownerAllowed, () -> creatureAllowed);
     }
 

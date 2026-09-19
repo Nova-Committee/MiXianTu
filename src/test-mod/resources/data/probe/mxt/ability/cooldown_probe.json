@@ -1,0 +1,9 @@
+{
+  "type": "mxt:active",
+  "slot": "utility",
+  "cooldown": 40,
+  "components": [
+    {"type": "mxt:cooldown", "ticks": 40}
+  ],
+  "entity_action": {"type": "mxt:no_op"}
+}

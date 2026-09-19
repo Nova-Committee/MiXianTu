@@ -257,7 +257,11 @@ public final class ForgingWorkstationService {
         if (holder == null || session == null) return new FinishOutcome(Failure.DISABLED, false);
 
         ForgingBlueprint blueprint = holder.value();
-        FinishResult result = ForgingService.finish(player, surface, holder, session, blueprint::qualityFor);
+        // The locked materials are the session's own record of what it was started from, and they are read
+        // here rather than at start because only the settlement turns them into a quality: see
+        // ForgingService#materialModifier.
+        double forgingModifier = ForgingService.materialModifier(player.level().registryAccess(), state.consumed(), FormulaContext.of(player));
+        FinishResult result = ForgingService.finish(player, surface, holder, session, blueprint::qualityFor, forgingModifier);
         if (!result.finished()) {
             // A listener refusing - by cancelling CompletePre or by throwing out of it - is not a verdict on
             // the piece, so it leaves the session where it is: see Failure#refusedByListener.

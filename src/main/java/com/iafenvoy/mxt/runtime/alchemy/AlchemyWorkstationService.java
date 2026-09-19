@@ -3,15 +3,18 @@ package com.iafenvoy.mxt.runtime.alchemy;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Failure;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Snapshot;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.StartResult;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.TickResult.State;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -22,6 +25,7 @@ import net.minecraft.world.level.Level;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Server-side material locking and completion adapter for {@link AlchemyWorkstationState}. The already
@@ -34,9 +38,31 @@ public final class AlchemyWorkstationService {
     public static StartResult start(AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                     int furnaceTier, FormulaContext context) {
         if (state.active()) return StartResult.rejected(Failure.INPUTS);
-        StartResult result = AlchemySession.start(holder, furnaceTier, itemIds(state.inputs()), context);
+        StartResult result = AlchemySession.start(holder, furnaceTier, itemIds(state.inputs()), context, inputModifier(state.inputs(), context));
         if (result.started()) state.lock(result.session());
         return result;
+    }
+
+    /**
+     * The alchemy modifier of a batch's own input: the lowest modifier among the ingredient stacks that
+     * are in the workstation when the batch starts, and {@link ItemQualityService#DEFAULT_MODIFIER} when
+     * none of them resolves a quality. The lowest, because a brew is only as good as its worst ingredient,
+     * and because one graded herb must not be made to read as though the whole recipe were graded. The
+     * stacks are read here rather than at completion because {@link AlchemyWorkstationState#lock} releases
+     * them as soon as the session is stored; see {@link AlchemySession#start} for what the modifier
+     * settles. The quality lookup is the server-side one, which is the only side a batch can start on.
+     */
+    static double inputModifier(List<ItemStack> inputs, FormulaContext context) {
+        double modifier = ItemQualityService.DEFAULT_MODIFIER;
+        boolean graded = false;
+        for (ItemStack stack : inputs) {
+            Optional<Holder<ItemQuality>> quality = ItemQualityService.find(stack);
+            if (quality.isEmpty()) continue;
+            double value = ItemQualityService.modifier(quality.orElseThrow(), ItemQuality::alchemyModifier, context);
+            modifier = graded ? Math.min(modifier, value) : value;
+            graded = true;
+        }
+        return modifier;
     }
 
     /**
@@ -46,7 +72,11 @@ public final class AlchemyWorkstationService {
                                     int furnaceTier, FormulaContext context) {
         AlchemyRecipe recipe = holder.value().definition();
         AuraResult aura = AuraService.getPositionAura(level, pos);
-        boolean auraMet = recipe.minimumAura().entrySet().stream().allMatch(entry -> {
+        // A zone can declare itself an alchemy environment, and then the place itself stands in for the aura the
+        // recipe asks for: the flag is a plain yes/no with no magnitude to scale a pool by, so the only honest
+        // reading is that the environment requirement is already answered. Without the flag the recipe's own
+        // minimum is compared against the zone's pools exactly as before.
+        boolean auraMet = aura.rules().alchemyEnvBonus() || recipe.minimumAura().entrySet().stream().allMatch(entry -> {
             double minimum = entry.getValue().evaluate(context);
             return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
         });

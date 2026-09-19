@@ -1,0 +1,8 @@
+{
+  "type": "mxt:modifier",
+  "condition": {"type": "mxt:has_curse", "curse": "mxt_test:curse_probe"},
+  "modifiers": [
+    {"attribute": "minecraft:armor", "id": "probe:diag2/a", "amount": 4, "operation": "add_value"},
+    {"attribute": "minecraft:oxygen_bonus", "id": "probe:diag2/b", "amount": 8, "operation": "add_value"}
+  ]
+}

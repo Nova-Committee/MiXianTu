@@ -1,23 +1,30 @@
 package com.iafenvoy.mxt.runtime.creature;
 
+import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 /**
- * Selects and persists a tagged creature profile after evaluating its entity condition.
+ * Selects and persists a tagged creature profile after evaluating its entity condition, and reads the persisted
+ * profile back for other modules that need it, such as contract eligibility.
  */
 public final class CreatureProfileService {
     private CreatureProfileService() {
@@ -57,6 +64,29 @@ public final class CreatureProfileService {
     public static boolean matchesType(Mob creature, CreatureProfile definition) {
         Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(creature.getType());
         return RegistryCodecs.matches(definition.entityTypeTags(), BuiltInRegistries.ENTITY_TYPE, Registries.ENTITY_TYPE, type);
+    }
+
+    /**
+     * Tests the profile side of contract eligibility: whether the profile applied to this creature declares the
+     * given contract kind through {@code contract_tags}. Every entry is read inside the {@code mxt:contract_type}
+     * registry namespace, so it names either the contract type's own id or one of the native datapack tags that
+     * type declares; that is what makes the field additive metadata instead of a second contract registry.
+     * <p>
+     * The profile comes from the same synchronised {@link MxtAttachments#CREATURE_SPIRIT} attachment this service
+     * writes, and tag membership is asked of the holder the caller already resolved. Neither step reaches for
+     * {@link MxtDatapackRegistries}' server-only accessors, because a caller may legitimately ask on a client:
+     * there the request must degrade to a plain "no match" instead of throwing, which also keeps the contract
+     * type's own {@code creature_condition} in charge whenever tag data is unavailable.
+     */
+    public static boolean declaresContract(Entity creature, Holder<ContractType> type) {
+        List<Identifier> declared = creature.getData(MxtAttachments.CREATURE_SPIRIT).profile()
+                .map(Holder::value)
+                .map(CreatureProfile::contractTags)
+                .orElse(List.of());
+        if (declared.isEmpty()) return false;
+        Identifier contractId = HolderHelper.idOrNull(type);
+        return declared.stream().anyMatch(entry -> entry.equals(contractId)
+                || type.is(TagKey.create(MxtResourceKeys.CONTRACT_TYPE, entry)));
     }
 
     public static boolean applySelected(Mob creature) {

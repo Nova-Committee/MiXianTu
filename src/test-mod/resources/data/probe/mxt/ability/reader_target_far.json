@@ -1,0 +1,8 @@
+{
+  "type": "mxt:modifier",
+  "condition": {
+    "type": "mxt:not",
+    "condition": {"type": "mxt:storage_target", "family": "mxt:ability", "id": "probe:storage_probe", "locked": true, "max_distance": 64}
+  },
+  "modifiers": [{"attribute": "minecraft:max_health", "id": "probe:ability/reader_target_far", "amount": 64, "operation": "add_value"}]
+}

@@ -141,13 +141,6 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
         return this.qualityByExtraSteps.stream().filter(entry -> extraSteps <= entry.maxExtraSteps()).findFirst().orElseThrow().quality();
     }
 
-    /**
-     * Total number of material slots this blueprint occupies, used for surface layout hints.
-     */
-    public int inputEntryCount() {
-        return this.input.size();
-    }
-
     public record MeterBounds(int min, int max, int targetMin, int targetMax) {
         public static final MapCodec<MeterBounds> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.INT.fieldOf("meter_min").forGetter(MeterBounds::min),

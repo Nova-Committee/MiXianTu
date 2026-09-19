@@ -5,7 +5,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * ISpiritEnergy adapter for an ItemStack's persisted artifact state.
+ * ISpiritEnergy adapter for an ItemStack's persisted artifact state. The capacity stays the caller's so that the
+ * archetype decides it once in {@link ArtifactService} instead of every adapter inventing a ceiling of its own.
  */
 public final class ArtifactSpiritEnergy implements ISpiritEnergy {
     private final ItemStack stack;

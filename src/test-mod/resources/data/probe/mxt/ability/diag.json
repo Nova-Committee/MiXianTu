@@ -1,0 +1,8 @@
+{
+  "type": "mxt:modifier",
+  "condition": {"type": "mxt:has_ability", "ability": "mxt_test:sword_focus"},
+  "modifiers": [
+    {"attribute": "minecraft:armor", "id": "probe:diag/a", "amount": 1, "operation": "add_value"},
+    {"attribute": "minecraft:oxygen_bonus", "id": "probe:diag/b", "amount": 2, "operation": "add_value"}
+  ]
+}

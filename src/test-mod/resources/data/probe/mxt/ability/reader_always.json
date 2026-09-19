@@ -1,0 +1,5 @@
+{
+  "type": "mxt:modifier",
+  "condition": {"type": "mxt:always_true"},
+  "modifiers": [{"attribute": "minecraft:max_health", "id": "probe:ability/reader_always", "amount": 1, "operation": "add_value"}]
+}

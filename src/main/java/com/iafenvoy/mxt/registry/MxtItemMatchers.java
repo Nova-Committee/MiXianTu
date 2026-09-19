@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.runtime.alchemy.HerbTagEntry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritStorageEntry;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
@@ -20,4 +21,5 @@ public final class MxtItemMatchers {
     public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<WildcardEntry>> WILDCARD = REGISTRY.register("wildcard", () -> WildcardEntry.CODEC);
     public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<RegexEntry>> REGEX = REGISTRY.register("regex", () -> RegexEntry.CODEC);
     public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<SpiritStorageEntry>> SPIRIT_STORAGE = REGISTRY.register("spirit_storage", () -> SpiritStorageEntry.CODEC);
+    public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<HerbTagEntry>> HERB_TAG = REGISTRY.register("herb_tag", () -> HerbTagEntry.CODEC);
 }

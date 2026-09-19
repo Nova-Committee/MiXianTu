@@ -1,0 +1,5 @@
+{
+  "type": "mxt:modifier",
+  "condition": {"type": "mxt:has_equipped_item"},
+  "modifiers": [{"attribute": "minecraft:armor_toughness", "id": "probe:ability/reader_equip_bare", "amount": 4, "operation": "add_value"}]
+}

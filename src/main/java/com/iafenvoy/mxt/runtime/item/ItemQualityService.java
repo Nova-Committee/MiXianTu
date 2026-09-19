@@ -30,6 +30,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClick
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 
 import java.util.*;
+import java.util.function.Function;
 
 /**
  * Resolves an item's quality and exposes the tag-defined quality catalogue.
@@ -185,6 +186,45 @@ public final class ItemQualityService {
 
     public static void clear(ItemStack stack) {
         stack.remove(MxtDataComponents.ITEM_QUALITY.get());
+    }
+
+    /**
+     * The multiplier a settlement applies when the stack resolves no quality, or when the datapack's
+     * provider yields a value no settlement can use. It is the same {@code 1.0} the codec defaults to, so
+     * an item whose quality never declares a modifier settles exactly as it did before the modifier had a
+     * consumer.
+     */
+    public static final double DEFAULT_MODIFIER = 1.0D;
+
+    /**
+     * Evaluates one of a quality's three modifiers against a context, falling back to
+     * {@link #DEFAULT_MODIFIER} for a non-finite or non-positive value. All three modifiers are
+     * multipliers, so a zero or negative one could only erase or invert the amount it settles; a broken
+     * formula has to leave that amount alone rather than cancel it.
+     */
+    public static double modifier(Holder<ItemQuality> quality, Function<ItemQuality, ItemQuality.Modifier> selector, FormulaContext context) {
+        double value = selector.apply(quality.value()).modifier().evaluate(context);
+        return Double.isFinite(value) && value > 0.0D ? value : DEFAULT_MODIFIER;
+    }
+
+    /**
+     * Resolves a stack's quality exactly as {@link #find} does and then evaluates one of that quality's
+     * modifiers. A stack without a quality is not an error here: content that declares no quality has no
+     * modifier to apply, which is precisely the {@link #DEFAULT_MODIFIER} the codec would have supplied.
+     */
+    public static double modifier(Provider access, ItemStack stack, Function<ItemQuality, ItemQuality.Modifier> selector, FormulaContext context) {
+        Optional<Holder<ItemQuality>> quality = find(access, stack);
+        return quality.isPresent() ? modifier(quality.orElseThrow(), selector, context) : DEFAULT_MODIFIER;
+    }
+
+    /**
+     * Resolves a stack's quality from the running server's datapack registries and evaluates one of its
+     * modifiers: the counterpart of the lookup-taking overload for settlements that hold no registry
+     * lookup, and like {@link #find(ItemStack)} only usable while a server runs.
+     */
+    public static double modifier(ItemStack stack, Function<ItemQuality, ItemQuality.Modifier> selector, FormulaContext context) {
+        Optional<Holder<ItemQuality>> quality = find(stack);
+        return quality.isPresent() ? modifier(quality.orElseThrow(), selector, context) : DEFAULT_MODIFIER;
     }
 
     /**

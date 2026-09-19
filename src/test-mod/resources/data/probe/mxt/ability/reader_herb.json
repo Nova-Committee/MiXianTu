@@ -1,0 +1,8 @@
+{
+  "type": "mxt:modifier",
+  "condition": {
+    "type": "mxt:has_equipped_item",
+    "item_condition": {"type": "mxt:item_matcher", "items": [{"type": "mxt:herb_tag", "element": "mxt_test:fire"}]}
+  },
+  "modifiers": [{"attribute": "minecraft:oxygen_bonus", "id": "probe:ability/reader_herb", "amount": 16, "operation": "add_value"}]
+}

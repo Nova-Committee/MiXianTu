@@ -85,14 +85,6 @@ public record FormationPlateComponent(List<Allowed> allowed,
     }
 
     /**
-     * Whether a bound plate may still be used to activate. An unbound plate is inert regardless of its
-     * allow list, which the plate item reports as its own case.
-     */
-    public boolean admitsSelection() {
-        return this.formation.map(this::admits).orElse(false);
-    }
-
-    /**
      * Every formation in the registry this plate admits, in registry order, so binding and suggestions do not
      * enumerate the registry themselves. Disabled entries are left to the caller, which rejects them itself.
      */

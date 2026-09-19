@@ -246,16 +246,14 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | `items` | `SpiritHerbService.find` → `ItemQualityService.find`（`runtime/item/ItemQualityService.java:254,261`）✅ |
 | `quality` | 同上 ✅ |
 | `age` | **无** |
-| `element_tags` | **无** |
-| `material_tags` | **无** |
-| `growth_rate` | **无** |
-| `drop_chance` | **无** |
+| `element_tags` | `mxt:herb_tag` 的 `element`（2026-09-19 接线：任何接受 `ItemMatcher` 的地方都能问"任意火属性灵草"）✅ |
+| `material_tags` | `mxt:herb_tag` 的 `material`（同上）✅ |
+| `growth_rate` | **无**（等种植/生长系统） |
+| `drop_chance` | **无**（等种植/生长系统） |
 
 （`SpiritHerb.java:14-17` 的类注释明确说它**不为数据包条目注册物品**——这条边界是对的。）
 
-同时 `AuraZone.Rules` 的三个灵气—灵植联动字段也**零消费者**：
-`spirit_plant_bonus`、`alchemy_env_bonus`、`natural_spawn_herb`（`data/aura/AuraZone.java:140-149`；
-`docs/灵气环境数据包.md:95` 自己也写了"尚未接入消费者"）。
+同时 `AuraZone.Rules` 的三个灵气—灵植联动字段：`alchemy_env_bonus` **已于 2026-09-19 接上**（该区域内的丹药配方视为满足 `minimum_aura`，见 `runtime/alchemy/AlchemyWorkstationService.java`），`spirit_plant_bonus` 与 `natural_spawn_herb` 仍**零消费者**（`data/aura/AuraZone.java:140-149`；`docs/灵气环境数据包.md:95` 自己也写了"尚未接入消费者"）。
 对照之下同一 `Rules` 里的另两个**已经接了**：`cultivate_suppress`（`AuraResult.java:38-39`、
 `CultivationActionService.java:302`）、`tribulation_modify`（`TribulationService.java:25-26,85`）。
 
@@ -263,7 +261,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 ② `age` 作为一个可读的档位值（百年/千年）——这一条由 §4.9 的通用变体组件解决。
 
 **最小补法（Java）**：一个 `mxt:spirit_crop` 方块 + `SpiritHerb.age/growth_rate/drop_chance`
-的消费者；`element_tags` / `material_tags` 接进炼丹配方匹配；`AuraZone.Rules` 三项接进去。
+的消费者（`element_tags`/`material_tags` 已由 `mxt:herb_tag` 消费）；`AuraZone.Rules` 剩两项随同一套系统接进去。
 
 ### 4.5 妖兽生成（151 个实体）
 
@@ -315,7 +313,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 - **没有任何物品使用它**。`MxtItems.SPIRIT_STONE_BAG` 是空壳 `Item::new`（`registry/MxtItems.java:42`）。
 - **没有任何菜单/界面**。`MxtMenus` 9 个里没有储物。
-- `ArtifactStateComponent.nourishment` 只写不读（`withNourishment` 无调用者，`data/artifact/ArtifactStateComponent.java:39`）。
+- `ArtifactStateComponent.nourishment` **已于 2026-09-19 接上**：灌能时按"真正收下 ÷ 本次有效容量"上涨（`0..1`、只升不降），并作为容量加成参与法器上限（`runtime/artifact/ArtifactService.java`）。
 
 **缺什么**：一个通用储物容器物品 + 界面（槽数来自 `storage_slots`，即数据驱动）。
 **最小补法**：新增一个 `SpiritStorageItem` + `MenuType`，复用 `ArtifactStorageService`（容量计算已写好）。
@@ -462,17 +460,17 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | 1 | `AlchemyWorkstation` | 接口**零实现**；无丹炉方块/方块实体/菜单/界面 | `runtime/alchemy/AlchemyWorkstation.java:25`；`MxtBlocks` 14 个方块、`MxtBlockEntities` 5 个、`MxtMenus` 9 个均无 |
 | 2 | `MxtRecipeTypes.REFINING` | 只被 `RefiningRecipe` 自身引用 → 无消费者；且 `ItemArchetype` 已是数据包注册表，这条配方路径是重复的 | `recipe/RefiningRecipe.java:56`（全仓唯一命中） |
 | 3 | `MxtRecipeTypes.FORMATION` | 同上；`Formation` 已是数据包注册表 | `recipe/FormationRecipe.java:53` |
-| 4 | `SpiritHerb` 的 `age`/`growth_rate`/`drop_chance`/`element_tags`/`material_tags` | 5 个字段零消费者（只有 `items`/`quality` 有） | `data/alchemy/SpiritHerb.java:18-25`；`ItemQualityService.java:254,261` |
-| 5 | `AuraZone.Rules` 的 `spirit_plant_bonus`/`alchemy_env_bonus`/`natural_spawn_herb` | 零消费者（同 `Rules` 的另两个已接） | `data/aura/AuraZone.java:140-149`；`docs/灵气环境数据包.md:95` |
-| 6 | `ItemArchetype.item_type` | 零消费者 | `data/artifact/ItemArchetype.java:20` |
-| 7 | `ItemArchetype.spirit_capacity` | 零消费者 | 同上 |
+| 4 | `SpiritHerb` 的 `age`/`growth_rate`/`drop_chance`/`element_tags`/`material_tags` | 5 个字段零消费者（只有 `items`/`quality` 有）；**`element_tags`/`material_tags` 已于 2026-09-19 由新条目 `mxt:herb_tag` 消费**，`age`/`growth_rate`/`drop_chance` 仍等灵植生长系统 | `data/alchemy/SpiritHerb.java:18-25`；`runtime/alchemy/HerbTagEntry.java` |
+| 5 | `AuraZone.Rules` 的 `spirit_plant_bonus`/`alchemy_env_bonus`/`natural_spawn_herb` | 零消费者（同 `Rules` 的另两个已接）；**`alchemy_env_bonus` 已于 2026-09-19 接上**（该区域内的丹药配方视为满足 `minimum_aura`），另外两个仍等灵植生长系统 | `data/aura/AuraZone.java:140-149`；`runtime/alchemy/AlchemyWorkstationService.java` |
+| 6 | `ItemArchetype.item_type` | 仍零消费者（2026-09-19 复核：仓库里没有按它分流的判断） | `data/artifact/ItemArchetype.java:20` |
+| 7 | `ItemArchetype.spirit_capacity` | **已于 2026-09-19 接上**：它现在就是法器灵力上限，`mxt:charge_artifact` 自己的 `capacity` 退为回退值 | `runtime/artifact/ArtifactService.java` |
 | 8 | `ArtifactStorageComponent` / `ArtifactStorageService` / `ISpiritStorage` | 无物品、无菜单使用 | `runtime/artifact/ArtifactStorageService.java`；`registry/MxtItems.java:42` 是空壳 |
-| 9 | `ArtifactStateComponent.nourishment` | 只写不读（`withNourishment` 无调用者） | `data/artifact/ArtifactStateComponent.java:39` |
-| 10 | `ability_component_type`：`toggle`/`timer`/`resource`/`target_lock` | 注册 + Codec 齐全，**零消费者**（只有 `cooldown`/`charges` 有） | `registry/MxtAbilityComponents.java:17-20`；只有 `AbilityService.java:72,84` 读 cooldown/charges |
-| 11 | `ChargesAbilityComponent.recharge_ticks` | 零消费者（`AbilityService` 只用 `maximum`） | `data/ability/component/ChargesAbilityComponent.java:8-13` |
+| 9 | `ArtifactStateComponent.nourishment` | **已于 2026-09-19 接上**：灌能时按"真正收下 ÷ 本次有效容量"上涨（夹在 `0..1`、只升不降），同时作为容量加成 `× (1 + 0.5 × nourishment)` | `runtime/artifact/ArtifactService.java` |
+| 10 | `data_storage_type`：`toggle`/`timer`/`resource`/`target_lock` | **已于 2026-09-19 关闭**：四者各有一个 `mxt:storage_toggle`/`storage_timer`/`storage_resource`/`storage_target` 实体条件读取（`mxt:charges`/`mxt:cooldown` 另补了 `storage_charges`/`storage_cooldown`，六种类型全部可读） | `registry/MxtEntityConditions.java`；`data/condition/builtin/entity/Storage*EntityCondition.java` |
+| 11 | `ChargesDataStorage.recharge_ticks` | **已于 2026-09-19 关闭**：`AbilityEventBridge` 每 tick 按"距上次写入 ≥ recharge_ticks"回充一次，最多一步、不脏化附件 | `runtime/ability/AbilityStorage.java`；`runtime/ability/AbilityEventBridge.java` |
 | 12 | `SkillStage.damage_multiplier` | 零消费者，代码已留 TODO | `data/cultivation/SkillStage.java:22,25` |
 | 13 | `CreatureProfile.realm_stages` | 零消费者 | `data/creature/CreatureProfile.java:28`；`technique.md` §8.2 |
-| 14 | `Technique.grade` | 零消费者 | `technique.md` T1 |
+| 14 | `Technique.grade` | **已于 2026-09-19 接上**：功法面板的行悬浮提示显示"品阶：<原文>"（存在 `mxt.technique_grade.<grade>` 时用翻译） | `screen/information/TechniquePanelScreen.java` |
 | 15 | `SpiritRoot.rarity` / `Physique.rarity` | 零读取点（`docs/模块实现审计.md:72-73` 自认"仅元数据"） | 全仓无 `rarity` 调用点 |
 | 16 | `TriggerContext.damageSource()` | **零读取点**——`mxt:hurt` 把 `DamageSource` 放进去了，但条件/公式都拿不到 | `data/trigger/TriggerContext.java:58`（全仓唯一命中） |
 | 17 | `CultivationAffinity.multiplier` 的 `roots` / `techniques` 两个 `Function` 参数 | 死参数，调用方仍在传 | `runtime/cultivation/CultivationAffinity.java:35-38,62-65`；`CultivationActionService.java:99-101,121-123` |
@@ -480,7 +478,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | 19 | `SpiritStoneVein` | 纯诊断读取器，无玩法消费者；方块与等级阈值写死 | `runtime/world/SpiritStoneVein.java:22,28,34-51`；唯一调用 `command/AuraCommand.java:90` |
 | 20 | `ResourceLedger` | 与附件账本并行的**第二套账本**，`src/main` 无生产调用点 | `runtime/resource/ResourceLedger.java`（全 67 行，仅自用） |
 | 21 | `MxtItems` 里的空壳物品：`talisman_brush` / `talisman_ink` / `cinnabar` / `blank_talisman` / `recall_talisman` / `realm_reward_box` | 全部 `Item::new`，无行为 | `registry/MxtItems.java:47,51,53,59-61` |
-| 22 | `ItemQuality.Modifier.modifier`（三个修正各一个） | **从不被求值**：唯一读取点 `ItemQualityTooltipAppender` 只打印 `description()`；且**压根没有**价值/锻造/炼丹三个结算点 | `data/quality/ItemQualityTooltipAppender.java:46-48,53-55`；见 §4.12-D4 |
+| 22 | `ItemQuality.Modifier.modifier`（三个修正各一个） | **已于 2026-09-19 关闭**：`value_multiplier` 进入货币单位面值（取整，Tooltip 同步显示结算值）、`forging_modifier` 进入锻造品质档（`额外步数 ÷ modifier`，取锁定材料中最低一档）、`alchemy_modifier` 进入炼丹时长（`声明时长 ÷ modifier`，取开炉原料中最低一档） | `runtime/economy/CurrencyValueService.java`；`runtime/forging/ForgingService.java`；`runtime/alchemy/AlchemySession.java` |
 | 23 | `TalismanComponent.appended()` | 铭刻的写入缝：`src/main` **零调用者**（唯一调用在 test-mod `MxtTestMod.java:5070`） | `data/item/TalismanComponent.java:44-48` |
 | 24 | `IdentificationComponent` | 只有读（`item/IdentificationMirrorItem.java:29-33`），**没有写入方** | `data/item/IdentificationComponent.java` |
 

@@ -1,0 +1,9 @@
+{
+  "type": "mxt:modifier",
+  "condition": {
+    "type": "mxt:equipped_item",
+    "equipment_slot": "head",
+    "item_condition": {"type": "mxt:item_matcher", "items": ["minecraft:red_mushroom"]}
+  },
+  "modifiers": [{"attribute": "minecraft:max_health", "id": "probe:ability/reader_equip_vanilla", "amount": 8, "operation": "add_value"}]
+}

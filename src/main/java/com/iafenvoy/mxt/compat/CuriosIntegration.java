@@ -57,12 +57,27 @@ public final class CuriosIntegration {
 
     private static List<ItemStack> equipped(ICuriosItemHandler inventory) {
         ArrayList<ItemStack> result = new ArrayList<>();
-        for (ICurioStacksHandler handler : inventory.getCurios().values()) {
-            IDynamicStackHandler stacks = handler.getStacks();
-            for (int index = 0; index < stacks.getSlots(); index++) {
-                ItemStack stack = stacks.getStackInSlot(index);
-                if (!stack.isEmpty()) result.add(stack.copy());
-            }
+        for (ICurioStacksHandler handler : inventory.getCurios().values()) result.addAll(stacks(handler));
+        return result;
+    }
+
+    /**
+     * Returns a stable snapshot of every non-empty stack in one named Curios slot; empty when the entity has no
+     * such slot at all, so a caller asking about a slot it does not have reads it as empty rather than failing.
+     */
+    public static List<ItemStack> equippedIn(LivingEntity entity, String slot) {
+        return CuriosApi.getCuriosInventory(entity)
+                .map(inventory -> inventory.getCurios().get(slot))
+                .map(CuriosIntegration::stacks)
+                .orElseGet(List::of);
+    }
+
+    private static List<ItemStack> stacks(ICurioStacksHandler handler) {
+        IDynamicStackHandler stacks = handler.getStacks();
+        ArrayList<ItemStack> result = new ArrayList<>();
+        for (int index = 0; index < stacks.getSlots(); index++) {
+            ItemStack stack = stacks.getStackInSlot(index);
+            if (!stack.isEmpty()) result.add(stack.copy());
         }
         return result;
     }

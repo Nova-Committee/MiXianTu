@@ -1,0 +1,11 @@
+{
+  "type": "mxt:active",
+  "slot": "utility",
+  "cooldown": 0,
+  "entity_action": {
+    "type": "mxt:modify_storage",
+    "family": "mxt:ability",
+    "id": "probe:storage_probe",
+    "value": {"type": "mxt:timer", "duration": 200, "ends_at": 10000000}
+  }
+}

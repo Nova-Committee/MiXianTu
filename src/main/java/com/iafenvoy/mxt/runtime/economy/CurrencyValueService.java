@@ -2,8 +2,10 @@ package com.iafenvoy.mxt.runtime.economy;
 
 import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder.Reference;
@@ -53,29 +55,43 @@ public final class CurrencyValueService {
 
     public static OptionalLong unitValue(@NotNull Provider access, @NotNull ItemStack stack) {
         if (stack.isEmpty()) return OptionalLong.of(0L);
-        return find(access, stack).map(CurrencyValueService::unitValue).orElseGet(OptionalLong::empty);
+        return find(access, stack)
+                .map(definition -> unitValue(access, stack, definition, isAvailable(definition), FormulaContext.EMPTY))
+                .orElseGet(OptionalLong::empty);
     }
 
     public static OptionalLong unitValue(@NotNull Provider access, @Nullable Entity holder, @NotNull ItemStack stack, @NotNull FormulaContext context) {
         if (holder == null) return unitValue(access, stack);
         if (stack.isEmpty()) return OptionalLong.of(0L);
-        return find(access, stack).map(definition -> unitValue(definition, holder, stack, context))
+        return find(access, stack)
+                .map(definition -> unitValue(access, stack, definition, isAvailable(definition, holder, stack, context), context))
                 .orElseGet(OptionalLong::empty);
     }
 
     public static OptionalLong unitValue(@NotNull RegistryAccess access, @Nullable Entity holder, @NotNull ItemStack stack) {
         if (holder == null) return unitValue(access, stack);
         if (stack.isEmpty()) return OptionalLong.of(0L);
-        return find(access, stack).map(definition -> unitValue(definition, holder, stack, FormulaContext.EMPTY))
+        return find(access, stack)
+                .map(definition -> unitValue(access, stack, definition, isAvailable(definition, holder, stack, FormulaContext.EMPTY), FormulaContext.EMPTY))
                 .orElseGet(OptionalLong::empty);
     }
 
-    private static OptionalLong unitValue(CurrencyValue definition) {
-        return OptionalLong.of(isAvailable(definition) ? definition.value() : 0L);
-    }
-
-    private static OptionalLong unitValue(CurrencyValue definition, Entity holder, ItemStack stack, FormulaContext context) {
-        return OptionalLong.of(isAvailable(definition, holder, stack, context) ? definition.value() : 0L);
+    /**
+     * The one place an item's currency value meets its quality. The denomination is settled by multiplying
+     * it with the {@code value_multiplier} of the quality the priced stack itself resolves, because that
+     * stack is this settlement's own input: a datapack that grades an item as refined is saying every unit
+     * of it is worth more, and an item whose quality declares no multiplier keeps the declared value.
+     * A product that would fall below one, reach past a {@code long}, or stop being a finite number leaves
+     * the declared denomination alone instead of clamping, so an unusable modifier can only ever mean "no
+     * change" rather than a value no datapack wrote.
+     */
+    private static OptionalLong unitValue(Provider access, ItemStack stack, CurrencyValue definition, boolean available, FormulaContext context) {
+        if (!available) return OptionalLong.of(0L);
+        double multiplier = ItemQualityService.modifier(access, stack, ItemQuality::valueMultiplier, context);
+        if (multiplier == ItemQualityService.DEFAULT_MODIFIER) return OptionalLong.of(definition.value());
+        double scaled = definition.value() * multiplier;
+        if (!Double.isFinite(scaled) || scaled < 1.0D || scaled >= Long.MAX_VALUE) return OptionalLong.of(definition.value());
+        return OptionalLong.of(Math.round(scaled));
     }
 
     public static OptionalLong value(@NotNull ItemStack stack) {

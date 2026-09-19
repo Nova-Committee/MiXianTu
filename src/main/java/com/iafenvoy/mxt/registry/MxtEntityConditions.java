@@ -72,4 +72,11 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RidingRecursiveCondition>> RIDING_RECURSIVE = REGISTRY.register("riding_recursive", () -> RidingRecursiveCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PassengerRecursiveCondition>> PASSENGER_RECURSIVE = REGISTRY.register("passenger_recursive", () -> PassengerRecursiveCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RidingRootCondition>> RIDING_ROOT = REGISTRY.register("riding_root", () -> RidingRootCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageToggleEntityCondition>> STORAGE_TOGGLE = REGISTRY.register("storage_toggle", () -> StorageToggleEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageTimerEntityCondition>> STORAGE_TIMER = REGISTRY.register("storage_timer", () -> StorageTimerEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageResourceEntityCondition>> STORAGE_RESOURCE = REGISTRY.register("storage_resource", () -> StorageResourceEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageTargetEntityCondition>> STORAGE_TARGET = REGISTRY.register("storage_target", () -> StorageTargetEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageChargesEntityCondition>> STORAGE_CHARGES = REGISTRY.register("storage_charges", () -> StorageChargesEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageCooldownEntityCondition>> STORAGE_COOLDOWN = REGISTRY.register("storage_cooldown", () -> StorageCooldownEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasEquippedItemCondition>> HAS_EQUIPPED_ITEM = REGISTRY.register("has_equipped_item", () -> HasEquippedItemCondition.CODEC);
 }

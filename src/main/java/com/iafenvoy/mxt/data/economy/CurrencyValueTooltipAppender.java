@@ -39,7 +39,10 @@ public final class CurrencyValueTooltipAppender {
         CurrencyValueService.definition(registries, stack).ifPresent(definition -> {
             boolean valid = definition.unavailableWhen().isEmpty() || player != null && definition.unavailableWhen().stream().noneMatch(entry ->
                     entry.condition().test(player, stack, FormulaContext.EMPTY));
-            long value = valid ? definition.value() : 0L;
+            // The number shown is the settled one rather than the declared denomination: an item's quality
+            // can change what a unit is worth, and a tooltip that kept printing the raw value would
+            // disagree with what the currency actually pays out. Without a quality it is that raw value.
+            long value = valid ? CurrencyValueService.unitValue(registries, player, stack, FormulaContext.EMPTY).orElse(0L) : 0L;
             builder.accept(Component.translatable("item.mxt.currency_value", value).withStyle(ChatFormatting.GOLD));
             if (!valid) {
                 CurrencyValueService.unavailableReason(registries, player, stack)

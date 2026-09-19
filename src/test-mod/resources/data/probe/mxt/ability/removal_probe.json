@@ -1,0 +1,10 @@
+{
+  "type": "mxt:modifier",
+  "condition": {"type": "mxt:always_true"},
+  "modifiers": [
+    {"attribute": "minecraft:armor", "id": "probe:removal/armor", "amount": 1, "operation": "add_value"},
+    {"attribute": "minecraft:attack_damage", "id": "probe:removal/attack", "amount": 1, "operation": "add_value"},
+    {"attribute": "minecraft:oxygen_bonus", "id": "probe:removal/oxygen", "amount": 1, "operation": "add_value"},
+    {"attribute": "minecraft:armor_toughness", "id": "probe:removal/toughness", "amount": 1, "operation": "add_value"}
+  ]
+}

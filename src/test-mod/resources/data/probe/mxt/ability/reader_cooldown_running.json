@@ -1,0 +1,5 @@
+{
+  "type": "mxt:modifier",
+  "condition": {"type": "mxt:storage_cooldown", "family": "mxt:ability", "id": "probe:cooldown_probe", "remaining": {"min": 1}, "ready": false},
+  "modifiers": [{"attribute": "minecraft:mining_efficiency", "id": "probe:ability/reader_cooldown_running", "amount": 2, "operation": "add_value"}]
+}

@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.alchemy;
 import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Post;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent.Pre;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -33,15 +34,42 @@ public final class AlchemySession {
 
     public static StartResult start(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, int furnaceTier,
                                     List<Identifier> inputs, FormulaContext context) {
+        return start(holder, furnaceTier, inputs, context, ItemQualityService.DEFAULT_MODIFIER);
+    }
+
+    /**
+     * Starts a batch. The duration is read through the alchemy modifier of the batch's own ingredients, so
+     * a recipe brewed from a quality-bearing herb finishes in less time: the modifier divides the declared
+     * duration, because it is declared as an improvement (a grade above one is presented as raising the
+     * alchemy effect) and the brewing time is the alchemy figure this settlement owns. The duration rather
+     * than the success window, because the ingredients are released the moment the session locks - the
+     * workstation clears its input list - while the temperature tolerance is re-read from the recipe on
+     * every tick, so only a value settled here can still see what was put in. A modifier of exactly one,
+     * which is the codec default and therefore every existing quality, leaves the recipe's own duration.
+     */
+    public static StartResult start(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, int furnaceTier,
+                                    List<Identifier> inputs, FormulaContext context, double alchemyModifier) {
         AlchemyRecipe recipe = holder.value().definition();
         if (NeoForge.EVENT_BUS.post(new Pre(holder, inputs)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         if (furnaceTier < recipe.minimumFurnaceTier()) return StartResult.rejected(Failure.FURNACE_TIER);
         if (!sameMultiset(recipe.inputs(), inputs)) return StartResult.rejected(Failure.INPUTS);
-        double duration = recipe.duration().evaluate(context);
+        double duration = effectiveDuration(recipe.duration().evaluate(context), alchemyModifier);
         if (!Double.isFinite(duration) || duration <= 0.0D || duration > Long.MAX_VALUE)
             return StartResult.rejected(Failure.INVALID_FORMULA);
         return StartResult.started(new AlchemySession(holder, Math.max(1L, Math.round(duration)), false, false));
+    }
+
+    /**
+     * The duration a batch actually runs for. A scaled duration that is not a positive finite number
+     * leaves the declared one alone, so an unusable modifier can only ever mean "no change" and never a
+     * batch that cannot be started. The result is deliberately not rounded here: the caller rounds the
+     * tick count, and rounding twice would answer a question the recipe did not ask.
+     */
+    static double effectiveDuration(double duration, double alchemyModifier) {
+        if (alchemyModifier == ItemQualityService.DEFAULT_MODIFIER) return duration;
+        double scaled = duration / alchemyModifier;
+        return Double.isFinite(scaled) && scaled > 0.0D ? scaled : duration;
     }
 
     /**

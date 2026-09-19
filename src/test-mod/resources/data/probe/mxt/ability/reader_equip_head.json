@@ -1,0 +1,9 @@
+{
+  "type": "mxt:modifier",
+  "condition": {
+    "type": "mxt:has_equipped_item",
+    "slots": ["head"],
+    "item_condition": {"type": "mxt:item_matcher", "items": ["minecraft:red_mushroom"]}
+  },
+  "modifiers": [{"attribute": "minecraft:safe_fall_distance", "id": "probe:ability/reader_equip_head", "amount": 32, "operation": "add_value"}]
+}

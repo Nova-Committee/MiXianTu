@@ -349,6 +349,10 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
         }
         if (!covered)
             lines.add(Component.translatable("tooltip.mxt.forging.materials.insufficient").withStyle(ChatFormatting.DARK_GRAY));
+        // A blueprint with a step limit can be failed by taking too many strikes, and nothing else on this
+        // screen says so: without the number the player cannot tell a generous plan from a tight one.
+        if (blueprint.hasStepLimit())
+            lines.add(Component.translatable("tooltip.mxt.forging.step_limit", blueprint.maxSteps()).withStyle(ChatFormatting.GRAY));
         graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
     }
 

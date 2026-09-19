@@ -1,0 +1,5 @@
+{
+  "type": "mxt:modifier",
+  "condition": {"type": "mxt:storage_charges", "family": "mxt:ability", "id": "probe:storage_probe", "remaining": {"min": 2}},
+  "modifiers": [{"attribute": "minecraft:safe_fall_distance", "id": "probe:ability/reader_charges_full", "amount": 1, "operation": "add_value"}]
+}

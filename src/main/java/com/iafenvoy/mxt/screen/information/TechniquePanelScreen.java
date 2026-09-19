@@ -234,7 +234,7 @@ public final class TechniquePanelScreen extends Screen {
                 graphics.fill(rowX, separatorY, rowRight, separatorY + 1, DIVIDER_DARK_COLOR);
                 graphics.fill(rowX, separatorY + 1, rowRight, separatorY + 2, DIVIDER_LIGHT_COLOR);
 
-                if (hovered) graphics.setTooltipForNextFrame(font, this.tooltip(), mouseX, mouseY);
+                if (hovered) graphics.setComponentTooltipForNextFrame(font, this.tooltip(), mouseX, mouseY);
             }
 
             /**
@@ -270,14 +270,16 @@ public final class TechniquePanelScreen extends Screen {
 
             /**
              * The technique's name, plus the level's own ID while it has one: the row itself only has room
-             * for the level's short display name or its rank.
+             * for the level's short display name or its rank. The grade is the one thing a row can never
+             * show, so it is spelled out here.
              */
-            private Component tooltip() {
+            private List<Component> tooltip() {
                 MutableComponent line = DefinitionText.name(this.row.technique(), "technique").copy();
                 if (this.row.hasStage())
                     line.append(" ").append(Component.literal(HolderHelper.id(this.row.stage()).toString())
                             .withStyle(ChatFormatting.DARK_GRAY));
-                return line;
+                return List.of(line, Component.translatable("screen.mxt.technique_panel.grade",
+                        gradeText(this.row.technique().value().grade())).withStyle(ChatFormatting.GRAY));
             }
 
             @Override
@@ -290,6 +292,15 @@ public final class TechniquePanelScreen extends Screen {
     private static String format(double value) {
         return Math.abs(value - Math.rint(value)) < 1.0E-6D
                 ? Long.toString(Math.round(value)) : String.format("%.1f", value);
+    }
+
+    /**
+     * A grade is free-form text a data pack chooses, so it is shown exactly as written unless the language file
+     * names that value, which is what lets a pack translate its own grades without this code knowing them.
+     */
+    private static Component gradeText(String grade) {
+        String key = "mxt.technique_grade." + grade;
+        return Language.getInstance().has(key) ? Component.translatable(key) : Component.literal(grade);
     }
 
     private static String abbreviate(Font font, String text, int width) {

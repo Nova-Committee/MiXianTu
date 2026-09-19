@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
@@ -17,11 +18,14 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntFunction;
 
@@ -76,15 +80,72 @@ public final class ForgingService {
 
     public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
                                       IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
+        return finish(player, surface, blueprint, session, qualityForExtraSteps, ItemQualityService.DEFAULT_MODIFIER);
+    }
+
+    /**
+     * Settles a complete session into its result, reading the extra steps through the forging modifier of
+     * the session's own locked materials. The modifier divides the extra count because extra steps are the
+     * penalty the smith paid for not finishing optimally: a material of higher grade makes each of those
+     * spare strikes count for less, so the piece reaches the better tier of the quality curve it would
+     * otherwise have earned. A modifier of exactly one - the codec default, and therefore every existing
+     * quality - selects the tier from the session's own count, unchanged. The count stored in
+     * {@link ForgingResultComponent} stays the session's own, because that component reports what the
+     * smith did rather than what the material was worth.
+     */
+    static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
+                               IntFunction<Holder<ItemQuality>> qualityForExtraSteps, double forgingModifier) {
         Failure refusal = postEvent(new CompletePre(player, surface.pos(), blueprint, new ForgingSessionView(session)));
         if (refusal != null) return FinishResult.rejected(refusal);
         if (!session.canComplete()) return FinishResult.rejected(Failure.NOT_COMPLETE);
         int extra = session.extraSteps();
-        Holder<ItemQuality> quality = qualityForExtraSteps.apply(extra);
+        Holder<ItemQuality> quality = qualityForExtraSteps.apply(effectiveExtraSteps(extra, forgingModifier));
         if (quality == null) return FinishResult.rejected(Failure.INVALID_BLUEPRINT);
         ForgingResultComponent result = new ForgingResultComponent(HolderHelper.id(blueprint), session.value(), session.steps(), session.optimalSteps(), extra, quality);
         notifyListeners(new CompletePost(player, surface.pos(), blueprint, new ForgingSessionView(session), result));
         return FinishResult.finished(result);
+    }
+
+    /**
+     * The forging modifier of a settlement's own input: the lowest modifier among the material stacks the
+     * session locked, and {@link ItemQualityService#DEFAULT_MODIFIER} when none of them resolves a quality.
+     * The lowest, because a piece is only as good as its worst material, and because a batch that mixes one
+     * graded ingredient with ungraded ones must not read better than that one ingredient alone.
+     *
+     * <p>The stacks are the blueprint's declared id and count, which is what the session records when it
+     * locks its materials. A quality those items resolve from the datapack - a spirit herb entry, or a
+     * binding's quality group default - is therefore visible here, while a quality component that existed
+     * only on the particular stack that was consumed is not: the session keeps what it took, not the item
+     * it was taken from. Reading the locked materials rather than the tool or blueprint slots is deliberate:
+     * those two are never consumed and stay editable during a session, so their quality at settlement would
+     * describe the table as it is now instead of the input this piece was forged from.
+     */
+    static double materialModifier(RegistryAccess access, List<ItemStack> consumed, FormulaContext context) {
+        double modifier = ItemQualityService.DEFAULT_MODIFIER;
+        boolean graded = false;
+        for (ItemStack stack : consumed) {
+            Optional<Holder<ItemQuality>> quality = ItemQualityService.find(access, stack);
+            if (quality.isEmpty()) continue;
+            double value = ItemQualityService.modifier(quality.orElseThrow(), ItemQuality::forgingModifier, context);
+            modifier = graded ? Math.min(modifier, value) : value;
+            graded = true;
+        }
+        return modifier;
+    }
+
+    /**
+     * The extra-step count the blueprint's quality curve is read with. A modifier above one earns the piece
+     * the better tier of a smith who needed fewer spare strikes; one below one costs it the worse tier. A
+     * count that would leave the integer range, or a modifier that is not a usable number at all, leaves
+     * the session's own extra steps in place rather than inventing a tier no session produced. The scaled
+     * count is rounded to whole steps, because a session counts strikes and the quality curve only knows
+     * whole extra steps.
+     */
+    static int effectiveExtraSteps(int extraSteps, double forgingModifier) {
+        if (forgingModifier == ItemQualityService.DEFAULT_MODIFIER) return extraSteps;
+        double scaled = extraSteps / forgingModifier;
+        if (!Double.isFinite(scaled) || scaled < 0.0D || scaled > Integer.MAX_VALUE) return extraSteps;
+        return (int) Math.round(scaled);
     }
 
     /**
