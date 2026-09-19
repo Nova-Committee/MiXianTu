@@ -1,0 +1,9 @@
+{
+  "windup": 40,
+  "darken_sky": true,
+  "timeline": [
+    { "type": "mxt:idle", "duration": 20 },
+    { "type": "mxt:action", "action": { "type": "mxt:apply_effect", "effect": "minecraft:glowing", "duration_ticks": 200 } }
+  ],
+  "success_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 2 }
+}

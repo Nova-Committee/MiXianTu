@@ -1,0 +1,7 @@
+{
+  "darken_sky": false,
+  "timeline": [
+    { "type": "mxt:idle", "duration": 60 },
+    { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:spirit_power", "amount": 1 } }
+  ]
+}

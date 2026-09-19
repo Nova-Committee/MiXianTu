@@ -22,7 +22,8 @@ import java.util.List;
 
 /**
  * Consumer for a persisted tribulation timeline: a run is installed by copying the definition's timeline into the
- * attachment, and the beats at the head of that queue are consumed until it is empty or a beat fails.
+ * attachment, its wind-up (when the definition has one) runs down first, and then the beats at the head of that
+ * queue are consumed until it is empty or a beat fails.
  *
  * <p>The attachment owns the queue and the state of the beat at its head, so nothing here is remembered between
  * ticks: every decision is read from, and written back to, the attachment. The beat being consumed works on a
@@ -58,9 +59,13 @@ public final class TribulationService {
         }
         if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
-        // Nothing is consumed here: the timeline is copied into the attachment and its first entry begins on
-        // the next tick, like every other one.
-        data.start(tribulation, timeline);
+        // The wind-up is resolved here, through the same rule every wait uses, and stored with the run: the
+        // countdown a player watches is therefore the number of ticks that will really pass, and a restart
+        // resumes the count instead of starting it over.
+        long windup = Math.max(0L, probe.ticks(definition.windup()));
+        // Nothing is consumed here: the timeline is copied into the attachment, its wind-up runs down first, and
+        // its first entry begins on the tick after that.
+        data.start(tribulation, timeline, windup);
         NeoForge.EVENT_BUS.post(new StartPost(data, tribulation));
         return StartResult.accepted();
     }
@@ -72,6 +77,12 @@ public final class TribulationService {
         if (data.peek() == null) {
             if (data.tribulation().isPresent()) data.clear();
             return TickResult.idle();
+        }
+        // The wind-up is the run counting itself in: the timeline has not started, so nothing is consumed, no
+        // beat begins and no state is written while it lasts.
+        if (data.windup() > 0L) {
+            data.tickWindup();
+            return TickResult.running();
         }
         Tribulation definition = tribulation.value();
         FormulaContext runContext = tribulationContext(entity, context);

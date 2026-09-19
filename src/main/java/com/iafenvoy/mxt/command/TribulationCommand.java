@@ -47,7 +47,8 @@ import static net.minecraft.commands.Commands.literal;
  * <p>The run belongs to an entity — the caller by default, or a named target, which is what lets a trial be
  * reproduced on a summon instead of only on a player. {@code status} reports the state slot in the spelling the
  * codec saves, which is the one form that shows exactly what the current entry has kept: the ticks an idle has
- * left, or nothing but the marker that the entry began.</p>
+ * left, or nothing but the marker that the entry began. A run that is still counting itself in has no beat to
+ * report at all, so it reports what is left of its wind-up instead.</p>
  */
 public final class TribulationCommand {
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("tribulation")
@@ -97,7 +98,10 @@ public final class TribulationCommand {
                     Component.translatable("command.mxt.tribulation.failure." + name(result.failure()))));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.tribulation.started", DefinitionText.name(tribulation),
+        source.sendSuccess(() -> data.windup() > 0L
+                ? Component.translatable("command.mxt.tribulation.started_windup", DefinitionText.name(tribulation),
+                data.remaining(), entity.getDisplayName(), data.windup())
+                : Component.translatable("command.mxt.tribulation.started", DefinitionText.name(tribulation),
                 data.remaining(), entity.getDisplayName()), true);
         return 1;
     }
@@ -124,6 +128,13 @@ public final class TribulationCommand {
         if (data.tribulation().isEmpty()) {
             source.sendFailure(Component.translatable("command.mxt.tribulation.none", entity.getDisplayName()));
             return 0;
+        }
+        // A run that is still counting itself in has not begun: reporting a beat ordinal here would claim the
+        // timeline is under way when nothing has been consumed yet.
+        if (data.windup() > 0L) {
+            source.sendSuccess(() -> Component.translatable("command.mxt.tribulation.status_windup",
+                    DefinitionText.name(data.tribulation().get()), entity.getDisplayName(), data.windup()), false);
+            return 1;
         }
         Component state = data.state().map(TribulationCommand::describeState)
                 .orElseGet(() -> Component.translatable("command.mxt.tribulation.state_not_begun"));

@@ -6,6 +6,7 @@
     "MinecraftServerRuntimeAccessor"
   ],
   "client": [
+    "BossHealthOverlayMixin",
     "ClientInputAccessor"
   ],
   "injectors": {

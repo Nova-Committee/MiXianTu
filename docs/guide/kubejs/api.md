@@ -498,7 +498,7 @@ MxtEvents.friendRelation(event => {
 | `realmInstance` | `EnterPre`、`EnterPost`、`Exit` | `level()`、`definition()`（`Holder<RealmInstance>`）、`member()`；只有 `EnterPre` 可取消。 |
 | `soul` | `TransferPre`、`TransferPost`、`ReclaimPre`、`ReclaimPost` | `entity()`、`soul()`；所有 `*Pre` 可取消。 |
 | `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`BREAK`、`RECALL`、`RELEASE`；`Pre` 可取消。 |
-| `tribulation` | `StartPre`、`StartPost`、`EntryPre`、`EntryPost`、`Complete` | `tribulation()`（`Holder<Tribulation>`）、`data()`；两种节拍事件另有 `index()`（第几拍，从 0 数）与 `entry()`。`data()` 就是附件本身：`peek()`/`remaining()` 读队首与还剩几拍，`state()` 读当前节拍写下的现场。`StartPre` 可取消（拒绝这次启动），`EntryPre` 可取消（跳过该节拍）。 |
+| `tribulation` | `StartPre`、`StartPost`、`EntryPre`、`EntryPost`、`Complete` | `tribulation()`（`Holder<Tribulation>`）、`data()`；两种节拍事件另有 `index()`（第几拍，从 0 数）与 `entry()`。`data()` 就是附件本身：`peek()`/`remaining()` 读队首与还剩几拍，`state()` 读当前节拍写下的现场，`windup()` 读启动前摇还剩多少 tick（0 表示已经在走时间线、或这场天劫没有前摇）。`StartPre` 可取消（拒绝这次启动），`EntryPre` 可取消（跳过该节拍）。 |
 
 ### `forging` 的两条额外约定
 

@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.data.timeline.TimelineEntry;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -15,8 +16,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The running tribulation: which definition accepted the attempt, the beats that are still to be consumed, and
- * the state of the beat at the head of that queue.
+ * The running tribulation: which definition accepted the attempt, the wind-up it still has to wait out, the beats
+ * that are still to be consumed, and the state of the beat at the head of that queue.
  *
  * <p>The queue <em>is</em> the cursor. Starting a run copies the definition's timeline into it, the head is the
  * beat being consumed, and finishing a beat pops it, so nothing has to be kept in step with a list index. The
@@ -26,30 +27,54 @@ import java.util.Optional;
  *
  * <p>Only one beat runs at a time, so a run keeps a single state value rather than a store: {@link #state()} is
  * that value, written by the beat at the head and by nothing else. An empty state means that beat has not begun,
- * which is what makes its start fire once and only once.</p>
+ * which is what makes its start fire once and only once. The wind-up lives beside it rather than in it, because
+ * it belongs to the run and not to a beat: while {@link #windup()} is positive no beat has begun and the queue
+ * has not been touched, so the countdown survives a restart exactly like the queue does.</p>
  */
 public final class TribulationAttachment extends ShouldSyncAttachment {
     public static final MapCodec<TribulationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(TribulationAttachment::tribulation),
             TimelineEntry.CODEC.listOf().optionalFieldOf("timeline", List.of()).forGetter(TribulationAttachment::beats),
-            DataStorage.CODEC.optionalFieldOf("state").forGetter(TribulationAttachment::state)
+            DataStorage.CODEC.optionalFieldOf("state").forGetter(TribulationAttachment::state),
+            Codec.LONG.optionalFieldOf("windup", 0L).forGetter(TribulationAttachment::windup)
     ).apply(i, TribulationAttachment::new));
     private Optional<Holder<Tribulation>> tribulation;
     private final Deque<TimelineEntry> queue;
     private Optional<DataStorage> state;
+    private long windup;
 
     public TribulationAttachment() {
-        this(Optional.empty(), List.of(), Optional.empty());
+        this(Optional.empty(), List.of(), Optional.empty(), 0L);
     }
 
-    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline, Optional<DataStorage> state) {
+    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline,
+                                  Optional<DataStorage> state, long windup) {
         this.tribulation = tribulation;
         this.queue = new ArrayDeque<>(timeline);
         this.state = state;
+        this.windup = windup;
     }
 
     public Optional<Holder<Tribulation>> tribulation() {
         return this.tribulation;
+    }
+
+    /**
+     * How many ticks of the run's wind-up are left, zero once the timeline is the thing running. The countdown is
+     * resolved when the run starts and then only ever counts down, so it is what the run will really wait out.
+     */
+    public long windup() {
+        return this.windup;
+    }
+
+    /**
+     * Spends one tick of the wind-up. The consumer calls this instead of touching the queue, so nothing is
+     * consumed and no beat begins while the run is still counting itself in.
+     */
+    public void tickWindup() {
+        if (this.windup <= 0L) return;
+        this.windup--;
+        this.markDirty();
     }
 
     /**
@@ -100,14 +125,15 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
     }
 
     /**
-     * Installs a run: the definition's timeline is copied into the queue, and its first beat begins on the next
-     * tick that reaches it.
+     * Installs a run: the definition's timeline is copied into the queue and the wind-up it has to wait out is
+     * stored with it. The countdown runs down first, and the first beat begins on the tick after it reaches zero.
      */
-    public void start(Holder<Tribulation> tribulation, List<TimelineEntry> timeline) {
+    public void start(Holder<Tribulation> tribulation, List<TimelineEntry> timeline, long windup) {
         this.tribulation = Optional.of(tribulation);
         this.queue.clear();
         this.queue.addAll(timeline);
         this.state = Optional.empty();
+        this.windup = Math.max(0L, windup);
         this.markDirty();
     }
 
@@ -115,6 +141,7 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
         this.tribulation = Optional.empty();
         this.queue.clear();
         this.state = Optional.empty();
+        this.windup = 0L;
         this.markDirty();
     }
 

@@ -1,1 +1,1 @@
-{ "values": ["mxt_test:probe_timeline", "mxt_test:probe_instant", "mxt_test:probe_gate"] }
+{ "values": ["mxt_test:probe_timeline", "mxt_test:probe_instant", "mxt_test:probe_gate", "mxt_test:probe_windup", "mxt_test:probe_no_darken"] }
