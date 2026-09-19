@@ -9,7 +9,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 
 import java.util.Locale;
 
@@ -50,7 +50,7 @@ public final class TribulationClientEffects {
     }
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick(Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null) return;
         TribulationAttachment run = activeRun();
@@ -60,7 +60,7 @@ public final class TribulationClientEffects {
             countdownShown = true;
         } else if (countdownShown) {
             countdownShown = false;
-            minecraft.gui.setOverlayMessage(null, false);
+            minecraft.gui.setOverlayMessage(Component.empty(), false);
         }
     }
 

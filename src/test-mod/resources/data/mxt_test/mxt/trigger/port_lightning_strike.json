@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:lightning_strike"},
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:sword_mastery", "amount": 100}
+}

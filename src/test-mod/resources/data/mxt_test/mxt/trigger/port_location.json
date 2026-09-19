@@ -1,0 +1,14 @@
+{
+  "trigger": {
+    "type": "mxt:location",
+    "player": [
+      {
+        "condition": "minecraft:entity_properties",
+        "entity": "this",
+        "predicate": {"location": {"position": {"y": {"min": -64}}}}
+      }
+    ]
+  },
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 1}
+}

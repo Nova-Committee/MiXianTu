@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:ride_entity_in_lava"},
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 32}
+}

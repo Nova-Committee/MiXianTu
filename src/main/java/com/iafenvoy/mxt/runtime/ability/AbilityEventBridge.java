@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
-import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.event.AbilityTriggeredEvent.Post;
 import com.iafenvoy.mxt.event.AbilityTriggeredEvent.Pre;
@@ -27,6 +26,7 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.mxt.runtime.trigger.TriggerPublishing;
 import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrator;
 import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrators;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
@@ -308,17 +308,7 @@ public final class AbilityEventBridge {
 
     private static void dispatch(Identifier signalType, LivingEntity entity, FormulaContext context,
                                  Consumer<TriggerContext> enrich) {
-        // Nothing to react with, so nothing to build: the tick signal is published by every living entity on
-        // every tick, and only the entities something listens to pay for a context.
-        if (!TriggerDispatcher.hasListener(signalType)) return;
-        TriggerContext triggerContext = new TriggerContext()
-                .actor(entity)
-                .level(entity.level())
-                .formula(context);
-        enrich.accept(triggerContext);
-        TriggerDispatcher.publish(new TriggerSignal(
-                signalType,
-                triggerContext, null, entity.level().getGameTime()));
+        TriggerPublishing.publish(signalType, entity, context, enrich);
     }
 
     /**

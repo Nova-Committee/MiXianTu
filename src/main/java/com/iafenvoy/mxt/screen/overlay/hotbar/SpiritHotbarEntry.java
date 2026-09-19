@@ -9,6 +9,8 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.DefinitionText;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -33,13 +35,19 @@ public record SpiritHotbarEntry(Identifier id) implements HotbarEntry {
 
     @Override
     public Optional<IconReference> icon() {
-        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, this.id).flatMap(resource -> resource.value().icon());
+        // The overlay renders on a client, which has only the registry access it was synchronised with: the
+        // server-backed lookup would throw on a dedicated server.
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return Optional.empty();
+        return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.RESOURCE, this.id)
+                .flatMap(resource -> resource.value().icon());
     }
 
     @Override
     public float cooldown(Player player) {
         if (player == null) return 0.0F;
-        Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, this.id).orElse(null);
+        Holder<Resource> resource = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.RESOURCE, this.id)
+                .orElse(null);
         if (resource == null) return 0.0F;
         SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
         long remaining = cooldowns.cooldowns().getOrDefault(resource, -1L) - player.level().getGameTime();

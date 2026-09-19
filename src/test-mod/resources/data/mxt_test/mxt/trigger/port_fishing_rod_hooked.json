@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:fishing_rod_hooked", "rod": {"items": "minecraft:fishing_rod"}},
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 1}
+}

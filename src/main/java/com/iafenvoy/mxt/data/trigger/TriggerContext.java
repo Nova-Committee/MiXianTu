@@ -103,4 +103,21 @@ public final class TriggerContext extends Context {
         this.formula = value == null ? FormulaContext.EMPTY : value;
         return this;
     }
+
+    /**
+     * Stores a payload value a formula cannot hold - a holder, a dimension key, a collection. Numbers belong
+     * in the formula context instead, because a formula may read them.
+     */
+    public <T> TriggerContext payload(String key, @Nullable T value) {
+        this.set(key, value);
+        return this;
+    }
+
+    /**
+     * Reads a payload value stored by a publisher. The key decides the type, so a reader must be the matcher
+     * the publisher was written for; {@link TriggerPayload} owns the keys.
+     */
+    public <T> @Nullable T payload(String key) {
+        return this.<T>get(key).orElse(null);
+    }
 }

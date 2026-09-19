@@ -1,0 +1,9 @@
+{
+  "trigger": {
+    "type": "mxt:item_durability_changed",
+    "durability": {"max": 1560},
+    "delta": {"max": -1}
+  },
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 4096}
+}

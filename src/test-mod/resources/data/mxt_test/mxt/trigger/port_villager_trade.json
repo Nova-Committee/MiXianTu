@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:villager_trade", "item": {"items": "minecraft:emerald"}},
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 1}
+}

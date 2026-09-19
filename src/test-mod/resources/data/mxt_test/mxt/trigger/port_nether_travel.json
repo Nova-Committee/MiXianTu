@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:nether_travel", "distance": {"horizontal": {"min": 0}}},
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 64}
+}

@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:thrown_item_picked_up_by_player", "item": {"items": "minecraft:stone"}},
+  "condition": {"type": "mxt:always_true"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 128}
+}

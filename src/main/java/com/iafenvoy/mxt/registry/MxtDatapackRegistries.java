@@ -141,6 +141,16 @@ public final class MxtDatapackRegistries {
     }
 
     /**
+     * Resolves one enabled entry from a client-synchronised datapack registry lookup. Client code must use this
+     * rather than {@link #holder(ResourceKey, Identifier)}: that one reads the server's registries, which exist
+     * on a client only while it runs an integrated server.
+     */
+    public static <T> Optional<Reference<T>> holder(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
+        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
+        return access.lookupOrThrow(key).get(ResourceKey.create(key, id)).filter(holder -> !holder.is(disabled));
+    }
+
+    /**
      * Resolves an enabled entry from a client-synchronised datapack registry lookup.
      */
     public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
