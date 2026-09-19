@@ -1,4 +1,11 @@
 {
   "type": "mxt:modifier",
-  "query_tags": ["mxt_test:artifact/owner"]
+  "modifiers": [
+    {
+      "attribute": "minecraft:armor",
+      "id": "mxt_test:ability/artifact_guard",
+      "amount": 2,
+      "operation": "add_value"
+    }
+  ]
 }

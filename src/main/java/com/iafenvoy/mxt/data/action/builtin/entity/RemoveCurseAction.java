@@ -22,7 +22,7 @@ public record RemoveCurseAction(Holder<Curse> curse) implements EntityAction {
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        CurseService.remove(entity, this.curse, Reason.CLEANSED, entity.level().getGameTime());
+        CurseService.remove(entity, this.curse, Reason.CLEANSED, entity.level().getGameTime(), ctx.formula());
     }
 
     @Override

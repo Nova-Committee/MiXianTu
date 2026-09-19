@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.data.storage.ChargesDataStorage;
 import com.iafenvoy.mxt.data.storage.CooldownDataStorage;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 
 import java.util.Optional;
@@ -48,6 +49,33 @@ public final class AbilityStorage {
      */
     public static ChargesDataStorage charges(AbilityAttachment attachment, Holder<Ability> ability, double remaining) {
         return get(attachment, ability, ChargesDataStorage.class).orElse(ChargesDataStorage.INSTANCE).withRemaining(remaining);
+    }
+
+    /**
+     * Gives one charge back when the declaration's {@code recharge_ticks} have passed since the count was last
+     * written. That write is the interval's anchor and both spending and recharging make it, so a caller may run
+     * this every tick and still get at most one step per interval. Nothing is written while the pool is full, or
+     * when it was never written at all, which reads as full: a tick that changes no state leaves the attachment
+     * clean instead of dirtying it sixty times a second.
+     *
+     * @param declaration the kind the ability declares, which carries {@code maximum} and {@code recharge_ticks}
+     * @return whether a charge was added
+     */
+    public static boolean recharge(AbilityAttachment attachment, Holder<Ability> ability,
+                                   ChargesDataStorage declaration, long gameTime, FormulaContext context) {
+        Optional<ChargesDataStorage> stored = get(attachment, ability, ChargesDataStorage.class);
+        if (stored.isEmpty() || stored.get().remaining().isEmpty()) return false;
+        double remaining = stored.get().remaining().get();
+        double maximum = declaration.maximum().evaluate(context);
+        if (!Double.isFinite(remaining) || !Double.isFinite(maximum) || remaining >= maximum) return false;
+        double ticks = declaration.rechargeTicks().evaluate(context);
+        // A declaration without a usable interval never recharges; an interval of zero would otherwise refill
+        // the pool with a write on every tick.
+        if (!Double.isFinite(ticks) || ticks <= 0.0D) return false;
+        if (gameTime - changedAt(attachment, ability, ChargesDataStorage.class) < Math.max(1L, Math.round(ticks)))
+            return false;
+        set(attachment, ability, stored.get().withRemaining(Math.min(maximum, remaining + 1.0D)), gameTime);
+        return true;
     }
 
     /**

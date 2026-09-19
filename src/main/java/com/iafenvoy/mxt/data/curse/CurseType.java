@@ -5,11 +5,15 @@ import com.iafenvoy.mxt.data.curse.CurseType.Empty;
 import com.iafenvoy.mxt.data.curse.CurseType.Permanent;
 import com.iafenvoy.mxt.data.curse.CurseType.Timed;
 import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
+import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
+import java.util.List;
+import java.util.OptionalLong;
 import java.util.function.Function;
 
 /**
@@ -23,15 +27,21 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
 
     MapCodec<? extends CurseType> codec();
 
-    long expiry(long duration, long gameTime);
+    /**
+     * When an instance applied now with that resolved duration expires, where a negative value means it never
+     * does.
+     * <p>
+     * An empty result means the resolution cannot be applied at all. Callers reject the application instead of
+     * throwing, so one malformed definition - a formula that produced a nonsense duration, a definition whose
+     * duration was edited while instances existed - can never break a tick or an event handler.
+     */
+    OptionalLong expiry(long duration, long gameTime);
 
-    static CurseType forIdentifier(Identifier id) {
-        return switch (id.getNamespace().equals(MiXianTu.MOD_ID) ? id.getPath() : "") {
-            case "timed" -> Timed.INSTANCE;
-            case "permanent" -> Permanent.INSTANCE;
-            case "triggered" -> Triggered.INSTANCE;
-            default -> Empty.INSTANCE;
-        };
+    /**
+     * Whether the type runs no behaviour of its own, which is how a definition can exist as a pure marker.
+     */
+    default boolean inert() {
+        return false;
     }
 
     enum Timed implements CurseType {
@@ -49,9 +59,8 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
         }
 
         @Override
-        public long expiry(long duration, long gameTime) {
-            if (duration <= 0L) throw new IllegalStateException("Timed curse duration must be positive");
-            return Math.addExact(gameTime, duration);
+        public OptionalLong expiry(long duration, long gameTime) {
+            return duration <= 0L ? OptionalLong.empty() : OptionalLong.of(Math.addExact(gameTime, duration));
         }
     }
 
@@ -70,17 +79,24 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
         }
 
         @Override
-        public long expiry(long duration, long gameTime) {
-            return -1L;
+        public OptionalLong expiry(long duration, long gameTime) {
+            return OptionalLong.of(-1L);
         }
     }
 
     /**
-     * A curse whose application/removal effects are driven by the owning event bridge.
+     * A curse whose periodic behaviour is driven by the trigger system instead of a tick interval: while the
+     * curse is held, every signal one of its {@code triggers} matches runs {@code on_tick} once. It lasts like
+     * {@code mxt:timed} when it declares a duration and like {@code mxt:permanent} when it does not.
      */
-    enum Triggered implements CurseType {
-        INSTANCE;
-        public static final MapCodec<Triggered> CODEC = MapCodec.unit(INSTANCE);
+    record Triggered(List<Trigger> triggers) implements CurseType {
+        public static final MapCodec<Triggered> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+                Trigger.CODEC.listOf().optionalFieldOf("triggers", List.of()).forGetter(Triggered::triggers)
+        ).apply(i, Triggered::new));
+
+        public Triggered {
+            triggers = List.copyOf(triggers);
+        }
 
         @Override
         public Identifier id() {
@@ -93,14 +109,13 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
         }
 
         @Override
-        public long expiry(long duration, long gameTime) {
-            if (duration <= 0L) return -1L;
-            return Math.addExact(gameTime, duration);
+        public OptionalLong expiry(long duration, long gameTime) {
+            return duration <= 0L ? OptionalLong.of(-1L) : OptionalLong.of(Math.addExact(gameTime, duration));
         }
     }
 
     /**
-     * A no-expiry curse type for definitions that intentionally have no lifecycle.
+     * A marker type: it never expires and runs no behaviour, so a definition can exist while doing nothing.
      */
     enum Empty implements CurseType {
         INSTANCE;
@@ -117,8 +132,13 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
         }
 
         @Override
-        public long expiry(long duration, long gameTime) {
-            return -1L;
+        public OptionalLong expiry(long duration, long gameTime) {
+            return OptionalLong.of(-1L);
+        }
+
+        @Override
+        public boolean inert() {
+            return true;
         }
     }
 }

@@ -2,7 +2,7 @@
 title: 其他注册表
 ---
 
-- `curse`：可被多个模块引用的诅咒定义与持续类型。
+- `curse`：可被多个模块引用的诅咒定义与持续类型；到期与被解毒各有一个行为，而「谁能解我」不由诅咒决定——解毒剂用 `mxt:remove_curses_by_tag` 声明它能解的 `mxt:curse` 标签，标签文件列出诅咒。物品可以携带诅咒（`mxt:curse_container`，装上即施加、脱下即移除），`display_condition` 决定它在人物信息面板里露不露面。详见[数据包格式](../../数据包格式.md#curse)。
 - `creature_profile` / `contract_type`：生物档案和契约规则，框架不提供具体生物数值。
 - `realm_instance`：运行时维度实例入口。
 - `spirit_herb`：绑定现有物品的灵植数据。

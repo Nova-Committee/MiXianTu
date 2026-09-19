@@ -1,0 +1,11 @@
+{
+  "type": "mxt:active",
+  "slot": "utility",
+  "cooldown": 0,
+  "condition": {
+    "type": "mxt:has_curse",
+    "curse": "mxt_test:curse_probe",
+    "remaining_ticks": {"max": 50}
+  },
+  "entity_action": {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 64}
+}

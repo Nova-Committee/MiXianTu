@@ -9,6 +9,10 @@ import java.util.*;
 
 /**
  * Applies stacking and expiry rules without allowing consumers to mutate curse state directly.
+ * <p>
+ * Nothing here throws on a definition it cannot honour: an application it cannot resolve an expiry for comes
+ * back empty and is rejected by the caller, which is what keeps a malformed definition from taking a tick or an
+ * event handler down with it.
  */
 public final class CurseLedger {
     private final Map<Holder<Curse>, CurseInstance> instances = new LinkedHashMap<>();
@@ -20,67 +24,62 @@ public final class CurseLedger {
         this.instances.putAll(instances);
     }
 
-    public synchronized CurseInstance apply(Holder<Curse> curse, int requestedStacks, long gameTime, FormulaContext context, String source) {
-        return this.apply(curse, requestedStacks, gameTime, context, source, Optional.empty());
-    }
-
-    public synchronized CurseInstance apply(Holder<Curse> curse, int requestedStacks, long gameTime,
-                                            FormulaContext context, String source, Optional<Long> durationOverride) {
-        if (requestedStacks <= 0) {
-            throw new IllegalArgumentException("requestedStacks must be positive");
-        }
+    public synchronized Optional<CurseInstance> apply(Holder<Curse> curse, int requestedStacks, long gameTime,
+                                                      FormulaContext context, Optional<Long> durationOverride) {
+        if (requestedStacks <= 0) return Optional.empty();
         Curse definition = curse.value();
+        OptionalLong resolved = expiry(definition, gameTime, context, durationOverride);
+        if (resolved.isEmpty()) return Optional.empty();
+        long expiresAt = resolved.getAsLong();
         CurseInstance current = this.instances.get(curse);
-        long expiresAt = expiry(definition, gameTime, context, durationOverride);
         if (current == null || definition.stackingMode() == StackingMode.REPLACE) {
-            CurseInstance created = new CurseInstance(curse, Math.min(requestedStacks, definition.maxStacks()), gameTime, expiresAt, source);
+            CurseInstance created = new CurseInstance(curse, Math.min(requestedStacks, definition.maxStacks()), gameTime, expiresAt);
             this.instances.put(curse, created);
-            return created;
+            return Optional.of(created);
         }
         int minStacks = Math.min(definition.maxStacks(), current.stacks() + requestedStacks);
         CurseInstance updated = switch (definition.stackingMode()) {
             case IGNORE -> current;
             case REFRESH_DURATION ->
-                    new CurseInstance(curse, current.stacks(), current.appliedAt(), expiresAt, current.source());
+                    new CurseInstance(curse, current.stacks(), current.appliedAt(), expiresAt);
             case ADD_STACKS_REFRESH_DURATION ->
-                    new CurseInstance(curse, minStacks, current.appliedAt(), expiresAt, current.source());
+                    new CurseInstance(curse, minStacks, current.appliedAt(), expiresAt);
             case ADD_STACKS_KEEP_DURATION ->
-                    new CurseInstance(curse, minStacks, current.appliedAt(), current.expiresAt(), current.source());
+                    new CurseInstance(curse, minStacks, current.appliedAt(), current.expiresAt());
             case REPLACE -> throw new IllegalStateException("Handled above");
         };
         this.instances.put(curse, updated);
-        return updated;
+        return Optional.of(updated);
     }
 
     public synchronized Optional<CurseInstance> remove(Holder<Curse> curse) {
         return Optional.ofNullable(this.instances.remove(curse));
     }
 
-    public synchronized List<CurseInstance> removeExpired(long gameTime) {
-        List<CurseInstance> expired = new ArrayList<>();
-        this.instances.entrySet().removeIf(entry -> {
-            if (entry.getValue().expiredAt(gameTime)) {
-                expired.add(entry.getValue());
-                return true;
-            }
-            return false;
-        });
-        return expired;
-    }
-
-    public synchronized Optional<CurseInstance> get(Holder<Curse> curse) {
-        return Optional.ofNullable(this.instances.get(curse));
-    }
-
     public synchronized Map<Holder<Curse>, CurseInstance> snapshot() {
         return this.instances;
     }
 
-    private static long expiry(Curse definition, long gameTime, FormulaContext context, Optional<Long> durationOverride) {
-        double duration = durationOverride.map(Long::doubleValue).orElseGet(() -> definition.durationTicks().evaluate(context));
-        if (!Double.isFinite(duration) || duration < 0.0D) {
-            throw new IllegalStateException("Curse duration must be finite and non-negative");
-        }
-        return definition.typedType().expiry(Math.round(duration), gameTime);
+    /**
+     * The expiry this application would get.
+     * <p>
+     * A caller-supplied duration may shorten a curse but never outlast what the definition itself declares:
+     * content that wants a longer curse writes a longer {@code duration_ticks}, so no reference can hand out an
+     * effectively permanent instance by passing a huge number, and none can make a timed curse permanent.
+     */
+    private static OptionalLong expiry(Curse definition, long gameTime, FormulaContext context, Optional<Long> durationOverride) {
+        double duration = definition.durationTicks().evaluate(context);
+        if (!Double.isFinite(duration) || duration < 0.0D) return OptionalLong.empty();
+        OptionalLong declared = definition.typedType().expiry(Math.round(duration), gameTime);
+        if (declared.isEmpty() || durationOverride.isEmpty()) return declared;
+        OptionalLong overridden = definition.typedType().expiry(durationOverride.get(), gameTime);
+        if (overridden.isEmpty()) return OptionalLong.empty();
+        long declaredValue = declared.getAsLong();
+        long overriddenValue = overridden.getAsLong();
+        // A definition that never expires is only ever shortened by an override; one that expires is never
+        // extended, and never turned permanent.
+        if (declaredValue < 0L) return overridden;
+        if (overriddenValue < 0L) return declared;
+        return OptionalLong.of(Math.min(declaredValue, overriddenValue));
     }
 }

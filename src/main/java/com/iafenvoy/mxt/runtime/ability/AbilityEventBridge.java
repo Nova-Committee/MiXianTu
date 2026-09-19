@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.storage.ChargesDataStorage;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
@@ -115,6 +116,7 @@ public final class AbilityEventBridge {
         }
         dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity));
         PassiveAttributeService.tick(entity);
+        rechargeCharges(entity, abilities, entity.level().getGameTime());
         if (entity.level().getGameTime() % 20L == 0L) {
             // Curios is reconciled on a slow cadence, so the index has to follow it here: it is no longer
             // rebuilt as a side effect of the next publication.
@@ -259,9 +261,25 @@ public final class AbilityEventBridge {
                 ResourceService.formulaContext(entity, id, resource.value(), FormulaContext.EMPTY)).changed()).orElse(false);
     }
 
+    /**
+     * Refills the charges of every held ability whose declaration recharges. Only an ability that declares
+     * {@code mxt:charges} is looked at, and {@link AbilityStorage#recharge} writes only when a step is actually
+     * due, so an entity holding no such ability costs one scan of its grants per tick and nothing else.
+     */
+    private static void rechargeCharges(LivingEntity actor, AbilityAttachment abilities, long gameTime) {
+        for (Holder<Ability> ability : abilities.sources().keys()) {
+            ChargesDataStorage declaration = ability.value().storages().stream()
+                    .filter(ChargesDataStorage.class::isInstance)
+                    .map(ChargesDataStorage.class::cast)
+                    .findFirst().orElse(null);
+            if (declaration == null) continue;
+            AbilityStorage.recharge(abilities, ability, declaration, gameTime, FormulaContext.of(actor));
+        }
+    }
+
     private static boolean tickAuras(LivingEntity actor, AbilityAttachment abilities, long gameTime) {
         boolean changed = false;
-        for (Holder<Ability> ability : abilities.sources().keySet()) {
+        for (Holder<Ability> ability : abilities.sources().keys()) {
             Ability definition = ability.value();
             if (!(definition.type() instanceof AuraAbilityType(
                     NumberProvider interval1,
@@ -293,7 +311,7 @@ public final class AbilityEventBridge {
     private static boolean finishDueCasts(LivingEntity actor, AbilityAttachment abilities,
                                           ResourceHolderAttachment resources, long gameTime) {
         boolean changed = false;
-        for (Holder<Ability> ability : abilities.sources().keySet()) {
+        for (Holder<Ability> ability : abilities.sources().keys()) {
             if (!AbilityStorage.castDue(abilities, ability, gameTime)) continue;
             AbilityService.finishCast(ability, ability.value(), actor, abilities, resources, gameTime, FormulaContext.of(actor));
             changed = true;
@@ -328,7 +346,7 @@ public final class AbilityEventBridge {
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         TriggerDispatcher.clearModule(entity.getUUID(), "ability");
-        for (Holder<Ability> ability : abilities.sources().keySet()) {
+        for (Holder<Ability> ability : abilities.sources().keys()) {
             Identifier abilityId = HolderHelper.id(ability);
             Ability definition = ability.value();
             int triggerIndex = 0;

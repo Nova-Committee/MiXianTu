@@ -2,22 +2,19 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.data.curse.CurseFilter;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.core.Holder;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
-public record HasCurseEntityCondition(Holder<Curse> curse) implements EntityCondition {
-    public static final MapCodec<HasCurseEntityCondition> CODEC = Curse.CODEC.fieldOf("curse").xmap(HasCurseEntityCondition::new, HasCurseEntityCondition::curse);
+/**
+ * Asks whether the entity holds a curse the query accepts: by definition, by tag, by stacks or by remaining time.
+ */
+public record HasCurseEntityCondition(CurseFilter filter) implements EntityCondition {
+    public static final MapCodec<HasCurseEntityCondition> CODEC = CurseFilter.MAP_CODEC.xmap(HasCurseEntityCondition::new, HasCurseEntityCondition::filter);
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
-        return entity.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(this.curse);
+        return this.filter.test(ctx.entity(), ctx.formula());
     }
 
     @Override

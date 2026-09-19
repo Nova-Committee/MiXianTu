@@ -36,7 +36,7 @@ public record AbilityHotbarEntry(Identifier id, Ability definition) implements H
     public float cooldown(Player player) {
         if (player == null) return 0.0F;
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        Holder<Ability> ability = holder.sources().keySet().stream()
+        Holder<Ability> ability = holder.sources().keys().stream()
                 .filter(value -> HolderHelper.id(value).equals(this.id)).findFirst().orElse(null);
         if (ability == null) return 0.0F;
         long remaining = holder.cooldowns().getOrDefault(ability, -1L) - player.level().getGameTime();

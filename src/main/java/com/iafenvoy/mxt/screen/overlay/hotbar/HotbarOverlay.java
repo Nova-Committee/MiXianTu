@@ -64,12 +64,12 @@ public enum HotbarOverlay implements GuiLayer {
                                     int x, int y, List<ResolvedAbility> abilities, long gameTime) {
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
        ResolvedAbility casting = abilities.stream().filter(value -> {
-            Optional<Holder<Ability>> bound = holder.sources().keySet().stream().filter(ability -> ability.value() == value.definition()).findFirst();
+            Optional<Holder<Ability>> bound = holder.sources().keys().stream().filter(ability -> ability.value() == value.definition()).findFirst();
             return bound.isPresent() && AbilityStorage.casting(holder, bound.get(), gameTime);
         }).findFirst().orElse(null);
         if (casting == null) return;
 
-        Optional<Holder<Ability>> bound = holder.sources().keySet().stream().filter(ability -> ability.value() == casting.definition()).findFirst();
+        Optional<Holder<Ability>> bound = holder.sources().keys().stream().filter(ability -> ability.value() == casting.definition()).findFirst();
         if (bound.isEmpty()) return;
         double deadline = AbilityStorage.castDeadline(holder, bound.get());
         if (deadline >= AbilityStorage.NO_CAST) return;

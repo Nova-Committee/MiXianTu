@@ -27,6 +27,8 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
+import com.iafenvoy.mxt.screen.information.InformationCollector;
+import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.CommandDispatcher;
@@ -70,7 +72,9 @@ public final class MxtTestCommands {
     private static final Identifier CONTRACT = id("master_servant");
     private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");
     private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
-            id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence")
+            id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence"),
+            id("curse_apply_probe"), id("curse_cleanse_probe"), id("curse_query_probe"),
+            id("curse_remaining_probe"), id("curse_replace_probe")
     );
 
     private MxtTestCommands() {
@@ -83,6 +87,7 @@ public final class MxtTestCommands {
                 .then(literal("kit").executes(context -> giveKit(context.getSource())))
                 .then(literal("cultivate").executes(context -> startCultivation(context.getSource())))
                 .then(literal("verify").executes(context -> verify(context.getSource())))
+                .then(literal("info").executes(context -> showInformation(context.getSource())))
                 .then(literal("guide").executes(context -> showGuide(context.getSource()))));
     }
 
@@ -222,6 +227,25 @@ public final class MxtTestCommands {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.cultivate.success"), true);
+        return 1;
+    }
+
+    /**
+     * Prints the character panel's own line model, so what the panel would show can be read from the server
+     * instead of a screenshot. It calls the very same {@code InformationManager.collectEntries} the screen does.
+     */
+    private static int showInformation(CommandSourceStack source) {
+        ServerPlayer player = player(source);
+        if (player == null) return 0;
+        for (InformationManager.Side side : InformationManager.Side.values()) {
+            List<InformationCollector.InformationEntry> entries = InformationManager.collectEntries(player, side);
+            source.sendSuccess(() -> Component.literal("[" + side + "] " + entries.size() + " entries"), false);
+            for (InformationCollector.InformationEntry entry : entries) {
+                String name = entry.name() == null ? "" : entry.name().getString();
+                String value = entry.value().getString();
+                source.sendSuccess(() -> Component.literal("- " + name + " = " + value), false);
+            }
+        }
         return 1;
     }
 

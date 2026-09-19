@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.loot;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
@@ -22,6 +23,11 @@ import java.util.List;
  * Vanilla loot integration for a server-validated curse application.
  */
 public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
+    /**
+     * What loot owes a curse it applies; one of the sources the shared ledger counts.
+     */
+    private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "loot");
+
     public static final MapCodec<ApplyCurseLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(function -> function.target),
             Identifier.CODEC.fieldOf("curse").forGetter(function -> function.curse),
@@ -48,7 +54,7 @@ public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
         Entity entity = this.target.get(context);
         if (entity != null)
             MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, this.curse).ifPresent(curse ->
-                    CurseService.apply(entity, curse, this.stacks, entity.level().getGameTime(), FormulaContext.of(entity), "loot"));
+                    CurseService.apply(entity, curse, this.stacks, entity.level().getGameTime(), FormulaContext.of(entity), SOURCE));
         return stack;
     }
 }

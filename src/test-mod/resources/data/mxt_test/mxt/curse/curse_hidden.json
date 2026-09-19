@@ -1,0 +1,8 @@
+{
+  "type": "mxt:timed",
+  "duration_ticks": 600,
+  "tick_interval": 20,
+  "max_stacks": 1,
+  "stacking_mode": "ignore",
+  "display_condition": {"type": "mxt:never"}
+}

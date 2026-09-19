@@ -170,6 +170,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public static final class Commands extends AutoInitConfigCategoryBase {
         public final BooleanEntry ability = BooleanEntry.builder("config.mxt.server.commands.ability", true).key("ability").tooltip("config.mxt.server.commands.ability.tooltip").build();
         public final BooleanEntry aura = BooleanEntry.builder("config.mxt.server.commands.aura", true).key("aura").tooltip("config.mxt.server.commands.aura.tooltip").build();
+        public final BooleanEntry curse = BooleanEntry.builder("config.mxt.server.commands.curse", true).key("curse").tooltip("config.mxt.server.commands.curse.tooltip").build();
         public final BooleanEntry display = BooleanEntry.builder("config.mxt.server.commands.display", true).key("display").tooltip("config.mxt.server.commands.display.tooltip").build();
         public final BooleanEntry formation = BooleanEntry.builder("config.mxt.server.commands.formation", true).key("formation").tooltip("config.mxt.server.commands.formation.tooltip").build();
         public final BooleanEntry friend = BooleanEntry.builder("config.mxt.server.commands.friend", true).key("friend").tooltip("config.mxt.server.commands.friend.tooltip").build();

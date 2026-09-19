@@ -1,20 +1,22 @@
 package com.iafenvoy.mxt.loot;
 
-import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.data.curse.CurseFilter;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
-public record HasCurseLootCondition(EntityTarget target, Holder<Curse> curse) implements LootItemCondition {
+/**
+ * The loot-table twin of {@code mxt:has_curse}: the same query, run against one entity of the loot context.
+ */
+public record HasCurseLootCondition(EntityTarget target, CurseFilter filter) implements LootItemCondition {
     public static final MapCodec<HasCurseLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasCurseLootCondition::target),
-            Curse.CODEC.fieldOf("curse").forGetter(HasCurseLootCondition::curse)
+            CurseFilter.MAP_CODEC.forGetter(HasCurseLootCondition::filter)
     ).apply(i, HasCurseLootCondition::new));
 
     @Override
@@ -25,6 +27,6 @@ public record HasCurseLootCondition(EntityTarget target, Holder<Curse> curse) im
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        return entity != null && entity.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(this.curse);
+        return entity != null && this.filter.test(entity, FormulaContext.of(entity));
     }
 }

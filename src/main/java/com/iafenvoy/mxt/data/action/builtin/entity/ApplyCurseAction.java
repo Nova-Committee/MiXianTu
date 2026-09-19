@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.curse.Curse;
@@ -10,6 +11,7 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
@@ -20,6 +22,11 @@ import java.util.Optional;
  */
 public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
                                Optional<NumberProvider> durationTicks) implements EntityAction {
+    /**
+     * What an ability owes a curse it applies; one of the sources the shared ledger counts.
+     */
+    public static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "ability");
+
     public static final MapCodec<ApplyCurseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Curse.CODEC.fieldOf("curse").forGetter(ApplyCurseAction::curse),
             NumberProvider.CODEC.optionalFieldOf("stacks", new Constant(1.0D)).forGetter(ApplyCurseAction::stacks),
@@ -36,7 +43,7 @@ public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
             double value = provider.evaluate(context);
             return Double.isFinite(value) && value >= 0.0D && value <= Long.MAX_VALUE ? Optional.of(Math.round(value)) : Optional.empty();
         });
-        CurseService.applyWithDuration(entity, this.curse, (int) Math.round(resolvedStacks), entity.level().getGameTime(), context, "ability", duration);
+        CurseService.applyWithDuration(entity, this.curse, (int) Math.round(resolvedStacks), entity.level().getGameTime(), context, SOURCE, duration);
     }
 
     @Override

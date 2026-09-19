@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
@@ -23,6 +25,7 @@ import java.util.function.Consumer;
 import static com.iafenvoy.mxt.screen.information.InformationHelper.lineWithDefinitions;
 
 public final class InformationManager {
+    private static final int CURSE_COLOR = 0xFFD98A8A;
     private static final Map<Identifier, RegisteredInformation> INFORMATION = new LinkedHashMap<>();
 
     static {
@@ -37,6 +40,7 @@ public final class InformationManager {
         register("spirit_roots", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.spirit_roots", c.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots(), "spirit_root"));
         register("physiques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.physiques", c.getData(MxtAttachments.SPIRIT_IDENTITY).physiques(), "physique"));
         register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques(), "technique"));
+        register("curses", Side.CULTIVATION, InformationManager::curseLines);
     }
 
     public static void register(@NotNull String id, @NotNull Side side, Consumer<InformationCollector> collector) {
@@ -110,6 +114,35 @@ public final class InformationManager {
         }
     }
 
-    private record RegisteredInformation(Side side, Consumer<InformationCollector> collector) {
+    /**
+     * Lists the held curses whose own {@code display_condition} passes. A curse that keeps itself out of sight
+     * leaves no row behind at all - not an empty one - which is the whole point of the field.
+     */
+    private static void curseLines(InformationCollector collector) {
+        Player player = collector.getPlayer();
+        FormulaContext context = FormulaContext.of(player);
+        long gameTime = player.level().getGameTime();
+        boolean first = true;
+        for (java.util.Map.Entry<Holder<Curse>, State> entry : player.getData(MxtAttachments.CURSE_HOLDER).instances().entrySet()) {
+            if (!entry.getKey().value().displayCondition().test(player, context)) continue;
+            Component name = DefinitionText.name(entry.getKey(), "curse");
+            if (entry.getValue().stacks() > 1) name = name.copy().append(" ×" + entry.getValue().stacks());
+            collector.add(first ? Component.translatable("info.mxt.curses") : null, name, CURSE_COLOR,
+                    curseTooltip(player.getData(MxtAttachments.CURSE_HOLDER).sources().of(entry.getKey()), entry.getValue(), gameTime));
+            first = false;
+        }
     }
-}
+
+    /**
+     * Which sources keep the curse alive, and how long it has left, so a row can be read without opening anything.
+     */
+    private static Component curseTooltip(Set<Identifier> sources, State state, long gameTime) {
+        String from = sources.stream().map(Identifier::toString).sorted().reduce((a, b) -> a + ", " + b).orElse("-");
+        Component line = Component.translatable("info.mxt.curse.source", from);
+        return state.expiresAt() < 0L
+                ? line.copy().append("\n").append(Component.translatable("info.mxt.curse.permanent"))
+                : line.copy().append("\n").append(Component.translatable("info.mxt.curse.remaining", Math.max(0L, state.expiresAt() - gameTime)));
+    }
+
+    private record RegisteredInformation(Side side, Consumer<InformationCollector> collector) {
+    }}

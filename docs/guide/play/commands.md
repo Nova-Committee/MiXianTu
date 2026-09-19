@@ -2,9 +2,9 @@
 title: 命令
 ---
 
-所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限。
+所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限；纯查询的入口（例如 `/mxt curse list`、`/ability list`、`/mxt trigger list`）不需要权限，只是不填目标时要用到自己，因此仍需由玩家执行。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（存档键为 `commands.<名字>`，界面上显示的就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。`formation` 和 `friend` 也在这个列表里（顶层写法分别是 `/formation` 和 `/friend`）。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（存档键为 `commands.<名字>`，界面上显示的就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 12 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`lightning`、`picker`、`talisman`、`technique`、`trade`、`tribulation`。
 
 | 命令 | 作用 |
 | --- | --- |
@@ -22,6 +22,9 @@ title: 命令
 | `/aura cache clear [radius]`（= `/mxt aura cache clear [radius]`） | 清除并立即重建周围已加载区块的子区块灵气缓存；半径按区块计算，默认 3，范围 0–32。 |
 | `/ability`（= `/mxt ability`） | 打开技能快捷栏配置界面。 |
 | `/ability cast <id>`（= `/mxt ability cast <id>`） | 强制施放技能。 |
+| `/ability list [<target>]`（= `/mxt ability list …`） | 列出持有者身上的技能：名字与**还在维持它的来源**。读的是附件而不是注册表，所以被停用/定义已删除的技能照样列出来——它仍然被持有，也仍然只能按名字撤销。不填 `target` 时看自己，不需要权限。 |
+| `/ability grant <targets> <ability>`（= `/mxt ability grant …`） | 以命令自己的来源 `mxt:command` 授予技能（需要 gamemaster 权限）。逐个目标报告成功或失败，失败发生在该目标已由这一来源持有时。 |
+| `/ability revoke <targets> <ability>`（= `/mxt ability revoke …`） | 只撤销 `mxt:command` 这一份来源（需要 gamemaster 权限）；还有别的来源持有就什么都不发生，该目标记为失败。逐个目标报告结果。 |
 | `/mxt breakthrough <resource>` | 尝试突破指定资源对应的境界。 |
 | `/mxt realm set <realm>` | 设置线性境界。 |
 | `/mxt soul reclaim` | 回收可回收的灵魂。 |
@@ -44,6 +47,10 @@ title: 命令
 | `/friend permanent remove <player>`（= `/mxt friend permanent remove`） | 移除永久好友。 |
 | `/mxt lightning [pos] [color … | palette …]`（= `/lightning`） | 直接打下一道雷，需要 gamemaster 权限。单色或渐变、亮度、粗细、伤害按固定顺序可选，见下。 |
 | `/mxt tribulation start <id> [<target>]`（= `/tribulation start …`） | 手动开始一场天劫（需要 gamemaster 权限），不必等突破；不填 `target` 时挂在自己身上。配套的 `status` 报告跑到第几拍与当前节拍的现场，`stop` 清除。 |
+| `/mxt curse list [<target>]`（= `/curse`） | 列出持有者身上的诅咒：名字、层数、剩余 tick 或「永不到期」。不填 `target` 时看自己，不需要权限。 |
+| `/mxt curse apply <targets> <curse> [<stacks>] [<duration_ticks>]`（= `/curse apply …`） | 施加一条诅咒（需要 gamemaster 权限），`stacks` 取 1–256，走与内容同一条事务：条件、叠层、`on_apply` 照常；被 `#mxt:disabled` 停用或已删除的定义会被拒绝并报出原因。`duration_ticks` 只能收紧定义自己的时长。 |
+| `/mxt curse remove <targets> <curse>`（= `/curse remove …`） | 以 `explicit` 原因移除（需要 gamemaster 权限）。这也是**被停用/已删除定义的唯一出口**。 |
+| `/mxt curse cleanse <targets> <tag>`（= `/curse cleanse …`） | 按 `mxt:curse` 标签解毒（需要 gamemaster 权限），与解毒剂同一个 `cleansed` 原因；被停用的实例会拒绝并说明原因。 |
 
 ### `/mxt lightning`
 

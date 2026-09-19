@@ -1,0 +1,6 @@
+{
+  "type": "mxt:triggered",
+  "triggers": [{"type": "mxt:hurt"}],
+  "duration_ticks": 600,
+  "on_tick": {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 256}
+}

@@ -227,14 +227,14 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | 可能承担的东西 | 现状 |
 | --- | --- |
 | 自定义 `MobEffect` | **基座注册 0 个**；`ApplyEffectAction` 收原版 `MobEffect` |
-| `curse` | 有 `duration_ticks` / `tick_interval` / `max_stacks` / `StackingMode` / 应用·周期·移除 Action / `cleanse_tags`（`data/curse/Curse.java:21-38`）——**形态上最接近"限时命名状态"**，但语义被限定为负面、可净化、可强制移除，且没有图标、不改属性 |
+| `curse` | 有 `duration_ticks` / `tick_interval` / `max_stacks` / `StackingMode` / 施加·周期·到期·解毒 Action（`data/curse/Curse.java`）——**形态上最接近"限时命名状态"**，但语义被限定为负面、可解毒，且没有图标、不改属性 |
 | 四个能力组件 | `toggle` / `timer` / `resource` / `target_lock` **注册了但零消费者**（见 §5） |
 
 **缺什么**：一个中立的"限时命名状态"（名字 + 图标 + 层数 + 起止条件 + 属性修正 + 可被条件读取）。
 现在只能用 `curse` 冒充，或退回原版效果。
 
 **最小补法**：两条路，需拍板 —— ① 把 `curse` 的中立字段补齐（`icon`、`AttributeEntry[]`），
-语义从"诅咒"泛化成"状态"，`cleanse_tags` 保留；② 新增 `mxt:status` 注册表。
+语义从"诅咒"泛化成"状态"（`cleanse_tags` 已于 2026-09-19 删除，解毒改由解毒剂 + `mxt:curse` 标签管理）；② 新增 `mxt:status` 注册表。
 路 ① 改动小但要动既有语义，路 ② 干净但多一张表。
 
 ### 4.4 灵植与作物（`年份档` + `生长阶段` = 77 族 / 250 行）

@@ -125,6 +125,17 @@ public final class MxtDatapackRegistries {
     }
 
     /**
+     * Resolves one entry without judging whether it is disabled, so a caller can tell a definition that was
+     * disabled from one that was deleted. Returns an empty result when no server is running, since there are no
+     * datapack registries to read then.
+     */
+    public static <T> Optional<Reference<T>> rawHolder(ResourceKey<? extends Registry<T>> key, Identifier id) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return Optional.empty();
+        return server.registryAccess().lookupOrThrow(key).get(ResourceKey.create(key, id));
+    }
+
+    /**
      * Reads enabled entries from either a server or the client-synchronised registry access.
      */
     public static <T> Stream<Reference<T>> holders(RegistryAccess access, ResourceKey<? extends Registry<T>> key) {

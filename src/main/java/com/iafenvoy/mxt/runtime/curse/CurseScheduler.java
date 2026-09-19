@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.curse;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -23,11 +24,15 @@ public final class CurseScheduler {
     public static void reschedule(Entity entity) {
         if (!(entity.level() instanceof ServerLevel level)) return;
         Queue queue = QUEUES.computeIfAbsent(level, ignored -> new Queue());
-        long due = nextDue(entity, level.getGameTime());
+        long gameTime = level.getGameTime();
+        long due = nextDue(entity, gameTime);
         if (due == Long.MAX_VALUE) {
             queue.nextDue.remove(entity.getUUID());
             return;
         }
+        // Every due time is in the future, so the drain loop below always makes progress. A due time that is
+        // already due would be re-added by every pass and spin the loop inside a single tick.
+        if (due <= gameTime) due = gameTime + 1L;
         queue.nextDue.put(entity.getUUID(), due);
         queue.entries.add(new Entry(entity.getUUID(), due));
     }
@@ -58,7 +63,17 @@ public final class CurseScheduler {
         FormulaContext context = FormulaContext.of(entity);
         for (Map.Entry<Holder<Curse>, State> entry : data.instances().entrySet()) {
             State state = entry.getValue();
-            if (state.expiresAt() >= 0L) result = Math.min(result, state.expiresAt());
+            // A frozen instance - its definition was disabled or deleted - neither expires nor acts, so it is not
+            // scheduled at all: its expiry is already in the past, and scheduling it would fire the due queue for
+            // that entity on every tick forever. Re-enabling the definition reschedules the entity.
+            if (CurseService.definitionState(entry.getKey()) == CurseService.DefinitionState.ACTIVE
+                    && state.expiresAt() >= 0L) {
+                result = Math.min(result, state.expiresAt());
+            }
+            CurseType type = entry.getKey().value().typedType();
+            // A triggered curse waits for its triggers and an inert one never acts, so neither is woken for a
+            // periodic effect; both still wake for their expiry, which the branch above took into account.
+            if (type.inert() || type instanceof CurseType.Triggered) continue;
             double intervalValue = entry.getKey().value().tickInterval().evaluate(context);
             if (!Double.isFinite(intervalValue) || intervalValue <= 0.0D) continue;
             long interval = Math.max(1L, Math.round(intervalValue));

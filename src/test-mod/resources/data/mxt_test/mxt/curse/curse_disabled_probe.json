@@ -1,0 +1,5 @@
+{
+  "type": "mxt:permanent",
+  "max_stacks": 1,
+  "stacking_mode": "ignore"
+}

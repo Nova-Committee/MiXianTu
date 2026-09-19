@@ -1,0 +1,14 @@
+{
+  "type": "mxt:timed",
+  "duration_ticks": 600,
+  "tick_interval": 12000,
+  "max_stacks": 1,
+  "stacking_mode": "ignore",
+  "on_apply": {
+    "type": "mxt:sequence",
+    "actions": [
+      {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 512},
+      {"type": "mxt:apply_curse", "curse": "mxt_test:curse_loop_probe", "stacks": 1}
+    ]
+  }
+}

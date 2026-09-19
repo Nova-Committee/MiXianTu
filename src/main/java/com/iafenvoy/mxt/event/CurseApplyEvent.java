@@ -5,9 +5,12 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.runtime.curse.CurseInstance;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
 
 /**
  * Server-side curse application transaction events.
@@ -43,9 +46,9 @@ public abstract class CurseApplyEvent extends Event {
 
     public static final class Pre extends CurseApplyEvent implements ICancellableEvent {
         private int stacks;
-        private String source;
+        private Identifier source;
 
-        public Pre(CurseHolderAttachment holder, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, String source) {
+        public Pre(CurseHolderAttachment holder, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
             super(holder, curse, gameTime, context);
             this.setStacks(stacks);
             this.setSource(source);
@@ -55,7 +58,10 @@ public abstract class CurseApplyEvent extends Event {
             return this.stacks;
         }
 
-        public String source() {
+        /**
+         * Who is applying it. A listener may change it, which decides which source the new instance is credited to.
+         */
+        public Identifier source() {
             return this.source;
         }
 
@@ -64,8 +70,8 @@ public abstract class CurseApplyEvent extends Event {
             this.stacks = stacks;
         }
 
-        public void setSource(@NotNull String source) {
-            this.source = source;
+        public void setSource(@NotNull Identifier source) {
+            this.source = Objects.requireNonNull(source, "Curse source");
         }
     }
 

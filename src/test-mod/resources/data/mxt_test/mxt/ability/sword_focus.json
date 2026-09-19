@@ -1,4 +1,12 @@
 {
   "type": "mxt:modifier",
-  "query_tags": ["mxt_test:weapon/sword"]
+  "condition": {"type": "mxt:has_curse", "curse": "mxt_test:curse_probe"},
+  "modifiers": [
+    {
+      "attribute": "minecraft:attack_damage",
+      "id": "mxt_test:ability/sword_focus",
+      "amount": 3,
+      "operation": "add_value"
+    }
+  ]
 }

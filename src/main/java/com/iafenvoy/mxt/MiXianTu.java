@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.runtime.curse.CurseTriggerSubscriptions;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
@@ -25,6 +26,7 @@ public final class MiXianTu {
         CuriosIntegration.registerPredicates();
         AbilityEventBridge.initialize();
         CultivationTriggerService.initialize();
+        CurseTriggerSubscriptions.initialize();
         TechniqueItemService.initialize();
         SpiritChargeService.initialize();
 

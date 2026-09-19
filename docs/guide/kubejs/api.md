@@ -17,7 +17,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtResources` | 原子支付多个资源 Cost。 |
 | `MxtAbilities` | 施放已授予实体的技能。 |
 | `MxtCultivation` | 增加修为、尝试境界突破。 |
-| `MxtCurses` | 施加或显式移除诅咒。 |
+| `MxtCurses` | 施加（可带时长）、显式移除与查询诅咒。 |
 | `MxtAura` | 查询、添加、移除服务端灵气区域。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
 | `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
@@ -254,12 +254,17 @@ if (result.committed()) {
 
 ### `MxtAbilities`
 
-| 方法 | 参数 | 返回值 |
-| --- | --- | --- |
-| `use(entity, ability)` | `Entity`、技能 ID | `AbilityService.UseResult` |
-| `selector(id, callback)` | 回调 ID、`(actor, context, params) => Entity[]` | `void` |
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `use(entity, ability)` | `Entity`、技能 ID | `AbilityService.UseResult` | 施放实体已持有的技能，仅在服务端生效。 |
+| `selector(id, callback)` | 回调 ID、`(actor, context, params) => Entity[]` | `void` | 注册数据包类型 `mxt:js` 的技能目标选择器。 |
+| `grant(entity, ability, source)` | `Entity`、技能 ID、来源 ID（`命名空间:路径`） | `boolean` | 以该来源授予技能；来源此前未持有该技能才返回 `true`。未知技能返回 `false`（不是错误），客户端不改动任何东西。 |
+| `revoke(entity, ability, source)` | `Entity`、技能 ID、来源 ID | `boolean` | 只撤这一份来源，成功时返回 `true`；**技能本身要等最后一份来源松手才消失**，那时它的冷却和按技能存储的状态一并丢弃。目标没有这一来源时返回 `false`。 |
+| `has(entity, ability)` | `Entity`、技能 ID | `boolean` | 是否持有；读的是附件，因此停用或已删除的定义也答得出来。 |
+| `list(entity)` | `Entity` | `List<String>` | 当前持有的全部技能 ID，按 ID 排序。 |
+| `sources(entity, ability)` | `Entity`、技能 ID | `List<String>` | 当前还在维持这项技能的来源，按 ID 排序；没持有则为空列表。 |
 
-只能施放实体已持有的技能，且仅在服务端生效。结果 record：`committed()` 表示立即完成，`casting()` 表示已开始吟唱，`failure()` 为失败枚举，`failedResource()` 为不足的资源 ID，`amounts()` 为实际支付资源。
+技能和诅咒授予用的是同一套来源账本：**只要还有一份来源持有，它就存在**，最后一份松手才真的移除。来源必须是命名空间标识符（如 `example:quest_reward`），写错会抛 `IllegalArgumentException`。授予、撤销、查询都只在服务端生效，客户端一律返回 `false` 或空列表且不改动任何东西。`use` 的结果 record：`committed()` 表示立即完成，`casting()` 表示已开始吟唱，`failure()` 为失败枚举，`failedResource()` 为不足的资源 ID，`amounts()` 为实际支付资源。
 
 ```js
 const result = MxtAbilities.use(player, 'example:fireball')
@@ -299,10 +304,16 @@ MxtAbilities.selector('example:nearest_three', (actor, context, params) => {
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `apply(entity, curse, stacks, source)` | `Entity`、诅咒 ID、正整数层数、非空来源字符串 | `CurseService.ApplyResult` | 走完整条件和合并逻辑。 |
-| `remove(entity, curse)` | `Entity`、诅咒 ID | `boolean` | 以 `EXPLICIT` 原因移除；触发移除事件。 |
+| `apply(entity, curse, stacks, source)` | `Entity`、诅咒 ID、正整数层数、来源 ID（`命名空间:路径`） | `CurseService.ApplyResult` | 走完整条件和合并逻辑；来源加入账本。 |
+| `applyFor(entity, curse, stacks, source, durationTicks)` | 同上，另加时长（tick） | `CurseService.ApplyResult` | 时长只能**收紧**：超过定义声明的时长会被定义本身的时长盖住。 |
+| `remove(entity, curse)` | `Entity`、诅咒 ID | `boolean` | 以 `EXPLICIT` 原因**整条**移除（所有来源一起抹掉）；触发移除事件。被停用/已删除的定义只有这条路能取下来。 |
+| `release(entity, curse, source)` | `Entity`、诅咒 ID、来源 ID | `boolean` | 只撤这一份来源；返回 `true` 表示正是这一撤把诅咒取了下来，`false` 则表示它还在（别的来源仍持有，或者这份来源本来就不在账上——两种情况都返回 `false`，想知道是谁在维持就读 `sources`）。 |
+| `has(entity, curse)` | `Entity`、诅咒 ID | `boolean` | 是否持有；读的是附件，因此停用或已删除的定义也答得出来。 |
+| `stacks(entity, curse)` | `Entity`、诅咒 ID | `int` | 层数，没持有为 `0`。 |
+| `remainingTicks(entity, curse)` | `Entity`、诅咒 ID | `long` | 剩余 tick；永不到期为 `-1`，没持有为 `0`。 |
+| `sources(entity, curse)` | `Entity`、诅咒 ID | `List<String>` | 当前还在维持这条诅咒的来源，按 ID 排序。 |
 
-`ApplyResult` 可调用 `applied()`、`cancelled()`、`failure()`、`instance()`。`source` 建议写稳定来源，如 `example:quest_reward`，以便数据和事件追踪。
+诅咒和技能授予用的是同一套来源账本：**只要还有一份来源持有，它就存在**，最后一份松手才真的移除。`ApplyResult` 可调用 `applied()`、`cancelled()`、`failure()`、`instance()`；`failure()` 除 `CONDITION`/`CANCELLED`/`SERVER_ONLY` 外还有 `DISABLED`（定义被 `#mxt:disabled` 停用）、`UNKNOWN`（定义已不在注册表）、`REENTRANT`（同一实体的同一条诅咒正在事务中，自引用被拒）、`INVALID_DURATION`（时长无法兑现，未写入）。`source` 建议写稳定来源，如 `example:quest_reward`，以便数据和事件追踪。
 
 ### `MxtAura`
 
@@ -487,7 +498,7 @@ MxtEvents.friendRelation(event => {
 | KubeJS 事件 | 阶段类名 | `native` 的主要 accessor / 语义 |
 | --- | --- | --- |
 | `abilityTriggered` | `Pre`、`Post` | `getEntity()`、`getAbility()`、`signalType()`、`context()`；`Pre` 可取消触发的技能。原生事件的 `ability()` 返回 `Holder<Ability>`，需要 ID 时使用 `HolderHelper.id(...)` 或 KubeJS 包装器的 `getAbility()`。 |
-| `curseRemove` | `Pre`、`Post` | `curse()`（`Holder<Curse>`）、`state()`、`reason()`、`gameTime()`、`holder()`；`Pre` 可取消移除。reason 为 `EXPLICIT`、`EXPIRED`、`CLEANSED`、`REPLACED`、`CONTENT_ACTION`、`ADMIN`。 |
+| `curseRemove` | `Pre`、`Post` | `curse()`（`Holder<Curse>`）、`state()`、`reason()`、`gameTime()`、`holder()`；`Pre` 可取消移除。reason 为 `EXPLICIT`、`EXPIRED`、`CLEANSED`、`REPLACED`（`replace` 叠层模式覆盖旧实例时补发的 `Post` 用它，且不可取消）。 |
 | `cultivationBreak` | `Pre`、`Post` | `target()`（`Holder<RealmStage>`）、`threshold()`、`context()`、`spirit()`、`resources()`；`Pre` 另有 `originalCosts()`、`costs()`、`setCost(resource, amount)`，可取消；`Post` 有 `paidCosts()`。 |
 | `techniqueLearn` | `Pre`、`Post` | `technique()`（`Holder<Technique>`）、`spirit()`；`Pre` 可取消。 |
 | `alchemyCraft` | `Pre`、`Post` | `recipe()`（`RecipeHolder<AlchemyRecipe>`）；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |

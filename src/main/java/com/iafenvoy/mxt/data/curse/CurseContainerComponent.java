@@ -1,37 +1,60 @@
 package com.iafenvoy.mxt.data.curse;
 
-import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.data.action.builtin.entity.ApplyCurseAction;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponentGetter;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item.TooltipContext;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipProvider;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.tooltip.TooltipAppender;
+import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
+import org.jspecify.annotations.NonNull;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
- * ItemStack component for curse instances before they are transferred to an entity.
+ * The curses an item carries. While such a stack is equipped they are applied to its holder, and taking the stack
+ * off removes the ones it owns; a curse that lapses in between is applied again, so a carried curse lasts as long
+ * as the gear does.
+ * <p>
+ * Entries are {@code mxt:apply_curse} entries, so a stack cannot declare anything that action could not do, and
+ * the item itself never touches the holder's state: everything goes through the ordinary curse transaction.
+ * <p>
+ * What a stack carries is written on the stack: the tooltip names every curse, because being cursed by gear one
+ * chose to wear should not come as a surprise.
  */
-public record CurseContainerComponent(Map<Holder<Curse>, State> instances) {
-    public static final MapCodec<CurseContainerComponent> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.map(Curse.CODEC, State.CODEC).optionalFieldOf("instances", Map.of()).forGetter(CurseContainerComponent::instances)
+@EventBusSubscriber(Dist.CLIENT)
+public record CurseContainerComponent(List<ApplyCurseAction> curses) implements TooltipProvider {
+    public static final Codec<CurseContainerComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
+            ApplyCurseAction.CODEC.codec().listOf().optionalFieldOf("curses", List.of()).forGetter(CurseContainerComponent::curses)
     ).apply(i, CurseContainerComponent::new));
-    public static final Codec<CurseContainerComponent> CODEC = MAP_CODEC.codec();
 
     public CurseContainerComponent() {
-        this(Map.of());
+        this(List.of());
     }
 
-    public CurseContainerComponent with(Holder<Curse> curse, State state) {
-        Map<Holder<Curse>, State> values = new LinkedHashMap<>(this.instances);
-        values.put(curse, state);
-        return new CurseContainerComponent(values);
+    @SubscribeEvent
+    public static void registerTooltipAppender(RegisterTooltipAppendersEvent event) {
+        event.registerComponentAppenderBeforeAll(MxtDataComponents.CURSE_CONTAINER, TooltipAppender.createComponentAppender(MxtDataComponents.CURSE_CONTAINER.get()));
     }
 
-    public CurseContainerComponent without(Holder<Curse> curse) {
-        Map<Holder<Curse>, State> values = new LinkedHashMap<>(this.instances);
-        values.remove(curse);
-        return new CurseContainerComponent(values);
+    @Override
+    public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
+        if (this.curses.isEmpty()) return;
+        consumer.accept(Component.translatable("tooltip.mxt.curse_container").withStyle(ChatFormatting.DARK_RED));
+        for (ApplyCurseAction action : this.curses) {
+            consumer.accept(Component.literal(" ")
+                    .append(DefinitionText.name(action.curse(), "curse"))
+                    .withStyle(ChatFormatting.RED));
+        }
     }
 }

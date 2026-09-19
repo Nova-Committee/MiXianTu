@@ -26,6 +26,7 @@ public final class CommandManager {
         Builder<LiteralArgumentBuilder<CommandSourceStack>, BooleanEntry> builder = ImmutableMap.builder();
         builder.put(AbilityCommand.ROOT, config.ability);
         builder.put(AuraCommand.ROOT, config.aura);
+        builder.put(CurseCommand.ROOT, config.curse);
         builder.put(DisplayCommand.ROOT, config.display);
         builder.put(FormationCommand.ROOT, config.formation);
         builder.put(FriendCommand.ROOT, config.friend);

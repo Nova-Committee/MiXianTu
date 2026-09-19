@@ -1,10 +1,12 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.event.CurseRemoveEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -34,7 +36,17 @@ public final class MxtTestMod {
         MxtTestTechniqueItems.REGISTRY.register(modBus);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::grantTestAbilities);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
+        NeoForge.EVENT_BUS.addListener(MxtTestMod::logCurseRemovals);
         LOGGER.info("Loaded MiXianTu test mod");
+    }
+
+    /**
+     * Development-only trace of every curse removal. Nothing in the mod logs this by itself, and the reason is
+     * the one part of a removal that no data pack can observe, so it is read here while playing.
+     */
+    private static void logCurseRemovals(CurseRemoveEvent.Post event) {
+        LOGGER.info("curse removed: {} reason={} stacks={} sources={}", HolderHelper.id(event.curse()),
+                event.reason(), event.state().stacks(), event.sources().stream().map(Identifier::toString).sorted().toList());
     }
 
     /**

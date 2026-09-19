@@ -1,0 +1,10 @@
+{
+  "type": "mxt:active",
+  "slot": "utility",
+  "cooldown": 0,
+  "entity_action": {
+    "type": "mxt:apply_curse",
+    "curse": "mxt_test:curse_replace_fixture",
+    "stacks": 1
+  }
+}

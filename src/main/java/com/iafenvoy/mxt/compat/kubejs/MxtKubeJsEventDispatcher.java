@@ -156,12 +156,17 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
             this.pre().setStacks(stacks);
         }
 
+        /**
+         * Who is applying it, as a string so a script can compare and replace it directly.
+         */
         public String getSource() {
-            return this.pre().source();
+            return this.pre().source().toString();
         }
 
         public void setSource(String source) {
-            this.pre().setSource(source);
+            Identifier id = source == null ? null : Identifier.tryParse(source);
+            if (id == null) throw new IllegalArgumentException("Invalid curse source identifier: " + source);
+            this.pre().setSource(id);
         }
 
         private CurseApplyEvent.Pre pre() {

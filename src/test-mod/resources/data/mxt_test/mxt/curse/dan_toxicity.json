@@ -3,6 +3,5 @@
   "duration_ticks": 600,
   "tick_interval": 20,
   "max_stacks": 8,
-  "stacking_mode": "add_stacks_refresh_duration",
-  "cleanse_tags": ["mxt_test:cleanse/toxicity"]
+  "stacking_mode": "add_stacks_refresh_duration"
 }

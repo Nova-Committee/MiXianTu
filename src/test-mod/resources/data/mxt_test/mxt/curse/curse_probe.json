@@ -1,0 +1,11 @@
+{
+  "type": "mxt:timed",
+  "duration_ticks": 100,
+  "tick_interval": 20,
+  "max_stacks": 4,
+  "stacking_mode": "add_stacks_refresh_duration",
+  "on_apply": {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 1},
+  "on_tick": {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 2},
+  "on_expire": {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 4},
+  "on_cleanse": {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 8}
+}

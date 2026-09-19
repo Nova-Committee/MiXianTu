@@ -341,7 +341,7 @@ public final class AbilityService {
         } else if (word.effect() == WordEffect.PURGE_SELF_CURSES) {
             CurseHolderAttachment holder = actor.getData(MxtAttachments.CURSE_HOLDER);
             new LinkedList<>(holder.instances().keySet()).forEach(curse ->
-                    CurseService.remove(actor, curse, Reason.EXPLICIT, -1L));
+                    CurseService.remove(actor, curse, Reason.EXPLICIT, -1L, context));
         }
     }
 

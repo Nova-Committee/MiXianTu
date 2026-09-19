@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -9,6 +11,7 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
@@ -25,6 +28,7 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Area;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -39,6 +43,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Optional-script boundary. It exposes validated operations, never attachment internals.
@@ -65,7 +71,78 @@ public final class MxtKubeJsApi {
                 actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
     }
 
-    public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, String source, FormulaContext context) {
+    /**
+     * Adds one source's claim on an ability, which is how every other module grants one. An unknown ability is
+     * not an error: nothing can be held by a name the ledger does not have, so the answer is simply {@code false}.
+     */
+    public static boolean grantAbility(@NotNull Entity entity, Identifier id, Identifier source) {
+        if (entity.level().isClientSide()) return false;
+        AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        return MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)
+                .map(ability -> changed(entity, attachment.grant(ability, source))).orElse(false);
+    }
+
+    /**
+     * Drops one source's claim. The ability itself only disappears when that was its last source, which is also
+     * when its cooldowns and its stored values go; an unknown ability answers {@code false}.
+     */
+    public static boolean revokeAbility(@NotNull Entity entity, Identifier id, Identifier source) {
+        if (entity.level().isClientSide()) return false;
+        AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        return findAbilityHolder(entity, id)
+                .map(ability -> changed(entity, attachment.revoke(ability, source))).orElse(false);
+    }
+
+    /**
+     * Whether the entity holds that ability, read from the attachment rather than from the registry, so an
+     * ability whose definition was disabled or deleted still answers honestly.
+     */
+    public static boolean hasAbility(@NotNull Entity entity, Identifier id) {
+        return findAbilityHolder(entity, id).isPresent();
+    }
+
+    /**
+     * Every ability the entity holds, sorted, read from the attachment for the same reason as {@link #hasAbility}.
+     */
+    public static List<String> abilities(@NotNull Entity entity) {
+        return abilityKeys(entity).map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    /**
+     * Which sources keep that ability granted right now, empty when the entity does not hold it.
+     */
+    public static List<String> abilitySources(@NotNull Entity entity, Identifier id) {
+        return findAbilityHolder(entity, id)
+                .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).sources().of(ability).stream()
+                        .map(Identifier::toString).sorted().toList())
+                .orElseGet(List::of);
+    }
+
+    /**
+     * A source change moves which triggers the entity listens for, so the runtime index is rebuilt whenever
+     * something actually changed.
+     */
+    private static boolean changed(Entity entity, boolean changed) {
+        if (changed && entity instanceof LivingEntity living)
+            AbilityEventBridge.rebuildTriggerSubscriptions(living);
+        return changed;
+    }
+
+    /**
+     * What the entity's ability ledger actually holds, which is the only source of truth a lookup uses. A client
+     * script reads nothing: a grant lives on the server, and the copy a client happens to hold is not what any
+     * answer here should be based on, which is also what {@link #hasAbility} and {@link #abilitySources} answer.
+     */
+    private static Stream<Holder<Ability>> abilityKeys(Entity entity) {
+        if (entity.level().isClientSide()) return Stream.empty();
+        return entity.getData(MxtAttachments.ABILITY_HOLDER).sources().keys().stream();
+    }
+
+    private static Optional<Holder<Ability>> findAbilityHolder(Entity entity, Identifier id) {
+        return abilityKeys(entity).filter(ability -> HolderHelper.id(ability).equals(id)).findFirst();
+    }
+
+    public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {
         if (target.level().isClientSide())
             return new ApplyResult(null, false, ApplyFailure.SERVER_ONLY);
         Holder<Curse> curse = MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, id).orElse(null);
@@ -76,6 +153,71 @@ public final class MxtKubeJsApi {
     public static boolean removeCurse(@NotNull Entity target, Identifier id) {
         return !target.level().isClientSide() && MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, id)
                 .map(curse -> CurseService.remove(target, curse, Reason.EXPLICIT, target.level().getGameTime()).isPresent()).orElse(false);
+    }
+
+    /**
+     * Lets go of one source's claim, which only removes the curse when no other source holds it.
+     */
+    public static boolean releaseCurse(@NotNull Entity target, Identifier id, Identifier source) {
+        return !target.level().isClientSide() && findCurseHolder(target, id)
+                .map(curse -> CurseService.release(target, curse, source, Reason.EXPLICIT,
+                        target.level().getGameTime(), FormulaContext.of(target)).isPresent()).orElse(false);
+    }
+
+    /**
+     * Which sources keep that curse alive right now, empty when the entity does not hold it.
+     */
+    public static Set<Identifier> curseSources(@NotNull Entity target, Identifier id) {
+        return findCurseHolder(target, id)
+                .map(curse -> target.getData(MxtAttachments.CURSE_HOLDER).sources().of(curse))
+                .orElseGet(Set::of);
+    }
+
+    /**
+     * Same as {@link #applyCurse}, with a duration the definition may shorten but never be outlasted by.
+     */
+    public static ApplyResult applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
+                                            long durationTicks, FormulaContext context) {
+        if (target.level().isClientSide()) return new ApplyResult(null, false, ApplyFailure.SERVER_ONLY);
+        if (durationTicks < 0L) throw new IllegalArgumentException("Curse duration must not be negative");
+        return MxtDatapackRegistries.holder(MxtResourceKeys.CURSE, id)
+                .map(curse -> CurseService.applyWithDuration(target, curse, stacks, target.level().getGameTime(),
+                        context, source, Optional.of(durationTicks)))
+                .orElseGet(() -> new ApplyResult(null, false, ApplyFailure.UNKNOWN));
+    }
+
+    /**
+     * Whether the entity holds that curse, read from the attachment rather than from the registry, so a curse
+     * whose definition was disabled or deleted still answers honestly.
+     */
+    public static boolean hasCurse(@NotNull Entity target, Identifier id) {
+        return findCurse(target, id).isPresent();
+    }
+
+    public static int curseStacks(@NotNull Entity target, Identifier id) {
+        return findCurse(target, id).map(CurseHolderAttachment.State::stacks).orElse(0);
+    }
+
+    /**
+     * Ticks left on that curse, or {@code -1} when it never expires. A curse the entity does not hold answers
+     * {@code 0}, so a script can tell the two apart.
+     */
+    public static long curseRemainingTicks(@NotNull Entity target, Identifier id) {
+        return findCurse(target, id)
+                .map(state -> state.expiresAt() < 0L ? -1L : Math.max(0L, state.expiresAt() - target.level().getGameTime()))
+                .orElse(0L);
+    }
+
+    private static Optional<CurseHolderAttachment.State> findCurse(Entity target, Identifier id) {
+        return findCurseHolder(target, id)
+                .map(curse -> target.getData(MxtAttachments.CURSE_HOLDER).instances().get(curse));
+    }
+
+    private static Optional<Holder<Curse>> findCurseHolder(Entity target, Identifier id) {
+        if (target.level().isClientSide()) return Optional.empty();
+        for (Holder<Curse> curse : target.getData(MxtAttachments.CURSE_HOLDER).instances().keySet())
+            if (HolderHelper.id(curse).equals(id)) return Optional.of(curse);
+        return Optional.empty();
     }
 
     /**

@@ -53,7 +53,7 @@ public final class AbilityHotbarClient {
 
     public static Optional<ResolvedAbility> resolve(Player player, String slot) {
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        return holder.sources().keySet().stream()
+        return holder.sources().keys().stream()
                 .filter(ability -> ability.value().type() instanceof ActiveAbilityType(
                         String slot1
                 ) && slot1.equals(slot))
@@ -69,7 +69,7 @@ public final class AbilityHotbarClient {
      */
     public static List<ResolvedAbility> allAvailable(Player player) {
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        return holder.sources().keySet().stream()
+        return holder.sources().keys().stream()
                 .filter(ability -> ability.value().type() instanceof ActiveAbilityType)
                 .map(ability -> new ResolvedAbility(HolderHelper.id(ability), ability.value()))
                 .sorted(Comparator.comparing(value -> value.id().toString()))
@@ -78,7 +78,7 @@ public final class AbilityHotbarClient {
 
     public static boolean shouldCancel(Player player, Identifier id) {
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        Optional<Holder<Ability>> ability = holder.sources().keySet().stream().filter(value -> HolderHelper.id(value).equals(id)).findFirst();
+        Optional<Holder<Ability>> ability = holder.sources().keys().stream().filter(value -> HolderHelper.id(value).equals(id)).findFirst();
         if (ability.isEmpty()) return false;
         if (holder.channelledAbility().filter(ability.get()::equals).isPresent()) return true;
         return AbilityStorage.hasCast(holder, ability.get());
