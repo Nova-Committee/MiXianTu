@@ -9,7 +9,7 @@ such event.
 
 Usage
 -----
-    python tools/codex_token_usage.py E:/Java/MiXianTu
+    python tools/codex_token_usage.py /path/to/MiXianTu
     python tools/codex_token_usage.py --list-dirs
     python tools/codex_token_usage.py --all --by-dir
 
@@ -466,9 +466,9 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "examples:\n"
-            "  codex_token_usage.py E:/Java/MiXianTu\n"
-            "  codex_token_usage.py E:/Java/MiXianTu --subdirs\n"
-            "  codex_token_usage.py E:/Java/MiXianTu --json\n"
+            "  codex_token_usage.py /path/to/MiXianTu\n"
+            "  codex_token_usage.py /path/to/MiXianTu --subdirs\n"
+            "  codex_token_usage.py /path/to/MiXianTu --json\n"
             "  codex_token_usage.py                  # every project, grouped by directory\n"
             "  codex_token_usage.py --list-dirs\n"
         ),

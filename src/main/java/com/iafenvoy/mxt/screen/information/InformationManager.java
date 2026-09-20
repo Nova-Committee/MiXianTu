@@ -3,8 +3,10 @@ package com.iafenvoy.mxt.screen.information;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -16,6 +18,7 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap.Entry;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -30,6 +33,11 @@ import static com.iafenvoy.mxt.screen.information.InformationHelper.lineWithDefi
 
 public final class InformationManager {
     private static final int CURSE_COLOR = 0xFFD98A8A;
+    private static final int VALUE_COLOR = 0xFFE0E4EC;
+    /**
+     * What a held definition is drawn in while it is switched off: still listed, visibly not counting.
+     */
+    private static final int SWITCHED_OFF_COLOR = 0xFF6E7681;
     private static final Map<Identifier, RegisteredInformation> INFORMATION = new LinkedHashMap<>();
 
     static {
@@ -42,7 +50,7 @@ public final class InformationManager {
         register("cultivation_progress", Side.CULTIVATION, InformationManager::progressLines);
         register("cultivating", Side.CULTIVATION, c -> c.add("info.mxt.cultivating", Component.translatable(c.getData(MxtAttachments.CULTIVATION).cultivating() ? "info.mxt.yes" : "info.mxt.no")));
         register("spirit_roots", Side.CULTIVATION, InformationManager::spiritRootLines);
-        register("physiques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.physiques", c.getData(MxtAttachments.SPIRIT_IDENTITY).physiques(), "physique"));
+        register("physiques", Side.CULTIVATION, InformationManager::physiqueLines);
         register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques(), "technique"));
         register("curses", Side.CULTIVATION, InformationManager::curseLines);
     }
@@ -101,21 +109,77 @@ public final class InformationManager {
      * it cultivates, and the element is the one thing a player reads a root for - so it is shown here, in the
      * element's own colour, rather than left to be looked up elsewhere. A root whose element a pack disabled
      * still appears, because the player holds it; it simply has no element to show.
+     *
+     * <p>A root that is held but switched off is shown in grey and marked in the row's tooltip, because "what
+     * does this body hold" and "what is this body running on right now" are two different questions and the
+     * panel is the only place both are visible at once.</p>
      */
     private static void spiritRootLines(InformationCollector collector) {
-        List<Holder<SpiritRoot>> roots = collector.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots();
+        SpiritIdentityAttachment identity = collector.getData(MxtAttachments.SPIRIT_IDENTITY);
+        List<Holder<SpiritRoot>> roots = identity.spiritRoots();
         if (roots.isEmpty()) return;
         MutableComponent line = Component.empty();
+        List<Component> notes = new ArrayList<>();
         for (int index = 0; index < roots.size(); index++) {
             Holder<SpiritRoot> root = roots.get(index);
             if (index > 0) line.append(", ");
-            line.append(DefinitionText.name(root, "spirit_root"));
+            boolean active = identity.isSpiritRootEnabled(root);
+            line.append(heldName(DefinitionText.name(root, "spirit_root"), active));
             Holder<Element> element = root.value().element();
-            if (!Elements.enabled(element)) continue;
-            line.append(Component.literal("(").append(DefinitionText.name(element, "element")).append(")")
-                    .withColor(element.value().color()));
+            if (Elements.enabled(element))
+                line.append(Component.literal("(").append(DefinitionText.name(element, "element")).append(")")
+                        .withColor(active ? element.value().color() : SWITCHED_OFF_COLOR));
+            notes.add(identityNote(root, "spirit_root", root.value().rarity(), active));
         }
-        collector.add("info.mxt.spirit_roots", line);
+        collector.add(Component.translatable("info.mxt.spirit_roots"), line, VALUE_COLOR, joined(notes));
+    }
+
+    /**
+     * Lists the held physiques the same way, with one difference their own field asks for: a physique granted
+     * more than once is one entry that says how many, because {@code allow_stacking} makes duplicates legal and
+     * a name repeated three times reads like a rendering mistake.
+     */
+    private static void physiqueLines(InformationCollector collector) {
+        SpiritIdentityAttachment identity = collector.getData(MxtAttachments.SPIRIT_IDENTITY);
+        List<Holder<Physique>> held = identity.physiques();
+        if (held.isEmpty()) return;
+        List<Holder<Physique>> distinct = new ArrayList<>(new LinkedHashSet<>(held));
+        MutableComponent line = Component.empty();
+        List<Component> notes = new ArrayList<>();
+        for (int index = 0; index < distinct.size(); index++) {
+            Holder<Physique> physique = distinct.get(index);
+            if (index > 0) line.append(", ");
+            boolean active = identity.isPhysiqueEnabled(physique);
+            line.append(heldName(DefinitionText.name(physique, "physique"), active));
+            int stacks = Collections.frequency(held, physique);
+            if (stacks > 1) line.append(" ×" + stacks);
+            notes.add(identityNote(physique, "physique", physique.value().rarity(), active));
+        }
+        collector.add(Component.translatable("info.mxt.physiques"), line, VALUE_COLOR, joined(notes));
+    }
+
+    /**
+     * One held definition's tooltip line: which rarity the content gave it, and whether it is switched on.
+     * Rarity had no reader at all before this, so a pack could write one and never see it anywhere; the panel
+     * is the one consumer every definition already has.
+     */
+    private static Component identityNote(Holder<?> holder, String category, String rarity, boolean active) {
+        MutableComponent note = DefinitionText.name(holder, category).append(" · ").append(DefinitionText.rarity(rarity));
+        if (!active) note.append(" · ").append(Component.translatable("info.mxt.switched_off"));
+        return note.withStyle(ChatFormatting.GRAY);
+    }
+
+    private static MutableComponent heldName(MutableComponent name, boolean active) {
+        return active ? name : name.withStyle(ChatFormatting.DARK_GRAY);
+    }
+
+    private static Component joined(List<Component> notes) {
+        MutableComponent result = Component.empty();
+        for (int index = 0; index < notes.size(); index++) {
+            if (index > 0) result.append("\n");
+            result.append(notes.get(index));
+        }
+        return result;
     }
 
     /**

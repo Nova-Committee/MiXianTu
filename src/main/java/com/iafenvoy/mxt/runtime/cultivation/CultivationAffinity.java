@@ -4,38 +4,35 @@ import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability.AffinityMode;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * Resolves the data-driven cultivation affinity without conflating independent physiques with elements.
+ *
+ * <p>Every reading here starts from the body's own attachment, so the numbers come from the roots and
+ * techniques it actually holds and are read at the moment they are asked for - a root is a definition, not a
+ * value, and looking one up a second time by id would only be a way for the two readings to disagree.</p>
  */
 public final class CultivationAffinity {
     private CultivationAffinity() {
     }
 
     /**
-     * Legacy attachment-only path; it retains element separation but has no zone-specific modifiers.
+     * Attachment-only path; it retains element separation but has no zone-specific modifiers.
      */
-    public static double multiplier(SpiritIdentityAttachment spirit, AuraChunkAttachment aura, FormulaContext context,
-                                    @Nullable Provider access,
-                                    Function<Identifier, Optional<SpiritRoot>> roots,
-                                    Function<Identifier, Optional<Technique>> techniques) {
+    public static double multiplier(SpiritIdentityAttachment spirit, AuraChunkAttachment aura, FormulaContext context) {
         double total = 0.0D;
         int count = 0;
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
@@ -50,19 +47,10 @@ public final class CultivationAffinity {
             total += base * Math.max(0.0D, 1.0D + concentration);
             count++;
         }
-        double result = count == 0 ? 1.0D : total / count;
-        for (Holder<Technique> techniqueHolder : spirit.learnedTechniques()) {
-            double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
-            if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
-            result *= modifier;
-        }
-        return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
+        return combine(spirit, context, total, count);
     }
 
-    public static double multiplier(SpiritIdentityAttachment spirit, AuraResult aura, FormulaContext context,
-                                    @Nullable Provider access,
-                                    Function<Identifier, Optional<SpiritRoot>> roots,
-                                    Function<Identifier, Optional<Technique>> techniques) {
+    public static double multiplier(SpiritIdentityAttachment spirit, AuraResult aura, FormulaContext context) {
         double total = 0.0D;
         int count = 0;
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
@@ -84,6 +72,15 @@ public final class CultivationAffinity {
             total += base * modifier;
             count++;
         }
+        return combine(spirit, context, total, count);
+    }
+
+    /**
+     * The average affinity of the live roots, times every learned technique's own cultivation modifier. No
+     * root means no root-side multiplier at all, which is {@code 1} rather than zero: a body without a spirit
+     * root still cultivates, it simply gets nothing extra for an element it does not have.
+     */
+    private static double combine(SpiritIdentityAttachment spirit, FormulaContext context, double total, int count) {
         double result = count == 0 ? 1.0D : total / count;
         for (Holder<Technique> techniqueHolder : spirit.learnedTechniques()) {
             double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
@@ -112,8 +109,14 @@ public final class CultivationAffinity {
         return total;
     }
 
-    public static double abilityMultiplier(SpiritIdentityAttachment spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements, FormulaContext context,
-                                           Function<Identifier, Optional<SpiritRoot>> roots, AffinityMode mode) {
+    /**
+     * What a casting adapted to these elements is worth to this body: the average (or the best) of the
+     * {@code element_ability_modifier} of its matching roots. A casting with no matching live root is worth
+     * nothing, which is the same answer the cast gate reads - an ability with an affinity nobody in this body
+     * has is not cast at all.
+     */
+    public static double abilityMultiplier(SpiritIdentityAttachment spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements,
+                                           FormulaContext context, AffinityMode mode) {
         if (elements.isEmpty()) return 1.0D;
         double total = 0.0D;
         double best = Double.NaN;

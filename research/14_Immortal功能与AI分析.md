@@ -1,6 +1,6 @@
 # Immortal 功能与 AI 对照分析
 
-> 来源：`E:\Java\Immortal`，commit `fafda5d7efd4e7fded12ddd90e0b12ef428bae1a`，最新提交日期 2025-06-24。
+> 来源：`Immortal`（外部工程，需自行获取），commit `fafda5d7efd4e7fded12ddd90e0b12ef428bae1a`，最新提交日期 2025-06-24。
 >
 > 目标项目：MiXianTu（Minecraft/NeoForge 26.1.2）。本文记录玩法与模块边界，不直接照搬 Immortal 的旧版 API。
 
@@ -46,10 +46,10 @@ Immortal 的 `IMMEntityData` 为实体保存元素附着量、更新时间、候
 
 源码：
 
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\capability\entity\IMMEntityData.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\api\spell\ElementReaction.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\ElementManager.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\ElementReactions.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/capability/entity/IMMEntityData.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/api/spell/ElementReaction.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/ElementManager.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/ElementReactions.java`
 
 MiXianTu 后续实现时，应把匹配、倍率、消耗和结果落到现有 `Condition`、`NumberProvider` 和 `Action`，避免每种反应都新增专用服务。
 
@@ -58,7 +58,7 @@ MiXianTu 后续实现时，应把匹配、倍率、消耗和结果落到现有 `
 Immortal 的 `SpellCastContext` 统一携带施法者、法术等级、倍率、目标实体、目标方块、位置、朝向、使用物品、触发条件和原始事件。主动技能、物品刻印和实体
 AI 因此可以共用技能实现。
 
-源码：`E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\api\spell\SpellCastContext.java`。
+源码：`Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/api/spell/SpellCastContext.java`。
 
 MiXianTu 已有 Action、Condition、Cost 和 NumberProvider，但复杂技能的命中结果与触发来源仍应继续收敛到统一上下文。
 
@@ -69,9 +69,9 @@ MiXianTu 已有 Action、Condition、Cost 和 NumberProvider，但复杂技能�
 
 源码：
 
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\codec\SpellInstance.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\SpellManager.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\menu\InscriptionTableMenu.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/codec/SpellInstance.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/SpellManager.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/menu/InscriptionTableMenu.java`
 
 ### 分页秘籍
 
@@ -80,9 +80,9 @@ MiXianTu 已有 Action、Condition、Cost 和 NumberProvider，但复杂技能�
 
 源码：
 
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\manual\SecretManual.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\manual\SecretScroll.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\impl\SecretManuals.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/manual/SecretManual.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/manual/SecretScroll.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/impl/SecretManuals.java`
 
 ### NPC 档案分层
 
@@ -91,8 +91,8 @@ MiXianTu 已有 Action、Condition、Cost 和 NumberProvider，但复杂技能�
 
 源码：
 
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\entity\human\setting\HumanSetting.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\entity\human\setting\trade\TradeSetting.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/entity/human/setting/HumanSetting.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/entity/human/setting/trade/TradeSetting.java`
 
 ## 特殊 AI 核验
 
@@ -110,10 +110,10 @@ Immortal 确实存在特殊 AI，但不存在一个统一命名为 `special_ai` 
 
 源码：
 
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\entity\golem\GolemEntity.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\entity\ai\behavior\golem\GolemBehavior.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\rune\behavior\BehaviorRunes.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\cultivation\rune\filter\FilterRuneTypes.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/entity/golem/GolemEntity.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/entity/ai/behavior/golem/GolemBehavior.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/rune/behavior/BehaviorRunes.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/cultivation/rune/filter/FilterRuneTypes.java`
 
 这是代码注册的简单注册表，行为实现和 Memory 需求仍在 Java 中，并不是完全由数据包生成的 AI 图。MiXianTu 可以借鉴“行为节点 +
 条件过滤器 + 运行时重建”，但应优先用现有 Action/Condition 实现。
@@ -125,9 +125,9 @@ Immortal 确实存在特殊 AI，但不存在一个统一命名为 `special_ai` 
 
 源码：
 
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\entity\human\cultivator\WanderingCultivatorAi.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\entity\human\HumanLikeAi.java`
-- `E:\Java\Immortal\neoforge\src\main\java\hungteen\imm\common\entity\human\pillager\ChillagerAi.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/entity/human/cultivator/WanderingCultivatorAi.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/entity/human/HumanLikeAi.java`
+- `Immortal`（外部工程）的 `neoforge/src/main/java/hungteen/imm/common/entity/human/pillager/ChillagerAi.java`
 
 这属于专用实体 AI，不是通用数据包模块。MiXianTu 当前可以用 `creature_profile`、Action、Condition 和技能系统表达部分行为，但不能自动生成同等的
 Brain 活动图。

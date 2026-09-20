@@ -8,6 +8,14 @@ description: MiXianTu 修仙模组框架的使用、数据包、KubeJS 与 Java 
 
 MiXianTu（觅仙途，模组 ID：`mxt`）是一个 NeoForge 修仙模组框架。它提供数据包注册表、条件与行为分派、资源与境界、灵气环境、物品绑定、技能、阵法、经济和扩展 API，但不预设具体世界观数值。
 
+:::info 这个目录是什么，不是什么
+
+这里是**仓库内的开发文档**（中文，写给内容作者与开发者）。
+
+**玩家文档站在另一个仓库**：[`IAFEnvoy/mxt-docs`](https://github.com/IAFEnvoy/mxt-docs)——那是中英双语、面向玩家的站点，别和这里搞混。字段级权威始终是 [数据包格式](数据包格式)，与代码不一致时以代码为准；本目录与本仓库的 `research/` 分工见 [docs/README](README)。
+
+:::
+
 ## 文档导航
 
 - [基本信息与安装](getting-started)

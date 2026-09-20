@@ -4,7 +4,7 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限；纯查询的入口（例如 `/mxt curse list`、`/ability list`、`/mxt trigger list`）不需要权限，只是不填目标时要用到自己，因此仍需由玩家执行。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 12 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`lightning`、`picker`、`talisman`、`technique`、`trade`、`tribulation`。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 13 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`identity`、`lightning`、`picker`、`talisman`、`technique`、`trade`、`tribulation`。
 
 | 命令 | 作用 |
 | --- | --- |
@@ -40,6 +40,12 @@ title: 命令
 | `/mxt formation list`（= `/formation list`） | 列出当前维度所有已激活阵法：ID、阵心坐标、半径、阵主与已付费的维持次数。 |
 | `/mxt formation info`（= `/formation info`） | 列出覆盖玩家所在位置的阵法；重叠时全部列出，不做取舍。 |
 | `/mxt formation bind <formation>`（= `/formation bind`） | 把指定阵法写入**主手**的阵盘（需要 gamemaster 权限）。阵盘是唯一能把阵法带进世界的物品，而它的绑定存在物品组件里；这条命令是生存流程里取得可用阵盘的入口。Tab 补全只列出**这块阵盘允许的**阵法，不在白名单里的会被拒绝且不修改阵盘；重复绑定会覆盖原值，ID 写错时阵盘保持原样。 |
+| `/identity root list [<target>]`（= `/mxt identity root list`） | 列出该实体持有的灵根：名字、稀有度、绑定元素与是否生效。读附件而不是注册表，所以定义被停用/删除的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
+| `/identity root grant\|remove <targets> <root>`（= `/mxt identity root …`） | 授予或移除灵根（需要 gamemaster 权限）。授予走实体行为 `mxt:grant_spirit_root` 的同一套服务，因此 `conflicting_elements` 与「已持有」都会拒绝并逐个目标报出原因。 |
+| `/identity root enable\|disable <targets> <root>`（= `/mxt identity root …`） | 「关闭但不失去」：关掉的灵根仍然持有，只是不再提供元素、修炼倍率、授予能力与 `conflicting_elements`。这与数据包标签 `mxt:disabled` 不是一回事。 |
+| `/identity physique list [<target>]`（= `/mxt identity physique list`） | 列出该实体持有的体质：名字、稀有度与是否生效（叠加时同名只列一行），不需要权限。 |
+| `/identity physique grant\|remove <targets> <physique>`（= `/mxt identity physique …`） | 授予（按当前实体判定 `holder_condition` 与互斥标签）或移除体质（需要 gamemaster 权限）。 |
+| `/identity physique enable\|disable <targets> <physique>`（= `/mxt identity physique …`） | 与灵根同义的开关：关闭后属性修正、授予能力与两个伤害倍率全部不生效，但体质仍然被持有。 |
 | `/technique repair [dry-run]`（= `/mxt technique repair`） | 清理指向已删除功法定义的失效数据。 |
 | `/technique drop <id>`（= `/mxt technique drop <id>`） | 移除一项已习得功法并重建其带来的属性与能力。 |
 | `/technique diagnose`（= `/mxt technique diagnose`） | 逐条检查手持功法物品为何无法使用。 |

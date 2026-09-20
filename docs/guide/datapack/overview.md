@@ -31,7 +31,7 @@ data/mxt/tags/mxt/<registry>/disabled.json
 
 被列入 `mxt:disabled` 的条目不会参与运行时查询——**元素也不例外**：被停用的元素不再参与克制/适应、不再作为灵根的元素、不再染色、不再匹配任何元素字段。标签值顺序不作为玩法顺序；品质顺序由品质读取接口根据原版标签顺序处理。
 
-> 灵根与体质另有一个**开关**（`spirit_identity` 附件里的 `disabled_spirit_roots` / `disabled_physiques`）：关闭是"仍然持有但不生效"，与这里的停用标签不是一回事，而且本模组不提供操作它的玩家入口。
+> 灵根与体质另有一个**开关**（`spirit_identity` 附件里的 `disabled_spirit_roots` / `disabled_physiques`）：关闭是"仍然持有但不生效"，与这里的停用标签不是一回事。操作用脚本的 `MxtSpiritRoots.setEnabled` / `MxtPhysiques.setEnabled`，或管理员命令 `/mxt identity root|physique enable|disable`；本模组不为它提供玩家界面。
 
 ## 数值字段
 

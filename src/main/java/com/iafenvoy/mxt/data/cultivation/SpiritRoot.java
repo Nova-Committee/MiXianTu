@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
@@ -29,14 +30,26 @@ public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMult
                          List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                          List<Either<Holder<Element>, TagKey<Element>>> conflictingElements) {
     public static final Codec<Holder<SpiritRoot>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SPIRIT_ROOT);
-    public static final Codec<SpiritRoot> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+    public static final Codec<SpiritRoot> DIRECT_CODEC = RecordCodecBuilder.<SpiritRoot>create(i -> i.group(
             Element.CODEC.fieldOf("element").forGetter(SpiritRoot::element),
             NumberProvider.CODEC.optionalFieldOf("cultivation_multiplier", new Constant(1.0D)).forGetter(SpiritRoot::cultivationMultiplier),
             NumberProvider.CODEC.optionalFieldOf("element_ability_modifier", new Constant(1.0D)).forGetter(SpiritRoot::elementAbilityModifier),
             Codec.STRING.optionalFieldOf("rarity", "common").forGetter(SpiritRoot::rarity),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(SpiritRoot::grantedAbilities),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("conflicting_elements", List.of()).forGetter(SpiritRoot::conflictingElements)
-    ).apply(i, SpiritRoot::new));
+    ).apply(i, SpiritRoot::new)).validate(SpiritRoot::validate);
+
+    /**
+     * A written multiplier is rejected while the pack loads rather than read as {@code NaN} at runtime: both
+     * numbers scale a body's cultivation and its elemental casting, and {@code -0.5} is a typo far more often
+     * than it is a rule. A formula can only be judged when it runs, which the callers already do.
+     */
+    private static DataResult<SpiritRoot> validate(SpiritRoot root) {
+        for (NumberProvider provider : List.of(root.cultivationMultiplier(), root.elementAbilityModifier()))
+            if (provider instanceof Constant constant && (!Double.isFinite(constant.value()) || constant.value() < 0.0D))
+                return DataResult.error(() -> "A spirit root multiplier must be finite and non-negative: " + constant.value());
+        return DataResult.success(root);
+    }
 
     /**
      * Whether the two roots rule each other out, read in both directions so a pack writes the rule once.

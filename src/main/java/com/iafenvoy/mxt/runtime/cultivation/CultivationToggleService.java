@@ -75,7 +75,7 @@ public final class CultivationToggleService {
         return Result.changedToggle();
     }
 
-    public enum Failure {NOT_HELD}
+    public enum Failure {NOT_HELD, SERVER_ONLY}
 
     /**
      * What a toggle did: whether it changed anything, and why it did nothing when it did not.

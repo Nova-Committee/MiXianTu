@@ -14,6 +14,10 @@ title: 修炼、境界与灵根
 }
 ```
 
+**两者各自接进伤害结算的一角**（见[数据包格式](../../数据包格式.md#伤害结算)的「伤害结算」一节）：灵根的 `element_ability_modifier` 是施放亲和元素技能时第一层的因子（匹配灵根按 `element_affinity_mode` 合并），体质的 `damage_dealt_multiplier` / `damage_taken_multiplier` 分别是第一层与第二层的因子，且体质那两条**与元素无关**——体质定义里出现任何元素或灵根字段，加载期就会拒绝并指名那个字段。灵根还提供 `cultivation_multiplier`（配合区块灵气浓度算修炼亲和）与 `conflicting_elements`（同体互斥，双向判定）；两者的 `rarity` 会显示在信息面板与该实体的 `/mxt identity … list` 里。
+
+已持有的灵根和体质都可以**关闭而不失去**：脚本侧 `MxtSpiritRoots.setEnabled` / `MxtPhysiques.setEnabled`，管理员侧 `/mxt identity root|physique enable|disable`，本模组不提供玩家界面。
+
 ```json
 // data/example/mxt/aura/qi.json
 {

@@ -60,10 +60,14 @@ import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry
 import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -146,6 +150,9 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_INERT_ELEMENT = id("inert");
     private static final Identifier PROBE_ELEMENT_ABILITY = id("elemental_probe");
     private static final Identifier PROBE_ELEMENT_TAG = id("basic");
+    private static final Identifier PROBE_PHYSIQUE = id("probe_body");
+    private static final Identifier PROBE_AFFINITY_ABILITY = id("firebolt");
+    private static final double PROBE_FIRE_AFFINITY = 1.1D;
     private static final Identifier PROBE_TECHNIQUE = id("sword_manual");
     private static final Identifier PROBE_TECHNIQUE_STAGE = id("sword_art_2");
     private static final Identifier PROBE_ABILITY = id("artifact_guard");
@@ -168,6 +175,7 @@ public final class MxtTestCommands {
                 .then(literal("verify").executes(context -> verify(context.getSource())))
                 .then(literal("damage").executes(context -> probeDamage(context.getSource())))
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
+                .then(literal("identity").executes(context -> probeIdentity(context.getSource())))
                 .then(literal("realm")
                         .executes(context -> probeRealm(context.getSource()))
                         .then(literal("keep").executes(context -> keepRealm(context.getSource())))
@@ -272,8 +280,13 @@ public final class MxtTestCommands {
         // second strike would land in that window and be refused rather than measured.
         LivingEntity masteryDefender = spawnProbe(level, origin.above(3), PROBE_WATER_ROOT);
         LivingEntity foreignDefender = spawnProbe(level, origin.above(4), PROBE_WATER_ROOT);
+        LivingEntity bodyAttacker = spawnProbe(level, origin.above(5), PROBE_FIRE_ROOT);
+        LivingEntity bodyDefender = spawnProbe(level, origin.above(6), PROBE_WATER_ROOT);
+        LivingEntity affinityAttacker = spawnProbe(level, origin.above(7), PROBE_FIRE_ROOT);
+        LivingEntity affinityDefender = spawnProbe(level, origin.above(8), PROBE_WATER_ROOT);
         try {
-            if (attacker == null || defender == null || masteryDefender == null || foreignDefender == null) {
+            if (attacker == null || defender == null || masteryDefender == null || foreignDefender == null
+                    || bodyAttacker == null || bodyDefender == null || affinityAttacker == null || affinityDefender == null) {
                 source.sendFailure(Component.literal("damage probe: could not create the probe entities"));
                 return 0;
             }
@@ -328,7 +341,56 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("damage probe: foreign health_lost=" + foreignLost
                     + (foreign ? " OK" : " MISMATCH")), false);
 
-            if (elements && mastery && foreign) {
+            // The physique half of the shaping and the reduction. One fixture is granted to both sides - it
+            // multiplies what its holder deals by 1.5 and what its holder takes by 0.5 - so one pair of numbers
+            // reads both: 10 * 1.5 (fire overcomes water) * 1.5 (dealt) = 22.5, then
+            // 22.5 * 0.5 (water is adapted to fire) * 0.5 (taken) = 5.625. The taken multiplier is written as
+            // an expression rather than a number, so this leg covers the formula path as well as the constant
+            // one, and it is evaluated against the physique holder's own context rather than the attacker's.
+            boolean bodyGranted = grantProbePhysique(bodyAttacker, PROBE_PHYSIQUE)
+                    && grantProbePhysique(bodyDefender, PROBE_PHYSIQUE);
+            FormulaContext bodyContext = FormulaContext.of(bodyAttacker);
+            double bodyOutgoing = DamageCalculationService.outgoing(bodyAttacker, bodyDefender, 10.0D, bodyContext);
+            double bodyIncoming = DamageCalculationService.incoming(bodyDefender, bodyAttacker, bodyOutgoing);
+            float bodyBefore = bodyDefender.getHealth();
+            DamageCalculationService.deal(bodyAttacker, bodyDefender, 10.0D, Optional.empty(), bodyContext);
+            double bodyLost = bodyBefore - bodyDefender.getHealth();
+            boolean physique = bodyGranted && close(bodyOutgoing, 22.5D) && close(bodyIncoming, 5.625D)
+                    && close(bodyLost, 5.625D);
+            source.sendSuccess(() -> Component.literal("damage probe: physique outgoing=" + bodyOutgoing
+                    + " taken=" + bodyIncoming + " health_lost=" + bodyLost + (physique ? " OK" : " MISMATCH")), false);
+
+            // The spirit root's affinity is a factor of the shaping layer now, not only a value a damage
+            // formula has to remember: 10 * 1.1 (the fire root's element_ability_modifier) * 1.5 = 16.5, and
+            // 16.5 * 0.5 = 8.25 once the water body answers for it. The second half drives a real cast and
+            // reads the same value off the context it dispatched with, which is what proves the number the
+            // pipeline applies and the number a pack could read are the same one.
+            FormulaContext affinityContext = FormulaContext.of(affinityAttacker)
+                    .with(DamageCalculationService.ELEMENT_MODIFIER, PROBE_FIRE_AFFINITY);
+            double affinityOutgoing = DamageCalculationService.outgoing(affinityAttacker, affinityDefender, 10.0D, affinityContext);
+            double affinityIncoming = DamageCalculationService.incoming(affinityDefender, affinityAttacker, affinityOutgoing);
+            float affinityBefore = affinityDefender.getHealth();
+            DamageCalculationService.deal(affinityAttacker, affinityDefender, 10.0D, Optional.empty(), affinityContext);
+            double affinityLost = affinityBefore - affinityDefender.getHealth();
+            double[] castAffinity = {Double.NaN};
+            Consumer<Pre> affinityListener = event ->
+                    castAffinity[0] = event.context().explicit(DamageCalculationService.ELEMENT_MODIFIER);
+            NeoForge.EVENT_BUS.addListener(affinityListener);
+            try {
+                Holder<Ability> affinityAbility = require(MxtResourceKeys.ABILITY, PROBE_AFFINITY_ABILITY);
+                AbilityService.useCarried(affinityAbility, affinityAbility.value(), affinityAttacker,
+                        affinityAttacker.getData(MxtAttachments.ABILITY_HOLDER), affinityAttacker.getData(MxtAttachments.RESOURCE_HOLDER),
+                        level.getGameTime(), FormulaContext.of(affinityAttacker), null);
+            } finally {
+                NeoForge.EVENT_BUS.unregister(affinityListener);
+            }
+            boolean affinity = close(castAffinity[0], PROBE_FIRE_AFFINITY) && close(affinityOutgoing, 16.5D)
+                    && close(affinityIncoming, 8.25D) && close(affinityLost, 8.25D);
+            source.sendSuccess(() -> Component.literal("damage probe: affinity outgoing=" + affinityOutgoing
+                    + " reduced=" + affinityIncoming + " health_lost=" + affinityLost + " cast=" + castAffinity[0]
+                    + (affinity ? " OK" : " MISMATCH")), false);
+
+            if (elements && mastery && foreign && physique && affinity) {
                 source.sendSuccess(() -> Component.literal("damage probe: OK"), false);
                 return 1;
             }
@@ -339,7 +401,126 @@ public final class MxtTestCommands {
             if (defender != null) defender.discard();
             if (masteryDefender != null) masteryDefender.discard();
             if (foreignDefender != null) foreignDefender.discard();
+            if (bodyAttacker != null) bodyAttacker.discard();
+            if (bodyDefender != null) bodyDefender.discard();
+            if (affinityAttacker != null) affinityAttacker.discard();
+            if (affinityDefender != null) affinityDefender.discard();
         }
+    }
+
+    /**
+     * Hands one disposable probe a physique through the authoritative service, which is the same path a data
+     * pack action takes; {@code false} means the definition was refused, and the leg that asked for it fails
+     * rather than measuring a body that never got it.
+     */
+    private static boolean grantProbePhysique(LivingEntity entity, Identifier id) {
+        return require(MxtResourceKeys.PHYSIQUE, id) != null
+                && CultivationIdentityService.grantPhysique(entity, id, require(MxtResourceKeys.PHYSIQUE, id).value(),
+                FormulaContext.of(entity)).changed();
+    }
+
+    /**
+     * Drives the cultivation identity surface end to end: the script API, the rarity a definition now reports,
+     * and the reading that refuses a physique written as if it were elemental. Every leg is a number or a
+     * boolean rather than a log line, because the point of the probe is to fail loudly when a guarantee the
+     * documentation makes stops holding.
+     *
+     * <p>The three guarantees it pins: a switched-off root or physique is still <em>held</em> while
+     * contributing nothing (so the reads have to answer both questions separately, and a switched-off physique
+     * must not scale anything); a rarity is a field with a reader rather than a comment; and a definition that
+     * belongs to another registry is refused while the pack loads instead of being dropped in silence.</p>
+     */
+    private static int probeIdentity(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        BlockPos origin = source.getPlayer() != null
+                ? source.getPlayer().blockPosition()
+                : level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO);
+        LivingEntity probe = spawnProbe(level, origin.above(), null);
+        try {
+            if (probe == null) {
+                source.sendFailure(Component.literal("identity probe: could not create the probe entity"));
+                return 0;
+            }
+            boolean granted = MxtKubeJsApi.grantSpiritRoot(probe, PROBE_FIRE_ROOT).changed()
+                    && MxtKubeJsApi.grantPhysique(probe, PROBE_PHYSIQUE).changed();
+            boolean listed = MxtKubeJsApi.spiritRoots(probe).equals(List.of(PROBE_FIRE_ROOT.toString()))
+                    && MxtKubeJsApi.physiques(probe).equals(List.of(PROBE_PHYSIQUE.toString()))
+                    && MxtKubeJsApi.activeSpiritRoots(probe).equals(List.of(PROBE_FIRE_ROOT.toString()))
+                    && MxtKubeJsApi.activePhysiques(probe).equals(List.of(PROBE_PHYSIQUE.toString()))
+                    && MxtKubeJsApi.hasSpiritRoot(probe, PROBE_FIRE_ROOT)
+                    && MxtKubeJsApi.hasPhysique(probe, PROBE_PHYSIQUE)
+                    && MxtKubeJsApi.isSpiritRootEnabled(probe, PROBE_FIRE_ROOT)
+                    && MxtKubeJsApi.isPhysiqueEnabled(probe, PROBE_PHYSIQUE);
+            // Off is not gone: the body still holds both, nothing of either counts, and switching again is a
+            // change that did not happen rather than a second toggle.
+            boolean switchedOff = MxtKubeJsApi.setSpiritRootEnabled(probe, PROBE_FIRE_ROOT, false).changed()
+                    && MxtKubeJsApi.setPhysiqueEnabled(probe, PROBE_PHYSIQUE, false).changed()
+                    && MxtKubeJsApi.hasSpiritRoot(probe, PROBE_FIRE_ROOT)
+                    && MxtKubeJsApi.hasPhysique(probe, PROBE_PHYSIQUE)
+                    && !MxtKubeJsApi.isSpiritRootEnabled(probe, PROBE_FIRE_ROOT)
+                    && MxtKubeJsApi.activeSpiritRoots(probe).isEmpty()
+                    && MxtKubeJsApi.activePhysiques(probe).isEmpty()
+                    && close(DamageCalculationService.physiqueMultiplier(probe, true), 1.0D)
+                    && !MxtKubeJsApi.setPhysiqueEnabled(probe, PROBE_PHYSIQUE, false).changed();
+            boolean removed = MxtKubeJsApi.removeSpiritRoot(probe, PROBE_FIRE_ROOT)
+                    && MxtKubeJsApi.removePhysique(probe, PROBE_PHYSIQUE)
+                    && MxtKubeJsApi.spiritRoots(probe).isEmpty() && MxtKubeJsApi.physiques(probe).isEmpty()
+                    && !MxtKubeJsApi.hasSpiritRoot(probe, PROBE_FIRE_ROOT)
+                    && !MxtKubeJsApi.setSpiritRootEnabled(probe, PROBE_FIRE_ROOT, true).changed();
+            boolean identity = granted && listed && switchedOff && removed;
+            source.sendSuccess(() -> Component.literal("identity probe: granted=" + granted + " listed=" + listed
+                    + " switched_off=" + switchedOff + " removed=" + removed + (identity ? " OK" : " MISMATCH")), false);
+
+            // A rarity is content's own word, so it is read back as written and falls back to itself when no
+            // language file names it - the two things a consumer that reports it has to be able to do.
+            Holder<Physique> physique = require(MxtResourceKeys.PHYSIQUE, PROBE_PHYSIQUE);
+            boolean rarity = physique != null && physique.value().rarity().equals("probe")
+                    && DefinitionText.rarity("probe").getString().equals("probe")
+                    && require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().rarity().equals("uncommon");
+            source.sendSuccess(() -> Component.literal("identity probe: rarity=" + rarity
+                    + (rarity ? " OK" : " MISMATCH")), false);
+
+            // A physique that names an element, an element relation or a spirit-root field is refused while it
+            // loads. It used to be dropped without a word, which is the one outcome a pack can never notice.
+            boolean refusedFields = refusesElementFields();
+            boolean negative = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("damage_dealt_multiplier", -1.0D)).isError();
+            boolean plain = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("rarity", "probe")).result().isPresent();
+            boolean strict = refusedFields && negative && plain;
+            source.sendSuccess(() -> Component.literal("identity probe: element_fields_refused=" + refusedFields
+                    + " negative_refused=" + negative + " plain_accepted=" + plain + (strict ? " OK" : " MISMATCH")), false);
+
+            if (identity && rarity && strict) {
+                source.sendSuccess(() -> Component.literal("identity probe: OK"), false);
+                return 1;
+            }
+            source.sendFailure(Component.literal("identity probe: MISMATCH"));
+            return 0;
+        } finally {
+            if (probe != null) probe.discard();
+        }
+    }
+
+    /**
+     * Whether every field that belongs to an element or to a spirit root is refused by the physique codec. The
+     * values written with them are deliberately irrelevant: the check happens before anything is decoded.
+     */
+    private static boolean refusesElementFields() {
+        for (String field : List.of("element", "element_affinity", "element_ability_modifier",
+                "conflicting_elements", "overcomes", "adapted_to", "damage_types", "cultivation_multiplier"))
+            if (!Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single(field, "mxt_test:fire")).isError()) return false;
+        return true;
+    }
+
+    /**
+     * One-field JSON object, for the decode checks that ask whether a single key is enough to refuse a
+     * definition.
+     */
+    private static JsonObject single(String key, Object value) {
+        JsonObject object = new JsonObject();
+        if (value instanceof Number number) object.addProperty(key, number);
+        else if (value instanceof Boolean flag) object.addProperty(key, flag);
+        else object.addProperty(key, String.valueOf(value));
+        return object;
     }
 
     /**

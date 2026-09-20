@@ -2,8 +2,11 @@ package com.iafenvoy.mxt.compat.kubejs;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -18,6 +21,8 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
@@ -265,6 +270,157 @@ public final class MxtKubeJsApi {
         if (element == null) return 0.0D;
         ElementReactionService.apply(entity, element, amount, FormulaContext.of(entity));
         return ElementReactionService.amount(entity, element);
+    }
+
+    /**
+     * Every spirit root the entity holds, sorted. The answer is read off the body rather than off the
+     * registry, so a root whose definition a pack disabled or deleted is still reported: the body holds it,
+     * and {@link #removeSpiritRoot} by that name is still what takes it off. This is the held list - the roots
+     * that actually count right now are {@link #activeSpiritRoots}.
+     */
+    public static List<String> spiritRoots(@NotNull Entity entity) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        return spirit == null ? List.of() : spirit.spiritRoots().stream()
+                .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    /**
+     * The held roots that count right now, sorted. A root is left out while it is switched off, and a root
+     * whose element is not live is left out too, because neither contributes anything to the body.
+     *
+     * <p>The element is read by resolving the root's id against the registry the entity's level provides,
+     * which is the same reading {@code Elements.of} does: a held reference that no longer resolves to an
+     * enabled definition answers nothing rather than throwing, on either side.</p>
+     */
+    public static List<String> activeSpiritRoots(@NotNull Entity entity) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        if (spirit == null) return List.of();
+        return spirit.activeSpiritRoots().stream()
+                .filter(root -> MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT,
+                                HolderHelper.id(root))
+                        .map(value -> Elements.enabled(value.element())).orElse(false))
+                .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    public static boolean hasSpiritRoot(@NotNull Entity entity, Identifier id) {
+        return foundSpiritRoot(entity, id) != null;
+    }
+
+    /**
+     * Whether that held root is switched on. A root the entity does not hold answers {@code false}, which is
+     * the same answer "switched off" gets - a script that needs to tell the two apart asks
+     * {@link #hasSpiritRoot} as well.
+     */
+    public static boolean isSpiritRootEnabled(@NotNull Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        Holder<SpiritRoot> root = foundSpiritRoot(entity, id);
+        return spirit != null && root != null && spirit.isSpiritRootEnabled(root);
+    }
+
+    /**
+     * Grants one spirit root through the same service the data pack action uses, so the conflict rules and the
+     * granted abilities behave identically. Unknown or disabled definitions are refused rather than granted by
+     * name: the definition is what says which element the root binds.
+     */
+    public static CultivationIdentityService.Result grantSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
+        if (entity.level().isClientSide())
+            return new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.SERVER_ONLY);
+        Holder<SpiritRoot> root = MxtDatapackRegistries.holder(MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
+        return root == null
+                ? new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.DISABLED)
+                : CultivationIdentityService.grantSpiritRoot(entity, id, root.value());
+    }
+
+    public static boolean removeSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
+        return !entity.level().isClientSide() && CultivationIdentityService.removeSpiritRoot(entity, id);
+    }
+
+    /**
+     * Switches a held root on or off without giving it up, which is the module the data pack turns to when a
+     * body should keep an identity it is not currently running on.
+     */
+    public static CultivationToggleService.Result setSpiritRootEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
+        if (entity.level().isClientSide())
+            return new CultivationToggleService.Result(false, CultivationToggleService.Failure.SERVER_ONLY);
+        Holder<SpiritRoot> root = foundSpiritRoot(entity, id);
+        return root == null
+                ? new CultivationToggleService.Result(false, CultivationToggleService.Failure.NOT_HELD)
+                : CultivationToggleService.setSpiritRootEnabled(entity, root, enabled);
+    }
+
+    /**
+     * Every physique the entity holds, sorted, read off the body for the same reason the roots are.
+     */
+    public static List<String> physiques(@NotNull Entity entity) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        return spirit == null ? List.of() : spirit.physiques().stream()
+                .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    public static List<String> activePhysiques(@NotNull Entity entity) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        return spirit == null ? List.of() : spirit.activePhysiques().stream()
+                .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    public static boolean hasPhysique(@NotNull Entity entity, Identifier id) {
+        return foundPhysique(entity, id) != null;
+    }
+
+    public static boolean isPhysiqueEnabled(@NotNull Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        Holder<Physique> physique = foundPhysique(entity, id);
+        return spirit != null && physique != null && spirit.isPhysiqueEnabled(physique);
+    }
+
+    /**
+     * Grants one physique through the same service the data pack action uses, including its holder condition
+     * and its exclusive tags, which are read against the entity as it is right now.
+     */
+    public static CultivationIdentityService.Result grantPhysique(@NotNull LivingEntity entity, Identifier id) {
+        if (entity.level().isClientSide())
+            return new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.SERVER_ONLY);
+        Holder<Physique> physique = MxtDatapackRegistries.holder(MxtResourceKeys.PHYSIQUE, id).orElse(null);
+        return physique == null
+                ? new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.DISABLED)
+                : CultivationIdentityService.grantPhysique(entity, id, physique.value(), FormulaContext.of(entity));
+    }
+
+    public static boolean removePhysique(@NotNull LivingEntity entity, Identifier id) {
+        return !entity.level().isClientSide() && CultivationIdentityService.removePhysique(entity, id);
+    }
+
+    public static CultivationToggleService.Result setPhysiqueEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
+        if (entity.level().isClientSide())
+            return new CultivationToggleService.Result(false, CultivationToggleService.Failure.SERVER_ONLY);
+        Holder<Physique> physique = foundPhysique(entity, id);
+        return physique == null
+                ? new CultivationToggleService.Result(false, CultivationToggleService.Failure.NOT_HELD)
+                : CultivationToggleService.setPhysiqueEnabled(entity, physique, enabled);
+    }
+
+    /**
+     * The identity a read is about, or {@code null}. Read, never created: asking whether a body holds a root
+     * must not be the reason it comes away holding an empty identity.
+     */
+    private static SpiritIdentityAttachment identity(Entity entity) {
+        return entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+    }
+
+    private static Holder<SpiritRoot> foundSpiritRoot(Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        if (spirit == null) return null;
+        for (Holder<SpiritRoot> root : spirit.spiritRoots())
+            if (HolderHelper.id(root).equals(id)) return root;
+        return null;
+    }
+
+    private static Holder<Physique> foundPhysique(Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        if (spirit == null) return null;
+        for (Holder<Physique> physique : spirit.physiques())
+            if (HolderHelper.id(physique).equals(id)) return physique;
+        return null;
     }
 
     public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier auraId, FormulaContext context) {

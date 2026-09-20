@@ -49,4 +49,6 @@ sidebar_position: 2
 - README 的模块完成度；
 - `research/` 审计状态（如设计边界发生变化）。
 
+**本目录只写"怎么用"，不写"为什么这么设计"。** 新的设计、改版与方案对比一律先留档到 `research/`（编号 `NN_<主题>设计.md`，审计放 `research/audit/`），规矩见 [`research/README.md`](../../research/README.md)；字段说明写进本目录的 [`数据包格式.md`](../数据包格式.md)，玩家侧的说法写进文档站仓库。本目录也不是玩家文档站——用途对照见 [`docs/README.md`](../README.md)。
+
 删除字段时不保留兼容性说明，除非用户明确要求；项目未发布阶段以当前 Codec 为准。

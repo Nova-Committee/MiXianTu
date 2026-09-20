@@ -82,7 +82,7 @@ public final class CultivationIdentityService {
         return true;
     }
 
-    public enum Failure {DISABLED, ALREADY_HELD, CONDITIONS, EXCLUSIVE_CONFLICT, ELEMENT_CONFLICT}
+    public enum Failure {DISABLED, ALREADY_HELD, CONDITIONS, EXCLUSIVE_CONFLICT, ELEMENT_CONFLICT, SERVER_ONLY}
 
     public record Result(boolean changed, Failure failure) {
         private static Result changedResult() {

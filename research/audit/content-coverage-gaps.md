@@ -1,7 +1,7 @@
 # 内容表对照基座的缺口清单
 
 审计基准：当前工作区代码（NeoForge 26.1.2）。所有结论来自**直接读源码**，行号对应本文件写入时的状态。
-对照物是 `E:\Java\.process\analysis\registries\` 下的注册表总表（1920 行 / 10 个类别）、
+对照物是本地分析工作区（不在本仓库内）的 `analysis/registries/` 下的注册表总表（1920 行 / 10 个类别）、
 `变种汇总.csv`（208 族 / 19 轴）与 15 个模组的分模组分析文档。
 
 > 变更记录
@@ -501,9 +501,9 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | 12 | `SkillStage.damage_multiplier` | **已于 2026-09-20 关闭**：施放能力时 `AbilityService` 把"授予该能力、且施法者当前所在的那一级"的倍率写进公式上下文（`damage_multiplier`），`DamageCalculationService` 第一层读它；TODO 与类注释里的推后说明一并删除 | `runtime/cultivation/SkillStageService.java`；`runtime/ability/AbilityService.java` |
 | 13 | `CreatureProfile.realm_stages` | 零消费者 | `data/creature/CreatureProfile.java:28`；`technique.md` §8.2 |
 | 14 | `Technique.grade` | **已于 2026-09-19 接上**：功法面板的行悬浮提示显示"品阶：<原文>"（存在 `mxt.technique_grade.<grade>` 时用翻译） | `screen/information/TechniquePanelScreen.java` |
-| 15 | `SpiritRoot.rarity` / `Physique.rarity` | 零读取点（`docs/模块实现审计.md:72-73` 自认"仅元数据"） | 全仓无 `rarity` 调用点 |
+| 15 | `SpiritRoot.rarity` / `Physique.rarity` | **已于 2026-09-21 关闭**：信息面板的灵根行与体质行在悬浮提示里显示稀有度（`DefinitionText.rarity`，存在 `mxt.rarity.<rarity>` 时用翻译、否则原文，与功法 `grade` 同一套读法），`/mxt identity root\|physique list` 也打印它；`Physique` 另加了两个与元素无关的伤害倍率（`damage_dealt_multiplier`/`damage_taken_multiplier`），由伤害管线两层读取 | `DefinitionText`；`screen/information/InformationManager`；`runtime/damage/DamageCalculationService` |
 | 16 | `TriggerContext.damageSource()` | **零读取点**——`mxt:hurt` 把 `DamageSource` 放进去了，但条件/公式都拿不到 | `data/trigger/TriggerContext.java:58`（全仓唯一命中） |
-| 17 | `CultivationAffinity.multiplier` 的 `roots` / `techniques` 两个 `Function` 参数 | 死参数，调用方仍在传 | `runtime/cultivation/CultivationAffinity.java:35-38,62-65`；`CultivationActionService.java:99-101,121-123` |
+| 17 | `CultivationAffinity.multiplier` 的 `roots` / `techniques` 两个 `Function` 参数 | **已于 2026-09-21 关闭**：两个参数与同样没人用的 `Provider access` 一起删除，倍率改为从 `SpiritIdentityAttachment` 自己持有的灵根与功法读（顺便把两个重载里重复的尾巴抽成 `combine`）；`abilityMultiplier` 的 `roots` 参数同样删除 | `runtime/cultivation/CultivationAffinity.java`；`runtime/cultivation/CultivationActionService.java`；`runtime/ability/AbilityService.java` |
 | 18 | `RuntimeDimensionService` | 类可用但**全仓零调用者**（无命令、无 KubeJS、无内部调用） | `runtime/world/RuntimeDimensionService.java:31-81` |
 | 19 | `SpiritStoneVein` | 纯诊断读取器，无玩法消费者；方块与等级阈值写死 | `runtime/world/SpiritStoneVein.java:22,28,34-51`；唯一调用 `command/AuraCommand.java:90` |
 | 20 | `ResourceLedger` | 与附件账本并行的**第二套账本**，`src/main` 无生产调用点 | `runtime/resource/ResourceLedger.java`（全 67 行，仅自用） |

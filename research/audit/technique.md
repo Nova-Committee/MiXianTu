@@ -102,7 +102,7 @@
 - 物品 tooltip：只显示功法名，`tooltip.mxt.item.technique`（`ItemBindingTooltipAppender.java:120-123`）；不显示 `grade`、倍率或授予能力。
 - 信息面板：`info.mxt.techniques` 一行，`InformationManager.java:39`（`lineWithDefinitions(..., "technique")`）。
 - 载体物品：`registry/MxtItems.java:46` `CULTIVATION_JADE_SLIP`（`item.mxt.cultivation_jade_slip`）；它只是普通物品，经 `technique_binding` 右键学习，**与槽位无关**。
-- ~~Curios 功法槽~~ **已于 2026-09-12 整体删除**：`data/mxt/curios/slots/technique.json`、`data/curios/tags/item/technique.json`、`data/mxt/tags/item/technique_equipable.json`、`assets/mxt/textures/slot/empty_technique_slot.png` 四个文件删除，`data/mxt/curios/entities/entities.json` 去掉 `technique` 项，`curios.identifier.technique` lang（中英）移除，并同步修了 4 处文档（`docs/curios槽位.md`、`docs/guide/play/interaction.md`、`docs/模块实现审计.md:123`、`E:\Website\docs\...\player-guide\curios-slots.md`）。现在只注册 `back_weapon`、`belt_item` 两个物理槽位。
+- ~~Curios 功法槽~~ **已于 2026-09-12 整体删除**：`data/mxt/curios/slots/technique.json`、`data/curios/tags/item/technique.json`、`data/mxt/tags/item/technique_equipable.json`、`assets/mxt/textures/slot/empty_technique_slot.png` 四个文件删除，`data/mxt/curios/entities/entities.json` 去掉 `technique` 项，`curios.identifier.technique` lang（中英）移除，并同步修了 4 处文档（`docs/curios槽位.md`、`docs/guide/play/interaction.md`、`docs/模块实现审计.md:123`、既有英文文档仓库 `docs` 的 `.../player-guide/curios-slots.md`）。现在只注册 `back_weapon`、`belt_item` 两个物理槽位。
 - **删除后的必做步骤（易漏）**：改完 `src/main/resources` 必须跑 `.\gradlew.bat processResources`（改 `src/test-mod/resources` 则是 `processTestModResources`）。dev 运行读的是 `build/resources/**`，不同步的话被删掉的槽位文件仍会继续加载——本次删除功法槽时 `build/resources/main` 里就残留了 `data/mxt/curios/slots/technique.json`，已重跑任务并逐文件哈希比对确认同步。
 
 ## 6. 事件、脚本与触发器
@@ -235,7 +235,7 @@
 - 展示：`src/main/java/com/iafenvoy/mxt/data/item/ItemBindingTooltipAppender.java`、`src/main/java/com/iafenvoy/mxt/screen/information/InformationManager.java`
 - 等级链参考（§8）：`data/cultivation/RealmStage.java`、`runtime/cultivation/CultivationService.java`、`attachment/CultivationAttachment.java`、`data/quality/ItemQuality.java`、`data/forging/ForgingBlueprint.java`、`data/Tribulation.java`
 - 测试夹具：`src/test-mod/resources/data/mxt_test/mxt/technique/{qingxiao_breathing_manual,sword_manual,body_manual}.json`、`.../mxt/technique_binding/qingxiao_breathing_jade_slip.json`、`.../mxt/skill_stage/{sword_art_1,sword_art_2}.json`、`.../mxt/resource/sword_mastery.json`、`.../mxt/trigger/sword_mastery_from_break.json`
-- 相关文档：`docs/数据包格式.md`（`skill_stage` 段 + `technique` 字段）、`docs/guide/datapack/overview.md:56`、`docs/模块实现审计.md:74-75`、`docs/item-bindings.md:10-16, 65-78`、`docs/guide/datapack/cultivation.md:5`、`docs/curios槽位.md`、`E:\Website\docs\docs\mod\mxt\datapack\json\{technique,skill_stage,index}.md`、`...\datapack\overview.md`、`...\player-guide\curios-slots.md`
+- 相关文档：`docs/数据包格式.md`（`skill_stage` 段 + `technique` 字段）、`docs/guide/datapack/overview.md:56`、`docs/模块实现审计.md:74-75`、`docs/item-bindings.md:10-16, 65-78`、`docs/guide/datapack/cultivation.md:5`、`docs/curios槽位.md`、既有英文文档仓库 `docs` 的 `docs/mod/mxt/datapack/json/{technique,skill_stage,index}.md`、`...\datapack\overview.md`、`...\player-guide\curios-slots.md`
 
 ## 11. 拒绝路径与反馈（2026-09-13 落地，T2）
 
@@ -270,7 +270,7 @@
 | `actionbar.mxt.technique.failed` | `"Cannot learn %s: %s"`，参数为功法名（`DefinitionText.name(holder, "technique")`）与下一条 |
 | `actionbar.mxt.technique.failure.disabled` / `.already_learned` / `.conflict` / `.conditions` / `.cancelled` | 五条事务原因 |
 
-键名由枚举常量小写拼接，en/zh 各 5 个新键 + 门槛 4 个（含改写后的基键），两边键集合完全一致（各 324 个）。校验脚本：`C:\Users\tanks\AppData\Local\Temp\mxt-lang-check.mjs`（比对 en/zh 键集合、扫描所有字面 `translatable("…")`、按枚举常量推导拼接键）。
+键名由枚举常量小写拼接，en/zh 各 5 个新键 + 门槛 4 个（含改写后的基键），两边键集合完全一致（各 324 个）。校验脚本：一个用完即弃的临时校验脚本（比对 en/zh 键集合、扫描所有字面 `translatable("…")`、按枚举常量推导拼接键）。
 
 ### 11.4 API 变化
 
@@ -720,7 +720,7 @@ IllegalStateException: The manual reported a duration of 0 instead of its learn_
 
 ## 21. 定案：mixin 到 Item 的三个取值点（2026-09-13）
 
-**起因**：用户提出第三个方案——**不要再用组件，直接 mixin 到"读组件的地方"**，并让我参考他之前写的 `E:\Java\Throwable`。
+**起因**：用户提出第三个方案——**不要再用组件，直接 mixin 到"读组件的地方"**，并让我参考他之前写的 `Throwable`（外部工程）。
 
 看过之后确认这是对的方案，而且他之前已经实现过同一形状（`ItemMixin`：`@Inject` 到 `getUseAction` / `getMaxUseTime` / `use` / `onStoppedUsing`）。**§20 我引入 `TechniqueManualItem` 是设计失误**：这个模组自己的承诺是"绑定作用于任何已注册物品"（`ItemBindingService` 类注释明写 *items already registered by Minecraft, a mod, or KubeJS*），`items` 字段也接受 tag，而 **KubeJS 注册的物品不可能继承我的类**。子类方案等于把这个承诺砍掉。
 

@@ -1,6 +1,6 @@
 # Mine & Slash 功能参考整理
 
-本文记录对 `E:\Java\Mine-And-Slash-Rework-1.20-Forge` 的功能层阅读结果。
+本文记录对 `Mine-And-Slash-Rework`（外部工程，1.20 Forge）的功能层阅读结果。
 
 ## 阅读范围
 
@@ -328,6 +328,6 @@ MiXianTu 只应借鉴交互和信息层级，不能直接复制 1.20.1 GUI 实�
 
 本文所有 Mine & Slash 功能均来自本地项目：
 
-`E:\Java\Mine-And-Slash-Rework-1.20-Forge`
+`Mine-And-Slash-Rework`（外部工程，1.20 Forge）
 
 具体来源路径已在每个模块下列出。本文是功能参考，不表示这些功能已经在 MiXianTu 中实现，也不改变 MiXianTu “只提供框架、不提供具体内容数值”的定位。

@@ -7,11 +7,8 @@ import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.*;
 import com.iafenvoy.mxt.data.condition.builtin.damage.meta.*;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.tags.DamageTypeTags;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-
-import static com.iafenvoy.mxt.data.condition.SimpleConditions.createDamage;
 
 @SuppressWarnings("unused")
 public final class MxtDamageConditions {
@@ -24,8 +21,8 @@ public final class MxtDamageConditions {
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<DirectDamageCondition>> DIRECTNESS = REGISTRY.register("directness", () -> DirectDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<DamageTypeCondition>> DAMAGE_TYPE = REGISTRY.register("damage_type", () -> DamageTypeCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<DamageTypeTagCondition>> DAMAGE_TYPE_TAG = REGISTRY.register("damage_type_tag", () -> DamageTypeTagCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<? extends DamageCondition>> FIRE = REGISTRY.register("fire", () -> createDamage(ctx -> ctx.source().is(DamageTypeTags.IS_FIRE)));
-    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<? extends DamageCondition>> MAGIC = REGISTRY.register("magic", () -> createDamage(ctx -> ctx.source().is(DamageTypeTags.AVOIDS_GUARDIAN_THORNS) && ctx.source().is(DamageTypeTags.WITCH_RESISTANT_TO)));
+    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<FireDamageCondition>> FIRE = REGISTRY.register("fire", () -> FireDamageCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<MagicDamageCondition>> MAGIC = REGISTRY.register("magic", () -> MagicDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ProjectileDamageCondition>> PROJECTILE = REGISTRY.register("projectile", () -> ProjectileDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ElementDamageCondition>> ELEMENT = REGISTRY.register("element", () -> ElementDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<AndDamageCondition>> AND = REGISTRY.register("and", () -> AndDamageCondition.CODEC);

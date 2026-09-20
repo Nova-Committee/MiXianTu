@@ -98,9 +98,7 @@ public final class CultivationActionService {
     public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraChunkAttachment aura, Identifier actionId,
                               CultivateAction definition, long gameTime, FormulaContext context,
                               BooleanSupplier conditionsMet) {
-        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context, entity.level().registryAccess(),
-                id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id),
-                id -> MxtDatapackRegistries.get(MxtResourceKeys.TECHNIQUE, id));
+        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context);
         return tick(spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, affinity);
     }
 
@@ -120,9 +118,7 @@ public final class CultivationActionService {
         Identifier actionId = HolderHelper.id(action);
         if (!canCultivateInEnvironment(spirit, entity, aura, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.ENVIRONMENT);
-        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context, entity.level().registryAccess(),
-                id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id),
-                id -> MxtDatapackRegistries.get(MxtResourceKeys.TECHNIQUE, id));
+        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context);
         return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
     }
 

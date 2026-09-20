@@ -20,6 +20,8 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtCurses` | 施加（可带时长）、显式移除与查询诅咒。 |
 | `MxtAura` | 查询、添加、移除服务端灵气区域。 |
 | `MxtElements` | 查询实体身上的元素与元素附着，并施加附着。 |
+| `MxtSpiritRoots` | 查询、授予、移除与开关灵根。 |
+| `MxtPhysiques` | 查询、授予、移除与开关体质。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
 | `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
 | `MxtLoot` | 注册脚本战利品条件与战利品函数。 |
@@ -352,6 +354,46 @@ PlayerEvents.tick(event => {
 MxtElements.attach(target, 'mxt_test:fire', 4)
 ```
 
+### `MxtSpiritRoots`
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `list(entity)` | `Entity` | `List<String>` | 该实体**持有**的灵根 ID，按 ID 排序。关闭的灵根、定义已被停用或删除的灵根仍会列出——它确实还持有。 |
+| `active(entity)` | `Entity` | `List<String>` | 现在**生效**的灵根：关掉的、以及绑定元素被停用的都不算。 |
+| `has(entity, root)` | `Entity`、灵根 ID | `boolean` | 是否持有（与 `mxt:has_spirit_root` 同义：关闭也算持有）。 |
+| `enabled(entity, root)` | `Entity`、灵根 ID | `boolean` | 该灵根是否处于开启状态；不持有则为 `false`。 |
+| `grant(entity, root)` | `LivingEntity`、灵根 ID | `{changed, failure}` | 走权威服务授予，冲突规则、授予的能力与关闭状态清理都照常。`failure` 见下。 |
+| `remove(entity, root)` | `LivingEntity`、灵根 ID | `boolean` | 放弃该灵根及其元素与一切授予；本来没持有则为 `false`。 |
+| `setEnabled(entity, root, enabled)` | `LivingEntity`、灵根 ID、`boolean` | `{changed, failure}` | 「关闭但不失去」：状态改变并重算授予才返回 `changed: true`，没持有则 `failure: "NOT_HELD"`。 |
+
+### `MxtPhysiques`
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `list(entity)` | `Entity` | `List<String>` | 该实体**持有**的体质 ID，按 ID 排序（`allow_stacking` 时同一个 ID 可能出现多次）。 |
+| `active(entity)` | `Entity` | `List<String>` | 现在**生效**的体质。 |
+| `has(entity, physique)` | `Entity`、体质 ID | `boolean` | 是否持有。 |
+| `enabled(entity, physique)` | `Entity`、体质 ID | `boolean` | 该体质是否处于开启状态；不持有则为 `false`。 |
+| `grant(entity, physique)` | `LivingEntity`、体质 ID | `{changed, failure}` | 走权威服务授予，`holder_condition` 与 `exclusive_tags` 按**当前**实体判定。 |
+| `remove(entity, physique)` | `LivingEntity`、体质 ID | `boolean` | 移除该体质及其属性、能力与伤害倍率；本来没持有则为 `false`。 |
+| `setEnabled(entity, physique, enabled)` | `LivingEntity`、体质 ID、`boolean` | `{changed, failure}` | 与灵根同义的开关。 |
+
+两者的 `failure` 取值是同一套词表：`DISABLED`（定义不存在或被 `mxt:disabled` 停用）、`ALREADY_HELD`、`CONDITIONS`（体质 `holder_condition` 不满足）、`EXCLUSIVE_CONFLICT`、`ELEMENT_CONFLICT`（灵根 `conflicting_elements`）、`NOT_HELD`、`SERVER_ONLY`（在客户端调用）。四个读方法两侧都能用（`spirit_identity` 附件是同步的，物品悬浮提示问"你是不是火灵根"正是这个用途），`grant` / `remove` / `setEnabled` 这三个改变状态的方法是服务端操作。
+
+```js
+// kubejs/server_scripts/mxt_identity.js
+// 洗练：把一条灵根换成另一条，并顺手把新体质打开。
+const result = MxtSpiritRoots.grant(player, 'mxt_test:qingxiao_fire_root')
+if (result.changed) {
+  MxtSpiritRoots.remove(player, 'mxt_test:water_root')
+  MxtPhysiques.setEnabled(player, 'mxt_test:blazing_body', true)
+} else {
+  console.warn(`grant refused: ${result.failure}`)
+}
+// "他是不是正在火灵根上"——关闭的灵根仍然持有，所以要问 active 而不是 has。
+const active = MxtSpiritRoots.active(player)
+```
+
 ### `MxtSouls`
 
 | 方法 | 参数 | 返回值 | 说明 |
@@ -564,7 +606,7 @@ MxtEvents.cultivationBreak(event => {
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
 
-只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtSouls`、`MxtElements.attach` 以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
+只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtSouls`、`MxtElements.attach`、`MxtSpiritRoots` 与 `MxtPhysiques` 的改变状态方法，以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` / `failure` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
 
 `MxtActions.execute*` 故意不设该保护，因为内置 Action 自己决定作用端：JSON 里声明了客户端执行的 Action（例如带 `client` 标志的速度 Action）本来就应当就地运行。
 

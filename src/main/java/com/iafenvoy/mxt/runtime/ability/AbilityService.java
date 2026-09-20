@@ -152,7 +152,7 @@ public final class AbilityService {
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
             context = withAbilityScaling(living, ability, definition, context);
-            if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
+            if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
         // A carried ability takes effect at once. A cast is finished by walking the abilities the actor *holds*
@@ -189,7 +189,7 @@ public final class AbilityService {
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
             context = withAbilityScaling(living, ability, definition, context);
-            if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
+            if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
         if (!AbilityStorage.castDue(abilities, ability, gameTime)) {
@@ -239,7 +239,7 @@ public final class AbilityService {
                                             FormulaContext context) {
         if (actor instanceof LivingEntity living) {
             context = withAbilityScaling(living, ability, definition, FormulaContexts.forEntity(living, context));
-            if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D) {
+            if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D) {
                 stopChannel(abilities);
                 return ChannelResult.stopped(Failure.ELEMENT_AFFINITY);
             }
@@ -376,7 +376,7 @@ public final class AbilityService {
             FormulaContext childContext = context;
             if (actor instanceof LivingEntity living) {
                 childContext = withAbilityScaling(living, childHolder, child, FormulaContexts.forEntity(living, context));
-                if (!child.elementAffinity().isEmpty() && childContext.value("element_modifier") <= 0.0D)
+                if (!child.elementAffinity().isEmpty() && childContext.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                     return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
             }
             if (NeoForge.EVENT_BUS.post(new AbilityUseEvent.Pre(actor, childHolder, childContext)).isCanceled())
@@ -472,18 +472,19 @@ public final class AbilityService {
      * the element affinity of its roots, and {@code damage_multiplier} for the mastery of the chain that
      * grants it.
      *
-     * <p>The mastery value is what the damage pipeline reads on the attacker's side of a hit, so a data pack
-     * does not have to write the multiplier into every damage formula by hand - and a pack that wants to
-     * scale something else by the same level can read the same value. It is put on the context here, where
-     * the ability being cast is still known, because a damage action only ever sees a formula context.</p>
+     * <p>Both are read by the damage pipeline on the attacker's side of a hit - the mastery as it stands, the
+     * affinity as the element factor of layer one - so a data pack writes the damage it means instead of
+     * multiplying either in by hand, and a pack that wants the same numbers for something else (a cost, a
+     * duration) can read the same names. They are put on the context here, where the ability being cast is
+     * still known, because a damage action only ever sees a formula context.</p>
      */
     private static FormulaContext withAbilityScaling(LivingEntity actor, Holder<Ability> ability, Ability definition,
                                                      FormulaContext context) {
         FormulaContext scaled = context;
         if (!definition.elementAffinity().isEmpty()) {
-            double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY), definition.elementAffinity(), context,
-                    id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id), definition.elementAffinityMode());
-            scaled = scaled.with("element_modifier", modifier);
+            double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY),
+                    definition.elementAffinity(), context, definition.elementAffinityMode());
+            scaled = scaled.with(DamageCalculationService.ELEMENT_MODIFIER, modifier);
         }
         return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, SkillStageService.damageMultiplier(actor, ability));
     }

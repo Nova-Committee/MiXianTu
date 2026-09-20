@@ -30,11 +30,14 @@ Reads the JSONL rollout logs Codex writes under `~/.codex/sessions/` and reports
 were spent in a given working directory.
 
 ```bash
-python tools/codex_token_usage.py E:/Java/MiXianTu        # one project
-python tools/codex_token_usage.py E:/Java/MiXianTu --json # machine readable
+python tools/codex_token_usage.py /path/to/MiXianTu        # one project
+python tools/codex_token_usage.py /path/to/MiXianTu --json # machine readable
 python tools/codex_token_usage.py --list-dirs             # every project, ranked
-python tools/codex_token_usage.py E:/Java/MiXianTu --index # most accurate attribution
+python tools/codex_token_usage.py /path/to/MiXianTu --index # most accurate attribution
 ```
+
+The path is whatever directory you actually run Codex in — this checkout is not at a fixed location, so the
+script takes it as an argument (`--list-dirs` prints the names it has seen, which is the easy way to copy one).
 
 Useful flags: `--subdirs` (include sessions in nested working directories), `--since` /
 `--until` (`YYYY-MM-DD`), `--by-dir`, `--main-only` (exclude sub-agent rollouts),

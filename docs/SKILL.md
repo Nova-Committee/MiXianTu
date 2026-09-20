@@ -2,7 +2,7 @@
 
 ## 定位
 
-MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.92` 的服务端权威修仙框架，Mod ID 为 `mxt`。Curios 是必需前置；KubeJS、JEI、Jade 为可选扩展。项目未发布，不保留旧数据兼容性。
+MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.99` 的服务端权威修仙框架，Mod ID 为 `mxt`。Curios 是必需前置；KubeJS、JEI、Jade 为可选扩展。项目未发布，不保留旧数据兼容性。
 
 ## 工作顺序
 

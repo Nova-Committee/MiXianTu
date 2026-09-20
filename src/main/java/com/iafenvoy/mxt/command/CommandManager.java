@@ -30,6 +30,7 @@ public final class CommandManager {
         builder.put(DisplayCommand.ROOT, config.display);
         builder.put(FormationCommand.ROOT, config.formation);
         builder.put(FriendCommand.ROOT, config.friend);
+        builder.put(IdentityCommand.ROOT, config.identity);
         builder.put(LightningCommand.ROOT, config.lightning);
         builder.put(PickerCommand.ROOT, config.picker);
         builder.put(TalismanCommand.ROOT, config.talisman);

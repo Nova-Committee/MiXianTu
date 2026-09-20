@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.util;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
@@ -69,5 +70,20 @@ public final class DefinitionText {
 
     public static MutableComponent name(Identifier id, String category) {
         return Component.translatable(id.toLanguageKey(category));
+    }
+
+    /**
+     * A rarity a data pack chose, shown exactly as it wrote it unless the language file names that value under
+     * {@code mxt.rarity.<rarity>}.
+     *
+     * <p>Rarity is free-form content vocabulary - this code cannot know whether a pack says {@code rare},
+     * {@code 上品} or {@code tier_3} - so the value is the name, and translation is an offer rather than a
+     * requirement. That is the same reading a technique's {@code grade} gets, and it is what lets one consumer
+     * (the information panel, a command) report a rarity without every pack having to register a word
+     * somewhere.</p>
+     */
+    public static MutableComponent rarity(String rarity) {
+        String key = "mxt.rarity." + rarity;
+        return Language.getInstance().has(key) ? Component.translatable(key) : Component.literal(rarity);
     }
 }

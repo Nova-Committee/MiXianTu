@@ -1,8 +1,13 @@
 package com.iafenvoy.mxt.runtime.damage;
 
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.formula.number.Constant;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
@@ -13,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -23,20 +29,30 @@ import java.util.Set;
  *
  * <ol>
  *   <li><b>Shaping</b> ({@link #outgoing}) runs where the hit is dealt, on the attacker's side: the value the
- * data pack wrote is multiplied by the caster's mastery ({@code damage_multiplier}) and by the element
- * relation the attacker's spirit roots hold over the target's. Everything this layer needs is known here -
- * the caster, the target, and the ability being cast - which is exactly what a defender-side hook cannot
- * see.</li>
+ * data pack wrote is multiplied by the caster's mastery ({@code damage_multiplier}), by the element affinity
+ * of the roots the casting was adapted to ({@code element_modifier}), by the attacker's own physiques
+ * ({@code damage_dealt_multiplier}) and by the element relation the attacker's spirit roots hold over the
+ * target's. Everything this layer needs is known here - the caster, the target, and the ability being cast -
+ * which is exactly what a defender-side hook cannot see.</li>
  *   <li><b>Reduction</b> ({@link #incoming}) runs on the target through {@link DamageEventBridge}, on the
- *   defence's side: the element the target is {@code adapted_to} softens (or worsens) what arrives. Living
- *   there rather than here is what makes it cover every source that reaches the entity, a mob's swing and a
- *   fall included, and it is also why the layer must never be applied twice - the incoming event fires
- *   exactly once per damage sequence, whoever dealt it.</li>
+ *   defence's side: the element the target is {@code adapted_to} softens (or worsens) what arrives, and the
+ *   target's own physiques ({@code damage_taken_multiplier}) answer for it. Living there rather than here is
+ *   what makes it cover every source that reaches the entity, a mob's swing and a fall included, and it is
+ *   also why the layer must never be applied twice - the incoming event fires exactly once per damage
+ *   sequence, whoever dealt it.</li>
  * </ol>
  *
  * <p>The two layers therefore never duplicate work: this class computes layer one and hands the damage over,
  * and the event computes layer two. Anything that only wants to know what a hit is worth without applying it
  * calls the layer directly, which is what the audit and the test-mod probe do.</p>
+ *
+ * <p>The cultivation identity of the two parties enters here and only here, which is what keeps a spirit root
+ * and a physique from being two different kinds of thing to a damage number. A root speaks through its element
+ * (both layers, from the definitions' own multipliers) and through its {@code element_ability_modifier}, which
+ * a casting exposes as {@code element_modifier} and this class applies - so a pack writes an elemental damage
+ * formula as the number it means, instead of multiplying the affinity in by hand. A physique speaks through
+ * {@code damage_dealt_multiplier} and {@code damage_taken_multiplier}, which are deliberately element-free: a
+ * physique is about what a body is, not about what it is made of.</p>
  *
  * <p>Element strength lives in the element definitions ({@code overcomes[].multiplier} /
  * {@code adapted_to[].multiplier}), so this class owns no number of its own and carries no balance data. Which
@@ -50,6 +66,13 @@ public final class DamageCalculationService {
      * an ability that belongs to no mastery chain simply does not set it, which reads as "no mastery bonus".
      */
     public static final String DAMAGE_MULTIPLIER = "damage_multiplier";
+    /**
+     * The formula value a casting ability adapted to an element exposes: the {@code element_ability_modifier}
+     * of the caster's matching spirit roots. Layer one applies it, so a pack does not have to remember it in
+     * every damage formula - and a pack that wants the same number for something other than damage reads the
+     * same name off the same context.
+     */
+    public static final String ELEMENT_MODIFIER = "element_modifier";
 
     private DamageCalculationService() {
     }
@@ -78,15 +101,18 @@ public final class DamageCalculationService {
     /**
      * Layer one: the amount this attacker forms against this target, before the target answers for it.
      *
-     * <p>A pack's own number is the base, and both multiplications are read from data - the mastery of the
-     * casting ability's chain, and the element edges the attacker's roots hold over the target's. A result
-     * that is not a positive finite number is reported as no damage at all, because a formula that overflowed
-     * or produced nonsense must not reach the health of an entity.</p>
+     * <p>A pack's own number is the base, and every multiplication is read from data: the mastery of the
+     * casting ability's chain, the element affinity of the roots the casting was adapted to, the attacker's own
+     * physiques, and the element edges the attacker's roots hold over the target's. A result that is not a
+     * positive finite number is reported as no damage at all, because a formula that overflowed or produced
+     * nonsense must not reach the health of an entity.</p>
      *
-     * <p>The mastery factor belongs to the casting and the element factor to the attacker, which is a
-     * distinction that shows on damage a caster deals to itself: a technique's own backlash is still that
-     * technique's damage and is scaled by its level, while it has no second party to hold an element edge
-     * against and therefore reads no relation at all.</p>
+     * <p>The mastery and affinity factors belong to the casting and the element edges and physiques to the
+     * attacker, which is a distinction that shows on damage a caster deals to itself: a technique's own backlash
+     * is still that technique's damage and is scaled by its level and by the affinity it was cast with, while it
+     * has no second party to hold an element edge against and therefore reads no relation at all - but the
+     * caster's own physique does still speak for it, because that is a property of the body dealing the blow
+     * rather than of the pair.</p>
      *
      * <p>The elements are passed in rather than derived here, because they are the one part of a strike that
      * depends on how it was declared: a claimed damage type names them, and only in its absence are they the
@@ -96,7 +122,8 @@ public final class DamageCalculationService {
     public static double outgoing(@Nullable Entity attacker, Entity target, double amount, @Nullable FormulaContext context,
                                   Set<Holder<Element>> elements) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
-        double result = amount * masteryMultiplier(context) * overcomeMultiplier(elements, target);
+        double result = amount * masteryMultiplier(context) * elementMultiplier(context)
+                * physiqueMultiplier(attacker, true) * overcomeMultiplier(elements, target);
         return Double.isFinite(result) && result > 0.0D ? result : 0.0D;
     }
 
@@ -112,7 +139,9 @@ public final class DamageCalculationService {
      * Layer two: the amount the target really takes from a hit of this size. The element comes from the
      * source, which is what makes this layer cover a lava tick or another mod's sword as readily as one of our
      * own hits; a source with no attacker and no claimed damage type carries no element, and an entity with no
-     * roots has nothing to be adapted with, so both read as an unchanged amount.
+     * roots has nothing to be adapted with, so both read as an unchanged amount. A target with a physique is
+     * answered for by it all the same, because "what this body takes" is a property of the body and of nothing
+     * about where the blow came from.
      */
     public static double incoming(LivingEntity target, DamageSource source, double amount) {
         return incoming(target, DamageElements.strike(source), amount);
@@ -133,7 +162,7 @@ public final class DamageCalculationService {
      */
     public static double incoming(LivingEntity target, Set<Holder<Element>> attacking, double amount) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
-        double result = amount * adaptationMultiplier(target, attacking);
+        double result = amount * adaptationMultiplier(target, attacking) * physiqueMultiplier(target, false);
         return Double.isFinite(result) && result > 0.0D ? result : 0.0D;
     }
 
@@ -177,6 +206,62 @@ public final class DamageCalculationService {
         if (context == null) return 1.0D;
         double value = context.explicit(DAMAGE_MULTIPLIER);
         return Double.isFinite(value) && value >= 0.0D ? value : 1.0D;
+    }
+
+    /**
+     * The element affinity multiplier the casting ability put on its formula context, or one when the context
+     * carries none - a casting that names no element, or damage that came from somewhere other than a casting,
+     * has no affinity to scale by.
+     *
+     * <p>The number itself is the spirit roots': a casting adapted to an element reads the
+     * {@code element_ability_modifier} of the caster's matching roots, averaged or taken best as the ability
+     * asked for, and a caster with no matching root never reaches this point - the cast was refused before any
+     * damage existed. An affinity of zero is a root that says "nothing comes through me", and it is honoured
+     * rather than read as "absent", the same way the cast gate honours it.</p>
+     */
+    public static double elementMultiplier(@Nullable FormulaContext context) {
+        if (context == null) return 1.0D;
+        double value = context.explicit(ELEMENT_MODIFIER);
+        return Double.isFinite(value) && value >= 0.0D ? value : 1.0D;
+    }
+
+    /**
+     * What the entity's own physiques are worth to one side of a hit: {@code damage_dealt_multiplier} for the
+     * blow it deals, {@code damage_taken_multiplier} for the blow it receives. Several physiques multiply,
+     * because each is its own source of the effect, and an entity with none - or with none switched on - reads
+     * as an unchanged amount.
+     *
+     * <p>A multiplier is evaluated against the holder's own formula context, never the other party's: what a
+     * body takes cannot depend on who is asking, and a physique is a property of that body. The context is only
+     * built when a provider actually needs one, so a physique whose numbers are written constants costs a
+     * lookup rather than a context on every strike; a provider that throws or produces nonsense contributes
+     * nothing, which is the same rule the passive attribute path follows for the same kind of formula.</p>
+     */
+    public static double physiqueMultiplier(@Nullable Entity entity, boolean dealt) {
+        if (!(entity instanceof LivingEntity holder)) return 1.0D;
+        SpiritIdentityAttachment spirit = holder.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        if (spirit == null) return 1.0D;
+        List<Holder<Physique>> physiques = spirit.activePhysiques();
+        if (physiques.isEmpty()) return 1.0D;
+        FormulaContext context = null;
+        double result = 1.0D;
+        for (Holder<Physique> physique : physiques) {
+            NumberProvider provider = dealt
+                    ? physique.value().damageDealtMultiplier() : physique.value().damageTakenMultiplier();
+            if (provider == null) continue;
+            final double value;
+            if (provider instanceof Constant constant) value = constant.value();
+            else {
+                if (context == null) context = FormulaContext.of(holder);
+                try {
+                    value = provider.evaluate(context);
+                } catch (RuntimeException exception) {
+                    continue;
+                }
+            }
+            if (Double.isFinite(value) && value >= 0.0D) result *= value;
+        }
+        return Double.isFinite(result) ? result : 1.0D;
     }
 
     /**
