@@ -1,0 +1,24 @@
+{
+  "amounts": {
+    "mxt_test:wood": 6,
+    "mxt_test:water": 4
+  },
+  "consume": {
+    "mxt_test:wood": 6
+  },
+  "action": {
+    "type": "mxt:sequence",
+    "actions": [
+      {
+        "type": "mxt:damage",
+        "amount": 3
+      },
+      {
+        "type": "mxt:attach_element",
+        "element": "mxt_test:earth",
+        "amount": 2
+      }
+    ]
+  },
+  "priority": 5
+}

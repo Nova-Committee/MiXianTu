@@ -12,6 +12,8 @@ import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.InRealmInstanceEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.InRealmInstanceEntityCondition.Role;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.Element;
@@ -21,6 +23,13 @@ import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.RealmTokenComponent;
+import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
+import com.iafenvoy.mxt.runtime.rift.RiftColors;
+import com.iafenvoy.mxt.runtime.rift.RiftConnections;
+import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
+import com.iafenvoy.mxt.runtime.rift.RiftMesh;
+import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -43,6 +52,10 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
+import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
+import com.iafenvoy.mxt.runtime.world.RealmInstanceService;
+import com.iafenvoy.mxt.runtime.world.RealmRecord;
+import com.iafenvoy.mxt.runtime.world.RealmStructurePlacer;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
@@ -51,28 +64,39 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
+import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.levelgen.Heightmap.Types;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.portal.TeleportTransition;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.jetbrains.annotations.Nullable;
@@ -83,6 +107,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import static net.minecraft.commands.Commands.literal;
@@ -108,6 +133,14 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_FIRE_ROOT = id("fire_root");
     private static final Identifier PROBE_WATER_ROOT = id("water_root");
     private static final Identifier PROBE_INERT_ROOT = id("inert_root");
+    private static final Identifier PROBE_ANTI_WATER_ROOT = id("anti_water_root");
+    private static final Identifier PROBE_METAL_ROOT = id("metal_root");
+    private static final Identifier PROBE_WOOD_ROOT = id("wood_root");
+    private static final Identifier PROBE_EARTH_ROOT = id("earth_root");
+    private static final Identifier PROBE_METAL_ELEMENT = id("metal");
+    private static final Identifier PROBE_WOOD_ELEMENT = id("wood");
+    private static final Identifier PROBE_EARTH_ELEMENT = id("earth");
+    private static final Identifier PROBE_FIVE_PHASES_TAG = id("five_phases");
     private static final Identifier PROBE_FIRE_ELEMENT = id("fire");
     private static final Identifier PROBE_WATER_ELEMENT = id("water");
     private static final Identifier PROBE_INERT_ELEMENT = id("inert");
@@ -135,6 +168,11 @@ public final class MxtTestCommands {
                 .then(literal("verify").executes(context -> verify(context.getSource())))
                 .then(literal("damage").executes(context -> probeDamage(context.getSource())))
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
+                .then(literal("realm")
+                        .executes(context -> probeRealm(context.getSource()))
+                        .then(literal("keep").executes(context -> keepRealm(context.getSource())))
+                        .then(literal("reopen").executes(context -> reopenRealm(context.getSource()))))
+                .then(literal("rift").executes(context -> probeRift(context.getSource())))
                 .then(literal("info").executes(context -> showInformation(context.getSource())))
                 .then(literal("guide").executes(context -> showGuide(context.getSource()))));
     }
@@ -339,6 +377,10 @@ public final class MxtTestCommands {
                 ? source.getPlayer().blockPosition()
                 : level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO);
         Holder<Element> fire = require(MxtResourceKeys.ELEMENT, PROBE_FIRE_ELEMENT);
+        Holder<Element> water = require(MxtResourceKeys.ELEMENT, PROBE_WATER_ELEMENT);
+        Holder<Element> metal = require(MxtResourceKeys.ELEMENT, PROBE_METAL_ELEMENT);
+        Holder<Element> wood = require(MxtResourceKeys.ELEMENT, PROBE_WOOD_ELEMENT);
+        Holder<Element> earth = require(MxtResourceKeys.ELEMENT, PROBE_EARTH_ELEMENT);
         Holder<DamageType> magic = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.MAGIC);
         LivingEntity rootless = spawnProbe(level, origin.above(), null);
         LivingEntity waterVictim = spawnProbe(level, origin.above(1), PROBE_WATER_ROOT);
@@ -347,9 +389,19 @@ public final class MxtTestCommands {
         LivingEntity inertHolder = spawnProbe(level, origin.above(4), PROBE_INERT_ROOT);
         LivingEntity reactionVictim = spawnProbe(level, origin.above(5), PROBE_WATER_ROOT);
         LivingEntity toggleProbe = spawnProbe(level, origin.above(6), PROBE_FIRE_ROOT);
+        LivingEntity loopVictim = spawnProbe(level, origin.above(7), null);
+        LivingEntity conflictProbe = spawnProbe(level, origin.above(8), null);
+        LivingEntity metalCaster = spawnProbe(level, origin.above(9), PROBE_METAL_ROOT);
+        LivingEntity woodVictim = spawnProbe(level, origin.above(10), PROBE_WOOD_ROOT);
+        LivingEntity woodCaster = spawnProbe(level, origin.above(11), PROBE_WOOD_ROOT);
+        LivingEntity metalVictim = spawnProbe(level, origin.above(12), PROBE_METAL_ROOT);
+        LivingEntity bloomVictim = spawnProbe(level, origin.above(13), null);
+        LivingEntity settleVictim = spawnProbe(level, origin.above(14), null);
         try {
             if (rootless == null || waterVictim == null || waterCaster == null || declaredVictim == null
-                    || inertHolder == null || reactionVictim == null || toggleProbe == null) {
+                    || inertHolder == null || reactionVictim == null || toggleProbe == null
+                    || loopVictim == null || conflictProbe == null || metalCaster == null || woodVictim == null
+                    || woodCaster == null || metalVictim == null || bloomVictim == null || settleVictim == null) {
                 source.sendFailure(Component.literal("element probe: could not create the probe entities"));
                 return 0;
             }
@@ -440,15 +492,92 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: toggle off=" + off + " on=" + on
                     + " unchanged=" + unchanged + " not_held=" + notHeld + (toggle ? " OK" : " MISMATCH")), false);
 
-            if (claimed && declared && reaction && disabled && hasElement && auraElement && attachment && toggle) {
+            // 7. A reaction whose own action applies the element it just consumed feeds itself. The nested
+            //    application joins the chain that is already running for this body instead of opening another
+            //    one, so the call comes back: every pass takes the demand away and puts it straight back, which
+            //    leaves the body carrying exactly what was applied however many passes the bound allows. Before
+            //    that guard this leg did not answer at all - the nesting had no floor.
+            ElementReactionService.apply(loopVictim, water, 8.0D, FormulaContext.of(loopVictim));
+            double loopLeft = ElementReactionService.amount(loopVictim, water);
+            boolean loop = close(loopLeft, 8.0D);
+            source.sendSuccess(() -> Component.literal("element probe: self-feeding reaction left=" + loopLeft
+                    + (loop ? " OK" : " MISMATCH")), false);
+
+            // 8. Who a spirit root rules out. The fixture root carries fire and declares both water and the
+            //    disabled inert element, so one body answers all three rules: a live element is refused, a
+            //    disabled element is not an element as far as the declaration goes, and once the declaring root
+            //    itself is switched off its declaration is not in force either.
+            Holder<SpiritRoot> antiWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_ANTI_WATER_ROOT);
+            Holder<SpiritRoot> probeWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_WATER_ROOT);
+            Holder<SpiritRoot> probeInert = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_INERT_ROOT);
+            boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_ANTI_WATER_ROOT, antiWater.value()).changed()
+                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).failure()
+                    == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
+            boolean inertFree = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_INERT_ROOT, probeInert.value()).changed();
+            boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).changed()
+                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).changed();
+            boolean conflict = blocked && inertFree && reopened;
+            source.sendSuccess(() -> Component.literal("element probe: conflict blocked=" + blocked
+                    + " inert_free=" + inertFree + " reopened=" + reopened
+                    + (conflict ? " OK" : " MISMATCH")), false);
+
+            // 9. The five-phase set the test package now ships: metal beats wood in the shaping layer and wood
+            //    is soft against metal in the reduction layer, so the same 4 lands as 4 * 1.4 * 1.25 = 7, while
+            //    the opposite direction has neither edge and lands as 4. The strike also leaves the striker's
+            //    element behind, and a tag over the whole set answers for a member.
+            double metalBefore = woodVictim.getHealth();
+            DamageCalculationService.deal(metalCaster, woodVictim, 4.0D, Optional.empty(), FormulaContext.of(metalCaster));
+            double metalOnWood = metalBefore - woodVictim.getHealth();
+            double woodBefore = metalVictim.getHealth();
+            DamageCalculationService.deal(woodCaster, metalVictim, 4.0D, Optional.empty(), FormulaContext.of(woodCaster));
+            double woodOnMetal = woodBefore - metalVictim.getHealth();
+            double metalLeft = ElementReactionService.amount(woodVictim, metal);
+            boolean fivePhases = close(metalOnWood, 7.0D) && close(woodOnMetal, 4.0D) && close(metalLeft, 3.0D)
+                    && new HasElementEntityCondition(List.of(Either.right(fivePhasesTag())))
+                    .test(metalCaster, FormulaContext.of(metalCaster));
+            source.sendSuccess(() -> Component.literal("element probe: five phases metal_on_wood=" + metalOnWood
+                    + " wood_on_metal=" + woodOnMetal + " metal_left=" + metalLeft
+                    + (fivePhases ? " OK" : " MISMATCH")), false);
+
+            // 10. A reaction that demands two elements at once, spends only one of them and acts twice: wood
+            //     alone does not answer it, and afterwards the water that completed the demand is still there
+            //     while the earth the action left behind has not reached its own demand.
+            ElementReactionService.apply(bloomVictim, wood, 6.0D, FormulaContext.of(bloomVictim));
+            boolean halfDemand = close(ElementReactionService.amount(bloomVictim, wood), 6.0D);
+            double bloomBefore = bloomVictim.getHealth();
+            ElementReactionService.apply(bloomVictim, water, 4.0D, FormulaContext.of(bloomVictim));
+            double bloomLost = bloomBefore - bloomVictim.getHealth();
+            double woodLeft = ElementReactionService.amount(bloomVictim, wood);
+            double waterLeft = ElementReactionService.amount(bloomVictim, water);
+            double earthLeft = ElementReactionService.amount(bloomVictim, earth);
+            boolean bloom = halfDemand && close(woodLeft, 0.0D) && close(waterLeft, 4.0D)
+                    && close(earthLeft, 2.0D) && close(bloomLost, 3.0D);
+            source.sendSuccess(() -> Component.literal("element probe: two-element reaction half=" + halfDemand
+                    + " wood=" + woodLeft + " water=" + waterLeft + " earth=" + earthLeft + " damage=" + bloomLost
+                    + (bloom ? " OK" : " MISMATCH")), false);
+
+            // 11. A reaction that consumes nothing answers the same demand on every pass, so one application
+            //     fires it exactly as many times as the chain allows and leaves the buildup untouched. The
+            //     count is the documented bound, written out here so changing it has to be a decision.
+            settleVictim.getData(MxtAttachments.ELEMENT_ATTACHMENT).add(earth, 10.0D);
+            int settleFired = ElementReactionService.trigger(settleVictim, FormulaContext.of(settleVictim));
+            double settleLeft = ElementReactionService.amount(settleVictim, earth);
+            boolean settle = settleFired == 8 && close(settleLeft, 10.0D);
+            source.sendSuccess(() -> Component.literal("element probe: unconsumed reaction fired=" + settleFired
+                    + " left=" + settleLeft + (settle ? " OK" : " MISMATCH")), false);
+
+            if (claimed && declared && reaction && disabled && hasElement && auraElement && attachment && toggle
+                    && loop && conflict && fivePhases && bloom && settle) {
                 source.sendSuccess(() -> Component.literal("element probe: OK"), false);
                 return 1;
             }
             source.sendFailure(Component.literal("element probe: MISMATCH"));
             return 0;
         } finally {
+            //noinspection DataFlowIssue
             for (LivingEntity probe : List.of(rootless, waterVictim, waterCaster, declaredVictim, inertHolder,
-                    reactionVictim, toggleProbe))
+                    reactionVictim, toggleProbe, loopVictim, conflictProbe, metalCaster, woodVictim, woodCaster,
+                    metalVictim, bloomVictim, settleVictim))
                 if (probe != null) probe.discard();
         }
     }
@@ -457,12 +586,509 @@ public final class MxtTestCommands {
         return TagKey.create(MxtResourceKeys.ELEMENT, PROBE_ELEMENT_TAG);
     }
 
+    private static TagKey<Element> fivePhasesTag() {
+        return TagKey.create(MxtResourceKeys.ELEMENT, PROBE_FIVE_PHASES_TAG);
+    }
+
     private static AuraRequirement minimumRange(double minimum) {
         return new AuraRequirement(new Constant(minimum), new Constant(1.0E9D));
     }
 
     private static boolean close(double actual, double expected) {
         return Math.abs(actual - expected) < 1.0E-3D;
+    }
+
+    /**
+     * Exercises the realm instance machine end to end without a player. An instance is a dimension, so every
+     * leg drives the registry and the generation service directly and then inspects the world that came out of
+     * it: its border, its placed structure, its landing spot, the instance cap and the claim rules.
+     */
+    private static int probeRealm(CommandSourceStack source) {
+        MinecraftServer server = source.getServer();
+        ServerLevel overworld = server.overworld();
+        Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
+        Holder<RealmInstance> mirror = require(MxtResourceKeys.REALM_INSTANCE, id("mirror_realm"));
+        Holder<RealmInstance> existing = require(MxtResourceKeys.REALM_INSTANCE, id("existing_realm"));
+        Holder<RealmInstance> absentStructure = require(MxtResourceKeys.REALM_INSTANCE, id("missing_structure_realm"));
+        Holder<RealmInstance> absentTemplate = require(MxtResourceKeys.REALM_INSTANCE, id("template_realm"));
+        boolean ok = true;
+        List<ResourceKey<Level>> opened = new ArrayList<>();
+        List<LivingEntity> probes = new ArrayList<>();
+        try {
+            // The structure the fixture places is built here instead of shipping a binary fixture.
+            Identifier towerId = id("probe/tower");
+            BlockPos scratch = overworld.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO).above(6);
+            for (int x = 0; x < 3; x++)
+                for (int z = 0; z < 3; z++)
+                    overworld.setBlockAndUpdate(scratch.offset(x, 0, z), Blocks.GOLD_BLOCK.defaultBlockState());
+            StructureTemplate tower = overworld.getStructureManager().getOrCreate(towerId);
+            tower.fillFromWorld(overworld, scratch, new Vec3i(3, 1, 3), false, List.of());
+            boolean towerSaved = overworld.getStructureManager().save(towerId);
+            for (int x = 0; x < 3; x++)
+                for (int z = 0; z < 3; z++)
+                    overworld.setBlockAndUpdate(scratch.offset(x, 0, z), Blocks.AIR.defaultBlockState());
+
+            // 1. An instance dimension is created on demand, before anybody is allowed in.
+            RealmRecord first = openInstance(server, trial, 0, 12345L, opened);
+            ServerLevel dimension = first == null ? null : server.getLevel(first.dimension());
+            ok &= check(source, "realm probe: tower_saved=" + towerSaved + " dimension=" + (first != null)
+                    + " level=" + (dimension != null), towerSaved && first != null && dimension != null);
+            if (dimension == null) return 0;
+
+            // 2. The declared border lands on the instance dimension, which also carries the instance seed.
+            WorldBorder border = dimension.getWorldBorder();
+            ok &= check(source, "realm probe: border size=" + border.getSize() + " center=(" + border.getCenterX()
+                            + "," + border.getCenterZ() + ")",
+                    close(border.getSize(), 128.0D) && close(border.getCenterX(), 0.0D) && close(border.getCenterZ(), 0.0D));
+            ok &= check(source, "realm probe: seed=" + dimension.getSeed(), dimension.getSeed() == 12345L);
+
+            // 3. Structures are placed before the landing is chosen, so an arrival can stand on them.
+            ok &= check(source, "realm probe: structure block=" + dimension.getBlockState(new BlockPos(8, 64, 8)).getBlock(),
+                    dimension.getBlockState(new BlockPos(8, 64, 8)).is(Blocks.GOLD_BLOCK));
+
+            // 4. A fixed entry point becomes the instance anchor.
+            Vec3 anchor = first.anchor().orElse(null);
+            ok &= check(source, "realm probe: anchor=" + anchor + " prepared=" + first.prepared(),
+                    anchor != null && close(anchor.x, 0.5D) && close(anchor.y, 65.0D) && close(anchor.z, 0.5D) && first.prepared());
+
+            // 5. The instance cap counts every instance of the definition.
+            RealmRecord second = openInstance(server, trial, 1, 999L, opened);
+            int count = RealmInstanceRegistry.of(trial).size();
+            ok &= check(source, "realm probe: instances=" + count + " cap=" + trial.value().maxInstances(),
+                    second != null && count >= trial.value().maxInstances());
+
+            // 6. Membership is capped per instance and a full instance is not joinable.
+            List<UUID> two = List.of(UUID.randomUUID(), UUID.randomUUID());
+            RealmRecord full = second.with(two);
+            RealmInstanceRegistry.replace(full);
+            RealmInstanceRegistry.at(first.dimension()).ifPresent(record -> RealmInstanceRegistry.replace(record.with(two)));
+            boolean joinable = RealmInstanceRegistry.joinable(trial, UUID.randomUUID()).isPresent();
+            ok &= check(source, "realm probe: full=" + full.full() + " joinable=" + joinable, full.full() && !joinable);
+
+            // 7. A claim is recorded, and the condition tells owner from guest.
+            LivingEntity probe = spawnProbe(overworld, overworld.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO).above(2), PROBE_FIRE_ROOT);
+            probes.add(probe);
+            boolean ownerSeen = false, guestSeen = true, foreignSeen = true;
+            if (probe != null) {
+                RealmInstanceRegistry.replace(first.withOwner(probe.getUUID()).with(List.of(probe.getUUID())));
+                ownerSeen = new InRealmInstanceEntityCondition(Optional.of(Either.left(trial)), Role.OWNER).test(probe, FormulaContext.of(probe));
+                guestSeen = new InRealmInstanceEntityCondition(Optional.of(Either.left(trial)), Role.GUEST).test(probe, FormulaContext.of(probe));
+                foreignSeen = new InRealmInstanceEntityCondition(Optional.of(Either.left(mirror)), Role.ANY).test(probe, FormulaContext.of(probe));
+            }
+            ok &= check(source, "realm probe: role owner=" + ownerSeen + " guest=" + guestSeen + " foreign=" + foreignSeen,
+                    probe != null && ownerSeen && !guestSeen && !foreignSeen);
+
+            // 8. A realm dimension is reachable by its definition id, a stem realm also by its stem.
+            List<Identifier> aliases = RealmInstanceRegistry.aliases(first.dimension().identifier()).toList();
+            ok &= check(source, "realm probe: aliases=" + aliases, aliases.contains(REALM));
+
+            // 9. A weighted entry list picks by weight: the zero-weight fixed point is never chosen, so a random
+            //    landing inside random_radius is what the anchor has to be.
+            RealmRecord mirrorRecord = openInstance(server, mirror, 0, 777L, opened);
+            Vec3 mirrorAnchor = mirrorRecord == null ? null : mirrorRecord.anchor().orElse(null);
+            ServerLevel mirrorLevel = mirrorRecord == null ? null : server.getLevel(mirrorRecord.dimension());
+            boolean inRadius = mirrorAnchor != null && Math.hypot(mirrorAnchor.x, mirrorAnchor.z) <= 16.0D + 1.0E-6D;
+            boolean skipped = mirrorLevel != null && !mirrorLevel.getBlockState(new BlockPos(0, 100, 0)).is(Blocks.GOLD_BLOCK);
+            ok &= check(source, "realm probe: random anchor=" + mirrorAnchor + " chance_skipped=" + skipped, inRadius && skipped);
+            ok &= check(source, "realm probe: stem alias=" + (mirrorRecord == null ? "-"
+                            : RealmInstanceRegistry.aliases(mirrorRecord.dimension().identifier()).toList()),
+                    mirrorRecord != null && RealmInstanceRegistry.aliases(mirrorRecord.dimension().identifier())
+                            .anyMatch(alias -> alias.equals(Identifier.fromNamespaceAndPath("minecraft", "the_end"))));
+
+            // 10. An existing realm creates nothing and reuses the dimension it names.
+            RealmRecord existingRecord = openInstance(server, existing, 0, 0L, opened);
+            ok &= check(source, "realm probe: existing=" + (existingRecord == null ? "-" : existingRecord.dimension().identifier()),
+                    existingRecord != null && existingRecord.dimension().equals(Level.OVERWORLD)
+                            && server.getLevel(existingRecord.dimension()) == overworld);
+
+            // 11. A definition that names a template or a structure that does not exist creates nothing.
+            boolean resolvable = RealmStructurePlacer.resolvable(server.getStructureManager(), absentStructure.value());
+            RealmRecord templateAttempt = planned(absentTemplate, 0, 0L);
+            boolean templateFailed = RealmInstanceService.open(server, templateAttempt).isEmpty();
+            ok &= check(source, "realm probe: structure_resolvable=" + resolvable + " template_failed=" + templateFailed
+                            + " leftover=" + RealmInstanceRegistry.at(templateAttempt.dimension()).isPresent(),
+                    !resolvable && templateFailed && RealmInstanceRegistry.at(templateAttempt.dimension()).isEmpty());
+
+            // 12. An unclaimed instance dies with its clock: the record goes and the dimension is released.
+            boolean expired = mirrorRecord != null && RealmInstanceService.expire(server, mirrorRecord, server.overworld().getGameTime() + 100L);
+            boolean released = mirrorRecord != null && RealmInstanceRegistry.at(mirrorRecord.dimension()).isEmpty()
+                    && server.getLevel(mirrorRecord.dimension()) == null;
+            ok &= check(source, "realm probe: expired=" + expired + " released=" + released, expired && released);
+
+            // 13. A claimed realm survives its visitors: the policy is what decides keep versus delete.
+            RealmRecord claimed = RealmInstanceRegistry.at(first.dimension()).orElse(null);
+            RealmRecord idled = claimed == null ? null : claimed.idle();
+            ok &= check(source, "realm probe: persists=" + (claimed != null && claimed.persists())
+                            + " idle_members=" + (idled == null ? -1 : idled.members().size()),
+                    claimed != null && claimed.persists() && idled.empty() && probe != null && idled.isOwner(probe.getUUID()));
+        } finally {
+            for (LivingEntity probe : probes) if (probe != null) probe.discard();
+            for (ResourceKey<Level> key : opened) {
+                RealmInstanceRegistry.at(key).ifPresent(record -> RealmInstanceService.destroy(server, record));
+            }
+        }
+        if (ok) {
+            source.sendSuccess(() -> Component.literal("realm probe: OK"), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("realm probe: MISMATCH"));
+        return 0;
+    }
+
+    /**
+     * Leaves one claimed instance behind instead of cleaning up, so a restart can be checked for keeping it.
+     * The realm probe itself destroys everything it opens.
+     */
+    private static int keepRealm(CommandSourceStack source) {
+        MinecraftServer server = source.getServer();
+        Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
+        RealmRecord record = RealmInstanceService.open(server, planned(trial, 0, 4242L)).orElse(null);
+        if (record == null) {
+            source.sendFailure(Component.literal("realm keep: could not open the instance"));
+            return 0;
+        }
+        UUID owner = UUID.randomUUID();
+        RealmInstanceRegistry.replace(record.withOwner(owner));
+        source.sendSuccess(() -> Component.literal("realm keep: " + record.dimension().identifier() + " owner=" + owner), false);
+        return 1;
+    }
+
+    /**
+     * Reopens a dormant instance the way an entry does, to prove that a claimed realm comes back with the
+     * terrain it had instead of being generated and furnished again.
+     */
+    private static int reopenRealm(CommandSourceStack source) {
+        MinecraftServer server = source.getServer();
+        Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
+        RealmRecord dormant = RealmInstanceRegistry.of(trial).stream()
+                .filter(record -> record.index() == 0).findFirst().orElse(null);
+        if (dormant == null) {
+            source.sendFailure(Component.literal("realm reopen: there is no dormant instance"));
+            return 0;
+        }
+        RealmRecord reopened = RealmInstanceService.open(server, dormant.restarted(server.overworld().getGameTime())).orElse(null);
+        ServerLevel level = reopened == null ? null : server.getLevel(reopened.dimension());
+        boolean kept = level != null && level.getBlockState(new BlockPos(8, 64, 8)).is(Blocks.GOLD_BLOCK);
+        boolean prepared = reopened != null && reopened.prepared();
+        if (kept && prepared) {
+            source.sendSuccess(() -> Component.literal("realm reopen: terrain kept=" + true + " prepared=" + true), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("realm reopen: terrain kept=" + kept + " prepared=" + prepared));
+        return 0;
+    }
+
+    /**
+     * Exercises the rift's linking rule, the mesh it is drawn from and its portal behaviour without a client.
+     *
+     * <p>Every leg drives the calls the renderer and the portal use - the point, link and triangle meshes, the
+     * 3x3x3 neighbour scan, the colour derivation, the stored state, the transition - and then inspects the world
+     * that came out of it. What cannot be checked from a server is the drawing itself.
+     */
+    private static int probeRift(CommandSourceStack source) {
+        double thickness = RiftMesh.DEFAULT_THICKNESS;
+        MinecraftServer server = source.getServer();
+        ServerLevel level = server.overworld();
+        Identifier here = level.dimension().identifier();
+        BlockPos base = level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(400, 0, 400)).above(2);
+        BlockPos middle = base.offset(1, 1, 0);
+        List<BlockPos> touched = new ArrayList<>();
+        List<BlockPos> touchedInEnd = new ArrayList<>();
+        boolean ok = true;
+        try {
+            // A 3x3 wall of rifts. Every block of it is inside the others' 3x3x3 reach, so all nine link up.
+            RiftBlockEntity centre = null;
+            for (int x = 0; x < 3; x++)
+                for (int y = 0; y < 3; y++) {
+                    RiftBlockEntity placed = placeRift(level, base.offset(x, y, 0), here, touched);
+                    if (x == 1 && y == 1) centre = placed;
+                }
+            if (centre == null) {
+                source.sendFailure(Component.literal("rift probe: could not place the wall"));
+                return 0;
+            }
+
+            // 1. Linking: the middle of the wall has all eight neighbours as links, a corner has three, and the
+            //    wall is one network of nine blocks.
+            int links = RiftConnections.connected(level, middle).size();
+            RiftBlockEntity corner = level.getBlockEntity(base) instanceof RiftBlockEntity found ? found : null;
+            int cornerLinks = corner == null ? -1 : RiftConnections.connected(level, base).size();
+            int network = RiftConnections.componentSize(level, middle);
+            ok &= check(source, "rift probe: links=" + links + " corner=" + cornerLinks + " network=" + network,
+                    links == 8 && cornerLinks == 3 && network == 9);
+
+            // 2. The wall's mesh: eight links, twelve triangles, every vertex within half a thickness of the
+            //    plane the wall lies in, a link half reaching exactly the midpoint it meets, and a width that
+            //    really is the configured thickness rather than a number of its own.
+            List<BlockPos> wallLinks = RiftConnections.connected(level, middle);
+            List<Loop> loops = RiftConnections.loops(middle, wallLinks);
+            List<Vec3> wallMesh = new ArrayList<>(RiftMesh.node(thickness));
+            for (BlockPos link : wallLinks) wallMesh.addAll(RiftMesh.linkShare(local(link, middle), thickness));
+            double flatness = 0.0;
+            for (Vec3 vertex : wallMesh) flatness = Math.max(flatness, Math.abs(vertex.z - 0.5));
+            List<Vec3> straightLink = RiftMesh.linkShare(local(base.offset(2, 1, 0), middle), thickness);
+            List<Vec3> diagonalLink = RiftMesh.linkShare(local(base.offset(2, 2, 0), middle), thickness);
+            double straightReach = axialReach(straightLink, new Vec3(1.0, 0.0, 0.0));
+            double diagonalReach = axialReach(diagonalLink, new Vec3(1.0, 1.0, 0.0));
+            double linkWidth = radialReach(diagonalLink, new Vec3(1.0, 1.0, 0.0)) / Math.sqrt(2.0) * 2.0;
+            ok &= check(source, "rift probe: mesh_links=" + wallLinks.size() + " triangles=" + loops.size()
+                            + " flatness=" + "%.4f".formatted(flatness)
+                            + " half_link=" + "%.4f".formatted(straightReach) + "/" + "%.4f".formatted(diagonalReach)
+                            + " link_width=" + "%.4f".formatted(linkWidth),
+                    wallLinks.size() == 8 && loops.size() == 12
+                            && flatness <= thickness / 2.0 + 1.0E-6
+                            && close(straightReach, 0.5) && close(diagonalReach, Math.sqrt(2.0) / 2.0)
+                            && close(linkWidth, thickness));
+
+            //    Counting the loops of the whole wall catches a triangle that two of its blocks both claim or
+            //    neither of them draws: nine blocks see forty-eight loops, which is sixteen triangles three ways.
+            int loopTotal = 0;
+            for (int x = 0; x < 3; x++)
+                for (int y = 0; y < 3; y++) {
+                    BlockPos at = base.offset(x, y, 0);
+                    if (!(level.getBlockEntity(at) instanceof RiftBlockEntity)) continue;
+                    loopTotal += RiftConnections.loops(at, RiftConnections.connected(level, at)).size();
+                }
+            ok &= check(source, "rift probe: wall_loops=" + loopTotal + " triangles=" + (loopTotal / 3), loopTotal == 48);
+
+            // 3. A loop is drawn by its three blocks as three shares that tile it, and each share is a slab whose
+            //    two surfaces are one thickness apart. Every block of the loop agrees the loop is there, the
+            //    shares add up to the whole triangle, and each of them is a third of it.
+            Loop loop = loops.isEmpty() ? null : loops.getFirst();
+            Vec3 forward = loop == null ? RiftMesh.CENTRE : local(loop.forward(), middle);
+            Vec3 backward = loop == null ? RiftMesh.CENTRE : local(loop.backward(), middle);
+            double whole = RiftMesh.area(List.of(RiftMesh.CENTRE, forward, backward));
+            double first = RiftMesh.area(RiftMesh.triangleFace(RiftMesh.CENTRE, forward, backward));
+            double second = RiftMesh.area(RiftMesh.triangleFace(forward, backward, RiftMesh.CENTRE));
+            double third = RiftMesh.area(RiftMesh.triangleFace(backward, RiftMesh.CENTRE, forward));
+            double slab = slabThickness(RiftMesh.triangleShare(RiftMesh.CENTRE, forward, backward, thickness));
+            boolean agreed = loop != null
+                    && agreesOnLoop(level, loop.forward(), middle, loop.backward())
+                    && agreesOnLoop(level, loop.backward(), middle, loop.forward());
+            ok &= check(source, "rift probe: loop_area=" + "%.4f".formatted(whole)
+                            + " shares=" + "%.4f".formatted(first) + "/" + "%.4f".formatted(second) + "/" + "%.4f".formatted(third)
+                            + " slab=" + "%.4f".formatted(slab) + " agreed=" + agreed,
+                    agreed && close(first, whole / 3.0) && close(second, whole / 3.0) && close(third, whole / 3.0)
+                            && close(first + second + third, whole) && close(slab, thickness));
+
+            // 4. A rift with nothing next to it draws exactly one point: no links, no triangles, and the point is
+            //    a cube of the configured thickness rather than a flat square.
+            BlockPos lonePos = base.offset(6, 0, 0);
+            RiftBlockEntity lone = placeRift(level, lonePos, here, touched);
+            List<BlockPos> loneLinks = lone == null ? List.of() : RiftConnections.connected(level, lonePos);
+            List<Vec3> point = RiftMesh.node(thickness);
+            double pointSide = cubeSide(point);
+            boolean loneAlone = lone != null && RiftConnections.isolated(level, lonePos);
+            ok &= check(source, "rift probe: lone_alone=" + loneAlone + " links=" + loneLinks.size()
+                            + " triangles=" + RiftConnections.loops(lonePos, loneLinks).size()
+                            + " point_vertices=" + point.size() + " point_side=" + "%.4f".formatted(pointSide),
+                    loneAlone && loneLinks.isEmpty() && RiftConnections.loops(lonePos, loneLinks).isEmpty()
+                            && point.size() == 24 && close(pointSide, thickness));
+
+            // 5. Linking is decided by position alone, and reaches the whole 3x3x3: a rift one layer up links to
+            //    all nine wall blocks and to the one placed beside the wall, whichever target each of them has.
+            RiftBlockEntity layer = placeRift(level, base.offset(1, 1, 1), Level.NETHER.identifier(), touched);
+            RiftBlockEntity beside = placeRift(level, base.offset(0, 0, 1), here, touched);
+            int layerLinks = layer == null ? -1 : RiftConnections.connected(level, base.offset(1, 1, 1)).size();
+            int besideLinks = beside == null ? -1 : RiftConnections.connected(level, base.offset(0, 0, 1)).size();
+            int cornerWithExtras = corner == null ? -1 : RiftConnections.connected(level, base).size();
+            boolean reached = layer != null && beside != null
+                    && !RiftConnections.isolated(level, base.offset(1, 1, 1));
+            ok &= check(source, "rift probe: layer_links=" + layerLinks + " beside_links=" + besideLinks
+                            + " corner_links=" + cornerWithExtras + " reached=" + reached,
+                    layerLinks == 10 && besideLinks == 5 && cornerWithExtras == 5 && reached);
+            level.setBlockAndUpdate(base.offset(1, 1, 1), Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(base.offset(0, 0, 1), Blocks.AIR.defaultBlockState());
+
+            // 6. Colour follows the target dimension unless it is overridden, and the derivation is stable.
+            Identifier end = Level.END.identifier();
+            int derived = RiftColors.forDimension(end);
+            lone.setTarget(end);
+            int resolvedAutomatic = RiftColors.resolve(lone);
+            lone.setColor(0xFF12AB34);
+            int resolvedOverride = RiftColors.resolve(lone);
+            ok &= check(source, "rift probe: colour_stable=" + (derived == RiftColors.forDimension(end))
+                            + " distinct=" + (derived != RiftColors.forDimension(Level.NETHER.identifier()))
+                            + " automatic=" + (resolvedAutomatic == derived)
+                            + " override=" + RiftColors.format(resolvedOverride),
+                    derived == RiftColors.forDimension(end) && derived != RiftColors.forDimension(Level.NETHER.identifier())
+                            && resolvedAutomatic == derived && resolvedOverride == 0xFF12AB34);
+
+            // 7. Destination and colour override survive a save and load, and nothing else is stored: a rift has
+            //    no direction and no opacity to lose. The metadata-carrying form is used because a static load
+            //    has to read the block entity id back out of the tag.
+            CompoundTag saved = lone.saveWithFullMetadata(level.registryAccess());
+            BlockEntity reloaded = BlockEntity.loadStatic(lonePos, level.getBlockState(lonePos), saved, level.registryAccess());
+            boolean persisted = reloaded instanceof RiftBlockEntity copy
+                    && copy.target().equals(end)
+                    && copy.color() == 0xFF12AB34;
+            ok &= check(source, "rift probe: persisted=" + persisted, persisted);
+
+            // 8. An arrival with no rift to land at carves one that leads back, and a second arrival reuses it
+            //    rather than stacking a new rift next to the first.
+            ServerLevel end_ = server.getLevel(Level.END);
+            BlockPos openSky = new BlockPos(0, 200, 0);
+            Vec3 firstArrival = end_ == null ? Vec3.ZERO : RiftTeleportService.arrival(end_, level.dimension(), openSky);
+            BlockPos carved = end_ == null ? null : findRiftNear(end_, BlockPos.containing(firstArrival), here);
+            Vec3 secondArrival = end_ == null ? Vec3.ZERO : RiftTeleportService.arrival(end_, level.dimension(), openSky);
+            boolean reused = carved != null && firstArrival.equals(secondArrival);
+            if (carved != null) touchedInEnd.add(carved);
+            ok &= check(source, "rift probe: carved_return=" + (carved != null) + " reused=" + reused,
+                    carved != null && reused);
+
+            // 9. The portal itself reports a transition into the configured dimension.
+            centre.setTarget(end);
+            Entity probe = EntityType.ARMOR_STAND.create(level, EntitySpawnReason.COMMAND);
+            TeleportTransition transition = MxtBlocks.RIFT.get().getPortalDestination(level, probe, middle);
+            boolean leadsToEnd = transition != null && transition.newLevel().dimension().equals(Level.END);
+            ok &= check(source, "rift probe: transition=" + (transition == null ? "-"
+                            : transition.newLevel().dimension().identifier() + "@" + "%.1f".formatted(transition.position().y)),
+                    leadsToEnd);
+            probe.discard();
+
+            // 10. Linking is read from the world each time: removing one block drops it out of the network.
+            level.setBlockAndUpdate(base, Blocks.AIR.defaultBlockState());
+            int afterRemoval = RiftConnections.connected(level, middle).size();
+            ok &= check(source, "rift probe: after_removal=" + afterRemoval, afterRemoval == 7);
+        } finally {
+            for (BlockPos pos : touched) level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            ServerLevel end_ = server.getLevel(Level.END);
+            if (end_ != null) for (BlockPos pos : touchedInEnd) end_.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        }
+        if (ok) {
+            source.sendSuccess(() -> Component.literal("rift probe: OK"), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("rift probe: MISMATCH"));
+        return 0;
+    }
+
+    private static RiftBlockEntity placeRift(ServerLevel level, BlockPos pos, Identifier target,
+                                             List<BlockPos> touched) {
+        level.setBlockAndUpdate(pos, MxtBlocks.RIFT.get().defaultBlockState());
+        touched.add(pos.immutable());
+        if (level.getBlockEntity(pos) instanceof RiftBlockEntity rift) {
+            rift.configure(target, RiftColors.AUTO);
+            return rift;
+        }
+        return null;
+    }
+
+    /**
+     * The closest rift leading to {@code target} within a small box, which is how the arrival service's own
+     * "carve one and then find it again" behaviour can be observed from the outside.
+     */
+    @Nullable
+    private static BlockPos findRiftNear(ServerLevel level, BlockPos around, Identifier target) {
+        BlockPos min = around.offset(-3, -3, -3);
+        BlockPos max = around.offset(3, 3, 3);
+        for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
+            if (!level.isLoaded(pos)) continue;
+            if (level.getBlockEntity(pos) instanceof RiftBlockEntity rift && rift.target().equals(target))
+                return pos.immutable();
+        }
+        return null;
+    }
+
+    /**
+     * A neighbour's centre in {@code self}'s block-local coordinates, which is where the renderer places the
+     * links it draws: a neighbour is at most one block away on each axis.
+     */
+    private static Vec3 local(BlockPos other, BlockPos self) {
+        return RiftMesh.CENTRE.add(other.getX() - self.getX(), other.getY() - self.getY(), other.getZ() - self.getZ());
+    }
+
+    /**
+     * The side of a vertex list that is a cube, or {@code -1} when its three extents are not all the same, which
+     * is how a mesh claiming to be a point is caught being a flat square instead.
+     */
+    private static double cubeSide(List<Vec3> vertices) {
+        double minX = Double.POSITIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        double minZ = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+        double maxZ = Double.NEGATIVE_INFINITY;
+        for (Vec3 vertex : vertices) {
+            minX = Math.min(minX, vertex.x);
+            minY = Math.min(minY, vertex.y);
+            minZ = Math.min(minZ, vertex.z);
+            maxX = Math.max(maxX, vertex.x);
+            maxY = Math.max(maxY, vertex.y);
+            maxZ = Math.max(maxZ, vertex.z);
+        }
+        double width = maxX - minX;
+        double height = maxY - minY;
+        double depth = maxZ - minZ;
+        return close(width, height) && close(height, depth) ? width : -1.0;
+    }
+
+    /**
+     * How far a mesh reaches along an axis, measured from the rift's own centre. A link half must reach exactly
+     * as far as the midpoint it meets its neighbour's half at.
+     */
+    private static double axialReach(List<Vec3> vertices, Vec3 axis) {
+        Vec3 unit = axis.normalize();
+        double reach = 0.0;
+        for (Vec3 vertex : vertices) reach = Math.max(reach, vertex.subtract(RiftMesh.CENTRE).dot(unit));
+        return reach;
+    }
+
+    /**
+     * How far a mesh reaches away from an axis, measured from the rift's own centre. For a beam that is the
+     * corner of its cross-section, so it checks the thickness the link claims to have.
+     */
+    private static double radialReach(List<Vec3> vertices, Vec3 axis) {
+        Vec3 unit = axis.normalize();
+        double reach = 0.0;
+        for (Vec3 vertex : vertices) {
+            Vec3 relative = vertex.subtract(RiftMesh.CENTRE);
+            reach = Math.max(reach, relative.subtract(unit.scale(relative.dot(unit))).length());
+        }
+        return reach;
+    }
+
+    /**
+     * Whether the block at {@code partner} also sees the loop through {@code self} and {@code other}. All three
+     * blocks of a loop have to draw their own share of it, so two of them agreeing would leave a gap and this is
+     * how a disagreement shows up.
+     */
+    private static boolean agreesOnLoop(ServerLevel level, BlockPos partner, BlockPos self, BlockPos other) {
+        if (!(level.getBlockEntity(partner) instanceof RiftBlockEntity)) return false;
+        for (Loop candidate : RiftConnections.loops(partner, RiftConnections.connected(level, partner)))
+            if (candidate.forward().equals(self) && candidate.backward().equals(other)
+                    || candidate.forward().equals(other) && candidate.backward().equals(self)) return true;
+        return false;
+    }
+
+    /**
+     * The distance between the two surfaces of a filled triangle share, which is the thickness the fill claims
+     * to have. A share is laid out top face, bottom face and then the rims, so a surface vertex and the one four
+     * places after it are the same corner of the triangle above and below.
+     */
+    private static double slabThickness(List<Vec3> share) {
+        if (share.size() < 8) return -1.0;
+        return share.get(0).distanceTo(share.get(4));
+    }
+
+    private static boolean check(CommandSourceStack source, String message, boolean value) {
+        if (value) {
+            source.sendSuccess(() -> Component.literal(message + " OK"), false);
+            return true;
+        }
+        source.sendFailure(Component.literal(message + " MISMATCH"));
+        return false;
+    }
+
+    private static RealmRecord planned(Holder<RealmInstance> definition, int index, long seed) {
+        return RealmInstanceService.plan(definition, index, seed, 0L);
+    }
+
+    private static RealmRecord openInstance(MinecraftServer server, Holder<RealmInstance> definition, int index,
+                                            long seed, List<ResourceKey<Level>> opened) {
+        RealmRecord record = RealmInstanceService.open(server, planned(definition, index, seed)).orElse(null);
+        if (record != null) opened.add(record.dimension());
+        return record;
     }
 
     private static int giveKit(CommandSourceStack source) {

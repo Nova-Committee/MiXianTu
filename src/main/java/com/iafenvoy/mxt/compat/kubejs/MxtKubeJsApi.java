@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.compat.kubejs;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
@@ -17,9 +18,11 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
+import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
@@ -225,6 +228,43 @@ public final class MxtKubeJsApi {
      */
     public static boolean reclaimSoul(@NotNull Entity entity) {
         return !entity.level().isClientSide() && SoulService.reclaim(entity);
+    }
+
+    /**
+     * The live elements an entity's spirit roots name, sorted. This is the element half of "what is this body",
+     * asked of the body rather than of the registry, so a script can tell a fire cultivator from a water one
+     * without knowing which roots exist.
+     */
+    public static List<String> elements(@NotNull Entity entity) {
+        return Elements.of(entity).stream().map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    public static boolean hasElement(@NotNull Entity entity, Identifier id) {
+        return Elements.of(entity).stream().anyMatch(element -> HolderHelper.id(element).equals(id));
+    }
+
+    /**
+     * How much of one element has built up on the entity. Read through the accessor that works on either side,
+     * because the accumulation is a synchronised attachment and a client script (an item tooltip, for example)
+     * has a copy of it. A disabled or unknown element answers {@code 0} rather than whatever is left on the
+     * body, which is the same rule the {@code mxt:element_attachment} condition follows.
+     */
+    public static double elementAmount(@NotNull Entity entity, Identifier id) {
+        return MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.ELEMENT, id)
+                .map(element -> ElementReactionService.amount(entity, element)).orElse(0.0D);
+    }
+
+    /**
+     * Builds one element up on the entity and answers the new total, through the same pipeline a strike uses:
+     * a reaction whose demand the new total meets fires here exactly as it would from damage. A negative amount
+     * wears the buildup off, and a disabled or unknown element changes nothing.
+     */
+    public static double attachElement(@NotNull Entity entity, Identifier id, double amount) {
+        if (entity.level().isClientSide() || !Double.isFinite(amount) || amount == 0.0D) return 0.0D;
+        Holder<Element> element = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, id).orElse(null);
+        if (element == null) return 0.0D;
+        ElementReactionService.apply(entity, element, amount, FormulaContext.of(entity));
+        return ElementReactionService.amount(entity, element);
     }
 
     public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier auraId, FormulaContext context) {

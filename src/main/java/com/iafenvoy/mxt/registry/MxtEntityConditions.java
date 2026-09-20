@@ -82,4 +82,5 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageChargesEntityCondition>> STORAGE_CHARGES = REGISTRY.register("storage_charges", () -> StorageChargesEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<StorageCooldownEntityCondition>> STORAGE_COOLDOWN = REGISTRY.register("storage_cooldown", () -> StorageCooldownEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasEquippedItemCondition>> HAS_EQUIPPED_ITEM = REGISTRY.register("has_equipped_item", () -> HasEquippedItemCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<InRealmInstanceEntityCondition>> IN_REALM_INSTANCE = REGISTRY.register("in_realm_instance", () -> InRealmInstanceEntityCondition.CODEC);
 }

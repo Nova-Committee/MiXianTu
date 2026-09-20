@@ -5,13 +5,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * Server-safe status feedback for framework item interactions.
+ * Server-safe status feedback for framework item and block interactions.
  */
-final class ItemFeedback {
+public final class ItemFeedback {
     private ItemFeedback() {
     }
 
-    static void send(Player player, Component message) {
+    public static void send(Player player, Component message) {
         if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
     }
 }

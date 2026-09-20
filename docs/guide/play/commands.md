@@ -28,6 +28,11 @@ title: 命令
 | `/ability revoke <targets> <ability>`（= `/mxt ability revoke …`） | 只撤销 `mxt:command` 这一份来源（需要 gamemaster 权限）；还有别的来源持有就什么都不发生，该目标记为失败。逐个目标报告结果。 |
 | `/mxt breakthrough <resource>` | 尝试突破指定资源对应的境界。 |
 | `/mxt realm set <realm>` | 设置线性境界。 |
+| `/mxt realm_instance list` | 列出当前所有秘境实例：维度键、序号、定义、在场人数与上限、主人、地形是否已布置、维度当前是否加载。 |
+| `/mxt realm_instance info <dimension>` | 查看某一份实例的同一行信息。 |
+| `/mxt realm_instance enter <definition>` | 以自己为进入者开一份或加入一份秘境实例（需要 gamemaster 权限）。这是无需令牌就能进秘境的管理入口，走的是与令牌完全相同的那条流程（条件、人数、实例上限、生成）。 |
+| `/mxt realm_instance exit` | 把自己从当前秘境送回进入时的位置；与令牌离开走同一条路，所以定义的 `exit_condition` 同样生效。 |
+| `/mxt realm_instance destroy <dimension>` | 强制结束一份实例：把里面的人送回，然后卸载维度并清空它的地形数据，**认领过的秘境也会被删掉**（需要 gamemaster 权限）。 |
 | `/mxt soul reclaim` | 回收可回收的灵魂。 |
 | `/mxt trigger list [<entity>]` | 列出该实体当前的运行时触发器订阅：模块/标识/信号/状态。订阅从不存档，这是运行中的服务器里唯一能看见它们的地方；不填实体时用自己。 |
 | `/mxt trigger rules <signal>` | 按执行顺序列出响应某个信号的数据包规则，以及每条规则的行为类型。 |
@@ -79,6 +84,30 @@ title: 命令
 `color <色>` 与 `palette <渐变>` 是**二选一**的两支，各自后面接着同一条固定顺序的尾巴 `[alpha [thickness [damage [visual_only]]]]`：想写后面的就必须把前面的也写出来（Tab 补全会一路提示），例如要 `thickness` 就得先写颜色或渐变、再写 `alpha`。数据包侧的同一个行为 `mxt:spawn_lightning` 支持任意组合的字段（渐变写在 `palette`），见[数据包 JSON 格式](../../数据包格式)。
 
 命令中的注册表 ID 使用原版 `IdentifierArgument`，Tab 补全来自服务端当前注册表。
+
+### 秘境实例（`/mxt realm_instance`）
+
+秘境定义（`mxt:realm_instance`）是模板而不是某个固定维度：每次进入都可能开出一份**新的实例维度**，维度键是 `<定义命名空间>:realm/<定义路径>/<序号>`，序号从 `0` 开始（只能开一份的定义也带序号）。这组命令是它的运维入口，**整棵子树都需要 gamemaster 权限**（`list`、`info`、`exit` 也一样，它们是给管理员看状态用的）。
+
+| 子命令 | 行为 |
+| --- | --- |
+| `list` | 列出所有实例。`loaded=false` 表示这份实例正在休眠——通常是因为它被认领过、人都走光了，地形留在存档里等着主人再来。 |
+| `info <dimension>` | 只看一份，参数写维度键，例如 `mxt:realm/trial_realm/0`。 |
+| `enter <definition>` | 自己进去。走完整流程：停用检查、进入条件、找一份没满的实例或新开一份（受 `max_instances` 限制）、生成维度与结构、落到入口。 |
+| `exit` | 回进入时的位置。定义里的 `exit_condition` 对这条命令同样生效（和自己用令牌离开一样）。 |
+| `destroy <dimension>` | 结束一份实例并**删除它的地形**。被锁在里面的玩家会被送回；`mxt:existing` 型秘境只清空成员，不动那个真实维度。 |
+
+### 裂隙（`/mxt rift`）
+
+裂隙（`mxt:rift`）不是数据包定义，而是运行时摆出来的方块：每个裂隙在方块中心画一个点，和 3×3×3 内所有相邻裂隙连线（不看朝向），两条线彼此也相邻时就围出一个三角形并填充内部。这组命令是它的运维入口，**整棵子树都需要 gamemaster 权限**；玩家侧的正常用法是拿裂隙方块（`mxt:rift` 物品）摆、拿裂隙锚（`mxt:rift_anchor` 物品）改。
+
+| 子命令 | 行为 |
+| --- | --- |
+| `info <pos>` | 打印这个裂隙通往哪里、颜色（自己设的还是随目标维度），以及**连线数、三角形数、连成一片的格数** —— 一眼看出它会画成什么样、为什么没有连上邻居。 |
+| `target <pos> <dimension>` | 改它通往哪个维度（有 Tab 补全，列出服务端所有维度）。 |
+| `color <pos> <color>` | 设颜色覆盖，写 `RRGGBB`（可带 `#`）或 `auto`。 |
+| `place <pos> <dimension>` | 直接在某个可替换的位置放一个通往该维度的裂隙。 |
+| `bind <dimension> [color]` | 把手上的裂隙锚设成这个目标（与潜行使用物品等价，但可以直接写成任意维度）。 |
 
 ### 阵盘
 

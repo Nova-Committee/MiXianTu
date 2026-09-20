@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.realm.RealmGeneration;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
@@ -65,6 +66,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = create("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends FormationActionType>> FORMATION_ACTION_TYPE = create("none", MxtResourceKeys.FORMATION_ACTION_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends TimelineEntry>> TIMELINE_ENTRY_TYPE = create("idle", MxtResourceKeys.TIMELINE_ENTRY_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends RealmGeneration>> REALM_GENERATION_TYPE = create("stem", MxtResourceKeys.REALM_GENERATION_TYPE);
 
     private static <T> DefaultedRegistry<T> create(String defaultKey, ResourceKey<? extends Registry<T>> key) {
         DefaultedRegistry<T> registry = new DefaultedMappedRegistry<>(defaultKey, key, Lifecycle.stable(), false);

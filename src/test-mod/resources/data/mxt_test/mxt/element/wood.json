@@ -1,0 +1,18 @@
+{
+  "overcomes": [
+    {
+      "elements": ["mxt_test:earth"],
+      "multiplier": 1.4
+    }
+  ],
+  "adapted_to": [
+    {
+      "elements": ["mxt_test:metal"],
+      "multiplier": 1.25
+    }
+  ],
+  "damage_types": ["minecraft:cactus", "minecraft:sweet_berry_bush"],
+  "attachment_decay": 0.25,
+  "damage_attachment": 3.0,
+  "color": "#4fae52"
+}

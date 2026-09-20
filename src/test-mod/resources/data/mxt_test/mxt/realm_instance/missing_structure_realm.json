@@ -1,0 +1,9 @@
+{
+  "generation": {
+    "type": "mxt:void"
+  },
+  "max_instances": 1,
+  "structures": [
+    { "nbt": "mxt_test:probe/absent", "pos": [0, 64, 0] }
+  ]
+}

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -24,10 +25,19 @@ import java.util.List;
  */
 public record HasElementLootCondition(EntityTarget target,
                                       List<Either<Holder<Element>, TagKey<Element>>> elements) implements LootItemCondition {
-    public static final MapCodec<HasElementLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final MapCodec<HasElementLootCondition> CODEC = RecordCodecBuilder.<HasElementLootCondition>mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasElementLootCondition::target),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(HasElementLootCondition::elements)
-    ).apply(i, HasElementLootCondition::new));
+    ).apply(i, HasElementLootCondition::new)).validate(HasElementLootCondition::validate);
+
+    /**
+     * An empty list can never match, so it is a condition that silently never passes: refused at load.
+     */
+    private static DataResult<HasElementLootCondition> validate(HasElementLootCondition condition) {
+        return condition.elements().isEmpty()
+                ? DataResult.error(() -> "mxt:has_element needs at least one element to ask about")
+                : DataResult.success(condition);
+    }
 
     @Override
     public @NonNull MapCodec<HasElementLootCondition> codec() {

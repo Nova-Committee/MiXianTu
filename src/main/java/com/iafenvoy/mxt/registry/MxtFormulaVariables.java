@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
+import com.iafenvoy.mxt.runtime.world.RealmRecord;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
 import com.iafenvoy.mxt.util.formula.FormulaNames;
@@ -41,6 +43,7 @@ public final class MxtFormulaVariables {
     public static final DeferredHolder<FormulaVariable, FormulaVariable> CASTER = REGISTRY.register("caster", () -> new EntityVariable("caster_"));
     public static final DeferredHolder<FormulaVariable, FormulaVariable> TARGET = REGISTRY.register("target", () -> new EntityVariable("target_"));
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
+    public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM_INSTANCE = REGISTRY.register("realm_instance", RealmInstanceVariable::new);
 
     /**
      * For formulas that must switch a term off without editing the expression.
@@ -172,6 +175,42 @@ public final class MxtFormulaVariables {
             if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
                 return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(aura);
             return Math.max(0, rank);
+        }
+    }
+
+    /**
+     * The state of the realm instance the subject is inside.
+     *
+     * <p>The names are prefixed {@code realm_instance_} because {@code realm} already means a cultivation
+     * stage, and both can be read in the same expression. Every name answers {@link Double#NaN} outside a
+     * realm, so a condition can tell "not in a realm" from "in an empty one".
+     */
+    private static final class RealmInstanceVariable implements FormulaVariable {
+        private static final Set<String> NAMES = Set.of("realm_instance_members", "realm_instance_limit",
+                "realm_instance_elapsed", "realm_instance_duration", "realm_instance_index", "realm_instance_is_owner");
+
+        @Override
+        public Set<String> names() {
+            return NAMES;
+        }
+
+        @Override
+        public double value(String key, String suffix, FormulaContext context) {
+            if (!suffix.isEmpty()) return Double.NaN;
+            Entity entity = context.caster() != null ? context.caster() : context.player();
+            if (entity == null) return Double.NaN;
+            RealmRecord record = RealmInstanceRegistry.ofMember(entity.getUUID()).orElse(null);
+            if (record == null) return Double.NaN;
+            return switch (key) {
+                case "realm_instance_members" -> record.members().size();
+                case "realm_instance_limit" -> record.instance().maxMembers().orElse(-1);
+                case "realm_instance_elapsed" -> record.startedAt() < 0L ? 0.0D
+                        : Math.max(0.0D, entity.level().getGameTime() - record.startedAt());
+                case "realm_instance_duration" -> record.instance().durationTicks();
+                case "realm_instance_index" -> record.index();
+                case "realm_instance_is_owner" -> record.isOwner(entity.getUUID()) ? 1.0D : 0.0D;
+                default -> Double.NaN;
+            };
         }
     }
 }

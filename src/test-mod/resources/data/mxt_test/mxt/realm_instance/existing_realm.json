@@ -1,0 +1,10 @@
+{
+  "generation": {
+    "type": "mxt:existing",
+    "dimension": "minecraft:overworld"
+  },
+  "max_instances": 1,
+  "entry": {
+    "pos": [0.5, 70.0, 0.5]
+  }
+}

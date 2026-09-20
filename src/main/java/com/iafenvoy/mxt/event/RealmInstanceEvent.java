@@ -1,51 +1,102 @@
 package com.iafenvoy.mxt.event;
 
-import com.iafenvoy.mxt.data.RealmInstance;
+import com.iafenvoy.mxt.data.realm.RealmInstance;
 import net.minecraft.core.Holder;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 
+import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Realm instance lifecycle. The dimension key is part of every payload because that is what an instance is:
+ * {@code Create} and {@code Destroy} bracket a dimension, and the member events describe one visit to it.
+ */
 public abstract class RealmInstanceEvent extends Event {
-    private final ServerLevel level;
+    private final MinecraftServer server;
     private final Holder<RealmInstance> definition;
-    private final UUID member;
+    private final ResourceKey<Level> dimension;
+    private final int index;
+    private final Optional<UUID> owner;
 
-    protected RealmInstanceEvent(ServerLevel level, Holder<RealmInstance> definition, UUID member) {
-        this.level = level;
+    protected RealmInstanceEvent(MinecraftServer server, Holder<RealmInstance> definition, ResourceKey<Level> dimension,
+                                 int index, Optional<UUID> owner) {
+        this.server = server;
         this.definition = definition;
-        this.member = member;
+        this.dimension = dimension;
+        this.index = index;
+        this.owner = owner;
     }
 
-    public ServerLevel level() {
-        return this.level;
+    public MinecraftServer server() {
+        return this.server;
     }
 
     public Holder<RealmInstance> definition() {
         return this.definition;
     }
 
-    public UUID member() {
-        return this.member;
+    public ResourceKey<Level> dimension() {
+        return this.dimension;
     }
 
-    public static final class EnterPre extends RealmInstanceEvent implements ICancellableEvent {
-        public EnterPre(ServerLevel level, Holder<RealmInstance> definition, UUID member) {
-            super(level, definition, member);
+    public int index() {
+        return this.index;
+    }
+
+    public Optional<UUID> owner() {
+        return this.owner;
+    }
+
+    public static final class Create extends RealmInstanceEvent {
+        public Create(MinecraftServer server, Holder<RealmInstance> definition, ResourceKey<Level> dimension, int index,
+                      Optional<UUID> owner) {
+            super(server, definition, dimension, index, owner);
         }
     }
 
-    public static final class EnterPost extends RealmInstanceEvent {
-        public EnterPost(ServerLevel level, Holder<RealmInstance> definition, UUID member) {
-            super(level, definition, member);
+    public static final class Destroy extends RealmInstanceEvent {
+        public Destroy(MinecraftServer server, Holder<RealmInstance> definition, ResourceKey<Level> dimension, int index,
+                       Optional<UUID> owner) {
+            super(server, definition, dimension, index, owner);
         }
     }
 
-    public static final class Exit extends RealmInstanceEvent {
-        public Exit(ServerLevel level, Holder<RealmInstance> definition, UUID member) {
-            super(level, definition, member);
+    public abstract static class MemberEvent extends RealmInstanceEvent {
+        private final UUID member;
+
+        protected MemberEvent(MinecraftServer server, Holder<RealmInstance> definition, ResourceKey<Level> dimension,
+                              int index, Optional<UUID> owner, UUID member) {
+            super(server, definition, dimension, index, owner);
+            this.member = member;
+        }
+
+        public UUID member() {
+            return this.member;
+        }
+    }
+
+    public static final class EnterPre extends MemberEvent implements ICancellableEvent {
+        public EnterPre(MinecraftServer server, Holder<RealmInstance> definition, ResourceKey<Level> dimension, int index,
+                        Optional<UUID> owner, UUID member) {
+            super(server, definition, dimension, index, owner, member);
+        }
+    }
+
+    public static final class EnterPost extends MemberEvent {
+        public EnterPost(MinecraftServer server, Holder<RealmInstance> definition, ResourceKey<Level> dimension, int index,
+                         Optional<UUID> owner, UUID member) {
+            super(server, definition, dimension, index, owner, member);
+        }
+    }
+
+    public static final class Exit extends MemberEvent {
+        public Exit(MinecraftServer server, Holder<RealmInstance> definition, ResourceKey<Level> dimension, int index,
+                    Optional<UUID> owner, UUID member) {
+            super(server, definition, dimension, index, owner, member);
         }
     }
 }

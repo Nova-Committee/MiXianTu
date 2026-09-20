@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -28,9 +29,18 @@ import java.util.Set;
  * for a lava tick once that element claims {@code minecraft:lava}.</p>
  */
 public record ElementDamageCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements DamageCondition {
-    public static final MapCodec<ElementDamageCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final MapCodec<ElementDamageCondition> CODEC = RecordCodecBuilder.<ElementDamageCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(ElementDamageCondition::elements)
-    ).apply(i, ElementDamageCondition::new));
+    ).apply(i, ElementDamageCondition::new)).validate(ElementDamageCondition::validate);
+
+    /**
+     * An empty list can never match, so it is a condition that silently never passes: refused at load.
+     */
+    private static DataResult<ElementDamageCondition> validate(ElementDamageCondition condition) {
+        return condition.elements().isEmpty()
+                ? DataResult.error(() -> "mxt:element needs at least one element to ask about")
+                : DataResult.success(condition);
+    }
 
     @Override
     public boolean test(@NonNull DamageConditionContext ctx) {

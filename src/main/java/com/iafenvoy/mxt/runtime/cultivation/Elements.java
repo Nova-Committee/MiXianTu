@@ -81,7 +81,11 @@ public final class Elements {
     }
 
     public static Set<Holder<Element>> of(Entity entity) {
-        return of(entity.getData(MxtAttachments.SPIRIT_IDENTITY), entity.level().registryAccess());
+        // Read, never create: this is asked of both sides of every strike, and an entity that carries no roots
+        // must not come away holding an empty spirit identity (and, with it, a save entry) because something
+        // merely asked what elements it has.
+        SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        return spirit == null ? Set.of() : of(spirit, entity.level().registryAccess());
     }
 
     /**

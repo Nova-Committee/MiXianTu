@@ -1,0 +1,11 @@
+{
+  "amounts": {
+    "mxt_test:earth": 10
+  },
+  "consume": {},
+  "action": {
+    "type": "mxt:heal",
+    "amount": 1
+  },
+  "priority": -5
+}

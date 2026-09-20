@@ -19,6 +19,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtCultivation` | 增加修为、尝试境界突破。 |
 | `MxtCurses` | 施加（可带时长）、显式移除与查询诅咒。 |
 | `MxtAura` | 查询、添加、移除服务端灵气区域。 |
+| `MxtElements` | 查询实体身上的元素与元素附着，并施加附着。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
 | `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
 | `MxtLoot` | 注册脚本战利品条件与战利品函数。 |
@@ -325,6 +326,32 @@ MxtAbilities.selector('example:nearest_three', (actor, context, params) => {
 
 `addBox` 仅接受 `ServerLevel`，且 `zone` 必须是已加载的 `aura_zone` 数据包 ID；否则抛出异常。`AuraResult` 常用只读方法：`aura()`、`concentration()`、`maximum()`、`regenPerTick()`、`cultivationSpeed()`、`source()`、`sourceKind()`、`suppressCultivate()`。
 
+### `MxtElements`
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `list(entity)` | `Entity` | `List<String>` | 该实体**当前生效**的灵根所指的元素 ID，按 ID 排序。停用的元素与关闭的灵根都不算，没有灵根则为空列表。 |
+| `has(entity, element)` | `Entity`、元素 ID | `boolean` | 该实体的灵根是否指向这个元素。 |
+| `amount(entity, element)` | `Entity`、元素 ID | `double` | 这个元素在该实体身上的附着量；没有则为 `0`，元素被停用或不存在也返回 `0`。客户端读同步过来的副本。 |
+| `attach(entity, element, amount)` | `Entity`、元素 ID、有限数值 | `double` | 走与打击**同一条**管线给实体加上（负数则扣掉）该元素的附着，返回新的附着量。攒够时 `element_reaction` 照常触发。 |
+
+元素与附着是两件事：`list`/`has` 读的是灵根（这个身体"是什么"），`amount`/`attach` 读写的是一张按元素记数的附着表（这个身体"攒了多少"）。`attach` 与实体行为 `mxt:attach_element` 等价，因此"泡在岩浆里""服丹""诅咒持续喂火"这类来源用脚本写也一样；负数可以用来净化。三个读方法两侧都能用（附着表是同步过来的附件，客户端脚本读的是本地副本，物品悬浮提示那类逻辑正是这么用的）；只有 `attach` 是服务端操作，客户端、未知或被停用的元素、非有限值、`0` 一律返回 `0` 且不改动任何东西。
+
+```js
+// kubejs/server_scripts/mxt_element.js
+PlayerEvents.tick(event => {
+  const player = event.player
+  if (player.level().isClientSide()) return
+  // "身上有水灵根、且火气攒到 8 了" —— 反应还没触发就能先看到苗头。
+  if (MxtElements.has(player, 'mxt_test:water') && MxtElements.amount(player, 'mxt_test:fire') >= 8) {
+    console.info(`water cultivator carrying ${MxtElements.list(player)}`)
+  }
+})
+
+// 让一次自定义事件给目标攒火气；攒够时数据包里的 element_reaction 会自己结算。
+MxtElements.attach(target, 'mxt_test:fire', 4)
+```
+
 ### `MxtSouls`
 
 | 方法 | 参数 | 返回值 | 说明 |
@@ -506,7 +533,7 @@ MxtEvents.friendRelation(event => {
 | `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
 | `formation` | `Activate`、`Deactivate`、`Tick`、`TickEffects`、`UpkeepFailed` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate`、`TickEffects`、`UpkeepFailed` 可取消，`Deactivate` 与 `Tick` 不可取消。`Tick` 是"本周期已付费"的观察点，`TickEffects` 只挡这一周期的效果且不退费，`UpkeepFailed` 取消表示让阵法撑过付不出钱的这一周期；`UpkeepFailed` 另有 `payer()`（`Optional<Entity>`，无人付款时为空）与 `failedResource()`（`Optional<Identifier>`，没有付款者时为空），脚本据此知道谁欠费、欠的是哪种资源。 |
 | `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Pre` 可取消结束，取消后寿元会被设为不受限。 |
-| `realmInstance` | `EnterPre`、`EnterPost`、`Exit` | `level()`、`definition()`（`Holder<RealmInstance>`）、`member()`；只有 `EnterPre` 可取消。 |
+| `realmInstance` | `Create`、`Destroy`、`EnterPre`、`EnterPost`、`Exit` | `definition()`（`Holder<RealmInstance>`）、`dimension()`（`ResourceKey<Level>`）、`index()`、`owner()`（`Optional<UUID>`）、`server()`；成员事件（`EnterPre`/`EnterPost`/`Exit`）另有 `member()`，只有 `EnterPre` 可取消。`Create` 在一份实例维度刚建好时发出，`Destroy` 在实例结束时发出——**无论是删掉地形还是只卸载保留**（被认领的秘境没人后只是休眠）。 |
 | `soul` | `TransferPre`、`TransferPost`、`ReclaimPre`、`ReclaimPost` | `entity()`、`soul()`；所有 `*Pre` 可取消。 |
 | `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`BREAK`、`RECALL`、`RELEASE`；`Pre` 可取消。 |
 | `tribulation` | `StartPre`、`StartPost`、`EntryPre`、`EntryPost`、`Complete` | `tribulation()`（`Holder<Tribulation>`）、`data()`；两种节拍事件另有 `index()`（第几拍，从 0 数）与 `entry()`。`data()` 就是附件本身：`peek()`/`remaining()` 读队首与还剩几拍，`state()` 读当前节拍写下的现场，`windup()` 读启动前摇还剩多少 tick（0 表示已经在走时间线、或这场天劫没有前摇）。`StartPre` 可取消（拒绝这次启动），`EntryPre` 可取消（跳过该节拍）。 |
@@ -537,7 +564,7 @@ MxtEvents.cultivationBreak(event => {
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
 
-只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtSouls` 以及 `MxtTriggers.publish` 直接返回 `false`，或把结果里的 `failure()` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
+只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtSouls`、`MxtElements.attach` 以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
 
 `MxtActions.execute*` 故意不设该保护，因为内置 Action 自己决定作用端：JSON 里声明了客户端执行的 Action（例如带 `client` 标志的速度 Action）本来就应当就地运行。
 

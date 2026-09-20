@@ -1,0 +1,17 @@
+{
+  "generation": {
+    "type": "mxt:stem",
+    "stem": "minecraft:the_end"
+  },
+  "seed": 777,
+  "max_instances": 1,
+  "max_members": 2,
+  "duration_ticks": 1,
+  "structures": [
+    { "nbt": "mxt_test:probe/tower", "pos": [0, 100, 0], "chance": 0.0 }
+  ],
+  "entry": [
+    { "random_center": [0.0, 0.0], "random_radius": 16.0, "spread": 2.0 },
+    { "pos": [100.5, 70.0, 100.5], "weight": 0 }
+  ]
+}

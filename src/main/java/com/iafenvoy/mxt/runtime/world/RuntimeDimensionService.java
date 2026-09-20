@@ -79,4 +79,21 @@ public final class RuntimeDimensionService {
             return true;
         }
     }
+
+    /**
+     * Unloads a runtime dimension and discards the terrain it generated, so the next instance of the same
+     * definition starts from nothing. The level is silenced before it closes, otherwise closing it would write
+     * the very region files that are about to be removed.
+     */
+    public static boolean delete(MinecraftServer server, ResourceKey<Level> key) {
+        if (Level.OVERWORLD.equals(key)) return false;
+        ServerLevel level = server.getLevel(key);
+        if (level != null) {
+            if (!level.players().isEmpty()) return false;
+            level.noSave = true;
+            unload(server, key);
+        }
+        RealmGenerationService.clearData(server, key);
+        return true;
+    }
 }

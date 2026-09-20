@@ -5,11 +5,22 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.world.phys.Vec2;
 
+import java.util.List;
 import java.util.function.Function;
 
 public final class MiscCodecs {
     public static final Codec<Integer> COLOR = color(true), COLOR_NO_ALPHA = color(false);
+
+    /**
+     * A two element {@code [x, z]} pair. Realm borders use it for their center.
+     */
+    public static final Codec<Vec2> HORIZONTAL_PAIR = Codec.DOUBLE.listOf().comapFlatMap(
+            values -> values.size() == 2
+                    ? DataResult.success(new Vec2(values.getFirst().floatValue(), values.get(1).floatValue()))
+                    : DataResult.error(() -> "Expected [x, z] with exactly two numbers"),
+            value -> List.of((double) value.x, (double) value.y));
 
     /**
      * A datapack display string: a bare JSON string is a translation key, an object is a full component, so a

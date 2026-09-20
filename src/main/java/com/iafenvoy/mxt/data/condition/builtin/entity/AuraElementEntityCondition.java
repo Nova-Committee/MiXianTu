@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
@@ -30,7 +31,18 @@ import java.util.Map.Entry;
  */
 public record AuraElementEntityCondition(Map<Holder<Element>, AuraRequirement> elements) implements EntityCondition {
     public static final MapCodec<AuraElementEntityCondition> CODEC = CollectionCodecs.map(Element.CODEC, AuraRequirement.CODEC)
-            .fieldOf("elements").xmap(AuraElementEntityCondition::new, AuraElementEntityCondition::elements);
+            .fieldOf("elements").xmap(AuraElementEntityCondition::new, AuraElementEntityCondition::elements)
+            .validate(AuraElementEntityCondition::validate);
+
+    /**
+     * An empty table would be a condition that passes everywhere, which is a gate nobody can see is missing:
+     * refused at load instead.
+     */
+    private static DataResult<AuraElementEntityCondition> validate(AuraElementEntityCondition condition) {
+        return condition.elements().isEmpty()
+                ? DataResult.error(() -> "mxt:aura_element needs at least one element to ask about")
+                : DataResult.success(condition);
+    }
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {

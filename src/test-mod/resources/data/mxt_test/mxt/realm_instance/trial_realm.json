@@ -1,7 +1,27 @@
 {
-  "dimension": "minecraft:the_end",
-  "duration_ticks": 12000,
-  "max_members": 4,
+  "generation": {
+    "type": "mxt:void",
+    "biome": "minecraft:the_void",
+    "dimension_type": "minecraft:the_end"
+  },
+  "seed": 12345,
+  "border": {
+    "center": [0.0, 0.0],
+    "size": 128.0,
+    "warning_blocks": 3,
+    "warning_time": 5
+  },
+  "max_instances": 2,
+  "max_members": 2,
+  "owned": true,
+  "structures": [
+    { "nbt": "mxt_test:probe/tower", "pos": [8, 64, 8] }
+  ],
+  "entry": {
+    "pos": [0.5, 65.0, 0.5],
+    "yaw": 90.0,
+    "pitch": 0.0
+  },
   "enter_action": { "type": "mxt:apply_effect", "effect": "minecraft:night_vision", "duration_ticks": 12000 },
   "exit_action": { "type": "mxt:heal", "amount": 4 }
 }

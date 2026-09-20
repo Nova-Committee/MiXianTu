@@ -44,6 +44,7 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TokenComponent>> TOKEN = register("token", TokenComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<IdentificationComponent>> IDENTIFICATION = register("identification", IdentificationComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TalismanComponent>> TALISMAN = register("talisman", TalismanComponent.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<RiftComponent>> RIFT = register("rift", RiftComponent.CODEC);
 
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(String id, Codec<T> codec) {
         return REGISTRY.registerComponentType(id, b -> b.persistent(codec).networkSynchronized(ByteBufCodecs.fromCodecWithRegistries(codec)));

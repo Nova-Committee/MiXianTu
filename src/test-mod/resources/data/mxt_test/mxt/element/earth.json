@@ -1,0 +1,18 @@
+{
+  "overcomes": [
+    {
+      "elements": ["mxt_test:water"],
+      "multiplier": 1.4
+    }
+  ],
+  "adapted_to": [
+    {
+      "elements": ["mxt_test:wood"],
+      "multiplier": 1.25
+    }
+  ],
+  "damage_types": ["minecraft:falling_block", "minecraft:in_wall"],
+  "attachment_decay": 0.25,
+  "damage_attachment": 3.0,
+  "color": "#a9824b"
+}

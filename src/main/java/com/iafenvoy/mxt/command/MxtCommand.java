@@ -14,7 +14,13 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationCont
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
+import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.item.RiftComponent;
+import com.iafenvoy.mxt.item.RiftAnchorItem;
+import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtBlocks;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -23,16 +29,23 @@ import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
+import com.iafenvoy.mxt.runtime.rift.RiftColors;
+import com.iafenvoy.mxt.runtime.rift.RiftConnections;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
+import com.iafenvoy.mxt.runtime.world.RealmInstanceService;
+import com.iafenvoy.mxt.runtime.world.RealmInstanceService.Result;
+import com.iafenvoy.mxt.runtime.world.RealmRecord;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -41,21 +54,30 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -105,6 +127,39 @@ public final class MxtCommand {
                         .then(literal("set").then(argument("realm", IdentifierArgument.id())
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_STAGE))
                                 .executes(ctx -> setRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "realm"))))))
+                .then(literal("realm_instance").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                        .then(literal("list").executes(ctx -> listRealmInstances(ctx.getSource())))
+                        .then(literal("info").then(argument("dimension", IdentifierArgument.id())
+                                .executes(ctx -> realmInstanceInfo(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))))
+                        .then(literal("enter").then(argument("definition", IdentifierArgument.id())
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_INSTANCE))
+                                .executes(ctx -> enterRealmInstance(ctx.getSource(), IdentifierArgument.getId(ctx, "definition")))))
+                        .then(literal("exit").executes(ctx -> exitRealmInstance(ctx.getSource())))
+                        .then(literal("destroy").then(argument("dimension", IdentifierArgument.id())
+                                .executes(ctx -> destroyRealmInstance(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"))))))
+                .then(literal("rift").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                        .then(literal("info").then(argument("pos", BlockPosArgument.blockPos())
+                                .executes(ctx -> riftInfo(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))))
+                        .then(literal("target").then(argument("pos", BlockPosArgument.blockPos())
+                                .then(argument("dimension", IdentifierArgument.id())
+                                        .suggests(MxtCommand::suggestDimensions)
+                                        .executes(ctx -> setRiftTarget(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"),
+                                                IdentifierArgument.getId(ctx, "dimension"))))))
+                        .then(literal("color").then(argument("pos", BlockPosArgument.blockPos())
+                                .then(argument("color", StringArgumentType.word())
+                                        .executes(ctx -> setRiftColor(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"),
+                                                StringArgumentType.getString(ctx, "color"))))))
+                        .then(literal("place").then(argument("pos", BlockPosArgument.blockPos())
+                                .then(argument("dimension", IdentifierArgument.id())
+                                        .suggests(MxtCommand::suggestDimensions)
+                                        .executes(ctx -> placeRift(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"),
+                                                IdentifierArgument.getId(ctx, "dimension"))))))
+                        .then(literal("bind").then(argument("dimension", IdentifierArgument.id())
+                                .suggests(MxtCommand::suggestDimensions)
+                                .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"), null))
+                                .then(argument("color", StringArgumentType.word())
+                                        .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"),
+                                                StringArgumentType.getString(ctx, "color")))))))
                 .then(literal("soul").then(literal("reclaim").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .executes(ctx -> reclaimSoul(ctx.getSource()))))
                 .then(literal("trigger")
@@ -357,6 +412,194 @@ public final class MxtCommand {
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.soul.reclaimed"), true);
         return 1;
+    }
+
+    /**
+     * Lists the live realm instances. An instance is a dimension, so its key is what identifies it here too.
+     */
+    private static int listRealmInstances(CommandSourceStack source) {
+        List<RealmRecord> records = RealmInstanceRegistry.all();
+        if (records.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.list.empty"), false);
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.list", records.size()), false);
+        for (RealmRecord record : records)
+            source.sendSuccess(() -> Component.literal(describe(record, source.getServer())), false);
+        return records.size();
+    }
+
+    private static int realmInstanceInfo(CommandSourceStack source, Identifier dimension) {
+        RealmRecord record = RealmInstanceRegistry.at(ResourceKey.create(Registries.DIMENSION, dimension)).orElse(null);
+        if (record == null) {
+            source.sendFailure(Component.translatable("command.mxt.realm_instance.unknown", dimension.toString()));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(describe(record, source.getServer())), false);
+        return 1;
+    }
+
+    private static int enterRealmInstance(CommandSourceStack source, Identifier definition) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        Holder<RealmInstance> holder = MxtDatapackRegistries.holder(MxtResourceKeys.REALM_INSTANCE, definition).orElse(null);
+        if (holder == null) {
+            source.sendFailure(Component.translatable("command.mxt.realm_instance.unknown", definition.toString()));
+            return 0;
+        }
+        Result result = RealmInstanceService.enter(player, holder);
+        if (!result.changed()) {
+            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.realm_instance.enter_failed",
+                    result.failure().name())));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.entered", DefinitionText.name(holder, "realm_instance")), true);
+        return 1;
+    }
+
+    private static int exitRealmInstance(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        Result result = RealmInstanceService.exit(player);
+        if (!result.changed()) {
+            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.realm_instance.exit_failed",
+                    result.failure() == null ? "unknown" : result.failure().name())));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.exited"), true);
+        return 1;
+    }
+
+    private static int destroyRealmInstance(CommandSourceStack source, Identifier dimension) {
+        RealmRecord record = RealmInstanceRegistry.at(ResourceKey.create(Registries.DIMENSION, dimension)).orElse(null);
+        if (record == null) {
+            source.sendFailure(Component.translatable("command.mxt.realm_instance.unknown", dimension.toString()));
+            return 0;
+        }
+        if (!RealmInstanceService.destroy(source.getServer(), record)) {
+            source.sendFailure(Component.translatable("command.mxt.realm_instance.destroy_failed", dimension.toString()));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.destroyed", dimension.toString()), true);
+        return 1;
+    }
+
+    private static CompletableFuture<Suggestions> suggestDimensions(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(context.getSource().getServer().levelKeys().stream()
+                .map(key -> key.identifier().toString()).sorted().toList(), builder);
+    }
+
+    /**
+     * A rift is addressed by its block position, the same way a realm instance is addressed by its dimension.
+     */
+    @Nullable
+    private static RiftBlockEntity riftAt(CommandSourceStack source, BlockPos pos) {
+        if (source.getLevel().getBlockEntity(pos) instanceof RiftBlockEntity rift) return rift;
+        source.sendFailure(Component.translatable("command.mxt.rift.missing", formatPos(pos)));
+        return null;
+    }
+
+    /**
+     * Reports everything that decides how a rift looks and where it goes, including the shape it currently draws
+     * as: a rift links to every rift in its 3x3x3 neighbourhood, and two links that are neighbours of each other
+     * close a triangle, so the counts of links and triangles are what the drawing comes down to.
+     */
+    private static int riftInfo(CommandSourceStack source, BlockPos pos) {
+        RiftBlockEntity rift = riftAt(source, pos);
+        if (rift == null) return 0;
+        ServerLevel level = source.getLevel();
+        List<BlockPos> links = RiftConnections.connected(level, pos);
+        int triangles = RiftConnections.loops(pos, links).size();
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info", formatPos(pos)), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.target", rift.target().toString()), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.color", RiftColors.format(RiftColors.resolve(rift)),
+                Component.translatable(rift.color() == RiftColors.AUTO
+                        ? "command.mxt.rift.color.auto" : "command.mxt.rift.color.override")), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.shape", links.size(), triangles,
+                links.isEmpty() ? 1 : RiftConnections.componentSize(level, pos)), false);
+        return 1;
+    }
+
+    private static int setRiftTarget(CommandSourceStack source, BlockPos pos, Identifier dimension) {
+        RiftBlockEntity rift = riftAt(source, pos);
+        if (rift == null) return 0;
+        rift.setTarget(dimension);
+        source.sendSuccess(() -> Component.translatable("block.mxt.rift.retargeted", dimension.toString()), true);
+        return 1;
+    }
+
+    private static int setRiftColor(CommandSourceStack source, BlockPos pos, String color) {
+        RiftBlockEntity rift = riftAt(source, pos);
+        if (rift == null) return 0;
+        if (color.equalsIgnoreCase("auto")) {
+            rift.setColor(RiftColors.AUTO);
+            source.sendSuccess(() -> Component.translatable("command.mxt.rift.color.reset"), true);
+            return 1;
+        }
+        int parsed = RiftColors.parse(color);
+        if (parsed == RiftColors.AUTO) {
+            source.sendFailure(Component.translatable("command.mxt.rift.color.invalid", color));
+            return 0;
+        }
+        rift.setColor(parsed);
+        source.sendSuccess(() -> Component.translatable("block.mxt.rift.recolored", RiftColors.format(parsed)), true);
+        return 1;
+    }
+
+    private static int placeRift(CommandSourceStack source, BlockPos pos, Identifier dimension) {
+        ServerLevel level = source.getLevel();
+        if (level.isOutsideBuildHeight(pos) || !level.getBlockState(pos).canBeReplaced()) {
+            source.sendFailure(Component.translatable("command.mxt.rift.place.blocked", formatPos(pos)));
+            return 0;
+        }
+        level.setBlock(pos, MxtBlocks.RIFT.get().defaultBlockState(), Block.UPDATE_ALL);
+        if (level.getBlockEntity(pos) instanceof RiftBlockEntity rift)
+            rift.configure(dimension, RiftColors.AUTO);
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.place.done", formatPos(pos), dimension.toString()), true);
+        return 1;
+    }
+
+    private static int bindRiftAnchor(CommandSourceStack source, Identifier dimension, @Nullable String color) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        ItemStack stack = player.getMainHandItem();
+        if (!(stack.getItem() instanceof RiftAnchorItem)) {
+            source.sendFailure(Component.translatable("command.mxt.rift.bind.missing"));
+            return 0;
+        }
+        int parsed = RiftColors.AUTO;
+        if (color != null && !color.equalsIgnoreCase("auto")) {
+            parsed = RiftColors.parse(color);
+            if (parsed == RiftColors.AUTO) {
+                source.sendFailure(Component.translatable("command.mxt.rift.color.invalid", color));
+                return 0;
+            }
+        }
+        stack.set(MxtDataComponents.RIFT, new RiftComponent(dimension, parsed));
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.bind.done", dimension.toString()), true);
+        return 1;
+    }
+
+    private static String formatPos(BlockPos pos) {
+        return "%d %d %d".formatted(pos.getX(), pos.getY(), pos.getZ());
+    }
+
+    private static String describe(RealmRecord record, MinecraftServer server) {
+        return "%s #%d %s members=%d limit=%s owner=%s prepared=%s loaded=%s".formatted(
+                record.dimension().identifier(), record.index(),
+                record.definition().unwrapKey().map(key -> key.identifier().toString()).orElse("?"),
+                record.members().size(), record.instance().maxMembers().map(String::valueOf).orElse("unlimited"),
+                record.owner().map(UUID::toString).orElse("-"), record.prepared(),
+                server.getLevel(record.dimension()) != null);
     }
 
     /**

@@ -1,0 +1,8 @@
+{
+  "generation": {
+    "type": "mxt:template",
+    "template": "absent_probe",
+    "stem": "minecraft:overworld"
+  },
+  "max_instances": 1
+}

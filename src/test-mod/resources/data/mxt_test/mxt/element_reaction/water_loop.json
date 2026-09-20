@@ -1,0 +1,10 @@
+{
+  "amounts": {
+    "mxt_test:water": 8
+  },
+  "action": {
+    "type": "mxt:attach_element",
+    "element": "mxt_test:water",
+    "amount": 8
+  }
+}

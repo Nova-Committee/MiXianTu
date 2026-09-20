@@ -1,12 +1,28 @@
 # Tools
 
-Three scripts live here, none of which is part of the mod build:
+Four scripts live here, none of which is part of the mod build:
 
 | File | What it is |
 | --- | --- |
 | `mxt_bendable_cuboids_animation.js` | A Blockbench companion plugin. Documented below. |
 | `generate_classic_gui_textures.py` | Regenerates `src/main/resources/assets/mxt/textures/gui/classic/` with Pillow. |
+| `generate_rift_textures.py` | Regenerates the rift's surface pattern and the icons of the rift block and of the rift anchor with Pillow and NumPy. |
 | `codex_token_usage.py` | Tallies Codex token spend from local rollout logs, filtered by working directory. |
+
+## Rift Textures (`generate_rift_textures.py`)
+
+```bash
+python tools/generate_rift_textures.py
+```
+
+Writes two files and overwrites them without asking:
+
+| Output | Contents |
+| --- | --- |
+| `textures/entity/rift.png` | A 128x128 seamless ridged fractal. Red and green carry the pattern's brightness and blue is lifted slightly, so it reads cold; alpha is the pattern's coverage, which the rift shader takes as how much of the surface a sample lights up. |
+| `textures/item/rift.png` | The rift block's icon: a 16x16 lens-shaped tear with a bright core, drawn at 4x and downsampled. |
+
+Both are deterministic: the surface texture is seeded, so regenerating it reproduces the same image.
 
 ## Codex Token Usage (`codex_token_usage.py`)
 

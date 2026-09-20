@@ -22,6 +22,7 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.realm.RealmInstance;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.mojang.serialization.Codec;

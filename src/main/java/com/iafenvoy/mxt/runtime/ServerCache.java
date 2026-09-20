@@ -324,7 +324,7 @@ public final class ServerCache {
             if (failure != null) {
                 problems.add(problem(MxtResourceKeys.SKILL_STAGE, first, failure));
                 unwalked.addAll(chain.keySet());
-                if (current != null) unwalked.add(current);
+                unwalked.add(current);
                 continue;
             }
             // A chain is merged only once it has been walked to its end, so a failure never indexes a prefix.

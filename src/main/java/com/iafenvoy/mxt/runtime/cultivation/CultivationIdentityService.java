@@ -29,8 +29,10 @@ public final class CultivationIdentityService {
         if (root == null) return Result.rejected(Failure.DISABLED);
         if (spirit.spiritRoots().contains(root)) return Result.rejected(Failure.ALREADY_HELD);
         // A root may rule out another root's element, in either direction: the rule is written once, on
-        // whichever of the two the pack thought of first, and the check reads both.
-        if (spirit.spiritRoots().stream().anyMatch(held -> held.value().conflictsWith(root.value())))
+        // whichever of the two the pack thought of first, and the check reads both. Only roots that are
+        // actually in force can rule anything out, so a root the holder switched off - still held, but
+        // contributing nothing, its conflicting_elements included - does not block this grant.
+        if (spirit.activeSpiritRoots().stream().anyMatch(held -> held.value().conflictsWith(root.value())))
             return Result.rejected(Failure.ELEMENT_CONFLICT);
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
         roots.add(root);

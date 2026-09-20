@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -39,9 +40,18 @@ public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMult
 
     /**
      * Whether the two roots rule each other out, read in both directions so a pack writes the rule once.
+     *
+     * <p>Both elements have to be live for the question to mean anything. A {@code mxt:disabled} element takes
+     * no part in any element field, and this is one: it neither rules another element out nor is ruled out by
+     * one, so a root bound to it simply coexists with everything.</p>
      */
     public boolean conflictsWith(SpiritRoot other) {
+        if (!enabled(this.element) || !enabled(other.element())) return false;
         return RegistryCodecs.matches(this.conflictingElements, other.element())
                 || RegistryCodecs.matches(other.conflictingElements(), this.element());
+    }
+
+    private static boolean enabled(Holder<Element> element) {
+        return !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element);
     }
 }

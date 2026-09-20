@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.Registry;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -19,7 +20,12 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -35,8 +41,10 @@ import java.util.Set;
  *
  * <p>A reaction is answered as soon as its demand is met, which is how a pack writes "ten fire on a body and it
  * ignites" without a second mechanism for thresholds: the reaction fires, takes what it asked for, and the
- * pipeline keeps looking while another reaction still qualifies. The chain is capped, because a reaction whose
- * action applies the same element again would otherwise never end.</p>
+ * pipeline keeps looking while another reaction still qualifies. The chain is capped, and an application made
+ * from inside a chain joins the one already running rather than opening another, because a reaction whose
+ * action applies the same element again - legal, and the point of a lingering burn - would otherwise never
+ * end.</p>
  */
 @EventBusSubscriber
 public final class ElementReactionService {
@@ -45,6 +53,31 @@ public final class ElementReactionService {
      * and useful, and is exactly why this bound exists.
      */
     private static final int MAX_CHAIN = 8;
+
+    /**
+     * The bodies one chain is currently resolving reactions for.
+     *
+     * <p>{@link #MAX_CHAIN} bounds one chain, but it cannot bound a chain that is started from inside one: an
+     * action that applies an element again goes back through {@link #apply} and would open a second chain,
+     * whose own actions open a third. A reaction that feeds itself - "it keeps burning until something puts it
+     * out" is a legal and wanted way to write an element - would then recurse until the thread dies, which is
+     * the very case the bound was written for. A body already in this set therefore only takes the amount: the
+     * chain that is running sees the new total on its next pass and answers it there, so at most
+     * {@code MAX_CHAIN} reactions fire per body per application and the loop terminates.</p>
+     *
+     * <p>Identity, not equality, because the body is the entity instance the chain was entered with, and the
+     * set is per thread because a chain never crosses one.</p>
+     */
+    private static final ThreadLocal<Set<Entity>> IN_CHAIN =
+            ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
+
+    /**
+     * How many reaction registries the walk order is kept for. A reloaded data pack makes a new registry
+     * instance rather than changing the old one, so the cache is bounded the same way the damage-type index is.
+     */
+    private static final int MAX_CACHED_REGISTRIES = 4;
+    private static final Object LOCK = new Object();
+    private static volatile Map<Registry<ElementReaction>, List<Reference<ElementReaction>>> orders = Map.of();
 
     private ElementReactionService() {
     }
@@ -88,32 +121,69 @@ public final class ElementReactionService {
     public static Holder<ElementReaction> match(Entity entity, FormulaContext context) {
         ElementAttachment attachment = entity.getExistingData(MxtAttachments.ELEMENT_ATTACHMENT).orElse(null);
         if (attachment == null || attachment.isEmpty()) return null;
-        return MxtDatapackRegistries.holders(MxtResourceKeys.ELEMENT_REACTION)
-                .sorted(Comparator.comparingInt((Reference<ElementReaction> holder) -> holder.value().priority()).reversed()
-                        .thenComparing(holder -> holder.key().identifier()))
+        return ordered().stream()
                 .filter(holder -> satisfied(holder.value(), attachment, entity, context))
                 .findFirst().orElse(null);
     }
 
     /**
+     * Every enabled reaction, priority first and registry id where the priorities tie, in the order an
+     * application walks them.
+     *
+     * <p>This is asked once per element per strike and once per link of a chain, and the answer only changes
+     * when the registry does: a data pack reload swaps the registry instance (and {@code /reload} does not
+     * touch it), so the instance is the cache key. Same shape and same bound as the damage-type index, which is
+     * the other hot reverse lookup in this pipeline.</p>
+     */
+    private static List<Reference<ElementReaction>> ordered() {
+        Registry<ElementReaction> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ELEMENT_REACTION);
+        List<Reference<ElementReaction>> cached = orders.get(registry);
+        if (cached != null) return cached;
+        synchronized (LOCK) {
+            cached = orders.get(registry);
+            if (cached != null) return cached;
+            List<Reference<ElementReaction>> built = MxtDatapackRegistries.holders(MxtResourceKeys.ELEMENT_REACTION)
+                    .sorted(Comparator.comparingInt((Reference<ElementReaction> holder) -> holder.value().priority()).reversed()
+                            .thenComparing(holder -> holder.key().identifier()))
+                    .toList();
+            Map<Registry<ElementReaction>, List<Reference<ElementReaction>>> updated =
+                    orders.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(orders);
+            updated.put(registry, built);
+            orders = Map.copyOf(updated);
+            return built;
+        }
+    }
+
+    /**
      * Answers reactions while any still qualifies, and returns how many fired.
+     *
+     * <p>An application made while this body is already part way through a chain does not start a chain of its
+     * own: the amount lands, and the running chain answers it. That is what keeps the bound above the whole of
+     * the rule rather than only half of it.</p>
      */
     public static int trigger(Entity entity, FormulaContext context) {
         if (!(entity.level() instanceof ServerLevel)) return 0;
-        int fired = 0;
-        while (fired < MAX_CHAIN) {
-            Holder<ElementReaction> holder = match(entity, context);
-            if (holder == null) break;
-            ElementReaction reaction = holder.value();
-            ElementAttachment attachment = entity.getData(MxtAttachments.ELEMENT_ATTACHMENT);
-            for (Entry<Holder<Element>, NumberProvider> entry : reaction.consumption().entrySet()) {
-                double taken = entry.getValue().evaluate(context);
-                if (Double.isFinite(taken) && taken > 0.0D) attachment.add(entry.getKey(), -taken);
+        if (!IN_CHAIN.get().add(entity)) return 0;
+        try {
+            int fired = 0;
+            while (fired < MAX_CHAIN) {
+                Holder<ElementReaction> holder = match(entity, context);
+                if (holder == null) break;
+                ElementReaction reaction = holder.value();
+                ElementAttachment attachment = entity.getData(MxtAttachments.ELEMENT_ATTACHMENT);
+                for (Entry<Holder<Element>, NumberProvider> entry : reaction.consumption().entrySet()) {
+                    double taken = entry.getValue().evaluate(context);
+                    if (Double.isFinite(taken) && taken > 0.0D) attachment.add(entry.getKey(), -taken);
+                }
+                reaction.action().ifPresent(action -> action.execute(entity, context));
+                fired++;
             }
-            reaction.action().ifPresent(action -> action.execute(entity, context));
-            fired++;
+            return fired;
+        } finally {
+            Set<Entity> chain = IN_CHAIN.get();
+            chain.remove(entity);
+            if (chain.isEmpty()) IN_CHAIN.remove();
         }
-        return fired;
     }
 
     /**

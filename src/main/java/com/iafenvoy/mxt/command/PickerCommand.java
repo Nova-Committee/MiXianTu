@@ -61,7 +61,6 @@ public final class PickerCommand {
                 ? ItemPickerManager.categories().stream().map(ResourceKey::identifier).toList()
                 : categories;
         PacketDistributor.sendToPlayer(player, new ItemPickerS2CPayload(Component.translatable("command.mxt.picker"), ids));
-        source.sendSuccess(() -> Component.translatable("command.mxt.picker.opened", ids.size()), false);
         return ids.size();
     }
 }

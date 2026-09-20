@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "mxt_test:metal",
+    "mxt_test:wood",
+    "mxt_test:water",
+    "mxt_test:fire",
+    "mxt_test:earth"
+  ]
+}

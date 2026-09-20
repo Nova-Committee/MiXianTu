@@ -2,10 +2,12 @@ package com.iafenvoy.mxt.config;
 
 import com.iafenvoy.jupiter.config.container.AutoInitConfigContainer;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
+import com.iafenvoy.jupiter.config.entry.DoubleEntry;
 import com.iafenvoy.jupiter.config.entry.EnumEntry;
 import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
+import com.iafenvoy.mxt.runtime.rift.RiftMesh;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
@@ -22,6 +24,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public final ResourceBars resourceBars = new ResourceBars();
     public final Information information = new Information();
     public final Techniques techniques = new Techniques();
+    public final Rifts rifts = new Rifts();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt-client.json");
@@ -91,6 +94,32 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
         private Techniques() {
             super("techniques", "config.mxt.client.techniques");
+        }
+    }
+
+    public static final class Rifts extends AutoInitConfigCategoryBase {
+        /**
+         * Draws rifts with the mod's own pipeline, which layers a drifting pattern over the points, links and
+         * fills a rift is built from. Off switches to plain translucent colour, which is there to fall back on
+         * when a shader pack or a driver disagrees with the custom pipeline.
+         */
+        public final BooleanEntry shaders = BooleanEntry.builder("config.mxt.client.rifts.shaders", true)
+                .key("shaders")
+                .tooltip("config.mxt.client.rifts.shaders.tooltip")
+                .build();
+        /**
+         * How thick a rift is drawn: the side of the cube at each node, the diameter of a link and the thickness
+         * of the slab a triangle is filled with, all one measurement. The floor keeps a rift visible when the
+         * player wants it subtle; the ceiling keeps one block from overfilling its own cube.
+         */
+        public final DoubleEntry thickness = DoubleEntry.builder("config.mxt.client.rifts.thickness", RiftMesh.DEFAULT_THICKNESS)
+                .key("thickness")
+                .tooltip("config.mxt.client.rifts.thickness.tooltip")
+                .range(RiftMesh.MIN_THICKNESS, RiftMesh.MAX_THICKNESS)
+                .build();
+
+        private Rifts() {
+            super("rifts", "config.mxt.client.rifts");
         }
     }
 }

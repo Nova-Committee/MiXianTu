@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.data.RealmInstance;
+import com.iafenvoy.mxt.data.realm.RealmInstance;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;

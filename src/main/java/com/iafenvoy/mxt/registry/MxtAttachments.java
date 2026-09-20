@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment;
+import com.iafenvoy.mxt.runtime.world.RealmWorldAttachment;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -50,7 +51,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraWorldAttachment>> AURA_WORLD = REGISTRY.register("aura_world", () -> AttachmentType.builder(AuraWorldAttachment::new).serialize(AuraWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FormationWorldAttachment>> FORMATION_WORLD = REGISTRY.register("formation_world", () -> AttachmentType.builder(FormationWorldAttachment::new).serialize(FormationWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkAttachment>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkAttachment::new).serialize(AuraChunkAttachment.CODEC).build());
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmInstanceAttachment>> REALM_INSTANCE = REGISTRY.register("realm_instance", () -> AttachmentType.builder(RealmInstanceAttachment::new).serialize(RealmInstanceAttachment.CODEC).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmWorldAttachment>> REALM_WORLD = REGISTRY.register("realm_world", () -> AttachmentType.builder(RealmWorldAttachment::new).serialize(RealmWorldAttachment.MAP_CODEC).build());
 
     @SubscribeEvent
     public static void flushDirtyAttachments(Post event) {

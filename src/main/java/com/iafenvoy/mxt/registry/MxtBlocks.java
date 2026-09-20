@@ -35,6 +35,7 @@ public final class MxtBlocks {
     public static final DeferredBlock<DisplayStandBlock> JUNGLE_DISPLAY_STAND = register("jungle_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> ACACIA_DISPLAY_STAND = register("acacia_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> DARK_OAK_DISPLAY_STAND = register("dark_oak_display_stand", DisplayStandBlock::new);
+    public static final DeferredBlock<RiftBlock> RIFT = registerRift("rift", RiftBlock::new);
 
     public static <T extends Block> DeferredBlock<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
@@ -67,6 +68,27 @@ public final class MxtBlocks {
                 .sound(SoundType.STONE)
                 .requiresCorrectToolForDrops()
                 .noOcclusion()));
+        MxtItems.registerBlockItem(path, block);
+        return block;
+    }
+
+    /**
+     * Registers the rift. It is unbreakable by ordinary means, emits light, has no collision, and asks its
+     * neighbours not to cull faces against it (the block itself is invisible; only its block entity is drawn).
+     * Like every other block here it gets an ordinary block item, which is what places one; the anchor
+     * ({@link com.iafenvoy.mxt.item.RiftAnchorItem}) is a plain item and only ever adjusts rifts that exist.
+     */
+    private static <T extends Block> DeferredBlock<T> registerRift(String path, Function<Properties, T> factory) {
+        ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
+        DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.of()
+                .setId(key)
+                .mapColor(MapColor.COLOR_BLACK)
+                .strength(-1.0F, 3_600_000.0F)
+                .sound(SoundType.GLASS)
+                .lightLevel(state -> 15)
+                .noCollision()
+                .noOcclusion()
+                .noTerrainParticles()));
         MxtItems.registerBlockItem(path, block);
         return block;
     }

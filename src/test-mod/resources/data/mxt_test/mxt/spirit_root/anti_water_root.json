@@ -1,0 +1,4 @@
+{
+  "element": "mxt_test:fire",
+  "conflicting_elements": ["mxt_test:water", "mxt_test:inert"]
+}

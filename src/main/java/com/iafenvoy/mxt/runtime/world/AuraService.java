@@ -197,11 +197,17 @@ public final class AuraService {
     /**
      * Dimension stems are a writable registry that is not synced to clients, so only the server may
      * expand a dimension tag through the LEVEL_STEM registry; the client resolves direct IDs only.
+     *
+     * <p>A realm instance is a runtime dimension with no level stem entry of its own, so its generation stem
+     * and its definition are matched as well: one zone can then cover every realm built from the End, or every
+     * instance of a single definition, without the pack having to name each generated dimension.
      */
     private static boolean matchesDimension(Level level, AuraZone zone, Identifier dimension) {
         if (!(level instanceof ServerLevel server)) return RegistryCodecs.matchesKey(zone.dimensions(), dimension);
         Registry<LevelStem> registry = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
-        return RegistryCodecs.matchesKey(zone.dimensions(), registry, dimension);
+        if (RegistryCodecs.matchesKey(zone.dimensions(), registry, dimension)) return true;
+        return RealmInstanceRegistry.aliases(dimension)
+                .anyMatch(alias -> RegistryCodecs.matchesKey(zone.dimensions(), registry, alias));
     }
 
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {

@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -24,9 +25,18 @@ import java.util.Set;
  * Roots and elements that a pack disabled are not part of the answer, exactly as everywhere else.</p>
  */
 public record HasElementEntityCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements EntityCondition {
-    public static final MapCodec<HasElementEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final MapCodec<HasElementEntityCondition> CODEC = RecordCodecBuilder.<HasElementEntityCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(HasElementEntityCondition::elements)
-    ).apply(i, HasElementEntityCondition::new));
+    ).apply(i, HasElementEntityCondition::new)).validate(HasElementEntityCondition::validate);
+
+    /**
+     * An empty list can never match, so it is a condition that silently never passes: refused at load.
+     */
+    private static DataResult<HasElementEntityCondition> validate(HasElementEntityCondition condition) {
+        return condition.elements().isEmpty()
+                ? DataResult.error(() -> "mxt:has_element needs at least one element to ask about")
+                : DataResult.success(condition);
+    }
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {

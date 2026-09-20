@@ -1,12 +1,14 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.render.DisplayStandBlockEntityRenderer;
+import com.iafenvoy.mxt.render.RiftBlockEntityRenderer;
 import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
 import com.iafenvoy.mxt.render.lightning.ColoredLightningBoltRenderer;
-import com.iafenvoy.mxt.render.particle.SpiritWispParticle.Provider;
+import com.iafenvoy.mxt.render.particle.RiftParticle.Provider;
+import com.iafenvoy.mxt.render.particle.SpiritWispParticle;
 import com.iafenvoy.mxt.screen.gui.*;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.NoopRenderer;
@@ -32,11 +34,13 @@ public final class MxtRenderers {
         event.registerBlockEntityRenderer(MxtBlockEntities.TRADE_STATION.get(), StationBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.SYSTEM_STATION.get(), StationBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.DISPLAY_STAND.get(), DisplayStandBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(MxtBlockEntities.RIFT.get(), RiftBlockEntityRenderer::new);
     }
 
     @SubscribeEvent
     public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(MxtParticleTypes.SPIRIT_WISP.get(), Provider::new);
+        event.registerSpriteSet(MxtParticleTypes.SPIRIT_WISP.get(), SpiritWispParticle.Provider::new);
+        event.registerSpriteSet(MxtParticleTypes.RIFT.get(), Provider::new);
     }
 
     @SubscribeEvent
