@@ -115,7 +115,7 @@ public final class PassiveAttributeService {
             addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers());
         for (Holder<Technique> technique : spirit.learnedTechniques())
             addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers());
-        for (Holder<Physique> physique : spirit.physiques())
+        for (Holder<Physique> physique : spirit.activePhysiques())
             addAll(entries, "physique", HolderHelper.id(physique), physique.value().attributeModifiers());
         return entries;
     }

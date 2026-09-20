@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.util.formula;
 
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -18,15 +19,17 @@ import java.util.Map;
 
 /**
  * Turns registry ids into the flat identifiers a formula can name, and keeps the name indexes the entity
- * variables resolve {@code caster_<resource>} and {@code caster_<attribute>} against. The attribute registry
- * is static, so its index is built once; the resource index is keyed by registry instance and holds resource
- * keys rather than entries, so it never keeps an old world alive.
+ * variables resolve {@code caster_<resource>}, {@code caster_<attribute>} and {@code caster_<element>} against.
+ * The attribute registry is static, so its index is built once; the resource and element indexes are keyed by
+ * registry instance and hold registry keys rather than entries, so neither keeps an old world alive.
  */
 public final class FormulaNames {
     private static final int MAX_CACHED_REGISTRIES = 4;
     private static final Object RESOURCE_LOCK = new Object();
+    private static final Object ELEMENT_LOCK = new Object();
 
     private static volatile Map<Registry<?>, Map<String, ResourceKey<Resource>>> resourceNames = Map.of();
+    private static volatile Map<Registry<?>, Map<String, ResourceKey<Element>>> elementNames = Map.of();
     private static volatile Map<String, Holder<Attribute>> attributeNames;
 
     private FormulaNames() {
@@ -85,6 +88,40 @@ public final class FormulaNames {
                     cached.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(cached);
             updated.put(registry, index);
             resourceNames = Map.copyOf(updated);
+            return index;
+        }
+    }
+
+    /**
+     * Resolves a flattened element name against the registry access that owns it, or {@code null} when no
+     * element uses it. The name is the same flattened id shape resources and attributes use, so
+     * {@code caster_<namespace>_<path>} answers {@code 1} or {@code 0} for "is this element among the ones
+     * this entity's spirit roots name".
+     */
+    @Nullable
+    public static Holder<Element> element(RegistryAccess access, String name) {
+        Registry<Element> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT);
+        Map<String, ResourceKey<Element>> index = elementNames.get(registry);
+        if (index == null) index = indexElements(registry);
+        ResourceKey<Element> key = index.get(name);
+        return key == null ? null : registry.get(key).orElse(null);
+    }
+
+    private static Map<String, ResourceKey<Element>> indexElements(Registry<Element> registry) {
+        synchronized (ELEMENT_LOCK) {
+            Map<Registry<?>, Map<String, ResourceKey<Element>>> cached = elementNames;
+            Map<String, ResourceKey<Element>> existing = cached.get(registry);
+            if (existing != null) return existing;
+            Map<String, ResourceKey<Element>> built = new LinkedHashMap<>();
+            registry.listElements().forEach(holder -> {
+                Identifier id = HolderHelper.id(holder);
+                put(built, id, ResourceKey.create(MxtResourceKeys.ELEMENT, id), "element");
+            });
+            Map<String, ResourceKey<Element>> index = Map.copyOf(built);
+            Map<Registry<?>, Map<String, ResourceKey<Element>>> updated =
+                    cached.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(cached);
+            updated.put(registry, index);
+            elementNames = Map.copyOf(updated);
             return index;
         }
     }

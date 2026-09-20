@@ -26,7 +26,7 @@ public record NumberRange(Optional<NumberProvider> min, Optional<NumberProvider>
         }
         if (this.max.isPresent()) {
             double max = this.max.get().evaluate(context);
-            if (!Double.isFinite(max) || value > max) return false;
+            return Double.isFinite(max) && !(value > max);
         }
         return true;
     }

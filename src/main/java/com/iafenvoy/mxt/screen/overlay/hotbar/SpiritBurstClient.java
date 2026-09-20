@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.network.payload.SpiritBurstC2SPayload;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -48,7 +49,7 @@ public final class SpiritBurstClient {
      */
     private static boolean canBurst(Player player, Reference<Aura> aura) {
         Aura profile = aura.value();
-        if (profile.auraType().isEmpty() || !ResourceUseService.canUse(player, aura)) return false;
+        if (!Elements.enabled(profile.auraType()) || !ResourceUseService.canUse(player, aura)) return false;
         double amount = profile.burstAmount().evaluate(
                 ResourceService.formulaContext(player, profile.resource(), FormulaContext.of(player)));
         return Double.isFinite(amount) && amount >= 1.0D;

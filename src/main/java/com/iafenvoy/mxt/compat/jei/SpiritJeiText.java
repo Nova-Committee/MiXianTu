@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.compat.jei;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -45,7 +46,8 @@ final class SpiritJeiText {
         String value = providerName(entry.getValue());
         String name = resourceName(entry.getKey());
         MutableComponent line = first ? Component.translatable("jei.mxt.aura_cost_label") : Component.empty();
-        int color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);
+        int color = entry.getKey().value().auraType().filter(Elements::enabled)
+                .map(type -> type.value().color()).orElse(0xFFFFFF);
         line.append(Component.literal(name).withColor(readableTextColor(color, PANEL_BACKGROUND)));
         line.append(Component.literal(" x" + value));
         if (font.width(line) <= maxWidth) return line;

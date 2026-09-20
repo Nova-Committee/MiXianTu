@@ -4,7 +4,8 @@ import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.data.curse.CurseType;
+import com.iafenvoy.mxt.data.curse.Curse.StackingMode;
+import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
@@ -68,8 +69,7 @@ public final class CurseService {
     public static DefinitionState definitionState(Holder<Curse> curse) {
         if (ServerLifecycleHooks.getCurrentServer() == null) return DefinitionState.ACTIVE;
         Optional<Reference<Curse>> current = MxtDatapackRegistries.rawHolder(MxtResourceKeys.CURSE, HolderHelper.id(curse));
-        if (current.isEmpty()) return DefinitionState.UNKNOWN;
-        return MxtDatapackRegistries.isDisabled(MxtResourceKeys.CURSE, current.get()) ? DefinitionState.DISABLED : DefinitionState.ACTIVE;
+        return current.map(curseReference -> MxtDatapackRegistries.isDisabled(MxtResourceKeys.CURSE, curseReference) ? DefinitionState.DISABLED : DefinitionState.ACTIVE).orElse(DefinitionState.UNKNOWN);
     }
 
     public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks,
@@ -95,7 +95,7 @@ public final class CurseService {
         // reported as a removal, because listeners would otherwise never learn that it disappeared. It runs no
         // action of its own: being replaced is an outside decision, not one of the curse's two own moments. The
         // sources that already kept it alive stay on it - ownership is not what a stacking mode replaces.
-        State displaced = definition.stackingMode() == Curse.StackingMode.REPLACE ? data.instances().get(curse) : null;
+        State displaced = definition.stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
         Set<Identifier> displacedFrom = data.sources().of(curse);
         CurseLedger ledger = read(data);
         Optional<CurseInstance> applied = ledger.apply(curse, event.stacks(), gameTime, context, durationOverride);
@@ -143,7 +143,7 @@ public final class CurseService {
         if (!IN_TRANSACTION.get().add(key)) return ApplyResult.rejected(ApplyFailure.REENTRANT);
         try {
             boolean created = !target.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)
-                    || definition.stackingMode() == Curse.StackingMode.REPLACE;
+                    || definition.stackingMode() == StackingMode.REPLACE;
             ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
                     context, source, eventBus, durationOverride);
             if (result.applied()) {
@@ -315,7 +315,7 @@ public final class CurseService {
                 continue;
             }
             // A triggered curse waits for its triggers, so this loop never runs its effect.
-            if (definition.typedType() instanceof CurseType.Triggered) continue;
+            if (definition.typedType() instanceof Triggered) continue;
             double interval = definition.tickInterval().evaluate(context);
             if (Double.isFinite(interval) && interval > 0.0D
                     && gameTime >= state.appliedAt()

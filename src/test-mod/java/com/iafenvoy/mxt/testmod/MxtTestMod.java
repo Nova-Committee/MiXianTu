@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.event.CurseRemoveEvent;
+import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -44,7 +44,7 @@ public final class MxtTestMod {
      * Development-only trace of every curse removal. Nothing in the mod logs this by itself, and the reason is
      * the one part of a removal that no data pack can observe, so it is read here while playing.
      */
-    private static void logCurseRemovals(CurseRemoveEvent.Post event) {
+    private static void logCurseRemovals(Post event) {
         LOGGER.info("curse removed: {} reason={} stacks={} sources={}", HolderHelper.id(event.curse()),
                 event.reason(), event.state().stacks(), event.sources().stream().map(Identifier::toString).sorted().toList());
     }

@@ -28,10 +28,13 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasAbilityEntityCondition>> HAS_ABILITY = REGISTRY.register("has_ability", () -> HasAbilityEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasCurseEntityCondition>> HAS_CURSE = REGISTRY.register("has_curse", () -> HasCurseEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasSpiritRootEntityCondition>> HAS_SPIRIT_ROOT = REGISTRY.register("has_spirit_root", () -> HasSpiritRootEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasElementEntityCondition>> HAS_ELEMENT = REGISTRY.register("has_element", () -> HasElementEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ElementAttachmentEntityCondition>> ELEMENT_ATTACHMENT = REGISTRY.register("element_attachment", () -> ElementAttachmentEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasPhysiqueEntityCondition>> HAS_PHYSIQUE = REGISTRY.register("has_physique", () -> HasPhysiqueEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RealmEntityCondition>> REALM = REGISTRY.register("realm", () -> RealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasRealmEntityCondition>> HAS_REALM = REGISTRY.register("has_realm", () -> HasRealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraRangeEntityCondition>> AURA_RANGE = REGISTRY.register("aura_range", () -> AuraRangeEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraElementEntityCondition>> AURA_ELEMENT = REGISTRY.register("aura_element", () -> AuraElementEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ResourceCompareEntityCondition>> RESOURCE_COMPARE = REGISTRY.register("resource_compare", () -> ResourceCompareEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<EntityTypeTagCondition>> ENTITY_TAG = REGISTRY.register("entity_tag", () -> EntityTypeTagCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<FormationMemberEntityCondition>> FORMATION_MEMBER = REGISTRY.register("formation_member", () -> FormationMemberEntityCondition.CODEC);

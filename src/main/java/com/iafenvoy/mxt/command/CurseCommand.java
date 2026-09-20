@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
+import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
@@ -111,7 +113,7 @@ public final class CurseCommand {
             return 1;
         }
         long gameTime = target.level().getGameTime();
-        for (Map.Entry<Holder<Curse>, State> entry : instances.entrySet()) {
+        for (Entry<Holder<Curse>, State> entry : instances.entrySet()) {
             Component name = DefinitionText.name(entry.getKey(), "curse");
             int stacks = entry.getValue().stacks();
             Component life = entry.getValue().expiresAt() < 0L
@@ -138,7 +140,7 @@ public final class CurseCommand {
         Optional<Long> duration = durationTicks.isPresent() ? Optional.of(durationTicks.getAsLong()) : Optional.empty();
         int applied = 0;
         for (Entity target : targets) {
-            CurseService.ApplyResult result = CurseService.applyWithDuration(target, curse, stacks,
+            ApplyResult result = CurseService.applyWithDuration(target, curse, stacks,
                     target.level().getGameTime(), FormulaContext.of(target), SOURCE, duration);
             if (result.applied()) {
                 applied++;
@@ -163,16 +165,13 @@ public final class CurseCommand {
             source.sendFailure(Component.translatable("command.mxt.curse.unknown", id.toString()));
             return 0;
         }
-        Holder<Curse> resolved = curse;
         int removed = 0;
         for (Entity target : targets) {
-            if (CurseService.remove(target, resolved, Reason.EXPLICIT, target.level().getGameTime()).isPresent()) {
+            if (CurseService.remove(target, curse, Reason.EXPLICIT, target.level().getGameTime()).isPresent()) {
                 removed++;
-                source.sendSuccess(() -> Component.translatable("command.mxt.curse.removed",
-                        DefinitionText.name(resolved, "curse"), target.getDisplayName()), true);
+                source.sendSuccess(() -> Component.translatable("command.mxt.curse.removed", DefinitionText.name(curse, "curse"), target.getDisplayName()), true);
             } else {
-                source.sendFailure(Component.translatable("command.mxt.curse.remove_failed",
-                        target.getDisplayName(), DefinitionText.name(resolved, "curse")));
+                source.sendFailure(Component.translatable("command.mxt.curse.remove_failed", target.getDisplayName(), DefinitionText.name(curse, "curse")));
             }
         }
         return removed;
@@ -214,8 +213,7 @@ public final class CurseCommand {
      * leaves behind.
      */
     private static Optional<Holder<Curse>> resolve(Collection<? extends Entity> targets, Identifier id) {
-        Optional<Holder<Curse>> registered = MxtDatapackRegistries.rawHolder(MxtResourceKeys.CURSE, id)
-                .map(holder -> (Holder<Curse>) holder);
+        Optional<Holder<Curse>> registered = MxtDatapackRegistries.rawHolder(MxtResourceKeys.CURSE, id).map(holder -> holder);
         return registered.isPresent() ? registered : heldByName(targets, id);
     }
 

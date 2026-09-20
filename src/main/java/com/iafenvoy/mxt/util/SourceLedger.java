@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -82,8 +83,8 @@ public final class SourceLedger<K> {
         return all;
     }
 
-    public Set<Map.Entry<K, Identifier>> entries() {
-        Set<Map.Entry<K, Identifier>> entries = new LinkedHashSet<>();
+    public Set<Entry<K, Identifier>> entries() {
+        Set<Entry<K, Identifier>> entries = new LinkedHashSet<>();
         this.sources.forEach((key, values) -> values.forEach(source -> entries.add(Map.entry(key, source))));
         return entries;
     }

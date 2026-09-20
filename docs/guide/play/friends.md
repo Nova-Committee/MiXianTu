@@ -38,7 +38,7 @@ title: 好友与敌我识别
 | `/friend permanent add <玩家>` | 添加永久好友；临时好友会被升级。 |
 | `/friend permanent remove <玩家>` | 移除永久好友。 |
 
-顶层 `/friend` 别名受 `config.mxt.server.commands.friend` 控制，默认开启；`/mxt friend` 始终完整。帮助与列表里的可点击指令会按当前配置选择根节点，所以关掉别名之后给出的建议仍然能执行。
+顶层 `/friend` 别名受服务端配置「命令别名 → /friend」控制，默认开启；`/mxt friend` 始终完整。帮助与列表里的可点击指令会按当前配置选择根节点，所以关掉别名之后给出的建议仍然能执行。
 
 **点击行为是"填入聊天栏"而不是"直接执行"**（`ClickEvent.SuggestCommand`）：好友要靠玩家输入名字，帮助无法预知，所以点一下只是把指令连同结尾的空格放进输入框，光标停在名字该在的位置。`/friend remove` 的补全只列出**当前真的能移除的名字**（临时名单与永久名单各自对应自己那条命令），不会给出一个点了必然被拒绝的选项。
 
@@ -93,10 +93,10 @@ FTB Teams 的"盟友"是**队内等级**，不是"结盟的另一支队伍"—�
 
 | 配置 | 默认 | 含义 |
 | --- | --- | --- |
-| `config.mxt.server.compat.ftb_teams_ally` | 开启 | 把 `ALLY` 等级算作队友 |
-| `config.mxt.server.compat.ftb_teams_invited` | **关闭** | 把 `INVITED` 等级算作队友 |
+| 服务端配置「兼容 → 盟友算队友」 | 开启 | 把 `ALLY` 等级算作队友 |
+| 服务端配置「兼容 → 受邀者算队友」 | **关闭** | 把 `INVITED` 等级算作队友 |
 
-两项都在服务端配置的**「兼容」标签页**里（存档键为 `compat.ftb_teams_ally` / `compat.ftb_teams_invited`）。
+两项都在服务端配置的**「兼容」标签页**里。
 
 **正式队员（`MEMBER` 及以上）永远算队友**，不设开关——在队里就是在队里。两个开关只管"外来者"的两档。
 

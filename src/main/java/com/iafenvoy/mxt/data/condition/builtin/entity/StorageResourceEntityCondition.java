@@ -30,8 +30,7 @@ public record StorageResourceEntityCondition(Identifier family, Identifier id,
         if (reading == null) return false;
         if (reading.declared(ResourceDataStorage.class).isEmpty()) return false;
         Optional<ResourceDataStorage> stored = reading.stored(ResourceDataStorage.class);
-        if (this.amount.isEmpty()) return stored.isPresent();
-        return this.amount.get().test(stored.flatMap(ResourceDataStorage::amount).orElse(0.0D), ctx.formula());
+        return this.amount.map(numberRange -> numberRange.test(stored.flatMap(ResourceDataStorage::amount).orElse(0.0D), ctx.formula())).orElseGet(stored::isPresent);
     }
 
     @Override

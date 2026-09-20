@@ -1,5 +1,20 @@
 {
-  "overcomes": ["mxt_test:fire"],
-  "adapted_to": ["mxt_test:water"],
+  "overcomes": [
+    {
+      "elements": ["mxt_test:fire"],
+      "multiplier": 1.5
+    }
+  ],
+  "adapted_to": [
+    {
+      "elements": ["mxt_test:water"],
+      "multiplier": 0.5
+    },
+    {
+      "elements": ["mxt_test:fire"],
+      "multiplier": 0.5
+    }
+  ],
+  "damage_types": ["minecraft:thorns", "minecraft:drown"],
   "color": "#3388ff"
 }

@@ -28,7 +28,9 @@ import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
+import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
+import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
@@ -149,7 +151,7 @@ public final class AbilityService {
                                  FormulaContext context, boolean requiresGrant, @Nullable Vec3 origin) {
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
-            context = withElementAffinity(living, definition, context);
+            context = withAbilityScaling(living, ability, definition, context);
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
@@ -186,7 +188,7 @@ public final class AbilityService {
                                        FormulaContext context) {
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
-            context = withElementAffinity(living, definition, context);
+            context = withAbilityScaling(living, ability, definition, context);
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
@@ -236,7 +238,7 @@ public final class AbilityService {
                                             AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                             FormulaContext context) {
         if (actor instanceof LivingEntity living) {
-            context = withElementAffinity(living, definition, FormulaContexts.forEntity(living, context));
+            context = withAbilityScaling(living, ability, definition, FormulaContexts.forEntity(living, context));
             if (!definition.elementAffinity().isEmpty() && context.value("element_modifier") <= 0.0D) {
                 stopChannel(abilities);
                 return ChannelResult.stopped(Failure.ELEMENT_AFFINITY);
@@ -373,7 +375,7 @@ public final class AbilityService {
             Ability child = childHolder.value();
             FormulaContext childContext = context;
             if (actor instanceof LivingEntity living) {
-                childContext = withElementAffinity(living, child, FormulaContexts.forEntity(living, context));
+                childContext = withAbilityScaling(living, childHolder, child, FormulaContexts.forEntity(living, context));
                 if (!child.elementAffinity().isEmpty() && childContext.value("element_modifier") <= 0.0D)
                     return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
             }
@@ -465,11 +467,25 @@ public final class AbilityService {
         return costs.stream().anyMatch(cost -> !(cost instanceof com.iafenvoy.mxt.data.cost.ResourceCost));
     }
 
-    private static FormulaContext withElementAffinity(LivingEntity actor, Ability definition, FormulaContext context) {
-        if (definition.elementAffinity().isEmpty()) return context;
-        double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY), definition.elementAffinity(), context,
-                id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id));
-        return context.with("element_modifier", modifier);
+    /**
+     * Adds the read-only values a casting ability exposes to its own formulas: {@code element_modifier} for
+     * the element affinity of its roots, and {@code damage_multiplier} for the mastery of the chain that
+     * grants it.
+     *
+     * <p>The mastery value is what the damage pipeline reads on the attacker's side of a hit, so a data pack
+     * does not have to write the multiplier into every damage formula by hand - and a pack that wants to
+     * scale something else by the same level can read the same value. It is put on the context here, where
+     * the ability being cast is still known, because a damage action only ever sees a formula context.</p>
+     */
+    private static FormulaContext withAbilityScaling(LivingEntity actor, Holder<Ability> ability, Ability definition,
+                                                     FormulaContext context) {
+        FormulaContext scaled = context;
+        if (!definition.elementAffinity().isEmpty()) {
+            double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY), definition.elementAffinity(), context,
+                    id -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, id), definition.elementAffinityMode());
+            scaled = scaled.with("element_modifier", modifier);
+        }
+        return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, SkillStageService.damageMultiplier(actor, ability));
     }
 
     private static <T extends DataStorage> Optional<T> kind(Ability definition, Class<T> type) {

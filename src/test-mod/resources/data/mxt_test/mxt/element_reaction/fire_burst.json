@@ -1,0 +1,9 @@
+{
+  "amounts": {
+    "mxt_test:fire": 8
+  },
+  "action": {
+    "type": "mxt:damage",
+    "amount": 6
+  }
+}

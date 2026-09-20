@@ -1,5 +1,18 @@
 {
-  "overcomes": ["mxt_test:water"],
-  "adapted_to": ["mxt_test:fire"],
+  "overcomes": [
+    {
+      "elements": ["mxt_test:water"],
+      "multiplier": 1.5
+    }
+  ],
+  "adapted_to": [
+    {
+      "elements": ["mxt_test:fire"],
+      "multiplier": 0.5
+    }
+  ],
+  "damage_types": ["minecraft:magic", "minecraft:in_fire", "minecraft:lava"],
+  "attachment_decay": 0.5,
+  "damage_attachment": 4.0,
   "color": "#ff5522"
 }

@@ -182,7 +182,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 **内容需要什么**：整套 `物攻 / 法攻 / 物防 / 法防 / 火攻 / 雷攻 / 毒攻 / 火防 / 雷防 / 毒防`
 （`analysis/16-共享数据契约.md` §3.2，跨 9 个模组、上千次读写），以及"谁打的 / 什么类型 / 多少级"。
 
-**基座现状**：
+**基座现状（2026-09-20 起本节已闭环，下面保留原始判断，改动见文末「已闭环」段）**：
 
 - `mxt:damage` 与 `mxt:damage_target` 都只发 `damageSources().generic()`
   （`data/action/builtin/entity/DamageAction.java`、`builtin/bientity/DamageTargetBiEntityAction.java`），
@@ -216,6 +216,36 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 照抄 `AttackFormationAction` + `FormationActionRunner` 的落点；
 在一个 `LivingIncomingDamageEvent` 监听里按施法者水平/属性重算。
 `mxt:damage` 保留为"环境伤害"语义。
+
+**已闭环（2026-09-20，实际做法与上面的"最小补法"有出入，以下为准）**：
+
+- 新增 `runtime/damage/DamageCalculationService`，把一次伤害分成**两层**：
+  **第一层出力**在发伤害处（攻击方一侧）乘 `damage_multiplier` 与攻击者灵根对目标灵根的
+  `overcomes[].multiplier`；**第二层减免**在 `runtime/damage/DamageEventBridge` 的
+  `LivingIncomingDamageEvent` 里乘受击者灵根的 `adapted_to[].multiplier`。
+  为什么这样切：第一层需要"谁、用什么、打谁"三件事同时在场（只有发伤害处有），
+  第二层需要看到**所有**打过来的伤害（包括别的模组与原版的），而"适应什么"本来就是受击者的属性；
+  两层不会重复——那个事件每次伤害序列只触发一次。
+- **没有**新增 `mxt:typed_damage` 动作类型。`damage_type` 由各条发伤害路径自带
+  （阵法 `AttackFormationAction` 本来就有），通用动作只补归属：`DamageTargetBiEntityAction` 从此把
+  施加者记为加害者，`DamageAction` 只在"打的对象不是施法者自己"时记归属（反噬/丹毒这类保留无主语义）。
+  来源统一在 `DamageCalculationService.source(...)` 里构造：有 `damage_type` 就用它并把加害者记为起因，
+  没有就按原版 `playerAttack`/`mobAttack`/`generic` 选择——阵法原来那段私有实现已经删掉。
+- `mxt:explode`（实体行为）也收进来了：每次单体爆炸伤害过第一层，爆源记为施法者。
+  `mxt:lightning` 与方块爆炸仍由原版结算，只受第二层影响（没有可归的攻击者）。
+- 元素关系从"只有谁克谁"变成"每条关系自带伤害倍率"：
+  `Element` 的 `overcomes` / `adapted_to` 现在是 `{elements, multiplier}` 数组，
+  加载期校验有限非负；`mxt:element_overcomes` 条件改读"关系存不存在"（`Element#overcomes`）。
+  一个实体多条灵根时所有成立的关系相乘。
+- `SkillStage.damageMultiplier` 的 TODO 与其类注释一起撤掉：施放能力时 `AbilityService` 把
+  "授予该能力、且施法者当前所在的那一级"的倍率写进公式上下文（`damage_multiplier`，
+  多个功法都授予同一能力时取最高），管线第一层读它。`research/audit/technique.md` 的 T10 同步标记为已闭环。
+- 公式变量文档、`docs/数据包格式.md` 的 `element` / `skill_stage` 两节与新增的「伤害结算」一节、
+  `docs/模块实现审计.md` 的元素/功法/技能水平三行都已同步。
+- 实机验证（test-mod `/mxt_test damage`，两个单灵根探针实体 + 一次真实 `AbilityService.useCarried`）：
+  元素层 `10 × 1.5 = 15.0`、减免后 `7.5`、实际掉血 `7.5`；技能层 `1.1 → 1.25`、实际掉血 `3.75`、
+  施放上下文里读到 `1.25`；原版来源（`mobAttack`）的 4 点伤害只吃减免 → 掉血 `2.0`。
+  仍缺的：伤害类型与元素之间没有映射（元素只从双方灵根读，不从 `damage_type` 反推）。
 
 ### 4.3 状态与效果（107 个药水效果）
 
@@ -468,7 +498,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | 9 | `ArtifactStateComponent.nourishment` | **已于 2026-09-19 接上**：灌能时按"真正收下 ÷ 本次有效容量"上涨（夹在 `0..1`、只升不降），同时作为容量加成 `× (1 + 0.5 × nourishment)` | `runtime/artifact/ArtifactService.java` |
 | 10 | `data_storage_type`：`toggle`/`timer`/`resource`/`target_lock` | **已于 2026-09-19 关闭**：四者各有一个 `mxt:storage_toggle`/`storage_timer`/`storage_resource`/`storage_target` 实体条件读取（`mxt:charges`/`mxt:cooldown` 另补了 `storage_charges`/`storage_cooldown`，六种类型全部可读） | `registry/MxtEntityConditions.java`；`data/condition/builtin/entity/Storage*EntityCondition.java` |
 | 11 | `ChargesDataStorage.recharge_ticks` | **已于 2026-09-19 关闭**：`AbilityEventBridge` 每 tick 按"距上次写入 ≥ recharge_ticks"回充一次，最多一步、不脏化附件 | `runtime/ability/AbilityStorage.java`；`runtime/ability/AbilityEventBridge.java` |
-| 12 | `SkillStage.damage_multiplier` | 零消费者，代码已留 TODO | `data/cultivation/SkillStage.java:22,25` |
+| 12 | `SkillStage.damage_multiplier` | **已于 2026-09-20 关闭**：施放能力时 `AbilityService` 把"授予该能力、且施法者当前所在的那一级"的倍率写进公式上下文（`damage_multiplier`），`DamageCalculationService` 第一层读它；TODO 与类注释里的推后说明一并删除 | `runtime/cultivation/SkillStageService.java`；`runtime/ability/AbilityService.java` |
 | 13 | `CreatureProfile.realm_stages` | 零消费者 | `data/creature/CreatureProfile.java:28`；`technique.md` §8.2 |
 | 14 | `Technique.grade` | **已于 2026-09-19 接上**：功法面板的行悬浮提示显示"品阶：<原文>"（存在 `mxt.technique_grade.<grade>` 时用翻译） | `screen/information/TechniquePanelScreen.java` |
 | 15 | `SpiritRoot.rarity` / `Physique.rarity` | 零读取点（`docs/模块实现审计.md:72-73` 自认"仅元数据"） | 全仓无 `rarity` 调用点 |
@@ -531,7 +561,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | **P1** | **通用等级/熟练度链**（§4.10）：状态键泛化 + 独立晋升服务 + `mxt:skill_stage` 条件 | 小～中 | 画符/炼丹/炼器等级 + 功法层数 |
 | **P1** | **灵植生命周期**（§4.4）+ `SpiritHerb` / `AuraZone.Rules` 死字段接线 | 中 | 77 族 / 250 行 |
 | **P1** | **清理 A 类 2/3/6/7/9/11/14/15/17/18/20/22/23/24**（死路径、死字段、无写入方的缝） | 极小 | 减维护面；多为直接删或一行接线 |
-| **P2** | **统一伤害管线**（§4.2）：把阵法那套 `typed_damage + attribute_to_owner` 提成通用动作 | 中 | 内容整套攻防数值 + `damage_multiplier` |
+| ~~**P2**~~ | **统一伤害管线**（§4.2）——**已于 2026-09-20 完成**：`DamageCalculationService` 两层（发伤害处的出力层 + `LivingIncomingDamageEvent` 的减免层），`mxt:damage` / `mxt:damage_target` / 阵法攻击 / `mxt:explode` 全部收拢，元素克制/适应倍率写进 `element` 定义，`SkillStage.damage_multiplier` 接上 | 已完成 | 内容整套攻防数值 + `damage_multiplier`（仍缺：伤害类型→元素的映射、灵宝侧攻防数值） |
 | **P2** | **数据驱动区域灵气**（§4.8-2） | 小～中 | 富灵气区、灵脉、生成三者的统一区域概念 |
 | **P2** | **生成表 / 灵气驱动生成**（§4.5、§4.8-3） | 中 | 151 个实体 / 9 张刷新表 / `natural_spawn_herb` |
 | **P2** | **状态注册表**（§4.3） | 中 | 107 个效果 |

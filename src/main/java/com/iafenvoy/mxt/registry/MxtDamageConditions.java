@@ -27,6 +27,7 @@ public final class MxtDamageConditions {
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<? extends DamageCondition>> FIRE = REGISTRY.register("fire", () -> createDamage(ctx -> ctx.source().is(DamageTypeTags.IS_FIRE)));
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<? extends DamageCondition>> MAGIC = REGISTRY.register("magic", () -> createDamage(ctx -> ctx.source().is(DamageTypeTags.AVOIDS_GUARDIAN_THORNS) && ctx.source().is(DamageTypeTags.WITCH_RESISTANT_TO)));
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ProjectileDamageCondition>> PROJECTILE = REGISTRY.register("projectile", () -> ProjectileDamageCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ElementDamageCondition>> ELEMENT = REGISTRY.register("element", () -> ElementDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<AndDamageCondition>> AND = REGISTRY.register("and", () -> AndDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ChanceDamageCondition>> CHANCE = REGISTRY.register("chance", () -> ChanceDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ConstantDamageCondition>> CONSTANT = REGISTRY.register("constant", () -> ConstantDamageCondition.CODEC);

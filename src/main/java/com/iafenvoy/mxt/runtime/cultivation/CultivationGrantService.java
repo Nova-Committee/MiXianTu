@@ -37,10 +37,10 @@ public final class CultivationGrantService {
             if (isCultivationSource(entry.getValue()) && abilities.revoke(entry.getKey(), entry.getValue()))
                 revoked++;
         int granted = 0;
-        for (Holder<SpiritRoot> root : spirit.spiritRoots()) {
+        for (Holder<SpiritRoot> root : spirit.activeSpiritRoots()) {
             granted += grantAll(abilities, root.value().grantedAbilities(), source("spirit_root", HolderHelper.id(root)));
         }
-        for (Holder<Physique> physique : spirit.physiques()) {
+        for (Holder<Physique> physique : spirit.activePhysiques()) {
             granted += grantAll(abilities, physique.value().grantedAbilities(), source("physique", HolderHelper.id(physique)));
         }
         for (Holder<Technique> technique : spirit.learnedTechniques()) {

@@ -26,6 +26,7 @@ public final class MxtBiEntityConditions {
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<RelationBiEntityCondition>> RELATION = REGISTRY.register("relation", () -> RelationBiEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<? extends BiEntityCondition>> FRIEND = REGISTRY.register("friend", () -> createBiEntity(ctx -> FriendService.isFriend(ctx.actor(), ctx.target())));
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ElementOvercomesBiEntityCondition>> ELEMENT_OVERCOMES = REGISTRY.register("element_overcomes", () -> ElementOvercomesBiEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ElementAdaptedToBiEntityCondition>> ELEMENT_ADAPTED_TO = REGISTRY.register("element_adapted_to", () -> ElementAdaptedToBiEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<CanSeeCondition>> CAN_SEE = REGISTRY.register("can_see", () -> CanSeeCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ChanceCondition>> CHANCE = REGISTRY.register("chance", () -> ChanceCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ConstantCondition>> CONSTANT = REGISTRY.register("constant", () -> ConstantCondition.CODEC);

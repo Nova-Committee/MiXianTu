@@ -125,7 +125,7 @@
 | T7 | **有"晋升"信号但仍无"学会/遗忘"信号、无脚本 API**（见 §6）：内容包可以响应 `mxt:technique_stage`，但无法感知"学会功法"，脚本也无法查询/授予/遗忘功法 | `TriggerSignals.java`；`MxtKubeJsApi.java` 全文 |
 | T8 | **测试覆盖薄**：`MxtTestMod.java:233-237` 只断言 binding 能解析、`technique` id 正确、conditions 无 description；`sword_manual.json`/`body_manual.json` 共享 `mxt_test:technique/sword` 互斥标签却无用例断言 `CONFLICT`，也没有 `ALREADY_LEARNED`、`learn_condition` 失败、学习失败 `Result` 值的断言（水平链与熟练度晋升的断言已补齐：`:239-275`、`:1106-1132`） | `src/test-mod/java/.../MxtTestMod.java`；`src/test-mod/resources/data/mxt_test/mxt/technique/*.json` |
 | T9 | `exclusive_tags` 只与"学习前已持有的集合"比较，不检查同批/回溯一致性；本身是自定义分类键（`Identifier` 相等比较），**不是**注册表 tag | `TechniqueService.java:33-36` |
-| T10 | `damage_multiplier` **无消费者**：只有 codec / 校验 / `toString` / 测试断言读它。原因是全仓没有统一的技能伤害管线——伤害来自 `mxt:damage` 动作自己的 `NumberProvider`。代码里已加 `//TODO::Consume damage_multiplier`（`SkillStage.java:39-41`），文档也标注了"暂未消费" | `grep damageMultiplier` 仅命中 `SkillStage.java` 自身与 `MxtTestMod.java:244` |
+| T10 | ~~`damage_multiplier` **无消费者**~~ → **已解决（2026-09-20）**。原始情况：只有 codec / 校验 / `toString` / 测试断言读它，全仓没有统一的技能伤害管线。落地方式（选的是当年列的两条路里"做成公式变量"那条）：`SkillStageService.damageMultiplier(holder, ability)` 取"授予该能力、且持有者当前所在的那一级"的倍率（多个功法都授予同一能力时取最高，不相乘），`AbilityService.withAbilityScaling` 在四处施放入口把它写进公式上下文作为 `damage_multiplier`；新增的 `DamageCalculationService` 第一层在攻击方结算时读这个值，`SkillStage` 类注释里的 TODO 随之删除 | `runtime/cultivation/SkillStageService.java`；`runtime/ability/AbilityService.java`；`runtime/damage/DamageCalculationService.java` |
 | T11 | 状态未校验归属：`SkillStageService.currentStage` 直接把附件里存的水平返回（缺失才回退 `default_stage`），不检查它是否属于该功法当前的链。数据包改链后可能留下"别条链的水平"：此时 `isStageAtLeast` 因链不同返回 false（不会错误解锁），但 `nextStage` 也返回 empty，功法**永久卡住**且没有任何日志 | `SkillStageService.java:44-47, 71-76`；`ServerCache.isStageAtLeast:167-171` |
 | T12 | **待定的语义（非 bug）**：`setLearnedTechniques` 直接改列表时不会清 `technique_stages` 里该功法的记录。当前行为是"遗忘后重新学会会接着原来的水平"，因为 `TechniqueMasteryService` 只遍历 `learnedTechniques()`，不会为未学功法晋升。做 T6 的 `forget` 时需要明确选哪一种：重置到入口级，还是保留进度 | `SpiritIdentityAttachment.java:84-94, 108-119`；`TechniqueMasteryService.tick` |
 
@@ -144,7 +144,7 @@
 - **语义（2026-09-12 定稿）**：`ability` 是**最低要求**——当前水平位于该级或其之后时生效（累积解锁）；`condition` 是**到达**该级的条件。链条顺序由 `ServerCache.rebuildSkillChains` 在服务端启动/数据包重载时推导（链首 + rank，拒绝多首级/跨链/成环/缺失）。`ServerCache.validateTechniqueChains` 再从 `default_stage` 沿链遍历：入口级**不要求**条目（写了则只取 `ability`，`condition` 不作为门槛），**其后每一级都必须有条目**，且不允许出现从入口走不到的 key。比较与查询接口：`isStageAtLeast`、`rankForStage`、`skillForStage`、`SkillStageService.unlockedAbilities/nextStage/advanceCondition/canAdvance`。
 - 测试夹具：`data/mxt_test/mxt/skill_stage/{sword_art_1,sword_art_2}.json` + `sword_manual.json` 的 `default_stage`/`configuration`（入口级也写了条目、二级 `ability` 用数组写法），`MxtTestMod` 有一段静默断言（链身份、倍率、条目数、能力总数、键的 `skill` 一致、rank 0/1、`isStageAtLeast` 双向、level1 → 1 个能力 / level2 → 2 个能力、`nextStage` 到顶为空、`advanceCondition` 与条目里的 `condition` 同一实例）。熟练度相关的夹具与端到端断言见 §8.0.1。
 - 负路径实验（2026-09-12）：临时删掉 `sword_art_2` 的条目后启动服务端，缓存重建抛 `Technique mxt_test:sword_manual does not configure the skill stage mxt_test:sword_art_2`，服务器不启动、审计不执行；夹具随后还原并重新同步 build 产物。
-- **未做**（下一步见 §9）：`damage_multiplier` 的消费点、`grade` 的语义、遗忘入口与学习失败反馈。链顺序、校验、两个查询与晋升运行时均已就绪，不再是缺口。
+- **未做**（下一步见 §9）：`grade` 的语义、遗忘入口与学习失败反馈。链顺序、校验、两个查询与晋升运行时均已就绪；`damage_multiplier` 的消费点已于 2026-09-20 接入伤害管线（见 T10 与 §9）。
 
 ### 8.0.1 熟练度晋升运行时（2026-09-13 落地）
 
@@ -204,7 +204,7 @@
 ## 9. 建议动手顺序
 
 1. ~~**掌握程度的运行时（§8.0 的下一步）**~~ → **已于 2026-09-13 完成，见 §8.0.1**：状态（`SpiritIdentityAttachment.technique_stages`）、晋升执行（`TechniqueMasteryService`）、按水平累积授予（`CultivationGrantService`）、`mxt:technique_stage` 信号都已落地；数值怎么涨刻意留给内容包（`mxt:trigger` 规则 / 修炼档案 / 脚本），这就是"数据驱动"的落点。本条余下的只有两项：
-   - `damage_multiplier` 消费点（**T10，已按用户要求留 TODO 推后**）：目前没有统一的技能伤害管线（伤害来自 `mxt:damage` 动作里的 `NumberProvider`），要么做成公式变量（需要 `FormulaContext` 携带水平主体），要么在 `DamageAction` 里按施法者水平乘算。TODO 写在 `SkillStage.java` 类注释上方。
+   - ~~`damage_multiplier` 消费点（T10）~~ → **已于 2026-09-20 完成**：走的是"做成公式变量"那条路——`AbilityService` 在施放时把水平倍率写进公式上下文（`damage_multiplier`），新增的统一伤害管线（`DamageCalculationService`）第一层读它。见 T10 与 `research/audit/content-coverage-gaps.md` §4.2 的「已闭环」段。
    - `grade`（T1）与 `skill_stage` 的关系也要一次定清：建议 `grade` 只做展示/掉落元数据，数值进阶交给水平链。`docs/模块实现审计.md:74` 的错误措辞已修正。
 2. ~~**T2 失败反馈**~~ → **已于 2026-09-13 完成，见 §11**。门槛与学习事务两级都回具名原因并发 actionbar；`ItemQualityService.canUse` 保持签名不变的同时新增 `check(...)` 返回 `Optional<Failure>`。
 3. **T6/T12 遗忘入口**：`TechniqueService.forget` + 重算授予/被动属性 + 事件（`TechniqueForgetEvent`）+ 互斥的追溯校验策略，并顺带定下 T12 的语义（遗忘是否重置水平）。

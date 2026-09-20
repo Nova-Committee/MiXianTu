@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Technique.StageConfiguration;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ServerCache;
@@ -81,5 +82,30 @@ public final class SkillStageService {
                                      FormulaContext context) {
         Holder<SkillStage> target = nextStage(technique, current).orElse(null);
         return target != null && advanceCondition(technique, target).test(entity, context);
+    }
+
+    /**
+     * What the holder's mastery is worth on one ability: the {@code damage_multiplier} of the level it stands
+     * on, for a chain whose configuration grants that ability at that level, or {@code 1.0} when no chain it
+     * has climbed does.
+     *
+     * <p>A chain speaks for the abilities it unlocks, which is why this is asked per ability rather than per
+     * holder: the multiplier of a body-refining manual belongs to what that manual grants, not to every hit
+     * the holder lands. Several techniques can grant the same ability, and the best of them is taken - the hit
+     * is one hit, so the strongest chain the holder stands on speaks for it instead of every chain stacking.</p>
+     */
+    public static double damageMultiplier(LivingEntity holder, Holder<Ability> ability) {
+        SpiritIdentityAttachment spirit = holder.getData(MxtAttachments.SPIRIT_IDENTITY);
+        double best = 1.0D;
+        for (Holder<Technique> technique : spirit.learnedTechniques()) {
+            Holder<SkillStage> current = currentStage(spirit, technique).orElse(null);
+            if (current == null) continue;
+            boolean grants = unlockedAbilities(technique.value(), current).stream()
+                    .anyMatch(unlocked -> unlocked.value() == ability.value());
+            if (!grants) continue;
+            double multiplier = current.value().damageMultiplier();
+            if (Double.isFinite(multiplier) && multiplier > best) best = multiplier;
+        }
+        return best;
     }
 }

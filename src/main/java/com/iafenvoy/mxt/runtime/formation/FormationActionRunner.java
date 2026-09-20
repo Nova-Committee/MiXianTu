@@ -12,16 +12,15 @@ import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.friend.FriendService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.TriState;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -53,12 +52,12 @@ public final class FormationActionRunner {
         return reached;
     }
 
-    public static void perEntity(ServerLevel level, Formation definition, FormationInstance instance,
+    public static void perEntity(Formation definition, FormationInstance instance,
                                  Entity entity, EntityActionContext context,
                                  @Nullable Entity owner, @Nullable UUID ownerId) {
         for (FormationActionType module : definition.actions()) {
             switch (module) {
-                case AttackFormationAction attack -> attack(level, attack, entity, context, owner);
+                case AttackFormationAction attack -> attack(attack, entity, context, owner);
                 case BuffFormationAction buff -> buff(buff, entity, context, instance, owner, ownerId);
                 // The terrain ward is not per-entity work: it answers block events instead, and there is
                 // no entity to act on. The default module declares nothing at all.
@@ -68,30 +67,14 @@ public final class FormationActionRunner {
         }
     }
 
-    private static void attack(ServerLevel level, AttackFormationAction attack, Entity entity,
+    private static void attack(AttackFormationAction attack, Entity entity,
                                EntityActionContext context, @Nullable Entity owner) {
         if (!attack.targetCondition().test(entity, context)) return;
         double amount = attack.damage().evaluate(context.formula());
         if (Double.isFinite(amount) && amount > 0.0D)
-            entity.hurtServer(level, damageSource(level, attack, owner), (float) amount);
+            DamageCalculationService.deal(attack.attributeToOwner() ? owner : null, entity, amount,
+                    attack.damageType(), context.formula());
         for (ApplyEffectAction effect : attack.effects()) effect.execute(context);
-    }
-
-    /**
-     * The damage source a strike is attributed to. With no declared type this is the vanilla reading of "the
-     * owner hit it" — {@code playerAttack} carries the player as attacker, which is what makes a kill count as
-     * theirs — and with no owner loaded it falls back to the anonymous generic source.
-     */
-    private static DamageSource damageSource(ServerLevel level, AttackFormationAction attack, @Nullable Entity owner) {
-        Entity cause = attack.attributeToOwner() ? owner : null;
-        return attack.damageType()
-                .map(type -> new DamageSource(type, cause))
-                .orElseGet(() -> switch (cause) {
-                    case Player player -> level.damageSources().playerAttack(player);
-                    // An owner is a player in play, but the rule is written for any living attacker.
-                    case LivingEntity living -> level.damageSources().mobAttack(living);
-                    case null, default -> level.damageSources().generic();
-                });
     }
 
     /**

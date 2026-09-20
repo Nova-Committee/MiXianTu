@@ -90,6 +90,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<Aura>> AURA = create("aura");
     public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = create("realm_stage");
     public static final ResourceKey<Registry<Element>> ELEMENT = create("element");
+    public static final ResourceKey<Registry<ElementReaction>> ELEMENT_REACTION = create("element_reaction");
     public static final ResourceKey<Registry<SpiritRoot>> SPIRIT_ROOT = create("spirit_root");
     public static final ResourceKey<Registry<Physique>> PHYSIQUE = create("physique");
     public static final ResourceKey<Registry<Ability>> ABILITY = create("ability");

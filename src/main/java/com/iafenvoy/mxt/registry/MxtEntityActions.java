@@ -30,6 +30,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<AddResourceAction>> ADD_RESOURCE = REGISTRY.register("add_resource", () -> AddResourceAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<GrantAbilityAction>> GRANT_ABILITY = REGISTRY.register("grant_ability", () -> GrantAbilityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<GrantSpiritRootAction>> GRANT_SPIRIT_ROOT = REGISTRY.register("grant_spirit_root", () -> GrantSpiritRootAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<AttachElementAction>> ATTACH_ELEMENT = REGISTRY.register("attach_element", () -> AttachElementAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<GrantPhysiqueAction>> GRANT_PHYSIQUE = REGISTRY.register("grant_physique", () -> GrantPhysiqueAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<RemoveAbilityAction>> REMOVE_ABILITY = REGISTRY.register("remove_ability", () -> RemoveAbilityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<RemoveSpiritRootAction>> REMOVE_SPIRIT_ROOT = REGISTRY.register("remove_spirit_root", () -> RemoveSpiritRootAction.CODEC);

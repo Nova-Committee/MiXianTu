@@ -27,6 +27,7 @@ import net.minecraft.tags.TagKey;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -35,13 +36,19 @@ import java.util.Optional;
  * <p>An ability declares the state it keeps through {@link DataStorageDeclaration}. The data-pack key of that
  * list stays {@code components} for compatibility, even though the values themselves are now held by the ability
  * attachment, next to the grants that own them.</p>
+ *
+ * <p>{@code element_affinity} is a gate and a multiplier, and {@code element_affinity_mode} says how a
+ * cultivator of several affinities is read: the average of the matching roots, which is the default and the
+ * reading every ability has always had, or the best of them. A pack that writes one sharp affinity wants the
+ * best; a pack that means "the more of my roots agree, the better" wants the average.</p>
  */
 public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTime, NumberProvider cooldown,
                       Optional<IconReference> icon,
                       List<DataStorage> storages, List<AttributeEntry> modifiers,
                       DamageCondition damageCondition, EntityCondition condition, EntityAction entityAction,
                       TargetSelector targetSelector, BiEntityCondition targetCondition, BiEntityAction biEntityAction,
-                      List<Either<Holder<Element>, TagKey<Element>>> elementAffinity) implements DataStorageDeclaration {
+                      List<Either<Holder<Element>, TagKey<Element>>> elementAffinity,
+                      AffinityMode elementAffinityMode) implements DataStorageDeclaration {
     public static final Codec<Holder<Ability>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ABILITY);
     public static final Codec<Ability> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             AbilityType.CODEC.forGetter(Ability::type),
@@ -57,8 +64,20 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
             TargetSelector.CODEC.optionalFieldOf("target_selector", SelfTargetSelector.INSTANCE).forGetter(Ability::targetSelector),
             BiEntityCondition.optionalCodec("target_condition").forGetter(Ability::targetCondition),
             BiEntityAction.optionalCodec("bi_entity_action").forGetter(Ability::biEntityAction),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_affinity", List.of()).forGetter(Ability::elementAffinity)
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_affinity", List.of()).forGetter(Ability::elementAffinity),
+            AffinityMode.CODEC.optionalFieldOf("element_affinity_mode", AffinityMode.AVERAGE).forGetter(Ability::elementAffinityMode)
     ).apply(i, Ability::new));
+
+    /**
+     * How the {@code element_ability_modifier} of several matching roots is combined into the one
+     * {@code element_modifier} a casting exposes.
+     */
+    public enum AffinityMode {
+        AVERAGE, MAX;
+        public static final Codec<AffinityMode> CODEC = Codec.STRING.xmap(
+                value -> valueOf(value.toUpperCase(Locale.ROOT)),
+                value -> value.name().toLowerCase(Locale.ROOT));
+    }
 
     public List<Trigger> triggers() {
         return this.type instanceof TriggeredAbilityType triggered ? triggered.triggers() : List.of();

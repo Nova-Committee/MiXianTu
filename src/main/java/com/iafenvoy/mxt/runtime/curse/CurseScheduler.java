@@ -4,7 +4,9 @@ import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.CurseType;
+import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.curse.CurseService.DefinitionState;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
@@ -66,14 +68,14 @@ public final class CurseScheduler {
             // A frozen instance - its definition was disabled or deleted - neither expires nor acts, so it is not
             // scheduled at all: its expiry is already in the past, and scheduling it would fire the due queue for
             // that entity on every tick forever. Re-enabling the definition reschedules the entity.
-            if (CurseService.definitionState(entry.getKey()) == CurseService.DefinitionState.ACTIVE
+            if (CurseService.definitionState(entry.getKey()) == DefinitionState.ACTIVE
                     && state.expiresAt() >= 0L) {
                 result = Math.min(result, state.expiresAt());
             }
             CurseType type = entry.getKey().value().typedType();
             // A triggered curse waits for its triggers and an inert one never acts, so neither is woken for a
             // periodic effect; both still wake for their expiry, which the branch above took into account.
-            if (type.inert() || type instanceof CurseType.Triggered) continue;
+            if (type.inert() || type instanceof Triggered) continue;
             double intervalValue = entry.getKey().value().tickInterval().evaluate(context);
             if (!Double.isFinite(intervalValue) || intervalValue <= 0.0D) continue;
             long interval = Math.max(1L, Math.round(intervalValue));

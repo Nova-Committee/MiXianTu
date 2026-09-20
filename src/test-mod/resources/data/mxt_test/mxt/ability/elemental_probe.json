@@ -1,0 +1,9 @@
+{
+  "type": "mxt:active",
+  "slot": "primary",
+  "bi_entity_action": {
+    "type": "mxt:damage_target",
+    "amount": 10,
+    "element": "mxt_test:fire"
+  }
+}

@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -43,7 +44,7 @@ public final class SpiritBurstService {
         }
         Optional<Holder<Aura>> valid = auraId.flatMap(id -> MxtDatapackRegistries.holder(MxtResourceKeys.AURA, id))
                 .map(aura -> (Holder<Aura>) aura)
-                .filter(aura -> aura.value().auraType().isPresent() && ResourceUseService.canUse(player, aura));
+                .filter(aura -> Elements.enabled(aura.value().auraType()) && ResourceUseService.canUse(player, aura));
         if (valid.isEmpty()) return;
         Set<Holder<Aura>> active = ACTIVE_AURAS.computeIfAbsent(playerId, ignored -> new HashSet<>());
         if (firing) {
@@ -75,7 +76,7 @@ public final class SpiritBurstService {
         ResourceHolderAttachment holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         Set<Holder<Aura>> active = ACTIVE_AURAS.get(player.getUUID());
         if (active == null || !active.contains(aura)) return;
-        active.removeIf(candidate -> candidate.value().auraType().isEmpty() || !ResourceUseService.canUse(player, candidate));
+        active.removeIf(candidate -> !Elements.enabled(candidate.value().auraType()) || !ResourceUseService.canUse(player, candidate));
         SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
         if (cooldowns.isOnCooldown(aura, player.level().getGameTime())) return;
         if (tryFire(player, holder, aura)) {
@@ -88,7 +89,7 @@ public final class SpiritBurstService {
      */
     private static boolean tryFire(ServerPlayer player, ResourceHolderAttachment holder, Holder<Aura> aura) {
         Aura definition = aura.value();
-        if (definition.auraType().isEmpty() || !ResourceUseService.canUse(player, aura)) return false;
+        if (!Elements.enabled(definition.auraType()) || !ResourceUseService.canUse(player, aura)) return false;
         Holder<Resource> resource = definition.resource();
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
         int amount = asWholeAmount(definition.burstAmount().evaluate(context));

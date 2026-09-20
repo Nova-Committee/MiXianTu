@@ -1,14 +1,9 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
@@ -16,10 +11,11 @@ import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
- * True when at least one of the actor's spirit-root elements overcomes a target root element.
+ * True when at least one of the actor's spirit-root elements overcomes a target root element. The relation
+ * itself is the question here, not what it is worth: how much an edge multiplies damage is the damage
+ * pipeline's business ({@code DamageCalculationService}).
  */
 public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
     INSTANCE;
@@ -30,15 +26,10 @@ public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
-        Set<Holder<Element>> actorElements = elements(actor.getData(MxtAttachments.SPIRIT_IDENTITY));
-        Set<Holder<Element>> targetElements = elements(target.getData(MxtAttachments.SPIRIT_IDENTITY));
+        Set<Holder<Element>> actorElements = Elements.of(actor);
+        Set<Holder<Element>> targetElements = Elements.of(target);
         return actorElements.stream().anyMatch(element -> targetElements.stream()
-                .anyMatch(targetElement -> RegistryCodecs.matches(element.value().overcomes(), targetElement)));
-    }
-
-    private static Set<Holder<Element>> elements(SpiritIdentityAttachment spirit) {
-        return spirit.spiritRoots().stream().flatMap(root -> MxtDatapackRegistries.get(MxtResourceKeys.SPIRIT_ROOT, root).stream())
-                .map(SpiritRoot::element).collect(Collectors.toUnmodifiableSet());
+                .anyMatch(targetElement -> element.value().overcomes(targetElement)));
     }
 
     @Override

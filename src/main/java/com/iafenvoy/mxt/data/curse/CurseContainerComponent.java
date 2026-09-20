@@ -48,7 +48,7 @@ public record CurseContainerComponent(List<ApplyCurseAction> curses) implements 
     }
 
     @Override
-    public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
+    public void addToTooltip(@NonNull TooltipContext context, @NonNull Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
         if (this.curses.isEmpty()) return;
         consumer.accept(Component.translatable("tooltip.mxt.curse_container").withStyle(ChatFormatting.DARK_RED));
         for (ApplyCurseAction action : this.curses) {

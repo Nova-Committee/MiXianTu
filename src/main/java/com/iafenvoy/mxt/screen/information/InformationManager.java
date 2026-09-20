@@ -4,10 +4,13 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -15,6 +18,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap.Entry;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +41,7 @@ public final class InformationManager {
         register("realm", Side.CULTIVATION, InformationManager::realmLines);
         register("cultivation_progress", Side.CULTIVATION, InformationManager::progressLines);
         register("cultivating", Side.CULTIVATION, c -> c.add("info.mxt.cultivating", Component.translatable(c.getData(MxtAttachments.CULTIVATION).cultivating() ? "info.mxt.yes" : "info.mxt.no")));
-        register("spirit_roots", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.spirit_roots", c.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots(), "spirit_root"));
+        register("spirit_roots", Side.CULTIVATION, InformationManager::spiritRootLines);
         register("physiques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.physiques", c.getData(MxtAttachments.SPIRIT_IDENTITY).physiques(), "physique"));
         register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques(), "technique"));
         register("curses", Side.CULTIVATION, InformationManager::curseLines);
@@ -93,6 +97,28 @@ public final class InformationManager {
     }
 
     /**
+     * Lists the held spirit roots, each with the element it is bound to. The root's own name does not say what
+     * it cultivates, and the element is the one thing a player reads a root for - so it is shown here, in the
+     * element's own colour, rather than left to be looked up elsewhere. A root whose element a pack disabled
+     * still appears, because the player holds it; it simply has no element to show.
+     */
+    private static void spiritRootLines(InformationCollector collector) {
+        List<Holder<SpiritRoot>> roots = collector.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots();
+        if (roots.isEmpty()) return;
+        MutableComponent line = Component.empty();
+        for (int index = 0; index < roots.size(); index++) {
+            Holder<SpiritRoot> root = roots.get(index);
+            if (index > 0) line.append(", ");
+            line.append(DefinitionText.name(root, "spirit_root"));
+            Holder<Element> element = root.value().element();
+            if (!Elements.enabled(element)) continue;
+            line.append(Component.literal("(").append(DefinitionText.name(element, "element")).append(")")
+                    .withColor(element.value().color()));
+        }
+        collector.add("info.mxt.spirit_roots", line);
+    }
+
+    /**
      * Displays every chain tracked by the player, using Mortal when no realm is assigned.
      */
     private static void realmLines(InformationCollector collector) {
@@ -123,7 +149,7 @@ public final class InformationManager {
         FormulaContext context = FormulaContext.of(player);
         long gameTime = player.level().getGameTime();
         boolean first = true;
-        for (java.util.Map.Entry<Holder<Curse>, State> entry : player.getData(MxtAttachments.CURSE_HOLDER).instances().entrySet()) {
+        for (Map.Entry<Holder<Curse>, State> entry : player.getData(MxtAttachments.CURSE_HOLDER).instances().entrySet()) {
             if (!entry.getKey().value().displayCondition().test(player, context)) continue;
             Component name = DefinitionText.name(entry.getKey(), "curse");
             if (entry.getValue().stacks() > 1) name = name.copy().append(" ×" + entry.getValue().stacks());

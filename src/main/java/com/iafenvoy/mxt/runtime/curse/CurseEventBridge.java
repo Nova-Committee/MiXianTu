@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
@@ -110,7 +111,7 @@ public final class CurseEventBridge {
         CurseHolderAttachment holder = entity.getData(MxtAttachments.CURSE_HOLDER);
         long gameTime = entity.level().getGameTime();
         FormulaContext context = FormulaContext.of(entity);
-        for (Map.Entry<Identifier, List<ApplyCurseAction>> entry : declared.entrySet()) {
+        for (Entry<Identifier, List<ApplyCurseAction>> entry : declared.entrySet()) {
             Identifier source = entry.getKey();
             Set<Holder<Curse>> wanted = new LinkedHashSet<>();
             for (ApplyCurseAction action : entry.getValue()) {

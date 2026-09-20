@@ -3,10 +3,11 @@ package com.iafenvoy.mxt.runtime.curse;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.data.curse.CurseType;
+import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.curse.CurseService.DefinitionState;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrator;
 import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrators;
@@ -17,7 +18,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.Map;
+import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * The trigger side of a curse: an {@code mxt:triggered} definition runs its periodic behaviour when the trigger
@@ -61,11 +63,11 @@ public final class CurseTriggerSubscriptions {
         if (entity.level().isClientSide()) return;
         TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
         CurseHolderAttachment holder = entity.getData(MxtAttachments.CURSE_HOLDER);
-        for (Map.Entry<Holder<Curse>, State> entry : holder.instances().entrySet()) {
-            if (!(entry.getKey().value().typedType() instanceof CurseType.Triggered triggered)) continue;
+        for (Entry<Holder<Curse>, State> entry : holder.instances().entrySet()) {
+            if (!(entry.getKey().value().typedType() instanceof Triggered(List<Trigger> triggers))) continue;
             Identifier curseId = HolderHelper.id(entry.getKey());
             int index = 0;
-            for (Trigger trigger : triggered.triggers()) {
+            for (Trigger trigger : triggers) {
                 TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), MODULE, curseId + "/" + index++,
                         trigger, signal -> true, signal -> run(entity, entry.getKey(), signal), false));
             }
@@ -79,8 +81,8 @@ public final class CurseTriggerSubscriptions {
     private static void run(Entity entity, Holder<Curse> curse, TriggerSignal signal) {
         if (!entity.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)) return;
         Curse definition = curse.value();
-        if (!(definition.typedType() instanceof CurseType.Triggered)) return;
-        if (CurseService.definitionState(curse) != CurseService.DefinitionState.ACTIVE) return;
+        if (!(definition.typedType() instanceof Triggered)) return;
+        if (CurseService.definitionState(curse) != DefinitionState.ACTIVE) return;
         definition.onTick().execute(entity, signal.context().formula());
     }
 }

@@ -2,9 +2,11 @@ package com.iafenvoy.mxt.command;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -16,22 +18,30 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -47,10 +57,12 @@ public final class AuraCommand {
             .executes(ctx -> openHotbarConfiguration(ctx.getSource()))
             .then(literal("query")
                     .executes(ctx -> queryAura(ctx.getSource(), null))
+                    .then(literal("element")
+                            .then(argument("element", IdentifierArgument.id())
+                                    .suggests((ctx, builder) -> suggest(ctx, builder, MxtResourceKeys.ELEMENT))
+                                    .executes(ctx -> queryElement(ctx.getSource(), IdentifierArgument.getId(ctx, "element")))))
                     .then(argument("type", IdentifierArgument.id())
-                            .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
-                                    MxtDatapackRegistries.holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.ELEMENT)
-                                            .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder))
+                            .suggests((ctx, builder) -> suggest(ctx, builder, MxtResourceKeys.AURA))
                             .executes(ctx -> queryAura(ctx.getSource(), IdentifierArgument.getId(ctx, "type")))))
             .then(literal("vein").executes(ctx -> queryVein(ctx.getSource())))
             .then(literal("cache")
@@ -65,6 +77,18 @@ public final class AuraCommand {
         return 1;
     }
 
+    /**
+     * Suggestions for one datapack registry, read through the enabled-entry accessor so a disabled definition
+     * is never offered. Each argument names the registry it actually resolves, because offering one registry's
+     * ids for another one's lookup is a suggestion that cannot work.
+     */
+    private static <T> CompletableFuture<Suggestions> suggest(
+            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder, ResourceKey<? extends Registry<T>> key) {
+        return SharedSuggestionProvider.suggest(
+                MxtDatapackRegistries.holders(ctx.getSource().getServer().registryAccess(), key)
+                        .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
+    }
+
     private static int queryAura(CommandSourceStack source, Identifier type) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
@@ -75,11 +99,32 @@ public final class AuraCommand {
                 return 0;
             }
             AuraPool pool = aura.pool(holder);
-            source.sendSuccess(() -> auraReport(aura, Map.of(holder, pool)), false);
+            source.sendSuccess(() -> auraReport(aura, Map.of(holder, pool), null), false);
             return 1;
         }
-        source.sendSuccess(() -> auraReport(aura, aura.aura()), false);
+        source.sendSuccess(() -> auraReport(aura, aura.aura(), null), false);
         return 1;
+    }
+
+    /**
+     * Every aura of one element at this position. The question is asked of the element because several auras
+     * can carry the same {@code aura_type}: a pack that groups its auras by element wants one answer, not the
+     * list of ids it would otherwise have to keep in sync by hand.
+     */
+    private static int queryElement(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        Reference<Element> element = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, id).orElse(null);
+        if (element == null) {
+            source.sendFailure(Component.translatable("command.mxt.aura.unknown_element", id.toString()));
+            return 0;
+        }
+        AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
+        Map<Holder<Aura>, AuraPool> pools = new LinkedHashMap<>();
+        aura.aura().forEach((holder, pool) -> {
+            if (holder.value().auraType().filter(element::equals).isPresent()) pools.put(holder, pool);
+        });
+        source.sendSuccess(() -> auraReport(aura, pools, DefinitionText.name(element, "element")), false);
+        return pools.size();
     }
 
     private static int queryVein(CommandSourceStack source) throws CommandSyntaxException {
@@ -96,8 +141,10 @@ public final class AuraCommand {
         return cleared;
     }
 
-    private static Component auraReport(AuraResult aura, Map<? extends Holder<Aura>, AuraPool> pools) {
+    private static Component auraReport(AuraResult aura, Map<? extends Holder<Aura>, AuraPool> pools, @Nullable Component filter) {
         MutableComponent report = Component.translatable("command.mxt.aura.query.header").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+        if (filter != null)
+            report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.filter", filter).withStyle(ChatFormatting.GRAY));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.source", sourceName(aura), Component.translatable("command.mxt.aura.source_kind." + aura.sourceKind().name().toLowerCase(Locale.ROOT))));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.suppressed", aura.suppressCultivate()));
         report.append(Component.literal("\n")).append(Component.translatable("command.mxt.aura.query.elements").withStyle(ChatFormatting.GRAY));
@@ -113,6 +160,7 @@ public final class AuraCommand {
     private static Component resourceName(Holder<Aura> aura) {
         MutableComponent base = DefinitionText.name(aura, "aura");
         return aura.value().auraType()
+                .filter(Elements::enabled)
                 .map(type -> base.copy().append(" (").append(DefinitionText.name(type, "element")).append(")")).orElse(base);
     }
 

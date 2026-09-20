@@ -2,6 +2,9 @@ package com.iafenvoy.mxt.data.curse;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.curse.CurseType.Timed;
+import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
+import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -12,6 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 import org.jspecify.annotations.NonNull;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -54,10 +58,12 @@ public record Curse(CurseType typedType, NumberProvider durationTicks, NumberPro
      * is evaluated, where an unusable result rejects that one application instead of throwing.
      */
     private static DataResult<Curse> validate(Curse curse) {
-        if (curse.typedType() == CurseType.Timed.INSTANCE && curse.durationTicks() instanceof Constant constant
-                && constant.value() <= 0.0D)
+        if (curse.typedType() == Timed.INSTANCE && curse.durationTicks() instanceof Constant(double value)
+                && value <= 0.0D)
             return DataResult.error(() -> "An mxt:timed curse needs a positive duration_ticks");
-        if (curse.typedType() instanceof CurseType.Triggered triggered && triggered.triggers().isEmpty())
+        if (curse.typedType() instanceof Triggered(
+                List<Trigger> triggers
+        ) && triggers.isEmpty())
             return DataResult.error(() -> "An mxt:triggered curse needs at least one entry in triggers");
         return DataResult.success(curse);
     }

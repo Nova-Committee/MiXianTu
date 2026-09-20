@@ -179,7 +179,7 @@ public final class FormationWorldTicker {
             if (!previous.contains(entity.getUUID())) definition.entityEnterAction().execute(context);
             // The function modules run before the definition's own hook, so a pack customising the tick
             // sees the state the array left behind rather than the state before it acted.
-            FormationActionRunner.perEntity(level, definition, instance, entity, context, owner, ownerId);
+            FormationActionRunner.perEntity(definition, instance, entity, context, owner, ownerId);
             definition.entityTickAction().execute(context);
         }
         FormationEntityActions.remember(level, controller, present);

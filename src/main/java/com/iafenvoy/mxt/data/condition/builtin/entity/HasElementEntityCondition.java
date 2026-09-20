@@ -1,0 +1,41 @@
+package com.iafenvoy.mxt.data.condition.builtin.entity;
+
+import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.mojang.datafixers.util.Either;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
+import net.minecraft.tags.TagKey;
+import org.jspecify.annotations.NonNull;
+
+import java.util.List;
+import java.util.Set;
+
+/**
+ * True when any element the entity's spirit roots name is one of the listed ones.
+ *
+ * <p>This is the coarse half of what {@code mxt:has_spirit_root} asks: a pack that means "a fire cultivator"
+ * writes the element (or an element tag), and stays right when a later data pack adds another way to be one.
+ * Roots and elements that a pack disabled are not part of the answer, exactly as everywhere else.</p>
+ */
+public record HasElementEntityCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements EntityCondition {
+    public static final MapCodec<HasElementEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(HasElementEntityCondition::elements)
+    ).apply(i, HasElementEntityCondition::new));
+
+    @Override
+    public boolean test(@NonNull EntityConditionContext ctx) {
+        Set<Holder<Element>> held = Elements.of(ctx.entity());
+        return held.stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
+    }
+
+    @Override
+    public @NonNull MapCodec<HasElementEntityCondition> codec() {
+        return CODEC;
+    }
+}

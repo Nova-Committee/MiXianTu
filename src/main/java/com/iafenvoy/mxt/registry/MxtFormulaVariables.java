@@ -2,8 +2,10 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
@@ -72,7 +74,10 @@ public final class MxtFormulaVariables {
     }
 
     /**
-     * Health, vanilla experience level, and one name per resource and per attribute the entity has.
+     * Health, vanilla experience level, one name per resource and per attribute the entity has, and one name
+     * per element plus a count. An element name answers {@code 1} or {@code 0}, because what a formula can ask
+     * about an element is whether this entity is one of its cultivators - the relations themselves are the
+     * damage pipeline's business, and read the same way there.
      */
     private static final class EntityVariable implements FormulaVariable {
         private static final Map<EntityType<?>, Set<Holder<Attribute>>> SYNCABLE_ATTRIBUTES = new ConcurrentHashMap<>();
@@ -104,6 +109,7 @@ public final class MxtFormulaVariables {
                 case "max_health" ->
                         entity instanceof LivingEntity living ? (double) living.getMaxHealth() : Double.NaN;
                 case "level" -> entity instanceof ServerPlayer player ? (double) player.experienceLevel : 0.0D;
+                case "element_count" -> (double) Elements.of(entity).size();
                 default -> state(entity, suffix);
             };
         }
@@ -119,7 +125,10 @@ public final class MxtFormulaVariables {
                 return instance.getValue();
             }
             Holder<Resource> resource = FormulaNames.resource(living.level().registryAccess(), field);
-            return resource == null ? Double.NaN : living.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
+            if (resource != null) return living.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
+            Holder<Element> element = FormulaNames.element(living.level().registryAccess(), field);
+            if (element == null) return Double.NaN;
+            return Elements.of(living).contains(element) ? 1.0D : 0.0D;
         }
 
         /**

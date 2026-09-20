@@ -59,6 +59,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.AURA, Aura.DIRECT_CODEC);
         register(event, MxtResourceKeys.REALM_STAGE, RealmStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.ELEMENT, Element.DIRECT_CODEC);
+        register(event, MxtResourceKeys.ELEMENT_REACTION, ElementReaction.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_ROOT, SpiritRoot.DIRECT_CODEC);
         register(event, MxtResourceKeys.PHYSIQUE, Physique.DIRECT_CODEC);
         register(event, MxtResourceKeys.ABILITY, Ability.DIRECT_CODEC);

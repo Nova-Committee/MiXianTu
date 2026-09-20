@@ -18,9 +18,13 @@ import java.util.Optional;
  * not one owner, so techniques share a chain and each enters at the stage it declares as default.
  * {@code next_stage} is a holder reference, so a broken chain is only detectable at runtime. {@code mastery}
  * belongs to the level, and {@code 0} asks for none.
+ *
+ * <p>{@code damage_multiplier} is read by the damage pipeline: a casting ability exposes the multiplier of the
+ * level the caster stands on as the formula value {@code damage_multiplier}, and
+ * {@code DamageCalculationService} applies it to the attacker's side of every hit the ability deals. The
+ * multiplier therefore belongs to the abilities a chain grants at that level, not to everything the holder
+ * does.</p>
  */
-//TODO::Consume damage_multiplier once a damage pipeline exists: either expose the caster's stage
-// multiplier as a formula value or multiply inside DamageAction. See research/audit/technique.md T10.
 public record SkillStage(Identifier skill, Optional<Holder<SkillStage>> nextStage, NumberProvider mastery,
                          double damageMultiplier) {
     public static final Codec<Holder<SkillStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SKILL_STAGE);

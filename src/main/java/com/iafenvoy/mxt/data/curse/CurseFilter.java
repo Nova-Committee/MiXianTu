@@ -14,7 +14,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 
 /**
@@ -36,7 +36,7 @@ public record CurseFilter(Optional<Holder<Curse>> curse, List<TagKey<Curse>> tag
 
     public boolean test(Entity entity, FormulaContext context) {
         long gameTime = entity.level().getGameTime();
-        for (Map.Entry<Holder<Curse>, State> entry : entity.getData(MxtAttachments.CURSE_HOLDER).instances().entrySet()) {
+        for (Entry<Holder<Curse>, State> entry : entity.getData(MxtAttachments.CURSE_HOLDER).instances().entrySet()) {
             if (this.matches(entry.getKey(), entry.getValue(), gameTime, context)) return true;
         }
         return false;
@@ -53,7 +53,7 @@ public record CurseFilter(Optional<Holder<Curse>> curse, List<TagKey<Curse>> tag
         if (this.remainingTicks.isPresent()) {
             // A permanent instance never runs out: it answers a lower bound but never an upper one.
             double remaining = state.expiresAt() < 0L ? Double.POSITIVE_INFINITY : state.expiresAt() - gameTime;
-            if (!this.remainingTicks.get().test(remaining, context)) return false;
+            return this.remainingTicks.get().test(remaining, context);
         }
         return true;
     }

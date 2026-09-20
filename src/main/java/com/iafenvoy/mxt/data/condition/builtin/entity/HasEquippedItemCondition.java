@@ -45,17 +45,17 @@ public record HasEquippedItemCondition(ItemCondition itemCondition, List<String>
         if (!(entity instanceof LivingEntity living)) return false;
         if (this.slots.isEmpty()) {
             for (EquipmentSlot slot : EquipmentSlot.values())
-                if (matches(living, living.getItemBySlot(slot), ctx)) return true;
-            return CuriosIntegration.equipped(living).stream().anyMatch(stack -> matches(living, stack, ctx));
+                if (this.matches(living, living.getItemBySlot(slot), ctx)) return true;
+            return CuriosIntegration.equipped(living).stream().anyMatch(stack -> this.matches(living, stack, ctx));
         }
         for (String name : this.slots) {
             if (name.startsWith(CURIOS_PREFIX)) {
                 if (CuriosIntegration.equippedIn(living, name.substring(CURIOS_PREFIX.length())).stream()
-                        .anyMatch(stack -> matches(living, stack, ctx))) return true;
+                        .anyMatch(stack -> this.matches(living, stack, ctx))) return true;
                 continue;
             }
             EquipmentSlot slot = VANILLA_SLOTS.get(name);
-            if (slot != null && matches(living, living.getItemBySlot(slot), ctx)) return true;
+            if (slot != null && this.matches(living, living.getItemBySlot(slot), ctx)) return true;
         }
         return false;
     }

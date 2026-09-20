@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
+import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -195,7 +195,7 @@ public final class MxtKubeJsApi {
     }
 
     public static int curseStacks(@NotNull Entity target, Identifier id) {
-        return findCurse(target, id).map(CurseHolderAttachment.State::stacks).orElse(0);
+        return findCurse(target, id).map(State::stacks).orElse(0);
     }
 
     /**
@@ -208,7 +208,7 @@ public final class MxtKubeJsApi {
                 .orElse(0L);
     }
 
-    private static Optional<CurseHolderAttachment.State> findCurse(Entity target, Identifier id) {
+    private static Optional<State> findCurse(Entity target, Identifier id) {
         return findCurseHolder(target, id)
                 .map(curse -> target.getData(MxtAttachments.CURSE_HOLDER).instances().get(curse));
     }

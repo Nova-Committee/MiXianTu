@@ -7,32 +7,26 @@
 - `mxt:back_weapon_auto`
 - `mxt:belt_item_auto`
 
-Jupiter server config 文件 `config/mxt-server.json` 中的 `curios` 部分控制自动验证范围。该配置会随服务器同步给客户端，容器名称为 `MxtServerConfig`：
+服务端配置的**「饰品栏」标签页**控制自动验证范围，改完由服务端同步给客户端：
 
-```json
-{
-  "curios": {
-    "back_mode": "MANUAL",
-    "belt_mode": "MANUAL",
-    "force_render_slots": false
-  }
-}
-```
+| 条目 | 默认 | 可选值 |
+| --- | --- | --- |
+| 背部槽位 | 手动 | 手动 / 仅武器 / 全部 |
+| 腰部槽位 | 手动 | 手动 / 武器与灵宝 / 全部 |
+| 强制渲染 | 关 | 开 / 关 |
 
-文件里的键都很短，界面上看到的名字与提示由翻译键给出（`config.mxt.server.curios.*`）。旧文件里写成整条路径的键（`config.mxt.server.curios.back_mode`）在读取时会被自动翻译成新键，不需要手工改。
+**背部槽位**可选**手动**、**仅武器**、**全部**：
 
-`back_mode` 可选 `MANUAL`、`WEAPONS`、`ALL`：
+- **手动**：自动验证不允许额外物品，只有 `curios:tag` 允许的物品可放入。
+- **仅武器**：在 tag 物品之外，允许匹配 `weapon_binding` 的物品。
+- **全部**：在 tag 物品之外，允许所有物品。
 
-- `MANUAL`：自动验证不允许额外物品，只有 `curios:tag` 允许的物品可放入。
-- `WEAPONS`：在 tag 物品之外，允许匹配 `weapon_binding` 的物品。
-- `ALL`：在 tag 物品之外，允许所有物品。
+**腰部槽位**可选**手动**、**武器与灵宝**、**全部**：
 
-`belt_mode` 可选 `MANUAL`、`WEAPONS_ARTIFACTS`、`ALL`：
-
-- `MANUAL`：只允许 `curios:tag`。
-- `WEAPONS_ARTIFACTS`：额外允许已匹配 `weapon_binding` 的武器，以及已经绑定 `item_archetype` 的灵宝。
-- `ALL`：在 tag 物品之外，允许所有物品。
+- **手动**：只允许 `curios:tag`。
+- **武器与灵宝**：额外允许已匹配 `weapon_binding` 的武器，以及已经绑定 `item_archetype` 的灵宝。
+- **全部**：在 tag 物品之外，允许所有物品。
 
 两个验证器是“额外允许”逻辑，不会覆盖或修改 `curios:tag`。其他模组也可以通过 Curios API 注册自己的 validator，但不能通过数据包创建新的验证算法。
 
-Curios 的槽位界面按钮会控制每个槽位的 `getRenders()` 状态以及槽位整体的可见状态；本模组的背部和腰部渲染会遵守这些状态。`config/mxt-server.json` 的 `curios.force_render_slots` 为 `true` 时，仅强制显示本模组的背部和腰部槽位，不影响其他模组槽位。
+Curios 的槽位界面按钮会控制每个槽位的 `getRenders()` 状态以及槽位整体的可见状态；本模组的背部和腰部渲染会遵守这些状态。服务端配置「饰品栏 → 强制渲染」打开时，仅强制显示本模组的背部和腰部槽位，不影响其他模组槽位。

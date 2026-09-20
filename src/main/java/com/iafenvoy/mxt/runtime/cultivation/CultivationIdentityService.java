@@ -28,6 +28,10 @@ public final class CultivationIdentityService {
         Holder<SpiritRoot> root = MxtDatapackRegistries.holder(MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
         if (root == null) return Result.rejected(Failure.DISABLED);
         if (spirit.spiritRoots().contains(root)) return Result.rejected(Failure.ALREADY_HELD);
+        // A root may rule out another root's element, in either direction: the rule is written once, on
+        // whichever of the two the pack thought of first, and the check reads both.
+        if (spirit.spiritRoots().stream().anyMatch(held -> held.value().conflictsWith(root.value())))
+            return Result.rejected(Failure.ELEMENT_CONFLICT);
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
         roots.add(root);
         spirit.setSpiritRoots(roots);
@@ -76,7 +80,7 @@ public final class CultivationIdentityService {
         return true;
     }
 
-    public enum Failure {DISABLED, ALREADY_HELD, CONDITIONS, EXCLUSIVE_CONFLICT}
+    public enum Failure {DISABLED, ALREADY_HELD, CONDITIONS, EXCLUSIVE_CONFLICT, ELEMENT_CONFLICT}
 
     public record Result(boolean changed, Failure failure) {
         private static Result changedResult() {

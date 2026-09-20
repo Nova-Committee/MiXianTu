@@ -317,6 +317,21 @@ public boolean reconcileSource(Identifier source, Collection<Holder<Ability>> de
 
 `attackers` 的取值需要用 `Context` 扩展数据（携带者）或 `FormulaContext.caster()`，所以 **E 依赖 §4 的携带者**，排序上应在 A/B/C 之后。
 
+### 6.4 已落地（2026-09-20，D1 统一伤害管线）
+
+统一管线已经做了，落点与本节的建议略有出入，以实际实现为准：
+
+- 新增 `runtime/damage/DamageCalculationService`：**第一层出力**在发伤害处结算（基础值 × 施放带来的
+  `damage_multiplier` × 攻击者灵根对目标灵根的 `overcomes[].multiplier`），**第二层减免**在
+  `LivingIncomingDamageEvent`（`DamageEventBridge`）里按受击者的 `adapted_to[].multiplier` 结算。
+- **没有**新增 `mxt:typed_damage`，也没有给 `mxt:damage` 加字段：`damage_type` 仍由各路径自带
+  （阵法 `AttackFormationAction` 本来就有），需要类型的内容自己写 `damage_type`。
+- 归属统一在 `DamageCalculationService.source(...)` 里构造：有 `damage_type` 就用它并把加害者记为起因，
+  没有就按原版 `playerAttack`/`mobAttack`/`generic` 选择。`FormationActionRunner` 里那段私有实现已删除，
+  阵法攻击模块现在直接调管线（`attribute_to_owner` 决定 `owner` 是否作为加害者传入）。
+- 因此 §6.2 的缺口同时关闭：`mxt:damage_target` 从此把施加者记为加害者，
+  `mxt:damage` 只在"打的对象不是施法者自己"时记归属（反噬/丹毒保留无主语义，见 `DamageAction` 类注释）。
+
 ---
 
 ## 7. 重排后的优先级
