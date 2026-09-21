@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.artifact.ability.EmptyArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -25,4 +26,6 @@ public final class MxtArtifactAbilityTypes {
             REGISTRY.register("flight", () -> FlightArtifactAbility.CODEC);
     public static final DeferredHolder<MapCodec<? extends ArtifactAbility>, MapCodec<StorageArtifactAbility>> STORAGE =
             REGISTRY.register("storage", () -> StorageArtifactAbility.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ArtifactAbility>, MapCodec<UpkeepArtifactAbility>> UPKEEP =
+            REGISTRY.register("upkeep", () -> UpkeepArtifactAbility.CODEC);
 }

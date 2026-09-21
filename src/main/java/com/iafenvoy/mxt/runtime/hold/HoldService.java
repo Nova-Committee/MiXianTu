@@ -67,9 +67,9 @@ public final class HoldService {
      * <p>
      * A sneaking click is never a hold: shift is how a player asks an item for its <em>other</em> behaviour, and a
      * hold that armed itself here would swallow that click - the item's own {@code use} is not reached while a
-     * cycle is running, so the only way to let it answer is not to start one. This is also why the check is here
-     * rather than in the hold's own {@code claims}: whether a stack is holdable is a property of the stack, while
-     * who is clicking it is not.
+     * cycle is running, so the only way to let it answer is not to start one. Sneaking is therefore decided here
+     * rather than in the hold's own {@code claims}: it belongs to the click, and a declaration that answered it
+     * would have to know about a verb it does not own.
      * <p>
      * Both sides write it, because each answers its own copy of the cycle; writing it on the server alone is what
      * broke the first attempt at this, where the client ran a zero-length, animation-less cycle. Both sides ask
@@ -77,19 +77,22 @@ public final class HoldService {
      */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onItemUse(RightClickItem event) {
-        if (event.getEntity().isShiftKeyDown()) return;
-        ItemStack stack = event.getEntity().getItemInHand(event.getHand());
+        LivingEntity entity = event.getEntity();
+        if (entity.isShiftKeyDown()) return;
+        ItemStack stack = entity.getItemInHand(event.getHand());
         HoldBinding hold = HoldLookup.hold(stack);
         if (hold == null) return;
-        Provider registries = event.getEntity().level().registryAccess();
-        if (!hold.claims(registries, stack)) return;
+        Provider registries = entity.level().registryAccess();
+        // The holder is part of the question: a declaration may refuse a stack for one reader and take it for
+        // another, and a refusal here is what lets the item answer the click itself.
+        if (!hold.claims(entity, registries, stack)) return;
         // An item that declares its own use keeps it. Nothing is armed here, which also means nothing is taken
         // off it later: the hold module only ever takes back the component it wrote itself.
         if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, hold)) return;
         // The reader's copy is the one that makes the sound, so it carries the declaration's own; the server's
         // copy only has to answer "how long" and "which pose" before it is taken off again, so it stays quiet.
-        if (event.getEntity().level().isClientSide()) arm(registries, stack, hold);
-        else armQuietly(registries, stack, hold);
+        if (entity.level().isClientSide()) arm(registries, entity, stack, hold);
+        else armQuietly(registries, entity, stack, hold);
     }
 
     /**
@@ -120,8 +123,8 @@ public final class HoldService {
         if (entity.level().isClientSide()) {
             // Two stacks can carry the read on this side: the entity's own use stack, and whatever the hand slot
             // holds now - a slot sync can replace the latter mid-read, and the pose is drawn from it.
-            keepArmed(registries, event.getItem());
-            keepArmed(registries, entity.getItemInHand(entity.getUsedItemHand()));
+            keepArmed(registries, entity, event.getItem());
+            keepArmed(registries, entity, entity.getItemInHand(entity.getUsedItemHand()));
             return;
         }
         ItemStack stack = event.getItem();
@@ -144,8 +147,8 @@ public final class HoldService {
      * consumable's sound off the stack during the hold, and the reader's client is the one place that can be
      * relied on to hear it.
      */
-    public static void arm(Provider registries, ItemStack stack, HoldBinding hold) {
-        arm(registries, stack, hold, hold.holdSound());
+    public static void arm(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold) {
+        arm(registries, holder, stack, hold, hold.holdSound());
     }
 
     /**
@@ -153,15 +156,15 @@ public final class HoldService {
      * taken off again the moment the cycle starts, and the sound for everyone else is played by the server itself
      * (see {@link #playHoldSound}) rather than from a stack's component.
      */
-    public static void armQuietly(Provider registries, ItemStack stack, HoldBinding hold) {
-        arm(registries, stack, hold, SILENT_SOUND);
+    public static void armQuietly(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold) {
+        arm(registries, holder, stack, hold, SILENT_SOUND);
     }
 
-    private static void arm(Provider registries, ItemStack stack, HoldBinding hold, Holder<SoundEvent> sound) {
+    private static void arm(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold, Holder<SoundEvent> sound) {
         // The same refusal the click path makes, kept here as well so the one writer in this class cannot be used
         // to take an item's own use away from it: see {@link #ours}.
         if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, hold)) return;
-        stack.set(DataComponents.CONSUMABLE, consumable(hold, sound, hold.holdTicks(registries, stack)));
+        stack.set(DataComponents.CONSUMABLE, consumable(hold, sound, hold.holdTicks(holder, registries, stack)));
     }
 
     private static Consumable consumable(HoldBinding hold, Holder<SoundEvent> sound, int ticks) {
@@ -201,10 +204,10 @@ public final class HoldService {
      * loop asks for the duration and the pose. Re-supplying it on every client tick is what keeps the pose alive
      * across that sync; a stack that still has it, or that is no hold, is left alone.
      */
-    public static void keepArmed(Provider registries, ItemStack stack) {
+    public static void keepArmed(Provider registries, LivingEntity holder, ItemStack stack) {
         if (stack.isEmpty() || stack.has(DataComponents.CONSUMABLE)) return;
         HoldBinding hold = HoldLookup.hold(stack);
-        if (hold != null && hold.claims(registries, stack)) arm(registries, stack, hold);
+        if (hold != null && hold.claims(holder, registries, stack)) arm(registries, holder, stack, hold);
     }
 
     /**
@@ -218,7 +221,7 @@ public final class HoldService {
      */
     public static boolean playHoldSound(LivingEntity entity, HoldBinding hold, ItemStack stack, int remaining) {
         Holder<SoundEvent> sound = hold.holdSound();
-        int ticks = hold.holdTicks(entity.level().registryAccess(), stack);
+        int ticks = hold.holdTicks(entity, entity.level().registryAccess(), stack);
         Consumable emitter = consumable(hold, sound, ticks);
         if (!emitter.shouldEmitParticlesAndSounds(remaining)) return false;
         entity.level().playSound(entity instanceof Player reader ? reader : null,

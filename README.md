@@ -20,7 +20,7 @@ the changelog.**
 
 ## Links
 
-- **[Documentation](https://docs.iafenvoy.com/docs/mod/mxt)**: full documentation for datapacks, KubeJS and Java
+- **[Documentation](https://mxt.iafenvoy.com/)**: full documentation for datapacks, KubeJS and Java
   development. **Still being written**, and will keep being updated.
 - **[Datapack Visual Editor](https://datapack.mcdev.tech/)**: edit this mod's datapacks in the browser as a form, with
   field descriptions and registry completion, so you never have to write JSON by hand.

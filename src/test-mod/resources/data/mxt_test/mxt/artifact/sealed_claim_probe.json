@@ -1,0 +1,7 @@
+{
+  "items": "minecraft:glowstone_dust",
+  "spirit_capacity": { "mxt_test:qi": 10 },
+  "hold_ticks": 5,
+  "claim_action": { "type": "mxt:consume_health", "amount": 1 },
+  "claim_condition": { "type": "mxt:never" }
+}

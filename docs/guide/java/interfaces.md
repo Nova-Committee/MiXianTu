@@ -16,7 +16,7 @@ title: 特殊公开接口
 
 ### `UseItemAuraAccess`
 
-让物品**按住右键灌注灵气**的接口，继承 `ItemAuraAccess`：`HoldBinding`/`HoldService` 负责手势与姿势，`SpiritChargeService` 每 tick 从持有者自己的灵气池取出并写入 `insert`。实现它**不代表**要自己描述形状——灵石就实现了它，却把 `pour` 留空，于是走 `item_aura` 定义那条共享读法。它表达的是"这个物品可以被按住灌"，不是"这个物品是特殊的"。不实现它的存储（比如只用来存东西的通用物品）永远不会被武装成手势。
+让物品**按住右键灌注灵气**的接口，继承 `ItemAuraAccess`：`HoldBinding`/`HoldService` 负责手势与姿势，`SpiritChargeService` 每 tick 从持有者自己的灵气池取出并写入 `insert`。实现它**不代表**要自己描述形状——灵石就实现了它，却把 `pour` 留空，于是走 `item_aura` 定义那条共享读法。它表达的是"这个物品可以被按住灌"，不是"这个物品是特殊的"。不实现它的存储（比如只用来存东西的通用物品）永远不会被武装成手势。`HoldBinding` 另外提供一对**带持有者**的默认重载（`claims(LivingEntity, Provider, ItemStack)` 与 `holdTicks(LivingEntity, Provider, ItemStack)`）——不关心是谁拿着的声明不用实现它们；法器就是靠这一对做到"归别人就不接管这次右键"（见 `docs/数据包格式.md` 的 `artifact`）。
 
 拆成两个接口是因为"存储"与"被灌"不是一回事：存储能被问在任何地方，被灌只发生在一个人对着自己手里那一堆做手势的时候。三个默认方法对应手势的三个时刻：
 

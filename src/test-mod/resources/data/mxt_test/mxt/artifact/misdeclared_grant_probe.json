@@ -1,5 +1,4 @@
 {
-  "item_type": "misdeclared_bead",
   "items": "minecraft:echo_shard",
   "abilities": [
     { "type": "mxt:passive", "abilities": "mxt_test:firebolt" }

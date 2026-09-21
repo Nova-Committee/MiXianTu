@@ -1,5 +1,4 @@
 {
-  "item_type": "flying_sword",
   "items": "minecraft:iron_sword",
   "spirit_capacity": { "mxt_test:qi": 60 },
   "abilities": [

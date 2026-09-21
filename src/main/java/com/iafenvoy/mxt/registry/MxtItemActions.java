@@ -24,6 +24,7 @@ public final class MxtItemActions {
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<DamageItemAction>> DAMAGE_ITEM = REGISTRY.register("damage_item", () -> DamageItemAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<ConsumeItemAction>> CONSUME_ITEM = REGISTRY.register("consume_item", () -> ConsumeItemAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<ChargeArtifactItemAction>> CHARGE_ARTIFACT = REGISTRY.register("charge_artifact", () -> ChargeArtifactItemAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<ConsumeHealthItemAction>> CONSUME_HEALTH = REGISTRY.register("consume_health", () -> ConsumeHealthItemAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<ChanceAction>> CHANCE = REGISTRY.register("chance", () -> ChanceAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<IfElseAction>> IF_ELSE = REGISTRY.register("if_else", () -> IfElseAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<ChoiceAction>> CHOICE = REGISTRY.register("choice", () -> ChoiceAction.CODEC);

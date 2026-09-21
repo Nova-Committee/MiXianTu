@@ -89,9 +89,22 @@ public final class CuriosIntegration {
                 .orElseGet(List::of);
     }
 
+    /**
+     * The same stacks as {@link #equipped}, but as the handler's own stacks rather than copies, for a caller that
+     * writes to them - an upkeep penalty that wears or consumes the artifact it belongs to, for instance. The
+     * copied reading stays the default: a caller that only reads has no business holding a live stack.
+     */
+    public static List<ItemStack> equippedLive(LivingEntity entity) {
+        Optional<ICuriosItemHandler> optional = CuriosApi.getCuriosInventory(entity);
+        ArrayList<ItemStack> result = new ArrayList<>();
+        if (optional.isEmpty()) return result;
+        for (ICurioStacksHandler handler : optional.get().getCurios().values()) result.addAll(stacks(handler, false));
+        return result;
+    }
+
     private static List<ItemStack> equipped(ICuriosItemHandler inventory) {
         ArrayList<ItemStack> result = new ArrayList<>();
-        for (ICurioStacksHandler handler : inventory.getCurios().values()) result.addAll(stacks(handler));
+        for (ICurioStacksHandler handler : inventory.getCurios().values()) result.addAll(stacks(handler, true));
         return result;
     }
 
@@ -107,11 +120,15 @@ public final class CuriosIntegration {
     }
 
     private static List<ItemStack> stacks(ICurioStacksHandler handler) {
+        return stacks(handler, true);
+    }
+
+    private static List<ItemStack> stacks(ICurioStacksHandler handler, boolean copy) {
         IDynamicStackHandler stacks = handler.getStacks();
         ArrayList<ItemStack> result = new ArrayList<>();
         for (int index = 0; index < stacks.getSlots(); index++) {
             ItemStack stack = stacks.getStackInSlot(index);
-            if (!stack.isEmpty()) result.add(stack.copy());
+            if (!stack.isEmpty()) result.add(copy ? stack.copy() : stack);
         }
         return result;
     }

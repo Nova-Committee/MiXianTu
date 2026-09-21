@@ -1,5 +1,4 @@
 {
-  "item_type": "sword",
   "items": "minecraft:diamond_sword",
   "spirit_capacity": {
     "mxt_test:qi": 100,

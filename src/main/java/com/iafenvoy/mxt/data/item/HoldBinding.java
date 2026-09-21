@@ -8,6 +8,7 @@ import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 
@@ -53,12 +54,38 @@ public interface HoldBinding extends ItemMatcher {
     }
 
     /**
+     * The same question with the entity that is holding the stack in hand.
+     *
+     * <p>A hold whose answer depends on <em>who</em> holds it - one that only takes over the click for its own
+     * owner, say - has nowhere else to ask it: matching is a property of the item, and the stack says nothing
+     * about the reader. The holder is therefore passed down from the click and the use cycle, which are the
+     * two paths that already know it; a declaration that does not care keeps the default and never sees it.</p>
+     */
+    default int holdTicks(LivingEntity holder, Provider registries, ItemStack stack) {
+        return this.holdTicks(registries, stack);
+    }
+
+    /**
      * Whether this declaration drives this stack at all. A declaration that answers for every stack that
      * matches it keeps the default; one that only takes some of them - everything that is chargeable, say -
      * answers through {@link #holdTicks(Provider, ItemStack)}.
      */
     default boolean claims(Provider registries, ItemStack stack) {
         return this.holdTicks(registries, stack) > NO_HOLD;
+    }
+
+    /**
+     * Whether this declaration drives this stack for this holder, who may be refused where a stack alone cannot
+     * be: the entity-aware counterpart of {@link #claims(Provider, ItemStack)}, and the reason the holder is
+     * threaded through the hold module at all.
+     *
+     * <p>A refusal here is not an error and not a message: the click is simply not taken over, so the item
+     * answers it the way it would without this declaration. Both sides ask it and must agree, which is why an
+     * implementation reads only state the two sides share - synced components and synced registries - and
+     * leaves anything about the wider world (a full pool, a failed condition) to the tick and finish paths.</p>
+     */
+    default boolean claims(LivingEntity holder, Provider registries, ItemStack stack) {
+        return this.claims(registries, stack);
     }
 
     /**

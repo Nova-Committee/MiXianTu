@@ -1,5 +1,4 @@
 {
-  "item_type": "beast_bell",
   "items": "minecraft:bell",
   "spirit_capacity": { "mxt_test:qi": "30 * 2" },
   "abilities": [

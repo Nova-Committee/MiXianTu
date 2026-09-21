@@ -3,9 +3,11 @@ package com.iafenvoy.mxt.network;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
 import com.iafenvoy.mxt.network.payload.ItemPickerS2CPayload;
+import com.iafenvoy.mxt.network.payload.OwnerNameS2CPayload;
 import com.iafenvoy.mxt.screen.picker.ItemPickerScreen;
 import com.iafenvoy.mxt.screen.overlay.hotbar.HotbarModeRegistry;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
+import com.iafenvoy.mxt.util.ClientPlayerNames;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -29,5 +31,13 @@ public final class ClientNetworkHandler {
             ItemPickerScreen screen = ItemPickerScreen.opening(payload.title(), payload.categories());
             if (screen != null) Minecraft.getInstance().setScreen(screen);
         });
+    }
+
+    /**
+     * Keeps the name the server gave for an owner id. Nothing is redrawn here: a tooltip is rebuilt every frame
+     * it is shown, so the name appears the next time the reader looks at the item.
+     */
+    static void onOwnerName(OwnerNameS2CPayload payload, IPayloadContext context) {
+        ClientPlayerNames.remember(payload.owner(), payload.name());
     }
 }

@@ -20,17 +20,22 @@ import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
+
+import java.util.Optional;
 
 
 public final class ServerNetworkHandler {
@@ -145,5 +150,18 @@ public final class ServerNetworkHandler {
         HotbarLayoutAttachment attachment = player.getData(MxtAttachments.HOTBAR_LAYOUT);
         if (payload.slots().size() > 9) return;
         attachment.setSlots(payload.mode(), payload.slots());
+    }
+
+    /**
+     * Answers what an owner id is called, out of what this server already knows: the player if they are online,
+     * otherwise the name its profile cache kept from a previous login. Nothing is fetched - see
+     * {@link PlayerNames#knownToServer} - so answering costs a map lookup rather than a web request, and a
+     * player this server has never seen is answered with nothing, which leaves the asking client showing the id
+     * it already had.
+     */
+    static void onOwnerNameRequest(OwnerNameC2SPayload payload, IPayloadContext context) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        Optional<String> name = server == null ? Optional.empty() : PlayerNames.knownToServer(server, payload.owner());
+        context.reply(new OwnerNameS2CPayload(payload.owner(), name));
     }
 }

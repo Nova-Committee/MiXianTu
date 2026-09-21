@@ -16,8 +16,9 @@ title: 网络协议与服务端权威
 | `CultivationToggleC2SPayload` | 请求切换修炼模式。 |
 | `FlightToggleC2SPayload` | 请求开关一种飞行状态；服务端仍校验请求的 `archetype`。 |
 | `HotbarLayoutC2SPayload` | 配置界面关闭时把完整的快捷栏布局送回服务端。 |
+| `OwnerNameC2SPayload` | 问某个归属 UUID 叫什么名字（只带 id）。服务端只查在线玩家列表与持久化的名字缓存，**不查会话服务**——那是网络请求，而处理器跑在主线程上。 |
 
-服务端向客户端同步动态注册表、资源/灵气必要状态（`AuraStateS2CPayload`）和附件，并按需下发 `HotbarConfigurationS2CPayload`（让客户端打开某个模式的快捷栏配置界面）与 `ItemPickerS2CPayload`（打开物品选择器，只带标题和分类 id，不带物品）。不要把客户端传入的数值当作可信结果；payload 只应传 ID、选择和操作意图。
+服务端向客户端同步动态注册表、资源/灵气必要状态（`AuraStateS2CPayload`）和附件，并按需下发 `HotbarConfigurationS2CPayload`（让客户端打开某个模式的快捷栏配置界面）、`ItemPickerS2CPayload`（打开物品选择器，只带标题和分类 id，不带物品）与 `OwnerNameS2CPayload`（回答上一条：知道就回名字，没见过这名玩家就什么都不回——客户端把这个答案也记下来，于是一次会话只问一次，工具提示下一帧就能读到名字）。不要把客户端传入的数值当作可信结果；payload 只应传 ID、选择和操作意图。
 
 **S2C payload 的类型两端都要登记，但 handler 只在客户端登记。** 服务端是编码方，所以它必须知道这些 payload 的 codec；可它永远不会处理它们，而 `ClientNetworkHandler` 这类处理器会碰到 `Screen` 等客户端专属类——专用服务器的类加载器拒绝加载这些类，只要在注册时**构造**一次处理器，服务器就会在 mod 加载阶段崩掉（`NoClassDefFoundError: net/minecraft/client/gui/screens/Screen`）。`NetworkManager` 因此按 `FMLEnvironment.getDist()` 分两支：客户端用带 handler 的 `playToClient`，服务端用不带 handler 的那个重载，只登记类型。
 

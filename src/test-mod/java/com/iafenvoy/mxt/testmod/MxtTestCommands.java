@@ -40,8 +40,12 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
@@ -58,6 +62,7 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
@@ -72,6 +77,7 @@ import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -90,6 +96,7 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -125,6 +132,7 @@ import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.ISlotType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -572,7 +580,7 @@ public final class MxtTestCommands {
         ItemStack stack = new ItemStack(Items.DIAMOND_SWORD);
 
         Artifact definition = ArtifactService.definition(access, stack).map(Reference::value).orElse(null);
-        boolean declared = definition != null && "sword".equals(definition.itemType())
+        boolean declared = definition != null
                 && definition.curiosEquipable() && definition.flight().isPresent() && definition.storage().isPresent();
         if (!declared) {
             source.sendFailure(Component.literal("artifact probe: the fixture definition does not claim a diamond sword"));
@@ -691,15 +699,17 @@ public final class MxtTestCommands {
 
         boolean ok = true;
         for (ArtifactRow row : List.of(
-                new ArtifactRow(Items.IRON_SWORD, "flying_sword", 60, 0, 0, 0, false, true, true),
-                new ArtifactRow(Items.AMETHYST_SHARD, "jade_pendant", 200, 100, 25, 27, true, false, false),
-                new ArtifactRow(Items.PRISMARINE_SHARD, "protective_talisman", 40, 0, 0, 0, true, false, false),
+                new ArtifactRow(Items.IRON_SWORD, "azure_flight_sword", 60, 0, 0, 0, false, true, true),
+                new ArtifactRow(Items.AMETHYST_SHARD, "spirit_gathering_jade", 200, 100, 25, 27, true, false, false),
+                new ArtifactRow(Items.PRISMARINE_SHARD, "ward_jade_talisman", 40, 0, 0, 0, true, false, false),
                 // The second item of the same definition, reached through the item tag its `items` list names.
-                new ArtifactRow(Items.QUARTZ, "protective_talisman", 40, 0, 0, 0, true, false, false),
-                new ArtifactRow(Items.BELL, "beast_bell", 60, 0, 0, 18, true, false, false))) {
+                new ArtifactRow(Items.QUARTZ, "ward_jade_talisman", 40, 0, 0, 0, true, false, false),
+                new ArtifactRow(Items.BELL, "cloud_beast_bell", 60, 0, 0, 18, true, false, false))) {
             ItemStack stack = new ItemStack(row.item());
-            Artifact definition = ArtifactService.definition(access, stack).map(Reference::value).orElse(null);
-            boolean matches = definition != null && row.itemType().equals(definition.itemType())
+            Reference<Artifact> holder = ArtifactService.definition(access, stack).orElse(null);
+            Artifact definition = holder == null ? null : holder.value();
+            // Which definition answered is the row's first claim: the registry id is the artifact's own name.
+            boolean matches = holder != null && HolderHelper.id(holder).equals(id(row.definition()))
                     && row.curiosEquipable() == ArtifactService.curiosEquipable(access, stack)
                     && row.requireOwner() == definition.requireOwner()
                     && row.flight() == definition.flight().isPresent()
@@ -708,7 +718,7 @@ public final class MxtTestCommands {
                     && ArtifactService.capacity(access, stack, waterPower, 0.0D, context) == row.waterPower()
                     && ArtifactService.capacity(access, stack, soulPower, 0.0D, context) == row.soulPower();
             ok &= check(source, "artifact roster " + BuiltInRegistries.ITEM.getKey(row.item()) + " = "
-                    + (definition == null ? "unclaimed" : definition.itemType()), matches);
+                    + (holder == null ? "unclaimed" : HolderHelper.id(holder)), matches);
         }
 
         ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
@@ -729,7 +739,7 @@ public final class MxtTestCommands {
         boolean refined = ArtifactService.refine(jadeStack, player) == RefineResult.REFINED;
         int jadeStored = ArtifactService.stored(jadeStack, qi);
         int jadeCeiling = ArtifactService.capacity(access, jadeStack, qi, 0.0D, context);
-        ok &= check(source, "artifact roster refine_action stored=" + jadeStored + " ceiling=" + jadeCeiling,
+        ok &= check(source, "artifact roster claim_action stored=" + jadeStored + " ceiling=" + jadeCeiling,
                 refined && ArtifactService.isOwner(jadeStack, player.getUUID()) && jadeStored == 40 && jadeCeiling == 220);
 
         ISlotType charm = CuriosSlotTypes.getSlotType("charm", false);
@@ -765,21 +775,229 @@ public final class MxtTestCommands {
         List<String> jadeLines = ArtifactDescription.keys(ArtifactDescription.describe(access, new ItemStack(Items.AMETHYST_SHARD), player, false));
         List<String> fedLines = ArtifactDescription.keys(ArtifactDescription.describe(access, jadeStack, player, false));
         List<String> wardLines = ArtifactDescription.keys(ArtifactDescription.describe(access, wardStack, player, false));
-        boolean tooltip = flightLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"), tooltipKey("unowned"),
-                        tooltipKey("aura"), tooltipKey("flight"), tooltipKey("flight_cost")))
-                // The jade does not require an owner, so a fresh one says nothing about ownership at all.
-                && jadeLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"),
-                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("storage")))
-                && fedLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"), tooltipKey("owned"),
+        // Anything a definition's own action charges is reported as a price; the blood-priced probe is the one
+        // fixture that charges health, and it is the only one whose claim line names a number.
+        List<String> bloodLines = ArtifactDescription.keys(ArtifactDescription.describe(access, new ItemStack(Items.BLAZE_ROD), player, false));
+        List<String> upkeepLines = ArtifactDescription.keys(ArtifactDescription.describe(access, new ItemStack(Items.IRON_SHOVEL), player, false));
+        // The long press closes every tooltip that has a gesture, and an unowned artifact is offered the claim
+        // while one the reader owns is offered the pour - the two halves never appear together.
+        boolean tooltip = flightLines.equals(List.of(tooltipKey("header"), tooltipKey("unowned"),
+                        // One entry, one line: the speed and what riding costs share a line, so a definition with
+                        // four abilities produces four lines rather than a paragraph.
+                        tooltipKey("aura"), tooltipKey("flight_costs"), tooltipKey("hold_claim")))
+                // The jade does not require an owner, so a fresh one says nothing about ownership at all, and its
+                // action charges aura rather than health, so its claim is free.
+                && jadeLines.equals(List.of(tooltipKey("header"),
+                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("storage"), tooltipKey("hold_claim_free")))
+                && fedLines.equals(List.of(tooltipKey("header"), tooltipKey("owned"),
                         tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("nourishment"),
-                        tooltipKey("storage")))
-                && wardLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"),
-                        tooltipKey("aura"), tooltipKey("passive"), tooltipKey("passive")))
+                        tooltipKey("storage"), tooltipKey("hold_pour")))
+                // The ward says nothing about a price, so the default two hearts are what it reports.
+                && wardLines.equals(List.of(tooltipKey("header"),
+                        tooltipKey("aura"), tooltipKey("passive"), tooltipKey("passive"), tooltipKey("hold_claim")))
+                && bloodLines.equals(List.of(tooltipKey("header"),
+                        tooltipKey("aura"), tooltipKey("hold_claim")))
+                // An upkeep entry is a line of its own, and the fixture's free price keeps its claim line free.
+                && upkeepLines.equals(List.of(tooltipKey("header"),
+                        tooltipKey("aura"), tooltipKey("upkeep"), tooltipKey("hold_claim_free")))
                 // A stack no definition claims gets nothing at all, and advanced tooltips add the id under the name.
                 && ArtifactDescription.describe(access, new ItemStack(Items.DIAMOND), player, false).isEmpty()
                 && ArtifactDescription.keys(ArtifactDescription.describe(access, flightStack, player, true)).size() == flightLines.size() + 1;
         ok &= check(source, "artifact roster tooltip lines flight=" + flightLines.size() + " jade=" + jadeLines.size()
-                + " fed=" + fedLines.size() + " ward=" + wardLines.size(), tooltip);
+                + " fed=" + fedLines.size() + " ward=" + wardLines.size() + " blood=" + bloodLines.size()
+                + " upkeep=" + upkeepLines.size(), tooltip);
+
+        // The long press: what a definition declares, who it takes over for, and the two settlements it can make.
+        // The gesture is driven through the service rather than through a real use cycle, because the arming half
+        // belongs to the hold module and is what the client sees; the numbers below are the server's half.
+        ItemStack dormantStack = new ItemStack(Items.GUNPOWDER);
+        boolean declaredHold = ArtifactService.holdTicks(access, flightStack, context) == 20
+                && ArtifactService.holdTicks(access, jadeStack, context) == 30
+                && ArtifactService.holdTicks(access, new ItemStack(Items.GLOWSTONE_DUST), context) == 5
+                // The price is the default of `claim_action`, so it is read back out of that action: a definition
+                // that says nothing charges two hearts, one that does something else entirely (the jade) charges
+                // none, and one whose action states a plainly written consume_health reports that number.
+                && ArtifactService.claimHealthCost(access, flightStack, context) == 4.0D
+                && ArtifactService.claimHealthCost(access, wardStack, context) == 4.0D
+                && ArtifactService.claimHealthCost(access, jadeStack, context) == 0.0D
+                && ArtifactService.claimHealthCost(access, new ItemStack(Items.GLOWSTONE_DUST), context) == 1.0D
+                && ArtifactService.claimHealthCost(access, new ItemStack(Items.BLAZE_ROD), context) == 3.0D
+                // hold_ticks: 0 is the escape hatch - the definition is not a hold, so nothing matches the item.
+                && ArtifactService.holdTicks(access, dormantStack, context) == 0
+                && HoldLookup.hold(dormantStack) == null
+                && HoldLookup.hold(flightStack) instanceof ArtifactHold;
+        ok &= check(source, "artifact hold declared ticks 20/30/5, claim_action-stated cost default 4 / none 0 / 1 and 3",
+                declaredHold);
+
+        ItemStack ownedHoldSword = flightStack.copy();
+        ArtifactService.refine(ownedHoldSword, player);
+        // Filling every declared aura is what makes the pour pointless, so the gesture must stop being taken over.
+        ItemStack fullJade = new ItemStack(Items.AMETHYST_SHARD);
+        ArtifactService.refine(fullJade, player);
+        for (int round = 0; round < 3; round++) {
+            ArtifactService.addEnergy(access, fullJade, qi, 1000.0D, 0.0D, context);
+            ArtifactService.addEnergy(access, fullJade, waterPower, 1000.0D, 0.0D, context);
+            ArtifactService.addEnergy(access, fullJade, soulPower, 1000.0D, 0.0D, context);
+        }
+        LivingEntity holdBystander = spawnProbe(source.getLevel(), player.blockPosition().above(2), null);
+        boolean takeover = HoldLookup.hold(flightStack) instanceof ArtifactHold unownedHold
+                // Unclaimed: the claim is on offer to anybody, so both the player and a probe entity take it over.
+                && unownedHold.claims(player, access, flightStack)
+                && holdBystander != null && unownedHold.claims(holdBystander, access, flightStack)
+                // Claimed: the owner is taken over and the stranger is not - the whole point of the entity-aware
+                // answer, since the stack says nothing about who is holding it.
+                && unownedHold.claims(player, access, ownedHoldSword)
+                && !unownedHold.claims(holdBystander, access, ownedHoldSword)
+                && HoldLookup.hold(fullJade) instanceof ArtifactHold fullHold
+                && !fullHold.claims(player, access, fullJade);
+        if (holdBystander != null) holdBystander.discard();
+        ok &= check(source, "artifact hold takeover unclaimed=both claimed=owner-only full=refused", takeover);
+
+        // Claiming pays the price and then runs the action, and the two are separate fields: the blood fixture
+        // states both, the jade replaces the price with a no-op to bind for free.
+        player.setHealth(player.getMaxHealth());
+        float healthBeforeClaim = player.getHealth();
+        ItemStack claimBlood = new ItemStack(Items.BLAZE_ROD);
+        ClaimResult claimedHold = ArtifactHoldService.claim(player, claimBlood, access);
+        boolean pricePaid = claimedHold == ClaimResult.CLAIMED && ArtifactService.isOwner(claimBlood, player.getUUID())
+                // Both prices of the fixture's list were charged and its claim_action ran: five points arrived.
+                && ArtifactService.stored(claimBlood, qi) == 5
+                // An invulnerable holder cannot be made to bleed and the binding still stands, so the number is
+                // only asserted where the damage could land at all.
+                && (player.isInvulnerable() || close((double) (healthBeforeClaim - player.getHealth()), 3.0D));
+        // A price replaced by mxt:no_op binds for free, at health a priced claim would have spent.
+        player.setHealth(4.0F);
+        ItemStack freeJade = new ItemStack(Items.AMETHYST_SHARD);
+        ClaimResult freeHold = ArtifactHoldService.claim(player, freeJade, access);
+        boolean freeClaim = freeHold == ClaimResult.CLAIMED && ArtifactService.isOwner(freeJade, player.getUUID())
+                && close((double) player.getHealth(), 4.0D);
+        // There is no health pre-check any more: a price the holder cannot survive is charged anyway and the
+        // binding still stands. Driven on a disposable probe, because the other way to show it is killing the
+        // player halfway through the run.
+        LivingEntity poorClaimant = spawnProbe(source.getLevel(), player.blockPosition().above(3), null);
+        boolean unguarded = false;
+        if (poorClaimant != null) {
+            poorClaimant.setHealth(2.0F);
+            ItemStack doomedSword = new ItemStack(Items.IRON_SWORD);
+            ClaimResult doomed = ArtifactHoldService.claim(poorClaimant, doomedSword, access);
+            unguarded = doomed == ClaimResult.CLAIMED && ArtifactService.isOwner(doomedSword, poorClaimant.getUUID())
+                    && (poorClaimant.isDeadOrDying() || close((double) poorClaimant.getHealth(), 0.0D));
+            poorClaimant.discard();
+        }
+        // The definition's own condition is asked before either action runs: this fixture states a price of one,
+        // and a refused binding does not pay it.
+        player.setHealth(4.0F);
+        ItemStack sealedStack = new ItemStack(Items.GLOWSTONE_DUST);
+        ClaimResult sealedHold = ArtifactHoldService.claim(player, sealedStack, access);
+        boolean sealedRefused = sealedHold == ClaimResult.CONDITION_FAILED && !ArtifactService.hasOwner(sealedStack)
+                && close((double) player.getHealth(), 4.0F);
+        // Charging belongs to the actions, so every writer of a binding pays it: the loot function and a script
+        // reach `refine` directly, and both of the fixture's actions run there as well. Health is topped up
+        // first, because this path is not guarded by anything - it charges whatever the definition says.
+        player.setHealth(player.getMaxHealth());
+        float healthBeforeScript = player.getHealth();
+        ItemStack scriptedBlood = new ItemStack(Items.BLAZE_ROD);
+        boolean scriptPaid = ArtifactService.refine(scriptedBlood, player) == RefineResult.REFINED
+                && ArtifactService.stored(scriptedBlood, qi) == 5
+                && (player.isInvulnerable() || close((double) (healthBeforeScript - player.getHealth()), 3.0D));
+        player.setHealth(healthBeforeClaim);
+        ok &= check(source, "artifact hold claim paid=" + pricePaid + " free=" + freeClaim + " unguarded=" + unguarded
+                + " condition=" + sealedRefused + " script=" + scriptPaid,
+                pricePaid && freeClaim && unguarded && sealedRefused && scriptPaid);
+
+        // Whose a stack is is reported by name: the claim above wrote this player's name next to their UUID, and
+        // the tooltip line carries that name rather than the id. The id stays reachable - as the indented line
+        // under an advanced tooltip - but never as the only thing a reader is given.
+        boolean ownerNamed = ArtifactService.state(claimBlood).ownerName()
+                .filter(player.getGameProfile().name()::equals).isPresent()
+                && ArtifactDescription.describe(access, claimBlood, player, false).stream()
+                .anyMatch(line -> ownedLineNames(line, player.getGameProfile().name()));
+        // The name behind an id is also answerable on demand, which is what a client that holds a stack claimed
+        // before names were kept asks for: the server answers from its player list, and admits when it has never
+        // seen the player rather than making something up.
+        boolean ownerLookup = PlayerNames.knownToServer(source.getServer(), player.getUUID())
+                .filter(player.getGameProfile().name()::equals).isPresent()
+                && PlayerNames.knownToServer(source.getServer(), UUID.randomUUID()).isEmpty();
+        ok &= check(source, "artifact owner shown by name=" + ownerNamed + " lookup=" + ownerLookup,
+                ownerNamed && ownerLookup);
+
+        // The periodic price is an ability entry rather than a claim field: it falls due on its own interval
+        // while the artifact is carried, it asks nobody who is not the owner when the entry says owner_only, and
+        // a price that cannot be paid runs the entry's own failure action instead of being skipped silently.
+        ItemStack upkeepStack = new ItemStack(Items.IRON_SHOVEL);
+        ArtifactService.refine(upkeepStack, player);
+        ResourceHolderAttachment upkeepPools = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        // The fixture charges water_power rather than qi on purpose: qi's aura declares a realm gate, and this
+        // leg drives the real resource transaction, which asks that gate.
+        ensureResource(player, upkeepPools, waterPower.value().resource(), 10.0D);
+        double upkeepPool = upkeepPools.get(waterPower.value().resource());
+        boolean upkeepPaid = ArtifactUpkeepService.upkeep(player, upkeepStack, 10L)
+                && close(upkeepPool - upkeepPools.get(waterPower.value().resource()), 2.0D)
+                // A tick between two intervals is nobody's, so nothing falls due on it.
+                && !ArtifactUpkeepService.upkeep(player, upkeepStack, 11L)
+                && close(upkeepPool - upkeepPools.get(waterPower.value().resource()), 2.0D);
+        FormulaContext upkeepContext = ResourceService.formulaContext(player, waterPower.value().resource(), context);
+        ResourceService.change(upkeepPools, waterPower.value().resource(),
+                -upkeepPools.get(waterPower.value().resource()), upkeepContext);
+        boolean upkeepFailed = !ArtifactUpkeepService.upkeep(player, upkeepStack, 15L) && upkeepStack.getDamageValue() == 1;
+        LivingEntity upkeepBystander = spawnProbe(source.getLevel(), player.blockPosition().above(4), null);
+        boolean upkeepOwnerOnly = upkeepBystander != null
+                && !ArtifactUpkeepService.upkeep(upkeepBystander, upkeepStack, 20L) && upkeepStack.getDamageValue() == 1;
+        if (upkeepBystander != null) upkeepBystander.discard();
+        ok &= check(source, "artifact upkeep paid=" + upkeepPaid + " fail=" + upkeepFailed
+                + " owner_only=" + upkeepOwnerOnly, upkeepPaid && upkeepFailed && upkeepOwnerOnly);
+
+        // The pour moves one unit of every declared aura out of the holder's own pools, one for one. The jade's
+        // claim_action charged 40 of qi on the way in, so the tick starts from there.
+        ItemStack pourStack = new ItemStack(Items.AMETHYST_SHARD);
+        ArtifactService.refine(pourStack, player);
+        ResourceHolderAttachment pools = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ensureResource(player, pools, qi.value().resource(), 10.0D);
+        ensureResource(player, pools, waterPower.value().resource(), 10.0D);
+        ensureResource(player, pools, soulPower.value().resource(), 10.0D);
+        double qiPool = pools.get(qi.value().resource());
+        double waterPool = pools.get(waterPower.value().resource());
+        double soulPool = pools.get(soulPower.value().resource());
+        int poured = ArtifactHoldService.pour(player, pourStack, access,
+                ArtifactService.definition(access, pourStack).map(Reference::value).orElseThrow());
+        boolean pourLeg = poured == 3
+                && ArtifactService.stored(pourStack, qi) == 41
+                && ArtifactService.stored(pourStack, waterPower) == 1
+                && ArtifactService.stored(pourStack, soulPower) == 1
+                && close(pools.get(qi.value().resource()), qiPool - 1.0D)
+                && close(pools.get(waterPower.value().resource()), waterPool - 1.0D)
+                && close(pools.get(soulPower.value().resource()), soulPool - 1.0D);
+        ok &= check(source, "artifact hold pour units=" + poured + " qi=" + ArtifactService.stored(pourStack, qi)
+                + " water=" + ArtifactService.stored(pourStack, waterPower), pourLeg);
+
+        // The two gesture-shaped actions: pour_action settles every tick that really moved aura, use_action closes
+        // a gesture that ran to its end. Driven through the same methods the event handlers call, for the same
+        // reason the claim and the pour are.
+        int beforePourAction = ArtifactService.stored(pourStack, qi);
+        ArtifactHoldService.runPourAction(player, pourStack);
+        int beforeUseAction = ArtifactService.stored(pourStack, qi);
+        ArtifactHoldService.runUseAction(player, pourStack);
+        boolean gestureActions = beforeUseAction == beforePourAction + 1
+                && ArtifactService.stored(pourStack, qi) == beforeUseAction + 2;
+        ok &= check(source, "artifact gesture actions pour=+" + (beforeUseAction - beforePourAction)
+                + " use=+" + (ArtifactService.stored(pourStack, qi) - beforeUseAction), gestureActions);
+
+        // A pour with nothing to move has two different reasons, and they are told apart: an artifact that is full
+        // for everything it declares has nothing to say, while one whose aura the holder cannot pay names it. The
+        // ward is filled to its ceiling for the first half, and the qi pool is drained for the second - so a full
+        // artifact can never report the reader's own aura as short.
+        ItemStack fullWard = new ItemStack(Items.PRISMARINE_SHARD);
+        ArtifactService.addEnergy(access, fullWard, qi, 1000.0D, 0.0D, context);
+        Artifact fullWardDefinition = ArtifactService.definition(access, fullWard).map(Reference::value).orElseThrow();
+        boolean fullSilent = ArtifactHoldService.blockedAura(player, fullWard, fullWardDefinition) == null;
+        ResourceHolderAttachment blockPools = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceService.change(blockPools, qi.value().resource(), -blockPools.get(qi.value().resource()),
+                ResourceService.formulaContext(player, qi.value().resource(), context));
+        ItemStack emptyWard = new ItemStack(Items.PRISMARINE_SHARD);
+        Artifact emptyWardDefinition = ArtifactService.definition(access, emptyWard).map(Reference::value).orElseThrow();
+        boolean namedShortfall = ArtifactHoldService.blockedAura(player, emptyWard, emptyWardDefinition) == qi;
+        ok &= check(source, "artifact pour feedback full=" + fullSilent + " named=" + namedShortfall,
+                fullSilent && namedShortfall);
 
         List<String> problems = ServerCache.get().map(cache -> cache.problems().stream()
                 .filter(problem -> problem.contains("/mxt/artifact/")).toList()).orElse(List.of());
@@ -802,13 +1020,26 @@ public final class MxtTestCommands {
     /**
      * One roster row: an item, and what every consumer must answer about the definition claiming it.
      */
-    private record ArtifactRow(Item item, String itemType, int qi, int waterPower, int soulPower, int slots,
+    private record ArtifactRow(Item item, String definition, int qi, int waterPower, int soulPower, int slots,
                                boolean curiosEquipable, boolean flight, boolean requireOwner) {
     }
 
     /** One artifact tooltip key, so the roster can spell out the lines a definition has to produce for a stack. */
     private static String tooltipKey(String path) {
         return "tooltip.mxt.artifact." + path;
+    }
+
+    /**
+     * Whether one tooltip line is the ownership line and names this owner. The rendered words belong to a
+     * language file, so the check reads the component's own argument - the same division the line-set checks
+     * make. The line is a mark with the sentence appended, so its siblings are searched too.
+     */
+    private static boolean ownedLineNames(Component line, String owner) {
+        if (line.getContents() instanceof TranslatableContents contents
+                && contents.getKey().equals(tooltipKey("owned"))
+                && Arrays.stream(contents.getArgs()).anyMatch(argument -> argument instanceof String value && value.equals(owner)))
+            return true;
+        return line.getSiblings().stream().anyMatch(sibling -> ownedLineNames(sibling, owner));
     }
 
     /**

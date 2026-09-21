@@ -1,0 +1,10 @@
+{
+  "items": "minecraft:blaze_rod",
+  "spirit_capacity": { "mxt_test:qi": 20 },
+  "hold_ticks": 5,
+  "claim_action": [
+    { "type": "mxt:consume_health", "amount": 2 },
+    { "type": "mxt:charge_artifact", "aura": "mxt_test:qi", "amount": 5 },
+    { "type": "mxt:consume_health", "amount": 1 }
+  ]
+}

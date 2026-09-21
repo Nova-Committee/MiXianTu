@@ -1,5 +1,4 @@
 {
-  "item_type": "jade_pendant",
   "items": "minecraft:amethyst_shard",
   "spirit_capacity": {
     "mxt_test:qi": 200,
@@ -10,5 +9,8 @@
     { "type": "mxt:storage", "slots": 27 }
   ],
   "curios_equipable": true,
-  "refine_action": { "type": "mxt:charge_artifact", "aura": "mxt_test:qi", "amount": 40 }
+  "hold_ticks": 30,
+  "claim_action": { "type": "mxt:charge_artifact", "aura": "mxt_test:qi", "amount": 40 },
+  "pour_action": { "type": "mxt:charge_artifact", "aura": "mxt_test:qi", "amount": 1 },
+  "use_action": { "type": "mxt:charge_artifact", "aura": "mxt_test:qi", "amount": 2 }
 }

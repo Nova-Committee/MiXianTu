@@ -1,11 +1,15 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.action.ItemAction;
+import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
+import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
@@ -16,6 +20,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.energy.ArtifactSpiritEnergy;
 import com.iafenvoy.mxt.runtime.energy.ISpiritEnergy;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
@@ -66,6 +71,14 @@ public final class ArtifactService {
                 .min(Comparator.comparingInt(holder -> holder.value().priority()));
     }
 
+    /**
+     * Writes ownership of this stack to one entity, and records what that owner is called while it is known.
+     *
+     * <p>The name is written here rather than looked up later because this is the only moment the owner is in
+     * hand: a tooltip is drawn on a client that may have no way to turn a UUID back into a name - the player may
+     * be offline, or connected to a server that never told it - so the readable half of the answer is stored
+     * with the authoritative half. It stays display-only; every ownership question is asked of the UUID.</p>
+     */
     public static RefineResult refine(ItemStack stack, Entity owner) {
         UUID ownerUuid = owner.getUUID();
         if (NeoForge.EVENT_BUS.post(new Pre(stack, ownerUuid)).isCanceled())
@@ -74,10 +87,14 @@ public final class ArtifactService {
         String requestedOwner = ownerUuid.toString();
         if (current.ownerUuid().isPresent() && !current.ownerUuid().get().equals(requestedOwner))
             return RefineResult.OWNED_BY_OTHER;
-        stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner));
+        stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner, PlayerNames.displayName(owner)));
         NeoForge.EVENT_BUS.post(new Post(stack, ownerUuid));
+        // What claiming does - which includes what it costs, because the default of that action is the price.
+        // It runs only for a binding that was really written, and it is deliberately not checked against the
+        // holder first: refusing a claim the price would kill is not this method's business, and every writer of
+        // a binding pays the same price.
         definition(owner.level().registryAccess(), stack).ifPresent(holder ->
-                holder.value().refineAction().execute(owner, stack, FormulaContext.of(owner)));
+                holder.value().claimAction().execute(owner, stack, FormulaContext.of(owner)));
         return RefineResult.REFINED;
     }
 
@@ -102,6 +119,75 @@ public final class ArtifactService {
     public static boolean mayUse(ItemStack stack, Holder<Artifact> artifact, UUID user) {
         if (isOwner(stack, user)) return true;
         return !artifact.value().requireOwner() && !hasOwner(stack);
+    }
+
+    /** The ceiling on a declared hold: past this the number is a pack mistake rather than a longer gesture. */
+    public static final int MAX_HOLD_TICKS = 72_000;
+
+    /**
+     * How long a definition asks to be held down. Zero means it does not take the gesture over at all, which is
+     * how a pack turns the long press off for one artifact; anything past {@link #MAX_HOLD_TICKS} is clamped.
+     */
+    public static int holdTicks(Artifact artifact, FormulaContext context) {
+        return (int) Math.clamp(Math.floor(evaluate(artifact.holdTicks(), context)), 0.0D, MAX_HOLD_TICKS);
+    }
+
+    public static int holdTicks(Provider access, ItemStack stack, FormulaContext context) {
+        return definition(access, stack).map(holder -> holdTicks(holder.value(), context)).orElse(0);
+    }
+
+    /**
+     * What claiming this stack charges in health, which is what the tooltip and the action bar repeat. Nothing
+     * is decided by it: the price is charged by {@code claim_action} when it runs, and whether the holder
+     * survives it is not asked. A plainly stated price (a bare {@code mxt:consume_health}, or the sum of every
+     * such entry of a top-level {@code mxt:sequence} - the list form every action field accepts) is what this
+     * reads; a price buried behind {@code mxt:chance} or {@code mxt:if_else} reads as nothing, and the lines
+     * that quote a number then simply say nothing.
+     */
+    public static double claimHealthCost(Provider access, ItemStack stack, FormulaContext context) {
+        return definition(access, stack)
+                .map(holder -> statedPrice(holder.value().claimAction(), context))
+                .orElse(0.0D);
+    }
+
+    /**
+     * The health price an action states, if it states one plainly. Only the two shapes that always run are read:
+     * the charging action itself, and the sequence a written list becomes, whose plainly stated prices add up
+     * because every entry of it runs. Anything conditional states nothing here.
+     */
+    private static double statedPrice(ItemAction action, FormulaContext context) {
+        if (action instanceof ConsumeHealthItemAction consume) return Math.max(0.0D, evaluate(consume.amount(), context));
+        if (action instanceof SequenceItemAction sequence)
+            return sequence.actions().stream().mapToDouble(inner -> statedPrice(inner, context)).sum();
+        return 0.0D;
+    }
+
+    /**
+     * Whether the definition's own condition lets this holder claim the stack. Asked by the long press before
+     * it settles anything; {@link #refine} deliberately does not, because it is also the entry point of the loot
+     * function and of scripts, where the pack has already decided who the owner is.
+     */
+    public static boolean mayClaim(Provider access, ItemStack stack, Entity holder, FormulaContext context) {
+        return definition(access, stack)
+                .map(holder_ -> holder_.value().claimCondition().test(holder, context))
+                .orElse(false);
+    }
+
+    /** The periodic price this stack charges whoever carries it, if its definition declares one. */
+    public static Optional<UpkeepArtifactAbility> upkeep(Provider access, ItemStack stack) {
+        return definition(access, stack).flatMap(holder -> holder.value().upkeep());
+    }
+
+    /**
+     * Whether at least one declared aura has room left, which is what makes a pour worth starting - the question
+     * a hold answers before it takes a click over.
+     */
+    public static boolean hasRoom(Provider access, ItemStack stack, FormulaContext context) {
+        Artifact artifact = definition(access, stack).map(Reference::value).orElse(null);
+        if (artifact == null) return false;
+        for (Holder<Aura> aura : artifact.spiritCapacity().keySet())
+            if (capacity(access, stack, aura, 0.0D, context) > stored(stack, aura)) return true;
+        return false;
     }
 
     /**

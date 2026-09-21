@@ -1,0 +1,15 @@
+{
+  "items": "minecraft:iron_shovel",
+  "spirit_capacity": { "mxt_test:qi": 20 },
+  "hold_ticks": 5,
+  "claim_action": { "type": "mxt:no_op" },
+  "abilities": [
+    {
+      "type": "mxt:upkeep",
+      "costs": [{ "id": "mxt_test:water_power", "amount": 2 }],
+      "interval": 5,
+      "on_fail": { "type": "mxt:damage_item", "amount": 1 },
+      "owner_only": true
+    }
+  ]
+}

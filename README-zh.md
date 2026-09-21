@@ -15,7 +15,7 @@
 
 ## 相关链接
 
-- **[文档](https://docs.iafenvoy.com/docs/mod/mxt)**：数据包、KubeJS 与 Java 开发的完整说明。**目前仍在补全中**，后续会持续更新。
+- **[文档](https://mxt.iafenvoy.com/)**：数据包、KubeJS 与 Java 开发的完整说明。**目前仍在补全中**，后续会持续更新。
 - **[数据包可视化编辑器](https://datapack.mcdev.tech/)**：在浏览器中以表单方式编辑本模组的数据包，字段带说明并支持注册表补全，免去手写
   JSON。
 - **[AGENTS.md](AGENTS.md)**：用 AI（或其他协作者）动手改这个仓库前先读的约定——验证命令、代码地图、房规与文档同步清单。
