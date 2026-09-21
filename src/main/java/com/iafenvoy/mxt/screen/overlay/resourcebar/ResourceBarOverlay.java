@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.screen.overlay.resourcebar;
 
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Bar;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientHud;
@@ -15,11 +15,13 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderer.Context;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
+import com.iafenvoy.mxt.screen.overlay.hud.HudManager;
+import com.iafenvoy.mxt.screen.overlay.hud.HudRenderer;
+import com.iafenvoy.mxt.screen.overlay.hud.RenderBlock;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -29,62 +31,101 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.common.NeoForgeMod;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
-import net.neoforged.neoforge.client.gui.GuiLayer;
-import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 /**
- * The single client overlay for data-driven resources and environment-aura HUD rows.
+ * Answers which resource bars want to be drawn, in which order, and at what slot of their stack.
+ *
+ * <p>It is a plain utility, not a renderer and not a GUI layer: every part of the screen it describes is
+ * drawn by the HUD framework's single renderer, from the two movable columns to the two fixed rows about the
+ * entity being looked at. Keeping the gathering here - rather than in the entries - is what lets the
+ * entries stay about placement: an entry asks for a list of bars and hands the resulting blocks to the
+ * layout.</p>
+ *
+ * <p>Every layout is split by the bar's own {@code anchor} into a left and a right pass, so a bar declared
+ * {@code anchor: right} genuinely draws on the right.</p>
  */
-@EventBusSubscriber(Dist.CLIENT)
-public enum ResourceBarOverlay implements GuiLayer {
-    INSTANCE;
+public final class ResourceBarOverlay {
+    /** Clearance between an overlay row and the centre of the screen. */
+    private static final int OVERLAY_GAP = 8;
 
-    private static final int BAR_GAP = 0;
-
-    @Override
-    public void render(@NotNull GuiGraphicsExtractor graphics, @NotNull DeltaTracker deltaTracker) {
-        Minecraft minecraft = Minecraft.getInstance();
-        Player player = minecraft.player;
-        if (minecraft.options.hideGui || player == null || minecraft.level == null) return;
-
-        Map<LayoutKey, Integer> offsets = new HashMap<>();
-        for (ResourceBarRenderState state : collect(player)) {
-            LayoutKey key = new LayoutKey(state.context().layout(), state.anchor());
-            int offset = offsets.getOrDefault(key, 0);
-            Position position = position(minecraft, player, state, offset);
-            ResourceBarRendererDispatcher.render(new Context(graphics, minecraft, state, position.x(), position.y()));
-            offsets.put(key, offset + state.renderData().height() + BAR_GAP);
-        }
+    private ResourceBarOverlay() {
     }
 
-    private static List<ResourceBarRenderState> collect(Player player) {
+    /**
+     * The player's own bars of one column, top to bottom, with their slots already resolved.
+     *
+     * <p>Asked once per column per frame by its entry - once to work out the column's size before placing
+     * it, once to draw it. The answer is built from attachments that are already on the client, so the
+     * second call costs an allocation and nothing else - cheaper than deciding which of the two callers is
+     * allowed to work from a frame-old answer.</p>
+     */
+    public static List<ResourceBarRenderState> column(Anchor anchor) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Player player = minecraft.player;
+        if (player == null || minecraft.level == null) return List.of();
+
         Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
-        List<ResourceBarRenderState> result = new ArrayList<>();
-        collectResources(result, resources, player, Layout.SELF_HUD);
-        if (Minecraft.getInstance().crosshairPickEntity instanceof LivingEntity target) {
-            collectResources(result, resources, target, Layout.TARGET_OVERLAY);
-            collectResources(result, resources, target, Layout.BOSS_OVERLAY);
+        List<ResourceBarRenderState> collected = new ArrayList<>();
+        collectResources(collected, resources, player, Layout.SELF_HUD, anchor);
+        collectAuraHud(collected, player, anchor);
+        return stack(sort(collected));
+    }
+
+    /**
+     * The bars of one fixed row - about the entity being looked at - with their slots already resolved.
+     */
+    public static List<ResourceBarRenderState> row(LivingEntity target, Layout layout) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.level == null) return List.of();
+        Registry<Resource> resources = target.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+        List<ResourceBarRenderState> collected = new ArrayList<>();
+        for (Anchor anchor : Anchor.values()) {
+            collectResources(collected, resources, target, layout, anchor);
         }
-        collectAuraHud(result, player);
-        return result.stream().sorted(Comparator.comparing((ResourceBarRenderState state) -> state.context().layout())
-                .thenComparing(ResourceBarRenderState::anchor)
-                .thenComparingInt(ResourceBarRenderState::order)
+        return stack(sort(collected));
+    }
+
+    /**
+     * Where a fixed row's column starts, measured from the middle of the screen outwards. Unchanged from the
+     * original overlay: a row is as wide as its widest bar, and it is placed by the edge that faces the
+     * middle.
+     */
+    public static int rowX(int screenWidth, Anchor side, int barWidth) {
+        return side == Anchor.LEFT ? screenWidth / 2 - OVERLAY_GAP - barWidth : screenWidth / 2 + OVERLAY_GAP;
+    }
+
+    /**
+     * Brings a sorted list of bars into the shape the layout wants: order resolved, slot left at zero.
+     *
+     * <p>The horizontal slot is zero because bars are left-aligned in their column. The vertical slot is zero
+     * too, and that is the important half: the layout stacks blocks back to back by the heights they report,
+     * so a bar's y position is decided in exactly one place. The original overlay instead accumulated a
+     * running y here, and keeping both meant the same stack had two answers - the accumulated one was counted
+     * again when the column's height was measured, which made every column twice as tall as it drew and left
+     * the gap this was chasing.</p>
+     */
+    private static List<ResourceBarRenderState> stack(List<ResourceBarRenderState> collected) {
+        List<ResourceBarRenderState> stacked = new ArrayList<>(collected.size());
+        for (ResourceBarRenderState state : collected) stacked.add(state.at(0, 0));
+        return stacked;
+    }
+
+    private static List<ResourceBarRenderState> sort(List<ResourceBarRenderState> collected) {
+        collected.sort(Comparator.<ResourceBarRenderState>comparingInt(ResourceBarRenderState::order)
                 .thenComparing(state -> state.id().toString())
-                .thenComparingInt(ResourceBarRenderState::index)).toList();
+                .thenComparingInt(ResourceBarRenderState::index));
+        return collected;
     }
 
     private static void collectResources(List<ResourceBarRenderState> result, Registry<Resource> resources,
-                                         LivingEntity entity, Layout layout) {
+                                         LivingEntity entity, Layout layout, Anchor anchor) {
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
             // A bar is declared on a value; the use gate belongs to the aura that value carries, and a value
@@ -96,7 +137,7 @@ public enum ResourceBarOverlay implements GuiLayer {
             List<ResourceBar> definitions = resource.value().bars();
             for (int index = 0; index < definitions.size(); index++) {
                 ResourceBar bar = definitions.get(index);
-                if (bar.context().layout() != layout) continue;
+                if (bar.context().layout() != layout || bar.anchor() != anchor) continue;
                 Optional<Values> extracted = bar.context().extract(entity, resource);
                 if (extracted.isEmpty()) continue;
                 Values values = extracted.get();
@@ -110,23 +151,24 @@ public enum ResourceBarOverlay implements GuiLayer {
                     continue;
                 result.add(new ResourceBarRenderState(
                         bar.context(), bar.anchor(), bar.order(), id, index, current, minimum, maximum, bar.renderer(),
-                        Optional.of(bar.context().name(id)), bar.valueDisplay()));
+                        0, 0, Optional.of(bar.context().name(id)), bar.valueDisplay()));
             }
         }
     }
 
-    private static void collectAuraHud(List<ResourceBarRenderState> result, Player player) {
+    private static void collectAuraHud(List<ResourceBarRenderState> result, Player player, Anchor anchor) {
         Snapshot snapshot = AuraClientState.current();
         ClientHud hud = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE)
                 .getOptional(snapshot.source()).map(AuraZone::clientHud).orElse(ClientHud.NONE);
         hud.storedAura().ifPresent(bar -> addAuraEntry(result, "stored_aura", 0, bar, snapshot.actualConcentration(),
-                resolvedMaximum(snapshot.actualMaximum(), bar.maximum())));
+                resolvedMaximum(snapshot.actualMaximum(), bar.maximum()), anchor));
         hud.sensedConcentration().ifPresent(bar -> addAuraEntry(result, "sensed_concentration", 1, bar,
-                snapshot.environmentConcentration(), bar.maximum()));
+                snapshot.environmentConcentration(), bar.maximum(), anchor));
     }
 
     private static void addAuraEntry(List<ResourceBarRenderState> result, String id, int index, Bar definition,
-                                     double current, double maximum) {
+                                     double current, double maximum, Anchor anchor) {
+        if (definition.anchor() != anchor) return;
         if (!Double.isFinite(current) || !Double.isFinite(maximum) || maximum <= 0.0D) return;
         Identifier identifier = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, id);
         String key = id.equals("stored_aura") ? "hud.mxt.resource_bar.stored_aura" : "hud.mxt.resource_bar.sensed_concentration";
@@ -135,7 +177,7 @@ public enum ResourceBarOverlay implements GuiLayer {
                 new OriginsRenderData(
                         OriginsRenderData.DEFAULT_TEXTURE,
                         definition.barIndex(), Optional.of(definition.barIndex()), definition.inverted()),
-                Optional.of(Component.translatable(key)), ValueDisplay.NONE));
+                0, 0, Optional.of(Component.translatable(key)), ValueDisplay.NONE));
     }
 
     private static boolean validValues(double minimum, double maximum, double current) {
@@ -147,37 +189,20 @@ public enum ResourceBarOverlay implements GuiLayer {
         return Double.isFinite(dynamic) && dynamic > 0.0D ? dynamic : fallback;
     }
 
-    private static Position position(Minecraft minecraft, Player player, ResourceBarRenderState state, int offset) {
-        int width = minecraft.getWindow().getGuiScaledWidth();
-        if (state.context().layout() == Layout.TARGET_OVERLAY)
-            return overlayPosition(width, 16 + offset, state.renderData().width(), state.anchor());
-        if (state.context().layout() == Layout.BOSS_OVERLAY)
-            return overlayPosition(width, 48 + offset, state.renderData().width(), state.anchor());
-        int y = minecraft.getWindow().getGuiScaledHeight() - 47;
-        if (player.getVehicle() instanceof LivingEntity vehicle)
-            y -= 8 * (int) (vehicle.getMaxHealth() / 20.0F);
-        // The tag overload is deprecated and NeoForge does not ship a water FluidType constant: the
-        // registered water type is the replacement, and asking the player about a type rather than a tag
-        // is also what the client can answer without a registry lookup.
-        if (player.isEyeInFluid(NeoForgeMod.WATER_TYPE.value()) || player.getAirSupply() < player.getMaxAirSupply())
-            y -= 8;
-        int x;
-        x = state.anchor() == Anchor.LEFT ? width / 2 - 20 - state.renderData().width() : width / 2 + 20;
-        return new Position(x, y - offset);
-    }
-
-    private static Position overlayPosition(int width, int y, int barWidth, Anchor anchor) {
-        return new Position(anchor == Anchor.LEFT ? width / 2 - 8 - barWidth : width / 2 + 8, y);
-    }
-
-    @SubscribeEvent
-    public static void registerOverlay(RegisterGuiLayersEvent event) {
-        event.registerAbove(VanillaGuiLayers.HOTBAR, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "resource_bars"), INSTANCE);
-    }
-
-    private record LayoutKey(Layout layout, Anchor anchor) {
-    }
-
-    private record Position(int x, int y) {
+    /**
+     * Registers everything this class describes with the HUD framework, once.
+     *
+     * <p>Called from client setup rather than left to the first frame. The framework's own layer is only
+     * rendered while a world is loaded, so an editor opened from the main menu - or from the pause menu of a
+     * world that has not drawn a frame yet - would otherwise find an empty registry and show nothing at all,
+     * which is exactly what it looks like when a feature is broken. Doing it here makes "the elements exist"
+     * independent of where the player is standing when they open the editor.</p>
+     */
+    public static void registerEntries() {
+        HudManager.register(new ResourceBarEntry("resource_bars.left", Anchor.LEFT));
+        HudManager.register(new ResourceBarEntry("resource_bars.right", Anchor.RIGHT));
+        HudManager.register(ResourceBarFixedEntry.target());
+        HudManager.register(ResourceBarFixedEntry.boss());
     }
 }
+

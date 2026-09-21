@@ -16,6 +16,9 @@ import net.minecraft.resources.Identifier;
  * short and the explanation lives in the tooltip, the same way the server config is written; call sites read the
  * entry itself through {@link #INSTANCE}, and the serialised keys are short for the same reason: the old full
  * paths are translated on load.
+ *
+ * <p>The HUD layout is not here: it lives in {@link MxtHudConfig}, in its own file, because it is written by
+ * dragging rather than by filling in a setting.</p>
  */
 public final class MxtClientConfig extends AutoInitConfigContainer {
     public static final MxtClientConfig INSTANCE = new MxtClientConfig();
@@ -27,7 +30,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public final Rifts rifts = new Rifts();
 
     private MxtClientConfig() {
-        super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt-client.json");
+        super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt/mxt-client.json");
         this.dataFixer.registerKeyRule("^config\\.mxt\\.client\\.[a-z_]+\\.([a-z_]+)$", key -> key.substring(key.lastIndexOf('.') + 1));
     }
 

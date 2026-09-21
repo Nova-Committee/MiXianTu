@@ -30,7 +30,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Compat compat = new Compat();
 
     private MxtServerConfig() {
-        super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "server"), "config.mxt.server", "./config/mxt-server.json");
+        super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "server"), "config.mxt.server", "./config/mxt/mxt-server.json");
         // What the old file wrote: a tab that has been merged away, and keys that spelled out their own path.
         this.dataFixer.registerKeyRule("friends", "compat");
         this.dataFixer.registerKeyRule("^config\\.mxt\\.server\\.[a-z_]+\\.([a-z_]+)$", key -> key.substring(key.lastIndexOf('.') + 1));

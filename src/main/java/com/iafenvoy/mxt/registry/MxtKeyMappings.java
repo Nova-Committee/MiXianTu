@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
 import com.iafenvoy.mxt.screen.information.TechniquePanelScreen;
+import com.iafenvoy.mxt.screen.overlay.hud.HudManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
@@ -35,6 +36,12 @@ public final class MxtKeyMappings {
      * panel, so a default key would compete with other mods for a slot nobody asked for.
      */
     public static final KeyMappingHolder TECHNIQUE_PANEL = new KeyMappingHolder("key.mxt.technique_panel", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
+    /**
+     * Bound by default, unlike the technique panel: placing HUD elements is done by looking at the HUD, so
+     * the key that opens the editor has to be reachable while playing. Right shift is what other client HUD
+     * editors use for the same job, which makes it the key a player is most likely to try first.
+     */
+    public static final KeyMappingHolder HUD_LAYOUT = new KeyMappingHolder("key.mxt.hud_layout", Type.KEYSYM, InputConstants.KEY_RSHIFT, CATEGORY);
 
     static {
         SWAP_BACK.onStateChange(pressed -> {
@@ -50,6 +57,9 @@ public final class MxtKeyMappings {
         TECHNIQUE_PANEL.onStateChange(pressed -> {
             if (pressed && Minecraft.getInstance().screen == null)
                 Minecraft.getInstance().setScreen(new TechniquePanelScreen());
+        });
+        HUD_LAYOUT.onStateChange(pressed -> {
+            if (pressed && Minecraft.getInstance().screen == null) HudManager.openEditor();
         });
     }
 
