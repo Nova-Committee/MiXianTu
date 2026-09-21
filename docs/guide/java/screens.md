@@ -2,7 +2,7 @@
 title: 客户端界面
 ---
 
-客户端界面统一放在 `com.iafenvoy.mxt.screen` 下：容器**菜单**在 `screen.menu`、它们的**界面**在 `screen.gui`，纯客户端信息界面在 `screen.information`，物品选择器在 `screen.picker`，HUD 覆盖层在 `screen.overlay`（快捷栏 `overlay.hotbar`、资源条 `overlay.resourcebar`、可拖动框架 `overlay.hud`）。新增界面优先复用现成的 `Screen` 基类和原版组件，不要自己造滚动和文本输入。
+客户端界面统一放在 `com.iafenvoy.mxt.screen` 下：容器**菜单**在 `screen.menu`、它们的**界面**在 `screen.gui`，纯客户端信息界面在 `screen.information`，物品选择器在 `screen.picker`，方向性选择（12 扇轮盘）在 `screen.wheel`，HUD 覆盖层在 `screen.overlay`（资源条 `overlay.resourcebar`、轮盘选中格 `overlay.wheel`、可拖动框架 `overlay.hud`）。新增界面优先复用现成的 `Screen` 基类和原版组件，不要自己造滚动和文本输入。
 
 ## 可拖动 HUD 框架 `screen.overlay.hud`
 
@@ -53,6 +53,19 @@ MyBar bar = HudManager.register(new MyBar());
 不接内容时框架是空转的：没有登记任何元素时，编辑界面只有一句「当前没有可移动的 HUD 元素」。范围、未移植项与后续接法见 [`research/26_可拖动HUD框架设计.md`](../../../research/26_可拖动HUD框架设计.md)。
 
 **已接入的元素**：资源条一共四个元素，全部登记进框架、由 `HudRenderer` 画——两列可拖的（`resource_bars.left` / `resource_bars.right`，键 `Anchor.LEFT` / `Anchor.RIGHT`）加两条不可拖的固定行（`resource_bars.target` / `resource_bars.boss`，`ResourceBarFixedEntry`，`moveable() == false`、位置每帧现算、永不入档）。资源条自己的那个 `mxt:resource_bars` GUI 层**已经删除**，`ResourceBarOverlay` 只剩纯工具方法。这四条可以当范例：`ResourceBarOverlay.column(anchor)`／`row(target, layout)` 只回答"哪些条、什么顺序"，条目用 `ResourceBarEntry.blocksWithGaps(...)` 把每条包成块并在条之间插 `spacer`，尺寸交给基类夹取。**位置在数据包那边没有字段**——`anchor` 只决定落进哪一列，列摆在哪是玩家自己的设置在客户端配置里。
+
+第五个元素是轮盘的「轮盘选中」（`overlay/wheel/WheelSelectionEntry`，键 `wheel.selection`）：它**不走 `RenderBlock`**，`renderBlocks()` 返回空、自己用 `render()` 画一格 22px 的槽（图标或名字开头、底边类型色、不可用时压暗），所以它也是"整块自己画"那条口子的第一个范例；位置默认挂在窗口底部中点、站在与资源条两列同一条线上（`ResourceBarEntry.BOTTOM_MARGIN`）。它由 `MiXianTuClient#init` 与资源条一起登记，理由同 §"登记时机"——不然从主菜单打开编辑器就看不到它。它对应的玩法（`R` 选、`V` 用）见 [`wheel.md`](./wheel.md)。
+
+## 轮盘选择系统 `screen.wheel`
+
+按键（`key.mxt.wheel`，**默认 R**）按住，屏幕上出现一个 **12 扇**的轮盘：指针**朝哪个方向**就选中哪一扇，选中的扇区变金色并向外扩一点，**这一扇的名字写在轮盘正中间**。它现在是技能与灵气**唯一的触发入口**：原来"技能与灵气各有一条快捷栏、各有一个配置界面"的两套东西已经删除，`LAlt` 那个按键也一并取消（`V` 虽然重新被占用，但含义换成了"用掉轮盘当前选中的那一扇"，见下）。
+
+**选择与使用分成两个键**：`R` 只负责选（松开或再按一次**只关闭、不触发**），`key.mxt.wheel_use`（默认 `V`）负责用——轮盘开着时用掉指针那一扇且**不关轮盘**，关着时用掉**上一次选中的那一扇**（客户端 `WheelSelectionState`，`LoggingIn` 清空后由服务端记住的 `selection` 填回来，见 [`wheel.md`](./wheel.md)），鼠标左键等同于它。两个键都由 `WheelMenuController` **裸轮询**（`InputConstants`/GLFW），因为任何 `Screen` 一打开原版就 `KeyMapping.releaseAll()`，而且"按着 `V` 松开 `R`"会让 `grabMouse()` 里的 `KeyMapping.setAll()` 补出一次假按下、多触发一次。可拖动的 HUD 元素「轮盘选中」（`wheel.selection`）显示的就是"现在按 `V` 会放什么"。
+
+框架（几何、扇环渲染、开合状态机、选择语义）在 `screen.wheel`，内容（技能与灵气怎样变成条目、12 格内容从哪来）在 `screen.wheel/content`，编辑界面是 `WheelConfigurationScreen`；接法与数据流见 [客户端轮盘](wheel)。三条界面语义值得记住：`isPauseScreen()` 返回 `false`（单人游戏里不暂停）；`extractBackground(...)` **留空**（默认背景会把这之前提取的整层 HUD 糊掉，`HudEditScreen` 当初也是为同一个模糊问题覆写 `isInGameUi()`）；**按住轮盘时角色会停下**（原版对任何 `Screen` 都 `KeyMapping.releaseAll()`，松开时 `grabMouse()` 会把物理按键状态同步回来，不用重新按）。
+
+框架里两条不肯让步的约定：**判扇区只看方向、不看距离**（指针还在内圈里也算数，所以中间那块空地能一直显示"当前指着的扇区叫什么"），以及**指针方向 → 扇区号的换算只有 `WheelGeometry` 一处**（`sectorStart` / `sectorCentre` / `sectorAt` 由同一组常量推出，`sectorAt(sectorCentre(k)) == k` 恒成立；MineMenu 把这段抄了三处、其中一处约定还和另外两处不同）。
+
 
 ## 物品选择界面 `ItemPickerScreen`
 

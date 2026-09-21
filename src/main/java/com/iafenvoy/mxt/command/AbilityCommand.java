@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.command;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -29,7 +28,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -50,9 +48,7 @@ public final class AbilityCommand {
      * What the command records as the source of what it grants, in the same shape the other modules use.
      */
     private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "command");
-    private static final Identifier ABILITY_HOTBAR_MODE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "ability");
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("ability")
-            .executes(ctx -> openHotbarConfiguration(ctx.getSource()))
             .then(literal("list")
                     .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
                     .then(argument("target", EntityArgument.entity())
@@ -82,11 +78,6 @@ public final class AbilityCommand {
         return SharedSuggestionProvider.suggest(MxtDatapackRegistries
                 .holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.ABILITY)
                 .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
-    }
-
-    private static int openHotbarConfiguration(CommandSourceStack source) throws CommandSyntaxException {
-        PacketDistributor.sendToPlayer(source.getPlayerOrException(), new HotbarConfigurationS2CPayload(ABILITY_HOTBAR_MODE));
-        return 1;
     }
 
     /**

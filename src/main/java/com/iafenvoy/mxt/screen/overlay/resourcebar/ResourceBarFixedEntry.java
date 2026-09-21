@@ -99,7 +99,7 @@ public final class ResourceBarFixedEntry extends AbstractHudEntry {
     @Override
     public int defaultX() {
         List<ResourceBarRenderState> row = this.row();
-        Anchor side = row.isEmpty() ? Anchor.LEFT : row.get(0).anchor();
+        Anchor side = row.isEmpty() ? Anchor.LEFT : row.getFirst().anchor();
         return ResourceBarOverlay.rowX(Minecraft.getInstance().getWindow().getGuiScaledWidth(), side,
                 this.layoutWidth());
     }

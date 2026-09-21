@@ -69,7 +69,7 @@ public final class MxtHudConfig extends AutoInitConfigContainer {
             Map<String, String> values = new HashMap<>(this.layout.getValue());
             values.put(layoutKey, value);
             this.layout.setValue(values);
-            MxtHudConfig.INSTANCE.save();
+            INSTANCE.save();
         }
 
         /**
@@ -81,13 +81,13 @@ public final class MxtHudConfig extends AutoInitConfigContainer {
             Map<String, String> values = new HashMap<>(this.layout.getValue());
             if (values.remove(layoutKey) == null) return;
             this.layout.setValue(values);
-            MxtHudConfig.INSTANCE.save();
+            INSTANCE.save();
         }
 
         private static MapStringEntry hudLayoutEntry() {
             // Held in a local first: the tooltip call makes the builder chain lose its type argument, and this
             // way the inferred type stays concrete instead of a raw type warning.
-            var builder = MapStringEntry.builder("config.mxt.hud.layout_v2", Map.<String, String>of());
+            MapStringEntry.Builder builder = MapStringEntry.builder("config.mxt.hud.layout_v2", Map.of());
             builder.key("layout_v2").tooltip("config.mxt.hud.layout.tooltip");
             return builder.build();
         }

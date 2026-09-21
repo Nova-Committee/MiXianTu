@@ -31,11 +31,11 @@ the changelog.**
 
 ### For Players
 
-- **Keybinds**: `C` toggles cultivation mode, `Z` opens the character information panel, `LAlt` shows the ability
-  hotbar, `V` fires spirit power; "Swap Main Hand with Back Weapon Slot" is unbound by default. All of them can be
-  changed in the controls settings.
-- **Interface**: resource bars, an aura concentration HUD, and a hotbar shared by abilities and spirit power (number
-  keys 1–9 select entries).
+- **Keybinds**: `C` toggles cultivation mode, `Z` opens the character information panel, `R` opens the wheel (the one
+  way abilities and spirit power are triggered); "Swap Main Hand with Back Weapon Slot" is unbound by default. All of
+  them can be changed in the controls settings.
+- **Interface**: a twelve-sector wheel (point at the sector you want and let go; the chosen entry's name is written in
+  the middle, and `/wheel` opens the editor for its twelve sectors), resource bars, an aura HUD.
 - **Blocks**: Spirit Crafting Table (uses aura recipes and deducts aura when the result is taken out), Forge Table,
   Exchange Station, Trade Station, Cheque Table, Display Stand, plus Spirit Stone Ore and Spirit Stone Block.
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
@@ -83,7 +83,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Module                          | Status | Description                                                                                                                                                                                                                                                                                                                |
 |---------------------------------|:------:|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Datapack Core                   |   ✅    | Gameplay rules are described by datapacks: conditions, effects, number calculation, item matching and trigger timing can all be freely combined, and a single entry can be disabled at any time.                                                                                                                           |
-| Hotbar and Character UI         |   ✅    | Players can open the ability and spirit power hotbars with a key and cast directly from them, open the character information panel to check their own state, and choose which entries appear on the hotbar.                                                                                                                |
+| Wheel and Character UI          |   ✅    | Abilities and spirit power share one twelve-sector wheel: hold `R` and point at the sector you want to cast or fire, and which entries sit on it is the player's own choice in the editor (six columns of auras, six of abilities, twelve shared cells). The character information panel is unchanged.                                                                                                                |
 | Resources                       |   ✅    | Numeric resources such as cultivation progress and spirit power can be defined; they regenerate by rule, are consumed by abilities and cultivation, and are drawn as resource bars on the HUD.                                                                                                                             |
 | Aura                            |   ✅    | The world has different aura concentrations per dimension, biome and block, changing over time and with formations; players can query the concentration at their position and see the result through particles, fog and the HUD.                                                                                           |
 | Cultivation and Realms          |   ✅    | Players can meditate to accumulate cultivation progress, faster where aura is dense; once the requirements are met they can break through to the next realm, with those requirements defined by datapacks.                                                                                                                 |

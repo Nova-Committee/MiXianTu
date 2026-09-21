@@ -1,9 +1,7 @@
 package com.iafenvoy.mxt.command;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.network.payload.HotbarConfigurationS2CPayload;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
@@ -35,7 +33,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
@@ -52,9 +49,7 @@ import static net.minecraft.commands.Commands.literal;
  * registered in must not share it.
  */
 public final class AuraCommand {
-    private static final Identifier SPIRIT_HOTBAR_MODE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit");
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("aura")
-            .executes(ctx -> openHotbarConfiguration(ctx.getSource()))
             .then(literal("query")
                     .executes(ctx -> queryAura(ctx.getSource(), null))
                     .then(literal("element")
@@ -71,11 +66,6 @@ public final class AuraCommand {
                             .executes(ctx -> clearAuraCache(ctx.getSource(), 3))
                             .then(argument("radius", IntegerArgumentType.integer(0, 32))
                                     .executes(ctx -> clearAuraCache(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius"))))));
-
-    private static int openHotbarConfiguration(CommandSourceStack source) throws CommandSyntaxException {
-        PacketDistributor.sendToPlayer(source.getPlayerOrException(), new HotbarConfigurationS2CPayload(SPIRIT_HOTBAR_MODE));
-        return 1;
-    }
 
     /**
      * Suggestions for one datapack registry, read through the enabled-entry accessor so a disabled definition

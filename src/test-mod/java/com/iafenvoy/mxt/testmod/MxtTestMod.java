@@ -50,8 +50,8 @@ public final class MxtTestMod {
     }
 
     /**
-     * Gives every joining player the abilities the test hotbar is meant to show, so a development session
-     * starts with something to press.
+     * Gives every joining player the abilities a development session wants on its wheel, so the editor has
+     * something to put in a sector and the wheel has something to trigger.
      */
     private static void grantTestAbilities(PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;

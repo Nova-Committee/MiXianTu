@@ -11,8 +11,8 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.core.Holder;
 
 /**
- * Server-authoritative cooldowns for the spirit-burst hotbar. The client receives this
- * attachment only to render the remaining fraction, following vanilla item cooldown semantics.
+ * Server-authoritative cooldowns for spirit bursts. The client receives this attachment only to draw the
+ * remaining fraction on the wheel, following vanilla item cooldown semantics.
  */
 public final class SpiritBurstCooldownAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritBurstCooldownAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

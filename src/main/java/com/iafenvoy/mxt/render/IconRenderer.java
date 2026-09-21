@@ -20,11 +20,15 @@ public final class IconRenderer {
      */
     public static final int ICON_SIZE = 16;
     /**
-     * How far a stand-in made of the name sits below the icon's own position: the hotbar's own nudge.
+     * How far a stand-in made of the name sits below the icon's own position: the nudge the compact slots
+     * were drawn with.
      */
     private static final int NAME_OFFSET = 7;
     private static final int NAME_COLOR = 0xFFE0E5EF;
-    private static final int NAME_MAX_LENGTH = 3;
+    /**
+     * How much of the box's width the name may not use, so the frame it sits in stays visible.
+     */
+    private static final int NAME_INSET = 2;
 
     private IconRenderer() {
     }
@@ -42,7 +46,8 @@ public final class IconRenderer {
     }
 
     /**
-     * Draws an icon in a box, or the first few characters of the name when there is no icon yet.
+     * Draws an icon in a box, or as much of the name as fits when there is no icon. The name is cut to the box
+     * rather than to a fixed character count, so it can never be drawn over the neighbouring box.
      */
     public static void renderOrName(GuiGraphicsExtractor graphics, Font font, Optional<IconReference> icon,
                                     Component name, int x, int y, int boxSize) {
@@ -50,9 +55,34 @@ public final class IconRenderer {
             render(graphics, icon.orElseThrow(), x, y, boxSize);
             return;
         }
-        String text = name.getString();
-        if (text.length() > NAME_MAX_LENGTH) text = text.substring(0, NAME_MAX_LENGTH);
+        String text = fit(font, name.getString(), boxSize - NAME_INSET);
+        if (text.isEmpty()) return;
         graphics.text(font, text, x + (boxSize - font.width(text)) / 2,
                 y + Math.max(0, (boxSize - ICON_SIZE) / 2) + NAME_OFFSET, NAME_COLOR, true);
+    }
+
+    /**
+     * Draws a name centred on a point, cut to the given width: the same rule as {@link #renderOrName} for
+     * callers that are not filling a box (the wheel writes a sector's name where its icon would have been).
+     */
+    public static void renderName(GuiGraphicsExtractor graphics, Font font, Component name, int centreX, int centreY, int maxWidth) {
+        String text = fit(font, name.getString(), maxWidth);
+        if (text.isEmpty()) return;
+        graphics.text(font, text, centreX - font.width(text) / 2, centreY - font.lineHeight / 2, NAME_COLOR, true);
+    }
+
+    /**
+     * The longest prefix that fits the width, counted in code points so a character is never cut in half.
+     */
+    private static String fit(Font font, String text, int maxWidth) {
+        if (maxWidth <= 0) return "";
+        String best = "";
+        int characters = text.codePointCount(0, text.length());
+        for (int count = 1; count <= characters; count++) {
+            String prefix = text.substring(0, text.offsetByCodePoints(0, count));
+            if (font.width(prefix) > maxWidth) break;
+            best = prefix;
+        }
+        return best;
     }
 }

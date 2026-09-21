@@ -142,17 +142,17 @@ public final class ArtifactHoldService {
         LivingEntity holder = event.getEntity();
         if (holder.level().isClientSide()) return;
         ItemStack stack = event.getItem();
-        if (!(HoldLookup.hold(stack) instanceof ArtifactHold hold)) return;
+        if (!(HoldLookup.hold(stack) instanceof ArtifactHold(Artifact artifact))) return;
         // Claiming and pouring are two different gestures on the same input: the claim is what finishing the
         // hold does, so an unclaimed stack is left exactly as it is until then.
         if (!ArtifactService.hasOwner(stack) || !ArtifactService.isOwner(stack, holder.getUUID())) return;
-        int moved = pour(holder, stack, holder.level().registryAccess(), hold.artifact());
+        int moved = pour(holder, stack, holder.level().registryAccess(), artifact);
         if (moved <= 0) {
             // Nothing moved, and the two reasons are told apart rather than lumped together: an artifact that is
             // full for everything it declares has nothing left to do and says nothing, while one whose aura the
             // holder cannot pay names that aura. Asking "is there room anywhere" alone made a full second aura
             // report as a shortfall, which is the answer this replaces.
-            Holder<Aura> blocked = blockedAura(holder, stack, hold.artifact());
+            Holder<Aura> blocked = blockedAura(holder, stack, artifact);
             if (blocked != null)
                 show(holder, Component.translatable("actionbar.mxt.charge.insufficient_aura",
                         DefinitionText.name(blocked, "aura")), "blocked:" + HolderHelper.id(blocked));
@@ -289,17 +289,15 @@ public final class ArtifactHoldService {
             int room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
             if (room <= 0) continue;
             int units = Math.min(POUR_INTAKE_PER_TICK, room);
-            if (POUR_COST_PER_UNIT > 0.0D) {
-                Holder<Resource> resource = aura.value().resource();
-                FormulaContext pool = ResourceService.formulaContext(holder, resource, formula);
-                double before = resources.get(resource);
-                units = Math.min(units, (int) Math.floor(before / POUR_COST_PER_UNIT));
-                if (units <= 0) continue;
-                Result paid = ResourceService.change(resources, resource, -(units * POUR_COST_PER_UNIT), pool);
-                if (!paid.valid()) continue;
-                units = Math.min(units, (int) Math.floor(Math.max(0.0D, before - paid.value()) / POUR_COST_PER_UNIT));
-                if (units <= 0) continue;
-            }
+            Holder<Resource> resource = aura.value().resource();
+            FormulaContext pool = ResourceService.formulaContext(holder, resource, formula);
+            double before = resources.get(resource);
+            units = Math.min(units, (int) Math.floor(before / POUR_COST_PER_UNIT));
+            if (units <= 0) continue;
+            Result paid = ResourceService.change(resources, resource, -(units * POUR_COST_PER_UNIT), pool);
+            if (!paid.valid()) continue;
+            units = Math.min(units, (int) Math.floor(Math.max(0.0D, before - paid.value()) / POUR_COST_PER_UNIT));
+            if (units <= 0) continue;
             moved += ArtifactService.addEnergy(access, stack, aura, units, 0.0D, formula);
         }
         return moved;

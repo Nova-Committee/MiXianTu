@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
 import com.iafenvoy.mxt.screen.information.TechniquePanelScreen;
 import com.iafenvoy.mxt.screen.overlay.hud.HudManager;
+import com.iafenvoy.mxt.screen.wheel.content.WheelConfigurationScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
@@ -42,6 +43,23 @@ public final class MxtKeyMappings {
      * editors use for the same job, which makes it the key a player is most likely to try first.
      */
     public static final KeyMappingHolder HUD_LAYOUT = new KeyMappingHolder("key.mxt.hud_layout", Type.KEYSYM, InputConstants.KEY_RSHIFT, CATEGORY);
+    /**
+     * The wheel key, bound by default: choosing a sector is not something to go looking for a key for. It only
+     * chooses - spending is {@link #WHEEL_USE} - and it has no state callback because {@code WheelMenuController}
+     * polls the raw key (opening a screen releases every mapping); registering it still puts it in the controls
+     * screen.
+     */
+    public static final KeyMappingHolder WHEEL = new KeyMappingHolder("key.mxt.wheel", Type.KEYSYM, InputConstants.KEY_R, CATEGORY);
+    /**
+     * The use key, bound by default: spends the sector the wheel key chose, with the wheel open or closed.
+     * Like {@link #WHEEL} it has no state callback, since the controller polls both keys raw.
+     */
+    public static final KeyMappingHolder WHEEL_USE = new KeyMappingHolder("key.mxt.wheel_use", Type.KEYSYM, InputConstants.KEY_V, CATEGORY);
+    /**
+     * Unbound on purpose, like the technique panel: opening the editor is not a mid-fight action, and {@code
+     * /wheel} does the same. Opening it touches no server - it reads the synced attachment and registries.
+     */
+    public static final KeyMappingHolder WHEEL_CONFIGURATION = new KeyMappingHolder("key.mxt.wheel_configuration", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
 
     static {
         SWAP_BACK.onStateChange(pressed -> {
@@ -60,6 +78,9 @@ public final class MxtKeyMappings {
         });
         HUD_LAYOUT.onStateChange(pressed -> {
             if (pressed && Minecraft.getInstance().screen == null) HudManager.openEditor();
+        });
+        WHEEL_CONFIGURATION.onStateChange(pressed -> {
+            if (pressed && Minecraft.getInstance().screen == null) WheelConfigurationScreen.open();
         });
     }
 

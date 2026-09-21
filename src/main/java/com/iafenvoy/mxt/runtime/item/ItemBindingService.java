@@ -329,7 +329,7 @@ public final class ItemBindingService {
      */
     private static boolean replaces(ItemAttributeModifiers.Entry entry, Set<Identifier> defaults,
                                     Holder<Attribute> attribute, double declared) {
-        if (declared == 0.0D || entry.modifier().id() == null) return false;
+        if (declared == 0.0D) return false;
         return defaults.contains(entry.modifier().id())
                 && HolderHelper.id(entry.attribute()).equals(HolderHelper.id(attribute));
     }

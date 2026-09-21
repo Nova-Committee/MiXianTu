@@ -864,13 +864,13 @@ public final class MxtTestCommands {
                 && ArtifactService.stored(claimBlood, qi) == 5
                 // An invulnerable holder cannot be made to bleed and the binding still stands, so the number is
                 // only asserted where the damage could land at all.
-                && (player.isInvulnerable() || close((double) (healthBeforeClaim - player.getHealth()), 3.0D));
+                && (player.isInvulnerable() || close(healthBeforeClaim - player.getHealth(), 3.0D));
         // A price replaced by mxt:no_op binds for free, at health a priced claim would have spent.
         player.setHealth(4.0F);
         ItemStack freeJade = new ItemStack(Items.AMETHYST_SHARD);
         ClaimResult freeHold = ArtifactHoldService.claim(player, freeJade, access);
         boolean freeClaim = freeHold == ClaimResult.CLAIMED && ArtifactService.isOwner(freeJade, player.getUUID())
-                && close((double) player.getHealth(), 4.0D);
+                && close(player.getHealth(), 4.0D);
         // There is no health pre-check any more: a price the holder cannot survive is charged anyway and the
         // binding still stands. Driven on a disposable probe, because the other way to show it is killing the
         // player halfway through the run.
@@ -881,7 +881,7 @@ public final class MxtTestCommands {
             ItemStack doomedSword = new ItemStack(Items.IRON_SWORD);
             ClaimResult doomed = ArtifactHoldService.claim(poorClaimant, doomedSword, access);
             unguarded = doomed == ClaimResult.CLAIMED && ArtifactService.isOwner(doomedSword, poorClaimant.getUUID())
-                    && (poorClaimant.isDeadOrDying() || close((double) poorClaimant.getHealth(), 0.0D));
+                    && (poorClaimant.isDeadOrDying() || close(poorClaimant.getHealth(), 0.0D));
             poorClaimant.discard();
         }
         // The definition's own condition is asked before either action runs: this fixture states a price of one,
@@ -890,7 +890,7 @@ public final class MxtTestCommands {
         ItemStack sealedStack = new ItemStack(Items.GLOWSTONE_DUST);
         ClaimResult sealedHold = ArtifactHoldService.claim(player, sealedStack, access);
         boolean sealedRefused = sealedHold == ClaimResult.CONDITION_FAILED && !ArtifactService.hasOwner(sealedStack)
-                && close((double) player.getHealth(), 4.0F);
+                && close(player.getHealth(), 4.0F);
         // Charging belongs to the actions, so every writer of a binding pays it: the loot function and a script
         // reach `refine` directly, and both of the fixture's actions run there as well. Health is topped up
         // first, because this path is not guarded by anything - it charges whatever the definition says.
@@ -899,7 +899,7 @@ public final class MxtTestCommands {
         ItemStack scriptedBlood = new ItemStack(Items.BLAZE_ROD);
         boolean scriptPaid = ArtifactService.refine(scriptedBlood, player) == RefineResult.REFINED
                 && ArtifactService.stored(scriptedBlood, qi) == 5
-                && (player.isInvulnerable() || close((double) (healthBeforeScript - player.getHealth()), 3.0D));
+                && (player.isInvulnerable() || close(healthBeforeScript - player.getHealth(), 3.0D));
         player.setHealth(healthBeforeClaim);
         ok &= check(source, "artifact hold claim paid=" + pricePaid + " free=" + freeClaim + " unguarded=" + unguarded
                 + " condition=" + sealedRefused + " script=" + scriptPaid,

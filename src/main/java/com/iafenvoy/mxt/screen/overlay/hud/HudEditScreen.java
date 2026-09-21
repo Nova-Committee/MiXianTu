@@ -167,7 +167,7 @@ public final class HudEditScreen extends Screen {
      */
     private void setSelected(HudEntry entry) {
         if (this.selected == entry) return;
-        boolean pickedUp = this.selected == null && entry != null;
+        boolean pickedUp = this.selected == null;
         if (this.selected != null) this.selected.setDragging(false);
         this.selected = entry;
         HudManager.setEditedEntry(entry);

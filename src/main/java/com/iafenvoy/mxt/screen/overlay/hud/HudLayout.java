@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.screen.overlay.hud;
 
 import com.iafenvoy.mxt.config.MxtHudConfig;
+import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 
@@ -93,8 +94,7 @@ public final class HudLayout {
      * guessing a size.
      */
     static int[] windowSize() {
-        var window = Minecraft.getInstance().getWindow();
-        if (window == null) return null;
+        Window window = Minecraft.getInstance().getWindow();
         int width = window.getGuiScaledWidth();
         int height = window.getGuiScaledHeight();
         return width <= 0 || height <= 0 ? null : new int[]{width, height};

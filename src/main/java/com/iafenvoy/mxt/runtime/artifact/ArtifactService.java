@@ -156,9 +156,10 @@ public final class ArtifactService {
      * because every entry of it runs. Anything conditional states nothing here.
      */
     private static double statedPrice(ItemAction action, FormulaContext context) {
-        if (action instanceof ConsumeHealthItemAction consume) return Math.max(0.0D, evaluate(consume.amount(), context));
-        if (action instanceof SequenceItemAction sequence)
-            return sequence.actions().stream().mapToDouble(inner -> statedPrice(inner, context)).sum();
+        if (action instanceof ConsumeHealthItemAction(NumberProvider amount))
+            return Math.max(0.0D, evaluate(amount, context));
+        if (action instanceof SequenceItemAction(List<ItemAction> actions))
+            return actions.stream().mapToDouble(inner -> statedPrice(inner, context)).sum();
         return 0.0D;
     }
 

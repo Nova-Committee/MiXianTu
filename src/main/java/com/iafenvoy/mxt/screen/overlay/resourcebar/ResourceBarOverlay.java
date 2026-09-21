@@ -20,12 +20,8 @@ import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import com.iafenvoy.mxt.screen.overlay.hud.HudManager;
-import com.iafenvoy.mxt.screen.overlay.hud.HudRenderer;
-import com.iafenvoy.mxt.screen.overlay.hud.RenderBlock;
 import com.iafenvoy.mxt.util.HolderHelper;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
@@ -118,7 +114,7 @@ public final class ResourceBarOverlay {
     }
 
     private static List<ResourceBarRenderState> sort(List<ResourceBarRenderState> collected) {
-        collected.sort(Comparator.<ResourceBarRenderState>comparingInt(ResourceBarRenderState::order)
+        collected.sort(Comparator.comparingInt(ResourceBarRenderState::order)
                 .thenComparing(state -> state.id().toString())
                 .thenComparingInt(ResourceBarRenderState::index));
         return collected;

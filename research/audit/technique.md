@@ -404,7 +404,7 @@ Information entry contains more than one line (width=90): 维度 = overworld
 | 层 | 位置 | 职责 |
 | --- | --- | --- |
 | 数据（双端） | `data/IconReference.java` | `record IconReference(Either<Identifier, ItemStackTemplate> value)`；`CODEC` 用 `Codec.either(Identifier.CODEC, ItemStackTemplate.CODEC)`，**内联**——裸字符串是贴图，对象是物品。辅助：`texture()`/`item()`/`stack()`/`of(ItemStack)`/`texture(id)`/`item(template)`；`toString()` 保持浅层（含 holder） |
-| 渲染（客户端） | `render/IconRenderer.java` | `render(graphics, icon, x, y, boxSize)` 把 16x16 的图标居中画进 box；`renderOrName(graphics, font, icon, name, x, y, boxSize)` 在没有图标时用名字前 3 个字顶上（沿用热键栏原偏移，观感不变） |
+| 渲染（客户端） | `render/IconRenderer.java` | `render(graphics, icon, x, y, boxSize)` 把 16x16 的图标居中画进 box；`renderOrName(graphics, font, icon, name, x, y, boxSize)` 在没有图标时用名字顶上（沿用热键栏原偏移，观感不变）。**2026-09-22 修正**：截断规则由"固定前 3 个字"改成**按可用宽度取最长前缀**（`fit`，按码点切），因为 3 个汉字 27px 会溢出 22px 的格子糊到隔壁；同时新增 `renderName(graphics, font, name, 中心X, 中心Y, 最大宽度)` 给轮盘扇区用（条目没有图标时在扇区中点画名字，宽度按该半径上一扇的弧长算） |
 
 **改了哪些地方**
 

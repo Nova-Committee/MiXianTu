@@ -12,46 +12,27 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * Client-only controls for the shared ability and spirit-burst hotbars, laid out one tab per overlay. Names stay
- * short and the explanation lives in the tooltip, the same way the server config is written; call sites read the
- * entry itself through {@link #INSTANCE}, and the serialised keys are short for the same reason: the old full
+ * Client-only controls for the mod's own overlays, laid out one tab per feature. Names stay short and the
+ * explanation lives in the tooltip, the same way the server config is written; call sites read the entry
+ * itself through {@link #INSTANCE}, and the serialised keys are short for the same reason: the old full
  * paths are translated on load.
  *
  * <p>The HUD layout is not here: it lives in {@link MxtHudConfig}, in its own file, because it is written by
- * dragging rather than by filling in a setting.</p>
+ * dragging rather than by filling in a setting. The wheel's sectors are not here either: they are the player's
+ * own layout, kept on the server, which is the side that validates them (see {@code WheelLayoutAttachment}).</p>
  */
 public final class MxtClientConfig extends AutoInitConfigContainer {
     public static final MxtClientConfig INSTANCE = new MxtClientConfig();
 
-    public final Hotbar hotbar = new Hotbar();
     public final ResourceBars resourceBars = new ResourceBars();
     public final Information information = new Information();
     public final Techniques techniques = new Techniques();
     public final Rifts rifts = new Rifts();
+    public final Wheel wheel = new Wheel();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt/mxt-client.json");
         this.dataFixer.registerKeyRule("^config\\.mxt\\.client\\.[a-z_]+\\.([a-z_]+)$", key -> key.substring(key.lastIndexOf('.') + 1));
-    }
-
-    public static final class Hotbar extends AutoInitConfigCategoryBase {
-        public final BooleanEntry allowVanillaHotbarSelection = BooleanEntry.builder("config.mxt.client.hotbar.allow_vanilla_selection", false)
-                .key("allow_vanilla_selection")
-                .tooltip("config.mxt.client.hotbar.allow_vanilla_selection.tooltip")
-                .build();
-        public final EnumEntry<HotbarMode> mode = EnumEntry.builder("config.mxt.client.hotbar.mode", HotbarMode.HOLD)
-                .key("mode")
-                .tooltip("config.mxt.client.hotbar.mode.tooltip")
-                .nameProvider(value -> Component.translatable("config.mxt.client.hotbar.mode." + value.name().toLowerCase()))
-                .build();
-
-        private Hotbar() {
-            super("hotbar", "config.mxt.client.hotbar");
-        }
-    }
-
-    public enum HotbarMode {
-        HOLD, TOGGLE
     }
 
     public static final class ResourceBars extends AutoInitConfigCategoryBase {
@@ -124,5 +105,25 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
         private Rifts() {
             super("rifts", "config.mxt.client.rifts");
         }
+    }
+
+    /**
+     * How the wheel menu is driven. One entry, because the only choice left is whether the key holds the wheel
+     * up or toggles it; spending the selection is the use key's job, not a setting.
+     */
+    public static final class Wheel extends AutoInitConfigCategoryBase {
+        public final EnumEntry<WheelMode> mode = EnumEntry.builder("config.mxt.client.wheel.mode", WheelMode.HOLD)
+                .key("mode")
+                .tooltip("config.mxt.client.wheel.mode.tooltip")
+                .nameProvider(value -> Component.translatable("config.mxt.client.wheel.mode." + value.name().toLowerCase()))
+                .build();
+
+        private Wheel() {
+            super("wheel", "config.mxt.client.wheel");
+        }
+    }
+
+    public enum WheelMode {
+        HOLD, TOGGLE
     }
 }

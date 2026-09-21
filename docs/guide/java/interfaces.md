@@ -34,6 +34,6 @@ title: 特殊公开接口
 
 技能、阵法和其他行为的消耗抽象，提供面向 `Player` 的检查和实际消耗方法。新增 Cost 类型应使用固有注册表分派，而不是在 JSON 中写 Java 类名。
 
-### `HotbarEntry`
+### `WheelMenuEntry`
 
-纯客户端条目接口，提供名称、可选图标、强调色和 `onPress`、`onPressTick(Player)`、`onRelease` 回调，以及 `cooldown(Player)` / `canPress(Player)` 两个冷却钩子；`render(...)` 可以整体覆写。
+轮盘条目的纯客户端接口：`kind()`（技能 / 灵气）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`。轮盘上的 12 扇由 `WheelMenuProvider`（唯一实现 `WheelContent`）给出，条目本身不知道自己落在哪一扇。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。

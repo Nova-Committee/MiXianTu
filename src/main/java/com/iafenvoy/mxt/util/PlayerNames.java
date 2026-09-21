@@ -35,8 +35,8 @@ public final class PlayerNames {
      */
     public static Optional<String> displayName(Entity entity) {
         Component name = entity.getName();
-        String value = name == null ? null : name.getString();
-        return value == null || value.isBlank() ? Optional.empty() : Optional.of(value);
+        String value = name.getString();
+        return value.isBlank() ? Optional.empty() : Optional.of(value);
     }
 
     /**

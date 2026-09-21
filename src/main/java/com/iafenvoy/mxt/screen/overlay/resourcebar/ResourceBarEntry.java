@@ -59,9 +59,11 @@ public final class ResourceBarEntry extends AbstractHudEntry {
 
     /**
      * How far above the bottom of the screen the columns stand: the height of the hotbar plus the health bar
-     * and the armour row above it.
+     * and the armour row above it. Public because it is the line the bottom of the HUD stands on rather than a
+     * number about resource bars: the wheel's selection cell is placed on it too, in the gap between the two
+     * columns, so the three elements line up on one edge.
      */
-    private static final int BOTTOM_MARGIN = 47;
+    public static final int BOTTOM_MARGIN = 47;
 
     private final Anchor side;
     private Bounds layout = new Bounds(EMPTY_WIDTH, EMPTY_HEIGHT);

@@ -1,13 +1,11 @@
 package com.iafenvoy.mxt.network;
 
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.HotbarLayoutAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
@@ -15,7 +13,8 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
-import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
+import com.iafenvoy.mxt.runtime.wheel.WheelService;
+import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
@@ -41,23 +40,39 @@ import java.util.Optional;
 public final class ServerNetworkHandler {
     public static final Logger MXT_DEBUG = LogUtils.getLogger();
 
-    static void onAbilityAction(AbilityActionC2SPayload payload, IPayloadContext context) {
-        Player player = context.player();
-        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
-        if (payload.cancel()) {
-            MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability -> {
-                // Releasing the input cancels either a pending cast or an active channel. Both
-                // states are independent, so both are cleared before returning.
-                AbilityService.cancelCast(ability, abilities, player.level().getGameTime());
-                if (abilities.channelledAbility().filter(ability::equals).isPresent())
-                    AbilityService.stopChannel(abilities);
-            });
-            return;
-        }
-        MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, payload.ability()).ifPresent(ability -> {
-            ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-            AbilityService.use(ability, ability.value(), player, abilities, resources, player.level().getGameTime(), FormulaContext.of(player));
-        });
+    /**
+     * One wheel sector was chosen. The payload carries what was chosen and nothing else: the kind says which
+     * registry the id belongs to, and whether the player may use it is decided here and by the pipeline behind
+     * it, never by the screen that sent this.
+     */
+    static void onWheelAction(WheelActionC2SPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        WheelService.trigger(player, payload.kind(), payload.id());
+    }
+
+    /**
+     * A wheel layout from the configuration screen: forced to twelve sectors with every id resolved, so it can
+     * only ever contain things this server could trigger.
+     */
+    static void onWheelLayout(WheelLayoutC2SPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        WheelLayoutAttachment attachment = player.getData(MxtAttachments.WHEEL_LAYOUT);
+        attachment.setLayout(WheelService.sanitize(player, payload.layout()));
+    }
+
+    /**
+     * The player armed something else, or nothing. The id is re-resolved like a layout's, and a selection this
+     * server cannot resolve is stored as "nothing armed" - logged, since "my wheel forgot my skill" is
+     * otherwise a report with nothing in the log to explain it.
+     */
+    static void onWheelSelection(WheelSelectionC2SPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        WheelSlot submitted = payload.selection().orElse(null);
+        Optional<WheelSlot> selection = WheelService.sanitizeSelection(player, submitted);
+        if (submitted != null && selection.isEmpty())
+            MiXianTu.LOGGER.warn("Discarding the wheel selection {} sent by {}: no such definition on this server",
+                    submitted, player.getGameProfile().name());
+        player.getData(MxtAttachments.WHEEL_LAYOUT).setSelection(selection);
     }
 
     static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {
@@ -138,18 +153,6 @@ public final class ServerNetworkHandler {
         if (!(context.player() instanceof ServerPlayer player)) return;
         Result result = CultivationModeService.toggle(player);
         if (!result.started() && !result.stopped()) CultivationModeService.notifyFailure(player, result);
-    }
-
-    static void onSpiritBurst(SpiritBurstC2SPayload payload, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer player)
-            SpiritBurstService.setFiring(player, payload.resource(), payload.firing());
-    }
-
-    static void onHotbarLayout(HotbarLayoutC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player) || payload.mode() == null) return;
-        HotbarLayoutAttachment attachment = player.getData(MxtAttachments.HOTBAR_LAYOUT);
-        if (payload.slots().size() > 9) return;
-        attachment.setSlots(payload.mode(), payload.slots());
     }
 
     /**

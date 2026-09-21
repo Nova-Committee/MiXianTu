@@ -9,4 +9,4 @@ sidebar_position: 1
 - [交互与界面](interaction)
 - [命令](commands)
 - [好友与敌我识别](friends)
-- [Hotbar、资源条与灵气 HUD](hotbar)
+- [轮盘、资源条与灵气 HUD](wheel)

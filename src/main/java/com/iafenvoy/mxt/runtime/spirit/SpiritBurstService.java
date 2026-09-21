@@ -72,16 +72,40 @@ public final class SpiritBurstService {
         ACTIVE_AURAS.remove(event.getEntity().getUUID());
     }
 
+    /**
+     * Fires one aura once, for a caller that keeps no "held down" state: the wheel chooses a sector and that is
+     * the whole gesture. The gate is the same one the held path applies - the element has to be enabled and the
+     * player has to be allowed to use the aura - and the cooldown and the payment are shared with it, so a burst
+     * cannot be fired from the wheel in a situation where a held key would have refused it.
+     *
+     * @return whether a burst was actually fired
+     */
+    public static boolean fireOnce(ServerPlayer player, Identifier auraId) {
+        if (auraId == null) return false;
+        Holder<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId)
+                .map(value -> (Holder<Aura>) value)
+                .filter(value -> Elements.enabled(value.value().auraType()) && ResourceUseService.canUse(player, value))
+                .orElse(null);
+        return aura != null && attempt(player, aura);
+    }
+
     private static void fire(ServerPlayer player, Holder<Aura> aura) {
-        ResourceHolderAttachment holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         Set<Holder<Aura>> active = ACTIVE_AURAS.get(player.getUUID());
         if (active == null || !active.contains(aura)) return;
         active.removeIf(candidate -> !Elements.enabled(candidate.value().auraType()) || !ResourceUseService.canUse(player, candidate));
+        attempt(player, aura);
+    }
+
+    /**
+     * The checks and the payment every firing shares, whether it was asked for once or held down.
+     */
+    private static boolean attempt(ServerPlayer player, Holder<Aura> aura) {
+        ResourceHolderAttachment holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
-        if (cooldowns.isOnCooldown(aura, player.level().getGameTime())) return;
-        if (tryFire(player, holder, aura)) {
-            cooldowns.setCooldownUntil(aura, Math.addExact(player.level().getGameTime(), FIRE_INTERVAL_TICKS));
-        }
+        if (cooldowns.isOnCooldown(aura, player.level().getGameTime())) return false;
+        if (!tryFire(player, holder, aura)) return false;
+        cooldowns.setCooldownUntil(aura, Math.addExact(player.level().getGameTime(), FIRE_INTERVAL_TICKS));
+        return true;
     }
 
     /**

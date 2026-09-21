@@ -48,7 +48,7 @@ import java.util.Optional;
  * is one implementation in {@link com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService}.</p>
  *
  * <p>The price is one of the things {@code claim_action} does rather than a field of its own: its default is
- * {@link com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction} for {@link #DEFAULT_CLAIM_HEALTH}
+ * {@link ConsumeHealthItemAction} for {@link #DEFAULT_CLAIM_HEALTH}
  * points of health, so an artifact that says nothing still charges two hearts to claim, and a definition that
  * wants a free binding says {@code mxt:no_op}. Every other action-shaped field defaults to doing nothing. What
  * this action charges is the whole price - three writers of a binding run it, and none of them asks whether the
