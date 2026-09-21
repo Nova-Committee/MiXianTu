@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.PillService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
@@ -43,9 +44,11 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Resolves datapack gameplay bindings for items already registered by Minecraft,
@@ -279,23 +282,56 @@ public final class ItemBindingService {
     /**
      * Item's own modifiers with the binding's current values layered on top. An unavailable item
      * therefore keeps its vanilla attributes instead of losing them.
+     *
+     * <p>{@code attack_damage} and {@code attack_speed} are this weapon's <em>own</em> numbers rather than a bonus
+     * on top of the item's, so a declaration that states one replaces the item's default for that attribute. Only
+     * that default is dropped, so a modifier another system put on the same attribute survives; declaring zero
+     * (the default) leaves the item's own number alone. {@code attributes} stays the additive list.</p>
      */
     private static ItemAttributeModifiers weaponModifiers(ItemStack stack, ItemAttributeModifiers baseline,
                                                           WeaponBinding weapon, LivingEntity entity) {
         Builder builder = ItemAttributeModifiers.builder();
-        baseline.modifiers().forEach(entry -> builder.add(entry.attribute(), entry.modifier(), entry.slot()));
         Item item = stack.getItem();
         FormulaContext context = FormulaContext.of(entity);
-        add(builder, Attributes.ATTACK_DAMAGE, modifierId(item, "attack_damage"),
-                weapon.attackDamage().evaluate(context), Operation.ADD_VALUE);
-        add(builder, Attributes.ATTACK_SPEED, modifierId(item, "attack_speed"),
-                weapon.attackSpeed().evaluate(context), Operation.ADD_VALUE);
+        double damage = weapon.attackDamage().evaluate(context);
+        double speed = weapon.attackSpeed().evaluate(context);
+        Set<Identifier> defaults = defaultModifierIds(stack);
+        baseline.modifiers().forEach(entry -> {
+            if (replaces(entry, defaults, Attributes.ATTACK_DAMAGE, damage)) return;
+            if (replaces(entry, defaults, Attributes.ATTACK_SPEED, speed)) return;
+            builder.add(entry.attribute(), entry.modifier(), entry.slot());
+        });
+        // A declared speed at or below -4 leaves the weapon with no positive attack speed (the player's base is
+        // 4). That is not merely slow: it was measured to park the held item too low in first person, so keep
+        // declarations above it - see research/23 §10.15.
+        add(builder, Attributes.ATTACK_DAMAGE, modifierId(item, "attack_damage"), damage, Operation.ADD_VALUE);
+        add(builder, Attributes.ATTACK_SPEED, modifierId(item, "attack_speed"), speed, Operation.ADD_VALUE);
         for (int index = 0; index < weapon.attributes().size(); index++) {
             AttributeEntry attribute = weapon.attributes().get(index);
             add(builder, attribute.attribute(), attribute.modifier().id(),
                     attribute.amount(context), attribute.modifier().operation());
         }
         return builder.build();
+    }
+
+    /**
+     * The ids of the modifiers the item type itself ships with - the ones a declared damage or speed may replace.
+     */
+    private static Set<Identifier> defaultModifierIds(ItemStack stack) {
+        Set<Identifier> ids = new HashSet<>();
+        stack.getPrototype().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY)
+                .modifiers().forEach(entry -> ids.add(entry.modifier().id()));
+        return ids;
+    }
+
+    /**
+     * Whether this entry is the item's own default for an attribute the binding states a number for.
+     */
+    private static boolean replaces(ItemAttributeModifiers.Entry entry, Set<Identifier> defaults,
+                                    Holder<Attribute> attribute, double declared) {
+        if (declared == 0.0D || entry.modifier().id() == null) return false;
+        return defaults.contains(entry.modifier().id())
+                && HolderHelper.id(entry.attribute()).equals(HolderHelper.id(attribute));
     }
 
     private static void add(Builder builder, Holder<Attribute> attribute, Identifier id, double value, Operation operation) {

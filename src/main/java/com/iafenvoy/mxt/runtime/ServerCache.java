@@ -2,6 +2,12 @@ package com.iafenvoy.mxt.runtime;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
+import com.iafenvoy.mxt.data.artifact.Artifact;
+import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility.Intent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -10,12 +16,19 @@ import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.mojang.datafixers.util.Either;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad;
@@ -113,6 +126,7 @@ public final class ServerCache {
         this.rankByRealm = ranks;
         this.rebuildTriggerRules(problems);
         this.rebuildSkillChains(problems);
+        this.rebuildArtifacts(problems);
         this.problems = List.copyOf(problems);
         if (problems.isEmpty()) {
             MiXianTu.LOGGER.info("Datapack validation passed: {} cultivation realms, {} skill stages, {} trigger rules",
@@ -156,6 +170,59 @@ public final class ServerCache {
         Map<Identifier, List<Reference<TriggerRule>>> indexed = new LinkedHashMap<>();
         rules.forEach((signal, entries) -> indexed.put(signal, List.copyOf(entries)));
         this.triggerRulesBySignal = Collections.unmodifiableMap(indexed);
+    }
+
+    /**
+     * The two artifact checks a definition cannot make about itself, because both need the other registries.
+     *
+     * <p>First: an {@code mxt:active} or {@code mxt:passive} entry grants abilities by name, and the name can
+     * lie - a pack calling an {@code mxt:modifier} ability "active" ships an artifact whose skill never appears
+     * in the hotbar, which reads as the artifact being broken. Second: two definitions claiming the same item
+     * leaves the winner to registry order, which is the quietest way for one of them to be dead content.</p>
+     */
+    private void rebuildArtifacts(List<String> problems) {
+        Registry<Ability> abilities = this.server.registryAccess().lookupOrThrow(MxtResourceKeys.ABILITY);
+        Map<Item, Identifier> claimed = new LinkedHashMap<>();
+        for (Reference<Artifact> holder : MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.ARTIFACT).toList()) {
+            Artifact definition = holder.value();
+            this.checkGrantedAbilityKinds(holder, definition, abilities, problems);
+            Identifier previous = this.claimItems(holder, definition, claimed);
+            if (previous != null)
+                problems.add(problem(MxtResourceKeys.ARTIFACT, holder.key().identifier(),
+                        "claims an item that " + previous + " already claims as its artifact"));
+        }
+    }
+
+    private void checkGrantedAbilityKinds(Reference<Artifact> holder, Artifact definition,
+                                          Registry<Ability> abilities, List<String> problems) {
+        for (ArtifactAbility ability : definition.abilities()) {
+            if (!(ability instanceof GrantArtifactAbility(
+                    GrantArtifactAbility.Intent intent,
+                    List<Either<Holder<Ability>, TagKey<Ability>>> abilities1
+            ))) continue;
+            boolean wantsActive = intent == Intent.ACTIVE;
+            for (Holder<Ability> granted : RegistryCodecs.listAll(abilities1, abilities)) {
+                boolean isActive = granted.value().type() instanceof ActiveAbilityType;
+                if (wantsActive == isActive) continue;
+                problems.add(problem(MxtResourceKeys.ARTIFACT, holder.key().identifier(),
+                        "grants " + HolderHelper.id(granted) + " as mxt:" + (wantsActive ? "active" : "passive")
+                                + ", but that ability's own type is " + (isActive ? "active" : "not active")));
+            }
+        }
+    }
+
+    /**
+     * Reserves every item this definition matches and returns the definition that had already claimed the first
+     * one it could not take, or {@code null} when it took them all.
+     */
+    private Identifier claimItems(Reference<Artifact> holder, Artifact definition, Map<Item, Identifier> claimed) {
+        for (Reference<Item> item : BuiltInRegistries.ITEM.listElements().toList()) {
+            ItemStack stack = new ItemStack(item.value());
+            if (definition.entries().stream().noneMatch(entry -> entry.matches(stack))) continue;
+            Identifier owner = claimed.putIfAbsent(item.value(), holder.key().identifier());
+            if (owner != null) return owner;
+        }
+        return null;
     }
 
     /**

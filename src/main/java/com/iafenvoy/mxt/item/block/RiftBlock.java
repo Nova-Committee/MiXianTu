@@ -25,7 +25,6 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Portal;
 import net.minecraft.world.level.block.Portal.Transition;
 import net.minecraft.world.level.block.RenderShape;
@@ -149,7 +148,7 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         if (!(blockEntity instanceof RiftBlockEntity rift)) return;
         ItemStack drop = new ItemStack(this);
         drop.set(MxtDataComponents.RIFT, new RiftComponent(rift.target(), rift.color()));
-        Block.popResource(level, pos, drop);
+        popResource(level, pos, drop);
     }
 
     /**

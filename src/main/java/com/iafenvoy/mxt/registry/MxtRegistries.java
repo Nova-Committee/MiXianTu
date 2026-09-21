@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
+import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
 import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -42,6 +43,7 @@ public final class MxtRegistries {
 
     public static final DefaultedRegistry<MapCodec<? extends AbilityType>> ABILITY_TYPE = create("empty", MxtResourceKeys.ABILITY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends TargetSelector>> ABILITY_TARGET_SELECTOR_TYPE = create("self", MxtResourceKeys.ABILITY_TARGET_SELECTOR_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends ArtifactAbility>> ARTIFACT_ABILITY_TYPE = create("empty", MxtResourceKeys.ARTIFACT_ABILITY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Cost>> COST_TYPE = create("resource", MxtResourceKeys.COST_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends CurseType>> CURSE_TYPE = create("empty", MxtResourceKeys.CURSE_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends DataStorage>> DATA_STORAGE_TYPE = create("empty", MxtResourceKeys.DATA_STORAGE_TYPE);

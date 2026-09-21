@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
 import com.iafenvoy.mxt.data.storage.AuraPulse;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
-import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.storage.ChargesDataStorage;
@@ -18,10 +17,10 @@ import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.event.AbilityTriggeredEvent.Post;
 import com.iafenvoy.mxt.event.AbilityTriggeredEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
@@ -197,10 +196,10 @@ public final class AbilityEventBridge {
         if (entity.level().isClientSide()) return;
         AbilityAttachment holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = equipmentSource(event.getSlot(), event.getTo());
-        itemAbilities(event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
+        itemAbilities(entity, event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                 .flatMap(Optional::stream)
                 .forEach(ability -> holder.revoke(ability, source));
-        itemAbilities(event.getTo()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
+        itemAbilities(entity, event.getTo()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                 .flatMap(Optional::stream).forEach(ability -> holder.grant(ability, source));
         rebuildTriggerSubscriptions(entity);
         FormulaContext context = FormulaContext.of(entity, Map.of("equipment_slot", (double) event.getSlot().ordinal()));
@@ -209,10 +208,14 @@ public final class AbilityEventBridge {
                         .set("equipment_slot", (double) event.getSlot().ordinal()));
     }
 
-    private static List<Identifier> itemAbilities(ItemStack stack) {
+    /**
+     * Every ability one stack contributes: what its artifact definition grants plus whatever the component on
+     * the stack was written with. The definition is resolved here rather than where the stack was made, so an
+     * artifact grants its skills by being held.
+     */
+    private static List<Identifier> itemAbilities(LivingEntity entity, ItemStack stack) {
         if (stack.isEmpty()) return List.of();
-        ItemAbilitiesComponent data = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesComponent(List.of()));
-        return data.abilities();
+        return ArtifactService.abilityIds(entity.level().registryAccess(), stack);
     }
 
     /**
@@ -221,7 +224,7 @@ public final class AbilityEventBridge {
     private static boolean syncCuriosAbilities(LivingEntity entity, AbilityAttachment holder) {
         Set<Holder<Ability>> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
-            itemAbilities(stack).stream()
+            itemAbilities(entity, stack).stream()
                     .map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                     .flatMap(Optional::stream)
                     .forEach(current::add);

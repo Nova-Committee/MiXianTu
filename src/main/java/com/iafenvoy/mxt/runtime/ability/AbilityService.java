@@ -25,8 +25,6 @@ import com.iafenvoy.mxt.event.ResourceConsumeEvent.Post;
 import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;

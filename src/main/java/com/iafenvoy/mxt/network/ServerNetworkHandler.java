@@ -93,7 +93,7 @@ public final class ServerNetworkHandler {
             }
             return;
         }
-        MxtDatapackRegistries.holder(MxtResourceKeys.ITEM_ARCHETYPE, payload.archetype()).ifPresent(archetype ->
+        MxtDatapackRegistries.holder(MxtResourceKeys.ARTIFACT, payload.archetype()).ifPresent(archetype ->
                 FlightService.mount(player, player.getMainHandItem(), archetype, FormulaContext.of(player)));
     }
 

@@ -10,7 +10,8 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
-import com.iafenvoy.mxt.data.artifact.ItemArchetype;
+import com.iafenvoy.mxt.data.artifact.Artifact;
+import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraMaximum;
 import com.iafenvoy.mxt.data.aura.AuraZone;
@@ -62,6 +63,7 @@ public final class MxtResourceKeys {
     // Builtin registries
     public static final ResourceKey<Registry<MapCodec<? extends AbilityType>>> ABILITY_TYPE = create("ability_type");
     public static final ResourceKey<Registry<MapCodec<? extends TargetSelector>>> ABILITY_TARGET_SELECTOR_TYPE = create("ability_target_selector_type");
+    public static final ResourceKey<Registry<MapCodec<? extends ArtifactAbility>>> ARTIFACT_ABILITY_TYPE = create("artifact_ability_type");
     public static final ResourceKey<Registry<MapCodec<? extends Cost>>> COST_TYPE = create("cost_type");
     public static final ResourceKey<Registry<MapCodec<? extends CurseType>>> CURSE_TYPE = create("curse_type");
     public static final ResourceKey<Registry<MapCodec<? extends DataStorage>>> DATA_STORAGE_TYPE = create("data_storage_type");
@@ -106,7 +108,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<SkillStage>> SKILL_STAGE = create("skill_stage");
     //TODO::May be removed together with CultivateAction - see that record for the cluster it lives in.
     public static final ResourceKey<Registry<CultivateAction>> CULTIVATE_ACTION = create("cultivate_action");
-    public static final ResourceKey<Registry<ItemArchetype>> ITEM_ARCHETYPE = create("item_archetype");
+    public static final ResourceKey<Registry<Artifact>> ARTIFACT = create("artifact");
     public static final ResourceKey<Registry<SpiritHerb>> SPIRIT_HERB = create("spirit_herb");
     public static final ResourceKey<Registry<Formation>> FORMATION = create("formation");
     public static final ResourceKey<Registry<Tribulation>> TRIBULATION = create("tribulation");

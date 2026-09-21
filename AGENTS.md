@@ -27,7 +27,7 @@
 3. **不要自行 `git commit` / `git push`。** 也不要 `git checkout --`、`git stash`、`git reset` 别人的改动。
 4. **默认不启动游戏/测试服务端。** 代码改动的最低验证是编译（第 2 节）；要实机验证（`runTestClient` / `runTestServer`）**先问**，跑完把结果贴出来。
 5. **文档同步三处**：本仓库 `docs/`（字段与教程）+ 本仓库 `docs/模块实现审计.md`（完成度）+ **文档站仓库**（中英各一份）。只改一处等于制造 bug。
-6. **设计先留档。** `research/` 是**设计稿存储处**：新模块、改版、重构方案（哪怕最后不做）、以及"推翻了以前哪个设计"都要在那里落一份档，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前下一个是 `23_`），审计放 `research/audit/`。规矩见 [`research/README.md`](research/README.md)。**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明。**
+6. **设计先留档。** `research/` 是**设计稿存储处**：新模块、改版、重构方案（哪怕最后不做）、以及"推翻了以前哪个设计"都要在那里落一份档，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前下一个是 `24_`），审计放 `research/audit/`。规矩见 [`research/README.md`](research/README.md)。**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明。**
 7. **不把研究设计写成"已完成"。** 「制作中 / 完成」只能由代码事实支撑；做不到的部分要明说。
 8. **不在文档里写死模组版本号。** 版本以 `gradle.properties` / 你装的那份 Jar 为准。平台与依赖版本（Minecraft / NeoForge / Curios / KubeJS）可以写。
 9. **内容不进本体。** 具体世界观数值、五行、丹方、灵根表这类内容属于数据包 / 测试包 / 内容模组；本体只提供框架与规则。
@@ -38,7 +38,8 @@
 | 用途 | 命令 | 说明 |
 | --- | --- | --- |
 | 编译（必做） | `./gradlew compileJava compileTestModJava --console=plain`（Windows 用 `gradlew.bat`） | 在仓库根目录。只改文档时不必跑。 |
-| 实机（先问） | `./gradlew runTestClient` / `runTestServer` | 加载 `src/test-mod`；日志在 `run-test-client/logs/`、`run-test-server/logs/`。 |
+| 实机（先问） | `./gradlew runTestClient` / `runTestServer` | 加载 `src/test-mod`；日志在 `run-test-client/logs/`、`run-test-server/logs/`。两个 run 任务都会显式先跑测试包的 `processResources`。 |
+| 只刷测试数据包 | `./gradlew processTestModResources --console=plain` | 改了 `src/test-mod/resources`（数据包 JSON、lang、资源）时用。**编译命令不会拷测试包资源**：`compileTestModJava` 只编译 Java，实机加载的是 `build/resources/testMod`，那里可能还是上一版——旧文件会让服务端以"定义写了已废弃字段"之类的方式启动失败，而源码看起来是对的。（2026-09-21 真实踩过。） |
 
 > CI（`.github/workflows/build.yml`）只跑 `./gradlew build`，而那条命令**不包含** `compileTestModJava`（仓库里也没有 JUnit 测试源）。所以改了 `src/test-mod` 一定要在本地显式编译，别指望 CI 替你发现错误。
 
@@ -71,7 +72,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 ## 4. 写代码的房规（都是踩过的坑）
 
 - **Definition 的两个 Codec**：`CODEC` 是 Holder Codec，`DIRECT_CODEC` 是直接对象 Codec，注册表注册后者。
-- **`RecordCodecBuilder` 不认识未知字段**，会静默丢掉：一份写着 `element` 的体质会被当成"没有元素"照常跑。要"这个定义不许带那些字段"就用 `util/codec/DefinitionCodecs.refuseKeys(...)`，让它加载期报错并指名字段。空表 / 空列表同理，用 `.validate(...)` 拒绝（否则会静默变成恒真或恒假）。
+- **`RecordCodecBuilder` 不认识未知字段，会静默丢掉**：一份写着 `element` 的体质会被当成"没有元素"照常跑。这是刻意的口径（`util/codec/DefinitionCodecs` 的点名拒绝已于 2026-09-21 按用户要求删除）：**改字段名 / 删字段时老文件不会报错，只是那个键不再生效**，所以字段变动必须同步 `docs/数据包格式.md`、测试包与文档站，别指望加载期替你发现。空表 / 空列表仍然用 `.validate(...)` 拒绝（否则会静默变成恒真或恒假）；字段**值**的校验（有限性、非负、区间）同样走 `.validate(...)`。
 - **链式 `.validate(...)` 会打断类型推断**：尾部接了 `.validate` 之后要写显式见证 `RecordCodecBuilder.<X>create(...)` / `RecordCodecBuilder.<X>mapCodec(...)`（参见 `Element`、`Physique`）。
 - **集合 Codec 是容错的**：`CollectionCodecs` / `AutoIgnoreMapCodec` / `AutoIgnoreListCodec` 会把坏条目打一条日志后**丢弃**。所以"定义写错"往往表现为"这一项不存在"，排查时先看日志里的 `Ignoring invalid list element`。
 - **只读查询用 `getExistingData(...)`**，不要为了问一句"它有没有灵根"就创建一份空附件（会跟着进存档）；只有真正要写的地方才 `getData(...)`。
@@ -87,7 +88,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 ## 5. 测试与探针
 
 - 本仓库**没有 JUnit**。验证靠：编译 →（获准时）实机跑 `/mxt_test`。
-- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `identity` / `realm [keep|reopen]` / `rift` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
+- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `identity` / `artifact` / `artifacts` / `realm [keep|reopen]` / `rift` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
 - **夹具里那些数字是断言的一部分**：例如测试包的火/水克制与适应倍率决定了 `10 × 1.5 × 0.5 = 7.5`。给测试包加内容时，先确认不会改变既有腿的算式（新内容用新文件承载，或让默认倍率为 1）。
 - 探针**只编译不等于跑过**：报告里必须写明"未实跑"，并给出跑一次该看什么输出。
 

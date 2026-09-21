@@ -4,10 +4,14 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
 import com.iafenvoy.mxt.registry.*;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.artifact.Artifact;
+import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
+import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
@@ -25,14 +29,21 @@ import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.RealmTokenComponent;
 import com.iafenvoy.mxt.data.realm.RealmInstance;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
+import com.iafenvoy.mxt.runtime.artifact.FlightService.Result.State;
 import com.iafenvoy.mxt.runtime.rift.RiftColors;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
 import com.iafenvoy.mxt.runtime.rift.RiftMesh;
 import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
+import com.iafenvoy.mxt.runtime.artifact.FlightService;
+import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
@@ -68,6 +79,7 @@ import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.JsonOps;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -75,6 +87,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -89,8 +102,10 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -104,6 +119,10 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.jetbrains.annotations.Nullable;
+import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.CuriosSlotTypes;
+import top.theillusivec4.curios.api.SlotContext;
+import top.theillusivec4.curios.api.type.ISlotType;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -156,6 +175,11 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_TECHNIQUE = id("sword_manual");
     private static final Identifier PROBE_TECHNIQUE_STAGE = id("sword_art_2");
     private static final Identifier PROBE_ABILITY = id("artifact_guard");
+    private static final Identifier SWORD_FOCUS = id("sword_focus");
+    /** Wrong on purpose: it grants an active ability as {@code mxt:passive}. */
+    private static final Identifier MISDECLARED_ARTIFACT = id("misdeclared_grant_probe");
+    /** Wrong on purpose: it claims the item {@link #MISDECLARED_ARTIFACT} already claims. */
+    private static final Identifier CLAIM_CONFLICT_ARTIFACT = id("claim_conflict_probe");
     private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");
     private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
             id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence"),
@@ -176,6 +200,8 @@ public final class MxtTestCommands {
                 .then(literal("damage").executes(context -> probeDamage(context.getSource())))
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
                 .then(literal("identity").executes(context -> probeIdentity(context.getSource())))
+                .then(literal("artifact").executes(context -> probeArtifact(context.getSource())))
+                .then(literal("artifacts").executes(context -> probeArtifactRoster(context.getSource())))
                 .then(literal("realm")
                         .executes(context -> probeRealm(context.getSource()))
                         .then(literal("keep").executes(context -> keepRealm(context.getSource())))
@@ -414,21 +440,21 @@ public final class MxtTestCommands {
      * rather than measuring a body that never got it.
      */
     private static boolean grantProbePhysique(LivingEntity entity, Identifier id) {
-        return require(MxtResourceKeys.PHYSIQUE, id) != null
-                && CultivationIdentityService.grantPhysique(entity, id, require(MxtResourceKeys.PHYSIQUE, id).value(),
+        return CultivationIdentityService.grantPhysique(entity, id, require(MxtResourceKeys.PHYSIQUE, id).value(),
                 FormulaContext.of(entity)).changed();
     }
 
     /**
      * Drives the cultivation identity surface end to end: the script API, the rarity a definition now reports,
-     * and the reading that refuses a physique written as if it were elemental. Every leg is a number or a
-     * boolean rather than a log line, because the point of the probe is to fail loudly when a guarantee the
-     * documentation makes stops holding.
+     * and the reading of a physique written as if it were elemental. Every leg is a number or a boolean rather
+     * than a log line, because the point of the probe is to fail loudly when a guarantee the documentation
+     * makes stops holding.
      *
      * <p>The three guarantees it pins: a switched-off root or physique is still <em>held</em> while
      * contributing nothing (so the reads have to answer both questions separately, and a switched-off physique
-     * must not scale anything); a rarity is a field with a reader rather than a comment; and a definition that
-     * belongs to another registry is refused while the pack loads instead of being dropped in silence.</p>
+     * must not scale anything); a rarity is a field with a reader rather than a comment; and a field belonging
+     * to another registry is ignored while the definition still loads, which is what the record codec does with
+     * every key it was not told about.</p>
      */
     private static int probeIdentity(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
@@ -474,22 +500,21 @@ public final class MxtTestCommands {
             // A rarity is content's own word, so it is read back as written and falls back to itself when no
             // language file names it - the two things a consumer that reports it has to be able to do.
             Holder<Physique> physique = require(MxtResourceKeys.PHYSIQUE, PROBE_PHYSIQUE);
-            boolean rarity = physique != null && physique.value().rarity().equals("probe")
-                    && DefinitionText.rarity("probe").getString().equals("probe")
-                    && require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().rarity().equals("uncommon");
+            boolean rarity = physique.value().rarity().equals("probe") && DefinitionText.rarity("probe").getString().equals("probe") && require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().rarity().equals("uncommon");
             source.sendSuccess(() -> Component.literal("identity probe: rarity=" + rarity
                     + (rarity ? " OK" : " MISMATCH")), false);
 
-            // A physique that names an element, an element relation or a spirit-root field is refused while it
-            // loads. It used to be dropped without a word, which is the one outcome a pack can never notice.
-            boolean refusedFields = refusesElementFields();
+            // A physique that also names an element, an element relation or a spirit-root field keeps loading
+            // and those keys are ignored, which is the record codec's own reading of a key it was not told
+            // about. A written number is still checked while the pack loads, so a broken multiplier is not.
+            boolean foreignIgnored = ignoresForeignFields();
             boolean negative = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("damage_dealt_multiplier", -1.0D)).isError();
             boolean plain = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("rarity", "probe")).result().isPresent();
-            boolean strict = refusedFields && negative && plain;
-            source.sendSuccess(() -> Component.literal("identity probe: element_fields_refused=" + refusedFields
-                    + " negative_refused=" + negative + " plain_accepted=" + plain + (strict ? " OK" : " MISMATCH")), false);
+            boolean loose = foreignIgnored && negative && plain;
+            source.sendSuccess(() -> Component.literal("identity probe: foreign_fields_ignored=" + foreignIgnored
+                    + " negative_refused=" + negative + " plain_accepted=" + plain + (loose ? " OK" : " MISMATCH")), false);
 
-            if (identity && rarity && strict) {
+            if (identity && rarity && loose) {
                 source.sendSuccess(() -> Component.literal("identity probe: OK"), false);
                 return 1;
             }
@@ -501,18 +526,22 @@ public final class MxtTestCommands {
     }
 
     /**
-     * Whether every field that belongs to an element or to a spirit root is refused by the physique codec. The
-     * values written with them are deliberately irrelevant: the check happens before anything is decoded.
+     * Whether a physique written as if it were elemental decodes the same as one that never mentioned those
+     * keys. Ignoring a field is only a guarantee if it leaves no trace, which comparing the two decoded
+     * definitions checks.
      */
-    private static boolean refusesElementFields() {
-        for (String field : List.of("element", "element_affinity", "element_ability_modifier",
-                "conflicting_elements", "overcomes", "adapted_to", "damage_types", "cultivation_multiplier"))
-            if (!Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single(field, "mxt_test:fire")).isError()) return false;
-        return true;
+    private static boolean ignoresForeignFields() {
+        JsonObject foreign = new JsonObject();
+        foreign.addProperty("element", "mxt_test:fire");
+        foreign.addProperty("overcomes", "mxt_test:water");
+        foreign.addProperty("damage_types", "mxt_test:fire");
+        foreign.addProperty("rarity", "probe");
+        return Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, foreign).result()
+                .equals(Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("rarity", "probe")).result());
     }
 
     /**
-     * One-field JSON object, for the decode checks that ask whether a single key is enough to refuse a
+     * One-field JSON object, for the decode checks that ask whether a single key is enough to break a
      * definition.
      */
     private static JsonObject single(String key, Object value) {
@@ -521,6 +550,265 @@ public final class MxtTestCommands {
         else if (value instanceof Boolean flag) object.addProperty(key, flag);
         else object.addProperty(key, String.valueOf(value));
         return object;
+    }
+
+    /**
+     * Drives the artifact module: a definition claims a real item, the stack is bound to its owner, aura is
+     * poured into one of the two kinds it names, its abilities follow the equipment slot, its inventory answers
+     * only its owner, its flight entry carries the holder, and it fits the four charm slots.
+     *
+     * <p>Fixture numbers: {@code mxt_test:qi} declares {@code 100} and {@code mxt_test:water_power} {@code 50},
+     * and {@code mxt_test:soul_power} declares nothing. A half feeding therefore raises the ceiling to
+     * {@code floor(100 * 1.25) = 125}, the next fill takes the remaining {@code 75}, and a fully fed artifact
+     * reaches {@code 100 * 1.5 = 150}.</p>
+     */
+    private static int probeArtifact(CommandSourceStack source) {
+        ServerPlayer player = player(source);
+        if (player == null) return 0;
+        ServerLevel level = source.getLevel();
+        // Fully qualified: this file's own HolderLookup record shadows the vanilla one inside this class.
+        Provider access = level.registryAccess();
+        FormulaContext context = FormulaContext.of(player);
+        ItemStack stack = new ItemStack(Items.DIAMOND_SWORD);
+
+        Artifact definition = ArtifactService.definition(access, stack).map(Reference::value).orElse(null);
+        boolean declared = definition != null && "sword".equals(definition.itemType())
+                && definition.curiosEquipable() && definition.flight().isPresent() && definition.storage().isPresent();
+        if (!declared) {
+            source.sendFailure(Component.literal("artifact probe: the fixture definition does not claim a diamond sword"));
+            return 0;
+        }
+
+        Holder<Aura> qi = require(MxtResourceKeys.AURA, QI);
+        Holder<Aura> waterPower = require(MxtResourceKeys.AURA, WATER_POWER);
+        Holder<Aura> soulPower = require(MxtResourceKeys.AURA, SOUL_POWER);
+        int qiCeiling = ArtifactService.capacity(access, stack, qi, 0.0D, context);
+        int waterCeiling = ArtifactService.capacity(access, stack, waterPower, 0.0D, context);
+        int undeclaredCeiling = ArtifactService.capacity(access, stack, soulPower, 0.0D, context);
+        int half = ArtifactService.addEnergy(access, stack, qi, 50.0D, 0.0D, context);
+        int raisedCeiling = ArtifactService.capacity(access, stack, qi, 0.0D, context);
+        int rest = ArtifactService.addEnergy(access, stack, qi, 1000.0D, 0.0D, context);
+        int fullCeiling = ArtifactService.capacity(access, stack, qi, 0.0D, context);
+        int stored = ArtifactService.stored(stack, qi);
+        int spent = ArtifactService.consumeEnergy(stack, qi, 25.0D);
+        boolean aura = qiCeiling == 100 && waterCeiling == 50 && undeclaredCeiling == 0
+                && half == 50 && raisedCeiling == 125 && rest == 75 && fullCeiling == 150 && stored == 125
+                && spent == 25 && ArtifactService.stored(stack, qi) == 100
+                // Nourishment is never lowered by spending, so the ceiling stays where the feeding put it.
+                && ArtifactService.capacity(access, stack, qi, 0.0D, context) == 150;
+        source.sendSuccess(() -> Component.literal("artifact probe: aura ceiling=" + qiCeiling + "/" + waterCeiling
+                + "/" + undeclaredCeiling + " filled=" + half + "+" + rest + " ceiling_after=" + raisedCeiling
+                + "->" + fullCeiling + " stored=" + stored + " spent=" + spent), false);
+
+        boolean unowned = !ArtifactService.isOwner(stack, player.getUUID());
+        boolean bound = ArtifactService.refine(stack, player) == RefineResult.REFINED
+                && ArtifactService.isOwner(stack, player.getUUID());
+        LivingEntity bystander = spawnProbe(level, player.blockPosition().above(1), null);
+        boolean foreignRefused = bystander != null
+                && ArtifactService.refine(stack, bystander) == RefineResult.OWNED_BY_OTHER;
+        if (bystander != null) bystander.discard();
+        boolean ownership = unowned && bound && foreignRefused;
+        source.sendSuccess(() -> Component.literal("artifact probe: ownership unowned=" + unowned + " bound=" + bound
+                + " foreign_refused=" + foreignRefused), false);
+
+        Holder<Ability> passive = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
+        Holder<Ability> active = require(MxtResourceKeys.ABILITY, PROBE_AFFINITY_ABILITY);
+        List<Identifier> declaredAbilities = ArtifactService.abilityIds(access, stack);
+        boolean grantsBoth = declaredAbilities.contains(PROBE_ABILITY) && declaredAbilities.contains(PROBE_AFFINITY_ABILITY);
+        AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        boolean hadPassive = holder.has(passive);
+        boolean hadActive = holder.has(active);
+        ItemStack previous = player.getMainHandItem().copy();
+        player.setItemSlot(EquipmentSlot.MAINHAND, stack);
+        holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        boolean equipped = holder.has(passive) && holder.has(active);
+        player.setItemSlot(EquipmentSlot.MAINHAND, previous);
+        holder = player.getData(MxtAttachments.ABILITY_HOLDER);
+        boolean released = holder.has(passive) == hadPassive && holder.has(active) == hadActive;
+        boolean abilities = grantsBoth && equipped && released;
+        source.sendSuccess(() -> Component.literal("artifact probe: abilities declared=" + grantsBoth
+                + " equipped=" + equipped + " released=" + released), false);
+
+        boolean storage = ArtifactStorageService.INSTANCE.slots(access, stack, context) == 9
+                && ArtifactStorageService.INSTANCE.set(access, stack, 0, new ItemStack(Items.APPLE), player)
+                && ArtifactStorageService.INSTANCE.get(access, stack, 0, player).is(Items.APPLE)
+                && !ArtifactStorageService.INSTANCE.set(access, stack, 9, new ItemStack(Items.APPLE), player);
+        source.sendSuccess(() -> Component.literal("artifact probe: storage=" + storage), false);
+
+        player.setItemSlot(EquipmentSlot.MAINHAND, stack);
+        Optional<Reference<Artifact>> resolved = ArtifactService.definition(access, stack);
+        FlightService.Result mounted = resolved.map(holderFound -> FlightService.mount(player, stack, holderFound, context)).orElse(null);
+        boolean flew = mounted != null && mounted.state() == State.MOUNTED
+                && player.getData(MxtAttachments.FLIGHT).active() && player.getVehicle() instanceof FlyingSwordEntity;
+        FlightService.dismount(player, FlightService.Failure.STOPPED);
+        boolean landed = !player.getData(MxtAttachments.FLIGHT).active()
+                && !(player.getVehicle() instanceof FlyingSwordEntity);
+        player.setItemSlot(EquipmentSlot.MAINHAND, previous);
+        boolean flight = flew && landed;
+        source.sendSuccess(() -> Component.literal("artifact probe: flight mounted=" + flew + " landed=" + landed), false);
+
+        // The charm slots are Curios' built-in slot, so this asserts the merged definition: the size a data pack
+        // added, and that membership is answered by the definition rather than by a tag.
+        ISlotType charm = CuriosSlotTypes.getSlotType("charm", false);
+        SlotContext charmSlot = new SlotContext("charm", player, 0, false, true);
+        boolean artifactFits = charm != null && CuriosApi.isStackValid(charmSlot, stack);
+        // The control is a sword no artifact claims: the netherite sword is only a weapon binding, so it must be
+        // refused while the fixture - which declares curios_equipable - is accepted.
+        boolean plainRefused = charm != null && !CuriosApi.isStackValid(charmSlot, new ItemStack(Items.NETHERITE_SWORD));
+        boolean curios = charm != null && charm.getSize() == 4 && artifactFits && plainRefused;
+        source.sendSuccess(() -> Component.literal("artifact probe: charm size=" + (charm == null ? "missing" : charm.getSize())
+                + " artifact=" + artifactFits + " plain_refused=" + plainRefused), false);
+
+        if (aura && ownership && abilities && storage && flight && curios) {
+            source.sendSuccess(() -> Component.literal("artifact probe: OK"), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("artifact probe: MISMATCH (aura=" + aura + " ownership=" + ownership
+                + " abilities=" + abilities + " storage=" + storage + " flight=" + flight + " curios=" + curios + ")"));
+        return 0;
+    }
+
+    /**
+     * The artifact fixture roster: one row per item, every question asked through the service the game itself uses.
+     * Together the rows cover item matching by id, by list and by item tag, per-aura ceilings (one of them written
+     * as a formula), storage slots from a formula, an {@code mxt:empty} placeholder beside a grant that mixes an id
+     * with an ability tag, the charm gate, the ownership gate {@code require_owner} switches, a refine action that
+     * charges on the way in, and the flight entry's own numbers.
+     *
+     * <p>Two fixtures are wrong on purpose, because the checks they trip live in {@code ServerCache} and have no
+     * other way to be observed: {@code mxt_test:misdeclared_grant_probe} grants an active ability as
+     * {@code mxt:passive}, and {@code mxt_test:claim_conflict_probe} claims an item the first one also claims.
+     * Registry order decides which of the two the claim problem names, so that assertion accepts either.</p>
+     */
+    private static int probeArtifactRoster(CommandSourceStack source) {
+        ServerPlayer player = player(source);
+        if (player == null) return 0;
+        Provider access = source.getLevel().registryAccess();
+        FormulaContext context = FormulaContext.of(player);
+        Holder<Aura> qi = require(MxtResourceKeys.AURA, QI);
+        Holder<Aura> waterPower = require(MxtResourceKeys.AURA, WATER_POWER);
+        Holder<Aura> soulPower = require(MxtResourceKeys.AURA, SOUL_POWER);
+
+        boolean ok = true;
+        for (ArtifactRow row : List.of(
+                new ArtifactRow(Items.IRON_SWORD, "flying_sword", 60, 0, 0, 0, false, true, true),
+                new ArtifactRow(Items.AMETHYST_SHARD, "jade_pendant", 200, 100, 25, 27, true, false, false),
+                new ArtifactRow(Items.PRISMARINE_SHARD, "protective_talisman", 40, 0, 0, 0, true, false, false),
+                // The second item of the same definition, reached through the item tag its `items` list names.
+                new ArtifactRow(Items.QUARTZ, "protective_talisman", 40, 0, 0, 0, true, false, false),
+                new ArtifactRow(Items.BELL, "beast_bell", 60, 0, 0, 18, true, false, false))) {
+            ItemStack stack = new ItemStack(row.item());
+            Artifact definition = ArtifactService.definition(access, stack).map(Reference::value).orElse(null);
+            boolean matches = definition != null && row.itemType().equals(definition.itemType())
+                    && row.curiosEquipable() == ArtifactService.curiosEquipable(access, stack)
+                    && row.requireOwner() == definition.requireOwner()
+                    && row.flight() == definition.flight().isPresent()
+                    && ArtifactService.storageSlots(access, stack, context) == row.slots()
+                    && ArtifactService.capacity(access, stack, qi, 0.0D, context) == row.qi()
+                    && ArtifactService.capacity(access, stack, waterPower, 0.0D, context) == row.waterPower()
+                    && ArtifactService.capacity(access, stack, soulPower, 0.0D, context) == row.soulPower();
+            ok &= check(source, "artifact roster " + BuiltInRegistries.ITEM.getKey(row.item()) + " = "
+                    + (definition == null ? "unclaimed" : definition.itemType()), matches);
+        }
+
+        ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
+        FlightArtifactAbility flight = ArtifactService.flight(access, flightStack).orElse(null);
+        boolean flightEntry = flight != null && close(flight.speed().evaluate(context), 0.12D)
+                && flight.costs().size() == 1 && flight.costs().getFirst().id().equals(QI)
+                && close(flight.costs().getFirst().amount().evaluate(context), 2.0D);
+        ok &= check(source, "artifact roster flight entry speed=0.12 costs=2 qi", flightEntry);
+
+        ItemStack wardStack = new ItemStack(Items.PRISMARINE_SHARD);
+        boolean grants = ArtifactService.definition(access, wardStack)
+                .map(holder -> holder.value().abilities().size()).orElse(0) == 2
+                && ArtifactService.abilityIds(access, wardStack).equals(List.of(PROBE_ABILITY, SWORD_FOCUS));
+        ok &= check(source, "artifact roster grants=id+tag beside an mxt:empty placeholder", grants);
+
+        // The refine action charges 40 of a 200 ceiling, so that feeding raises the ceiling to floor(200 * 1.1).
+        ItemStack jadeStack = new ItemStack(Items.AMETHYST_SHARD);
+        boolean refined = ArtifactService.refine(jadeStack, player) == RefineResult.REFINED;
+        int jadeStored = ArtifactService.stored(jadeStack, qi);
+        int jadeCeiling = ArtifactService.capacity(access, jadeStack, qi, 0.0D, context);
+        ok &= check(source, "artifact roster refine_action stored=" + jadeStored + " ceiling=" + jadeCeiling,
+                refined && ArtifactService.isOwner(jadeStack, player.getUUID()) && jadeStored == 40 && jadeCeiling == 220);
+
+        ISlotType charm = CuriosSlotTypes.getSlotType("charm", false);
+        SlotContext charmSlot = new SlotContext("charm", player, 0, false, true);
+        boolean charmGate = charm != null && CuriosApi.isStackValid(charmSlot, wardStack)
+                && CuriosApi.isStackValid(charmSlot, jadeStack)
+                && !CuriosApi.isStackValid(charmSlot, flightStack);
+        ok &= check(source, "artifact roster charm gate (declared yes, undeclared no)", charmGate);
+
+        // Ownership is the definition's choice: a definition asking for an owner refuses until it has one, while
+        // one that does not is open to anybody until it is refined and then answers to its owner alone.
+        Reference<Artifact> flightHolder = ArtifactService.definition(access, flightStack).orElse(null);
+        Reference<Artifact> jadeHolder = ArtifactService.definition(access, jadeStack).orElse(null);
+        ItemStack plainJade = new ItemStack(Items.AMETHYST_SHARD);
+        ItemStack ownedSword = flightStack.copy();
+        ArtifactService.refine(ownedSword, player);
+        UUID stranger = UUID.randomUUID();
+        boolean ownershipGate = flightHolder != null && jadeHolder != null
+                && !ArtifactService.mayUse(flightStack, flightHolder, player.getUUID())
+                && !ArtifactService.mayUse(ownedSword, flightHolder, stranger)
+                && ArtifactService.mayUse(ownedSword, flightHolder, player.getUUID())
+                && ArtifactService.mayUse(plainJade, jadeHolder, player.getUUID())
+                && ArtifactService.mayUse(plainJade, jadeHolder, stranger)
+                && ArtifactService.mayUse(jadeStack, jadeHolder, player.getUUID())
+                && !ArtifactService.mayUse(jadeStack, jadeHolder, stranger)
+                && !ArtifactService.hasOwner(plainJade) && ArtifactService.hasOwner(jadeStack);
+        ok &= check(source, "artifact roster ownership gate require_owner=true refuses, =false binds", ownershipGate);
+
+        // The tooltip is built by ArtifactDescription so the same list can be read here without a client: the
+        // rendered words belong to a language file, but how many lines a definition earns belongs to this module.
+        // Ownership and warmth are known because the fresh stacks carry neither and the jade was just refined.
+        List<String> flightLines = ArtifactDescription.keys(ArtifactDescription.describe(access, flightStack, player, false));
+        List<String> jadeLines = ArtifactDescription.keys(ArtifactDescription.describe(access, new ItemStack(Items.AMETHYST_SHARD), player, false));
+        List<String> fedLines = ArtifactDescription.keys(ArtifactDescription.describe(access, jadeStack, player, false));
+        List<String> wardLines = ArtifactDescription.keys(ArtifactDescription.describe(access, wardStack, player, false));
+        boolean tooltip = flightLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"), tooltipKey("unowned"),
+                        tooltipKey("aura"), tooltipKey("flight"), tooltipKey("flight_cost")))
+                // The jade does not require an owner, so a fresh one says nothing about ownership at all.
+                && jadeLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"),
+                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("storage")))
+                && fedLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"), tooltipKey("owned"),
+                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("nourishment"),
+                        tooltipKey("storage")))
+                && wardLines.equals(List.of(tooltipKey("header"), tooltipKey("item_type"),
+                        tooltipKey("aura"), tooltipKey("passive"), tooltipKey("passive")))
+                // A stack no definition claims gets nothing at all, and advanced tooltips add the id under the name.
+                && ArtifactDescription.describe(access, new ItemStack(Items.DIAMOND), player, false).isEmpty()
+                && ArtifactDescription.keys(ArtifactDescription.describe(access, flightStack, player, true)).size() == flightLines.size() + 1;
+        ok &= check(source, "artifact roster tooltip lines flight=" + flightLines.size() + " jade=" + jadeLines.size()
+                + " fed=" + fedLines.size() + " ward=" + wardLines.size(), tooltip);
+
+        List<String> problems = ServerCache.get().map(cache -> cache.problems().stream()
+                .filter(problem -> problem.contains("/mxt/artifact/")).toList()).orElse(List.of());
+        boolean misdeclared = problems.stream().anyMatch(problem ->
+                problem.contains(MISDECLARED_ARTIFACT.getPath()) && problem.contains("as mxt:passive")
+                        && problem.contains("own type is active"));
+        boolean claimed = problems.stream().anyMatch(problem -> problem.contains("already claims")
+                && (problem.contains(MISDECLARED_ARTIFACT.getPath()) || problem.contains(CLAIM_CONFLICT_ARTIFACT.getPath())));
+        ok &= check(source, "artifact roster validator problems=" + problems,
+                problems.size() == 2 && misdeclared && claimed);
+
+        if (ok) {
+            source.sendSuccess(() -> Component.literal("artifact roster: OK"), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("artifact roster: MISMATCH"));
+        return 0;
+    }
+
+    /**
+     * One roster row: an item, and what every consumer must answer about the definition claiming it.
+     */
+    private record ArtifactRow(Item item, String itemType, int qi, int waterPower, int soulPower, int slots,
+                               boolean curiosEquipable, boolean flight, boolean requireOwner) {
+    }
+
+    /** One artifact tooltip key, so the roster can spell out the lines a definition has to produce for a stack. */
+    private static String tooltipKey(String path) {
+        return "tooltip.mxt.artifact." + path;
     }
 
     /**
@@ -1304,6 +1592,12 @@ public final class MxtTestCommands {
         give(player, formationPlate());
         give(player, realmToken());
         give(player, contractScroll());
+        // The artifact fixtures, handed over already bound: nothing in the test pack refines an item yet, and an
+        // unowned artifact refuses flight, storage and mxt:owned_by.
+        giveArtifact(player, Items.IRON_SWORD);
+        giveArtifact(player, Items.AMETHYST_SHARD);
+        giveArtifact(player, Items.PRISMARINE_SHARD);
+        giveArtifact(player, Items.BELL);
         source.sendSuccess(() -> Component.translatable("command.mxt_test.kit.success"), true);
         return 1;
     }
@@ -1394,6 +1688,13 @@ public final class MxtTestCommands {
         ItemStack stack = new ItemStack(MxtItems.CONTRACT_SCROLL.get());
         stack.set(MxtDataComponents.CONTRACT_SCROLL, new ContractScrollComponent(Optional.of(require(MxtResourceKeys.CONTRACT_TYPE, CONTRACT))));
         return stack;
+    }
+
+    /** Gives one artifact fixture bound to the player, since the test pack has no other way to refine an item. */
+    private static void giveArtifact(ServerPlayer player, Item item) {
+        ItemStack stack = new ItemStack(item);
+        ArtifactService.refine(stack, player);
+        give(player, stack);
     }
 
     private static void give(ServerPlayer player, ItemStack stack) {

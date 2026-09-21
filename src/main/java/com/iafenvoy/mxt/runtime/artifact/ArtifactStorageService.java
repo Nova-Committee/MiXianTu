@@ -1,12 +1,10 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
-import com.iafenvoy.mxt.data.artifact.ItemArchetype;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
@@ -14,51 +12,42 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Default storage implementation for datapack-defined artifacts with positive {@code storage_slots}.
+ * Default storage implementation for artifacts whose definition declares a positive slot count. The limit comes
+ * from the definition, never from the payload, and only the owner may reach the contents, only on the server.
  */
 public final class ArtifactStorageService implements ISpiritStorage {
     public static final ArtifactStorageService INSTANCE = new ArtifactStorageService();
-    private static final int MAX_SLOTS = 256;
 
     private ArtifactStorageService() {
     }
 
     @Override
-    public int slots(ItemStack stack) {
-        return this.slots(stack, FormulaContext.EMPTY);
-    }
-
-    public int slots(ItemStack stack, FormulaContext context) {
-        return ArtifactService.state(stack).archetype().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_ARCHETYPE, id))
-                .map(definition -> configuredSlots(definition, context))
-                .orElse(0);
+    public int slots(Provider access, ItemStack stack, FormulaContext context) {
+        return ArtifactService.storageSlots(access, stack, context);
     }
 
     @Override
-    public ItemStack get(ItemStack stack, int slot, Player viewer) {
-        if (!this.mayAccess(stack, viewer)) return ItemStack.EMPTY;
-        int capacity = this.slots(stack, FormulaContexts.forEntity(viewer));
+    public ItemStack get(Provider access, ItemStack stack, int slot, Player viewer) {
+        if (!this.mayAccess(access, stack, viewer)) return ItemStack.EMPTY;
+        int capacity = this.slots(access, stack, FormulaContexts.forEntity(viewer));
         if (slot < 0 || slot >= capacity) return ItemStack.EMPTY;
         return storage(stack).get(slot);
     }
 
     @Override
-    public boolean set(ItemStack stack, int slot, ItemStack value, Player viewer) {
-        if (!this.mayAccess(stack, viewer)) return false;
-        int capacity = this.slots(stack, FormulaContexts.forEntity(viewer));
+    public boolean set(Provider access, ItemStack stack, int slot, ItemStack value, Player viewer) {
+        if (!this.mayAccess(access, stack, viewer)) return false;
+        int capacity = this.slots(access, stack, FormulaContexts.forEntity(viewer));
         if (slot < 0 || slot >= capacity || value.getCount() > value.getMaxStackSize()) return false;
         stack.set(MxtDataComponents.ARTIFACT_STORAGE, storage(stack).with(slot, value, capacity));
         return true;
     }
 
-    public boolean mayAccess(ItemStack stack, Player viewer) {
-        return !viewer.level().isClientSide() && ArtifactService.isOwner(stack, viewer.getUUID()) && this.slots(stack, FormulaContexts.forEntity(viewer)) > 0;
-    }
-
-    public static int configuredSlots(ItemArchetype definition, FormulaContext context) {
-        double evaluated = definition.storageSlots().evaluate(context);
-        if (!Double.isFinite(evaluated)) return 0;
-        return Math.clamp((int) Math.floor(evaluated), 0, MAX_SLOTS);
+    public boolean mayAccess(Provider access, ItemStack stack, Player viewer) {
+        if (viewer.level().isClientSide() || this.slots(access, stack, FormulaContexts.forEntity(viewer)) <= 0)
+            return false;
+        return ArtifactService.definition(access, stack)
+                .map(holder -> ArtifactService.mayUse(stack, holder, viewer.getUUID())).orElse(false);
     }
 
     private static ArtifactStorageComponent storage(ItemStack stack) {

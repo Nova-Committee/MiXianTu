@@ -339,13 +339,14 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 ### 4.7 储物（`12-储物袋` + 法宝储物）
 
 **基座现状**：`ArtifactStorageComponent`（`List<ItemStack>`）、`ArtifactStorageService`、
-`ISpiritStorage`、`ItemArchetype.storage_slots` **都在**，但：
+`ISpiritStorage`、`ItemArchetype` 的储物能力 **都在，但**（`ItemArchetype` 已于 2026-09-21 改名为 `Artifact`，本文其余处保留当时的名字与行号）：
 
 - **没有任何物品使用它**。`MxtItems.SPIRIT_STONE_BAG` 是空壳 `Item::new`（`registry/MxtItems.java:42`）。
 - **没有任何菜单/界面**。`MxtMenus` 9 个里没有储物。
 - `ArtifactStateComponent.nourishment` **已于 2026-09-19 接上**：灌能时按"真正收下 ÷ 本次有效容量"上涨（`0..1`、只升不降），并作为容量加成参与法器上限（`runtime/artifact/ArtifactService.java`）。
+- **2026-09-21**：槽位声明从 `ItemArchetype.storage_slots` 挪进 `abilities` 里的 `mxt:storage` 条目，`ISpiritStorage` 三处签名改为带 `HolderLookup.Provider`（定义要在客户端也读得到）。界面仍然没有。
 
-**缺什么**：一个通用储物容器物品 + 界面（槽数来自 `storage_slots`，即数据驱动）。
+**缺什么**：一个通用储物容器物品 + 界面（槽数来自 `mxt:storage` 条目，即数据驱动）。
 **最小补法**：新增一个 `SpiritStorageItem` + `MenuType`，复用 `ArtifactStorageService`（容量计算已写好）。
 
 ### 4.8 世界内容（结构 33 / 群系 8 / 维度 2 / 灵脉 9 阶）
@@ -488,14 +489,14 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | # | 位置 | 现状 | 证据 |
 | --: | --- | --- | --- |
 | 1 | `AlchemyWorkstation` | 接口**零实现**；无丹炉方块/方块实体/菜单/界面 | `runtime/alchemy/AlchemyWorkstation.java:25`；`MxtBlocks` 14 个方块、`MxtBlockEntities` 5 个、`MxtMenus` 9 个均无 |
-| 2 | `MxtRecipeTypes.REFINING` | 只被 `RefiningRecipe` 自身引用 → 无消费者；且 `ItemArchetype` 已是数据包注册表，这条配方路径是重复的 | `recipe/RefiningRecipe.java:56`（全仓唯一命中） |
+| 2 | `MxtRecipeTypes.REFINING` | 只被 `RefiningRecipe` 自身引用 → 无消费者；且 `ItemArchetype` 已是数据包注册表，这条配方路径是重复的。**2026-09-21 复核：仍然没有消费者**（`archetype` 字段仍是内联的） | `recipe/RefiningRecipe.java:56`（全仓唯一命中） |
 | 3 | `MxtRecipeTypes.FORMATION` | 同上；`Formation` 已是数据包注册表 | `recipe/FormationRecipe.java:53` |
 | 4 | `SpiritHerb` 的 `age`/`growth_rate`/`drop_chance`/`element_tags`/`material_tags` | 5 个字段零消费者（只有 `items`/`quality` 有）；**`element_tags`/`material_tags` 已于 2026-09-19 由新条目 `mxt:herb_tag` 消费**，`age`/`growth_rate`/`drop_chance` 仍等灵植生长系统 | `data/alchemy/SpiritHerb.java:18-25`；`runtime/alchemy/HerbTagEntry.java` |
 | 5 | `AuraZone.Rules` 的 `spirit_plant_bonus`/`alchemy_env_bonus`/`natural_spawn_herb` | 零消费者（同 `Rules` 的另两个已接）；**`alchemy_env_bonus` 已于 2026-09-19 接上**（该区域内的丹药配方视为满足 `minimum_aura`），另外两个仍等灵植生长系统 | `data/aura/AuraZone.java:140-149`；`runtime/alchemy/AlchemyWorkstationService.java` |
-| 6 | `ItemArchetype.item_type` | 仍零消费者（2026-09-19 复核：仓库里没有按它分流的判断） | `data/artifact/ItemArchetype.java:20` |
-| 7 | `ItemArchetype.spirit_capacity` | **已于 2026-09-19 接上**：它现在就是法器灵力上限，`mxt:charge_artifact` 自己的 `capacity` 退为回退值 | `runtime/artifact/ArtifactService.java` |
-| 8 | `ArtifactStorageComponent` / `ArtifactStorageService` / `ISpiritStorage` | 无物品、无菜单使用 | `runtime/artifact/ArtifactStorageService.java`；`registry/MxtItems.java:42` 是空壳 |
-| 9 | `ArtifactStateComponent.nourishment` | **已于 2026-09-19 接上**：灌能时按"真正收下 ÷ 本次有效容量"上涨（夹在 `0..1`、只升不降），同时作为容量加成 `× (1 + 0.5 × nourishment)` | `runtime/artifact/ArtifactService.java` |
+| 6 | `ItemArchetype.item_type` | **2026-09-21 复核：仍无按值分流的判断**。重设计后它成为必填且非空、并明确为"器型标识"，但代码里没有任何 `switch`/`if` 读它的值；它是给数据包与内容方认族的标签，不是分发键 | `data/artifact/ItemArchetype.java` |
+| 7 | `ItemArchetype.spirit_capacity` | **已于 2026-09-21 重做**：从单个 `NumberProvider` 变成 `灵气 → 上限` 的 map，上限按灵气分别计算，非有限/非正按 0；存量改用共用组件 `mxt:spirit_storage` | `runtime/artifact/ArtifactService.java`（`capacity`/`addEnergy`） |
+| 8 | `ArtifactStorageComponent` / `ArtifactStorageService` / `ISpiritStorage` | **2026-09-21：槽位来源改接**（定义里的 `mxt:storage` 条目，`ISpiritStorage` 三处签名带上 `Provider`），**但仍无物品与菜单使用**——储物界面依旧不存在 | `runtime/artifact/ArtifactStorageService.java`；`registry/MxtItems.java:42` 是空壳 |
+| 9 | `ArtifactStateComponent.nourishment` | **已于 2026-09-19 接上、2026-09-21 复核仍成立**：灌能时按"真正收下 ÷ 本次该灵气的有效上限"上涨（夹在 `0..1`、只升不降），同时作为容量加成 `× (1 + 0.5 × nourishment)`。同轮该组件删掉了 `spirit_energy` 与 `archetype` 两个字段 | `runtime/artifact/ArtifactService.java` |
 | 10 | `data_storage_type`：`toggle`/`timer`/`resource`/`target_lock` | **已于 2026-09-19 关闭**：四者各有一个 `mxt:storage_toggle`/`storage_timer`/`storage_resource`/`storage_target` 实体条件读取（`mxt:charges`/`mxt:cooldown` 另补了 `storage_charges`/`storage_cooldown`，六种类型全部可读） | `registry/MxtEntityConditions.java`；`data/condition/builtin/entity/Storage*EntityCondition.java` |
 | 11 | `ChargesDataStorage.recharge_ticks` | **已于 2026-09-19 关闭**：`AbilityEventBridge` 每 tick 按"距上次写入 ≥ recharge_ticks"回充一次，最多一步、不脏化附件 | `runtime/ability/AbilityStorage.java`；`runtime/ability/AbilityEventBridge.java` |
 | 12 | `SkillStage.damage_multiplier` | **已于 2026-09-20 关闭**：施放能力时 `AbilityService` 把"授予该能力、且施法者当前所在的那一级"的倍率写进公式上下文（`damage_multiplier`），`DamageCalculationService` 第一层读它；TODO 与类注释里的推后说明一并删除 | `runtime/cultivation/SkillStageService.java`；`runtime/ability/AbilityService.java` |
@@ -608,7 +609,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 | `data/curse/Curse.java:21-38` | 最接近"限时命名状态"的定义 |
 | `data/aura/AuraZone.java:36, 140-149` + `runtime/world/AuraWorldAttachment.java:19-74` | 群系/维度挂载、三个死规则字段、只能 KubeJS 写入的区域 |
 | `data/creature/CreatureProfile.java:28-33` + `runtime/creature/CreatureProfileService.java:28-68` | 生物档案字段表（无生成字段）与"只给已生成 Mob 套档" |
-| `data/artifact/ItemArchetype.java` / `ArtifactStateComponent.java` | 法器原型与状态（含死字段） |
+| `data/artifact/ItemArchetype.java` / `ArtifactStateComponent.java` | 法器原型与状态（**2026-09-21 重设计**：`items` 认领物品 + `abilities` 固有分派列表 + 灵气 map 上限；`item_type` 仍无按值分流的判断） |
 | `runtime/world/RuntimeDimensionService.java:31-81` / `RealmInstanceService.java:41-53,134-136` | 零调用者的维度装载器 / 秘境进入路径 |
 | `runtime/world/SpiritStoneVein.java:22,28,34-51` | 硬编码 6 级灵脉枚举 |
 | `runtime/formation/FormationStructureValidator.java:30-83` + `data/Formation.java:46,49,81-88` | 只有只读结构匹配 |

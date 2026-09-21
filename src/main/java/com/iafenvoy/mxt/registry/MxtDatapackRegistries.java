@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.*;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
-import com.iafenvoy.mxt.data.artifact.ItemArchetype;
+import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.BlockAura;
@@ -72,7 +72,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.TECHNIQUE, Technique.DIRECT_CODEC);
         register(event, MxtResourceKeys.SKILL_STAGE, SkillStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.CULTIVATE_ACTION, CultivateAction.DIRECT_CODEC);
-        register(event, MxtResourceKeys.ITEM_ARCHETYPE, ItemArchetype.DIRECT_CODEC);
+        register(event, MxtResourceKeys.ARTIFACT, Artifact.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_HERB, SpiritHerb.CODEC);
         register(event, MxtResourceKeys.FORMATION, Formation.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIBULATION, Tribulation.DIRECT_CODEC);

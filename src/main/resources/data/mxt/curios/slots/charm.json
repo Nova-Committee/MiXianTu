@@ -1,0 +1,4 @@
+{
+  "size": 4,
+  "validators": ["mxt:charm_artifact_auto"]
+}

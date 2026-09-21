@@ -10,7 +10,7 @@ title: 命令
 | --- | --- |
 | `/mxt registries list` | 列出动态注册表及条目数量。 |
 | `/mxt registries validate` | 校验数据包定义，并把本次构建**发现的全部问题一次列出**：每条都带出错的文件路径；没有问题时报告注册表与条目数量。 |
-| `/picker [<category>]`（= `/mxt picker`） | 打开物品选择器，列出所选数据包注册表定义对应的物品；`category` 是注册表 ID（如 `mxt:aura`、`mxt:currency`、`mxt:item_binding`），不填列出全部已注册分类。需要 gamemaster 权限，且只在创造模式下可用。 |
+| `/picker [<category>]`（= `/mxt picker`） | 打开物品选择器，列出所选数据包注册表定义对应的物品；`category` 是注册表 ID（如 `mxt:aura`、`mxt:artifact`、`mxt:item_binding`），不填列出全部已注册分类。需要 gamemaster 权限，且只在创造模式下可用。 |
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
 | `/mxt resource <id>` | 查询资源值。 |
 | `/mxt resource <id> set <value>` | 设置资源值。 |

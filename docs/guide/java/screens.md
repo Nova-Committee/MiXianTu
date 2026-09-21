@@ -71,7 +71,7 @@ if (screen != null) Minecraft.getInstance().setScreen(screen);
 
 翻译键的拼法统一由 `com.iafenvoy.mxt.util.DefinitionText` 决定：类别默认取注册表自己的 path，少数不是的（`mxt:item_quality` 一直按 `quality` 翻译）在它里面的 `CATEGORIES` 声明一次。手里已经有 `Holder` / `ResourceKey` 时直接 `DefinitionText.name(holder)`，只有拿到的是一根光秃秃的 `Identifier` 时才需要把类别当参数传进去（`DefinitionText.name(id, "resource")`）。
 
-分类就是注册表本身，`/picker <分类 id>` 可以只列出某一个（如 `/picker mxt:aura`、`/picker mxt:currency`、`/picker mxt:item_binding`），不写则给出全部已注册分类。
+分类就是注册表本身，`/picker <分类 id>` 可以只列出某一个（如 `/picker mxt:aura`、`/picker mxt:artifact`、`/picker mxt:item_binding`），不写则给出全部已注册分类。
 
 ## 界面细节
 

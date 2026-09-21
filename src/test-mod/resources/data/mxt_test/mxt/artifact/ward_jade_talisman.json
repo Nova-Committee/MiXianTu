@@ -1,0 +1,10 @@
+{
+  "item_type": "protective_talisman",
+  "items": ["minecraft:prismarine_shard", "#mxt_test:charm_jades"],
+  "spirit_capacity": { "mxt_test:qi": 40 },
+  "abilities": [
+    { "type": "mxt:passive", "abilities": ["mxt_test:artifact_guard", "#mxt_test:artifact_passive"] },
+    { "type": "mxt:empty" }
+  ],
+  "curios_equipable": true
+}

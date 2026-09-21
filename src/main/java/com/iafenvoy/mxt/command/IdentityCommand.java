@@ -7,7 +7,9 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -204,7 +206,7 @@ public final class IdentityCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            CultivationIdentityService.Result result = mutation.apply(living, holder);
+            Result result = mutation.apply(living, holder);
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
                         DefinitionText.name(holder, category), target.getDisplayName(), reason(result.failure())));
@@ -281,7 +283,7 @@ public final class IdentityCommand {
             }
             Holder<T> holder = find(held.apply(living.getData(MxtAttachments.SPIRIT_IDENTITY)), id);
             CultivationToggleService.Result result = holder == null
-                    ? new CultivationToggleService.Result(false, CultivationToggleService.Failure.NOT_HELD)
+                    ? new CultivationToggleService.Result(false, Failure.NOT_HELD)
                     : mutation.apply(living, holder);
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed",
@@ -321,6 +323,6 @@ public final class IdentityCommand {
 
     @FunctionalInterface
     private interface Grant<T> {
-        CultivationIdentityService.Result apply(LivingEntity entity, Holder<T> holder);
+        Result apply(LivingEntity entity, Holder<T> holder);
     }
 }

@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.screen.picker;
 
 import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
+import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
@@ -78,6 +79,7 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.WEAPON_BINDING, WeaponBinding::entries);
         registerMatcher(MxtResourceKeys.PILL_BINDING, PillBinding::entries);
         registerMatcher(MxtResourceKeys.TECHNIQUE_BINDING, TechniqueBinding::entries);
+        registerMatcher(MxtResourceKeys.ARTIFACT, Artifact::entries);
 
         // Definitions carried by a dedicated item: the definition is written onto the stack, and the name the
         // row shows is the definition's own rather than the stand-in item's.

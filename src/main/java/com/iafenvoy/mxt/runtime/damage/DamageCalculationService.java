@@ -250,7 +250,7 @@ public final class DamageCalculationService {
                     ? physique.value().damageDealtMultiplier() : physique.value().damageTakenMultiplier();
             if (provider == null) continue;
             final double value;
-            if (provider instanceof Constant constant) value = constant.value();
+            if (provider instanceof Constant(double value1)) value = value1;
             else {
                 if (context == null) context = FormulaContext.of(holder);
                 try {

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.data.artifact.ItemArchetype;
+import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -19,7 +19,7 @@ import java.util.UUID;
 public final class FlightAttachment extends ShouldSyncAttachment {
     public static final MapCodec<FlightAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.optionalFieldOf("active", false).forGetter(FlightAttachment::active),
-            ItemArchetype.CODEC.optionalFieldOf("archetype").forGetter(FlightAttachment::archetype),
+            Artifact.CODEC.optionalFieldOf("archetype").forGetter(FlightAttachment::archetype),
             Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(FlightAttachment::startedAt),
             Codec.DOUBLE.optionalFieldOf("previous_flight", 0.0D).forGetter(FlightAttachment::previousFlight),
             Codec.BOOL.optionalFieldOf("previous_flying", false).forGetter(FlightAttachment::previousFlying),
@@ -27,7 +27,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
             Codec.STRING.optionalFieldOf("vehicle").forGetter(FlightAttachment::vehicleRaw)
     ).apply(i, FlightAttachment::new));
     private boolean active;
-    private Holder<ItemArchetype> archetype;
+    private Holder<Artifact> archetype;
     private long startedAt;
     private double previousFlight;
     private boolean previousFlying;
@@ -37,7 +37,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
     public FlightAttachment() {
     }
 
-    private FlightAttachment(boolean active, Optional<Holder<ItemArchetype>> archetype, long startedAt, double previousFlight, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
+    private FlightAttachment(boolean active, Optional<Holder<Artifact>> archetype, long startedAt, double previousFlight, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
         this.active = active;
         this.archetype = archetype.orElse(null);
         this.startedAt = startedAt;
@@ -51,7 +51,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
         return this.active;
     }
 
-    public Optional<Holder<ItemArchetype>> archetype() {
+    public Optional<Holder<Artifact>> archetype() {
         return Optional.ofNullable(this.archetype);
     }
 
@@ -83,7 +83,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
         return Optional.ofNullable(this.vehicle);
     }
 
-    public void start(Holder<ItemArchetype> archetype, long gameTime, double flight, boolean flying, float flyingSpeed, UUID vehicle) {
+    public void start(Holder<Artifact> archetype, long gameTime, double flight, boolean flying, float flyingSpeed, UUID vehicle) {
         this.active = true;
         this.archetype = archetype;
         this.startedAt = gameTime;

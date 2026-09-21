@@ -1,0 +1,15 @@
+{
+  "item_type": "sword",
+  "items": "minecraft:diamond_sword",
+  "spirit_capacity": {
+    "mxt_test:qi": 100,
+    "mxt_test:water_power": 50
+  },
+  "abilities": [
+    { "type": "mxt:passive", "abilities": "mxt_test:artifact_guard" },
+    { "type": "mxt:active", "abilities": "mxt_test:firebolt" },
+    { "type": "mxt:flight", "speed": 0.1, "costs": [{ "id": "mxt_test:qi", "amount": 1 }] },
+    { "type": "mxt:storage", "slots": 9 }
+  ],
+  "curios_equipable": true
+}

@@ -1,8 +1,13 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
-import com.iafenvoy.mxt.data.artifact.ItemArchetype;
+import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
+import com.iafenvoy.mxt.data.artifact.Artifact;
+import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -10,32 +15,55 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.energy.ArtifactSpiritEnergy;
 import com.iafenvoy.mxt.runtime.energy.ISpiritEnergy;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.mojang.datafixers.util.Either;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.HolderLookup.RegistryLookup;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Server-side ownership and energy operations for artifact ItemStacks.
+ * Ownership, aura and resolution for artifact ItemStacks.
+ *
+ * <p>Everything reads the registries the caller hands in rather than the running server: the same questions are
+ * asked on a client, where the server-side entry points of {@code MxtDatapackRegistries} throw.</p>
  */
 public final class ArtifactService {
-    /**
-     * How much of its declared capacity an artifact gains by taking in one full feeding. Nourishment is kept as
-     * the share of a feeding rather than as an amount of energy, so this constant alone decides what the ceiling
-     * can become and no number a data pack writes can enter the bonus.
-     */
+    /** How much of its declared ceiling one full feeding is worth. Kept as a share, so no pack number enters it. */
     private static final double NOURISHMENT_CAPACITY_BONUS = 0.5D;
-    /**
-     * One full feeding is the whole of the nourishment an artifact can take in, so a stored value above one says
-     * nothing the ceiling does not already say; it is clamped where it is read as well as where it is written,
-     * because a save or a pack can put any finite number into the component.
-     */
+    /** A stored value above one says nothing the ceiling does not, so it is clamped wherever it is read. */
     private static final double MAX_NOURISHMENT = 1.0D;
+    /** A layout limit rather than a balance one: a larger number is a pack mistake, not a bigger inventory. */
+    private static final int MAX_STORAGE_SLOTS = 256;
 
     private ArtifactService() {
+    }
+
+    /**
+     * The definition claiming this stack, with the holder so its id stays available. The highest
+     * {@code priority} wins and registry order breaks ties; two definitions claiming one item is reported by
+     * {@code ServerCache} while the pack loads.
+     */
+    public static Optional<Reference<Artifact>> definition(Provider access, ItemStack stack) {
+        if (stack.isEmpty()) return Optional.empty();
+        return MxtDatapackRegistries.holders(access, MxtResourceKeys.ARTIFACT)
+                .filter(holder -> holder.value().entries().stream().anyMatch(entry -> entry.matches(stack)))
+                .min(Comparator.comparingInt(holder -> holder.value().priority()));
     }
 
     public static RefineResult refine(ItemStack stack, Entity owner) {
@@ -48,8 +76,8 @@ public final class ArtifactService {
             return RefineResult.OWNED_BY_OTHER;
         stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner));
         NeoForge.EVENT_BUS.post(new Post(stack, ownerUuid));
-        current.archetype().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_ARCHETYPE, id)).ifPresent(definition ->
-                definition.refineAction().execute(owner, stack, FormulaContext.of(owner)));
+        definition(owner.level().registryAccess(), stack).ifPresent(holder ->
+                holder.value().refineAction().execute(owner, stack, FormulaContext.of(owner)));
         return RefineResult.REFINED;
     }
 
@@ -57,99 +85,157 @@ public final class ArtifactService {
         return state(stack).ownerUuid().filter(owner.toString()::equals).isPresent();
     }
 
+    /** Whether the stack has been refined at all, whoever it belongs to. */
+    public static boolean hasOwner(ItemStack stack) {
+        return state(stack).ownerUuid().isPresent();
+    }
+
     /**
-     * Fills an artifact with the spirit energy it is handed and reports how much of it was really taken.
-     * <p>
-     * The capacity this write is measured against is the one the stack's own archetype declares, so the number
-     * a data pack writes is what decides how much the artifact can hold. The caller's capacity is only the
-     * fallback for a stack that resolves to no usable archetype, which is why a caller that declares its own
-     * capacity keeps working unchanged.
-     * <p>
-     * Energy that was really accepted also feeds the artifact, so nourishment is only ever earned by a charge
-     * the server performed and never handed to an item by writing the component.
+     * Whether one entity may use an artifact where ownership is read - flight, and the storage. A definition
+     * asking for an owner refuses until it has one; one that does not is open to anybody until it is refined and
+     * answers to its owner alone from then on. Refining therefore stays worth doing without being a prerequisite
+     * nothing in the game can currently satisfy.
+     *
+     * <p>{@code mxt:owned_by} is not routed through here: that condition asks whether the owner <em>is</em> the
+     * holder, which is a question a pack asks on purpose and has one answer regardless of this flag.</p>
      */
-    public static double addEnergy(ItemStack stack, double amount, double fallbackCapacity, FormulaContext context) {
-        double capacity = capacity(stack, fallbackCapacity, context);
-        double accepted = energyStorage(stack, capacity).receive(amount);
-        if (accepted > 0.0D) feed(stack, accepted, capacity);
+    public static boolean mayUse(ItemStack stack, Holder<Artifact> artifact, UUID user) {
+        if (isOwner(stack, user)) return true;
+        return !artifact.value().requireOwner() && !hasOwner(stack);
+    }
+
+    /**
+     * The abilities this stack offers: what its definition grants plus whatever the component was written with,
+     * so an artifact, a scripted stack and a plain stack all reach the ability runtime the same way.
+     */
+    public static List<Holder<Ability>> abilities(Provider access, ItemStack stack) {
+        if (stack.isEmpty()) return List.of();
+        LinkedHashSet<Holder<Ability>> granted = new LinkedHashSet<>();
+        definition(access, stack).ifPresent(holder -> granted.addAll(resolveAbilities(access, holder.value().grantedAbilities())));
+        ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesComponent(List.of()));
+        component.abilities().forEach(id -> MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).ifPresent(granted::add));
+        return List.copyOf(granted);
+    }
+
+    /**
+     * Expands the ids and tags of one grant entry into the abilities they name, in the order they were written.
+     * The runtime reading and the tooltip both come through here, so a stack cannot grant one set of abilities
+     * while its tooltip describes another.
+     */
+    public static List<Holder<Ability>> resolveAbilities(Provider access,
+                                                        Collection<Either<Holder<Ability>, TagKey<Ability>>> values) {
+        RegistryLookup<Ability> abilities = access.lookupOrThrow(MxtResourceKeys.ABILITY);
+        List<Holder<Ability>> resolved = new ArrayList<>();
+        for (Either<Holder<Ability>, TagKey<Ability>> value : values)
+            value.ifLeft(resolved::add)
+                    .ifRight(tag -> abilities.listElements().filter(holder -> holder.is(tag)).forEach(resolved::add));
+        return List.copyOf(resolved);
+    }
+
+    public static List<Identifier> abilityIds(Provider access, ItemStack stack) {
+        return abilities(access, stack).stream().map(HolderHelper::id).toList();
+    }
+
+    public static Optional<FlightArtifactAbility> flight(Provider access, ItemStack stack) {
+        return definition(access, stack).flatMap(holder -> holder.value().flight());
+    }
+
+    public static int storageSlots(Provider access, ItemStack stack, FormulaContext context) {
+        return definition(access, stack).flatMap(holder -> holder.value().storage())
+                .map(storage -> (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, MAX_STORAGE_SLOTS))
+                .orElse(0);
+    }
+
+    public static boolean curiosEquipable(Provider access, ItemStack stack) {
+        return definition(access, stack).map(holder -> holder.value().curiosEquipable()).orElse(false);
+    }
+
+    /**
+     * The aura this stack can hold of one kind: what its definition declares, plus the bonus it has earned by
+     * being fed. A stack that claims no definition, or one that does not name this aura, falls back to the
+     * caller's capacity - so a caller with its own ceiling keeps working and an unmentioned aura stays
+     * unstorable.
+     */
+    public static int capacity(Provider access, ItemStack stack, Holder<Aura> aura, double fallbackCapacity, FormulaContext context) {
+        double declared = definition(access, stack)
+                .map(holder -> holder.value().spiritCapacity().get(aura))
+                .map(provider -> evaluate(provider, context))
+                .orElse(0.0D);
+        if (!Double.isFinite(declared) || declared <= 0.0D) declared = fallbackCapacity;
+        if (!Double.isFinite(declared) || declared <= 0.0D) return 0;
+        double resolved = declared * (1.0D + NOURISHMENT_CAPACITY_BONUS * Math.clamp(state(stack).nourishment(), 0.0D, MAX_NOURISHMENT));
+        // Saturate rather than hand an infinity to a store that would have to reject it.
+        return Double.isFinite(resolved) ? (int) Math.clamp(Math.floor(resolved), 0.0D, Integer.MAX_VALUE) : Integer.MAX_VALUE;
+    }
+
+    public static int stored(ItemStack stack, Holder<Aura> aura) {
+        return store(stack).get(aura);
+    }
+
+    public static void setEnergy(ItemStack stack, Holder<Aura> aura, int value) {
+        stack.set(MxtDataComponents.SPIRIT_STORAGE, store(stack).with(aura, Math.max(0, value)));
+    }
+
+    /**
+     * Fills one aura of an artifact and reports how much was really taken. What was accepted also feeds the
+     * artifact, so nourishment is only ever earned by a charge the server performed.
+     */
+    public static int addEnergy(Provider access, ItemStack stack, Holder<Aura> aura, double amount,
+                                double fallbackCapacity, FormulaContext context) {
+        if (!Double.isFinite(amount) || amount <= 0.0D) return 0;
+        int capacity = capacity(access, stack, aura, fallbackCapacity, context);
+        int stored = stored(stack, aura);
+        int accepted = (int) Math.min(Math.floor(amount), Math.max(0, capacity - stored));
+        if (accepted <= 0) return 0;
+        setEnergy(stack, aura, stored + accepted);
+        if (capacity > 0) feed(stack, (double) accepted / (double) capacity);
         return accepted;
     }
 
-    /**
-     * The spirit energy one stack can hold: what its archetype declares, plus the bounded bonus the artifact has
-     * earned by being fed.
-     * <p>
-     * A stack falls back to the caller's capacity when it names no archetype, when that archetype no longer
-     * resolves - a datapack reload can remove an entry a save still points at - and when the declared number is
-     * not a size a store could use. The field defaults to zero, so reading a zero declaration as "nothing
-     * declared" is also what keeps a pack that adds an archetype for its abilities or its flight from silently
-     * turning every charge path into a store that can never be filled. A caller capacity that is itself unusable
-     * resolves to zero as well, because a store that cannot say how much it holds must refuse the energy rather
-     * than throw out of the energy adapter.
-     */
-    public static double capacity(ItemStack stack, double fallbackCapacity, FormulaContext context) {
-        ArtifactStateComponent state = state(stack);
-        double base = state.archetype()
-                .flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_ARCHETYPE, id))
-                .map(definition -> declaredCapacity(definition, context))
-                .orElse(0.0D);
-        if (!Double.isFinite(base) || base <= 0.0D) base = fallbackCapacity;
-        if (!Double.isFinite(base) || base <= 0.0D) return 0.0D;
-        double resolved = base * (1.0D + NOURISHMENT_CAPACITY_BONUS * Math.clamp(state.nourishment(), 0.0D, MAX_NOURISHMENT));
-        // A declaration large enough for the bonus to overflow saturates rather than reaching the energy adapter
-        // as an infinity, which the adapter would reject.
-        return Double.isFinite(resolved) ? resolved : Double.MAX_VALUE;
+    public static int consumeEnergy(ItemStack stack, Holder<Aura> aura, double amount) {
+        if (!Double.isFinite(amount) || amount <= 0.0D) return 0;
+        int stored = stored(stack, aura);
+        int extracted = (int) Math.min(Math.floor(amount), Math.max(0, stored));
+        if (extracted > 0) setEnergy(stack, aura, stored - extracted);
+        return extracted;
     }
 
     /**
-     * What one archetype declares as its capacity, or zero when the declaration evaluates to something a store
-     * could not use. A non-finite result is reported by the provider rather than quietly becoming a capacity, so
-     * a pack author can tell a formula that never produced a number from one that produced zero.
+     * Raises nourishment by the share of one feeding an accepted write filled. Never lowered: an artifact keeps
+     * what it was fed after the aura it took in is spent again.
      */
-    private static double declaredCapacity(ItemArchetype definition, FormulaContext context) {
-        double declared = definition.spiritCapacity().evaluate(context);
-        return definition.spiritCapacity().assertFinite(declared) ? declared : 0.0D;
-    }
-
-    /**
-     * Raises one artifact's nourishment by the share of its capacity that this accepted write filled.
-     * <p>
-     * Measuring the gain against the capacity that accepted the energy is what bounds it: an artifact filled from
-     * empty gains exactly one, a partial charge gains its fraction, and nothing but accepted energy moves the
-     * number at all. It is never lowered here, because an artifact that was fed keeps what it was fed even after
-     * the energy it took in is spent again.
-     */
-    private static void feed(ItemStack stack, double accepted, double capacity) {
-        if (!Double.isFinite(accepted) || accepted <= 0.0D || !Double.isFinite(capacity) || capacity <= 0.0D) return;
-        // Read back rather than reuse a snapshot taken before the write, because the accepted energy is already
-        // in the component and withNourishment must carry it forward.
-        ArtifactStateComponent state = state(stack);
-        double raised = Math.clamp(state.nourishment() + accepted / capacity, 0.0D, MAX_NOURISHMENT);
-        if (raised <= state.nourishment()) return;
-        stack.set(MxtDataComponents.ARTIFACT_STATE, state.withNourishment(raised));
-    }
-
-    public static double consumeEnergy(ItemStack stack, double amount) {
-        return new ArtifactSpiritEnergy(stack, Double.MAX_VALUE).extract(amount);
+    private static void feed(ItemStack stack, double share) {
+        if (!Double.isFinite(share) || share <= 0.0D) return;
+        ArtifactStateComponent current = state(stack);
+        double raised = Math.clamp(current.nourishment() + share, 0.0D, MAX_NOURISHMENT);
+        if (raised <= current.nourishment()) return;
+        stack.set(MxtDataComponents.ARTIFACT_STATE, current.withNourishment(raised));
     }
 
     public static ArtifactStateComponent state(ItemStack stack) {
-        return Optional.ofNullable(stack.get(MxtDataComponents.ARTIFACT_STATE)).orElseGet(ArtifactStateComponent::empty);
+        return stack.getOrDefault(MxtDataComponents.ARTIFACT_STATE, ArtifactStateComponent.empty());
     }
 
-    public static ISpiritEnergy energyStorage(ItemStack stack, double capacity) {
-        return new ArtifactSpiritEnergy(stack, capacity);
+    public static ISpiritEnergy energyStorage(ItemStack stack, Holder<Aura> aura, double capacity) {
+        return new ArtifactSpiritEnergy(stack, aura, capacity);
     }
 
-    public static void setEnergy(ItemStack stack, double energy) {
-        stack.set(MxtDataComponents.ARTIFACT_STATE, state(stack).withEnergy(energy));
+    /** Writes immutable server-computed forge provenance to a completed item. */
+    public static void applyForgingResult(ItemStack stack, ForgingResultComponent result) {
+        stack.set(MxtDataComponents.FORGING_RESULT, result);
+    }
+
+    private static SpiritStorageComponent store(ItemStack stack) {
+        return stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
     }
 
     /**
-     * Writes immutable server-computed forge provenance to a completed item.
+     * What one provider declares, or zero when it evaluates to something a store could not use. A non-finite
+     * result is reported by the provider instead of quietly becoming a capacity.
      */
-    public static void applyForgingResult(ItemStack stack, ForgingResultComponent result) {
-        stack.set(MxtDataComponents.FORGING_RESULT, result);
+    private static double evaluate(NumberProvider provider, FormulaContext context) {
+        double value = provider.evaluate(context);
+        return provider.assertFinite(value) ? value : 0.0D;
     }
 
     public enum RefineResult {REFINED, OWNED_BY_OTHER, CANCELLED}

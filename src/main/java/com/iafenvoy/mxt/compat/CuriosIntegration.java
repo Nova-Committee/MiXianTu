@@ -5,9 +5,11 @@ import com.iafenvoy.mxt.config.MxtServerConfig.BackMode;
 import com.iafenvoy.mxt.config.MxtServerConfig.BeltMode;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
 import top.theillusivec4.curios.api.SlotContext;
@@ -19,31 +21,63 @@ import java.util.*;
 
 public final class CuriosIntegration {
     /**
-     * Registers the data-driven automatic acceptance predicates used by the back and belt slots.
+     * Registers the data-driven automatic acceptance predicates used by the back, belt and charm slots.
      */
     public static void registerPredicates() {
         CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "back_weapon_auto"), (context, stack) -> acceptsBack(MxtServerConfig.INSTANCE.curios.backMode.getValue(), context, stack));
         CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "belt_item_auto"), (context, stack) -> acceptsBelt(MxtServerConfig.INSTANCE.curios.beltMode.getValue(), context, stack));
+        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "charm_artifact_auto"), CuriosIntegration::acceptsCharm);
+    }
+
+    /**
+     * The four charm slots are the built-in {@code charm} slot, widened to hold artifacts and nothing else.
+     *
+     * <p>Membership is the definition's answer rather than the stack's, so a pack opts an item in where it
+     * already says what the item is. The built-in {@code curios:tag} validator stays merged, so the
+     * {@code curios:charm} item tag remains the escape hatch for anything that is not an artifact.</p>
+     */
+    private static boolean acceptsCharm(SlotContext context, ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        Provider access = registries(context);
+        return access != null && ArtifactService.curiosEquipable(access, stack);
     }
 
     private static boolean acceptsBack(BackMode mode, SlotContext context, ItemStack stack) {
         if (stack.isEmpty()) return false;
+        Provider access = registries(context);
         return switch (mode) {
             case MANUAL -> false;
             case ALL -> true;
-            case WEAPONS -> ItemBindingService.weapon(context.entity().level().registryAccess(), stack).isPresent();
+            case WEAPONS -> access != null && ItemBindingService.weapon(access, stack).isPresent();
         };
     }
 
     private static boolean acceptsBelt(BeltMode mode, SlotContext context, ItemStack stack) {
         if (stack.isEmpty()) return false;
+        Provider access = registries(context);
         return switch (mode) {
             case MANUAL -> false;
             case ALL -> true;
-            case WEAPONS_ARTIFACTS ->
-                    ItemBindingService.weapon(context.entity().level().registryAccess(), stack).isPresent()
-                            || ArtifactService.state(stack).archetype().isPresent();
+            // "Is it an artifact" is asked of the definition rather than of a component being present, so a
+            // pack decides which of its items may be worn on the belt instead of the mere existence of state.
+            case WEAPONS_ARTIFACTS -> access != null && (ItemBindingService.weapon(access, stack).isPresent()
+                    || ArtifactService.curiosEquipable(access, stack));
         };
+    }
+
+    /**
+     * The registry view behind a slot context, or {@code null} when the context carries no entity.
+     *
+     * <p>An entity-less context is not a mistake on Curios' side: it asks the same predicates while building
+     * the recipe book and the creative search index, where a stack's slots are wanted only for its searchable
+     * text. There are no registries to resolve a definition against on that path, so the answer is "not
+     * claimed" - which keeps every predicate total instead of throwing on a worker thread. This was a real
+     * failure: {@code acceptsCharm} read {@code context.entity().level()} directly and the recipe-book build
+     * logged {@code Cannot invoke LivingEntity.level() because ... is null} once per item.</p>
+     */
+    private static @Nullable Provider registries(SlotContext context) {
+        LivingEntity entity = context.entity();
+        return entity == null ? null : entity.level().registryAccess();
     }
 
     /**

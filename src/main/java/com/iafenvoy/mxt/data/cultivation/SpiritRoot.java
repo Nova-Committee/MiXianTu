@@ -46,8 +46,8 @@ public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMult
      */
     private static DataResult<SpiritRoot> validate(SpiritRoot root) {
         for (NumberProvider provider : List.of(root.cultivationMultiplier(), root.elementAbilityModifier()))
-            if (provider instanceof Constant constant && (!Double.isFinite(constant.value()) || constant.value() < 0.0D))
-                return DataResult.error(() -> "A spirit root multiplier must be finite and non-negative: " + constant.value());
+            if (provider instanceof Constant(double value) && (!Double.isFinite(value) || value < 0.0D))
+                return DataResult.error(() -> "A spirit root multiplier must be finite and non-negative: " + value);
         return DataResult.success(root);
     }
 

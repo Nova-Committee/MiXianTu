@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.DefinitionCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -22,11 +21,11 @@ import java.util.List;
 /**
  * Element-independent innate or acquired physique. Intentionally has no element field.
  *
- * <p>"Intentionally" is enforced rather than assumed: a definition that declares an element or a spirit-root
- * field fails to load with that field named, because {@code RecordCodecBuilder} would otherwise drop it in
- * silence and leave a physique that reads as if it were elemental while the game treats it as nothing of the
- * kind. Everything a physique may say is either a vanilla attribute, a granted ability, a condition, an
- * exclusive tag, a display rarity or a stacking rule - which is exactly the list below.</p>
+ * <p>"Intentionally" is a statement about the registry rather than a check on the file: a definition that also
+ * declares an element or a spirit-root field keeps loading and that key is ignored, because the record codec
+ * reads only the keys named below. Everything a physique may say is either a vanilla attribute, a granted
+ * ability, a condition, an exclusive tag, a display rarity or a stacking rule - which is exactly the list
+ * below.</p>
  *
  * <p>The two damage multipliers are the physique's own contribution to one strike, and they are the reason a
  * physique can be about fighting without being about elements: {@code damage_dealt_multiplier} scales what its
@@ -40,17 +39,8 @@ public record Physique(List<AttributeEntry> attributeModifiers,
                        List<Identifier> exclusiveTags, String rarity, boolean allowStacking,
                        NumberProvider damageDealtMultiplier, NumberProvider damageTakenMultiplier) {
     public static final Codec<Holder<Physique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PHYSIQUE);
-    /**
-     * The fields that would make a physique mean an element or a spirit root. They are refused rather than
-     * ignored: a pack that wanted one of those is looking at the wrong registry, and telling it so while the
-     * pack loads is cheaper than a damage number nobody can explain afterwards.
-     */
-    private static final List<String> FOREIGN_FIELDS = List.of(
-            "element", "elements", "element_affinity", "element_tags", "element_ability_modifier",
-            "conflicting_elements", "relations", "overcomes", "adapted_to", "damage_types",
-            "attachment_decay", "damage_attachment", "aura_type", "cultivation_multiplier");
 
-    public static final Codec<Physique> DIRECT_CODEC = DefinitionCodecs.refuseKeys(
+    public static final Codec<Physique> DIRECT_CODEC =
             RecordCodecBuilder.<Physique>mapCodec(i -> i.group(
                     AttributeEntry.CODEC.listOf().optionalFieldOf("attribute_modifiers", List.of()).forGetter(Physique::attributeModifiers),
                     RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
@@ -60,9 +50,7 @@ public record Physique(List<AttributeEntry> attributeModifiers,
                     Codec.BOOL.optionalFieldOf("allow_stacking", false).forGetter(Physique::allowStacking),
                     NumberProvider.CODEC.optionalFieldOf("damage_dealt_multiplier", new Constant(1.0D)).forGetter(Physique::damageDealtMultiplier),
                     NumberProvider.CODEC.optionalFieldOf("damage_taken_multiplier", new Constant(1.0D)).forGetter(Physique::damageTakenMultiplier)
-            ).apply(i, Physique::new)).validate(Physique::validate),
-            "physique", "a physique is element-independent, and element relations and element binding belong to element and spirit_root definitions",
-            FOREIGN_FIELDS).codec();
+            ).apply(i, Physique::new)).validate(Physique::validate).codec();
 
     /**
      * A written number can be checked while the pack loads; a formula can only be checked when it runs, which
@@ -70,8 +58,8 @@ public record Physique(List<AttributeEntry> attributeModifiers,
      */
     private static DataResult<Physique> validate(Physique physique) {
         for (NumberProvider provider : List.of(physique.damageDealtMultiplier(), physique.damageTakenMultiplier()))
-            if (provider instanceof Constant constant && (!Double.isFinite(constant.value()) || constant.value() < 0.0D))
-                return DataResult.error(() -> "A physique damage multiplier must be finite and non-negative: " + constant.value());
+            if (provider instanceof Constant(double value) && (!Double.isFinite(value) || value < 0.0D))
+                return DataResult.error(() -> "A physique damage multiplier must be finite and non-negative: " + value);
         return DataResult.success(physique);
     }
 }

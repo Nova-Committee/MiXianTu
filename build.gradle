@@ -117,7 +117,14 @@ tasks.named('runTestClient').configure {
 }
 
 tasks.named('runTestServer').configure {
-    dependsOn(testModSourceSet.classesTaskName)
+    // Same reason as the client below: the run task does not reliably pull in the test source set's resource
+    // processing, so a server could launch with a stale `build/resources/testMod` pack and fail to load a
+    // datapack file the working tree no longer has.
+    dependsOn(
+            testModSourceSet.compileJavaTaskName,
+            testModSourceSet.processResourcesTaskName,
+            testModSourceSet.classesTaskName
+    )
 }
 
 configurations {
