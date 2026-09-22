@@ -11,9 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Draws a formation's boundary for the players close enough to be looking at it. The vanilla broadcast
- * helper is not used because its own cutoff is a flat 32 blocks, which would clip the outline of any
- * formation larger than that.
+ * Draws a formation's boundary for the players close enough to be looking at it. The vanilla broadcast helper
+ * is not used because its own cutoff is a flat 32 blocks, which would clip the outline of any larger formation.
  */
 public final class FormationRangeDisplay {
     /**
@@ -39,28 +38,21 @@ public final class FormationRangeDisplay {
         }
     }
 
-    /**
-     * Reach is the radius plus a fixed margin, because standing at the edge of an array is exactly when a
-     * player wants to see where it ends.
-     */
+    // Reach is the radius plus a fixed margin, because standing at the edge of an array is exactly when a player
+    // wants to see where it ends.
     public static boolean visible(Vec3 center, double radius, Vec3 position) {
         double reach = radius + VISIBLE_MARGIN;
         return position.distanceToSqr(center) <= reach * reach;
     }
 
-    /**
-     * Whether this dispatch is one the module wants drawn on. Counted in the array's periods, so an interval
-     * of one means every period: the ticker only reaches here on a period boundary.
-     */
+    // Counted in the array's periods, so an interval of one means every period: the ticker only reaches here on
+    // a period boundary.
     public static boolean due(RangeDisplayFormationAction module, long gameTime, long period) {
         return Math.floorDiv(gameTime, period) % module.intervalPeriods() == 0L;
     }
 
-    /**
-     * The points of one outline. {@code RING} is a circle at the centre's own height; {@code SPHERE} spreads
-     * the same number of points over the whole surface with the golden angle, evenly rather than in a
-     * latitude grid that would clump the points at the poles.
-     */
+    // RING is a circle at the centre's own height; SPHERE spreads the same number of points over the whole
+    // surface with the golden angle, evenly rather than in a latitude grid that would clump them at the poles.
     public static List<Vec3> points(Shape shape, Vec3 center, double radius, int count) {
         List<Vec3> points = new ArrayList<>(count);
         if (shape == Shape.RING) {

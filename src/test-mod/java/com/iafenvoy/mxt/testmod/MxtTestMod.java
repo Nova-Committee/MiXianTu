@@ -19,11 +19,8 @@ import org.slf4j.Logger;
 import java.util.List;
 
 /**
- * Development-only mod that contributes the mxt_test datapack and client resources.
- * <p>
- * It carries no audit: the game is started to be played, and the fixtures, items and {@code /mxt_test}
- * commands here are what make the scenario playable. Behaviour is checked by reading the code and by
- * running the game, not by a suite that runs itself on every boot.
+ * Development-only mod contributing the mxt_test datapack and client resources; behaviour is checked by
+ * playing the scenario, not by a suite that runs on boot.
  */
 @Mod(MxtTestMod.MOD_ID)
 public final class MxtTestMod {
@@ -40,19 +37,13 @@ public final class MxtTestMod {
         LOGGER.info("Loaded MiXianTu test mod");
     }
 
-    /**
-     * Development-only trace of every curse removal. Nothing in the mod logs this by itself, and the reason is
-     * the one part of a removal that no data pack can observe, so it is read here while playing.
-     */
+    // Nothing in the mod logs a removal by itself, and the reason is the one part no data pack can observe.
     private static void logCurseRemovals(Post event) {
         LOGGER.info("curse removed: {} reason={} stacks={} sources={}", HolderHelper.id(event.curse()),
                 event.reason(), event.state().stacks(), event.sources().stream().map(Identifier::toString).sorted().toList());
     }
 
-    /**
-     * Gives every joining player the abilities a development session wants on its wheel, so the editor has
-     * something to put in a sector and the wheel has something to trigger.
-     */
+    // Grants on join so the wheel editor has something to put in a sector and the wheel something to trigger.
     private static void grantTestAbilities(PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);

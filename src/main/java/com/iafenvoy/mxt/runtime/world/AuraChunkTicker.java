@@ -64,10 +64,8 @@ public final class AuraChunkTicker {
         DIRTY.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(level.getChunkAt(pos));
     }
 
-    /**
-     * Rebuilds queued block-aura caches once, so a placement becomes visible immediately without scanning
-     * the chunk for every individual block event.
-     */
+    // Rebuilds queued block-aura caches once, so a placement becomes visible without scanning the chunk for
+    // every individual block event.
     public static void flushDirty(ServerLevel level) {
         Set<LevelChunk> dirty = DIRTY.get(level);
         if (dirty == null || dirty.isEmpty()) return;
@@ -78,12 +76,8 @@ public final class AuraChunkTicker {
         DIRTY.remove(level);
     }
 
-    /**
-     * Clears and immediately rebuilds the persisted block-aura subsection
-     * caches in the loaded chunks around a position.
-     *
-     * @return number of chunks invalidated
-     */
+    // Clears then immediately rebuilds the persisted block-aura subsection caches of the loaded chunks around
+    // a position; returns how many chunks were invalidated.
     public static int clearBlockAuraCachesAround(ServerLevel level, BlockPos center, int radius) {
         if (radius < 0) throw new IllegalArgumentException("Cache clear radius cannot be negative");
         Set<LevelChunk> chunks = LOADED.get(level);
@@ -128,10 +122,8 @@ public final class AuraChunkTicker {
         return level.getGameTime() + 200L + level.getRandom().nextInt(400);
     }
 
-    /**
-     * Rebuilds the transient section visitor counts used to split emitter aura between players. A player
-     * counts as an accessor of every loaded section in the same bounded query volume AuraService uses.
-     */
+    // Rebuilds the transient section visitor counts used to split emitter aura between players. A player counts
+    // as an accessor of every loaded section in the same bounded query volume AuraService uses.
     private static void refreshAuraVisitors(ServerLevel level) {
         Set<LevelChunk> chunks = LOADED.get(level);
         if (chunks == null) return;
@@ -155,18 +147,14 @@ public final class AuraChunkTicker {
         }
     }
 
-    /**
-     * Runs after protection handlers so canceled block changes do not invalidate aura caches.
-     */
+    // LOW priority so canceled block changes do not invalidate aura caches.
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockBreak(BreakBlockEvent event) {
         if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level
                 && BlockAuraService.matches(level, event.getState())) markDirty(level, event.getPos());
     }
 
-    /**
-     * Runs after protection handlers so canceled block changes do not invalidate aura caches.
-     */
+    // LOW priority so canceled block changes do not invalidate aura caches.
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockPlace(EntityPlaceEvent event) {
         if (!event.isCanceled() && event.getLevel() instanceof ServerLevel level

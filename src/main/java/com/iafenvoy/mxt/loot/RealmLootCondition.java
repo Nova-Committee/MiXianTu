@@ -11,6 +11,7 @@ import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
+// Any realm stage the entity has reached counts, not only the current one.
 public record RealmLootCondition(EntityTarget target, Holder<RealmStage> realm) implements LootItemCondition {
     public static final MapCodec<RealmLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(RealmLootCondition::target),

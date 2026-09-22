@@ -7,8 +7,8 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * An action about to run for one pair of entities, and the place it happens at when that is not the actor's
- * own - the same arrangement {@link EntityActionContext} makes, carried as the same extension data.
+ * An action about to run for one pair of entities, and the place it happens at when that is not the actor's own -
+ * the same arrangement {@link EntityActionContext} makes, carried as the same extension data.
  */
 public class BiEntityActionContext extends Context {
     private final Entity actor;
@@ -34,10 +34,7 @@ public class BiEntityActionContext extends Context {
         return this.target;
     }
 
-    /**
-     * Where this action happens: the place it was given, or the acting entity's own position. An action that
-     * moves an endpoint "to the actor" moves it here.
-     */
+    // An action that moves an endpoint "to the actor" moves it here.
     public Vec3 position() {
         return this.origin().orElseGet(this.actor::position);
     }

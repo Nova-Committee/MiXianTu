@@ -44,9 +44,7 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /aura} command; also reachable as {@code /mxt aura}. The subtree is built per call rather
- * than cached: a {@code LiteralArgumentBuilder} is one mutable node, and the two surfaces it is
- * registered in must not share it.
+ * The {@code /aura} command; also reachable as {@code /mxt aura}.
  */
 public final class AuraCommand {
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("aura")
@@ -67,11 +65,8 @@ public final class AuraCommand {
                             .then(argument("radius", IntegerArgumentType.integer(0, 32))
                                     .executes(ctx -> clearAuraCache(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius"))))));
 
-    /**
-     * Suggestions for one datapack registry, read through the enabled-entry accessor so a disabled definition
-     * is never offered. Each argument names the registry it actually resolves, because offering one registry's
-     * ids for another one's lookup is a suggestion that cannot work.
-     */
+    // Read through the enabled-entry accessor, so a disabled definition is never offered. Each argument passes the
+    // registry it actually resolves: offering one registry's ids for another one's lookup cannot work.
     private static <T> CompletableFuture<Suggestions> suggest(
             CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder, ResourceKey<? extends Registry<T>> key) {
         return SharedSuggestionProvider.suggest(
@@ -96,11 +91,7 @@ public final class AuraCommand {
         return 1;
     }
 
-    /**
-     * Every aura of one element at this position. The question is asked of the element because several auras
-     * can carry the same {@code aura_type}: a pack that groups its auras by element wants one answer, not the
-     * list of ids it would otherwise have to keep in sync by hand.
-     */
+    // The question is asked of the element because several auras can carry the same aura_type.
     private static int queryElement(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         Reference<Element> element = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, id).orElse(null);

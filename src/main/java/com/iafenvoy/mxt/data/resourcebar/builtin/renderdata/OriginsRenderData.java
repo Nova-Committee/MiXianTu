@@ -12,10 +12,8 @@ import java.util.Optional;
 public record OriginsRenderData(Identifier texture, int barIndex, Optional<Integer> iconIndex, boolean inverted)
         implements ResourceBarRenderData {
     public static final Identifier DEFAULT_TEXTURE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/resource_bar.png");
-    // TODO::Consider migrating `sprite_location` to IconReference later. It is deliberately left as a bare
-    //  Identifier for now: this sprite is a 25-cell atlas indexed by `bar_index`/`icon_index` and drawn at
-    //  the bar's own size, whereas IconReference is a single 16x16 icon - taking it would drop the index
-    //  and the size semantics. Revisit if resource bars ever need per-definition icons.
+    // TODO: sprite_location stays a bare Identifier rather than an IconReference - this sprite is a 25-cell atlas
+    // indexed by bar_index/icon_index and drawn at the bar's own size, which IconReference cannot express.
     public static final MapCodec<OriginsRenderData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.optionalFieldOf("sprite_location", DEFAULT_TEXTURE).forGetter(OriginsRenderData::texture),
             Codec.intRange(0, 24).optionalFieldOf("bar_index", 0).forGetter(OriginsRenderData::barIndex),

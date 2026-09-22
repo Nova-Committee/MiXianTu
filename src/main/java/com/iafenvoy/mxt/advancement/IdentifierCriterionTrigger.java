@@ -12,9 +12,8 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
-/**
- * A reusable vanilla advancement trigger filtered by an optional MXT definition ID.
- */
+// One codec, several registered triggers (breakthrough/ability/alchemy/tribulation); each instance is told
+// which definition IDs count, and an instance with no definition filter matches every trigger call.
 public final class IdentifierCriterionTrigger extends SimpleCriterionTrigger<Instance> {
     @Override
     public @NonNull Codec<Instance> codec() {

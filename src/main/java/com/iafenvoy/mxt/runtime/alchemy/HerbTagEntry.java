@@ -21,17 +21,13 @@ import java.util.Optional;
 
 /**
  * Matches any item that is a spirit herb carrying a named element or material. The tags belong to the herb
- * definition rather than to the item, so a declaration can say "a fire-aligned herb" without knowing which items
- * a data pack later binds to that herb, and an item that is added to the herb afterwards is covered by the same
- * file. Both fields are optional and every field that is given has to be present on the herb.
+ * definition rather than to the item, so a declaration can say "a fire-aligned herb" without knowing which items a
+ * data pack later binds to that herb, and an item added to the herb afterwards is covered by the same file. Both
+ * fields are optional, and every field given has to be present on the herb.
  * <p>
- * The element field speaks the element registry: an entry names one element and a {@code #} tag names every
- * element in it, and the herb's own {@code element_tags} is read the same way, in both directions - a herb
- * aligned with a "fire-like" tag answers a query for fire, and one aligned with fire answers a query for that
- * tag. A pack therefore never has to guess which side the tag belongs on.
- * <p>
- * It lives beside {@link SpiritHerbService} rather than with the other built-in entries, because it is one of the
- * few entries that reads a data-pack registry instead of vanilla's item registry alone.
+ * The element field speaks the element registry in both directions: an entry names one element and a {@code #} tag
+ * names every element in it, and the herb's own {@code element_tags} is read the same way, so a pack never has to
+ * guess which side the tag belongs on.
  */
 public record HerbTagEntry(Optional<Either<Holder<Element>, TagKey<Element>>> element,
                            Optional<Identifier> material) implements Entry {
@@ -52,9 +48,8 @@ public record HerbTagEntry(Optional<Either<Holder<Element>, TagKey<Element>>> el
         try {
             SpiritHerb herb = SpiritHerbService.find(stack).orElse(null);
             if (herb == null) return false;
-            // The element registry only exists while a server runs, and a matcher is also evaluated on a
-            // client, where the honest answer is "this is not known to be that herb" - which is also why the
-            // registry is fetched inside this block rather than before it.
+            // The element registry only exists while a server runs, and a matcher is also evaluated on a client,
+            // where the honest answer is "not known to be that herb" - hence the fetch inside this block.
             Registry<Element> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ELEMENT);
             return this.element.map(query -> Elements.aligned(registry, herb.elementTags(), query)).orElse(true)
                     && this.material.map(herb.materialTags()::contains).orElse(true);

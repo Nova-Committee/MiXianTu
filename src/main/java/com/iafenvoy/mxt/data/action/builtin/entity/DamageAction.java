@@ -24,22 +24,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Applies generic damage to the acting entity, which is the "environment" reading of a hit: with no damage
- * type and no element it is credited to nobody, so it reads no element relation and no attacker physique, and
- * it stays the right shape for recoil, backlash and hazard ticks. The mastery and the affinity of the casting
- * that dealt it still apply, because they belong to the casting rather than to the pair - a stronger technique
- * has a heavier backlash.
- *
- * <p>An action can still land on somebody other than the caster - nested under a target action, a passenger
- * action or an equipped-item action the acting entity is not the caster - and there the caster is credited,
- * because a hit somebody caused is theirs.</p>
- *
- * <p>{@code damage_type} and {@code element} are opt-in and say what the strike is made of. With
- * {@code element} alone the damage type is the one that element claims (an element owns the meaning of a
- * damage type, so declaring the element is enough to make the strike readable as it everywhere else); with
- * both, the load checks that the element really claims that type. Neither is a second way to express the
- * other: a strike that needs a type of its own is still written the same way, and one that needs a deliberate
- * attacker still uses the bi-entity path.</p>
+ * Damages the acting entity; with no {@code damage_type} and no {@code element} nobody is credited, so it reads
+ * no element relation and no attacker physique - recoil, backlash and hazard ticks.
  */
 public record DamageAction(NumberProvider amount, Optional<Holder<DamageType>> damageType,
                            List<Either<Holder<Element>, TagKey<Element>>> element) implements EntityAction {
@@ -54,26 +40,18 @@ public record DamageAction(NumberProvider amount, Optional<Holder<DamageType>> d
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
-        // Damage is a server decision: {@code Entity#hurt} still routes to the server and is deprecated,
-        // and an action running on a client level must not pretend it dealt damage.
+        // Server only: an action running on a client level must not pretend it dealt damage.
         if (!(entity.level() instanceof ServerLevel)) return;
         if (!Double.isFinite(amount) || amount <= 0.0D) return;
         DamageCalculationService.deal(attacker(entity, context), entity, amount, this.resolvedType(entity.level()), context);
     }
 
-    /**
-     * The damage type this action travels as, resolved from the declaration; see
-     * {@link DamageElements#resolveType}. An empty result is the reading this action always had - the strike is
-     * made of whatever the attacker's roots are.
-     */
+    // Empty means the strike is made of whatever the attacker's roots are (see DamageElements.resolveType).
     private Optional<Holder<DamageType>> resolvedType(Level level) {
         return DamageElements.resolveType(level.registryAccess(), this.element, this.damageType);
     }
 
-    /**
-     * Who to credit, which is the caster only when the damage is not the caster's own: a bearer that damages
-     * itself is taking a price, not being hit by anybody.
-     */
+    // A bearer that damages itself is taking a price, not being hit by anybody: credit nobody.
     private static Entity attacker(Entity entity, FormulaContext context) {
         Entity caster = context.caster();
         return caster == entity ? null : caster;

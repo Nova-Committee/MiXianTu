@@ -38,61 +38,30 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Charges items that implement {@link UseItemAuraAccess} by pouring the holder's own aura into them: hold the
- * item down and every server tick moves aura from the holder's resource pool into the item's store, through
- * the item's own {@link ItemAuraAccess#insert}.
- * <p>
- * What a pour moves and what it costs is the item's own answer ({@link UseItemAuraAccess#pour}) or, for an item
- * that gives none, the {@code item_aura} definition that matches it - the exchange the fuel direction already
- * describes, read the other way round. Burning an item spends {@code consume_speed} of it per tick per item and
- * hands the holder {@code release_speed}; pouring spends {@code release_speed} of the holder's aura to put
- * {@code consume_speed} into the item. Neither direction is a rate the other does not know, and because the two
- * are the same pair of numbers, a round trip - pour in, burn out - returns exactly what it cost. That is the
- * property that makes this safe to hand to anything implementing the interface: pouring cannot manufacture
- * aura, it can only store it.
- * <p>
- * Nothing here is item-specific, and an item needs no code beyond the interface: the whole gesture is declared
- * by {@link SpiritChargeHold} and driven by {@link com.iafenvoy.mxt.runtime.hold.HoldService}, and the reading
- * side of an item's store - what it holds, what it can hold, whether it is full - is the same reading the
- * tooltip and the Jade display make, so no two of them can disagree.
+ * Charges items implementing {@link UseItemAuraAccess} by pouring the holder's own aura into them through the
+ * item's {@link ItemAuraAccess#insert}. The rates are the {@code item_aura} pair read the other way round, so a
+ * pour-then-burn round trip returns exactly what it cost: pouring can only store aura, never manufacture it.
  */
 @EventBusSubscriber
 public final class SpiritChargeService {
-    /**
-     * The last action-bar line written to each holder, so a number that has not moved is not rewritten and a
-     * refusal repeated every tick of a hold is said once. Keyed by the code rather than the message, because
-     * the message is rebuilt from the charge each time.
-     */
+    // Keyed by the code rather than the message, because the message is rebuilt from the charge each time.
     private static final Map<UUID, String> LAST_LINE = new ConcurrentHashMap<>();
 
-    /**
-     * How fast a store that declares itself is poured: one whole unit a tick, one for one. Nothing about the
-     * store's shape is assumed by it - an item that only says what it holds is poured at the gesture's own rate,
-     * while an item the shared {@code item_aura} definition describes states its own pair and keeps it.
-     */
+    // The gesture's own rate, used for a store that declares only what it holds; an item described by the
+    // shared item_aura definition states its own pair instead.
     public static final int POUR_INTAKE_PER_TICK = 1;
     public static final double POUR_COST_PER_UNIT = 1.0D;
 
     private SpiritChargeService() {
     }
 
-    /**
-     * Hands the hold module this module's one declaration, once, at construction. The hold module drives the
-     * gesture and never learns what an item aura is; this module never touches the use cycle.
-     */
+    // Registered once, at construction: the hold module drives the gesture and never learns what an item aura is.
     public static void initialize() {
         HoldLookup.register(registries -> List.of(SpiritChargeHold.INSTANCE));
     }
 
-    /**
-     * Says why a click on a chargeable item did nothing. A stack this module does not claim is never armed, so
-     * the click falls through to vanilla and there is no gesture and no other place that could explain the
-     * silence.
-     * <p>
-     * This never cancels: an item that is also a technique manual, that carries a talisman's invocation, or that
-     * declares its own use, belongs to whatever claims it first, and swallowing the click here would take that
-     * away.
-     */
+    // This never cancels: an item that is also a technique manual, carries a talisman's invocation or declares
+    // its own use belongs to whatever claims it first.
     @SubscribeEvent
     public static void onItemUse(RightClickItem event) {
         LivingEntity entity = event.getEntity();
@@ -107,10 +76,7 @@ public final class SpiritChargeService {
         else if (charge.full()) show(entity, Component.translatable("actionbar.mxt.charge.full"), "full");
     }
 
-    /**
-     * One tick of the pour. Server only: the charge is the item's stored state, and only the server may write
-     * it - the client's copy arrives through the component sync and is what draws the tooltip.
-     */
+    // Server only: the charge is item state, and the client's copy arrives through the component sync.
     @SubscribeEvent
     public static void onUseTick(Tick event) {
         LivingEntity entity = event.getEntity();
@@ -121,13 +87,12 @@ public final class SpiritChargeService {
         // A tick is paid for before the item answers it, so an item that would refuse this tick says so first.
         if (!access.canPourInto(entity, stack)) return;
         Provider registries = entity.level().registryAccess();
-        // Which aura is poured is the item's answer and does not depend on the holder, so it is read first: the
-        // formula context the rates are read against is that aura's own.
+        // Which aura is poured does not depend on the holder, so it is read first: the rates are read against
+        // that aura's own context.
         Charge probe = resolve(registries, stack);
         if (probe == null) return;
         Holder<Aura> aura = probe.aura();
-        // The rates are read in the aura's own context, and the pool that pays for them is the value the aura
-        // is counted in - the one conversion that never needs a lookup.
+        // The pool that pays is the resource the aura is counted in - the one conversion needing no lookup.
         Holder<Resource> resource = aura.value().resource();
         FormulaContext context = ResourceService.formulaContext(entity, resource, FormulaContext.of(entity));
         Charge charge = resolve(registries, stack, context);
@@ -135,8 +100,8 @@ public final class SpiritChargeService {
 
         int want = charge.intake();
         if (want <= 0) return;
-        // What the item will really take: a full one, or one that stores another aura, answers zero, and
-        // the answer is asked before anything is paid for.
+        // What the item will really take, asked before anything is paid for: a full item, or one storing
+        // another aura, answers zero.
         int units = want - access.insert(entity, stack, aura, want, true);
         if (units <= 0) {
             show(entity, Component.translatable("actionbar.mxt.charge.full"), "full");
@@ -146,19 +111,16 @@ public final class SpiritChargeService {
         double unitCost = charge.costPerUnit();
         if (unitCost > 0.0D) {
             ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
-            // What the holder can pay for, decided before anything moves: a partial payment that bought no
-            // whole unit would be aura taken for nothing.
+            // Decided before anything moves: a partial payment that bought no whole unit would be aura taken
+            // for nothing.
             units = Math.min(units, (int) Math.floor(resources.get(resource) / unitCost));
             if (units <= 0) {
                 show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
                 return;
             }
             double before = resources.get(resource);
-            // The holder's pool, spent the way the fuel direction fills it: through the resource service, so
-            // the definition's bounds and its audit trail both apply, and what is charged for is what was
-            // actually taken rather than what was asked for - a bound may trim the payment. The measured
-            // payment can only lower the units, never raise them: a pool clamped down from above its own
-            // maximum must not buy more than the tick asked for.
+            // Spent through the resource service so the definition's bounds and audit trail apply: what is
+            // charged for is what was actually taken, and a bound may only trim the payment, never raise it.
             Result paid = ResourceService.change(resources, resource, -(units * unitCost), context);
             if (!paid.valid()) {
                 show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
@@ -172,35 +134,26 @@ public final class SpiritChargeService {
         }
         access.insert(entity, stack, aura, units, false);
         showProgress(entity, resolve(registries, stack, context));
-        // The writer reports the move, and the item decides whether that was the moment it filled: a talisman
-        // carrier spends itself and fires what is written on it, a spirit stone simply has nothing to say.
+        // The item decides whether that was the moment it filled, so a talisman carrier can spend itself here.
         access.onCharged(SpiritSource.of(entity), stack);
     }
 
-    /**
-     * What one item's store is doing, resolved from the registries and the item itself. Answers {@code null}
-     * for anything this module does not charge: a stack that is empty or is not an {@link ItemAuraAccess} item,
-     * one that neither declares a store nor matches an {@code item_aura} definition, and one whose numbers do
-     * not evaluate to something a tick could move.
-     * <p>
-     * The context is the caller's, because a definition may scale its numbers by the holder; the hold itself
-     * resolves with the empty context, so the two sides of a connection agree on how long a gesture lasts.
-     */
+    // Answers null for anything this module does not charge: an empty stack, a non-ItemAuraAccess item, one that
+    // matches no store, and one whose numbers cannot move a tick. The context is the caller's.
     public static @Nullable Charge resolve(Provider registries, ItemStack stack, FormulaContext context) {
-        // The guard is the precondition too: an item_aura definition describes items, so a plain item one
-        // happens to match - a crystal that only burns as fuel - must not read as pourable.
+        // An item_aura definition describes items, so a plain item one happens to match - a crystal that only
+        // burns as fuel - must not read as pourable.
         if (stack.isEmpty() || !(stack.getItem() instanceof ItemAuraAccess)) return null;
         SpiritPour pour = stack.getItem() instanceof UseItemAuraAccess manual
                 ? manual.pour(registries, stack).orElse(null) : null;
         if (pour != null) {
             Entry entry = pour.active().orElse(null);
             if (entry == null) return null;
-            // A store that only says what it holds is poured at the gesture's own rate.
             return new Charge(entry.aura(), entry.stored(), entry.capacity(),
                     POUR_INTAKE_PER_TICK, POUR_COST_PER_UNIT);
         }
-        // The shared reading: one definition describes one item, so a stack of them moves as many times as it
-        // has items, and a missing component is a pristine, fully charged item.
+        // The shared reading: one definition describes one item, so a stack moves as many times as it has
+        // items, and a missing component is a pristine, fully charged item.
         Holder<ItemAura> definition = ItemAuraService.find(registries, stack).orElse(null);
         if (definition == null) return null;
         int capacity = ItemAuraService.capacity(registries, stack, context);
@@ -209,33 +162,25 @@ public final class SpiritChargeService {
         double intakeSpeed = definition.value().consumeSpeed().evaluate(context) * count;
         double costSpeed = definition.value().releaseSpeed().evaluate(context) * count;
         if (!Double.isFinite(intakeSpeed) || intakeSpeed <= 0.0D) return null;
-        // What is in the stack is its own answer when it has one: a written store files its amounts under the
-        // auras they count, so a definition that has since been re-typed cannot reinterpret them - it simply
-        // stops matching them. A store holding nothing, or one that was drained, leaves the declaration to say
-        // which aura this is, and the definition supplies the size either way.
+        // A written store files its amounts under the auras they count, so a re-typed definition simply stops
+        // matching them; a store holding nothing leaves the declaration to say which aura this is.
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         Holder<Aura> aura = (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
                 .orElse(definition.value().type());
         int stored = component == null ? capacity : Mth.clamp(component.get(aura), 0, capacity);
-        // The whole units a tick moves, and what one of them costs: the ratio of the two speeds, which is the
-        // same for one item and for a stack of them.
+        // What one whole unit costs: the ratio of the two speeds, the same for one item and for a stack.
         double unitCost = !Double.isFinite(costSpeed) || costSpeed <= 0.0D ? 0.0D : costSpeed / intakeSpeed;
         return new Charge(aura, stored, capacity,
                 Math.max(1, (int) Math.floor(intakeSpeed)), unitCost);
     }
 
-    /**
-     * The same reading against the empty formula context - what a hold is sized by.
-     */
+    // The same reading against the empty formula context - what a hold is sized by.
     public static @Nullable Charge resolve(Provider registries, ItemStack stack) {
         return resolve(registries, stack, FormulaContext.EMPTY);
     }
 
-    /**
-     * Whether there is nothing left to pour into this stack - the question a caller means by "is it full". A
-     * store the item describes itself may take several auras and only the item can say whether all of them are
-     * full, so it is asked of the store rather than of the one aura {@link #resolve} answers for.
-     */
+    // A store the item describes itself may take several auras and only the item can say whether all of them
+    // are full, so that question is asked of the store rather than of the one aura resolve() answers for.
     public static boolean full(Provider registries, ItemStack stack) {
         if (stack.isEmpty() || !(stack.getItem() instanceof ItemAuraAccess)) return false;
         SpiritPour pour = stack.getItem() instanceof UseItemAuraAccess manual
@@ -245,10 +190,7 @@ public final class SpiritChargeService {
         return charge != null && charge.full();
     }
 
-    /**
-     * The colour a charge percentage is shown in, from full to empty. Shared so the tooltip, the Jade display
-     * and the action bar cannot drift apart.
-     */
+    // Shared so the tooltip, the Jade display and the action bar cannot drift apart.
     public static int color(int percentage) {
         if (percentage >= 75) return 0xFF55FF55;
         if (percentage >= 50) return 0xFFFFFF55;
@@ -265,26 +207,18 @@ public final class SpiritChargeService {
                 .withStyle(ChatFormatting.AQUA), "progress:" + percentage);
     }
 
-    /**
-     * Writes one action-bar line per holder, and only when it says something the last one did not: a hold that
-     * cannot go on says so once instead of every tick, and a number that has not moved is not rewritten.
-     */
+    // Writes one action-bar line per holder, and only when it differs from the last one, so a refusal repeated
+    // every tick of a hold is said once.
     private static void show(LivingEntity entity, Component line, String code) {
         if (!(entity instanceof ServerPlayer player)) return;
         if (code.equals(LAST_LINE.put(player.getUUID(), code))) return;
         player.sendSystemMessage(line, true);
     }
 
-    /**
-     * One item's store as one tick of pouring sees it: the aura being poured, what it holds, what it can hold,
-     * how many whole units a tick moves, and what one of them costs the holder.
-     */
+    // One item's store as one tick of pouring sees it.
     public record Charge(Holder<Aura> aura, int stored, int capacity, int intake, double costPerUnit) {
-        /**
-         * How long a pour may last at most. A charge is sized by the time it takes to fill the item, and this
-         * is the ceiling on that: an item whose capacity dwarfs its intake would otherwise ask for a hold
-         * nobody would ever finish, so past this the gesture stops and is repeated instead.
-         */
+        // Ceiling on how long a pour may last: an item whose capacity dwarfs its intake would otherwise ask for
+        // a hold nobody would ever finish, so past this the gesture stops and is repeated instead.
         public static final int MAX_HOLD_TICKS = 200;
 
         public int percentage() {
@@ -295,17 +229,8 @@ public final class SpiritChargeService {
             return this.stored >= this.capacity;
         }
 
-        /**
-         * The ticks a pour lasts: the time this item takes to fill from empty, capped. A stack with nothing to
-         * pour is not a hold at all, which is what {@link HoldBinding#NO_HOLD} already means - so a filled item
-         * is never armed, and a hold that fills one stops making its sound while the pose runs out.
-         * <p>
-         * Sized by the capacity rather than by what is missing, even though the deficit is what actually gets
-         * poured, because the length has to be a function of the stack and not of the tick: the sound's cadence
-         * is read from it again on every tick of the hold, and a length that shrank as the item filled would
-         * take the sound away with it. A partly charged item therefore fills before its pose ends, which is
-         * visible as a hold that stops moving - and is why the pose can be released early.
-         */
+        // Sized by the capacity rather than the deficit, because the length must be a function of the stack and not
+        // of the tick: the sound's cadence is read from it every tick, and a shrinking length would drop it.
         public int holdTicks() {
             if (this.full() || this.intake <= 0) return HoldBinding.NO_HOLD;
             return Mth.clamp((int) Math.ceil((double) this.capacity / this.intake), 1, MAX_HOLD_TICKS);

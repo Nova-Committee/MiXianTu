@@ -17,23 +17,9 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * Opens and closes the wheel and spends what it holds: the wheel key only chooses, the use key spends the pointed
- * cell (or the remembered one while the wheel is down), the twelve slot keys each arm and spend their cell of the
- * page that is up, and the two switch keys move between pages. A wheel with nothing on it anywhere does not open,
- * and opening always lands on the first page.
- *
- * <p>The page is followed by everything that draws the ring, while the <em>chosen cell</em> is a number that
- * survives its page going away - see {@link WheelSelectionState}. The switch keys therefore work with the wheel
- * up or down; when they are pressed with another screen open they stay silent, like every other key here.</p>
- *
- * <p>All keys are polled raw ({@code InputConstants}/GLFW), because {@code setScreen} releases every mapping
- * and {@code grabMouse}'s {@code setAll()} would re-press the use key and double-fire; edges are once a tick.
- * The slot and switch keys are polled here for the same reason, even though they are registered in
- * {@link MxtKeyMappings} with the rest: a {@code KeyMapping}'s own edge would fire a cast that nobody pressed.</p>
- *
- * <p>A key that was pressed and could do nothing answers on the action bar ({@code WheelMenuController#notice})
- * in two cases - the wheel is empty on every page, or nothing was ever chosen. A cell whose entry is gone on
- * purpose stays silent: the wheel grid already draws it as empty, slot keys included.</p>
+ * Opens and closes the wheel and spends what it holds: the wheel key chooses, the use key spends the pointed cell
+ * (or the remembered one while it is down), the slot keys spend their own cell, the switch keys page. Keys are
+ * polled raw: {@code setScreen} releases every mapping and {@code grabMouse}'s {@code setAll()} re-presses use.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class WheelMenuController {
@@ -42,10 +28,8 @@ public final class WheelMenuController {
     private static boolean lastUseDown;
     private static boolean lastPreviousDown;
     private static boolean lastNextDown;
-    /**
-     * The last state of each slot key, indexed like {@link MxtKeyMappings#WHEEL_SLOTS} - that is, by cell.
-     * All twelve are unbound by default, so an unbound one simply never goes down.
-     */
+    // Last state of each slot key, indexed by cell. All twelve are unbound by default, so an unbound one never
+    // goes down.
     private static final boolean[] slotDown = new boolean[MxtKeyMappings.WHEEL_SLOTS.size()];
 
     private WheelMenuController() {
@@ -54,25 +38,23 @@ public final class WheelMenuController {
     static void usePointed(WheelSelection.Method method) {
         WheelMenuScreen screen = open;
         if (screen == null) return;
-        // Null for an empty cell: nothing is spent and the wheel stays up. Silent on purpose - the cell is
-        // drawn as empty right there, so a line about it would be answering a question nobody asked.
+        // Null for an empty cell: nothing is spent, the wheel stays up, and the cell is drawn as empty anyway.
         WheelSelection selection = screen.selection(method);
         if (selection != null) selection.entry().onSelected(selection);
     }
 
-    /** Called when something else takes the screen down; the controller must not touch the new screen. */
+    // Something else took the screen down; the controller must not touch the new screen.
     static void screenRemoved(WheelMenuScreen screen) {
         if (open == screen) open = null;
     }
 
     private static void open(Minecraft minecraft) {
         if (minecraft.screen != null) return;
-        // Whatever was up while the wheel was down, opening lands on the first page: that is the one the player
-        // arranged, and the ones read from their gear are one keypress away.
+        // Opening always lands on the first page: the one the player arranged, the gear pages being one keypress away.
         WheelSelectionState.firstPage();
         WheelSelectionState.refresh(minecraft.player);
-        // A wheel with nothing anywhere is not opened: there would be nothing to point at. Say so rather than
-        // do nothing. The test spans every page, because the first page being empty must not hide the rest.
+        // A wheel with nothing anywhere is not opened - there would be nothing to point at - and says so instead.
+        // The test spans every page, because an empty first page must not hide the rest.
         if (WheelMenuContent.hasAnyEntry(WheelSelectionState.pages())) {
             WheelMenuScreen screen = new WheelMenuScreen();
             open = screen;
@@ -127,11 +109,8 @@ public final class WheelMenuController {
         }
     }
 
-    /**
-     * The two switch keys: one page back, one page forward, wrapping at both ends. The page is only what the
-     * ring draws and what the slot keys address - the chosen cell is not moved by it, so switching cannot drop
-     * what the use key would spend.
-     */
+    // One page back, one page forward, wrapping at both ends. The page is only what the ring draws and what the
+    // slot keys address: the chosen cell is not moved by it, so switching cannot drop what the use key spends.
     private static void usePageKeys(Minecraft minecraft) {
         // Sampled even while another screen owns the keys, so a key held through a screen change cannot turn
         // into a press the moment it closes; only acting is gated, exactly as for the slot keys below.
@@ -152,16 +131,12 @@ public final class WheelMenuController {
                 WheelSelectionState.pageSource().displayName()));
     }
 
-    /**
-     * The twelve slot keys: each arms its own cell of the page that is up and spends it in the same breath, so
-     * one key does what "point at that cell, then press the use key" does - a keyboard hotbar laid over the
-     * wheel, and the way a key can reach a cell that is not on the page currently drawn.
-     */
+    // Each slot key arms its own cell of the page that is up and spends it in the same breath, so one key does
+    // what "point at that cell, then press use" does - a keyboard hotbar over the wheel.
     private static void useSlotKeys(Minecraft minecraft) {
         List<MxtKeyMappings.KeyMappingHolder> slots = MxtKeyMappings.WHEEL_SLOTS;
-        // Edges are sampled even while another screen owns the keys, so a key held through a screen change
-        // cannot turn into a press the moment it closes; only acting is gated. Raw polling is what keeps a
-        // slot key from double-firing on the false press `grabMouse`'s `setAll()` invents (see the class doc).
+        // Edges are sampled even while another screen owns the keys (only acting is gated), and raw polling is
+        // what keeps a slot key from double-firing on the false press grabMouse's setAll() invents.
         boolean live = minecraft.player != null && (minecraft.screen == null || open != null);
         for (int sector = 0; sector < slots.size(); sector++) {
             boolean down = keyDown(minecraft, slots.get(sector));
@@ -171,10 +146,7 @@ public final class WheelMenuController {
         }
     }
 
-    /**
-     * Arms one cell of the page that is up and spends it; an empty one is silent, and a press is never sent for
-     * nothing.
-     */
+    // An empty cell is silent: a press is never sent for nothing.
     private static void useSlotKey(Minecraft minecraft, int sector) {
         int number = WheelSelectionState.numberAt(sector);
         // Read before it is chosen, so the entry and the source that trigger is sent with are the same cell.
@@ -185,7 +157,7 @@ public final class WheelMenuController {
         entry.onSelected(new WheelSelection(source, number, entry, WheelSelection.Method.KEY));
     }
 
-    /** The use key went down: spend the pointed cell if the wheel is up, the remembered one if it is not. */
+    // The use key went down: spend the pointed cell if the wheel is up, the remembered one if it is not.
     private static void use(Minecraft minecraft) {
         if (open != null) {
             usePointed(WheelSelection.Method.KEY);
@@ -198,29 +170,22 @@ public final class WheelMenuController {
             selection.entry().onSelected(selection);
             return;
         }
-        // Only "nothing was ever picked" is worth an answer. A cell that was picked and no longer holds
-        // anything (empty, deleted, un-granted) is a normal state, and the wheel grid already shows it.
+        // Only "nothing was ever picked" is worth an answer: a cell that was picked and no longer holds anything
+        // (empty, deleted, un-granted) is a normal state, and the wheel grid already draws it as empty.
         if (WheelSelectionState.number() < 0)
             notice(Component.translatable("actionbar.mxt.wheel.no_selection",
                     MxtKeyMappings.WHEEL.get().getTranslatedKeyMessage()));
     }
 
-    /**
-     * One line on the action bar, for a key that was pressed and could do nothing - or, for a switch, which page
-     * it moved to. Client-side on purpose: this is feedback about the local player's own HUD, and the server never
-     * hears about a key that did nothing. A key pressed while another screen is open stays silent - that is
-     * typing, not a request.
-     */
+    // Client-side on purpose: feedback about the local player's own HUD - the server never hears about a key that
+    // did nothing. A key pressed while another screen is open stays silent: that is typing, not a request.
     private static void notice(Component message) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player != null) minecraft.gui.setOverlayMessage(message, false);
     }
 
-    /**
-     * The remembered cell as a selection, or {@code null} when there is nothing to spend. Read from what this
-     * tick resolved, so the use key and the HUD cell that announces it agree by construction - including the
-     * fallback that applies when the chosen number points past the pages that exist.
-     */
+    // Read from what this tick resolved, so the use key and the HUD cell that announces it agree by
+    // construction - including the fallback for a chosen number that points past the pages that exist.
     private static @Nullable WheelSelection remembered() {
         WheelMenuEntry entry = WheelSelectionState.selected();
         if (entry == null) return null;
@@ -228,7 +193,7 @@ public final class WheelMenuController {
                 entry, WheelSelection.Method.KEY);
     }
 
-    /** A bound key's state straight from the input device; an unbound key is never down. */
+    // A bound key's state straight from the input device; an unbound key is never down.
     private static boolean keyDown(Minecraft minecraft, MxtKeyMappings.KeyMappingHolder holder) {
         InputConstants.Key bound = holder.get().getKey();
         int value = bound.getValue();

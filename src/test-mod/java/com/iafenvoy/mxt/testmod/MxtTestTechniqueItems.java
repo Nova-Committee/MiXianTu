@@ -10,10 +10,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredRegister.Items;
 
 /**
- * The two sample cultivation manuals, which make the technique-learning paths reachable in game: they
- * carry no behaviour beyond a plain {@link Item} plus a datapack binding, and living here keeps two
- * unfinished props out of the main creative menu and their ids out of save data. One is held and one
- * instant (both {@code TechniqueBinding.requiresHold} branches); the held one declares a hold_animation.
+ * The two sample cultivation manuals, carrying no behaviour beyond a plain {@link Item} plus a datapack
+ * binding: one is held and one instant (both {@code TechniqueBinding.requiresHold} branches), the held one
+ * declaring a hold_animation. Living here keeps two unfinished props out of the creative menu.
  */
 public final class MxtTestTechniqueItems {
     public static final Items REGISTRY = DeferredRegister.createItems(MxtTestMod.MOD_ID);
@@ -24,10 +23,8 @@ public final class MxtTestTechniqueItems {
     private MxtTestTechniqueItems() {
     }
 
-    /**
-     * A plain item, because a technique binding finds its carrier by name and the click path supplies the use
-     * behaviour of any item that declares a hold.
-     */
+    // A technique binding finds its carrier by name, and the click path supplies the use behaviour of any item
+    // that declares a hold, so no subclass is needed.
     private static DeferredItem<Item> register(String path) {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM,
                 Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, path));

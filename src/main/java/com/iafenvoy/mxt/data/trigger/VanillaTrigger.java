@@ -7,17 +7,8 @@ import net.minecraft.advancements.criterion.SimpleCriterionTrigger.SimpleInstanc
 import net.minecraft.resources.Identifier;
 
 /**
- * A trigger that hands its decision to one of vanilla's own criterion instances.
- *
- * <p>The instance codec stays vanilla's, so writing such a trigger reads exactly like the {@code conditions}
- * object of the advancement trigger it mirrors, and the decision is made by vanilla's own {@code matches}
- * method. This class only rebuilds the arguments that trigger would have been called with, because MiXianTu
- * publishes the signal from its own hooks: vanilla fires those criteria at sites no event exposes, while the
- * game events next to them are enough to reconstruct the same arguments.</p>
- *
- * <p>What is deliberately not inherited is the advancement lifecycle: a criterion is a one-shot, persisted
- * boolean owned by a player and an advancement, while a signal here is repeatable, runtime-only and can be
- * matched by any definition.</p>
+ * A trigger that hands its decision to one of vanilla's own criterion instances, reconstructing the arguments
+ * vanilla's call site would have passed: it is repeatable and runtime-only, with no advancement lifecycle.
  *
  * @param <T> the vanilla instance type this trigger decodes
  */
@@ -34,10 +25,7 @@ public final class VanillaTrigger<T extends CriterionTriggerInstance> implements
         this.matcher = matcher;
     }
 
-    /**
-     * Wraps one vanilla instance codec into a trigger type. The codec is used as a map codec because a
-     * dispatched trigger decodes its fields from the same object that names its {@code type}.
-     */
+    // A dispatched trigger decodes its fields from the same object that names its type, hence a map codec.
     public static <T extends CriterionTriggerInstance> MapCodec<VanillaTrigger<T>> mapCodec(Identifier signalType, Codec<T> vanilla, Matcher<T> matcher) {
         return MapCodec.assumeMapUnsafe(vanilla.xmap(
                 instance -> new VanillaTrigger<>(signalType, vanilla, instance, matcher),
@@ -69,7 +57,7 @@ public final class VanillaTrigger<T extends CriterionTriggerInstance> implements
     }
 
     /**
-     * Rebuilds the payload one vanilla criterion would have received, and asks it the same question.
+     * Rebuilds the payload one vanilla criterion would have received.
      */
     @FunctionalInterface
     public interface Matcher<T extends CriterionTriggerInstance> {

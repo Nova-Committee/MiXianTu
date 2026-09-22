@@ -11,12 +11,7 @@ import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
 
-/**
- * Datapack-defined set of forging methods unlocked by holding one tool item.
- *
- * <p>The binding is referenced from an item through the {@code mxt:tool_binding}
- * data component, so the item itself only stores a registry id.</p>
- */
+/** Datapack-defined set of forging methods unlocked by holding one tool item, referenced through a data component. */
 public record ToolBinding(List<Holder<ForgingMethod>> methods) {
     public static final Codec<Holder<ToolBinding>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TOOL_BINDING);
     public static final Codec<ToolBinding> DIRECT_CODEC = RecordCodecBuilder.<ToolBinding>create(i -> i.group(

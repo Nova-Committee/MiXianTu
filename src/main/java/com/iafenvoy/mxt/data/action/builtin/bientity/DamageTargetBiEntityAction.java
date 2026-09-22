@@ -24,15 +24,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Applies the actor's damage to the target. This is the shape a hit with an owner takes: the actor is credited
- * as the attacker, so a kill counts as theirs and the element edges its roots hold are read against the
- * target's, and the caster's mastery bonus travels in the formula context the ability built.
- *
- * <p>{@code element} and {@code damage_type} say what the strike is made of, and are how a technique of one
- * element is written by a cultivator of another: declaring an element replaces the reading off the attacker's
- * roots with that element, and declaring nothing keeps it. The damage type is the one the element claims
- * unless it is given outright, in which case the load checks that the element claims it - the reduction layer
- * only ever sees the damage source, so the element has to be readable from the type.</p>
+ * Applies the actor's damage to the target, crediting the actor as the attacker. Declaring an {@code element}
+ * replaces the reading off the attacker's roots; {@code damage_type} defaults to the one the element claims.
  */
 public record DamageTargetBiEntityAction(NumberProvider amount, Optional<Holder<DamageType>> damageType,
                                          List<Either<Holder<Element>, TagKey<Element>>> element) implements BiEntityAction {
@@ -47,18 +40,13 @@ public record DamageTargetBiEntityAction(NumberProvider amount, Optional<Holder<
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
-        // Damage is a server decision; the deprecated {@code Entity#hurt} only ever applied on a server
-        // anyway, so asking for the server level first is the same behaviour stated outright.
+        // Server only: the deprecated Entity#hurt only ever applied on a server anyway.
         if (!(target.level() instanceof ServerLevel)) return;
         if (!Double.isFinite(amount) || amount <= 0.0D) return;
         DamageCalculationService.deal(ctx.actor(), target, amount, this.resolvedType(target.level()), context);
     }
 
-    /**
-     * The damage type this action travels as, resolved from the declaration; see
-     * {@link DamageElements#resolveType}. An empty result keeps the reading this action always had - the strike
-     * is made of the actor's own roots.
-     */
+    // Empty keeps the reading this action always had: the strike is made of the actor's own roots.
     private Optional<Holder<DamageType>> resolvedType(Level level) {
         return DamageElements.resolveType(level.registryAccess(), this.element, this.damageType);
     }

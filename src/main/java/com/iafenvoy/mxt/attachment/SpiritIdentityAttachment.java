@@ -19,16 +19,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Persisted roots, physiques, learned techniques and their mastery levels. A technique's level is
- * stored only once it has advanced: a technique the holder never climbed has no entry and stands on its own
- * entry level, so a data pack that moves the entry level moves everyone who never advanced.
- *
- * <p>A held root or physique can also be switched off without being given up, which is what the two
- * {@code disabled_*} sets are for: they are the storage half of the enable/disable module, and they name things
- * the entity still holds. Held and active are therefore two different questions, answered by
- * {@link #spiritRoots()} and {@link #activeSpiritRoots()}: ownership reads the first, everything that gives an
- * effect reads the second. Removing a root or physique drops its toggle with it, so a body never keeps state
- * about something it no longer has.</p>
+ * Persisted roots, physiques, learned techniques and their mastery levels. A technique's level is stored only once
+ * it has advanced, so a data pack that moves the entry level moves everyone who never advanced. The two
+ * {@code disabled_*} sets are the storage half of the enable/disable module and name things the entity still holds,
+ * so held and active are different questions: ownership reads {@link #spiritRoots()}, every effect reads
+ * {@link #activeSpiritRoots()}.
  */
 public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritIdentityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -72,10 +67,7 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
         return this.physiques;
     }
 
-    /**
-     * The held roots that are switched on, which is what every effect reads. A root that is held but switched
-     * off contributes nothing: no element, no cultivation multiplier, no granted ability.
-     */
+    // What every effect reads: a root that is held but switched off contributes nothing.
     public List<Holder<SpiritRoot>> activeSpiritRoots() {
         return this.spiritRoots.stream().filter(root -> !this.disabledSpiritRoots.contains(root)).toList();
     }
@@ -100,10 +92,7 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
         return this.physiques.contains(physique) && !this.disabledPhysiques.contains(physique);
     }
 
-    /**
-     * Switches a held root on or off and answers whether that changed anything. A root the entity does not hold
-     * has no state to switch, so nothing happens.
-     */
+    // A root the entity does not hold has no state to switch.
     public boolean setSpiritRootEnabled(Holder<SpiritRoot> root, boolean enabled) {
         if (!this.spiritRoots.contains(root)) return false;
         boolean changed = enabled ? this.disabledSpiritRoots.remove(root) : this.disabledSpiritRoots.add(root);
@@ -126,9 +115,7 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
         return this.techniqueStages;
     }
 
-    /**
-     * The level the holder has advanced to, or {@code null} while it still stands on the entry level.
-     */
+    // Null while the holder still stands on the technique's entry level.
     public @Nullable Holder<SkillStage> techniqueStage(Holder<Technique> technique) {
         return this.techniqueStages.get(technique);
     }

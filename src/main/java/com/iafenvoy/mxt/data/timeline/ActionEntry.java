@@ -5,8 +5,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
- * Runs one entity action and finishes on the tick it runs, so a timeline can place a beat anywhere. It has no
- * fixed length, which is what makes several of these in a row resolve in a single tick.
+ * Runs one entity action and finishes on the tick it runs. It has no fixed length, which is what makes several of
+ * these in a row resolve in a single tick.
  */
 public record ActionEntry(EntityAction action) implements TimelineEntry {
     public static final MapCodec<ActionEntry> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

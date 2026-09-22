@@ -75,9 +75,6 @@ public final class InformationPanelScreen extends Screen {
         this.layoutButton();
     }
 
-    /**
-     * Puts the technique-panel entry point in the header, right of the title.
-     */
     private void layoutButton() {
         if (this.techniquesButton == null) return;
         Component label = Component.translatable("screen.mxt.technique_panel");
@@ -85,9 +82,6 @@ public final class InformationPanelScreen extends Screen {
         this.techniquesButton.setRectangle(buttonWidth, 16, this.panelLeft + this.panelWidth - 20 - buttonWidth, this.panelTop + 17);
     }
 
-    /**
-     * Recalculates all GUI-space bounds after a window or GUI-scale change.
-     */
     private void layoutWidgets() {
         this.panelWidth = Math.max(1, Math.min(PANEL_WIDTH, this.width - 12));
         this.panelHeight = Math.max(1, Math.min(PANEL_HEIGHT, this.height - 12));

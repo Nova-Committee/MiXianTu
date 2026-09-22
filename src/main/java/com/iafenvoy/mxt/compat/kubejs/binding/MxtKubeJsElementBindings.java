@@ -8,11 +8,9 @@ import net.minecraft.world.entity.Entity;
 import java.util.List;
 
 /**
- * Runtime element operations exposed as {@code MxtElements}.
- * <p>
- * Elements are read off the spirit roots a body carries and off the buildup a body has accumulated, so this is
- * the script-side answer to both halves of the element system: which element a body is, and how much of one is
- * sitting on it. Everything that changes state goes through the same services the data pack path uses.
+ * Runtime element operations exposed as {@code MxtElements}. Elements are read off the spirit roots a body carries
+ * and off the buildup a body has accumulated, so this answers both halves of the element system: which element a
+ * body is, and how much of one is sitting on it. State changes go through the services the data pack path uses.
  */
 public final class MxtKubeJsElementBindings {
     @Info("Every element the entity's spirit roots name right now, sorted. Disabled elements and disabled roots contribute nothing.")

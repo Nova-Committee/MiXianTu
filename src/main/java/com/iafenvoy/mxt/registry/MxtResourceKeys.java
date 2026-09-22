@@ -55,9 +55,8 @@ import net.minecraft.resources.ResourceKey;
 import net.objecthunter.exp4j.function.Function;
 
 /**
- * The single source of truth for every registry key owned by MiXianTu. The values are separate from the
- * registry instances and registration events, so codecs and runtime services can read registry identity
- * without coupling to a registration class.
+ * Every registry key MiXianTu owns, kept separate from the registry instances and the registration events so
+ * codecs and runtime services can read registry identity without depending on a registration class.
  */
 public final class MxtResourceKeys {
     // Builtin registries

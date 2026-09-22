@@ -27,10 +27,7 @@ import java.util.*;
 @EventBusSubscriber
 public final class SpiritBurstService {
     public static final long FIRE_INTERVAL_TICKS = 10L;
-    /**
-     * What each player is holding the shortcut down for. The entries are auras rather than their ids: what is
-     * being fired is an aura, and the id only arrives that way because a key binding travels as a name.
-     */
+    // Keyed by aura rather than id: only the id arrives, because a key binding travels as a name.
     private static final Map<UUID, Set<Holder<Aura>>> ACTIVE_AURAS = new HashMap<>();
 
     private SpiritBurstService() {
@@ -72,14 +69,8 @@ public final class SpiritBurstService {
         ACTIVE_AURAS.remove(event.getEntity().getUUID());
     }
 
-    /**
-     * Fires one aura once, for a caller that keeps no "held down" state: the wheel chooses a sector and that is
-     * the whole gesture. The gate is the same one the held path applies - the element has to be enabled and the
-     * player has to be allowed to use the aura - and the cooldown and the payment are shared with it, so a burst
-     * cannot be fired from the wheel in a situation where a held key would have refused it.
-     *
-     * @return whether a burst was actually fired
-     */
+    // Same gate, cooldown and payment as the held path, so the wheel cannot fire a burst in a situation where
+    // a held key would have refused it. Returns whether a burst was actually fired.
     public static boolean fireOnce(ServerPlayer player, Identifier auraId) {
         if (auraId == null) return false;
         Holder<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId)
@@ -96,9 +87,7 @@ public final class SpiritBurstService {
         attempt(player, aura);
     }
 
-    /**
-     * The checks and the payment every firing shares, whether it was asked for once or held down.
-     */
+    // The checks and the payment every firing shares, whether it was asked for once or held down.
     private static boolean attempt(ServerPlayer player, Holder<Aura> aura) {
         ResourceHolderAttachment holder = player.getData(MxtAttachments.RESOURCE_HOLDER);
         SpiritBurstCooldownAttachment cooldowns = player.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
@@ -108,9 +97,7 @@ public final class SpiritBurstService {
         return true;
     }
 
-    /**
-     * A positive {@code burst_amount} marks an aura that can be fired by the shortcut.
-     */
+    // A positive burst_amount marks an aura that can be fired by the shortcut.
     private static boolean tryFire(ServerPlayer player, ResourceHolderAttachment holder, Holder<Aura> aura) {
         Aura definition = aura.value();
         if (!Elements.enabled(definition.auraType()) || !ResourceUseService.canUse(player, aura)) return false;

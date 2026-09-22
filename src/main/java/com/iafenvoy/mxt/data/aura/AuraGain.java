@@ -8,13 +8,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 
 /**
- * A positive aura gain evaluated by a data-driven action: how much of one named aura an action hands over.
- * <p>
- * It is the aura counterpart of {@code ResourceGain} rather than the same record, because the two answer
- * different questions: a {@code ResourceGain} writes an amount into a value and is what {@code add_resource}
- * uses - including for plain counters that carry no aura at all - while this names an aura, which is what
- * makes a gain a gain of aura. The amount is credited to the value the aura is counted in
- * ({@code Aura#resource()}) at the boundary where the holder's pool is written.
+ * A positive aura gain evaluated by a data-driven action. It is not a {@code ResourceGain}: that writes an amount
+ * into a value (including plain counters that carry no aura), while this names an aura. The amount is credited to
+ * the value the aura is counted in ({@code Aura#resource()}).
  */
 public record AuraGain(Holder<Aura> aura, NumberProvider amount) {
     public static final Codec<AuraGain> CODEC = RecordCodecBuilder.create(i -> i.group(

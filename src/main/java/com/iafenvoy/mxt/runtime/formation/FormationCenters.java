@@ -9,19 +9,15 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Resolves which block position a player actually meant when they clicked a formation plate: the
- * clicked position and the full 3x3x3 block around it, searched in order of distance, so the click
- * itself always wins when it works. Neither entry point decides what should happen there; the caller
- * looks the result up in the level's index.
+ * Resolves which block position a player actually meant when they clicked a formation plate: the clicked
+ * position and the full 3x3x3 around it, searched in order of distance, so the click itself always wins when it
+ * works. Neither entry point decides what should happen there; the caller looks the result up in the index.
  */
 public final class FormationCenters {
     private FormationCenters() {
     }
 
-    /**
-     * @return the nearest position in the clicked 3x3x3 that satisfies the definition, or empty when
-     * none does
-     */
+    // The nearest position in the clicked 3x3x3 that satisfies the definition, or empty when none does.
     public static Optional<BlockPos> resolve(ServerLevel level, BlockPos clicked, Formation definition) {
         BlockPos best = null;
         double bestDistance = Double.MAX_VALUE;
@@ -49,11 +45,9 @@ public final class FormationCenters {
         return x * x + y * y + z * z;
     }
 
-    /**
-     * Resolves both the centre and which formation is standing there, for a plate that was never bound to
-     * one. The caller decides which definitions may be tried and in what order, so a caller that sorts by id
-     * gets a deterministic answer where two definitions describe the same structure.
-     */
+    // Both the centre and which formation is standing there, for a plate that was never bound to one. The
+    // caller decides which definitions may be tried and in what order, so a caller that sorts by id gets a
+    // deterministic answer where two definitions describe the same structure.
     public static Optional<Match> resolveAny(ServerLevel level, BlockPos clicked, List<? extends Holder<Formation>> candidates) {
         Match best = null;
         double bestDistance = Double.MAX_VALUE;
@@ -76,9 +70,6 @@ public final class FormationCenters {
         return Optional.ofNullable(best);
     }
 
-    /**
-     * A structure that matched, and the definition it matched.
-     */
     public record Match(BlockPos center, Holder<Formation> formation) {
     }
 }

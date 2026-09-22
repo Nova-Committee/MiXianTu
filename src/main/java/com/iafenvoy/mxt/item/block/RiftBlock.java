@@ -37,25 +37,15 @@ import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 /**
- * A rift: a block that leads to another dimension, drawn as a point linked to the rifts around it.
- *
- * <p>The block shows nothing itself, and it does not show up in the block's outline either: what is drawn is the
- * mesh the block entity renderer builds, which is why adjacency matters. A rift links to every rift in the
- * 3x3x3 blocks around it and draws a beam to each, and three of them close a filled triangle. It has no
- * direction of its own - a line between two points has nothing for a direction to decide - so nothing about the
- * way it was placed changes what it looks like or what it links to.
- *
- * <p>The block keeps a full-cube shape so it can be aimed at and right-clicked, while {@code noCollission} lets
- * entities pass through it: entering the block is what takes you through, and there is nothing else to line up
- * with.
+ * A rift: a block that leads to another dimension, drawn as a point linked to the rifts around it. The block
+ * itself shows nothing (the block entity renderer draws the mesh), so adjacency is what decides the look: it links
+ * to every rift in the 3x3x3 around it and has no direction of its own. It keeps a full-cube shape so it can be
+ * aimed at and right-clicked, while {@code noCollission} lets entities pass through - entering is what takes you.
  */
 public final class RiftBlock extends BaseEntityBlock implements Portal {
     private static final MapCodec<RiftBlock> CODEC = simpleCodec(RiftBlock::new);
     private static final float PARTICLE_CHANCE = 0.25F;
-   /**
-     * Radius the ambient particles are scattered over, so they hang around the point rather than filling the
-     * block.
-     */
+    // Particles are scattered over this radius so they hang around the point rather than filling the block.
     private static final double PARTICLE_RADIUS = 0.3;
 
     public RiftBlock(Properties properties) {
@@ -77,9 +67,6 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         return RenderShape.INVISIBLE;
     }
 
-    /**
-     * The placing stack carries the destination and colour; there is nothing else to take from the placer.
-     */
     @Override
     public void setPlacedBy(@NonNull Level level, @NonNull BlockPos pos, @NonNull BlockState state, @Nullable LivingEntity placer, @NonNull ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
@@ -88,10 +75,7 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         rift.configure(component.target(), component.color());
     }
 
-    /**
-     * A dye overrides the colour. Without an override a rift is coloured by where it leads, so this is the only
-     * way to give one dimension a colour of its own.
-     */
+    // Without an override a rift is coloured by where it leads, so a dye is the only way to give it a colour of its own.
     @Override
     protected @NonNull InteractionResult useItemOn(@NonNull ItemStack stack, @NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull InteractionHand hand, @NonNull BlockHitResult hit) {
         DyeColor dye = stack.get(DataComponents.DYE);
@@ -105,10 +89,6 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         return InteractionResult.SUCCESS;
     }
 
-    /**
-     * Touching the block is entering the rift: with no direction stored there is no plane to line up with, and a
-     * point with lines around it has no inside to miss.
-     */
     @Override
     protected void entityInside(@NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Entity entity, @NonNull InsideBlockEffectApplier effectApplier, boolean isPrecise) {
         if (!(level instanceof ServerLevel)) return;
@@ -123,9 +103,6 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         return RiftTeleportService.destination(level, rift, entity, pos);
     }
 
-    /**
-     * A rift takes hold at once; there is no warm-up like a nether portal's.
-     */
     @Override
     public int getPortalTransitionTime(@NonNull ServerLevel level, @NonNull Entity entity) {
         return 0;
@@ -136,10 +113,7 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         return Transition.CONFUSION;
     }
 
-    /**
-     * Breaking a rift hands back an anchor still aimed where the rift led, so a rift can be moved or duplicated
-     * without losing its destination. There is no loot table: this drop is the only one.
-     */
+    // Breaking hands back an anchor still aimed where the rift led. There is no loot table: this drop is the only one.
     @Override
     public void playerDestroy(@NonNull Level level, @NonNull Player player, @NonNull BlockPos pos, @NonNull BlockState state, @Nullable BlockEntity blockEntity, @NonNull ItemStack destroyedWith) {
         player.awardStat(Stats.BLOCK_MINED.get(this));
@@ -151,14 +125,8 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         popResource(level, pos, drop);
     }
 
-    /**
-     * Particles gather around the point rather than anywhere in the cube, so a rift starts sparkling where it is
-     * drawn and the effect grows with the rift's own thickness.
-     *
-     * <p>They are the mod's own particle, which is the vanilla portal particle wearing this rift's colour: a
-     * door tinted by its destination should not sparkle in the nether's violet. Nothing here makes a sound - a
-     * rift is silent until it takes someone through.
-     */
+    // The mod's own particle is the vanilla portal particle wearing this rift's colour, and the points gather around
+    // the rift's centre rather than filling the cube. Nothing here makes a sound: a rift is silent until it takes someone.
     @Override
     public void animateTick(@NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull RandomSource random) {
         if (!(level.getBlockEntity(pos) instanceof RiftBlockEntity rift)) return;

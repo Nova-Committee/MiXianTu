@@ -16,17 +16,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Lets the artifact carry its holder: the speed the flying mount moves at, and what a tick of riding costs.
- * {@link com.iafenvoy.mxt.data.artifact.Artifact} refuses a second entry of this kind, so "how fast is this
- * artifact" always has one answer.
- *
- * <p>It is also a {@link ToggableArtifactAbility}, which is what puts it on the wheel: mounting and dismounting is
- * a switch, and a player holding the artifact can throw it from the wheel instead of needing a command. The state
- * it reports is the mount that is up <em>now</em>, read from the same attachment the flight controller writes, so
- * the cell and the sword can never disagree about whether the player is flying.</p>
+ * Lets the artifact carry its holder: the speed the flying mount moves at, and what a tick of riding costs. Also
+ * a {@link ToggableArtifactAbility}, so mounting and dismounting is a wheel switch; the state it reports is the
+ * mount up <em>now</em>, read from the same attachment the flight controller writes.
  */
 public record FlightArtifactAbility(NumberProvider speed, List<ResourceCost> costs) implements ToggableArtifactAbility {
-    /** The name this capability is addressed by inside its artifact; see {@link #key()}. */
     public static final String KEY = "flight";
     public static final MapCodec<FlightArtifactAbility> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("speed").forGetter(FlightArtifactAbility::speed),
@@ -43,10 +37,7 @@ public record FlightArtifactAbility(NumberProvider speed, List<ResourceCost> cos
         return KEY;
     }
 
-    /**
-     * Whether <em>this</em> artifact is the one carrying the holder: a second flying sword in the bag must not
-     * read as "on" while the first one is up, which is why the archetype the flight started with is compared.
-     */
+    // A second flying sword in the bag must not read as "on" while the first is up, hence the archetype check.
     @Override
     public Optional<Boolean> state(ArtifactToggleContext context) {
         FlightAttachment data = context.holder().getExistingData(MxtAttachments.FLIGHT).orElse(null);
@@ -55,11 +46,6 @@ public record FlightArtifactAbility(NumberProvider speed, List<ResourceCost> cos
         return Optional.of(self != null && data.archetype().map(HolderHelper::id).filter(self::equals).isPresent());
     }
 
-    /**
-     * Mounts or dismounts, through the same controller every other flight entry point uses, so the price, the
-     * ownership gate and the attribute bookkeeping stay in one place. Which of the two it is comes from the state
-     * this capability already reports, so the press carries no direction.
-     */
     @Override
     public Result activate(ArtifactToggleContext context) {
         if (!(context.holder() instanceof ServerPlayer player)) return Result.refused(Failure.UNAVAILABLE);

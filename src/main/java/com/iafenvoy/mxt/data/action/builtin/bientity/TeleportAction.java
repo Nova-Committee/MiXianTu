@@ -28,8 +28,8 @@ public record TeleportAction(boolean teleportActor, boolean teleportTarget, bool
         Entity target = ctx.target();
         if (actor.level().isClientSide() || (!this.teleportActor && !this.teleportTarget) || !(actor.level() instanceof ServerLevel actorLevel) || !(target.level() instanceof ServerLevel targetLevel))
             return;
-        // "The actor's position" is where the activation happened: an item cast from a display stand pulls a
-        // target to the stand rather than to whoever filled it.
+        // "The actor's position" is where the activation happened, not the actor's own: an item cast from a
+        // display stand pulls a target to the stand rather than to whoever filled it.
         Position actorPosition = Position.at(actorLevel, actor, ctx.position());
         Position targetPosition = Position.of(targetLevel, target);
         if (this.teleportActor) targetPosition.teleport(actor, this.rotate);

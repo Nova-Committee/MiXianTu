@@ -19,8 +19,8 @@ import java.util.function.Consumer;
 
 /**
  * Tells a player which of a carrier's two gestures a click will get, because nothing else does: the charge bar
- * shows how far along it is, not what to do about it, and a carrier that has never been poured into looks
- * exactly like one that is merely empty.
+ * shows how far along it is, not what to do about it, and a carrier that has never been poured into looks exactly
+ * like one that is merely empty.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class TalismanTooltipAppender {

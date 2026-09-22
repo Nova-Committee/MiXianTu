@@ -29,9 +29,8 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import java.util.Optional;
 
 /**
- * Server-authoritative furnace-style fuel handling for item-provided aura.
- * The currently processed item lives in {@code float_holding_item}; only this
- * service may consume its {@link ItemAuraComponent} state.
+ * Server-authoritative furnace-style fuel handling for item-provided aura. The currently processed item lives
+ * in {@code float_holding_item}; only this service may consume its {@link ItemAuraComponent} state.
  */
 @EventBusSubscriber
 public final class ItemAuraService {
@@ -52,16 +51,10 @@ public final class ItemAuraService {
         return find(entity.level().registryAccess(), stack);
     }
 
-    /**
-     * The aura this fuel or chargeable item carries.
-     */
     public static Optional<Holder<Aura>> type(Provider access, ItemStack stack) {
         return find(access, stack).map(holder -> holder.value().type());
     }
 
-    /**
-     * Resolves the type against the active server's registry access.
-     */
     public static Optional<Holder<Aura>> type(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server == null ? Optional.empty() : type(server.registryAccess(), stack);
@@ -73,9 +66,6 @@ public final class ItemAuraService {
                 .orElse(0);
     }
 
-    /**
-     * Resolves capacity against the active server's registry.
-     */
     public static int capacity(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server == null ? 0 : capacity(server.registryAccess(), stack, FormulaContext.EMPTY);
@@ -87,10 +77,8 @@ public final class ItemAuraService {
         return total >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.floor(total);
     }
 
-    /**
-     * Advances the held fuel by one server tick. A missing fuel first resumes the smallest partially
-     * consumed matching stack, then takes a fresh matching item from the hands or the inventory.
-     */
+    // Advances by one server tick. A missing fuel first resumes the smallest partially consumed matching
+    // stack, then takes a fresh matching item from the hands or the inventory.
     public static TickResult tick(LivingEntity entity, ResourceHolderAttachment resources, FormulaContext context) {
         FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         ItemStack item = holding.item();
@@ -125,9 +113,6 @@ public final class ItemAuraService {
         return new TickResult(consumed, released, false, true);
     }
 
-    /**
-     * Returns an interrupted fuel item to its owner without consuming it.
-     */
     public static void returnFloatingItem(LivingEntity entity) {
         ItemStack item = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).take();
         if (item.isEmpty()) return;
@@ -280,8 +265,8 @@ public final class ItemAuraService {
     private static double release(LivingEntity entity, ResourceHolderAttachment resources, Holder<Aura> aura,
                                   double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
-        // The pool holds values, so the aura names which value is credited: this is the one direction the two
-        // convert in without a lookup.
+        // The pool holds values, so the aura names which value is credited: the one direction the two convert
+        // in without a lookup.
         Holder<Resource> resource = aura.value().resource();
         double before = resources.get(resource);
         ResourceService.change(resources, resource, amount, ResourceService.formulaContext(entity, resource, context));

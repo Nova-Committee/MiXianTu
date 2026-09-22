@@ -17,9 +17,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Server-side hooks for the complete forging transaction, posted with the requesting player and the table
- * position. The session arrives as a read-only {@link ForgingSessionView}: a pre event may cancel or replace the
- * strike's costs, but not the session's value, history or quality. A listener throw on a pre event is caught as
+ * Server-side hooks for the complete forging transaction, posted with the requesting player and the table position.
+ * The session arrives as a read-only {@link ForgingSessionView}: a pre event may cancel or replace the strike's
+ * costs, but not the session's value, history or quality. A listener throw on a pre event is caught as
  * {@code ForgingService.Failure.LISTENER_ERROR} and leaves the session as it was; elsewhere it is only logged.
  */
 public abstract class ForgingEvent extends Event {
@@ -31,18 +31,14 @@ public abstract class ForgingEvent extends Event {
         this.pos = pos;
     }
 
-    /**
-     * Who asked for this operation. Not a security boundary - the server acts against its own state - but what
-     * a listener needs to react as something other than a global rule.
-     */
+    // Not a security boundary - the server acts against its own state - but what a listener needs to react as
+    // something other than a global rule.
     public ServerPlayer player() {
         return this.player;
     }
 
-    /**
-     * The table the operation is happening at: the position rather than the surface, so a listener can name
-     * the table without being handed its writable container and session state - see {@link ForgingSessionView}.
-     */
+    // The position rather than the surface, so a listener can name the table without being handed its writable
+    // container and session state.
     public BlockPos pos() {
         return this.pos;
     }

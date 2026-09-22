@@ -4,8 +4,8 @@ import com.mojang.serialization.MapCodec;
 
 /**
  * The marker a run writes when the current entry begins, and the state an entry that keeps no numbers of its own
- * leaves behind. "This entry has begun" has to be stored rather than derived: it is what tells a run coming back
- * from a save that the first tick of the entry has already happened, so its start is not consumed twice.
+ * leaves behind. It has to be stored rather than derived: it is what tells a run coming back from a save that the
+ * first tick of the entry already happened, so its start is not consumed twice.
  */
 public enum EntryBegan implements RuntimeStorage {
     INSTANCE;

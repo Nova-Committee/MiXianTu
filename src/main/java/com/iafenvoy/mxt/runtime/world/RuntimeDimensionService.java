@@ -20,8 +20,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Optional runtime dimension loader operating on already decoded LevelStem values. It never mutates the
- * dynamic dimension registry, so callers can keep it as a fallback for realm instances.
+ * Optional runtime dimension loader operating on already decoded LevelStem values. It never mutates the dynamic
+ * dimension registry, so callers can keep it as a fallback for realm instances.
  */
 public final class RuntimeDimensionService {
     private RuntimeDimensionService() {
@@ -58,10 +58,7 @@ public final class RuntimeDimensionService {
         return stems.get(stemKey).flatMap(holder -> load(server, key, holder.value()));
     }
 
-    /**
-     * Removes a runtime level after its players have been moved elsewhere. The
-     * overworld and dimensions with players are deliberately never removed.
-     */
+    // The overworld and dimensions with players are deliberately never removed.
     @SuppressWarnings("deprecation")
     public static boolean unload(MinecraftServer server, ResourceKey<Level> key) {
         if (Level.OVERWORLD.equals(key)) return false;
@@ -80,11 +77,8 @@ public final class RuntimeDimensionService {
         }
     }
 
-    /**
-     * Unloads a runtime dimension and discards the terrain it generated, so the next instance of the same
-     * definition starts from nothing. The level is silenced before it closes, otherwise closing it would write
-     * the very region files that are about to be removed.
-     */
+    // The level is silenced before it closes, otherwise closing it would write the very region files that are
+    // about to be removed.
     public static boolean delete(MinecraftServer server, ResourceKey<Level> key) {
         if (Level.OVERWORLD.equals(key)) return false;
         ServerLevel level = server.getLevel(key);

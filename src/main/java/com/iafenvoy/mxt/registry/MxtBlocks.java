@@ -44,9 +44,7 @@ public final class MxtBlocks {
         return block;
     }
 
-    /**
-     * Registers a full opaque cube without disabling neighbour face culling.
-     */
+    // A full opaque cube: no noOcclusion(), so neighbour face culling stays on.
     private static <T extends Block> DeferredBlock<T> registerSolid(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
         DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.ofFullCopy(Blocks.IRON_BLOCK).setId(key)));
@@ -54,11 +52,8 @@ public final class MxtBlocks {
         return block;
     }
 
-    /**
-     * Registers the forge table. It deliberately does not copy the vanilla smithing table, which is a wooden
-     * block despite its stone-looking texture: an anvil-and-hammer station uses {@link SoundType#ANVIL}, a
-     * stone map colour, and needs a pickaxe to drop.
-     */
+    // Deliberately not a copy of the vanilla smithing table, which is wooden despite its stone-looking texture:
+    // a forging station is stone-sounding, stone-coloured and needs a pickaxe to drop.
     private static <T extends Block> DeferredBlock<T> registerForging(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
         DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.of()
@@ -72,12 +67,9 @@ public final class MxtBlocks {
         return block;
     }
 
-    /**
-     * Registers the rift. It is unbreakable by ordinary means, emits light, has no collision, and asks its
-     * neighbours not to cull faces against it (the block itself is invisible; only its block entity is drawn).
-     * Like every other block here it gets an ordinary block item, which is what places one; the anchor
-     * ({@link com.iafenvoy.mxt.item.RiftAnchorItem}) is a plain item and only ever adjusts rifts that exist.
-     */
+    // The block itself is invisible - only its block entity is drawn. Unbreakable by ordinary means, lit, no
+    // collision, and neighbours are asked not to cull faces against it. It still gets an ordinary block item,
+    // which is what places one; the anchor item only ever adjusts rifts that already exist.
     private static <T extends Block> DeferredBlock<T> registerRift(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
         DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.of()

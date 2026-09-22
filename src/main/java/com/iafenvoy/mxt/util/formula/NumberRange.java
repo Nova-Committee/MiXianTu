@@ -7,10 +7,8 @@ import java.util.Optional;
 
 /**
  * An inclusive numeric window whose bounds are independently optional, so one field covers "at least", "at most"
- * and an exact window. Both bounds are number providers, so a query scales with whoever evaluates it.
- * <p>
- * An absent bound is no bound at all. A bound that evaluates to something non-finite is treated as a failed
- * check rather than an open one, the same way the other range conditions fail closed.
+ * and an exact window. An absent bound is no bound at all; a bound that evaluates to something non-finite fails
+ * the check rather than opening it, the way the other range conditions fail closed.
  */
 public record NumberRange(Optional<NumberProvider> min, Optional<NumberProvider> max) {
     public static final Codec<NumberRange> CODEC = RecordCodecBuilder.create(i -> i.group(

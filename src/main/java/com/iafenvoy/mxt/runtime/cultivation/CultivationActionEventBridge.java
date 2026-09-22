@@ -97,7 +97,6 @@ public final class CultivationActionEventBridge {
         // Progress and static conditions may have just armed a persisted
         // breakthrough transition; rebuild its runtime trigger subscriptions.
         CultivationTriggerService.refresh(entity);
-        // Cultivation can change progress, active-state timing, and resource conversions in one tick.
     }
 
     private static void attemptAutomaticBreakthrough(ServerPlayer player, CultivationAttachment spirit) {

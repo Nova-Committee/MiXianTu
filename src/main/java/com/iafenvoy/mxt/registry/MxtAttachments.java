@@ -71,9 +71,7 @@ public final class MxtAttachments {
         return holder;
     }
 
-    /**
-     * In-progress inventories must not duplicate when a player respawns.
-     */
+    // No copyOnDeath: an in-progress inventory must not duplicate when a player respawns.
     private static <T extends ShouldSyncAttachment> DeferredHolder<AttachmentType<?>, AttachmentType<T>> entityWithoutDeathCopy(String name, Supplier<T> factory, MapCodec<T> codec) {
         StreamCodec<RegistryFriendlyByteBuf, T> streamCodec = ByteBufCodecs.fromCodecWithRegistries(codec.codec());
         DeferredHolder<AttachmentType<?>, AttachmentType<T>> holder = REGISTRY.register(name, () -> AttachmentType.builder(factory).serialize(codec).sync(streamCodec).build());
@@ -81,13 +79,9 @@ public final class MxtAttachments {
         return holder;
     }
 
-    /**
-     * A server-owned attachment: saved and copied on death, never sent to the client, and therefore also the
-     * way an attachment opts out of {@link ShouldSyncAttachment}. {@link FriendAttachment} is the reason it
-     * exists - both of its lists are saved, since that is what keeps a session friend through death, and the
-     * session half is emptied at login, so a synced copy would be stale from the next login onwards rather
-     * than merely incomplete.
-     */
+    // A server-owned attachment: saved and copied on death but never sent to the client, which is also how an
+    // attachment opts out of ShouldSyncAttachment. A synced copy of FriendAttachment would be stale from the
+    // next login onwards, because its session half is emptied at login.
     private static <T> DeferredHolder<AttachmentType<?>, AttachmentType<T>> entityServerOnly(String name, Supplier<T> factory, MapCodec<T> codec) {
         return REGISTRY.register(name, () -> AttachmentType.builder(factory).serialize(codec).copyOnDeath().build());
     }

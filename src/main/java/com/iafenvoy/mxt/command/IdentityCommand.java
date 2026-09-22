@@ -44,18 +44,10 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /identity} command; also reachable as {@code /mxt identity}. It is the administrative half of the
- * spirit root and physique modules: the definitions themselves are data, and the actions are entities, so
- * without this there is nothing an operator can call to hand one out, take it back, or switch it off.
- *
- * <p>Switching is the module that used to have no entry point at all. The storage, the synchronisation and
- * every reader of it already existed, and a state a pack can only reach by writing Java is a state nobody can
- * use - so {@code enable} and {@code disable} are here, next to the granting they belong with, and they keep
- * the guarantee the module is built on: the body still holds what it switched off.</p>
- *
- * <p>Everything a mutation does is reported per target rather than as one verdict, because the interesting
- * failures are per target - one already holds the root, another conflicts with the element it binds - and the
- * reason is what makes the command worth running twice.</p>
+ * The {@code /identity} command; also reachable as {@code /mxt identity}. The administrative half of the spirit
+ * root and physique modules: the definitions are data and the actions are entities, so without it neither can be
+ * handed out, taken back or switched off. Disabling keeps the guarantee the modules are built on - the body still
+ * holds what it switched off - and results are reported per target.
  */
 public final class IdentityCommand {
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("identity")
@@ -114,10 +106,8 @@ public final class IdentityCommand {
         return source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
 
-    /**
-     * Completion reads the live registry, so a definition a pack disabled is not offered - while a body that
-     * still holds one can name it by hand, which is what {@code remove} and {@code disable} are for.
-     */
+    // The live registry drives completion, so a disabled definition is not offered - but a body that still holds
+    // one can name it by hand, which is what remove and disable are for.
     private static <T> SuggestionProvider<CommandSourceStack> suggest(ResourceKey<Registry<T>> key) {
         return (ctx, builder) -> SharedSuggestionProvider.suggest(MxtDatapackRegistries
                 .holders(ctx.getSource().getServer().registryAccess(), key)
@@ -142,23 +132,14 @@ public final class IdentityCommand {
                 physique -> definition(MxtResourceKeys.PHYSIQUE, physique).map(Physique::rarity).orElse("?"));
     }
 
-    /**
-     * What a held reference is, resolved by id against the live registry rather than through {@code value()}:
-     * a body can hold a reference to a definition that has since been disabled or deleted, and this command
-     * exists precisely to report and clean up that state. Disabled counts as present here - the entry is still
-     * written, and an operator wants to see its rarity - while a deleted one answers empty and reads as
-     * unknown.
-     */
+    // Resolved by id rather than through value(): the body can hold a reference to a definition that has since
+    // been disabled or deleted. Disabled counts as present, deleted answers empty and reads as unknown.
     private static <T> Optional<T> definition(ResourceKey<Registry<T>> key, Holder<T> holder) {
         return MxtDatapackRegistries.rawHolder(key, HolderHelper.id(holder)).map(Holder::value);
     }
 
-    /**
-     * Prints what one body holds, one line per definition: its name, its rarity, the element it is bound to
-     * when it has one, and whether it currently counts. A definition whose entry a pack removed still appears,
-     * because the body holds a reference to it - which is exactly the state an operator has to be able to see
-     * to clean up.
-     */
+    // A definition whose entry a pack removed still appears, because the body holds a reference to it - exactly
+    // the state an operator has to be able to see in order to clean it up.
     private static <T> int list(CommandSourceStack source, Entity target, List<Holder<T>> held, String category,
                                 Function<Holder<T>, Boolean> active, Function<Holder<T>, Component> detail,
                                 Function<Holder<T>, String> rarity) {
@@ -265,11 +246,8 @@ public final class IdentityCommand {
                 SpiritIdentityAttachment::physiques);
     }
 
-    /**
-     * Switches what a body holds. The holder is looked up among the held references rather than in the
-     * registry, so an entry a pack has since disabled can still be switched off - the state is about the body,
-     * and a definition that no longer loads is exactly when an operator needs it.
-     */
+    // The holder is looked up among the held references, not in the registry, so an entry a pack has since
+    // disabled can still be switched off: the state is about the body.
     private static <T> int toggle(CommandContext<CommandSourceStack> ctx, Identifier id, String category, boolean enabled,
                                   BiFunction<LivingEntity, Holder<T>, CultivationToggleService.Result> mutation,
                                   Function<SpiritIdentityAttachment, List<Holder<T>>> held) throws CommandSyntaxException {
@@ -313,10 +291,8 @@ public final class IdentityCommand {
         return 0;
     }
 
-    /**
-     * A failure is printed as its own name rather than as a sentence: the values are a fixed vocabulary the
-     * command shares with the services, and a pack author reading the log wants the identifier.
-     */
+    // Printed as its own name rather than as a sentence: the values are a fixed vocabulary shared with the
+    // services, and a pack author reading the log wants the identifier.
     private static Component reason(@Nullable Enum<?> failure) {
         return Component.literal(failure == null ? "NO_CHANGE" : failure.name());
     }

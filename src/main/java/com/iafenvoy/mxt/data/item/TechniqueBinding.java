@@ -18,14 +18,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Binds an existing physical item to a learnable cultivation technique. {@code learn_time} is the ticks the
- * item must be held down before the technique is learned; absent or zero means one right-click learns
- * immediately, and {@code hold_animation} and {@code hold_sound} only mean anything together with
- * {@code learn_time}.
- * <p>
- * The hold itself is not this module's: it is declared through {@link HoldBinding} and driven by the hold
- * module, which knows nothing about techniques. The names stay in this module's own vocabulary - a reader
- * studies for a {@code learn_time} - and the interface only asks what the gesture needs.
+ * Binds an existing physical item to a learnable cultivation technique. {@code learn_time} is the ticks the item
+ * must be held down before the technique is learned; absent or zero means one right-click learns immediately, and
+ * the animation and sound only mean anything together with it. The hold itself is declared through
+ * {@link HoldBinding} and driven by the hold module, which knows nothing about techniques.
  */
 public record TechniqueBinding(List<Entry> entries, Holder<Technique> technique,
                                Optional<TagKey<ItemQuality>> qualityGroup,

@@ -14,8 +14,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Locale;
 
 /**
- * Client-side, resource-pack controlled transforms for an item rendered in
- * physical Curios back and belt slots.
+ * Client-side, resource-pack controlled transforms for an item rendered in physical Curios back and belt slots.
  */
 public record AccessoryRenderDefinition(Preset preset, Transform back, Transform belt) {
     public static final MapCodec<AccessoryRenderDefinition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

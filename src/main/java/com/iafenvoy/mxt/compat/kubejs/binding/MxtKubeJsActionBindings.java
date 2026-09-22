@@ -17,10 +17,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
- * KubeJS registrations for the four intrinsic action dispatch types.
- *
- * <p>Callbacks receive the {@link FormulaContext} of the dispatch as their last argument, so the
- * same event payload variables a data pack action reads are available to the script.</p>
+ * KubeJS registrations for the four intrinsic action dispatch types. Callbacks receive the
+ * {@link FormulaContext} of the dispatch as their last argument, so the same event payload variables a data pack
+ * action reads are available to the script.
  */
 public final class MxtKubeJsActionBindings {
     @Info("Registers an entity action. Datapack type: mxt:js")

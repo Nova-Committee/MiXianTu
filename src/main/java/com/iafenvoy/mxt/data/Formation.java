@@ -27,11 +27,10 @@ import java.util.function.Function;
 
 /**
  * A formation's static shape, resource costs and lifecycle actions. The shape is declared one of two ways,
- * never both: {@code structure_template}, whose air entries are ignored so a template says what must be
- * present and never what must be absent; or {@code structure}, an inline list of required blocks at offsets
- * from the controller. {@code spare_friends} is the friend-or-foe switch: it decides whether the per-entity
- * work goes to everyone the array covers or only to those its owner does not recognise, and it says nothing
- * about what the array is for — an attacking array is one whose actions attack.
+ * never both: {@code structure_template}, whose air entries are ignored so a template says what must be present
+ * and never what must be absent, or {@code structure}, an inline list of required blocks at offsets from the
+ * controller. {@code spare_friends} decides whether per-entity work goes to everyone the array covers or only to
+ * those its owner does not recognise; what the array is for is its actions, not this field.
  */
 public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlock> structure,
                         NumberProvider radius, List<ResourceCost> activationCosts,
@@ -65,8 +64,8 @@ public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlo
 
     /**
      * What the array may keep of the aura its own ground supplies; without it the formation is a pass-through.
-     * {@code capacity} is per resource and required, so a {@code storage} with no {@code capacity} does not
-     * decode, and stocked aura only offsets a bill of the same resource (see {@code FormationService.MaintainRule}).
+     * {@code capacity} is required, and stocked aura only offsets a bill of the same resource
+     * (see {@code FormationService.MaintainRule}).
      */
     public record Storage(Map<Holder<Aura>, NumberProvider> capacity) {
         public static final Codec<Storage> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -74,10 +73,7 @@ public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlo
         ).apply(i, Storage::new));
     }
 
-    /**
-     * Reporting the shape error here rather than in the constructor keeps it a normal decode error, so a bad
-     * definition can be named instead of taken down as an exception.
-     */
+    // Reported as a decode error rather than thrown from the constructor, so a bad definition can be named.
     private static DataResult<Formation> validate(Formation formation) {
         boolean template = formation.structureTemplate().isPresent();
         boolean inline = !formation.structure().isEmpty();
@@ -88,13 +84,11 @@ public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlo
         return DataResult.success(formation);
     }
 
-    /**
-     * One block an inline structure requires, at an offset from the controller.
-     */
+    /** One block an inline structure requires, at an offset from the controller. */
     public record RequiredBlock(BlockPos offset, BlockState state) {
         /**
-         * Accepts a bare block id, falling back to vanilla's {@code {"Name": ..., "Properties": ...}} object
-         * only when the state is not the default; on write the bare id comes back wherever it can.
+         * Accepts a bare block id, falling back to vanilla's {@code {"Name": ..., "Properties": ...}} object only
+         * for a non-default state; on write the bare id comes back wherever it can.
          */
         private static final Codec<BlockState> STATE = Codec.either(BuiltInRegistries.BLOCK.byNameCodec(), BlockState.CODEC)
                 .xmap(choice -> choice.map(Block::defaultBlockState, Function.identity()),

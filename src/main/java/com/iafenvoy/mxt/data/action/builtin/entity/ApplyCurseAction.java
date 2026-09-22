@@ -22,9 +22,7 @@ import java.util.Optional;
  */
 public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
                                Optional<NumberProvider> durationTicks) implements EntityAction {
-    /**
-     * What an ability owes a curse it applies; one of the sources the shared ledger counts.
-     */
+    // What an ability owes a curse it applies; one of the sources the shared ledger counts.
     public static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "ability");
 
     public static final MapCodec<ApplyCurseAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

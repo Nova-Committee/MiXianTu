@@ -13,8 +13,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Per-player, per-table strike rate limit, against autoclicker spam and a modified client that fires
- * strike packets faster than a human can. Entries are dropped once their cooldown has elapsed.
+ * Per-player, per-table strike rate limit, against autoclicker spam and a modified client that fires strike
+ * packets faster than a human can. Entries are dropped once their cooldown has elapsed.
  */
 public final class ForgingRateLimiter {
     private static final Map<Key, Long> LAST_STRIKE = new LinkedHashMap<>();
@@ -22,11 +22,7 @@ public final class ForgingRateLimiter {
     private ForgingRateLimiter() {
     }
 
-    /**
-     * Returns true and records the strike when the player is allowed to act now.
-     *
-     * @param cooldownTicks the method cooldown, in ticks; {@code 0} always allows
-     */
+    // Records the strike and returns true when the player is allowed to act now; a cooldown of 0 always allows.
     public static boolean tryAcquire(ServerPlayer player, ForgingSurface surface, int cooldownTicks, long gameTime) {
         if (cooldownTicks <= 0) return true;
         Key key = key(player, surface);
@@ -37,9 +33,7 @@ public final class ForgingRateLimiter {
         return true;
     }
 
-    /**
-     * Remaining cooldown ticks, used by the client-facing scene so the button can grey out.
-     */
+    // Read by the client-facing scene so the button can grey out.
     public static int remaining(ServerPlayer player, ForgingSurface surface, int cooldownTicks, long gameTime) {
         if (cooldownTicks <= 0) return 0;
         Key key = key(player, surface);
@@ -51,17 +45,11 @@ public final class ForgingRateLimiter {
         return (int) (cooldownTicks - elapsed);
     }
 
-    /**
-     * Forgets a player's entries. Called when the player leaves so a rejoin starts clean.
-     */
     public static void forget(UUID player) {
         LAST_STRIKE.keySet().removeIf(key -> key.player().equals(player));
     }
 
-    /**
-     * Drops entries that no longer have a live table or player behind them. Runs periodically
-     * from the forge event bridge.
-     */
+    // Drops entries with no live table or player behind them; runs periodically from the forge event bridge.
     public static void prune(MinecraftServer server, long gameTime) {
         LAST_STRIKE.entrySet().removeIf(entry -> {
             Key key = entry.getKey();

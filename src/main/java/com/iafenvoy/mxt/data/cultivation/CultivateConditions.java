@@ -14,9 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Data-driven rules shared by cultivation start and breakthrough transitions.
- * Conditions are evaluated synchronously; trigger and action are optional
- * extension points for event-driven and active transition entry points.
+ * Data-driven rules shared by cultivation start and breakthrough transitions. Conditions are evaluated
+ * synchronously; trigger and action are optional extension points for event-driven and active entry points.
  */
 public record CultivateConditions(List<EntityCondition> conditions,
                                   List<Trigger> triggers,

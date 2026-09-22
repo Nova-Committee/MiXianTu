@@ -38,11 +38,9 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 /**
- * Server-side breakthrough transaction; callers evaluate content conditions before payment is committed.
- *
- * <p>A chain is identified by its aura, so the aura-keyed methods are the core. The id-keyed overloads exist
- * for callers that hold only a name - a command or a content script - and resolve that name against the aura
- * registry; nothing here is keyed by the value a chain is counted in, because that is not what a chain is.</p>
+ * Server-side breakthrough transaction; callers evaluate content conditions before payment is committed. A
+ * chain is identified by its aura, which is why the aura-keyed methods are the core: the id-keyed overloads
+ * exist for callers that hold only a name, and they resolve that name against the aura registry.
  */
 public final class CultivationService {
     private static final double PROGRESS_EPSILON = 1.0E-7D;
@@ -50,9 +48,6 @@ public final class CultivationService {
     private CultivationService() {
     }
 
-    /**
-     * Attempts the only legal next realm of the named aura's chain.
-     */
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                              Identifier auraId, FormulaContext context, BooleanSupplier conditionsMet) {
         Reference<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId).orElse(null);
@@ -60,9 +55,6 @@ public final class CultivationService {
                 : attempt(entity, spirit, resources, aura, context, conditionsMet);
     }
 
-    /**
-     * Attempts the only legal next realm of one cultivation chain.
-     */
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                              Holder<Aura> aura, FormulaContext context, BooleanSupplier conditionsMet) {
         if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failure.SERVER_ONLY, null);
@@ -71,10 +63,7 @@ public final class CultivationService {
         return attempt(entity, spirit, resources, transition, context, conditionsMet);
     }
 
-    /**
-     * Entity-aware breakthrough entry point. It preserves the same transaction semantics and
-     * dispatches triggered abilities only after the realm state has committed.
-     */
+    // Triggered abilities are dispatched only after the realm state has committed.
     private static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Transition transition,
                                               FormulaContext context, BooleanSupplier conditionsMet) {
         Holder<RealmStage> targetHolder = transition.target();
@@ -104,8 +93,8 @@ public final class CultivationService {
                     effect.send(level, entity.position().add(0.0D, entity.getBbHeight() * 0.5D, 0.0D));
             });
             target.successAction().execute(entity, context);
-            // TribulationService samples the aura influence itself, so every phase is scaled by the
-            // current environment rather than only the phase that starts at breakthrough.
+            // Sampled here so every tribulation phase is scaled by the current environment, not only the
+            // phase that starts at breakthrough.
             target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
         } else {
@@ -144,9 +133,7 @@ public final class CultivationService {
         return BreakthroughResult.committed(payment.amounts());
     }
 
-    /**
-     * Resolves the pending transition of one cultivation chain, keyed by the profile itself.
-     */
+    // Resolves the pending transition of one cultivation chain, keyed by the profile itself.
     private static Optional<Transition> next(@Nullable Holder<Aura> aura, CultivationAttachment spirit) {
         if (aura == null) return Optional.empty();
         Identifier cultivationId = HolderHelper.id(aura);
@@ -160,9 +147,6 @@ public final class CultivationService {
                 .map(value -> Transition.mortal(aura, value));
     }
 
-    /**
-     * Adds progress to the named aura's chain.
-     */
     public static double addProgress(LivingEntity entity, Holder<Aura> aura, double amount, FormulaContext context) {
         return addProgressForChain(entity, aura, amount, context);
     }
@@ -198,9 +182,6 @@ public final class CultivationService {
         return accepted;
     }
 
-    /**
-     * Remaining legal progress for this chain's current transition.
-     */
     public static double remainingProgressForChain(CultivationAttachment spirit, Holder<Aura> aura, FormulaContext context) {
         Transition transition = next(aura, spirit).orElse(null);
         if (transition == null) return 0.0D;
@@ -216,10 +197,7 @@ public final class CultivationService {
         return remaining <= PROGRESS_EPSILON ? 0.0D : remaining;
     }
 
-    /**
-     * Resolves a chain's breakthrough state without mutating the player; shared by the automatic
-     * breakthrough tick and the information screen.
-     */
+    // Read-only, shared by the automatic breakthrough tick and the information screen.
     public static BreakthroughStatus breakthroughStatusForChain(LivingEntity entity, Holder<Aura> aura, FormulaContext context) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         Transition transition = next(aura, spirit).orElse(null);
@@ -233,18 +211,13 @@ public final class CultivationService {
                 threshold.breakthroughExp(), threshold.maxExperience());
     }
 
-    /**
-     * The conditions of the currently pending transition. The returned value is datapack state; runtime
-     * trigger subscriptions are rebuilt separately and never stored in the attachment.
-     */
+    // Runtime trigger subscriptions are rebuilt separately and never stored in the attachment.
     public static Optional<CultivateConditions> pendingConditionsForChain(LivingEntity entity, Holder<Aura> aura) {
         Transition transition = next(aura, entity.getData(MxtAttachments.CULTIVATION)).orElse(null);
         return transition == null ? Optional.empty() : Optional.of(transition.conditions());
     }
 
-    /**
-     * Sets a validated realm administratively without traversing the registry at call time.
-     */
+    // Administrative, validated through the server cache rather than by traversing the registry here.
     public static boolean setRealm(CultivationAttachment spirit, Identifier target) {
         ServerCache cache = ServerCache.get().orElse(null);
         Identifier cultivationId = cache == null ? null : cache.cultivationForRealm(target).orElse(null);
@@ -287,9 +260,6 @@ public final class CultivationService {
             return new Transition(target, target, aura, aura.value(), true);
         }
 
-        /**
-         * The stored value this chain is counted in, as named by the aura that keys the chain.
-         */
         private Holder<Resource> value() {
             return this.aura.value().resource();
         }

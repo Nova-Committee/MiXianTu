@@ -6,10 +6,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Common storage boundary; the default implementation is {@link ArtifactStorageService#INSTANCE}.
- *
- * <p>Every call takes the caller's registries, because the slot count is declared by a datapack definition and
- * has to be readable on the client too.</p>
+ * Common storage boundary; the default implementation is {@link ArtifactStorageService#INSTANCE}. Every call takes
+ * the caller's registries, because the slot count is declared by a datapack definition and has to be readable on
+ * the client too.
  */
 public interface ISpiritStorage {
     int slots(Provider access, ItemStack stack, FormulaContext context);

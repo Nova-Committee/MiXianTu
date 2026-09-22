@@ -5,7 +5,7 @@ import com.mojang.serialization.MapCodec;
 
 /**
  * A passive ability: its {@code modifiers} apply for as long as the ability is granted, and its {@code condition}
- * is re-evaluated every tick, so a passive can be gated on the holder's state the way an {@code aura} is.
+ * is re-evaluated every tick, so a passive can be gated on the holder's state the way an aura is.
  */
 public enum ModifierAbilityType implements AbilityType {
     INSTANCE;

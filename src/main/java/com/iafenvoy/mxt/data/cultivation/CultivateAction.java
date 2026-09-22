@@ -19,18 +19,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A named cultivation activity with entity conditions and an interval action.
- * <p>
- * Where it may be practised is said with {@code start_condition} and {@code condition}, like every other
- * requirement: the environment is part of the condition context, so a content pack asks for the place it wants
- * (a concentration, a realm, a block, a biome) instead of naming a kind of aura this action expects to find.
+ * A named cultivation activity with entity conditions and an interval action. Where it may be practised is said
+ * with {@code start_condition} and {@code condition} like every other requirement: the environment is part of the
+ * condition context, so a pack asks for the place it wants instead of naming a kind of aura.
  */
-//TODO::May be removed. What it holds is "how an entity cultivates right now", which is a process the rest of the
-// system could keep in the state attachment (progress, realm, fuel) rather than in a datapack registry. If it
-// goes, this whole cluster goes with it: CultivationModeService, CultivationActionService,
-// AuraDistributionService, the cultivate_* fields on CultivationAttachment, the CultivationToggleC2SPayload
-// round trip, the `/mxt` cultivate subcommand, and the registry key below. Marked, not scheduled - content that
-// declares one is fully supported.
+// TODO: may be removed. What it holds is "how an entity cultivates right now", which the rest of the system could
+// keep in the state attachment rather than a datapack registry; CultivationModeService, CultivationActionService,
+// AuraDistributionService and the registry key below would go with it. Marked, not scheduled.
 public record CultivateAction(boolean defaultAction, EntityCondition startCondition, EntityCondition condition,
                               int tickInterval,
                               List<ResourceCost> costs, NumberProvider absorbAmount,

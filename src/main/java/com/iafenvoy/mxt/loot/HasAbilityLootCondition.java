@@ -12,9 +12,6 @@ import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Tests an entity's granted ability attachment in a vanilla loot predicate.
- */
 public record HasAbilityLootCondition(EntityTarget target,
                                       Identifier ability) implements LootItemCondition {
     public static final MapCodec<HasAbilityLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

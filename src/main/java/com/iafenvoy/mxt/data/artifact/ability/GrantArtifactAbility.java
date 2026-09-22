@@ -12,11 +12,9 @@ import net.minecraft.tags.TagKey;
 import java.util.List;
 
 /**
- * Grants abilities while the artifact is held or equipped.
- *
- * <p>The passive and active registrations read the same field, because the lifecycle is the granted ability's
- * own {@code type}'s business; the two names state the pack's intent, and {@code ServerCache} reports an entry
- * whose ability disagrees with it. Abilities may be written as ids or {@code #tags}.</p>
+ * Grants abilities while the artifact is held or equipped. Both names read the same field, because the lifecycle is
+ * the granted ability's own {@code type}'s business; the two names state the pack's intent, and {@code ServerCache}
+ * reports an entry whose ability disagrees with it. Abilities may be written as ids or {@code #tags}.
  */
 public record GrantArtifactAbility(Intent intent, List<Either<Holder<Ability>, TagKey<Ability>>> abilities) implements ArtifactAbility {
     public static final MapCodec<GrantArtifactAbility> PASSIVE_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -36,6 +34,5 @@ public record GrantArtifactAbility(Intent intent, List<Either<Holder<Ability>, T
         return this.intent == Intent.ACTIVE ? ACTIVE_CODEC : PASSIVE_CODEC;
     }
 
-    /** What the pack meant when it picked one of the two names, which is the only thing telling them apart. */
     public enum Intent {PASSIVE, ACTIVE}
 }

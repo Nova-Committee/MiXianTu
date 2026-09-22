@@ -34,9 +34,7 @@ import static com.iafenvoy.mxt.screen.information.InformationHelper.lineWithDefi
 public final class InformationManager {
     private static final int CURSE_COLOR = 0xFFD98A8A;
     private static final int VALUE_COLOR = 0xFFE0E4EC;
-    /**
-     * What a held definition is drawn in while it is switched off: still listed, visibly not counting.
-     */
+    // Drawn for a held definition that is switched off: still listed, visibly not counting.
     private static final int SWITCHED_OFF_COLOR = 0xFF6E7681;
     private static final Map<Identifier, RegisteredInformation> INFORMATION = new LinkedHashMap<>();
 
@@ -104,16 +102,8 @@ public final class InformationManager {
         }
     }
 
-    /**
-     * Lists the held spirit roots, each with the element it is bound to. The root's own name does not say what
-     * it cultivates, and the element is the one thing a player reads a root for - so it is shown here, in the
-     * element's own colour, rather than left to be looked up elsewhere. A root whose element a pack disabled
-     * still appears, because the player holds it; it simply has no element to show.
-     *
-     * <p>A root that is held but switched off is shown in grey and marked in the row's tooltip, because "what
-     * does this body hold" and "what is this body running on right now" are two different questions and the
-     * panel is the only place both are visible at once.</p>
-     */
+    // A root is listed with the element it is bound to, because its own name does not say what it cultivates.
+    // A root whose element a pack disabled still appears, because the player holds it; it simply shows no element.
     private static void spiritRootLines(InformationCollector collector) {
         SpiritIdentityAttachment identity = collector.getData(MxtAttachments.SPIRIT_IDENTITY);
         List<Holder<SpiritRoot>> roots = identity.spiritRoots();
@@ -134,11 +124,8 @@ public final class InformationManager {
         collector.add(Component.translatable("info.mxt.spirit_roots"), line, VALUE_COLOR, joined(notes));
     }
 
-    /**
-     * Lists the held physiques the same way, with one difference their own field asks for: a physique granted
-     * more than once is one entry that says how many, because {@code allow_stacking} makes duplicates legal and
-     * a name repeated three times reads like a rendering mistake.
-     */
+    // Duplicates are collapsed into one entry carrying a ×N count: allow_stacking makes them legal, and a
+    // repeated name would read like a rendering mistake.
     private static void physiqueLines(InformationCollector collector) {
         SpiritIdentityAttachment identity = collector.getData(MxtAttachments.SPIRIT_IDENTITY);
         List<Holder<Physique>> held = identity.physiques();
@@ -158,11 +145,7 @@ public final class InformationManager {
         collector.add(Component.translatable("info.mxt.physiques"), line, VALUE_COLOR, joined(notes));
     }
 
-    /**
-     * One held definition's tooltip line: which rarity the content gave it, and whether it is switched on.
-     * Rarity had no reader at all before this, so a pack could write one and never see it anywhere; the panel
-     * is the one consumer every definition already has.
-     */
+    // Rarity is shown only here, in the row's tooltip: the panel is the one consumer every definition has.
     private static Component identityNote(Holder<?> holder, String category, String rarity, boolean active) {
         MutableComponent note = DefinitionText.name(holder, category).append(" · ").append(DefinitionText.rarity(rarity));
         if (!active) note.append(" · ").append(Component.translatable("info.mxt.switched_off"));
@@ -182,9 +165,6 @@ public final class InformationManager {
         return result;
     }
 
-    /**
-     * Displays every chain tracked by the player, using Mortal when no realm is assigned.
-     */
     private static void realmLines(InformationCollector collector) {
         CultivationAttachment cultivation = collector.getData(MxtAttachments.CULTIVATION);
         Set<Holder<Aura>> chains = new LinkedHashSet<>(cultivation.cultivationProgresses().keySet());
@@ -204,10 +184,8 @@ public final class InformationManager {
         }
     }
 
-    /**
-     * Lists the held curses whose own {@code display_condition} passes. A curse that keeps itself out of sight
-     * leaves no row behind at all - not an empty one - which is the whole point of the field.
-     */
+    // A curse whose display_condition fails leaves no row behind at all, not an empty one: that is the point
+    // of the field.
     private static void curseLines(InformationCollector collector) {
         Player player = collector.getPlayer();
         FormulaContext context = FormulaContext.of(player);
@@ -223,9 +201,6 @@ public final class InformationManager {
         }
     }
 
-    /**
-     * Which sources keep the curse alive, and how long it has left, so a row can be read without opening anything.
-     */
     private static Component curseTooltip(Set<Identifier> sources, State state, long gameTime) {
         String from = sources.stream().map(Identifier::toString).sorted().reduce((a, b) -> a + ", " + b).orElse("-");
         Component line = Component.translatable("info.mxt.curse.source", from);

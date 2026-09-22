@@ -9,11 +9,9 @@ import net.minecraft.world.level.storage.LevelResource;
 import java.util.OptionalLong;
 
 /**
- * Hands a per-instance seed to a level while it is being constructed.
- *
- * <p>Chunk generators are seeded while the datapack registry is built, so a runtime dimension normally reuses
- * the world seed. A realm wants its own: the seed is stored on the instance record and published here for the
- * narrow window in which {@code ServerLevel} is constructed.
+ * Hands a per-instance seed to a level while it is being constructed. Chunk generators are seeded while the
+ * datapack registry is built, so a runtime dimension would normally reuse the world seed; the instance's own
+ * seed is published here for the narrow window in which {@code ServerLevel} is constructed.
  */
 public final class RealmSeedBridge {
     private static ResourceKey<Level> constructing;

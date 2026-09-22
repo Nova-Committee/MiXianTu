@@ -27,12 +27,10 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
- * The authoritative table of realm instances. Instances are keyed by their dimension, which is what an
- * instance actually is: a dimension created on demand from a definition.
- *
- * <p>The table is persisted on the overworld, so a claimed realm is still there after a restart. That is
- * also why the persisted copy is rewritten after every change instead of relying on a dirty flag: an instance
- * that is created and immediately entered must not be lost if the server stops later in the same tick.
+ * The authoritative table of realm instances, keyed by their dimension.
+ * <p>
+ * The table is persisted on the overworld and rewritten after every change rather than behind a dirty flag:
+ * an instance created and immediately entered must not be lost if the server stops later in the same tick.
  */
 public final class RealmInstanceRegistry {
     private static final Map<ResourceKey<Level>, RealmRecord> INSTANCES = new LinkedHashMap<>();
@@ -42,10 +40,8 @@ public final class RealmInstanceRegistry {
     private RealmInstanceRegistry() {
     }
 
-    /**
-     * Loads the persisted instances. An unclaimed realm owns no terrain to come back to, so a record of one is
-     * a leftover from a crash and is dropped together with its region files.
-     */
+    // An unclaimed realm owns no terrain to come back to, so a record of one is a crash leftover and is
+    // dropped together with its region files.
     public static void load(MinecraftServer value) {
         server = value;
         INSTANCES.clear();
@@ -80,18 +76,12 @@ public final class RealmInstanceRegistry {
         return Optional.ofNullable(INSTANCES.get(dimension));
     }
 
-    /**
-     * The instance a player is currently a member of, found by membership rather than by level so a player who
-     * is between dimensions is still recognised.
-     */
+    // Found by membership rather than by level, so a player who is between dimensions is still recognised.
     public static Optional<RealmRecord> ofMember(UUID member) {
         return INSTANCES.values().stream().filter(record -> record.holds(member)).findFirst();
     }
 
-    /**
-     * The instance to join, or empty when a new one has to be created. Claimed and unclaimed realms share one
-     * pool: {@code owned} records who claimed an instance, it does not reserve it.
-     */
+    // Claimed and unclaimed realms share one pool: owned records who claimed an instance, it does not reserve it.
     public static Optional<RealmRecord> joinable(Holder<RealmInstance> definition, UUID member) {
         return INSTANCES.values().stream()
                 .filter(record -> record.definition().equals(definition))
@@ -115,9 +105,7 @@ public final class RealmInstanceRegistry {
         if (INSTANCES.remove(dimension) != null) sync();
     }
 
-    /**
-     * The lowest unused index for a definition, so instance dimensions keep stable, readable keys.
-     */
+    // The lowest unused index, so instance dimensions keep stable, readable keys.
     public static int nextIndex(Holder<RealmInstance> definition) {
         List<Integer> used = INSTANCES.values().stream()
                 .filter(record -> record.definition().equals(definition))
@@ -136,11 +124,8 @@ public final class RealmInstanceRegistry {
         return INSTANCES.containsKey(dimension);
     }
 
-    /**
-     * Names a realm dimension also answers to. A runtime dimension has no level stem entry of its own, so an
-     * aura zone that would otherwise only match {@code minecraft:the_end} can still cover every realm built
-     * from that stem, and one that names the definition covers all of its instances.
-     */
+    // A runtime dimension has no level stem entry of its own, so an aura zone that would otherwise only match
+    // minecraft:the_end can still cover every realm built from that stem, or from the definition itself.
     public static Stream<Identifier> aliases(Identifier dimension) {
         RealmRecord record = INSTANCES.get(ResourceKey.create(Registries.DIMENSION, dimension));
         if (record == null) return Stream.empty();

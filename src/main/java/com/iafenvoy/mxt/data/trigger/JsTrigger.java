@@ -9,9 +9,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
 /**
- * A trigger matcher whose decision is a server script callback. The matcher declares the signal it listens
- * to, because the dispatcher indexes subscriptions by signal; the callback decides whether the concrete
- * signal fires, so a data pack can wait for a signal a script publishes with {@code MxtTriggers.publish}.
+ * A trigger matcher whose decision is a server script callback, published by a pack with
+ * {@code MxtTriggers.publish}. The signal field is required because the dispatcher indexes subscriptions by it.
  */
 public record JsTrigger(Identifier signal, String id, JsonObject params) implements Trigger {
     public static final MapCodec<JsTrigger> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

@@ -42,9 +42,9 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * Trigger matchers. Two families live here: the signals MiXianTu publishes itself, which only carry the
- * signal id, and the ported vanilla triggers, which keep vanilla's own instance codec and matching.
- * Third-party modules can register additional codecs into the same registry.
+ * Trigger matchers: the signals MiXianTu publishes itself, which only carry the signal id, and the ported
+ * vanilla triggers, which keep vanilla's own instance codec and matching. Third-party modules can register
+ * further codecs into the same registry.
  */
 @SuppressWarnings("unused")
 public final class MxtTriggers {
@@ -101,11 +101,8 @@ public final class MxtTriggers {
                 TriggerSignals.id(signal))));
     }
 
-    /**
-     * Registers one ported vanilla trigger. The type name is derived from the signal, and the payload codec is
-     * vanilla's own instance codec, so the signal a definition listens to and the arguments it can write can
-     * never disagree with the trigger they mirror.
-     */
+    // The type name is derived from the signal and the payload codec is vanilla's own instance codec, so the
+    // arguments a definition writes can never disagree with the trigger they mirror.
     private static <T extends CriterionTriggerInstance> void port(Identifier signal, Codec<T> codec, Matcher<T> matcher) {
         REGISTRY.register(signal.getPath(), () -> VanillaTrigger.mapCodec(signal, codec, matcher));
     }

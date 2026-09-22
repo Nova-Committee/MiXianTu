@@ -70,10 +70,8 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         if (event instanceof ICancellableEvent cancellable) result.applyCancel(cancellable);
     }
 
-    /**
-     * A friend judgement is asked far more often than a lifecycle event, so this check replaces a wrapper
-     * and an empty handler walk on every query.
-     */
+    // A friend judgement is asked far more often than a lifecycle event, so this check replaces a wrapper and
+    // an empty handler walk on every query.
     @Override
     public void postFriendRelation(Relation event) {
         if (FRIEND_RELATION.hasListeners()) FRIEND_RELATION.post(new FriendRelationKubeEvent(event));
@@ -156,9 +154,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
             this.pre().setStacks(stacks);
         }
 
-        /**
-         * Who is applying it, as a string so a script can compare and replace it directly.
-         */
+        // A string so a script can compare and replace it directly.
         public String getSource() {
             return this.pre().source().toString();
         }
@@ -237,10 +233,9 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     }
 
     /**
-     * KubeJS view of a friend judgement. A script answers by writing a verdict; leaving the event alone
-     * leaves the question to the player's own friend list, which is what {@code "default"} reports. The
-     * judge is given as an id first and an entity second, because it is missing while that player is
-     * offline.
+     * KubeJS view of a friend judgement. Leaving the event alone leaves the question to the player's own friend
+     * list, which is what {@code "default"} reports; the judge is an id first because it is missing while that
+     * player is offline.
      */
     public static final class FriendRelationKubeEvent implements KubeEvent {
         private final Relation event;
@@ -283,17 +278,14 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
             this.event.setResult(TriState.from(friend));
         }
 
-        /**
-         * Gives the question back to the friend list after having claimed it.
-         */
         public void abstain() {
             this.event.setResult(TriState.DEFAULT);
         }
     }
 
     /**
-     * Stable common surface for every remaining lifecycle event. The original
-     * event remains available for its domain-specific getters and mutable pre-event fields.
+     * Stable common surface for every remaining lifecycle event; the original event stays available for its
+     * domain-specific getters and mutable pre-event fields.
      */
     public static final class GenericKubeEvent implements KubeEvent {
         private final String type;

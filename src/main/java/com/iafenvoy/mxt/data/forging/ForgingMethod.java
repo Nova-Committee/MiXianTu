@@ -21,9 +21,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * A single datapack-defined forging operation. {@code sound} is played at the table when the method is
- * used, for everyone in range, and defaults to {@link SoundEvents#ANVIL_PLACE} because that is the noise
- * the table stands in for.
+ * A single datapack-defined forging operation. {@code sound} is played at the table when the method is used, for
+ * everyone in range, and defaults to the noise the table stands in for.
  */
 public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCondition condition,
                             Optional<IconReference> icon, int cooldown, SoundEvent sound) {
@@ -44,19 +43,13 @@ public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCond
         return DataResult.success(value);
     }
 
-    /**
-     * The icon stack for the selector list, empty when the method has no icon or draws a texture. The item
-     * branch is materialised here because a datapack registry is parsed before item components are bound.
-     */
+    // The item branch is materialised here because a datapack registry is parsed before item components are bound.
     public ItemStack iconStack() {
         return this.icon.flatMap(IconReference::stack).orElse(ItemStack.EMPTY);
     }
 
-    /**
-     * The name this method is listed under: its icon's own name when the icon is an item, because that is
-     * what the selector grid draws. {@code id} covers the cases the icon cannot — no icon, or one drawn from
-     * a texture — where an empty stack would otherwise report itself as "Air".
-     */
+    // id covers what the icon cannot (no icon, or one drawn from a texture), where an empty stack would report
+    // itself as "Air".
     public MutableComponent displayName(Identifier id) {
         ItemStack icon = this.iconStack();
         return icon.isEmpty() ? Component.literal(id.toString()) : icon.getHoverName().copy();

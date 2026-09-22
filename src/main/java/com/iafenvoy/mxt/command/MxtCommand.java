@@ -85,19 +85,13 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The administration and diagnostics that exist only under {@code /mxt}. These nodes have no top-level alias,
- * so {@code /registries} or {@code /resource} do not claim short generic spellings for operator tooling; the
- * player-facing subtrees live in their own classes and {@code CommandManager} attaches them at both roots.
+ * Administration and diagnostics that exist only under {@code /mxt}: these nodes take no top-level alias, so
+ * operator tooling never claims short generic spellings such as {@code /registries}.
  */
 public final class MxtCommand {
-    /**
-     * A chat report lists at most this many problems; the log keeps all of them.
-     */
+    // The chat report lists at most this many problems; the log keeps all of them.
     private static final int MAX_REPORTED_PROBLEMS = 12;
 
-    /**
-     * Attaches the diagnostic-only nodes to an existing root.
-     */
     public static void attach(LiteralArgumentBuilder<CommandSourceStack> root) {
         root.then(literal("registries")
                         .then(literal("list").executes(ctx -> listRegistries(ctx.getSource())))
@@ -220,19 +214,13 @@ public final class MxtCommand {
         return problems.size() > shown ? text + "; ...(+" + (problems.size() - shown) + ")" : text;
     }
 
-    /**
-     * Offers the signals a datapack rule reacts to.
-     */
     private static CompletableFuture<Suggestions> suggestRuleSignals(SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(ServerCache.get()
                 .map(cache -> cache.triggerSignals().stream().map(Identifier::toString).toList())
                 .orElse(List.of()), builder);
     }
 
-    /**
-     * Offers every signal a rule reacts to or a subscription listens to: the two sets a signal can be
-     * published against.
-     */
+    // Every signal a rule reacts to or a subscription listens to: the two sets a signal can be published against.
     private static CompletableFuture<Suggestions> suggestPublishedSignals(SuggestionsBuilder builder) {
         Set<String> ids = new LinkedHashSet<>();
         ServerCache.get().ifPresent(cache -> cache.triggerSignals().forEach(signal -> ids.add(signal.toString())));
@@ -414,9 +402,6 @@ public final class MxtCommand {
         return 1;
     }
 
-    /**
-     * Lists the live realm instances. An instance is a dimension, so its key is what identifies it here too.
-     */
     private static int listRealmInstances(CommandSourceStack source) {
         List<RealmRecord> records = RealmInstanceRegistry.all();
         if (records.isEmpty()) {
@@ -495,9 +480,6 @@ public final class MxtCommand {
                 .map(key -> key.identifier().toString()).sorted().toList(), builder);
     }
 
-    /**
-     * A rift is addressed by its block position, the same way a realm instance is addressed by its dimension.
-     */
     @Nullable
     private static RiftBlockEntity riftAt(CommandSourceStack source, BlockPos pos) {
         if (source.getLevel().getBlockEntity(pos) instanceof RiftBlockEntity rift) return rift;
@@ -505,11 +487,6 @@ public final class MxtCommand {
         return null;
     }
 
-    /**
-     * Reports everything that decides how a rift looks and where it goes, including the shape it currently draws
-     * as: a rift links to every rift in its 3x3x3 neighbourhood, and two links that are neighbours of each other
-     * close a triangle, so the counts of links and triangles are what the drawing comes down to.
-     */
     private static int riftInfo(CommandSourceStack source, BlockPos pos) {
         RiftBlockEntity rift = riftAt(source, pos);
         if (rift == null) return 0;
@@ -602,10 +579,7 @@ public final class MxtCommand {
                 server.getLevel(record.dimension()) != null);
     }
 
-    /**
-     * Lists the runtime trigger subscriptions of one entity. They are never persisted, so this is the only
-     * way to see what a running server currently has armed.
-     */
+    // Subscriptions are never persisted, so this is the only way to see what a running server has armed.
     private static int listTriggers(CommandSourceStack source, Entity target) {
         Entity entity = target == null ? source.getPlayer() : target;
         if (entity == null) {
@@ -621,9 +595,6 @@ public final class MxtCommand {
         return subscriptions.size();
     }
 
-    /**
-     * Lists the datapack rules that react to one signal, in the order they run.
-     */
     private static int listTriggerRules(CommandSourceStack source, Identifier signal) {
         List<Reference<TriggerRule>> rules = ServerCache.get().map(cache -> cache.triggerRules(signal)).orElse(List.of());
         source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.header", signal.toString(), rules.size()), false);
@@ -633,9 +604,6 @@ public final class MxtCommand {
         return rules.size();
     }
 
-    /**
-     * Publishes a signal by hand, which is how an author checks a reaction without waiting for the event.
-     */
     private static int publishTrigger(CommandSourceStack source, Identifier signal, Entity target) {
         Entity entity = target == null ? source.getPlayer() : target;
         if (entity == null) {

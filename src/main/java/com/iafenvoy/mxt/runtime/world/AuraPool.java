@@ -13,9 +13,10 @@ import net.minecraft.network.codec.StreamCodec;
 import java.util.Map;
 
 /**
- * Serializable state for one independently stored resource pool. {@code supplied} is how much of
- * {@code amount} the block emitters at this position are contributing, carried because a consumer allowed to
- * spend the ground it stands on has to know how much of what it sees is already its own.
+ * Serializable state for one independently stored resource pool.
+ * <p>
+ * {@code supplied} is how much of {@code amount} the block emitters at this position contribute, carried
+ * because a consumer allowed to spend the ground it stands on has to know how much of what it sees is its own.
  */
 public record AuraPool(double amount, double maximum, double regenPerTick, double supplied) {
     public static final Codec<AuraPool> CODEC = RecordCodecBuilder.<AuraPool>create(i -> i.group(
@@ -40,10 +41,7 @@ public record AuraPool(double amount, double maximum, double regenPerTick, doubl
         if (Double.isFinite(maximum) && amount > maximum) amount = maximum;
     }
 
-    /**
-     * A pool nothing but the environment feeds, which is every pool that is stored rather than resolved for
-     * a position.
-     */
+    // A pool nothing but the environment feeds, which is every pool that is stored rather than resolved.
     public static AuraPool natural(double amount, double maximum, double regenPerTick) {
         return new AuraPool(amount, maximum, regenPerTick, 0.0D);
     }

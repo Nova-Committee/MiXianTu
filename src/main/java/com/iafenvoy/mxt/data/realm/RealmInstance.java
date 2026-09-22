@@ -19,13 +19,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Datapack policy for a secret realm. A realm is not a fixed dimension: every instance of this definition
- * is a dimension created on demand from {@link RealmGeneration}, so the fields below decide how that
- * dimension is generated, bounded and furnished, where travellers arrive, and who may claim it.
- *
- * <p>An instance stops being simulated when its last member leaves. A claimed ({@code owned}) realm only
- * unloads, keeping its generated terrain for the next visit, while an unclaimed one is destroyed with its
- * region data.
+ * Datapack policy for a secret realm. A realm is not a fixed dimension: every instance is a dimension created on
+ * demand from {@link RealmGeneration}. A claimed ({@code owned}) realm only unloads when its last member leaves,
+ * keeping its terrain, while an unclaimed one is destroyed with its region data.
  */
 public record RealmInstance(RealmGeneration generation, long seed, Optional<Border> border, int maxInstances,
                             Optional<Integer> maxMembers, boolean owned, long durationTicks,
@@ -33,10 +29,8 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
                             EntityCondition enterCondition, EntityCondition exitCondition,
                             Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
                             EntityAction enterAction, EntityAction exitAction) {
-    /**
-     * The vanilla border diameter. A definition without a border is explicitly reset to this instead of
-     * inheriting the overworld border that derived level data would otherwise hand to a runtime dimension.
-     */
+    // Written explicitly onto an instance without a border instead of inheriting the overworld border that derived
+    // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
     public static final int MAX_INSTANCES = 256;
     public static final int MAX_MEMBERS = 100_000;
@@ -59,10 +53,7 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
             EntityAction.optionalCodec("exit_action").forGetter(RealmInstance::exitAction)
     ).apply(i, RealmInstance::new)).validate(RealmInstance::validate);
 
-    /**
-     * The border to write onto an instance dimension. A definition without one still receives the vanilla
-     * default so that a realm never inherits a shrunken overworld border.
-     */
+    // Never "whatever the overworld uses": an omitted definition border still gets the vanilla default.
     public Border effectiveBorder() {
         return this.border.orElse(Border.VANILLA_DEFAULT);
     }
@@ -71,9 +62,6 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
         return this.maxMembers.orElse(MAX_MEMBERS);
     }
 
-    /**
-     * Picks one entry point by weight, or {@code null} when the definition asks for a random landing.
-     */
     public EntryPoint pickEntry(RandomSource random) {
         return EntryPoint.select(this.entry, random);
     }
@@ -120,10 +108,7 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
         return Math.abs(pos.getX() + 0.5D - border.center().x) <= half && Math.abs(pos.getZ() + 0.5D - border.center().y) <= half;
     }
 
-    /**
-     * How an instance dimension is bounded. An omitted border means "the vanilla default", never "whatever
-     * the overworld uses".
-     */
+    /** How an instance dimension is bounded; empty means the vanilla default, never the overworld's border. */
     public record Border(Vec2 center, double size, int warningBlocks, int warningTime, double damagePerBlock,
                          double safeZone) {
         public static final Border VANILLA_DEFAULT = new Border(new Vec2(0.0F, 0.0F), DEFAULT_BORDER_SIZE, 5, 15, 0.2D, 5.0D);
@@ -137,10 +122,7 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
         ).apply(i, Border::new));
     }
 
-    /**
-     * One structure template placed into a fresh instance. {@code chance} is rolled per instance, so the
-     * same definition can furnish a realm differently on every visit.
-     */
+    // chance is rolled per instance, so the same definition can furnish a realm differently on every visit.
     public record StructurePlacement(Identifier nbt, BlockPos pos, Rotation rotation, Mirror mirror, double integrity,
                                      double chance, boolean relativeToEntry, boolean ignoreEntities, boolean keepLiquids) {
         public static final Codec<StructurePlacement> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -170,10 +152,7 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
                 value -> value.name().toLowerCase(Locale.ROOT));
     }
 
-    /**
-     * One weighted landing option. The field accepts a single object or an array of them, so a realm with
-     * one fixed entrance keeps the short form while a larger one can spread arrivals over several points.
-     */
+    // The field accepts a single object or an array of them, so one fixed entrance keeps the short form.
     public record EntryPoint(Optional<Vec3> pos, Optional<Float> yaw, Optional<Float> pitch,
                              Optional<Vec2> randomCenter, Optional<Double> randomRadius, double spread, int weight) {
         public static final Codec<EntryPoint> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -187,10 +166,7 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
         ).apply(i, EntryPoint::new));
         public static final Codec<List<EntryPoint>> LIST_CODEC = CombinedCodecs.combineCodec(CODEC);
 
-        /**
-         * Weighted choice with the same fallback as {@link com.iafenvoy.mxt.data.action.WeightedActionEntry}:
-         * a non-positive total falls back to a uniform pick instead of failing.
-         */
+        // Same fallback as WeightedActionEntry: a non-positive total picks uniformly instead of failing.
         public static EntryPoint select(List<EntryPoint> entries, RandomSource random) {
             if (entries.isEmpty()) return null;
             long total = entries.stream().mapToLong(entry -> Math.max(0, entry.weight())).sum();

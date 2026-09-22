@@ -19,10 +19,8 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Enters a bound realm instance, or returns the traveller to their saved origin.
- *
- * <p>A refusal carries a definition-provided message when there is one, so a realm can explain itself instead
- * of showing a failure code.
+ * Enters a bound realm instance, or returns the traveller to their saved origin. A refusal carries the
+ * definition's own message when there is one, so a realm can explain itself instead of showing a failure code.
  */
 public final class RealmTokenItem extends Item {
     public RealmTokenItem(Properties properties) {

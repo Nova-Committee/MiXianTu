@@ -36,15 +36,10 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /talisman} subtree: hands the caller a carrier, which is the one thing a data pack cannot write
- * into a stack by itself. What is inscribed on a carrier is a component, so an operator wanting one to test
- * with would otherwise have to write component syntax; here they name the definitions instead.
- * <p>
- * {@code blank} is the empty carrier and {@code give} inscribes one or more definitions on a fresh carrier -
- * comma separated, because a carrier holds a list and an operator usually wants the multi-inscription case.
- * {@code charged} additionally pours the bill in, which is what makes the result fire on the next click: a
- * carrier is only loaded by the aura its own definitions bill, and an operator testing an invocation should not
- * have to go and find the matching aura first. Everything here asks for the gamemaster permission.
+ * The {@code /talisman} subtree: hands the caller a carrier, which is the one thing a data pack cannot write into
+ * a stack by itself. {@code give} inscribes one or more definitions on a fresh carrier, comma separated because a
+ * carrier holds a list; {@code charged} additionally pours the bill in, since a carrier is only loaded by the
+ * aura its own definitions bill. Everything here asks for the gamemaster permission.
  */
 public final class TalismanCommand {
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = build();
@@ -53,15 +48,13 @@ public final class TalismanCommand {
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> build() {
-        // Every optional node is one readable level, and each builder is attached to exactly one parent - which
-        // is why "charged" is built once per branch: brigadier reads a child builder at most once, so sharing one
+        // "charged" is built once per branch: brigadier reads a child builder at most once, so sharing one
         // instance between two parents loses whichever parent is reached second.
         LiteralArgumentBuilder<CommandSourceStack> count = literal("count")
                 .then(argument("count", IntegerArgumentType.integer(1, 64))
                         .executes(ctx -> give(ctx, false, TriggerMode.FIRE))
                         .then(charged()));
-        // The storing mode has nothing charged to start from: a stored carrier is poured by hand, which is the
-        // whole point of the mode, so the pairing is not offered.
+        // stored has nothing charged to start from: a stored carrier is poured by hand, which is the point of the mode.
         LiteralArgumentBuilder<CommandSourceStack> stored = literal("stored")
                 .executes(ctx -> give(ctx, false, TriggerMode.STORE))
                 .then(literal("count")
@@ -84,18 +77,11 @@ public final class TalismanCommand {
                 .then(give);
     }
 
-    /**
-     * The {@code charged} node, built fresh for each branch that offers it.
-     */
     private static LiteralArgumentBuilder<CommandSourceStack> charged() {
         return literal("charged").executes(ctx -> give(ctx, true, TriggerMode.FIRE));
     }
 
-    /**
-     * Suggests every loaded talisman definition, so {@code give} offers what the server actually has rather
-     * than a hand-written list. The argument is greedy because it is a comma-separated list, so the whole id
-     * list is offered as one completion.
-     */
+    // The argument is greedy because it is a comma-separated list, so the whole id list is offered as one completion.
     private static CompletableFuture<Suggestions> suggestTalismans(CommandContext<CommandSourceStack> ctx,
                                                                    SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(
@@ -103,9 +89,6 @@ public final class TalismanCommand {
                         .map(holder -> holder.key().identifier().toString()).sorted().toList(), builder);
     }
 
-    /**
-     * An empty carrier: nothing is written on it, so nothing is billed and no aura is needed.
-     */
     private static int blank(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = ctx.getSource().getPlayer();
         if (player == null) {
@@ -157,10 +140,6 @@ public final class TalismanCommand {
         return stack.getCount();
     }
 
-    /**
-     * The inscriptions as a readable list, shown with the confirmation: which definitions were written is the
-     * thing an operator is about to check anyway.
-     */
     private static Component inscriptions(List<Holder<Talisman>> inscribed) {
         Component line = Component.empty();
         for (int index = 0; index < inscribed.size(); index++) {
@@ -170,10 +149,8 @@ public final class TalismanCommand {
         return line;
     }
 
-    /**
-     * Pours the whole bill in, one aura at a time. The capacity comes from the inscriptions themselves, so a
-     * carrier is filled to exactly what its invocation costs and nothing has to be configured twice.
-     */
+    // The capacity comes from the inscriptions themselves, so the carrier is filled to exactly what its
+    // invocation costs and nothing has to be configured twice.
     private static void charge(ServerPlayer player, ItemStack stack) {
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
         for (Entry<Holder<Aura>, Integer> entry : TalismanService.bill(stack).entrySet()) {
@@ -182,11 +159,8 @@ public final class TalismanCommand {
         }
     }
 
-    /**
-     * How many carriers this node hands out. The argument is optional, so a node reached without it is not an
-     * error - which is the one way to tell, since {@code CommandContext} offers no "was it given" question and
-     * {@code IntegerArgumentType.getInteger} has no defaulted overload.
-     */
+    // The "count" argument is optional and CommandContext offers no "was it given" question, so the missing
+    // argument is caught rather than checked for: IntegerArgumentType.getInteger has no defaulted overload.
     private static int count(CommandContext<CommandSourceStack> ctx) {
         try {
             return IntegerArgumentType.getInteger(ctx, "count");

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
@@ -14,11 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The current level and mastery progress of each learned technique, as a plain display model. Nothing here
- * is client-only: the learned techniques and their mastery values are both synchronized attachments, so a
- * client builds the same rows a server would. The chain order comes from the links rather than from
- * {@code ServerCache}, which is bound to a running server; chains are short and validated, so walking the
- * links per row is cheap and cannot loop.
+ * The current level and mastery progress of each learned technique, as a plain display model. Nothing here is
+ * client-only: the learned techniques and their mastery values are both synchronised attachments, so a client
+ * builds the same rows a server would. Chain order comes from the links rather than from {@link ServerCache},
+ * which is bound to a running server; chains are short and validated, so walking them per row is cheap.
  */
 public final class TechniqueProgress {
     /**
@@ -29,61 +29,31 @@ public final class TechniqueProgress {
     private TechniqueProgress() {
     }
 
-    /**
-     * Which numbers the progress display uses: the stored mastery against the next requirement, or only what
-     * was gained since the current level.
-     */
     public enum Mode {
-        /**
-         * The stored mastery against the next level's requirement, so the bar spans the whole climb.
-         */
+        // The stored mastery against the next level's requirement, so the bar spans the whole climb.
         ABSOLUTE,
-        /**
-         * Only what was gained since the current level, so every level starts from an empty bar.
-         */
+        // Only what was gained since the current level, so every level starts from an empty bar.
         WITHIN_LEVEL
     }
 
-    /**
-     * One learned technique and where its holder stands in the technique's chain.
-     *
-     * @param stage              the level the holder stands on, or {@code null} when there is no chain
-     * @param rank               the zero-based rank of {@code stage} in its chain, or {@code -1}
-     * @param total              how many levels the technique's chain has, or {@code 0} without one
-     * @param currentRequirement what the level the holder stands on asked for, or {@code 0}
-     * @param hasMastery         whether the technique names a resource that measures mastery
-     * @param required           what the next level asks for, or {@code NaN} at the top of the chain
-     */
+    // One learned technique and where its holder stands in its chain. The magic values are conventions a caller
+    // reads: no chain means a null stage, rank -1, total 0 and a currentRequirement of 0, and `required` is NaN
+    // whenever nothing sits above - which is how `hasNextLevel` tells "nothing above" from "asks for nothing".
     public record Entry(Holder<Technique> technique, @Nullable Holder<SkillStage> stage, int rank,
                         int total, double currentRequirement, boolean hasMastery, double mastery, double required) {
-        /**
-         * Whether the technique has a level to display at all.
-         */
         public boolean hasStage() {
             return this.stage != null && this.rank >= 0;
         }
 
-        /**
-         * Whether the holder can still climb: it has a chain, a measured value, and a level above it.
-         */
         public boolean hasNextLevel() {
             return this.hasStage() && this.hasMastery && Double.isFinite(this.required);
         }
     }
 
-    /**
-     * How full a progress bar is, together with the numbers it shows.
-     *
-     * @param done     the value the bar counts from zero
-     * @param span     the value the bar counts up to
-     * @param fraction {@code done / span} clamped to {@code [0, 1]}
-     */
+    // How full a progress bar is; fraction is done / span clamped to [0, 1].
     public record Progress(double done, double span, double fraction) {
     }
 
-    /**
-     * One row per learned technique, in the order the holder learned them.
-     */
     public static List<Entry> rows(SpiritIdentityAttachment spirit, ResourceHolderAttachment resources, FormulaContext context) {
         List<Entry> rows = new ArrayList<>(spirit.learnedTechniques().size());
         for (Holder<Technique> technique : spirit.learnedTechniques())
@@ -134,10 +104,7 @@ public final class TechniqueProgress {
         return Double.isFinite(value) ? value : 0.0D;
     }
 
-    /**
-     * How many levels the technique's chain has. The chain is validated when the server cache is
-     * built, so this only walks the links.
-     */
+    // The chain is validated when the server cache is built, so this only walks the links.
     private static int chainLength(Technique definition) {
         Holder<SkillStage> current = definition.defaultStage().orElse(null);
         int count = 0;
@@ -148,9 +115,6 @@ public final class TechniqueProgress {
         return count;
     }
 
-    /**
-     * The zero-based rank of a level in this technique's chain, or {@code -1} for another chain's level.
-     */
     private static int rankOf(Technique definition, @Nullable Holder<SkillStage> stage) {
         if (stage == null) return -1;
         Holder<SkillStage> current = definition.defaultStage().orElse(null);

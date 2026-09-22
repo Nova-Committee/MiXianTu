@@ -14,10 +14,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Per-block aura contribution, accumulated and cached for each loaded chunk.
- * <p>
- * The auras it names are its whole vocabulary: which auras a block emits is the key set of {@link #aura},
- * so a block cannot claim a kind of aura it does not actually supply.
+ * Per-block aura contribution, accumulated and cached for each loaded chunk. The auras it names are its whole
+ * vocabulary - which auras a block emits is the key set of {@link #aura} - so a block cannot claim a kind of aura
+ * it does not actually supply.
  */
 public record BlockAura(List<Either<Holder<Block>, TagKey<Block>>> blocks, Map<Holder<Aura>, AuraValue> aura) {
     public static final Codec<BlockAura> CODEC = RecordCodecBuilder.<BlockAura>create(i -> i.group(

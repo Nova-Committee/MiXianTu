@@ -11,10 +11,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Server-owned flight mount state.
- *
- * <p>What is saved is the flight <em>attribute</em> value, not the deprecated {@code Abilities#mayfly}
- * flag; if the attribute stayed raised after dismounting the player would keep flying.
+ * Server-owned flight mount state. What is saved is the flight <em>attribute</em> value, not the deprecated
+ * {@code Abilities#mayfly} flag: if the attribute stayed raised after dismounting, the player would keep flying.
  */
 public final class FlightAttachment extends ShouldSyncAttachment {
     public static final MapCodec<FlightAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

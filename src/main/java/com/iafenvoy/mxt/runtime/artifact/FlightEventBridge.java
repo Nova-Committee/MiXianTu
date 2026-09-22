@@ -9,6 +9,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 
+// Per-tick server driver for an active flight: it re-checks the carried artifact and ends the flight when it is
+// no longer the one the flight was started with.
 @EventBusSubscriber
 public final class FlightEventBridge {
     private FlightEventBridge() {

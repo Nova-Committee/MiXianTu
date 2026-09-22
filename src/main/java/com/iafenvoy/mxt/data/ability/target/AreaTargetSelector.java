@@ -36,6 +36,7 @@ public record AreaTargetSelector(NumberProvider radius, boolean includeActor) im
     public Stream<Entity> select(Entity actor, FormulaContext context, @Nullable Vec3 origin) {
         double value = this.radius.evaluate(context);
         if (!Double.isFinite(value) || value < 0.0D) return Stream.empty();
+        // Clamped at 128 blocks: a larger box makes getEntities walk the whole level.
         double radius = Math.min(value, 128.0D);
         // An area around the place the activation happens at: an item cast from a display stand covers the
         // stand, not whoever wound it there. With no such place this is exactly the actor's own box.

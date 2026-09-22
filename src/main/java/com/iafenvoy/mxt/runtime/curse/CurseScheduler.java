@@ -65,9 +65,8 @@ public final class CurseScheduler {
         FormulaContext context = FormulaContext.of(entity);
         for (Map.Entry<Holder<Curse>, State> entry : data.instances().entrySet()) {
             State state = entry.getValue();
-            // A frozen instance - its definition was disabled or deleted - neither expires nor acts, so it is not
-            // scheduled at all: its expiry is already in the past, and scheduling it would fire the due queue for
-            // that entity on every tick forever. Re-enabling the definition reschedules the entity.
+            // A frozen instance neither expires nor acts, so it is not scheduled at all: its expiry is in the past,
+            // and scheduling it would fire the due queue for that entity every tick forever.
             if (CurseService.definitionState(entry.getKey()) == DefinitionState.ACTIVE
                     && state.expiresAt() >= 0L) {
                 result = Math.min(result, state.expiresAt());

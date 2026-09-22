@@ -10,13 +10,13 @@ import net.neoforged.neoforge.network.handling.MainThreadPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 /**
- * Registers every payload of this mod. The server-bound ones are handled on the server, so they are the same on
- * both sides.
+ * Registers every payload of this mod. The server-bound ones are handled on the server, so they are the same on both
+ * sides; every handler is a {@code MainThreadPayloadHandler}, so it runs on the main thread and may touch world state.
  *
- * <p>The client-bound ones are not: a dedicated server never handles one, but it is still the side that encodes
- * them, so their <em>types</em> have to be registered there too. Only a client may name the handlers that run
- * them, because those handlers touch screen classes that a dedicated server's class loader refuses to load at
- * all — naming one is enough to make the server refuse to start.</p>
+ * <p>The client-bound ones differ per side: a dedicated server never handles one, but it is still the side that
+ * encodes them, so their <em>types</em> have to be registered there too. Only a client may name the handlers that run
+ * them, since those touch screen classes a dedicated server's class loader refuses to load at all - naming one is
+ * enough to make the server refuse to start.
  */
 @EventBusSubscriber
 public final class NetworkManager {

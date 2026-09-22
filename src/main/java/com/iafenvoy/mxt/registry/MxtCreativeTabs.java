@@ -20,9 +20,8 @@ public final class MxtCreativeTabs {
                 MxtItems.registeredItems().forEach(item -> output.accept(item.get()));
                 MxtItems.spiritStones().forEach(item -> {
                     ItemStack empty = new ItemStack(item.get());
-                    // A store with an empty map is a stone that was drained, which is what the creative menu is
-                    // offering: without the component at all it would read as a pristine, full one. What it is
-                    // empty of is its own definition's answer, so nothing has to be recorded here.
+                    // An empty map is a stone that was drained, which is what the creative entry offers: with no
+                    // component at all it would read as a pristine, full one.
                     empty.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
                     output.accept(empty);
                 });

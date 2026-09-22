@@ -21,31 +21,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * The one place that answers two questions the rest of the mod must not answer for itself: whether an element
- * definition is live, and which elements an entity actually carries.
- *
- * <p>Every datapack registry in this mod can be disabled by tagging an entry with {@code mxt:disabled}, and an
- * element is no exception - a disabled element must stop holding relations, colouring text, satisfying a
- * spirit root's binding or matching an affinity. Nothing about that can be seen from a {@link Holder}: its
- * {@code value()} is the definition as written, disabled or not. Reading an element therefore goes through
- * {@link #enabled(Holder)} (a tag test, so it is the same answer on both sides) rather than through
- * {@code Holder#value()}.</p>
- *
- * <p>The second question is the spirit roots. They are read through the registry so that a root a pack
- * disabled contributes nothing - the same rule every other reader of the roots follows - and a root that
- * survives contributes its element only while that element is enabled too. A root the holder switched off with
- * the enable/disable module is not read at all: it is still held, but nothing about it applies. An entity with
- * no roots has no elements here, and callers read that as "no element relation applies" rather than as an
- * error: an ordinary mob is supposed to have neither.</p>
+ * The one place that answers whether an element definition is live and which elements an entity carries, so
+ * nothing else answers either for itself. A disabled element ({@code mxt:disabled}) must stop holding
+ * relations, colouring text, satisfying a spirit root's binding and matching an affinity, and a
+ * {@link Holder} cannot show that - its {@code value()} is the definition as written - so every read goes
+ * through {@link #enabled(Holder)}. Roots are read through the registry and contribute their element only
+ * while the root is switched on and that element is enabled; an entity with no roots has no elements, which
+ * callers read as "no element relation applies" rather than as an error.
  */
 public final class Elements {
     private Elements() {
     }
 
-    /**
-     * Whether this element definition takes part in runtime queries. A tag test on the holder, so callers on
-     * either side get the same answer without reaching for a registry.
-     */
     public static boolean enabled(Holder<Element> element) {
         return !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element);
     }
@@ -54,24 +41,14 @@ public final class Elements {
         return element.filter(Elements::enabled).isPresent();
     }
 
-    /**
-     * Whether an element matches a holder-or-tag list and is live. The list shape is the one every element
-     * field in the mod uses ({@code element_affinity}, {@code preferred_aura_elements}, ...), so the
-     * "disabled wins over matching" rule lives here once instead of at each field.
-     */
+    // The holder-or-tag list shape every element field in the mod uses, so "disabled wins over matching"
+    // lives here once instead of at each field.
     public static boolean matches(Collection<Either<Holder<Element>, TagKey<Element>>> elements, Holder<Element> candidate) {
         return enabled(candidate) && RegistryCodecs.matches(elements, candidate);
     }
 
-    /**
-     * The distinct live elements a spirit identity names, in no particular order, with the registry view the
-     * caller has.
-     *
-     * <p>The registry is passed in rather than reached for, because this reading happens on both sides: a
-     * condition can be asked from a client (an item tooltip evaluates them), where the only roots and roots
-     * definitions available are the synchronised copies and the server-only accessor would throw. The level's
-     * own {@code registryAccess()} answers on either side, so {@link #of(Entity)} uses it.</p>
-     */
+    // The registry is passed in rather than reached for: this is asked on both sides, and a client (an item
+    // tooltip evaluates conditions) has only the synchronised copies, so the server-only accessor would throw.
     public static Set<Holder<Element>> of(SpiritIdentityAttachment spirit, Provider access) {
         return spirit.activeSpiritRoots().stream()
                 .flatMap(root -> MxtDatapackRegistries.get(access, MxtResourceKeys.SPIRIT_ROOT, root).stream())
@@ -81,19 +58,14 @@ public final class Elements {
     }
 
     public static Set<Holder<Element>> of(Entity entity) {
-        // Read, never create: this is asked of both sides of every strike, and an entity that carries no roots
-        // must not come away holding an empty spirit identity (and, with it, a save entry) because something
-        // merely asked what elements it has.
+        // Read, never create: an entity that carries no roots must not come away holding an empty spirit
+        // identity (and, with it, a save entry) because something merely asked what elements it has.
         SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
         return spirit == null ? Set.of() : of(spirit, entity.level().registryAccess());
     }
 
-    /**
-     * The elements a holder-or-tag entry stands for, expanded against the registry: an entry is itself, a tag
-     * is every element in it. A disabled element is not part of any expansion, so a pack can take an element
-     * out of every query at once. A caller with no registry to ask gets an empty set, because a tag cannot be
-     * expanded without one.
-     */
+    // A disabled element is part of no expansion, so a pack can take an element out of every query at once. A
+    // caller with no registry gets an empty set, because a tag cannot be expanded without one.
     public static Set<Holder<Element>> expand(@Nullable Registry<Element> registry, Either<Holder<Element>, TagKey<Element>> entry) {
         if (entry.left().isPresent()) {
             Holder<Element> element = entry.left().orElseThrow();
@@ -106,12 +78,8 @@ public final class Elements {
                 .collect(Collectors.toUnmodifiableSet());
     }
 
-    /**
-     * Whether a set of declared elements meets a query written as an entry or a tag, asked in both directions:
-     * a herb aligned with the tag "fire-like" answers a query for fire, and a herb aligned with fire answers a
-     * query for that tag. Both sides are expanded to elements and intersected, which is the only reading that
-     * does not depend on which side a pack happened to write the tag on.
-     */
+    // Asked in both directions - a herb aligned with the tag "fire-like" answers a query for fire and vice
+    // versa - because expanding both sides and intersecting does not care which side a pack wrote the tag on.
     public static boolean aligned(@Nullable Registry<Element> registry, Collection<Either<Holder<Element>, TagKey<Element>>> declared,
                                   Either<Holder<Element>, TagKey<Element>> query) {
         Set<Holder<Element>> wanted = expand(registry, query);

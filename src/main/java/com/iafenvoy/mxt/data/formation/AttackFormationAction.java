@@ -14,11 +14,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The attack module: what an attacking array does to everything it covers, once per period. It hits everyone
- * the array affects, so sparing the owner and his friends is the formation's {@code spare_friends} switch,
- * not this module's business — this module only says what the strike is. Damage with no
- * attacker credits nobody, so {@code attribute_to_owner} defaults to true, and effects reuse
- * {@link ApplyEffectAction} rather than declaring a second shape for the same three fields.
+ * The attack module: what an attacking array does to everything it covers, once per period. Sparing the owner and
+ * his friends is the formation's {@code spare_friends} switch, not this module's business - this only says what the
+ * strike is. Damage with no attacker credits nobody, so {@code attribute_to_owner} defaults to true, and effects
+ * reuse {@link ApplyEffectAction} rather than declaring a second shape for the same three fields.
  */
 public record AttackFormationAction(NumberProvider damage, Optional<Holder<DamageType>> damageType,
                                     boolean attributeToOwner, List<ApplyEffectAction> effects,

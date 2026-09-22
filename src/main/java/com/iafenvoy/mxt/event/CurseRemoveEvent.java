@@ -44,11 +44,8 @@ public abstract class CurseRemoveEvent extends Event {
         return this.state;
     }
 
-    /**
-     * Who was keeping it alive when it left, captured before the transaction erased them. A release that emptied
-     * the ledger therefore reports nothing, which is exactly what "no source holds it any more" means, while a
-     * whole-instance removal reports the sources it took away from.
-     */
+    // Captured before the transaction erased them: a release that emptied the ledger reports nothing, which is
+    // exactly what "no source holds it any more" means, while a whole-instance removal reports what it took away.
     public Set<Identifier> sources() {
         return this.sources;
     }
@@ -73,9 +70,6 @@ public abstract class CurseRemoveEvent extends Event {
         }
     }
 
-    /**
-     * Why an instance left the holder. Every value here has a real emitter: a script or an ability removes it
-     * explicitly, the scheduler expires it, a cure cleanses it, or a {@code replace} stacking mode displaces it.
-     */
+    // Every value has a real emitter: explicit removal, expiry, cleansing, or a replace stacking mode displacing it.
     public enum Reason {EXPLICIT, EXPIRED, CLEANSED, REPLACED}
 }

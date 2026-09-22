@@ -46,6 +46,7 @@ public enum Space implements StringRepresentable {
 
     public static void transformVectorToBase(Vec3 forward, Vector3f vector, float yaw, boolean normalizeBase) {
         double scaleDouble = forward.length();
+        // Below this, normalizing the forward vector is noise rather than a direction, so the vector is zeroed.
         if (scaleDouble <= 0.007D) {
             vector.zero();
             return;

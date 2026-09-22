@@ -11,8 +11,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Runtime values made available to a trigger. Fixed fields cover common
- * Minecraft events; extension values are stored by {@link Context#set}.
+ * Runtime values made available to a trigger: fixed fields for common Minecraft events, plus extension values
+ * stored by {@link Context#set}.
  */
 public final class TriggerContext extends Context {
     @Nullable
@@ -104,19 +104,14 @@ public final class TriggerContext extends Context {
         return this;
     }
 
-    /**
-     * Stores a payload value a formula cannot hold - a holder, a dimension key, a collection. Numbers belong
-     * in the formula context instead, because a formula may read them.
-     */
+    // A payload value a formula cannot hold; numbers belong in the formula context because a formula reads them.
     public <T> TriggerContext payload(String key, @Nullable T value) {
         this.set(key, value);
         return this;
     }
 
-    /**
-     * Reads a payload value stored by a publisher. The key decides the type, so a reader must be the matcher
-     * the publisher was written for; {@link TriggerPayload} owns the keys.
-     */
+    // Keyed payloads are type-erased by design: a reader must be the matcher the publisher was written for,
+    // and TriggerPayload owns the keys.
     public <T> @Nullable T payload(String key) {
         return this.<T>get(key).orElse(null);
     }

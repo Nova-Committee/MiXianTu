@@ -24,9 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * A shapeless recipe whose completion also consumes stored spirit power.
- */
+// Completion also consumes stored aura; matching is a backtracking search, not per-slot equality.
 public record SpiritShapelessRecipe(List<Ingredient> ingredients, ItemStackTemplate result,
                                     Map<Holder<Aura>, NumberProvider> aura) implements SpiritRecipe {
     public static final MapCodec<SpiritShapelessRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

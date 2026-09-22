@@ -28,10 +28,7 @@ public final class BlockAuraService {
     private BlockAuraService() {
     }
 
-    /**
-     * Scans one chunk column and records every block selected by a {@code block_aura} definition. Block ids
-     * and tags are expanded once into a per-block index, so the inner loop does one lookup per block.
-     */
+    // Block ids and tags are expanded once into a per-block index, so the inner loop does one lookup per block.
     public static void rebuild(ServerLevel level, LevelChunk chunk) {
         Registry<Block> blocks = level.registryAccess().lookupOrThrow(Registries.BLOCK);
         Index index = index(level, blocks);
@@ -45,8 +42,8 @@ public final class BlockAuraService {
         int minZ = chunk.getPos().getMinBlockZ();
         int minY = level.getMinY();
         int maxY = level.getMaxY();
-        // Decided here rather than at query time: the shared stock subtracts this chunk's whole aggregate, so
-        // an absorbed emitter left in it would be handed back to every query and spent twice.
+        // The shared stock subtracts this chunk's whole aggregate, so an absorbed emitter left in it would be
+        // handed back to every query and spent twice.
         Sources absorbed = Sources.of(level, minX, minZ, minX + 15, minZ + 15);
         for (int x = minX; x < minX + 16; x++) {
             for (int z = minZ; z < minZ + 16; z++) {
@@ -65,9 +62,6 @@ public final class BlockAuraService {
         chunk.getData(MxtAttachments.AURA_CHUNK).setBlockContribution(contributions);
     }
 
-    /**
-     * Expands every definition's block ids and tags into a direct block index.
-     */
     private static Index index(ServerLevel level, Registry<Block> blocks) {
         List<BlockAura> definitions = MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.BLOCK_AURA)
                 .map(Reference::value).toList();

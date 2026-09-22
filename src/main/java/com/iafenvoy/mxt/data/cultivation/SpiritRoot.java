@@ -17,13 +17,9 @@ import net.minecraft.tags.TagKey;
 import java.util.List;
 
 /**
- * A spirit root always binds exactly one element.
- *
- * <p>{@code conflicting_elements} is the one rule a root can state about its neighbours: a root whose element
- * carries one of these - or whose element is carried by one of them - cannot be held at the same time. It is a
- * list of its own rather than a reading of the element relations, because two elements may be opposed in the
- * damage pipeline and still be perfectly possible to hold together; a pack that wants "fire and water do not
- * mix in one body" says so here. The check is symmetric, so writing the rule on either root is enough.</p>
+ * A spirit root always binds exactly one element. {@code conflicting_elements} is a list of its own rather than a
+ * reading of the element relations - two elements may be opposed in the damage pipeline and still be perfectly
+ * possible to hold together - and the check is symmetric, so writing the rule on either root is enough.
  */
 public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMultiplier,
                          NumberProvider elementAbilityModifier, String rarity,
@@ -39,11 +35,8 @@ public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMult
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("conflicting_elements", List.of()).forGetter(SpiritRoot::conflictingElements)
     ).apply(i, SpiritRoot::new)).validate(SpiritRoot::validate);
 
-    /**
-     * A written multiplier is rejected while the pack loads rather than read as {@code NaN} at runtime: both
-     * numbers scale a body's cultivation and its elemental casting, and {@code -0.5} is a typo far more often
-     * than it is a rule. A formula can only be judged when it runs, which the callers already do.
-     */
+    // A written multiplier is rejected at load rather than read as NaN at runtime, since -0.5 is a typo far more
+    // often than a rule. A formula can only be judged when it runs, which the callers already do.
     private static DataResult<SpiritRoot> validate(SpiritRoot root) {
         for (NumberProvider provider : List.of(root.cultivationMultiplier(), root.elementAbilityModifier()))
             if (provider instanceof Constant(double value) && (!Double.isFinite(value) || value < 0.0D))
@@ -51,13 +44,8 @@ public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMult
         return DataResult.success(root);
     }
 
-    /**
-     * Whether the two roots rule each other out, read in both directions so a pack writes the rule once.
-     *
-     * <p>Both elements have to be live for the question to mean anything. A {@code mxt:disabled} element takes
-     * no part in any element field, and this is one: it neither rules another element out nor is ruled out by
-     * one, so a root bound to it simply coexists with everything.</p>
-     */
+    // Both elements must be live for the question to mean anything: a mxt:disabled element neither rules another
+    // out nor is ruled out by one, so a root bound to it coexists with everything.
     public boolean conflictsWith(SpiritRoot other) {
         if (!enabled(this.element) || !enabled(other.element())) return false;
         return RegistryCodecs.matches(this.conflictingElements, other.element())

@@ -34,13 +34,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The twelve cells a player's wheel page holds: abilities, auras and artifact capabilities normalised into one
+ * The cells a player's wheel page holds: abilities, auras and artifact capabilities normalised into one
  * {@link WheelMenuEntry} list, resolved fresh from the synced attachment and registries so the drawn wheel and
- * the triggered entry can never disagree.
- *
- * <p>The configured source reads the player's saved layout; every other source reads what the equipment it
- * names grants and declares right now ({@link WheelSources}), so those pages follow the item in hand rather than
- * being edited - and a source that contributes more than a page of entries is given more pages by the framework.</p>
+ * the triggered entry can never disagree. Every other source reads what the equipment grants right now.
  */
 public final class WheelContent implements WheelMenuProvider {
     public static final WheelContent INSTANCE = new WheelContent();
@@ -65,7 +61,7 @@ public final class WheelContent implements WheelMenuProvider {
         return sectors;
     }
 
-    /** Every aura this player can actually burst, in id order; the filter is the one the server applies. */
+    // In id order, and filtered by the same rule the server applies before honouring a burst.
     public static List<WheelMenuEntry> auras(@Nullable Player player) {
         if (player == null) return List.of();
         return MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.AURA)
@@ -75,7 +71,6 @@ public final class WheelContent implements WheelMenuProvider {
                 .toList();
     }
 
-    /** Every active ability this player holds, in id order: the skill half of {@link #pool}. */
     public static List<WheelMenuEntry> abilities(@Nullable Player player) {
         if (player == null) return List.of();
         // Read-only: asking what a player could put on their wheel must not create an ability attachment.
@@ -88,15 +83,8 @@ public final class WheelContent implements WheelMenuProvider {
                 .toList();
     }
 
-    /**
-     * Everything the configured page may hold: the active abilities this player holds, followed by the artifact
-     * capabilities they carry. Read-only - asking what a player could put on their wheel must not create an
-     * attachment - and each half is in its own id order, so the pool does not reshuffle between two openings.
-     *
-     * <p>Capabilities are in the same pool as skills rather than in a column of their own because the configured
-     * page holds both under one kind-free row: which of the two a cell holds is the cell's business, not the
-     * pool's.</p>
-     */
+    // Abilities first, then artifact capabilities; each half keeps its own id order, so the pool does not
+    // reshuffle between two openings.
     public static List<WheelMenuEntry> pool(@Nullable Player player) {
         if (player == null) return List.of();
         List<WheelMenuEntry> options = new ArrayList<>(abilities(player));
@@ -106,11 +94,8 @@ public final class WheelContent implements WheelMenuProvider {
         return List.copyOf(options);
     }
 
-    /**
-     * One derived page: the skills the equipment it names grants, then the artifact capabilities that equipment
-     * declares. Both halves are live readings and neither is stored, so the page follows the gear; a source that
-     * contributes more than a page of entries is given more pages by the framework rather than being cut.
-     */
+    // One derived page: what the named equipment grants and declares right now, never stored, so the page
+    // follows the gear; a source with more entries than a page gets more pages rather than being cut.
     private static List<WheelMenuEntry> derived(Player player, WheelSource source) {
         List<WheelMenuEntry> entries = new ArrayList<>();
         for (Holder<Ability> ability : WheelSources.abilities(player, source))
@@ -120,20 +105,13 @@ public final class WheelContent implements WheelMenuProvider {
         return List.copyOf(entries);
     }
 
-    /**
-     * The twelve cells as stored: the player's own layout, or twelve empty ones when they have never saved
-     * a wheel. Raw ids rather than resolved entries, so a cell whose id no longer resolves stays visible
-     * and clearable.
-     *
-     * <p>Nothing is filled in for a new player on purpose: what goes on the wheel is a decision, and picking
-     * "the first six of each pool" for them put entries they never chose there - and kept moving them until
-     * the first save, because the pool is derived from what is available right now.
-     */
+    // Raw ids rather than resolved entries, so a cell whose id no longer resolves stays visible and clearable.
+    // Nothing is filled in for a player who has never saved: what goes on the wheel is the player's decision.
     public static WheelLayout layoutFor(@Nullable Player player) {
         return layout(player).orElse(WheelLayout.EMPTY);
     }
 
-    /** Sends the whole layout, then republishes the armed cell: the places it was counted on just changed. */
+    // Sends the whole layout, then republishes the armed cell: the places it was counted on just changed.
     public static void save(WheelLayout layout) {
         ClientPacketDistributor.sendToServer(new WheelLayoutC2SPayload(layout));
         WheelSelectionSync.republish();
@@ -144,7 +122,6 @@ public final class WheelContent implements WheelMenuProvider {
         return player.getExistingData(MxtAttachments.WHEEL_LAYOUT).flatMap(WheelLayoutAttachment::layout);
     }
 
-    /** The entry a sector names, or {@code null} when its id no longer resolves in that pool. */
     private static @Nullable WheelMenuEntry find(WheelSlot slot, List<WheelMenuEntry> auras,
                                                  List<WheelMenuEntry> options) {
         if (slot.isEmpty()) return null;

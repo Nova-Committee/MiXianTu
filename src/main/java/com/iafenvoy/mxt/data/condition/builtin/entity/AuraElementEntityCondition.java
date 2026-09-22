@@ -21,23 +21,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * Tests the ambient aura at an entity's position by element rather than by aura.
- *
- * <p>{@code mxt:aura_range} asks about named auras, which is the wrong question for a pack that groups its
- * auras by element: "is this a fire-aligned place" would otherwise have to list every aura id that happens to
- * carry that element, and stay in step with them. Here the requirement is put on the element and every live
- * aura carrying it is summed, so adding another fire aura to a zone is enough on its own. The requirement is
- * the same lower/upper bound shape used everywhere else, and every entry has to pass.</p>
+ * Tests the ambient aura at an entity's position by element rather than by aura id: every live aura carrying that
+ * element is summed, and every listed entry has to pass.
  */
 public record AuraElementEntityCondition(Map<Holder<Element>, AuraRequirement> elements) implements EntityCondition {
     public static final MapCodec<AuraElementEntityCondition> CODEC = CollectionCodecs.map(Element.CODEC, AuraRequirement.CODEC)
             .fieldOf("elements").xmap(AuraElementEntityCondition::new, AuraElementEntityCondition::elements)
             .validate(AuraElementEntityCondition::validate);
 
-    /**
-     * An empty table would be a condition that passes everywhere, which is a gate nobody can see is missing:
-     * refused at load instead.
-     */
+    // An empty table would be a condition that passes everywhere, a gate nobody can see is missing: refused at load.
     private static DataResult<AuraElementEntityCondition> validate(AuraElementEntityCondition condition) {
         return condition.elements().isEmpty()
                 ? DataResult.error(() -> "mxt:aura_element needs at least one element to ask about")
@@ -53,10 +45,7 @@ public record AuraElementEntityCondition(Map<Holder<Element>, AuraRequirement> e
                 .allMatch(entry -> entry.getValue().test(concentration(resolved, entry.getKey()), context));
     }
 
-    /**
-     * Every live aura of one element at this position, added up: the element is the key a pack asks by, and a
-     * place is fire-aligned to the degree that all of its fire auras are present.
-     */
+    // All live auras of one element at this position, summed.
     private static double concentration(AuraResult aura, Holder<Element> element) {
         double total = 0.0D;
         for (Entry<Holder<Aura>, AuraPool> entry : aura.aura().entrySet()) {

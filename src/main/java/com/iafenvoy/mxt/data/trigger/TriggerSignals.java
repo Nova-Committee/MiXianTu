@@ -19,11 +19,8 @@ public final class TriggerSignals {
     public static final Identifier BREAKTHROUGH = id("breakthrough");
     public static final Identifier TECHNIQUE_STAGE = id("technique_stage");
 
-    /**
-     * Ported vanilla triggers. Each one keeps the vanilla id, so the signal name says which advancement
-     * trigger it mirrors; what differs is only who publishes it - MiXianTu's own hooks instead of the call
-     * sites vanilla fires them from.
-     */
+    // Ported vanilla triggers: the signal keeps the vanilla id, but MiXianTu's own hooks publish it instead of
+    // the call sites vanilla fires from.
     public static final Identifier CONSUME_ITEM = id("consume_item");
     public static final Identifier BREWED_POTION = id("brewed_potion");
     public static final Identifier TAME_ANIMAL = id("tame_animal");

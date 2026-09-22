@@ -10,9 +10,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
-/**
- * A vanilla loot condition whose decision is a server script callback.
- */
+// Decision comes from a server-side KubeJS callback; client-side loot rolls never see it.
 public record JsLootCondition(String id, JsonObject params) implements LootItemCondition {
     public static final MapCodec<JsLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsLootCondition::id),

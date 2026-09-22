@@ -9,7 +9,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageType;
@@ -20,45 +19,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Element relations, the strength of each relation, the damage types it speaks for, and the display color used
- * by aura-cost text are data driven; tags classify elements but do not encode precedence.
- *
- * <p>Both relations carry their own damage multiplier, because "who overcomes whom" is not the whole of the
- * rule: fire overcoming metal and fire overcoming wood are different amounts, and a pack that wants a
- * three-way cycle with one soft edge writes it here rather than in code. {@code overcomes} is read on the
- * attacking side of one strike ({@code overcomes[].multiplier} multiplies the damage the holder deals to a
- * target carrying a listed element), {@code adapted_to} on the defending side ({@code adapted_to[].multiplier}
- * multiplies the damage the holder takes from a listed element). A relation below {@code 1} therefore weakens
- * rather than strengthens, which is also how a pack expresses "this element is soft against that one".</p>
- *
- * <p>Several relations can match one strike, and each one multiplies: a holder with two roots that both
- * overcome the target takes both edges, and the numbers a pack writes are the whole of the result. Every
- * multiplier must be finite and non-negative, refused at load rather than clamped at runtime.</p>
- *
- * <p>{@code damage_types} is what makes a strike elemental at all: a damage type an element claims <em>means</em>
- * that element, so a fireball, a lava bath and a blade of fire are all readable as one thing from the
- * {@link net.minecraft.world.damagesource.DamageSource} alone. An element that claims nothing is still a valid
- * element - it simply gives no damage type a meaning, and strikes keep being read off the attacker's spirit
- * roots as they were before. See {@code DamageElements} for the reading side.</p>
- *
- * <p>{@code attachment_decay} and {@code damage_attachment} describe how the element builds up on a body
- * ({@code ElementReactionService}): the first is how much of it leaves per tick on its own, the second how much
- * a strike made of it leaves behind on the target. Both default to zero, so an element is by default a pure
- * relation and a pack opts into accumulation by writing one or both numbers. Only a strike the damage type
- * <em>claims</em> leaves anything behind: a strike read off the attacker's spirit roots reduces but does not
- * rub off, which is what the origin in {@code DamageElements} records.</p>
- *
- * <p>{@code damage_attachment} is the default for every claim this element writes; a {@link DamageTypeClaim}
- * may carry a number of its own, which is how one element says that a lava bath builds up half as fast as a
- * fireball. The claimed types therefore double as groups that can each carry their own number, without the
- * element having to be split in two.</p>
- *
- * <p>{@code conflict_multiplier} is what this element is worth in the hand of somebody it conflicts with: when
- * a striker's active spirit root lists this element in its {@code conflicting_elements}, everything that
- * striker deals is multiplied by this number (default {@code 1.0}, so nothing happens unless a pack says so).
- * The number lives on the element being wielded rather than on the root, because it is that element's own
- * statement about being mis-wielded; it is applied once per wielding element no matter how many roots
- * conflict with it.</p>
+ * An element definition: relation edges carrying their own damage multipliers, the damage types it claims, its
+ * buildup/decay numbers, display color and conflict multiplier. {@code overcomes} is read on the attacking side
+ * and {@code adapted_to} on the defending one; every matching relation multiplies, so a value below 1 weakens.
+ * All numbers are validated finite and non-negative at load.
  */
 public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
                       List<DamageTypeClaim> damageTypes,
@@ -104,12 +68,8 @@ public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
         return null;
     }
 
-    /**
-     * Two relations naming the same target are legal - every matching relation multiplies, which is how a pack
-     * writes "twice as strong against one element" - but they are much more often a copy-paste slip, and the
-     * symptom (damage scaled by the square of one number) is invisible in play. The relation is kept and the
-     * load says so once.
-     */
+    // Duplicate targets are legal - every matching relation multiplies - but far more often a copy-paste slip
+    // whose symptom (damage scaled by the square of one number) is invisible in play, so the load logs it once.
     private static void warnRepeatedTargets(String field, List<Relation> relations) {
         Set<Holder<Element>> holders = new HashSet<>();
         Set<TagKey<Element>> tags = new HashSet<>();
@@ -124,43 +84,23 @@ public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
             }
     }
 
-    /**
-     * Whether this element claims the given damage type, tags included. The claim is what names the element of
-     * a strike; the relation multipliers are what that element is then worth, and the claim's own
-     * {@code damage_attachment} is how much of it that kind of hit leaves behind.
-     */
     public boolean claims(Holder<DamageType> type) {
         return this.damageTypes.stream().anyMatch(claim -> claim.matches(type));
     }
 
-    /**
-     * Whether this element overcomes the given one at all, whatever the relation is worth. A condition that
-     * asks about the relation itself reads this, so a pack can write a harmless {@code 1.0} edge for content
-     * that only needs the pairing.
-     */
+    // Matches whatever the relation is worth, so a harmless 1.0 edge still counts as a pairing.
     public boolean overcomes(Holder<Element> other) {
         return this.overcomes.stream().anyMatch(relation -> relation.matches(other));
     }
 
-    /**
-     * Whether this element is adapted to the given one at all, whatever the relation is worth. The defensive
-     * mirror of {@link #overcomes}: a pack reads it to ask "is this something I resist", and cultivation reads
-     * it to decide whether a place is opposed to a root rather than merely empty of it.
-     */
     public boolean adapts(Holder<Element> other) {
         return this.adaptedTo.stream().anyMatch(relation -> relation.matches(other));
     }
 
-    /**
-     * The damage multiplier this element deals to a target whose element is the given one.
-     */
     public double overcomeMultiplier(Holder<Element> other) {
         return product(this.overcomes, other);
     }
 
-    /**
-     * The damage multiplier this element takes from an attack whose element is the given one.
-     */
     public double adaptationMultiplier(Holder<Element> other) {
         return product(this.adaptedTo, other);
     }
@@ -172,21 +112,15 @@ public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
         return result;
     }
 
-    /**
-     * Do not expand element holders here. Element relations can form cycles, and a holder's
-     * diagnostic string delegates back to its value's {@code toString()}.
-     */
+    // Do not expand element holders here: relations can form cycles, and a holder's diagnostic string delegates
+    // back to its value's toString().
     @Override
     public @NonNull String toString() {
         return "Element[overcomes=" + this.overcomes.size()
                 + ", adaptedTo=" + this.adaptedTo.size()
                 + ", damageTypes=" + this.damageTypes.size() + "]";
     }
-    /**
-     * One edge of a relation: the elements it points at, written as registry entries, tags, or both, and what
-     * the edge is worth. The list shape is the same holder-or-tag list the rest of the mod uses, so a single id
-     * and an array of ids are both accepted.
-     */
+    /** One relation edge: the elements it points at (ids, tags, or both) and what the edge is worth. */
     public record Relation(List<Either<Holder<Element>, TagKey<Element>>> elements, double multiplier) {
         public static final Codec<Relation> CODEC = RecordCodecBuilder.create(i -> i.group(
                 RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(Relation::elements),

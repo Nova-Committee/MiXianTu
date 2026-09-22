@@ -24,19 +24,15 @@ import java.util.List;
  * Consumer for a persisted tribulation timeline: a run is installed by copying the definition's timeline into the
  * attachment, its wind-up (when the definition has one) runs down first, and then the beats at the head of that
  * queue are consumed until it is empty or a beat fails.
- *
- * <p>The attachment owns the queue and the state of the beat at its head, so nothing here is remembered between
- * ticks: every decision is read from, and written back to, the attachment. The beat being consumed works on a
- * draft of that state, which is committed once the beat has answered, so a tick is the only thing that can change
- * what is stored.</p>
+ * <p>
+ * Nothing here is remembered between ticks: the attachment owns the queue and the state of the head beat, which
+ * the beat works on as a draft and commits once it has answered.
  */
 public final class TribulationService {
     private TribulationService() {
     }
 
-    /**
-     * Adds the local aura influence, so every wait is scaled by the environment the run currently stands in.
-     */
+    // Adds the local aura influence, so every wait is scaled by the environment the run stands in.
     private static FormulaContext tribulationContext(LivingEntity entity, FormulaContext context) {
         return context.with("aura_tribulation_modifier",
                 AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
@@ -48,9 +44,8 @@ public final class TribulationService {
         List<TimelineEntry> timeline = definition.timeline();
         if (timeline.isEmpty()) return StartResult.rejected(Failure.EMPTY_TIMELINE);
         if (!definition.condition().test(entity, context)) return StartResult.rejected(Failure.CONDITIONS);
-        // Every entry is asked whether it can run before the run begins. An entry that cannot resolve is a
-        // content error, and this is the only moment it can be reported as a refusal instead of a failure
-        // halfway through a timeline the player has already committed to.
+        // Every entry is asked whether it can run before the run begins: this is the only moment a content error
+        // can be reported as a refusal instead of a failure halfway through a committed timeline.
         FormulaContext runContext = tribulationContext(entity, context);
         TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
                 definition.difficultyScale().evaluate(runContext), new TimelineState());
@@ -60,8 +55,7 @@ public final class TribulationService {
         if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
             return StartResult.rejected(Failure.CANCELLED);
         // The wind-up is resolved here, through the same rule every wait uses, and stored with the run: the
-        // countdown a player watches is therefore the number of ticks that will really pass, and a restart
-        // resumes the count instead of starting it over.
+        // countdown a player watches is the number of ticks that will really pass, and a restart resumes it.
         long windup = Math.max(0L, probe.ticks(definition.windup()));
         // Nothing is consumed here: the timeline is copied into the attachment, its wind-up runs down first, and
         // its first entry begins on the tick after that.
@@ -71,9 +65,8 @@ public final class TribulationService {
     }
 
     public static TickResult tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
-        // A run with nothing left to consume cannot progress: a save whose timeline the codec reduced to nothing,
-        // or a cursor that outlived its beats. Dropping it is what keeps a dead run from blocking the next
-        // breakthrough, and no ending runs, because this run never reached one.
+        // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
+        // or a cursor that outlived its beats. Dropping it keeps a dead run from blocking the next breakthrough.
         if (data.peek() == null) {
             if (data.tribulation().isPresent()) data.clear();
             return TickResult.idle();
@@ -97,9 +90,8 @@ public final class TribulationService {
                 NeoForge.EVENT_BUS.post(new Complete(data, tribulation));
                 return TickResult.completed();
             }
-            // The beat reads and writes a draft of the run's state, committed once it has answered its tick: a
-            // beat that changes nothing leaves the stored value untouched, and nothing has to be saved or
-            // synced for it.
+            // The beat reads and writes a draft of the run's state and commits it once it has answered: a beat
+            // that changes nothing leaves the stored value untouched, so nothing has to be saved or synced.
             TimelineState state = new TimelineState(data.state().orElse(null));
             TimelineContext entryContext = new TimelineContext(entity, runContext, gameTime, scale, state);
             if (!state.isPresent()) {

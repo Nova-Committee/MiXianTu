@@ -58,9 +58,6 @@ public final class ServerCache {
         this.server = server;
     }
 
-    /**
-     * Returns the active server cache, or empty when no server is running.
-     */
     public static Optional<ServerCache> get() {
         return Optional.ofNullable(INSTANCE);
     }
@@ -69,10 +66,7 @@ public final class ServerCache {
         return this.server;
     }
 
-    /**
-     * Problems the last rebuild found, each naming the file an author has to fix. They are reported instead of
-     * aborting the build, so one broken definition cannot hide every other problem.
-     */
+    /** Every problem the last rebuild found, each naming the file to fix; reported instead of aborting. */
     public List<String> problems() {
         return this.problems;
     }
@@ -94,11 +88,8 @@ public final class ServerCache {
         if (INSTANCE != null && INSTANCE.server == event.getServer()) INSTANCE = null;
     }
 
-    /**
-     * Rebuilds the derived indexes after datapack data is available. Every check collects its problem and
-     * carries on with the next definition: an invalid chain is never indexed, but the definitions around it
-     * still are, so an author sees the whole list at once instead of one problem per restart.
-     */
+    // Collects every problem and carries on: an invalid chain is never indexed, the definitions around it are,
+    // so an author sees the whole list at once instead of one problem per restart.
     private void rebuild() {
         List<String> problems = new ArrayList<>();
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
@@ -137,10 +128,7 @@ public final class ServerCache {
         }
     }
 
-    /**
-     * Renders one problem the way its author can act on it: the file the definition is read from, then the
-     * reason. It is the same path shape the game uses for its own datapack reports.
-     */
+    // The path shape the game uses for its own datapack reports, so the author can open the file directly.
     private static String problem(ResourceKey<? extends Registry<?>> registry, Identifier id, String message) {
         Identifier directory = registry.identifier();
         return "data/" + id.getNamespace() + "/" + directory.getNamespace() + "/" + directory.getPath()
@@ -152,10 +140,7 @@ public final class ServerCache {
         return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
     }
 
-    /**
-     * Indexes datapack trigger rules by the signal their trigger names, so publishing a signal never
-     * walks the whole registry.
-     */
+    /** Indexed by signal, so publishing one never walks the whole trigger registry. */
     private void rebuildTriggerRules(List<String> problems) {
         Map<Identifier, List<Reference<TriggerRule>>> rules = new LinkedHashMap<>();
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TRIGGER).forEach(rule -> {
@@ -173,12 +158,9 @@ public final class ServerCache {
     }
 
     /**
-     * The two artifact checks a definition cannot make about itself, because both need the other registries.
-     *
-     * <p>First: an {@code mxt:active} or {@code mxt:passive} entry grants abilities by name, and the name can
-     * lie - a pack calling an {@code mxt:modifier} ability "active" ships an artifact whose skill never appears
-     * in the hotbar, which reads as the artifact being broken. Second: two definitions claiming the same item
-     * leaves the winner to registry order, which is the quietest way for one of them to be dead content.</p>
+     * The two artifact checks a definition cannot make about itself, because both need the other registries: a
+     * granted ability whose kind is the opposite of the intent it was granted under, and two definitions
+     * claiming the same item (the winner would be decided by registry order).
      */
     private void rebuildArtifacts(List<String> problems) {
         Registry<Ability> abilities = this.server.registryAccess().lookupOrThrow(MxtResourceKeys.ABILITY);
@@ -211,10 +193,8 @@ public final class ServerCache {
         }
     }
 
-    /**
-     * Reserves every item this definition matches and returns the definition that had already claimed the first
-     * one it could not take, or {@code null} when it took them all.
-     */
+    // Reserves every item the definition matches; returns the definition holding the first item it could not
+    // take, or null when it took them all.
     private Identifier claimItems(Reference<Artifact> holder, Artifact definition, Map<Item, Identifier> claimed) {
         for (Reference<Item> item : BuiltInRegistries.ITEM.listElements().toList()) {
             ItemStack stack = new ItemStack(item.value());
@@ -232,17 +212,12 @@ public final class ServerCache {
         return this.triggerRulesBySignal.getOrDefault(signal, List.of());
     }
 
-    /**
-     * Every signal at least one rule reacts to, in a stable order, for command completion.
-     */
+    /** Every signal at least one rule reacts to, sorted, for command completion. */
     public List<Identifier> triggerSignals() {
         return this.triggerRulesBySignal.keySet().stream().sorted(Comparator.comparing(Identifier::toString)).toList();
     }
 
-    /**
-     * Gets the cultivation profile owning a validated realm. The profile is what a realm stage
-     * names, and it is what the chain belongs to; the value it stores is reached through it.
-     */
+    /** The aura profile owning a validated realm; the stored value is reached through it. */
     public Optional<Identifier> cultivationForRealm(Identifier realm) {
         return Optional.ofNullable(this.cultivationByRealm.get(realm));
     }
@@ -251,25 +226,17 @@ public final class ServerCache {
         return this.cultivationByRealm.containsKey(realm);
     }
 
-    /**
-     * Returns the zero-based rank of a realm in its validated cultivation chain.
-     */
+    /** Zero-based, counted from the first realm of the validated chain. */
     public Optional<Integer> rankForRealm(Identifier realm) {
         return Optional.ofNullable(this.rankByRealm.get(realm));
     }
 
-    /**
-     * Returns whether two realms share a cultivation chain and current is no lower than required.
-     */
     public boolean isRealmAtLeast(Identifier current, Identifier required) {
         Identifier currentCultivation = this.cultivationByRealm.get(current);
         return currentCultivation != null && currentCultivation.equals(this.cultivationByRealm.get(required))
                 && this.rankByRealm.getOrDefault(current, -1) >= this.rankByRealm.getOrDefault(required, Integer.MAX_VALUE);
     }
 
-    /**
-     * Gets the skill owning a validated mastery level.
-     */
     public Optional<Identifier> skillForStage(Identifier stage) {
         return Optional.ofNullable(this.skillByStage.get(stage));
     }
@@ -278,18 +245,11 @@ public final class ServerCache {
         return this.skillByStage.containsKey(stage);
     }
 
-    /**
-     * Returns the zero-based rank of a mastery level in its validated skill chain. The first level of
-     * a chain is {@code 0}, which is what lets a level be compared with another one.
-     */
     public Optional<Integer> rankForStage(Identifier stage) {
         return Optional.ofNullable(this.rankByStage.get(stage));
     }
 
-    /**
-     * Returns whether two mastery levels share a skill chain and current is no lower than required.
-     * This is the comparison every stage-gated rule uses.
-     */
+    /** The comparison every stage-gated rule uses. */
     public boolean isStageAtLeast(Identifier current, Identifier required) {
         Identifier currentSkill = this.skillByStage.get(current);
         return currentSkill != null && currentSkill.equals(this.skillByStage.get(required))
@@ -322,12 +282,9 @@ public final class ServerCache {
         ranks.putAll(chainRanks);
     }
 
-    /**
-     * Rebuilds validated linear skill chains. A chain is discovered from its {@code next_stage} links, not
-     * from the level a definition enters at, because several techniques may share a skill and enter it at
-     * different levels. A chain that cannot be walked is reported and left out, never indexed partially,
-     * since a half-ordered chain would compare levels that never were comparable.
-     */
+    // A chain is discovered from its next_stage links, not from the level a definition enters at, because
+    // several techniques may share a skill and enter it at different levels. A chain that cannot be walked is
+    // reported and left out, never indexed partially.
     private void rebuildSkillChains(List<String> problems) {
         Map<Identifier, SkillStage> stages = new LinkedHashMap<>();
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.SKILL_STAGE)
@@ -407,11 +364,8 @@ public final class ServerCache {
         this.rankByStage = ranks;
     }
 
-    /**
-     * A technique annotates one chain: its entry level is where a holder starts, every level after it must be
-     * configured, and nothing may be configured that it can never reach. A partially annotated chain is
-     * reported, so a holder can never reach a level nothing describes.
-     */
+    // A technique annotates one chain: a holder starts at its entry level and may be configured for every level
+    // after it. A partially annotated chain is reported, so nobody reaches a level nothing describes.
     private void validateTechniqueChains(Map<Identifier, Identifier> resolved, Map<Identifier, SkillStage> stages,
                                          List<String> problems) {
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TECHNIQUE).forEach(holder -> {

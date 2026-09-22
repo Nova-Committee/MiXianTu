@@ -13,10 +13,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Matches an artifact holding one named aura within a range.
- *
- * <p>The aura is named rather than implied because an artifact may hold several: "is it charged" is only a
- * question once it is known which charge is meant.</p>
+ * Matches an artifact holding one named aura within a range. The aura is named rather than implied because an
+ * artifact may hold several charges.
  */
 public record ArtifactEnergyRangeItemCondition(Holder<Aura> aura, NumberProvider min, NumberProvider max) implements ItemCondition {
     public static final MapCodec<ArtifactEnergyRangeItemCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

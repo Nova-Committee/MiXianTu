@@ -21,18 +21,11 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * What one stored value <em>is</em>, beyond the number it holds: the aura it carries and how it is used up, the
- * realm chain it opens, its passive regeneration and its conversions to and from cultivation progress.
- * <p>
- * A {@link Resource} is the value itself - bounds, icon, bars, colour - and this is the behaviour laid on one of
- * them, one to one, so a resource is either a plain counter or an aura. The name is the point: what an aura is
- * is decided here ({@code aura_type} marks the element, {@code burst_amount} how much a spirit burst carries),
- * and the ambient aura of the world ({@code mxt:aura_zone}, {@code mxt:block_aura}) is a separate thing that
- * happens to share the word.
- * <p>
- * Cultivation proper - realms, breakthrough, progress - is the process this file lets a value take part in; it
- * is not what this file is. That distinction is why the registry is {@code mxt:aura} and the state attachment a
- * player carries stays {@code mxt:cultivation}.
+ * What one stored value <em>is</em>, beyond the number it holds: the realm chain it opens, its passive
+ * regeneration and its conversions to and from cultivation progress. A {@link Resource} is the value itself
+ * (bounds, icon, bars, colour) and this is the behaviour laid on one of them, one to one, so a resource is either
+ * a plain counter or an aura. The ambient aura of the world ({@code mxt:aura_zone}, {@code mxt:block_aura}) is a
+ * separate thing that happens to share the word.
  */
 public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> firstRealm,
                    NumberProvider startExp, CultivateConditions startCultivateConditions,
@@ -61,10 +54,7 @@ public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> first
                 + this.firstRealm.map(HolderHelper::id).orElse(HolderHelper.EMPTY) + "]";
     }
 
-    /**
-     * One directional conversion between cultivation progress and the stored value.
-     * The per-tick limit applies to the consumed source value before the multiplier.
-     */
+    // The per-tick limit applies to the consumed source value before the multiplier.
     public record ResourceConversion(NumberProvider multiplier, NumberProvider maxPerTick) {
         public static final ResourceConversion DEFAULT = new ResourceConversion(new Constant(1.0D), new Constant(1.0D));
         public static final Codec<ResourceConversion> CODEC = RecordCodecBuilder.create(i -> i.group(

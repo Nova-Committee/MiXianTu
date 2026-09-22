@@ -11,9 +11,7 @@ import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Vanilla loot predicate for a physique, intentionally separate from elemental spirit roots.
- */
+// Physique is a separate system from elemental spirit roots; this condition asks for the former only.
 public record HasPhysiqueLootCondition(EntityTarget target, Holder<Physique> physique) implements LootItemCondition {
     public static final MapCodec<HasPhysiqueLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasPhysiqueLootCondition::target),

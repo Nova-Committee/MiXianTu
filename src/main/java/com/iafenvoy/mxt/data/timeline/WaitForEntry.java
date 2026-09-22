@@ -5,8 +5,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
- * Waits until a condition holds, re-read every tick. A condition that never holds parks the run on this
- * entry, which is the point: the timeline waits for the world instead of guessing a duration.
+ * Waits until a condition holds, re-read every tick. A condition that never holds parks the run on this entry for
+ * good, which is the point: the timeline waits for the world instead of guessing a duration.
  */
 public record WaitForEntry(EntityCondition condition) implements TimelineEntry {
     public static final MapCodec<WaitForEntry> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

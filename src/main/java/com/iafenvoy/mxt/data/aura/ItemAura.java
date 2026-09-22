@@ -14,12 +14,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Defines how an item supplies temporary aura fuel while an entity cultivates.
- * The definition is matched by item or item tag, like the currency registry.
- * <p>
- * {@code type} names the {@link Aura} the item carries rather than the value it is counted in: that is what
- * "which aura is this fuel" means, and the value - with its bounds - is read from {@code Aura#resource()}
- * wherever the pool is written.
+ * Defines how an item supplies temporary aura fuel while an entity cultivates; the definition is matched by item or
+ * item tag. {@code type} names the {@link Aura} the item carries rather than the value it is counted in, and the
+ * value - with its bounds - is read from {@code Aura#resource()} wherever the pool is written.
  */
 public record ItemAura(List<Entry> items, Holder<Aura> type, NumberProvider aura, NumberProvider consumeSpeed,
                        NumberProvider releaseSpeed,

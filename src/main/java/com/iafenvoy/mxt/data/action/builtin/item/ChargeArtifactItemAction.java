@@ -13,12 +13,8 @@ import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Charges one named aura of an artifact from a declared amount.
- *
- * <p>The aura is named because an artifact stores as many kinds as its definition lists, and "fill it up" is
- * only an instruction once the kind is known. The declared capacity is the fallback rather than the ceiling: a
- * stack whose definition names that aura is measured against what the definition declares, so this number only
- * decides how much a stack that no definition claims can hold.</p>
+ * Charges one named aura of an artifact. {@code capacity} is only the fallback for a stack no definition
+ * claims; a stack whose definition names the aura is measured against what the definition declares.
  */
 public record ChargeArtifactItemAction(Holder<Aura> aura, NumberProvider amount, NumberProvider capacity) implements ItemAction {
     public static final MapCodec<ChargeArtifactItemAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -29,8 +25,7 @@ public record ChargeArtifactItemAction(Holder<Aura> aura, NumberProvider amount,
 
     @Override
     public void execute(@NonNull ItemActionContext ctx) {
-        // Resolving the definition needs the acting entity's registries, so an action with no actor has nothing
-        // to charge against.
+        // Resolving the definition needs the registries of a level, so no actor means nothing to charge.
         if (ctx.holder() == null) return;
         FormulaContext context = ctx.formula();
         ArtifactService.addEnergy(ctx.holder().level().registryAccess(), ctx.stack(), this.aura,

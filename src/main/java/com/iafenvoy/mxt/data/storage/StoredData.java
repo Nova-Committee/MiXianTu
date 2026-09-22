@@ -6,7 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 /**
  * One stored value and the tick it was written. The value travels as the kind instance itself, so the store can
  * read and write it without knowing anything about it, and the write tick is the one thing every kind would
- * otherwise have to keep for itself.
+ * otherwise keep for itself.
  */
 public record StoredData(DataStorage value, long changedAt) {
     public static final Codec<StoredData> CODEC = RecordCodecBuilder.create(i -> i.group(

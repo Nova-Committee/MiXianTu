@@ -44,6 +44,8 @@ public final class CommandManager {
     public static void registerCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
+        // One builder instance per subtree serves both surfaces: attached under /mxt first, registered top-level
+        // only where the server option is on. MxtCommand.attach has to run before the root is registered.
         LiteralArgumentBuilder<CommandSourceStack> root = literal(MiXianTu.MOD_ID);
         for (Entry<LiteralArgumentBuilder<CommandSourceStack>, BooleanEntry> entry : NODES.entrySet())
             root.then(entry.getKey());

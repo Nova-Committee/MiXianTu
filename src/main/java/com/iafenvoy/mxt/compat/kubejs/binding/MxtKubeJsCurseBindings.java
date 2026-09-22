@@ -9,10 +9,8 @@ import net.minecraft.world.entity.Entity;
 import java.util.List;
 
 /**
- * Runtime curse operations exposed as {@code MxtCurses}.
- * <p>
- * A curse is kept alive by its sources, the same way an ability grant is: applying adds one, releasing drops one,
- * and the curse only leaves once no source holds it.
+ * Runtime curse operations exposed as {@code MxtCurses}. A curse is kept alive by its sources, the way an ability
+ * grant is: applying adds one, releasing drops one, and the curse only leaves once no source holds it.
  */
 public final class MxtKubeJsCurseBindings {
     @Info("Applies a curse through the standard transactional service, under the given source.")
@@ -67,10 +65,8 @@ public final class MxtKubeJsCurseBindings {
         return id;
     }
 
-    /**
-     * A source is an identifier now that abilities and curses share the ledger, so a script has to name itself the
-     * way every built-in source does.
-     */
+    // Sources are identifiers now that abilities and curses share the ledger, so a script names itself like any
+    // built-in source.
     private static Identifier sourceId(String raw) {
         Identifier id = raw == null ? null : Identifier.tryParse(raw);
         if (id == null) throw new IllegalArgumentException("Invalid curse source identifier: " + raw

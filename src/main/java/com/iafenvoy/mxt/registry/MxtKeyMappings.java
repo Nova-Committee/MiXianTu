@@ -39,7 +39,6 @@ public final class MxtKeyMappings {
     public static final KeyMappingHolder WHEEL = new KeyMappingHolder("key.mxt.wheel", Type.KEYSYM, InputConstants.KEY_R, CATEGORY);
     public static final KeyMappingHolder WHEEL_USE = new KeyMappingHolder("key.mxt.wheel_use", Type.KEYSYM, InputConstants.KEY_V, CATEGORY);
     public static final KeyMappingHolder WHEEL_CONFIGURATION = new KeyMappingHolder("key.mxt.wheel_configuration", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
-    /** The numpad's own left/right keys, so switching wheels never competes with the arrow keys. */
     public static final KeyMappingHolder WHEEL_PREVIOUS = new KeyMappingHolder("key.mxt.wheel_previous", Type.KEYSYM, InputConstants.KEY_LEFT, CATEGORY);
     public static final KeyMappingHolder WHEEL_NEXT = new KeyMappingHolder("key.mxt.wheel_next", Type.KEYSYM, InputConstants.KEY_RIGHT, CATEGORY);
 
@@ -68,7 +67,7 @@ public final class MxtKeyMappings {
         });
 
         // The sector is the key's own sort order inside the category: KeyMapping#compareTo compares the order
-        // before the translated name, so the twelve are listed 1..12 in every language without padding them.
+        // before the translated name, so the twelve are listed 1..12 in every language.
         for (int sector = 0; sector < WheelGeometry.SECTORS; sector++)
             WHEEL_SLOTS.add(new KeyMappingHolder("key.mxt.wheel_slot." + (sector + 1), Type.KEYSYM, InputConstants.UNKNOWN.getValue(), WHEEL_SLOT_CATEGORY, sector));
     }
@@ -95,10 +94,8 @@ public final class MxtKeyMappings {
             this(new KeyMapping(name, type, value, category));
         }
 
-        /**
-         * Same, plus the position this key takes inside its category. Without one, a category is sorted by the
-         * translated name ({@code KeyMapping#compareTo}), which puts "Slot 10" before "Slot 2".
-         */
+        // The order is what a category sorts by: without it KeyMapping#compareTo uses the translated name, which
+        // puts "Slot 10" before "Slot 2".
         public KeyMappingHolder(String name, Type type, int value, Category category, int order) {
             this(new KeyMapping(name, type, value, category, order));
         }

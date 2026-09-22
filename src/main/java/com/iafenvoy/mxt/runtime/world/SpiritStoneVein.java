@@ -13,6 +13,7 @@ import java.util.Set;
  * Calculates vein quality from connected spirit-stone ore blocks, rather than storing a fragile block-entity grade.
  */
 public final class SpiritStoneVein {
+    // Scan cap, so one huge vein cannot stall the server tick.
     private static final int MAX_SCAN = 4_096;
 
     private SpiritStoneVein() {

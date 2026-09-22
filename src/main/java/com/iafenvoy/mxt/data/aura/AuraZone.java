@@ -146,9 +146,7 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
         ).apply(i, Rules::new));
     }
 
-    /**
-     * Seeded 2D value noise; seed lives in datapacks so template distributions are reproducible.
-     */
+    // Seed lives in datapacks so template distributions are reproducible.
     public record Noise(boolean enabled, long seed, double scale, double amplitude) {
         public static final Noise NONE = new Noise(false, 0L, 640.0D, 0.0D);
         public static final Codec<Noise> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -168,9 +166,6 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
         ).apply(i, ClientRender::new));
     }
 
-    /**
-     * Optional Origins-style bars for the current chunk's stored and resolved aura values.
-     */
     public record ClientHud(Optional<Bar> storedAura, Optional<Bar> sensedConcentration) {
         public static final ClientHud NONE = new ClientHud(Optional.empty(), Optional.empty());
         public static final Codec<ClientHud> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -184,9 +179,7 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
         }
     }
 
-    /**
-     * One bar row on the aura HUD. The texture row also selects its icon, as in Origins.
-     */
+    // The texture row (bar_index) also selects the icon.
     public record Bar(double maximum, int barIndex, boolean inverted, Anchor anchor, int order) {
         public static final Codec<Bar> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.DOUBLE.fieldOf("maximum").forGetter(Bar::maximum),

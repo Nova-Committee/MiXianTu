@@ -13,12 +13,10 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Decides where travellers arrive.
- *
- * <p>A definition lists weighted landing options: one with a {@code pos} is a fixed gate, one without is a
- * random spot inside {@code random_center}/{@code random_radius}. Whichever is picked becomes the instance
- * anchor, so later visitors reach the same place instead of scattering across the realm, and arrivals in the
- * same visit are spread around that anchor.
+ * Decides where travellers arrive. A definition lists weighted landing options: one with a {@code pos} is a
+ * fixed gate, one without is a random spot inside {@code random_center}/{@code random_radius}. Whichever is
+ * picked becomes the instance anchor, so later visitors reach the same place, and arrivals in the same visit
+ * are spread around it.
  */
 public final class RealmEntryLocator {
     private static final double DEFAULT_RADIUS = 64.0D;
@@ -26,10 +24,8 @@ public final class RealmEntryLocator {
     private RealmEntryLocator() {
     }
 
-    /**
-     * The planned landing of a fresh instance. The height is a first guess from the terrain as it is before
-     * the realm is furnished; {@link #finish} corrects it once structures are in place.
-     */
+    // The height is a first guess from the terrain as it is before the realm is furnished; finish() corrects it
+    // once structures are in place.
     public static Landing plan(ServerLevel level, RealmRecord record) {
         RealmInstance definition = record.instance();
         RandomSource random = RandomSource.create(record.seed());
@@ -40,18 +36,13 @@ public final class RealmEntryLocator {
         return new Landing(point, position);
     }
 
-    /**
-     * The final anchor. An explicit y is honoured, a random landing is dropped onto whatever now occupies the
-     * chosen column - the structures that were just placed included.
-     */
+    // An explicit y is honoured; a random landing is dropped onto whatever now occupies the chosen column,
+    // the structures that were just placed included.
     public static Vec3 finish(ServerLevel level, Landing landing) {
         if (landing.point() != null && landing.point().pos().isPresent()) return landing.position();
         return new Vec3(landing.position().x, surface(level, landing.position().x, landing.position().z), landing.position().z);
     }
 
-    /**
-     * Where one member of a visit lands, and which way they face.
-     */
     public static Arrival arrival(ServerLevel level, RealmRecord record, int slot, float fallbackYaw, float fallbackPitch) {
         Vec3 anchor = record.anchor().orElseGet(() -> new Vec3(0.5D, 0.0D, 0.5D));
         RandomSource random = RandomSource.create(record.seed());
@@ -83,9 +74,7 @@ public final class RealmEntryLocator {
         return new Vec3(x, surface(level, x, z), z);
     }
 
-    /**
-     * The height of the first blocking block, or the bottom of the world for a realm with no floor at all.
-     */
+    // The height of the first blocking block; the world floor for a realm with no floor at all.
     public static double surface(ServerLevel level, double x, double z) {
         BlockPos column = new BlockPos(Mth.floor(x), level.getMinY(), Mth.floor(z));
         return level.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ());

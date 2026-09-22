@@ -14,16 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The client half of {@link PlayerNames}: the players the current connection lists, plus whatever the server has
- * told this client about the rest.
- *
- * <p>A tooltip is drawn while the game runs, so a name has to come from somewhere that is already here: the
- * connection's player list answers for anyone online, and everything else is asked of the server once and then
- * remembered - see {@link #remember}. Until the answer arrives the caller shows what it has (the id), and the
- * next frame that draws the tooltip shows the name instead, because a tooltip is rebuilt rather than cached.</p>
- *
- * <p>This class is kept apart so a dedicated server never loads it: {@code net.minecraft.client.Minecraft} does
- * not exist there, and the caller in {@link PlayerNames} asks for it only after checking the distribution, so
- * the class is resolved at that call rather than when the common class loads.</p>
+ * told this client about the rest, asked once and then remembered because a tooltip cannot wait for an answer.
+ * Kept apart so a dedicated server never loads it, where {@code Minecraft} does not exist.
  */
 public final class ClientPlayerNames {
     /** What the server has answered so far, including "no such player" - a question is not asked twice. */

@@ -16,29 +16,24 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The artifact capabilities one entity carries that need a key - every switch and every one-shot an artifact
- * declares - read the same way on both sides: the client draws them, the server re-reads them before honouring a
- * trigger, so "this cell is a capability the player has" means one thing.
+ * The artifact capabilities one entity carries that need a key, read the same way on both sides: the client draws
+ * them, the server re-reads them before honouring a trigger.
  *
- * <p>Nothing here is stored. A capability is an entry of an artifact definition, and which artifacts an entity
- * carries is read from the stacks themselves - the same reading {@link ArtifactService} does for abilities - so
- * putting the artifact away takes its cells off the wheel in the same breath, exactly as it takes its skills.</p>
+ * <p>Nothing is stored: a capability is an entry of a definition and which artifacts an entity carries is read
+ * from the stacks themselves, so putting an artifact away takes its cells off the wheel exactly as it takes its
+ * skills.
  */
 public final class ArtifactToggleService {
     private ArtifactToggleService() {
     }
 
-    /**
-     * One capability a player carries: the ability, the stack that declares it and the definition behind both.
-     */
     public record Toggle(LivingEntity holder, ItemStack stack, Holder<Artifact> artifact,
                          ToggableArtifactAbility ability) {
-        /** The artifact and key this cell names, which is how the wheel tells two capabilities of one apart. */
+        // The artifact and key this cell names, which is how the wheel tells two capabilities of one apart.
         public ArtifactCapability capability() {
             return new ArtifactCapability(HolderHelper.id(this.artifact), this.ability.key());
         }
 
-        /** The id the wheel addresses the cell by. */
         public Identifier id() {
             return this.capability().id();
         }
@@ -47,25 +42,20 @@ public final class ArtifactToggleService {
             return new ArtifactToggleContext(this.holder, this.stack, this.artifact);
         }
 
-        /** The state it is in, when it has one; empty for a one-shot activation that leaves nothing on. */
+        // Empty for a one-shot activation that leaves nothing on.
         public Optional<Boolean> state() {
             return this.ability.state(this.context());
         }
 
-        /** Presses it; the one call the wheel makes on the server. */
+        // The one call the wheel makes on the server.
         public ToggableArtifactAbility.Result activate() {
             return this.ability.activate(this.context());
         }
     }
 
-    /**
-     * Every capability the given stacks declare, in id order and without duplicates: the same capability of the
-     * same artifact in two slots is one cell, because the wheel names the artifact rather than the slot it happens
-     * to be in.
-     *
-     * <p>The list is deliberately not cut to one page - how many entries fit is the framework's business, and all
-     * the server asks of it is whether one id is in it.</p>
-     */
+    // In id order and without duplicates: the wheel names the artifact rather than the slot, so the same
+    // capability of the same artifact in two slots is one cell. Deliberately not cut to one page - how many
+    // entries fit is the framework's business, and all the server asks is whether one id is in it.
     public static List<Toggle> of(LivingEntity holder, List<ItemStack> stacks) {
         Map<Identifier, Toggle> found = new LinkedHashMap<>();
         for (ItemStack stack : stacks) {
@@ -84,7 +74,7 @@ public final class ArtifactToggleService {
                 .toList();
     }
 
-    /** One capability out of a list the caller has already read, which is how a trigger finds what it was sent. */
+    // One capability out of a list the caller has already read, which is how a trigger finds what it was sent.
     public static Optional<Toggle> find(List<Toggle> toggles, Identifier id) {
         return toggles.stream().filter(toggle -> toggle.id().equals(id)).findFirst();
     }

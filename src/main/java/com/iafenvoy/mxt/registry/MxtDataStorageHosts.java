@@ -13,9 +13,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * The bridge a data pack needs to reach storage: which families keep state at all, and where the values of one
- * family live on an entity. A data pack can only name a registry, so one line per family is what connects the
- * registry to the attachment that holds its values.
+ * The bridge from a data pack to storage: a data pack can only name a registry, so one line per family connects
+ * that registry to the attachment that holds an entity's values for it.
  */
 public final class MxtDataStorageHosts {
     private static final Map<Identifier, Function<Entity, DataStorageHolder>> BY_REGISTRY = new LinkedHashMap<>();
@@ -27,25 +26,15 @@ public final class MxtDataStorageHosts {
     private MxtDataStorageHosts() {
     }
 
-    /**
-     * Declares that the content of this registry keeps state, and where an entity's values for it live.
-     */
     public static <T extends DataStorageDeclaration> void register(ResourceKey<? extends Registry<T>> registry, Function<Entity, DataStorageHolder> storage) {
         BY_REGISTRY.put(registry.identifier(), storage);
     }
 
-    /**
-     * The holder one family keeps its values in on this entity, or empty when that family keeps no state.
-     */
     public static Optional<DataStorageHolder> holder(Entity entity, Identifier family) {
         return Optional.ofNullable(BY_REGISTRY.get(family)).map(access -> access.apply(entity));
     }
 
-    /**
-     * Resolves one host definition, so a writer can check which kinds it declares. A family that keeps no
-     * storage is answered without touching the registry access, which would throw for a registry that does
-     * not exist.
-     */
+    // Checked before any registry lookup: a family that keeps no storage names a registry that does not exist.
     public static Optional<DataStorageDeclaration> definition(Identifier family, Identifier id) {
         if (!BY_REGISTRY.containsKey(family)) return Optional.empty();
         ResourceKey<Registry<Object>> registry = ResourceKey.createRegistryKey(family);

@@ -68,18 +68,14 @@ public final class MxtKubeJsEvents {
         if (current != null) current.postAura(event);
     }
 
-    /**
-     * Forwards a published MXT lifecycle event that has no specialised Java listener API.
-     */
+    // Forwards a published MXT lifecycle event that has no specialised Java listener API.
     public static void post(String type, Event event) {
         Dispatcher current = dispatcher;
         if (current != null) current.post(type, event);
     }
 
-    /**
-     * Forwards a friend judgement, which is asked far more often than a lifecycle event and therefore has
-     * its own entry point: the KubeJS side is expected to skip the work when no script listens.
-     */
+    // A friend judgement is asked far more often than a lifecycle event, so it has its own entry point: the
+    // KubeJS side is expected to skip the work when no script listens.
     public static void postFriendRelation(Relation event) {
         Dispatcher current = dispatcher;
         if (current != null) current.postFriendRelation(event);

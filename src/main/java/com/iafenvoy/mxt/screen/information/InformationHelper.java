@@ -19,20 +19,11 @@ public final class InformationHelper {
         return values.stream().map(holder -> DefinitionText.name(holder, category).getString()).reduce((a, b) -> a + ", " + b).orElse("-");
     }
 
-    /**
-     * How wide an information row's two columns are.
-     *
-     * @param nameWidth  the label column, never wider than {@code preferredNameWidth}
-     * @param valueWidth the space left for the value
-     */
     public record Columns(int nameWidth, int valueWidth) {
     }
 
-    /**
-     * Splits the width available to a row into a label column and a value column. The value is data and the
-     * label can be abbreviated and tooltipped, so a long value narrows the label instead of being cut off;
-     * {@code preferredNameWidth} wins whenever nothing has to give, which keeps the values aligned.
-     */
+    // The value is data and the label can be abbreviated and tooltipped, so a long value narrows the label
+    // instead of being cut off; preferredNameWidth wins whenever nothing has to give, keeping values aligned.
     public static Columns columns(int availableWidth, int preferredNameWidth, int valueWidth) {
         int width = Math.max(1, availableWidth);
         int wanted = Math.max(0, Math.min(valueWidth, width));

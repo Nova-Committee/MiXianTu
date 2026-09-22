@@ -28,9 +28,7 @@ public abstract class TribulationEvent extends Event {
         return this.tribulation;
     }
 
-    /**
-     * Fired before a run is installed. Cancelling it refuses the attempt and leaves nothing behind.
-     */
+    // Cancelling refuses the attempt and leaves nothing behind.
     public static final class StartPre extends TribulationEvent implements ICancellableEvent {
         public StartPre(TribulationAttachment data, Holder<Tribulation> tribulation) {
             super(data, tribulation);
@@ -43,9 +41,6 @@ public abstract class TribulationEvent extends Event {
         }
     }
 
-    /**
-     * What the two events about one timeline entry have in common: which beat it is, and the beat itself.
-     */
     public abstract static class EntryEvent extends TribulationEvent {
         private final int index;
         private final TimelineEntry entry;
@@ -66,28 +61,19 @@ public abstract class TribulationEvent extends Event {
         }
     }
 
-    /**
-     * Fired before an entry consumes its first tick. Cancelling it skips that entry, so a listener can drop a
-     * beat without stalling the run.
-     */
+    // Cancelling skips that entry, so a listener can drop a beat without stalling the run.
     public static final class EntryPre extends EntryEvent implements ICancellableEvent {
         public EntryPre(TribulationAttachment data, Holder<Tribulation> tribulation, int index, TimelineEntry entry) {
             super(data, tribulation, index, entry);
         }
     }
 
-    /**
-     * Fired after an entry finishes, before the consumer moves past it.
-     */
     public static final class EntryPost extends EntryEvent {
         public EntryPost(TribulationAttachment data, Holder<Tribulation> tribulation, int index, TimelineEntry entry) {
             super(data, tribulation, index, entry);
         }
     }
 
-    /**
-     * Fired once the timeline is exhausted and the run's success behaviour has run.
-     */
     public static final class Complete extends TribulationEvent {
         public Complete(TribulationAttachment data, Holder<Tribulation> tribulation) {
             super(data, tribulation);

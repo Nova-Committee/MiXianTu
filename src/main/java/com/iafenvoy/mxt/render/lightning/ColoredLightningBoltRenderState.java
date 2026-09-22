@@ -13,8 +13,6 @@ public class ColoredLightningBoltRenderState extends LightningBoltRenderState {
     public int color = ColoredLightningBolt.DEFAULT_COLOR;
     public float alpha = ColoredLightningBolt.DEFAULT_ALPHA;
     public float thickness = ColoredLightningBolt.DEFAULT_THICKNESS;
-    /**
-     * Empty for a flat {@link #color}; otherwise the gradient, first entry at the top of the strand.
-     */
+    // Empty for a flat colour; otherwise the gradient, first entry at the top of the strand.
     public List<Integer> palette = List.of();
 }

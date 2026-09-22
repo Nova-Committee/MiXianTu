@@ -48,7 +48,6 @@ public record AbilityWheelEntry(Identifier id, Ability definition) implements Wh
         return ACCENT;
     }
 
-    /** Ticks of cooldown left, or 0 when the player no longer holds the ability and so has none to report. */
     @Override
     public long cooldownTicks(Player player) {
         if (player == null) return 0L;
@@ -60,7 +59,6 @@ public record AbilityWheelEntry(Identifier id, Ability definition) implements Wh
         return Math.max(0L, holder.cooldowns().getOrDefault(ability, 0L) - player.level().getGameTime());
     }
 
-    /** Kind, name and the definition's numbers; lines whose value is zero are left out. */
     @Override
     public List<Component> tooltip(Player player) {
         List<Component> lines = new ArrayList<>(5);

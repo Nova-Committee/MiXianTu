@@ -27,14 +27,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * The talismans written onto one carrier, in the order they were appended, and how this carrier answers being
- * filled. An empty list is the blank carrier a fresh talisman item starts as; writing a talisman appends its
- * definition rather than replacing what is already there, so one carrier can hold several.
- * <p>
- * The mode is a property of the stack rather than of any definition: what a carrier does belongs to the object
- * that was written and charged, and the same inscriptions can be carried by one stack that fires on its own and
- * another that waits to be told. {@link TriggerMode#FIRE} is the default, which also makes it what every carrier
- * written before this field existed decodes as. See {@code runtime/talisman} for what the two modes do.
+ * The talismans written onto one carrier, in append order, and how this carrier answers being filled. Writing a
+ * talisman appends rather than replaces, so one carrier can hold several; an empty list is a blank carrier. The
+ * mode lives on the stack, not on any definition, and {@link TriggerMode#FIRE} is the default - which is also
+ * what every carrier written before this field existed decodes as.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public record TalismanComponent(List<Holder<Talisman>> talismans, TriggerMode mode) implements TooltipProvider {
@@ -45,10 +41,8 @@ public record TalismanComponent(List<Holder<Talisman>> talismans, TriggerMode mo
             TriggerMode.CODEC.optionalFieldOf("mode", TriggerMode.FIRE).forGetter(TalismanComponent::mode)
     ).apply(i, TalismanComponent::new));
 
-    /**
-     * What a carrier does when it is full. {@code FIRE} fires the moment the bill is paid, which is what makes a
-     * carrier a one-shot; {@code STORE} only accumulates, and waits to be fired by a hand or to be switched back.
-     */
+    // FIRE fires the moment the bill is paid, which is what makes a carrier a one-shot; STORE only accumulates
+    // and waits to be fired by a hand or switched back.
     public enum TriggerMode {
         FIRE("fire"),
         STORE("store");
@@ -69,28 +63,19 @@ public record TalismanComponent(List<Holder<Talisman>> talismans, TriggerMode mo
             return this.key;
         }
 
-        /**
-         * The mode that is not this one - what a toggle switches to.
-         */
         public TriggerMode other() {
             return this == FIRE ? STORE : FIRE;
         }
     }
 
-    /**
-     * The same list with one more talisman at the end. The appended definition is kept as written: a
-     * carrier may hold the same talisman twice, which is what makes "write it again" a no-op the crafting
-     * loop can decide on rather than a rule hidden here.
-     */
+    // The appended definition is kept as written: a carrier may hold the same talisman twice, so "write it again"
+    // is a no-op the crafting loop decides on rather than a rule hidden here.
     public TalismanComponent appended(Holder<Talisman> talisman) {
         List<Holder<Talisman>> appended = new ArrayList<>(this.talismans);
         appended.add(talisman);
         return new TalismanComponent(List.copyOf(appended), this.mode);
     }
 
-    /**
-     * The same inscriptions in the other mode.
-     */
     public TalismanComponent withMode(TriggerMode mode) {
         return new TalismanComponent(this.talismans, mode);
     }

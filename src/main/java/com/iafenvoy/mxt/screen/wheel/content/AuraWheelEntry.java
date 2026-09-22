@@ -57,7 +57,6 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
         return Math.max(0L, cooldowns.cooldowns().getOrDefault(this.aura, 0L) - player.level().getGameTime());
     }
 
-    /** Kind, name, burst amount, current value and element; no value line until the client is synced. */
     @Override
     public List<Component> tooltip(Player player) {
         List<Component> lines = new ArrayList<>(6);

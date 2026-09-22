@@ -8,20 +8,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.border.WorldBorder;
 
 /**
- * Writes a realm definition's border onto an instance dimension.
- *
- * <p>The center is read as {@code [x, z]}: a {@code Vec2} stores the second component in its {@code y} field.
+ * Writes a realm definition's border onto an instance dimension. The center is read as {@code [x, z]}: a
+ * {@code Vec2} stores the second component in its {@code y} field.
  */
 public final class RealmBorderService {
     private RealmBorderService() {
     }
 
-    /**
-     * @param forceDefault when true an omitted {@code border} still applies the vanilla default, because a
-     *                     runtime dimension built on derived level data would otherwise inherit the overworld
-     *                     border. An {@code existing} realm passes false: it reuses a real dimension whose
-     *                     border is not ours to reset.
-     */
+    // forceDefault: an omitted border still applies the vanilla default, because a runtime dimension built on
+    // derived level data would inherit the overworld border. An existing realm passes false; its border is not ours.
     public static void apply(ServerLevel level, RealmInstance definition, boolean forceDefault) {
         if (!forceDefault && definition.border().isEmpty()) return;
         Border settings = definition.effectiveBorder();

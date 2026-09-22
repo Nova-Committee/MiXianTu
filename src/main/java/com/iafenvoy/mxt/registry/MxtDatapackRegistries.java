@@ -47,7 +47,8 @@ import java.util.stream.Stream;
 
 /**
  * Native Minecraft datapack registries. Reloading and client synchronisation belong to the vanilla registry
- * system; this class never stores a registry snapshot.
+ * system, so this class never stores a registry snapshot; the {@code mxt:disabled} tag turns an entry off
+ * without deleting it, and every read here filters on it.
  */
 @EventBusSubscriber
 public final class MxtDatapackRegistries {
@@ -105,17 +106,11 @@ public final class MxtDatapackRegistries {
         return isDisabled(key, id) ? Optional.empty() : registry(key).getOptional(id);
     }
 
-    /**
-     * Returns a directly held enabled datapack value without a second registry lookup.
-     */
     public static <T> Optional<T> get(ResourceKey<? extends Registry<T>> key, Holder<T> holder) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return holder.is(disabled) ? Optional.empty() : Optional.of(holder.value());
     }
 
-    /**
-     * Resolves an enabled registry entry while retaining its stable holder reference.
-     */
     public static <T> Optional<Reference<T>> holder(ResourceKey<? extends Registry<T>> key, Identifier id) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return registry(key).get(ResourceKey.create(key, id)).filter(holder -> !holder.is(disabled));
@@ -126,46 +121,31 @@ public final class MxtDatapackRegistries {
         return registry(key).listElements().filter(holder -> !holder.is(disabled));
     }
 
-    /**
-     * Resolves one entry without judging whether it is disabled, so a caller can tell a definition that was
-     * disabled from one that was deleted. Returns an empty result when no server is running, since there are no
-     * datapack registries to read then.
-     */
+    // Deliberately does not judge whether the entry is disabled, so a caller can tell a definition that was
+    // disabled from one that was deleted; empty when no server is running, since there is no registry then.
     public static <T> Optional<Reference<T>> rawHolder(ResourceKey<? extends Registry<T>> key, Identifier id) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return Optional.empty();
         return server.registryAccess().lookupOrThrow(key).get(ResourceKey.create(key, id));
     }
 
-    /**
-     * Reads enabled entries from either a server or the client-synchronised registry access.
-     */
     public static <T> Stream<Reference<T>> holders(RegistryAccess access, ResourceKey<? extends Registry<T>> key) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return access.lookupOrThrow(key).listElements().filter(holder -> !holder.is(disabled));
     }
 
-    /**
-     * Reads enabled entries from a client-synchronised datapack registry lookup.
-     */
     public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return access.lookupOrThrow(key).listElements().filter(holder -> !holder.is(disabled));
     }
 
-    /**
-     * Resolves one enabled entry from a client-synchronised datapack registry lookup. Client code must use this
-     * rather than {@link #holder(ResourceKey, Identifier)}: that one reads the server's registries, which exist
-     * on a client only while it runs an integrated server.
-     */
+    // Client code must use this rather than holder(ResourceKey, Identifier): that one reads the server's
+    // registries, which exist on a client only while it runs an integrated server.
     public static <T> Optional<Reference<T>> holder(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return access.lookupOrThrow(key).get(ResourceKey.create(key, id)).filter(holder -> !holder.is(disabled));
     }
 
-    /**
-     * Resolves an enabled entry from a client-synchronised datapack registry lookup.
-     */
     public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
         TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
         return access.lookupOrThrow(key).get(ResourceKey.create(key, id))
@@ -186,9 +166,6 @@ public final class MxtDatapackRegistries {
         return holder.is(TagKey.create(key, DISABLED_TAG));
     }
 
-    /**
-     * Checks a native datapack tag on one entry of a custom dynamic registry.
-     */
     public static <T> boolean isTagged(ResourceKey<? extends Registry<T>> key, Identifier id, Identifier tagId) {
         TagKey<T> tag = TagKey.create(key, tagId);
         return registry(key).get(ResourceKey.create(key, id)).map(holder -> holder.is(tag)).orElse(false);

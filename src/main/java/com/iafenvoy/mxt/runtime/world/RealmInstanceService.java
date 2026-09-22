@@ -35,11 +35,10 @@ import java.util.UUID;
 
 /**
  * Authoritative realm membership and cross-dimension travel.
- *
- * <p>Entering resolves to an instance first and to a dimension second: an existing instance is joined when it
- * has room, otherwise a new instance dimension is created until the definition's {@code max_instances} is
- * reached. The dimension is created before anybody arrives so that structures are placed and the landing spot
- * is chosen on finished terrain.
+ * <p>
+ * Entering resolves to an existing instance when it has room, otherwise to a new instance dimension until
+ * {@code max_instances} is reached. The dimension is created before anybody arrives, so structures are placed
+ * and the landing spot is chosen on finished terrain.
  */
 public final class RealmInstanceService {
     private RealmInstanceService() {
@@ -112,9 +111,6 @@ public final class RealmInstanceService {
         return Result.entered();
     }
 
-    /**
-     * Leaves the realm the player is inside, honouring the definition's exit condition.
-     */
     public static Result exit(ServerPlayer player) {
         RealmTravelAttachment travel = player.getData(MxtAttachments.REALM_TRAVEL);
         Holder<RealmInstance> definition = travel.realm().orElse(null);
@@ -125,11 +121,8 @@ public final class RealmInstanceService {
         return leave(player) ? Result.exited() : Result.rejected(Failure.MISSING_ORIGIN);
     }
 
-    /**
-     * Returns a player to the exact origin captured when they entered. This is also the exit used by an expiry
-     * and by an administrator, which is why it never consults the exit condition: a definition must not be able
-     * to lock a player inside a realm forever.
-     */
+    // Also the exit used by an expiry and by an administrator, which is why it never consults the exit
+    // condition: a definition must not be able to lock a player inside a realm forever.
     private static boolean leave(ServerPlayer player) {
         RealmTravelAttachment travel = player.getData(MxtAttachments.REALM_TRAVEL);
         Holder<RealmInstance> definition = travel.realm().orElse(null);
@@ -153,9 +146,6 @@ public final class RealmInstanceService {
         return true;
     }
 
-    /**
-     * Ends an instance whose clock ran out, sending everyone home.
-     */
     public static boolean expire(MinecraftServer server, RealmRecord record, long gameTime) {
         if (!record.expired(gameTime)) return false;
         for (UUID member : List.copyOf(record.members())) {
@@ -174,9 +164,7 @@ public final class RealmInstanceService {
         return true;
     }
 
-    /**
-     * Ends an instance by force, discarding its terrain even when it was claimed.
-     */
+    // By force: the terrain is discarded even when the instance was claimed.
     public static boolean destroy(MinecraftServer server, RealmRecord record) {
         for (UUID member : List.copyOf(record.members())) {
             ServerPlayer player = server.getPlayerList().getPlayer(member);
@@ -191,10 +179,8 @@ public final class RealmInstanceService {
         return true;
     }
 
-    /**
-     * Restores a traveller whose instance no longer holds them, which is what a destroyed or expired realm
-     * leaves behind for a player who was offline at the time.
-     */
+    // For a traveller whose instance no longer holds them: what a destroyed or expired realm leaves behind for
+    // a player who was offline at the time.
     public static boolean returnIfOrphaned(ServerPlayer player) {
         RealmTravelAttachment travel = player.getData(MxtAttachments.REALM_TRAVEL);
         if (!travel.active()) return false;
@@ -207,10 +193,8 @@ public final class RealmInstanceService {
         return true;
     }
 
-    /**
-     * Plans an instance of a definition without opening it: identity, seed and clock only. This is the part of
-     * an entry that needs no player, so a script can create a realm and decide separately who goes in.
-     */
+    // Identity, seed and clock only: the part of an entry that needs no player, so a script can create a realm
+    // and decide separately who goes in.
     public static RealmRecord plan(Holder<RealmInstance> definition, int index, long seed, long gameTime) {
         RealmInstance value = definition.value();
         ResourceKey<Level> dimension = RealmGenerationService.dimensionKey(HolderHelper.id(definition), value.generation(), index);
@@ -219,11 +203,8 @@ public final class RealmInstanceService {
                 Optional.empty(), false, List.of());
     }
 
-    /**
-     * Registers a freshly resolved instance and makes sure its dimension exists and is furnished. This is the
-     * half of an entry that does not need a player, so scripts and diagnostics can open a realm without
-     * sending anybody into it.
-     */
+    // The half of an entry that does not need a player, so scripts and diagnostics can open a realm without
+    // sending anybody into it.
     public static Optional<RealmRecord> open(MinecraftServer server, RealmRecord record) {
         // The table is written before the level is built: the seed mixin and the registry both answer for this
         // dimension while it is being constructed.
@@ -242,10 +223,8 @@ public final class RealmInstanceService {
         return RealmInstanceRegistry.replace(current);
     }
 
-    /**
-     * What happens when the last member leaves: a claimable realm and one built on an existing dimension keep
-     * their terrain and are merely unloaded, while a plain instance is destroyed with its region files.
-     */
+    // When the last member leaves: a claimable realm and one built on an existing dimension keep their terrain
+    // and are merely unloaded, while a plain instance is destroyed with its region files.
     private static void retire(MinecraftServer server, RealmRecord record) {
         boolean keep = record.persists();
         if (keep) {

@@ -34,9 +34,7 @@ public abstract class SoulEvent extends Event {
         }
     }
 
-    /**
-     * Fired by an explicit rescue or resurrection integration before soul state is cleared.
-     */
+    // Fired by an explicit rescue or resurrection integration before soul state is cleared.
     public static final class ReclaimPre extends SoulEvent implements ICancellableEvent {
         public ReclaimPre(Entity entity, SoulAttachment soul) {
             super(entity, soul);

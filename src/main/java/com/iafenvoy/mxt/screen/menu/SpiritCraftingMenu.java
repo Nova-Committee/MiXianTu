@@ -35,10 +35,8 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 /**
- * A vanilla-sized crafting menu restricted to the two spirit recipe types. The table is reached through
- * {@link ContainerLevelAccess}, so the server resolves the block on demand and the client gets
- * {@link ContainerLevelAccess#NULL}. The recipe is matched here while the aura buffer lives on the block,
- * so the server half alone publishes the progress rows.
+ * A vanilla-sized crafting menu restricted to the two spirit recipe types. The recipe is matched here while
+ * the aura buffer lives on the block, so the server half alone publishes the progress rows.
  */
 public final class SpiritCraftingMenu extends AbstractContainerMenu {
     private static final int MAX_PROGRESS_ENTRIES = 8;
@@ -94,19 +92,14 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         this.updateResult();
     }
 
-    /**
-     * Runs one action against the table, or nothing when there is none: the block was broken under an open
-     * menu, the chunk is unloaded, or this is the client half.
-     */
+    // Runs the action against the table, or does nothing when there is none: broken block, unloaded chunk, or
+    // the client half.
     private void withTable(Consumer<SpiritCraftingTableBlockEntity> action) {
         this.access.execute((level, pos) -> {
             if (level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table) action.accept(table);
         });
     }
 
-    /**
-     * Runs one read against the table, or returns {@code fallback} when there is none.
-     */
     private <T> T fromTable(Function<SpiritCraftingTableBlockEntity, T> reader, T fallback) {
         return this.access
                 .evaluate((level, pos) -> level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table
@@ -143,10 +136,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         super.broadcastChanges();
     }
 
-    /**
-     * Re-matches the grid, hands the matched costs to the block's intake window and republishes the rows; on
-     * the client {@link #findRecipe} needs a server level, so the arrays keep what the server published.
-     */
     private void updateResult() {
         this.current = this.findRecipe();
         Map<Holder<Aura>, Integer> costs = this.current == null ? Map.of() : this.current.costs();

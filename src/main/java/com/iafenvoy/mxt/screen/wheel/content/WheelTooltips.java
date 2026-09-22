@@ -23,9 +23,7 @@ import java.util.Locale;
  * client's context, so a tooltip shows this player's numbers, and durations use {@link WheelDuration}.
  */
 final class WheelTooltips {
-    /**
-     * How values are separated inside one line.
-     */
+    // How values are separated inside one line.
     private static final Component SEPARATOR = Component.literal("、");
 
     private WheelTooltips() {
@@ -38,14 +36,8 @@ final class WheelTooltips {
         return Component.literal(String.format(Locale.ROOT, "%.1f", value));
     }
 
-    /**
-     * Only {@link ResourceCost} is spelled out; other cost types become "something else", never a guess.
-     *
-     * <p>Each cost is evaluated in the context of the resource it charges, which is the context the server
-     * charges it in: a cost written as {@code "8 + level"} reads the realm rank of <em>that</em> resource, and a
-     * plain entity context has no realm to read - which is why this line used to print {@code 8} and log a
-     * formula warning every frame the wheel was open.</p>
-     */
+    // Only ResourceCost is spelled out - other types become "something else", never a guess - and each is
+    // evaluated in the context of the resource it charges, which is the context the server charges it in.
     static Component costs(List<Cost> costs, Player player) {
         FormulaContext base = FormulaContext.of(player);
         List<Component> parts = new ArrayList<>(costs.size());

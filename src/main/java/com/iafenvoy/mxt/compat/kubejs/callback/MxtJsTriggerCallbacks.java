@@ -14,15 +14,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Runtime trigger subscriptions created by server scripts. Nothing here is saved: an entity leaving the
- * world, a server stop, a data pack reload and a script reload all drop them. {@link TriggerDispatcher} is
- * the single source of truth for what exists; this class only remembers which owners registered.
+ * Runtime trigger subscriptions created by server scripts. Nothing here is saved: an entity leaving the world, a
+ * server stop, a data pack reload and a script reload all drop them. {@link TriggerDispatcher} stays the single
+ * source of truth for what exists; this class only remembers which owners registered.
  */
 public final class MxtJsTriggerCallbacks {
-    /**
-     * Module name used with {@link TriggerDispatcher}, keeping script subscriptions separate from the
-     * ability and cultivation modules.
-     */
+    // Keeps script subscriptions separate from the ability and cultivation modules in TriggerDispatcher.
     public static final String MODULE = "kubejs";
 
     private static final Set<UUID> OWNERS = ConcurrentHashMap.newKeySet();
@@ -61,10 +58,8 @@ public final class MxtJsTriggerCallbacks {
         return TriggerDispatcher.subscriptionCount(entity.getUUID(), MODULE);
     }
 
-    /**
-     * Called when server scripts are re-evaluated, because the callback objects they reference are
-     * replaced by the new evaluation.
-     */
+    // Called when server scripts are re-evaluated: the callback objects they reference are replaced by the new
+    // evaluation.
     public static void clear() {
         OWNERS.forEach(owner -> TriggerDispatcher.clearModule(owner, MODULE));
         OWNERS.clear();

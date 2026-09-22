@@ -13,21 +13,11 @@ import net.minecraft.world.entity.LivingEntity;
 import java.util.List;
 
 /**
- * The resource bars about whatever the crosshair is on, split into the two rows the original overlay drew:
- * the target row near the top of the screen and the boss row below it.
- *
- * <p>Like the two columns, these are HUD elements drawn by the framework's single renderer - that is the
- * point of them being entries at all. Unlike them they are <strong>not movable</strong>: they belong to the
- * entity being looked at rather than to the player's own arrangement, so there is nothing for the player to
- * decide and nothing to store.</p>
- *
- * <p>{@link #visible()} answers "is there something to show right now" rather than "did the player switch
- * this on". That is what keeps the row out of the layout file: visibility is part of what an entry stores,
- * and nothing here ever calls {@link #setVisible(boolean)}, so a row that appears and disappears never
- * writes a placement.</p>
+ * The bars about whatever the crosshair is on, as the original overlay's two rows: the target row near the top
+ * of the screen and the boss row below it. Both are not movable - they belong to the entity being looked at -
+ * and {@link #visible()} answers "is there something to show", which keeps the rows out of the layout file.
  */
 public final class ResourceBarFixedEntry extends AbstractHudEntry {
-    /** Where the row starts, measured from the top of the screen. */
     private static final int TARGET_TOP = 16;
     private static final int BOSS_TOP = 48;
 
@@ -55,10 +45,7 @@ public final class ResourceBarFixedEntry extends AbstractHudEntry {
                 : "hud.mxt.resource_bar.boss_overlay").getString();
     }
 
-    /**
-     * Fixed: the row is pinned to whatever the crosshair is on, so there is nothing to drag and the editor
-     * does not offer it.
-     */
+    // The row is pinned to whatever the crosshair is on, so the editor does not offer it.
     @Override
     public boolean moveable() {
         return false;
@@ -81,17 +68,12 @@ public final class ResourceBarFixedEntry extends AbstractHudEntry {
         return RenderBlock.boundsOf(this.renderBlocks()).height();
     }
 
-    /**
-     * The row's blocks, spaced exactly like a column's so the two read as the same kind of thing.
-     */
     @Override
     public List<RenderBlock> renderBlocks() {
         return ResourceBarEntry.blocksWithGaps(this.row());
     }
 
-    /**
-     * Nothing to do: this entry is built out of blocks, so the layout draws it.
-     */
+    // Nothing to do: the entry is built out of blocks, so the layout draws it.
     @Override
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
     }
@@ -109,13 +91,8 @@ public final class ResourceBarFixedEntry extends AbstractHudEntry {
         return this.top;
     }
 
-    /**
-     * The row's size is derived every frame and its position is fixed, so it is placed through
-     * {@link #placeAtDefault()} - the framework's "use the position this class suggests, store nothing" path -
-     * and deliberately not through the base {@link #refreshPlacement()}, which would let a stored value from
-     * an older version tug the row around. Without the placement call the row has no anchor point at all, and
-     * it draws at the top-left corner of the window instead of under the crosshair's target.
-     */
+    // placeAtDefault() and not the base refreshPlacement(): the row stores nothing, and the call is also what
+    // gives it an anchor point at all - without it the row would draw at the window's top-left corner.
     @Override
     public void refreshPlacement() {
         this.setSize(this.layoutWidth(), this.layoutHeight());

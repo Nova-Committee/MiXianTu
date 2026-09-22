@@ -12,9 +12,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
 /**
- * Shared item quality definition, including common economic, forging, and alchemy modifiers. Ordering and
- * groups belong to native registry tags rather than this definition, so datapacks can reorganise them
- * without rewriting individual quality files.
+ * Shared item quality definition, including common economic, forging and alchemy modifiers. Ordering and groups
+ * belong to native registry tags rather than this definition, so datapacks can reorganise them without rewriting
+ * individual quality files.
  */
 public record ItemQuality(Component displayName, Modifier valueMultiplier,
                           Modifier forgingModifier, Modifier alchemyModifier,

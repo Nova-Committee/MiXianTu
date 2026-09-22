@@ -20,12 +20,9 @@ import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The pipeline and render type a rift is drawn with.
- *
- * <p>The pipeline is the rift's own: it takes position-coloured quads like a plain debug surface, but its
- * fragment shader samples the mod's rift texture nine times through the projected position with a different
- * rotation and scroll per layer, which is what gives the points, links and fills their drifting kaleidoscope
- * look. Colour still arrives per vertex, so one pipeline draws every rift whatever colour it is.
+ * The pipeline and render type a rift is drawn with. The fragment shader samples the mod's rift texture nine times
+ * through the projected position, with a different rotation and scroll per layer; colour still arrives per vertex,
+ * so one pipeline draws every rift whatever colour it is.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class MxtRiftRenderTypes {
@@ -50,18 +47,14 @@ public final class MxtRiftRenderTypes {
     private MxtRiftRenderTypes() {
     }
 
-    /**
-     * Registered on the mod event bus, which is the only point at which a custom pipeline may join the list.
-     */
+    // A pipeline may only join the list here, on the mod event bus.
     @SubscribeEvent
     public static void registerPipelines(RegisterRenderPipelinesEvent event) {
         event.registerPipeline(RIFT);
     }
 
-    /**
-     * The render type for a rift. Both variants accept exactly the same position-colour quads, so the client
-     * config can fall back to a plain translucent drawing without the renderer changing at all.
-     */
+    // Both variants accept exactly the same position-colour quads, so the shader-less fallback needs no renderer
+    // change. The "Sampler0" name must match the one the RIFT pipeline declares.
     public static RenderType rift() {
         if (!MxtClientConfig.INSTANCE.rifts.shaders.getValue()) {
             if (plainType == null) plainType = RenderTypes.debugQuads();

@@ -12,29 +12,18 @@ import java.util.List;
 
 /**
  * The enable/disable module for spirit roots and physiques: the server-authoritative way to switch a held root
- * or physique off without giving it up, and the definition of what "off" means.
- *
- * <p>Off is not removed. The body still holds it - {@code mxt:has_spirit_root} still names it, removal still
- * works, and switching it back on restores everything it gave - but nothing it provides applies: no element, no
- * cultivation multiplier, no granted ability, no passive attribute, and no rule it states about other roots.
- * That is why every reader of the two collections asks for the <em>active</em> ones.</p>
- *
- * <p>What this module deliberately does not have is a way for a player to reach it. There is no command, no key
- * binding and no screen: the state is stored, synced, saved and honoured, and how a pack or a game mode lets a
- * cultivator operate it is left to whoever wants the feature.</p>
- *
- * <p>The storage lives in {@link SpiritIdentityAttachment}, beside the collections it is about, because a toggle
- * has to travel with the things it toggles - a synced, saved copy of a body that lost its switches would read as
- * "everything is on" the moment it crossed a dimension.</p>
+ * or physique off without giving it up. Off is not removed - the body still holds it and removal still works -
+ * but nothing it provides applies: no element, no cultivation multiplier, no granted ability, no passive
+ * attribute and no rule it states about other roots, which is why every reader asks for the active
+ * collections. There is deliberately no player entry point (no command, key or screen); the storage lives in
+ * {@link SpiritIdentityAttachment} so that a toggle travels with the things it toggles.
  */
 public final class CultivationToggleService {
     private CultivationToggleService() {
     }
 
-    /**
-     * Switches one held spirit root on or off, and re-derives what the body is granted so the abilities the
-     * root handed out are released or handed back in the same step.
-     */
+    // Re-derives what the body is granted in the same step, so the abilities the root handed out are released
+    // or handed back with the switch.
     public static Result setSpiritRootEnabled(LivingEntity entity, Holder<SpiritRoot> root, boolean enabled) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         if (!spirit.spiritRoots().contains(root)) return Result.rejected(Failure.NOT_HELD);
@@ -59,10 +48,7 @@ public final class CultivationToggleService {
         return entity.getData(MxtAttachments.SPIRIT_IDENTITY).isPhysiqueEnabled(physique);
     }
 
-    /**
-     * Switches everything the body holds on or off at once, which is the shape a "seal your cultivation" effect
-     * wants; it answers how many toggles that changed.
-     */
+    // The shape a "seal your cultivation" effect wants; answers how many toggles that changed.
     public static Result setAllEnabled(LivingEntity entity, boolean enabled) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         int changed = 0;
@@ -77,9 +63,6 @@ public final class CultivationToggleService {
 
     public enum Failure {NOT_HELD, SERVER_ONLY}
 
-    /**
-     * What a toggle did: whether it changed anything, and why it did nothing when it did not.
-     */
     public record Result(boolean changed, @Nullable Failure failure) {
         private static Result changedToggle() {
             return new Result(true, null);

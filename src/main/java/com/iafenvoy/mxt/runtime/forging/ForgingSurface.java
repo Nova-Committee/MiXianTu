@@ -23,31 +23,18 @@ public interface ForgingSurface {
     int OUTPUT_SLOT = INPUT_START + INPUT_SLOTS;
     int TOTAL_SLOTS = OUTPUT_SLOT + 1;
 
-    /**
-     * The block entity container backing the slots above.
-     */
     Container forgingContainer();
 
-    /**
-     * The persistent session state of this table.
-     */
     ForgingTableState forgingState();
 
-    /**
-     * The block this surface is attached to, as a position rather than the surface itself: the container and
-     * the session state that go with it are writable, and an event listener is not a place to write them from.
-     */
+    // A position rather than the surface itself: the container and the session state that go with it are
+    // writable, and an event listener is not a place to write them from.
     BlockPos pos();
 
-    /**
-     * Marks the container contents and session state dirty and pushes them to tracking clients.
-     */
     void forgingChanged();
 
-    /**
-     * The slot classification, static because both the block entity and the menu classify the same fixed
-     * layout, and the client half of the menu has no surface object to ask.
-     */
+    // Static because both the block entity and the menu classify the same fixed layout, and the client half of
+    // the menu has no surface object to ask.
     static boolean isBlueprintSlot(int slot) {
         return slot >= BLUEPRINT_START && slot < BLUEPRINT_START + BLUEPRINT_SLOTS;
     }
@@ -64,10 +51,8 @@ public interface ForgingSurface {
         return slot == OUTPUT_SLOT;
     }
 
-    /**
-     * The one placement rule, shared by the block entity, which is the authority for hoppers and shift-clicks,
-     * and the menu. A session freezes the output, the inputs and the blueprint; tools stay live.
-     */
+    // The one placement rule, shared by the block entity - the authority for hoppers and shift-clicks - and the
+    // menu. A session freezes the output, the inputs and the blueprint; tools stay live.
     static boolean canPlace(int slot, ItemStack stack, boolean active, ForgingBlueprint locked) {
         if (isOutputSlot(slot)) return false;
         if (isToolSlot(slot)) return stack.has(MxtDataComponents.TOOL_BINDING.get());
@@ -80,10 +65,8 @@ public interface ForgingSurface {
         return false;
     }
 
-    /**
-     * Whether a slot may be emptied. The mirror of {@link #canPlace}: a session locks what it owns, and
-     * the tool slots are not part of that, so a hammer can be swapped mid-session as well as added.
-     */
+    // The mirror of canPlace: a session locks what it owns, and the tool slots are not part of that, so a
+    // hammer can be swapped mid-session as well as added.
     static boolean canTake(int slot, boolean active) {
         return !active || isToolSlot(slot);
     }

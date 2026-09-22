@@ -8,9 +8,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
  * Formula-backed lower and upper bounds for one stored value, and the shape every "how much of this is there"
- * question in the mod is asked with: an aura pool at a position, an element's accumulation on a body. The
- * bounds are evaluated in the caller's context and a non-finite pair never matches, so a broken formula reads
- * as "not this" rather than as a match.
+ * question in the mod is asked with. A non-finite pair never matches, so a broken formula reads as "not this".
  */
 public record AuraRequirement(NumberProvider min, NumberProvider max) {
     public static final Codec<AuraRequirement> CODEC = RecordCodecBuilder.create(i -> i.group(

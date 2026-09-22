@@ -31,16 +31,10 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * A named ability. Behaviour is selected by the built-in type identifier.
- *
- * <p>An ability declares the state it keeps through {@link DataStorageDeclaration}. The data-pack key of that
- * list stays {@code components} for compatibility, even though the values themselves are now held by the ability
- * attachment, next to the grants that own them.</p>
- *
- * <p>{@code element_affinity} is a gate and a multiplier, and {@code element_affinity_mode} says how a
- * cultivator of several affinities is read: the average of the matching roots, which is the default and the
- * reading every ability has always had, or the best of them. A pack that writes one sharp affinity wants the
- * best; a pack that means "the more of my roots agree, the better" wants the average.</p>
+ * A named ability; behaviour is selected by the built-in type identifier. The declared state list keeps the
+ * datapack key {@code components} for compatibility even though the values are now held by the ability
+ * attachment. {@code element_affinity_mode} says how a cultivator of several matching roots is read: the average
+ * of them (the default, and the reading every ability has always had) or the best.
  */
 public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTime, NumberProvider cooldown,
                       Optional<IconReference> icon,
@@ -68,10 +62,7 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
             AffinityMode.CODEC.optionalFieldOf("element_affinity_mode", AffinityMode.AVERAGE).forGetter(Ability::elementAffinityMode)
     ).apply(i, Ability::new));
 
-    /**
-     * How the {@code element_ability_modifier} of several matching roots is combined into the one
-     * {@code element_modifier} a casting exposes.
-     */
+    // How the element_ability_modifier of several matching roots becomes the one element_modifier a cast exposes.
     public enum AffinityMode {
         AVERAGE, MAX;
         public static final Codec<AffinityMode> CODEC = Codec.STRING.xmap(
@@ -83,10 +74,8 @@ public record Ability(AbilityType type, List<Cost> costs, NumberProvider castTim
         return this.type instanceof TriggeredAbilityType triggered ? triggered.triggers() : List.of();
     }
 
-    /**
-     * Actions and composite ability types may refer to abilities through holders. Keep diagnostic
-     * output shallow so logging a cyclic datapack definition cannot recurse through its holder.
-     */
+    // Actions and composite ability types may refer to abilities through holders: keep diagnostic output shallow
+    // so logging a cyclic datapack definition cannot recurse through its holder.
     @Override
     public @NonNull String toString() {
         return "Ability[type=" + this.type.getClass().getSimpleName() + ", costs=" + this.costs.size()

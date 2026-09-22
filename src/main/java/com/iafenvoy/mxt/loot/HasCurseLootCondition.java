@@ -10,9 +10,6 @@ import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
-/**
- * The loot-table twin of {@code mxt:has_curse}: the same query, run against one entity of the loot context.
- */
 public record HasCurseLootCondition(EntityTarget target, CurseFilter filter) implements LootItemCondition {
     public static final MapCodec<HasCurseLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasCurseLootCondition::target),

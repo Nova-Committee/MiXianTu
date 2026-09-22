@@ -16,27 +16,14 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 /**
- * The screen the player drags HUD entries around on.
- *
- * <p>This is the port of AxolotlClient's {@code HudEditScreen} ("This implementation of Hud modules is based
- * on KronHUD", GPL-3.0) with the scaling half removed: KronHUD's version grabs a corner to resize an entry
- * and grows a snapping guide while moving, and neither exists here. What is left is the part that makes the
- * feature useful on its own - pick an entry up with the left button, drop it anywhere on screen, and the new
- * position is written to the client config as it moves.</p>
- *
- * <p>Entries keep drawing through the GUI layer while this screen is open, so what is being dragged is the
- * real element rather than a picture of one. This screen only adds the rectangle, the name label and the
- * button.</p>
- *
- * <p>Two departures from KronHUD, both because the guide that made them unnecessary is gone: a click on
- * empty space clears the selection, and the escape key drops the selection instead of closing the screen -
- * a misplaced drag is then one keystroke away from being abandoned.</p>
+ * The screen the player drags HUD entries around on: pick one up with the left button, drop it anywhere, and
+ * the new position is written to the client config as it moves. Entries keep drawing through the GUI layer
+ * while this screen is open, so the real element is being dragged rather than a picture of one, and there is
+ * no scaling or snapping to go with it (research/26).
  */
 public final class HudEditScreen extends Screen {
-    /** Unselected entries: a dim wash, so the real element underneath stays readable. */
     private static final int IDLE_FILL = 0x33FFFFFF;
     private static final int IDLE_OUTLINE = 0x66FFFFFF;
-    /** The entry in hand, which has to be obvious at a glance. */
     private static final int SELECTED_FILL = 0x44FFD24A;
     private static final int SELECTED_OUTLINE = 0xFFFFD24A;
     private static final int LABEL_COLOR = 0xFFFFD24A;
@@ -60,7 +47,7 @@ public final class HudEditScreen extends Screen {
                     highlight ? SELECTED_FILL : IDLE_FILL);
             graphics.outline(bounds.x(), bounds.y(), bounds.width(), bounds.height(),
                     highlight ? SELECTED_OUTLINE : IDLE_OUTLINE);
-            // Named by what the entry calls itself, not by a translation key: an entry whose name has not
+            // Named by what the entry calls itself rather than by a translation key: an entry whose name has not
             // been written yet is exactly the one worth spotting here.
             graphics.text(this.font, entry.displayName(), bounds.x(), bounds.y() - 10, LABEL_COLOR, true);
         }
@@ -84,14 +71,9 @@ public final class HudEditScreen extends Screen {
                 .bounds(this.width / 2 - 60, this.height - 30, 120, 20).build());
     }
 
-    /**
-     * Places this screen in the same family as the vanilla container and book screens, and the reason is the
-     * background: a screen that is not "in the game UI" gets the blurred menu background, and that blur is
-     * applied to everything drawn before it - which is the whole HUD, because the HUD is extracted before any
-     * screen is. The result was an editor whose elements were blurred along with the world, which is exactly
-     * the thing the player is trying to look at. Reporting an in-game UI instead draws the plain translucent
-     * gradient, so the elements being placed stay crisp.
-     */
+    // Reporting an in-game UI avoids the blurred menu background: that blur is applied to everything drawn
+    // before the screen, which is the whole HUD, so the elements being placed would be blurred along with the
+    // world. This way the plain translucent gradient is drawn and the entries stay crisp.
     @Override
     public boolean isInGameUi() {
         return true;
@@ -127,9 +109,8 @@ public final class HudEditScreen extends Screen {
 
     @Override
     public boolean keyPressed(@NotNull KeyEvent event) {
-        // Arrow keys are the keyboard's version of dragging: one pixel at a time, or ten with a modifier.
-        // That is also the only way to place an entry precisely, and the only way at all for a player who
-        // cannot hold a mouse button down.
+        // Arrow keys are the keyboard's version of dragging: one pixel at a time, or ten with a modifier - the
+        // only way to place an entry precisely, and the only way at all without holding a mouse button down.
         if (this.selected != null) {
             int step = event.hasShiftDown() ? 10 : 1;
             int key = event.key();
@@ -161,10 +142,8 @@ public final class HudEditScreen extends Screen {
         return true;
     }
 
-    /**
-     * Moves the edit screen's idea of "what is being dragged" and tells both entries, which is what lets an
-     * entry draw itself differently while it is in hand.
-     */
+    // Moves the edit screen's idea of "what is being dragged" and tells both entries, which is what lets an
+    // entry draw itself differently while it is in hand.
     private void setSelected(HudEntry entry) {
         if (this.selected == entry) return;
         boolean pickedUp = this.selected == null;

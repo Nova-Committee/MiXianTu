@@ -11,9 +11,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.Locale;
 
 /**
- * The display module: where the array's boundary is, drawn as particles. It never affects an entity.
- * {@code interval_periods} is counted in periods rather than ticks, because the dispatch only happens on a
- * period boundary and a tick count would silently be rounded to that grid.
+ * The display module: where the array's boundary is, drawn as particles; it never affects an entity.
+ * {@code interval_periods} is counted in periods rather than ticks, because the dispatch only happens on a period
+ * boundary and a tick count would silently be rounded to that grid.
  */
 public record RangeDisplayFormationAction(ParticleOptions particle, int intervalPeriods, int points,
                                           Shape shape) implements FormationActionType {
@@ -31,15 +31,8 @@ public record RangeDisplayFormationAction(ParticleOptions particle, int interval
         return CODEC;
     }
 
-    /**
-     * Which outline of the range to draw.
-     */
     public enum Shape implements StringRepresentable {
-        /// A horizontal circle at the controller's own height: the array's ground plan, and the cheapest
-        /// thing to read from inside it.
         RING,
-        /// Points spread over the whole sphere, so a radius that reaches underground or overhead is
-        /// visible as well; they are spread over a far larger surface, so it reads sparser.
         SPHERE;
 
         public static final Codec<Shape> CODEC = StringRepresentable.fromEnum(Shape::values);

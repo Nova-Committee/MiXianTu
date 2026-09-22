@@ -35,10 +35,7 @@ public final class PickerCommand {
         return SharedSuggestionProvider.suggest(ItemPickerManager.categories().stream().map(key -> key.identifier().toString()), builder);
     }
 
-    /**
-     * Resolves the category argument into the id the client will walk, rejecting an id this mod does not
-     * offer rather than letting the picker open on nothing.
-     */
+    // An id this mod does not offer is rejected rather than letting the picker open on nothing.
     private static List<Identifier> categories(CommandContext<CommandSourceStack> context) {
         Identifier id = IdentifierArgument.getId(context, "category");
         return List.of(ItemPickerManager.categories().stream()

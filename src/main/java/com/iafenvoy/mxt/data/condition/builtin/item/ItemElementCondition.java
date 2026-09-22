@@ -18,22 +18,15 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * True when the item carries one of the listed elements.
- *
- * <p>The item-side counterpart of {@code mxt:has_element}, and the reading is
- * {@link ItemElements}: what the weapon, item or artifact definition claims for the stack, or - when none of
- * them declares anything - the element named by the aura the stack stores or declares. An element or an
- * element tag is accepted on both sides, so "a fire weapon" stays right when a later pack adds another way for
- * a weapon to be fire.</p>
+ * True when the item carries one of the listed elements, as read by {@link ItemElements}: what the weapon, item or
+ * artifact definition claims for the stack, or the element named by the aura the stack stores or declares.
  */
 public record ItemElementCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements ItemCondition {
     public static final MapCodec<ItemElementCondition> CODEC = RecordCodecBuilder.<ItemElementCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(ItemElementCondition::elements)
     ).apply(i, ItemElementCondition::new)).validate(ItemElementCondition::validate);
 
-    /**
-     * An empty list can never match, so it is a condition that silently never passes: refused at load.
-     */
+    // An empty list can never match, so it is a condition that silently never passes: refused at load.
     private static DataResult<ItemElementCondition> validate(ItemElementCondition condition) {
         return condition.elements().isEmpty()
                 ? DataResult.error(() -> "mxt:item_element needs at least one element to ask about")

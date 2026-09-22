@@ -13,28 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Builds localized names for datapack definitions from their registry identifiers.
- *
- * <p>A definition is not an item and carries no name of its own - nothing about it can be read off a stack - so
- * the only name it can have is one a language file gives it. That name is keyed by position: the registry the
- * definition is registered in, its namespace, and its path, which is the {@code <category>.<namespace>.<path>}
- * shape {@link Identifier#toLanguageKey(String)} builds. A definition {@code mxt:fire} in {@code mxt:aura} is
- * therefore looked up as {@code aura.mxt.fire}, and a data pack names it by writing that key.</p>
- *
- * <p>Two ways to ask for it, depending on what the caller has:</p>
- * <ul>
- *   <li>a {@link ResourceKey} or a {@link Holder} already says which registry it lives in, so the category is
- *       read off it - {@link #name(Holder)} and {@link #name(ResourceKey)} need nothing else; and</li>
- *   <li>a bare {@link Identifier} needs the category naming explicitly, which is what
- *       {@link #name(Identifier, String)} is for.</li>
- * </ul>
- *
- * <p>A key that nothing translates renders as the key itself, which is still the definition's id in readable
- * form rather than a blank, so a data pack with no lang file yet stays usable and searchable.</p>
- *
- * <p>Most registries are translated under their own path, which is why the category can be derived at all. The
- * few that are not are declared once in {@link #CATEGORIES} rather than repeated at every call site, so the
- * same definition can never be called one thing by a tooltip and another by the item picker.</p>
+ * Localized names for datapack definitions, keyed {@code <category>.<namespace>.<path>} off the registry the
+ * definition lives in, so {@code mxt:fire} in {@code mxt:aura} reads as {@code aura.mxt.fire}. An untranslated key
+ * renders as the key itself; {@link #CATEGORIES} lists registries translated under a different path.
  */
 public final class DefinitionText {
     private static final Map<Identifier, String> CATEGORIES = new LinkedHashMap<>();
@@ -73,14 +54,8 @@ public final class DefinitionText {
     }
 
     /**
-     * A rarity a data pack chose, shown exactly as it wrote it unless the language file names that value under
-     * {@code mxt.rarity.<rarity>}.
-     *
-     * <p>Rarity is free-form content vocabulary - this code cannot know whether a pack says {@code rare},
-     * {@code 上品} or {@code tier_3} - so the value is the name, and translation is an offer rather than a
-     * requirement. That is the same reading a technique's {@code grade} gets, and it is what lets one consumer
-     * (the information panel, a command) report a rarity without every pack having to register a word
-     * somewhere.</p>
+     * A free-form pack value, shown verbatim unless the language file translates {@code mxt.rarity.<value>};
+     * the same reading a technique's {@code grade} gets.
      */
     public static MutableComponent rarity(String rarity) {
         String key = "mxt.rarity." + rarity;

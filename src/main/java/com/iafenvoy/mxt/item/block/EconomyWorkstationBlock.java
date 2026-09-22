@@ -14,6 +14,7 @@ public abstract class EconomyWorkstationBlock extends Block {
         super(properties);
     }
 
+    // Empty so the open-air counter top does not occlude its neighbours.
     @Override
     protected @NonNull VoxelShape getOcclusionShape(@NonNull BlockState state) {
         return Shapes.empty();

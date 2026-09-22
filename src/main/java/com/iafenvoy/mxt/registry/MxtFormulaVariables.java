@@ -29,10 +29,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The built-in formula variables. Every entry decomposes a number out of the objects a
- * {@link FormulaContext} carries; values that belong to no object - damage, a block position, an event
- * payload - are not variables, and callers keep those in the context's explicit value map. This is a code
- * registry, so data packs cannot add variables.
+ * The built-in formula variables: every entry decomposes a number out of the objects a {@link FormulaContext}
+ * carries, while values that belong to no object (damage, a block position, an event payload) stay in the
+ * context's explicit value map. A code registry, so data packs cannot add variables.
  */
 @SuppressWarnings("unused")
 public final class MxtFormulaVariables {
@@ -45,9 +44,7 @@ public final class MxtFormulaVariables {
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM_INSTANCE = REGISTRY.register("realm_instance", RealmInstanceVariable::new);
 
-    /**
-     * For formulas that must switch a term off without editing the expression.
-     */
+    // For formulas that must switch a term off without editing the expression.
     private record ZeroVariable() implements FormulaVariable {
         private static final Set<String> NAMES = Set.of("zero");
 
@@ -76,12 +73,9 @@ public final class MxtFormulaVariables {
         }
     }
 
-    /**
-     * Health, vanilla experience level, one name per resource and per attribute the entity has, and one name
-     * per element plus a count. An element name answers {@code 1} or {@code 0}, because what a formula can ask
-     * about an element is whether this entity is one of its cultivators - the relations themselves are the
-     * damage pipeline's business, and read the same way there.
-     */
+    // Health, vanilla experience level, one name per resource and per attribute the entity has, and one name per
+    // element answering 1 or 0: all a formula may ask about an element is whether this entity is one of its
+    // cultivators - the relations themselves are the damage pipeline's business, read the same way there.
     private static final class EntityVariable implements FormulaVariable {
         private static final Map<EntityType<?>, Set<Holder<Attribute>>> SYNCABLE_ATTRIBUTES = new ConcurrentHashMap<>();
 
@@ -134,10 +128,8 @@ public final class MxtFormulaVariables {
             return Elements.of(living).contains(element) ? 1.0D : 0.0D;
         }
 
-        /**
-         * The client only holds the attributes it needs, so a formula must not read a hidden attribute as if
-         * it were up to date.
-         */
+        // The client only holds the attributes it needs, so a formula must not read a hidden attribute as if it
+        // were up to date.
         private static boolean synchronised(LivingEntity entity, Holder<Attribute> attribute) {
             Set<Holder<Attribute>> syncable = SYNCABLE_ATTRIBUTES.get(entity.getType());
             if (syncable == null) {
@@ -151,11 +143,9 @@ public final class MxtFormulaVariables {
         }
     }
 
-    /**
-     * The cultivation state of the resource the formula is evaluated for. These names exist only
-     * in a resource context, which is why {@code level} means a realm rank here while
-     * {@code caster_level} stays the vanilla experience level.
-     */
+    // The cultivation state of the resource the formula is evaluated for. These names exist only in a resource
+    // context, which is why {@code level} means a realm rank here while {@code caster_level} stays the vanilla
+    // experience level.
     private static final class RealmVariable implements FormulaVariable {
         private static final Set<String> NAMES = Set.of("realm", "realm_rank", "level", "absorbed_aura", "cultivation_progress");
 
@@ -178,13 +168,9 @@ public final class MxtFormulaVariables {
         }
     }
 
-    /**
-     * The state of the realm instance the subject is inside.
-     *
-     * <p>The names are prefixed {@code realm_instance_} because {@code realm} already means a cultivation
-     * stage, and both can be read in the same expression. Every name answers {@link Double#NaN} outside a
-     * realm, so a condition can tell "not in a realm" from "in an empty one".
-     */
+    // The state of the realm instance the subject is inside. The names carry the {@code realm_instance_} prefix
+    // because {@code realm} already means a cultivation stage and both can be read in one expression; every name
+    // answers NaN outside a realm, so a condition can tell "not in a realm" from "in an empty one".
     private static final class RealmInstanceVariable implements FormulaVariable {
         private static final Set<String> NAMES = Set.of("realm_instance_members", "realm_instance_limit",
                 "realm_instance_elapsed", "realm_instance_duration", "realm_instance_index", "realm_instance_is_owner");

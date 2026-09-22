@@ -14,12 +14,8 @@ public final class ClientNetworkHandler {
         AuraClientState.update(payload.source(), payload.actual(), payload.environment());
     }
 
-    /**
-     * Shows the categories the server named. The grid is built on this side from the synced registries, and
-     * taking an item out of it is the vanilla creative gesture: the client puts it in the carried stack, and
-     * the only thing that ever reaches the server is the slot it ends up in, sent as the vanilla creative slot
-     * packet - so this handler only has to open the screen.
-     */
+    // The grid is built on this side from the synced registries, and taking an item out of it is the vanilla
+    // creative gesture, so the only thing that reaches the server is the slot it ends up in: this only opens the screen.
     static void onItemPicker(ItemPickerS2CPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             ItemPickerScreen screen = ItemPickerScreen.opening(payload.title(), payload.categories());
@@ -27,10 +23,7 @@ public final class ClientNetworkHandler {
         });
     }
 
-    /**
-     * Keeps the name the server gave for an owner id. Nothing is redrawn here: a tooltip is rebuilt every frame
-     * it is shown, so the name appears the next time the reader looks at the item.
-     */
+    // Nothing is redrawn here: a tooltip is rebuilt every frame it is shown, so the name appears next time it is read.
     static void onOwnerName(OwnerNameS2CPayload payload, IPayloadContext context) {
         ClientPlayerNames.remember(payload.owner(), payload.name());
     }

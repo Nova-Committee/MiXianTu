@@ -8,11 +8,10 @@ import net.minecraft.core.Holder;
 import java.util.*;
 
 /**
- * Applies stacking and expiry rules without allowing consumers to mutate curse state directly.
+ * Applies stacking and expiry rules without letting consumers mutate curse state directly.
  * <p>
- * Nothing here throws on a definition it cannot honour: an application it cannot resolve an expiry for comes
- * back empty and is rejected by the caller, which is what keeps a malformed definition from taking a tick or an
- * event handler down with it.
+ * Nothing here throws on a definition it cannot honour: an application it cannot resolve an expiry for comes back
+ * empty, so a malformed definition cannot take a tick or an event handler down with it.
  */
 public final class CurseLedger {
     private final Map<Holder<Curse>, CurseInstance> instances = new LinkedHashMap<>();
@@ -60,13 +59,8 @@ public final class CurseLedger {
         return this.instances;
     }
 
-    /**
-     * The expiry this application would get.
-     * <p>
-     * A caller-supplied duration may shorten a curse but never outlast what the definition itself declares:
-     * content that wants a longer curse writes a longer {@code duration_ticks}, so no reference can hand out an
-     * effectively permanent instance by passing a huge number, and none can make a timed curse permanent.
-     */
+    // A caller-supplied duration may shorten a curse but never outlast the definition: content wanting a longer
+    // curse writes a longer duration_ticks, so nobody can hand out an effectively permanent instance.
     private static OptionalLong expiry(Curse definition, long gameTime, FormulaContext context, Optional<Long> durationOverride) {
         double duration = definition.durationTicks().evaluate(context);
         if (!Double.isFinite(duration) || duration < 0.0D) return OptionalLong.empty();

@@ -22,8 +22,8 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * Pre-reserves one shared chunk aura pool for every player due to cultivate this tick, before any of
- * them is processed, so entity-tick ordering cannot decide who is served first.
+ * Pre-reserves one shared chunk aura pool for every player due to cultivate this tick, before any of them is
+ * processed, so entity-tick ordering cannot decide who is served first.
  */
 public final class AuraDistributionService {
     private static final Map<UUID, Allocation> ALLOCATIONS = new HashMap<>();
@@ -53,9 +53,7 @@ public final class AuraDistributionService {
         for (List<Claim> claims : claimsByChunk.values()) reserve(level, gameTime, claims);
     }
 
-    /**
-     * Returns a pre-reserved share for this tick, or empty when there was no prepass.
-     */
+    // Empty when there was no prepass for this tick.
     public static Optional<Map<Holder<Aura>, Double>> take(ServerPlayer player) {
         Allocation allocation = ALLOCATIONS.remove(player.getUUID());
         return allocation == null || allocation.gameTime() != player.level().getGameTime()
@@ -85,10 +83,8 @@ public final class AuraDistributionService {
             ALLOCATIONS.put(claims.get(index).player().getUUID(), new Allocation(gameTime, allocations.get(index)));
     }
 
-    /**
-     * Allocates one finite shared aura pool without mutating world state. Public so integrations can
-     * preview the three allocation rules without creating fake players or chunks.
-     */
+    // Allocates one finite shared pool without mutating world state. Public so integrations can preview the
+    // three allocation rules without creating fake players or chunks.
     public static List<Double> distribute(List<Double> requests, List<Double> weights, double available,
                                           Distribution distribution, RandomSource random) {
         if (requests.size() != weights.size())

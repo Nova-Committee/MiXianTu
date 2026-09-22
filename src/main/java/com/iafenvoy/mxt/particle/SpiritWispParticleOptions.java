@@ -12,9 +12,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.ExtraCodecs;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Client-side visual parameters for a tracked spirit-burst trail particle.
- */
 public record SpiritWispParticleOptions(int color, float size) implements ParticleOptions {
     public static final MapCodec<SpiritWispParticleOptions> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ExtraCodecs.RGB_COLOR_CODEC.fieldOf("color").forGetter(SpiritWispParticleOptions::color),

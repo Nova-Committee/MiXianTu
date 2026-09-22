@@ -19,15 +19,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Attaches ordered entity actions to already registered physical items.
- *
- * <p>{@code element} is what this item is made of, which is the reading
- * {@link com.iafenvoy.mxt.runtime.cultivation.ItemElements} takes: an item whose definitions declare no element
- * at all falls back to the element of the aura it stores or declares.</p>
- *
- * <p>{@code attachment_multiplier} is what this item is worth as a ward: while it is carried, every strike that
- * leaves an element on the carrier leaves this fraction of it. Several carried items multiply and the default
- * {@code 1.0} is a no-op.</p>
+ * Attaches ordered entity actions to already registered physical items. {@code element} is what the item is made
+ * of; an item whose definitions declare no element at all falls back to the element of the aura it stores or
+ * declares. {@code attachment_multiplier} is what it is worth as a ward - the fraction of a strike's element that
+ * gets through - and several carried items multiply, the default 1.0 being a no-op.
  */
 public record ItemBinding(List<Entry> entries, List<EntityAction> actions, Optional<TagKey<ItemQuality>> qualityGroup,
                           List<DescribedEntry<EntityCondition>> conditions,

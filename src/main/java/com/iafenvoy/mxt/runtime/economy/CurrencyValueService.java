@@ -37,18 +37,12 @@ public final class CurrencyValueService {
         return unitValue(new ItemStack(item));
     }
 
-    /**
-     * Returns the value of a complete stack.
-     */
     public static OptionalLong unitValue(@NotNull ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return OptionalLong.empty();
         return unitValue(server.registryAccess(), stack);
     }
 
-    /**
-     * Reads one currency value from the client-synchronised datapack registries.
-     */
     public static OptionalLong unitValue(@NotNull Provider access, @NotNull Item item) {
         return unitValue(access, new ItemStack(item));
     }
@@ -76,15 +70,10 @@ public final class CurrencyValueService {
                 .orElseGet(OptionalLong::empty);
     }
 
-    /**
-     * The one place an item's currency value meets its quality. The denomination is settled by multiplying
-     * it with the {@code value_multiplier} of the quality the priced stack itself resolves, because that
-     * stack is this settlement's own input: a datapack that grades an item as refined is saying every unit
-     * of it is worth more, and an item whose quality declares no multiplier keeps the declared value.
-     * A product that would fall below one, reach past a {@code long}, or stop being a finite number leaves
-     * the declared denomination alone instead of clamping, so an unusable modifier can only ever mean "no
-     * change" rather than a value no datapack wrote.
-     */
+    // The one place an item's currency value meets its quality: the denomination is multiplied by the
+    // value_multiplier of the quality the priced stack itself resolves, because that stack is this settlement's
+    // own input. A product that would fall below one, reach past a long, or stop being finite leaves the
+    // declared denomination alone instead of clamping, so an unusable modifier can only ever mean "no change".
     private static OptionalLong unitValue(Provider access, ItemStack stack, CurrencyValue definition, boolean available, FormulaContext context) {
         if (!available) return OptionalLong.of(0L);
         double multiplier = ItemQualityService.modifier(access, stack, ItemQuality::valueMultiplier, context);
@@ -134,9 +123,7 @@ public final class CurrencyValueService {
                 .toList();
     }
 
-    /**
-     * Checks whether a stack can occupy the exchange input slot, even before its count is sufficient.
-     */
+    // Whether a stack can occupy the exchange input slot, even before its count is sufficient.
     public static boolean isExchangeInput(RegistryAccess registryAccess, ItemStack input) {
         if (input.isEmpty()) return false;
         return matching(registryAccess, input).anyMatch(definition -> isAvailable(definition) && !definition.exchanges().isEmpty());
@@ -150,9 +137,7 @@ public final class CurrencyValueService {
                         && !definition.exchanges().isEmpty());
     }
 
-    /**
-     * Finds a currency definition by stack matcher without evaluating unavailable_when.
-     */
+    // Finds a currency definition by stack matcher without evaluating unavailable_when.
     public static Optional<CurrencyValue> definition(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), stack);
@@ -188,9 +173,7 @@ public final class CurrencyValueService {
                 .map(Reference::value), stack);
     }
 
-    /**
-     * Returns empty when any stack is not configured as currency or the sum overflows.
-     */
+    // Empty when any stack is not configured as currency or the sum overflows.
     public static OptionalLong totalValue(@NotNull Collection<ItemStack> stacks) {
         long total = 0L;
         for (ItemStack stack : stacks) {

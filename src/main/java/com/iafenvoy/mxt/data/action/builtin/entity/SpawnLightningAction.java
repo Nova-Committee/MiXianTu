@@ -21,9 +21,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * Strikes a lightning bolt at the actor, with a colour, glow, thickness and optional gradient of its own.
- * Everything the bolt then does — damage, fire, lightning rods, copper, thunder — is the vanilla bolt's own
- * behaviour.
+ * Strikes a lightning bolt at the actor with a colour, glow, thickness and optional gradient. Everything the
+ * bolt then does — damage, fire, rods, copper, thunder — stays the vanilla bolt's own behaviour.
  */
 public record SpawnLightningAction(NumberProvider offsetX, NumberProvider offsetY, NumberProvider offsetZ,
                                    int color, float alpha, float thickness, List<Integer> palette, NumberProvider damage,

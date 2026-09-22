@@ -21,17 +21,10 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * Client command for looking at the draggable HUD.
- *
- * <p>It is a diagnostic rather than a way to play: everything it can do is also reachable from the layout
- * editor, and the only reason it exists is that "the editor shows nothing" has no other way of being
- * answered. It prints what the framework actually holds - every registered element, where it is, whether it
- * is visible and movable, and how many blocks it is offering to draw right now - which separates "the element
- * was never registered" from "the element is registered and drawing nothing".</p>
- *
- * <p>Being a client command, it needs no operator permission and its output goes only to the player who ran
- * it. It is also the only command in this mod registered on the client: the rest of {@code command/} is the
- * server-side {@code /mxt} tree.</p>
+ * Client command for looking at the draggable HUD: a diagnostic for "the editor shows nothing" with no other way of
+ * being answered. It prints what the framework actually holds - every registered element, where it is, whether it
+ * is visible and movable, and how many blocks it offers to draw. Being a client command it needs no permission, and
+ * it is the only command in this mod registered on the client.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class HudCommand {

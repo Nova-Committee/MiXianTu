@@ -32,6 +32,7 @@ public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements B
         FormulaContext context = ctx.formula();
         if (actor.level() != target.level()) return false;
         Vec3 from = actor.getEyePosition(), to = target.getEyePosition();
+        // Past 128 blocks this answers false without raycasting, so a long-range check stays cheap.
         return from.distanceTo(to) <= 128.0D && actor.level().clip(new ClipContext(from, to, this.shapeType, this.fluidHandling, actor)).getType() == Type.MISS;
     }
 

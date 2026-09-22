@@ -43,9 +43,6 @@ public final class TechniqueService {
         return Result.learnedResult();
     }
 
-    /**
-     * Entity-aware learning entry point that evaluates every declared fixed cultivation condition.
-     */
     public static Result learn(LivingEntity entity, SpiritIdentityAttachment spirit, Holder<Technique> technique, FormulaContext context) {
         boolean allowed = technique.value().learnCondition().test(entity, context);
         if (!allowed) return Result.rejected(Failure.CONDITIONS);

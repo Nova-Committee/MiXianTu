@@ -25,10 +25,10 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The per-entity side of a formation: who was inside it last tick, the context each per-entity action
- * receives, and how a formation-scoped grant is released. It lives outside the ticker because teardown can
- * also be called directly through {@link FormationWorldService}, which would otherwise leave the grants of
- * the entities it was tracking. The presence set is in memory only.
+ * The per-entity side of a formation: who was inside it last tick, the context each per-entity action receives,
+ * and how a formation-scoped grant is released. It lives outside the ticker because teardown can also be called
+ * directly through {@link FormationWorldService}, which would otherwise leave the grants of the entities it was
+ * tracking. The presence set is in memory only.
  */
 final class FormationEntityActions {
     private static final Map<ResourceKey<Level>, Map<BlockPos, Set<UUID>>> PRESENCE = new HashMap<>();
@@ -36,10 +36,6 @@ final class FormationEntityActions {
     private FormationEntityActions() {
     }
 
-    /**
-     * The context a per-entity action receives: the numbers a formula reads as explicit values, plus the
-     * formation itself as {@link FormationCarrier} extension data.
-     */
     static EntityActionContext context(Entity entity, FormationCarrier carrier, double radius, double distanceSquared) {
         Vec3 center = carrier.center();
         FormulaContext formula = FormulaContext.of(entity, Map.of(
@@ -54,10 +50,8 @@ final class FormationEntityActions {
         return context;
     }
 
-    /**
-     * The attachment is read without being created: most entities that walk through a formation never held
-     * a granted ability.
-     */
+    // The attachment is read without being created: most entities that walk through a formation never held a
+    // granted ability.
     static void release(Entity entity, Identifier source) {
         if (!(entity instanceof LivingEntity living)) return;
         AbilityAttachment abilities = living.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
@@ -66,11 +60,8 @@ final class FormationEntityActions {
             AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }
 
-    /**
-     * Releases everything the formation handed to the entities it was tracking, then forgets them. The
-     * exit action runs as well, because the formation's own {@code deactivate_action} is a block action
-     * and cannot reach them.
-     */
+    // Releases everything the formation handed to the entities it was tracking, then forgets them. The exit
+    // action runs as well, because the formation's own deactivate_action is a block action and cannot reach them.
     static void releaseTracked(ServerLevel level, BlockPos controller, FormationInstance instance) {
         Set<UUID> tracked = forget(level, controller);
         if (tracked.isEmpty()) return;

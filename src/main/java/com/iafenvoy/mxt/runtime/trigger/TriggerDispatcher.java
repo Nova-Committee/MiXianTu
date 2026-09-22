@@ -12,18 +12,18 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 import java.util.*;
 
 /**
- * Server-side runtime index for trigger subscriptions. It has no knowledge of
- * the owning gameplay module and never persists subscription objects.
+ * Server-side runtime index for trigger subscriptions, never persisted and knowing nothing about the gameplay
+ * modules that own them.
  *
- * <p>The signal index is layered by owner, because a subscription identity is only unique inside its
- * owner: two entities holding the same definition register the same module and identity, and they must
- * never share a slot. Publishing is then one lookup per layer, and an owner that listens to nothing is
- * rejected before anything is copied.</p>
+ * <p>The signal index is layered by owner because a subscription identity is only unique inside its owner: two
+ * entities holding the same definition register the same module and identity and must never share a slot.
+ * {@link #DISPATCHING} stops a subscription from re-entering itself through its own signal.
  */
 public final class TriggerDispatcher {
     private static final Map<UUID, LinkedHashMap<String, TriggerSubscription>> BY_OWNER = new LinkedHashMap<>();
     private static final Map<Identifier, LinkedHashMap<UUID, LinkedHashMap<String, TriggerSubscription>>> BY_SIGNAL =
             new LinkedHashMap<>();
+    // Re-entrancy guard: a subscription whose own action publishes the same signal to itself must not recurse.
     private static final ThreadLocal<Set<String>> DISPATCHING =
             ThreadLocal.withInitial(HashSet::new);
 
@@ -76,27 +76,17 @@ public final class TriggerDispatcher {
         BY_SIGNAL.clear();
     }
 
-    /**
-     * Returns the runtime-only subscription count, for lifecycle diagnostics. Subscriptions are never
-     * persisted.
-     */
     public static int subscriptionCount() {
         return BY_OWNER.values().stream().mapToInt(Map::size).sum();
     }
 
-    /**
-     * Returns the current runtime-only subscription count for one owner.
-     */
     public static int subscriptionCount(UUID owner) {
         LinkedHashMap<String, TriggerSubscription> subscriptions = BY_OWNER.get(owner);
         return subscriptions == null ? 0 : subscriptions.size();
     }
 
-    /**
-     * Returns the current runtime-only subscription count of one module for one
-     * owner. Modules that build their own index ask for their own slice instead
-     * of the total, which also contains the subscriptions of every other module.
-     */
+    // Module-scoped: a module that builds its own index asks for its own slice instead of the total, which also
+    // contains every other module's subscriptions.
     public static int subscriptionCount(UUID owner, String module) {
         LinkedHashMap<String, TriggerSubscription> subscriptions = BY_OWNER.get(owner);
         if (subscriptions == null) return 0;
@@ -106,26 +96,17 @@ public final class TriggerDispatcher {
         return count;
     }
 
-    /**
-     * Whether one module currently owns the subscription with that identity.
-     */
     public static boolean hasSubscription(UUID owner, String module, String identity) {
         LinkedHashMap<String, TriggerSubscription> subscriptions = BY_OWNER.get(owner);
         return subscriptions != null && subscriptions.containsKey(module + ":" + identity);
     }
 
-    /**
-     * Returns a snapshot of every runtime-only subscription of one owner, for diagnostics. Subscriptions are
-     * never persisted.
-     */
+    // A snapshot, for diagnostics.
     public static List<TriggerSubscription> subscriptions(UUID owner) {
         LinkedHashMap<String, TriggerSubscription> subscriptions = BY_OWNER.get(owner);
         return subscriptions == null ? List.of() : List.copyOf(subscriptions.values());
     }
 
-    /**
-     * Returns a stable module-to-subscription count snapshot for diagnostics.
-     */
     public static Map<String, Integer> subscriptionCountsByModule() {
         Map<String, Integer> counts = new LinkedHashMap<>();
         BY_OWNER.values().forEach(subscriptions -> subscriptions.values().forEach(subscription ->
@@ -133,20 +114,15 @@ public final class TriggerDispatcher {
         return Collections.unmodifiableMap(counts);
     }
 
-    /**
-     * Whether anything at all can react to that signal: a subscription of any owner, or a datapack rule.
-     * Callers that would otherwise build a context nobody reads ask this first, which is what keeps the
-     * per-tick signal affordable.
-     */
+    // Callers that would otherwise build a context nobody reads ask this first, which is what keeps a per-tick
+    // signal affordable.
     public static boolean hasListener(Identifier signal) {
         LinkedHashMap<UUID, LinkedHashMap<String, TriggerSubscription>> byOwner = BY_SIGNAL.get(signal);
         if (byOwner != null && !byOwner.isEmpty()) return true;
         return ServerCache.get().map(cache -> !cache.triggerRules(signal).isEmpty()).orElse(false);
     }
 
-    /**
-     * Every signal at least one owner listens to, in a stable order, for command completion.
-     */
+    // Every signal at least one owner listens to, in a stable order, for command completion.
     public static List<Identifier> signals() {
         return BY_SIGNAL.keySet().stream().sorted(Comparator.comparing(Identifier::toString)).toList();
     }
@@ -166,10 +142,7 @@ public final class TriggerDispatcher {
         publishTo(actor.getUUID(), signal);
     }
 
-    /**
-     * Publishes a signal to one owner explicitly, for signals whose context has no actor; the normal
-     * publish method derives the owner from {@link TriggerContext#actor()}.
-     */
+    // For signals whose context has no actor; publish(...) derives the owner from the actor instead.
     public static void publishTo(UUID owner, TriggerSignal signal) {
         if (signal.context().level() != null && signal.context().level().isClientSide()) return;
         LinkedHashMap<UUID, LinkedHashMap<String, TriggerSubscription>> byOwner = BY_SIGNAL.get(signal.type());
@@ -216,10 +189,7 @@ public final class TriggerDispatcher {
         publishTo(owner, new TriggerSignal(type, context, null, gameTime));
     }
 
-    /**
-     * The identity of a subscription inside its owner. It is not unique across owners: the same definition
-     * held by two entities produces the same value on purpose.
-     */
+    // Not unique across owners: the same definition held by two entities produces the same value on purpose.
     private static String ownerKey(TriggerSubscription subscription) {
         return subscription.module() + ":" + subscription.identity();
     }

@@ -21,18 +21,15 @@ public final class MxtTestItems {
     public static final Items REGISTRY = DeferredRegister.createItems(MxtTestMod.MOD_ID);
     public static final DeferredItem<Item> QINGXIAO_SPIRIT_CRYSTAL = register("qingxiao_spirit_crystal", Item::new);
 
-    /**
-     * A hammer and a manual that carry {@code mxt:tool_binding} / {@code mxt:blueprint_binding}: the
-     * forge table's slots accept only stacks with those components, and nothing else puts them on an
-     * item, so without these the gated path and both selector lists are unreachable.
-     */
+    // Nothing else puts mxt:tool_binding / mxt:blueprint_binding on an item, and the forge table's slots accept
+    // only stacks carrying them, so without these the gated path and both selector lists are unreachable.
     public static final DeferredItem<Item> TEST_HAMMER = register("test_hammer", Item::new);
     public static final DeferredItem<Item> TEST_MANUAL = register("test_manual", Item::new);
 
     private MxtTestItems() {
     }
 
-    /** A hammer stack bound to a tool binding, or an empty stack when the binding is absent. */
+    // Empty when the binding is absent.
     public static ItemStack hammer(Holder<ToolBinding> binding) {
         if (binding == null) return ItemStack.EMPTY;
         ItemStack stack = new ItemStack(TEST_HAMMER.get());
@@ -40,7 +37,6 @@ public final class MxtTestItems {
         return stack;
     }
 
-    /** A manual stack bound to a blueprint binding, or an empty stack when the binding is absent. */
     public static ItemStack manual(Holder<BlueprintBinding> binding) {
         if (binding == null) return ItemStack.EMPTY;
         ItemStack stack = new ItemStack(TEST_MANUAL.get());

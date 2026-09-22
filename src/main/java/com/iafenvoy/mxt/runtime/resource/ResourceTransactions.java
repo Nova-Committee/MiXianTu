@@ -39,10 +39,8 @@ public final class ResourceTransactions {
         return new Evaluation(amounts);
     }
 
-    /**
-     * Evaluates every cost with the formula context of the resource it spends.
-     * This lets a skill cost refer to that resource's realm rank and absorbed aura.
-     */
+    // Each cost is evaluated with the formula context of the resource it spends, so a skill cost can refer to
+    // that resource's realm rank and absorbed aura.
     public static Evaluation evaluate(LivingEntity payer, List<ResourceCost> costs, FormulaContext context) {
         LinkedHashMap<Identifier, Double> amounts = new LinkedHashMap<>();
         for (ResourceCost cost : costs) {
@@ -62,13 +60,11 @@ public final class ResourceTransactions {
         return tryConsume(null, holder, evaluation);
     }
 
-    /**
-     * Performs an entity-driven transaction. The optional entity enables a resource's
-     * use gate; server systems without an entity retain value-only accounting.
-     */
+    // The optional entity enables a resource's use gate; server systems without an entity retain value-only
+    // accounting.
     public static Result tryConsume(LivingEntity entity, ResourceHolderAttachment holder, Evaluation evaluation) {
-        // The holder is intentionally a value-only attachment.  A cost may never create a
-        // negative balance, even when a caller has not resolved the optional datapack bounds.
+        // The holder is intentionally a value-only attachment, so a cost may never create a negative balance even
+        // when a caller has not resolved the optional datapack bounds.
         for (Entry<Identifier, Double> entry : evaluation.amounts.entrySet()) {
             Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, entry.getKey()).orElse(null);
             if (resource == null) return Result.rejected(entry.getKey(), evaluation.amounts);
@@ -98,10 +94,8 @@ public final class ResourceTransactions {
             amounts = new LinkedHashMap<>(amounts);
         }
 
-        /**
-         * Wraps amounts already evaluated by the caller, so a system that adjusts a cost does not have to
-         * re-evaluate the providers with a different context than the one they were written against.
-         */
+        // Wraps amounts already evaluated by the caller, so a system adjusting a cost does not re-evaluate the
+        // providers against a context other than the one they were written for.
         public static Evaluation of(Map<Identifier, Double> amounts) {
             return new Evaluation(amounts);
         }

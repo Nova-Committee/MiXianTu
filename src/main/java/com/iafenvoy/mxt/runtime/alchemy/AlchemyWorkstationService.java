@@ -43,15 +43,8 @@ public final class AlchemyWorkstationService {
         return result;
     }
 
-    /**
-     * The alchemy modifier of a batch's own input: the lowest modifier among the ingredient stacks that
-     * are in the workstation when the batch starts, and {@link ItemQualityService#DEFAULT_MODIFIER} when
-     * none of them resolves a quality. The lowest, because a brew is only as good as its worst ingredient,
-     * and because one graded herb must not be made to read as though the whole recipe were graded. The
-     * stacks are read here rather than at completion because {@link AlchemyWorkstationState#lock} releases
-     * them as soon as the session is stored; see {@link AlchemySession#start} for what the modifier
-     * settles. The quality lookup is the server-side one, which is the only side a batch can start on.
-     */
+    // The lowest modifier among the ingredients present when the batch starts, because a brew is only as good as
+    // its worst ingredient; read here because lock() releases the stacks as soon as the session is stored.
     static double inputModifier(List<ItemStack> inputs, FormulaContext context) {
         double modifier = ItemQualityService.DEFAULT_MODIFIER;
         boolean graded = false;
@@ -65,17 +58,13 @@ public final class AlchemyWorkstationService {
         return modifier;
     }
 
-    /**
-     * Position-aware variant for concrete alchemy blocks; the plain overload skips the aura check.
-     */
+    // Position-aware variant for concrete alchemy blocks; the plain overload skips the aura check.
     public static StartResult start(Level level, BlockPos pos, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                     int furnaceTier, FormulaContext context) {
         AlchemyRecipe recipe = holder.value().definition();
         AuraResult aura = AuraService.getPositionAura(level, pos);
-        // A zone can declare itself an alchemy environment, and then the place itself stands in for the aura the
-        // recipe asks for: the flag is a plain yes/no with no magnitude to scale a pool by, so the only honest
-        // reading is that the environment requirement is already answered. Without the flag the recipe's own
-        // minimum is compared against the zone's pools exactly as before.
+        // A zone can declare itself an alchemy environment, and then the place stands in for the aura the recipe
+        // asks for: the flag is a plain yes/no with no magnitude, so the requirement is already answered.
         boolean auraMet = aura.rules().alchemyEnvBonus() || recipe.minimumAura().entrySet().stream().allMatch(entry -> {
             double minimum = entry.getValue().evaluate(context);
             return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
@@ -84,9 +73,6 @@ public final class AlchemyWorkstationService {
         return start(state, holder, furnaceTier, context);
     }
 
-    /**
-     * Restores the saved session, advances it once, and appends produced stacks at most once.
-     */
     public static TickResult tick(AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                   double temperature, FormulaContext context) {
         Snapshot snapshot = state.session().orElse(null);
@@ -101,9 +87,6 @@ public final class AlchemyWorkstationService {
         return TickResult.finished(outputs, result.spoiled());
     }
 
-    /**
-     * Completes an alchemy tick and applies the recipe's block-side behavior at the workstation.
-     */
     public static TickResult tick(Level level, BlockPos pos, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                   double temperature, FormulaContext context) {
         TickResult result = tick(state, holder, temperature, context);
@@ -115,9 +98,6 @@ public final class AlchemyWorkstationService {
         return result;
     }
 
-    /**
-     * Owner-aware adapter for workstation block entities that can attribute a successful batch.
-     */
     public static TickResult tick(ServerPlayer owner, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                   double temperature, FormulaContext context) {
         AlchemyRecipe recipe = holder.value().definition();

@@ -12,9 +12,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
 
-/**
- * Common contract for recipes accepted by the spirit crafting table.
- */
 public interface SpiritRecipe extends Recipe<SpiritCraftingInput> {
     Map<Holder<Aura>, NumberProvider> aura();
 

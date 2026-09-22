@@ -12,9 +12,8 @@ import net.minecraft.core.Holder;
 import java.util.Map;
 
 /**
- * One resource aura entry in a datapack definition. {@code amount} is the
- * zone's initial stock or a block's capacity contribution, depending on its owner.
- * The color is used by environment rendering; particles and HUD bars keep their own colors.
+ * One aura entry in a datapack definition. {@code amount} is the zone's initial stock or a block's capacity
+ * contribution, depending on its owner, and the color is used by environment rendering only.
  */
 public record AuraValue(double amount, AuraMaximum max, double regenPerTick, int color) {
     public static final AuraValue ZERO = new AuraValue(0.0D, InitialMultiplier.ONE, 0.0D, 0xFFFFFF);

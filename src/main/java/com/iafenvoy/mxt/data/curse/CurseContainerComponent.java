@@ -22,15 +22,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * The curses an item carries. While such a stack is equipped they are applied to its holder, and taking the stack
- * off removes the ones it owns; a curse that lapses in between is applied again, so a carried curse lasts as long
- * as the gear does.
- * <p>
- * Entries are {@code mxt:apply_curse} entries, so a stack cannot declare anything that action could not do, and
- * the item itself never touches the holder's state: everything goes through the ordinary curse transaction.
- * <p>
- * What a stack carries is written on the stack: the tooltip names every curse, because being cursed by gear one
- * chose to wear should not come as a surprise.
+ * The curses an item carries: while such a stack is equipped they are applied to its holder, and taking it off
+ * removes the ones it owns. Entries are {@code mxt:apply_curse} entries, so a stack cannot declare anything that
+ * action could not do, and the item itself never touches the holder's state - everything goes through the ordinary
+ * curse transaction.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public record CurseContainerComponent(List<ApplyCurseAction> curses) implements TooltipProvider {

@@ -22,49 +22,27 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Which elements one item stack carries. The item-side counterpart of {@link Elements}, which answers the same
- * question for an entity.
- *
- * <p>Two readings, and the first one that answers wins:</p>
- *
- * <ol>
- *   <li><b>What the stack's own definitions declare.</b> The {@code element} field of the {@code weapon_binding},
- *   {@code item_binding} or {@code artifact} that claims the stack, expanded through the element registry so a
- *   tag stands for every element it holds. Several definitions may contribute, and the union is the answer;
- *   within one registry the usual {@code ItemMatcher} reading applies, so the first match is the one that
- *   speaks.</li>
- *   <li><b>What the aura in it names.</b> Only when no definition declares anything: the single aura in the
- *   stack's {@code mxt:spirit_storage} component, or - for a store that is empty or names several - the aura
- *   its {@code mxt:item_aura} definition says it carries, and then that aura's {@code aura_type}. A store that
- *   holds nothing therefore reads as the aura it declares, which is what "a drained stone is empty of what it
- *   declares" means for this reading too. An artifact's {@code spirit_capacity} is deliberately not a source:
- *   it says what a stack can hold, not what it is.</li>
- * </ol>
- *
- * <p>An element a pack disabled contributes nothing, exactly as everywhere else - {@link Elements#expand} is
- * what expands the declarations, and the aura path filters through {@link Elements#enabled}.</p>
- *
- * <p>Nothing here is memoised: the reading walks the item-binding registries, so a caller in a hot path should
- * ask once per strike rather than once per element it is about to compare.</p>
+ * Which elements one item stack carries - the item-side counterpart of {@link Elements}, which answers the same
+ * question for an entity. Two readings, and the first that answers wins: what the stack's own definitions
+ * declare (the {@code element} field of the weapon binding, item binding or artifact claiming it, expanded so a
+ * tag stands for every element it holds and unioned across the three), and failing that what the aura in it
+ * names (the sole aura in its {@code mxt:spirit_storage}, or for a store that is empty or names several, the
+ * {@code aura_type} of the aura its {@code mxt:item_aura} definition declares; an artifact's
+ * {@code spirit_capacity} is deliberately not a source, since it says what a stack can hold, not what it is).
+ * A disabled element contributes nothing, as everywhere else. Nothing is memoised: the reading walks the
+ * item-binding registries, so a hot path asks once per strike rather than once per element compared.
  */
 public final class ItemElements {
     private ItemElements() {
     }
 
-    /**
-     * The elements this stack carries, with the registry view the caller has.
-     */
     public static Set<Holder<Element>> of(RegistryAccess access, ItemStack stack) {
         if (stack.isEmpty()) return Set.of();
         Set<Holder<Element>> declared = declared(access, stack);
         return declared.isEmpty() ? fromAura(access, stack) : declared;
     }
 
-    /**
-     * {@link #of(RegistryAccess, ItemStack)} against the running server's registries, for callers that hold only a
-     * stack. A caller with no server (a client-side script) gets no element rather than an exception, the same
-     * reading {@link ItemAuraService#type(ItemStack)} takes.
-     */
+    // A caller with no server (a client-side script) gets no element rather than an exception.
     public static Set<Holder<Element>> of(ItemStack stack) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         return server == null ? Set.of() : of(server.registryAccess(), stack);
@@ -90,6 +68,6 @@ public final class ItemElements {
         Optional<Holder<Aura>> aura = storage == null ? Optional.empty() : storage.soleAura();
         if (aura.isEmpty()) aura = ItemAuraService.type(access, stack);
         Optional<Holder<Element>> element = aura.flatMap(holder -> holder.value().auraType());
-        return element.filter(Elements::enabled).<Set<Holder<Element>>>map(Set::of).orElseGet(Set::of);
+        return element.filter(Elements::enabled).map(Set::of).orElseGet(Set::of);
     }
 }

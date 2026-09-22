@@ -37,13 +37,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Server-authoritative spirit-power projectile. Its visible beam is a client-side
- * particle trail sampled between two consecutive projectile positions.
- * <p>
- * What it carries is a {@link Resource} - the stored value it was fired from and will pour into whatever it
- * reaches. That is the aura <em>kind</em>, which is a resource; the <em>element</em> a value is attuned to is
- * the cultivation profile's {@code aura_type} and is not what this projectile names, so the two are not the
- * same field and must not share a name.
+ * Server-authoritative spirit-power projectile. It carries a {@link Resource} - the aura kind. The element a
+ * value is attuned to is the cultivation profile's {@code aura_type} and is not named here, so the two are
+ * different fields and must not share a name.
  */
 public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final int MAX_LIFETIME_TICKS = 100;
@@ -144,10 +140,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         this.getEntityData().set(PARTICLE_COLOR, particleColor);
     }
 
-    /**
-     * The aura this burst carries and pours. What travels is the aura itself - which aura is the whole
-     * question - and the value it is counted in is read from the definition where the target store needs it.
-     */
+    // Requires a registry holder: only the id travels, so an inline value could not be rebuilt on arrival.
     public void setAura(Holder<Aura> aura) {
         Identifier id = aura.unwrapKey().map(ResourceKey::identifier)
                 .orElseThrow(() -> new IllegalArgumentException("Spirit burst aura must be a registry holder"));
@@ -166,8 +159,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         Vec3 previous = new Vec3(this.xo, this.yo, this.zo);
         Vec3 movement = current.subtract(previous);
         int samples = Math.max(1, (int) Math.ceil(movement.length() / PARTICLE_SPACING));
-        // The last sample of the previous tick is this tick's first sample.
-        // Skipping it avoids the regularly spaced bright clumps in the trail.
+        // The first sample is the previous tick's last one; skipping it avoids regularly spaced bright clumps.
         for (int index = 1; index <= samples; index++) {
             Vec3 point = previous.lerp(current, (double) index / samples);
             int color = this.variedParticleColor();
@@ -189,21 +181,12 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         return ((int) (red * 255.0F) << 16) | ((int) (green * 255.0F) << 8) | (int) (blue * 255.0F);
     }
 
-    /**
-     * Where a spirit burst reaches a container it could be poured into: the whole cell the block stands in, and
-     * the cell above it. A block's collision shape answers a different question - where a player would bump into
-     * it - and the two disagree exactly where it matters: a display stand shows the item it holds 1.65 above its
-     * own block, above a shape that stops at 1.4375, so a burst aimed at the item a player can see used to fly
-     * straight over the stand and pour into nothing. A container is a place to pour into rather than a wall, so
-     * anything within two blocks of its floor is reached.
-     */
+    // The whole cell the block stands in plus the one above it: a display stand shows its item 1.65 above a shape
+    // that stops at 1.4375, so a shape-based hit flies over the stand and pours into nothing.
     private static final double SPIRIT_REACH_HEIGHT = 2.0D;
 
-    /**
-     * Vanilla projectile ray casts only test the block cell currently crossed, and a block that can be poured
-     * into is reached as a place rather than as its collision shape. A regular block hit still wins when it is
-     * closer, so a burst cannot pour through a wall.
-     */
+    // Vanilla ray casts only test the block cell currently crossed, and a container is reached as a place
+    // rather than as its collision shape; a regular block hit still wins when it is closer.
     private boolean tryHitAuraAccess() {
         Vec3 start = this.position();
         Vec3 end = start.add(this.getDeltaMovement());

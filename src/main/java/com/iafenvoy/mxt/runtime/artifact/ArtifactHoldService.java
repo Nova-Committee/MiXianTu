@@ -38,64 +38,39 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * What holding an artifact down does, one gesture per artifact definition.
+ * What holding an artifact down does, one gesture per definition: an unclaimed artifact is claimed, one already
+ * yours is poured into, one belonging to somebody else is not this module's click at all.
  *
- * <p>An artifact that has no owner is claimed by holding it down: the definition's own condition is asked, and
- * the binding is written through {@link ArtifactService#refine}, which is what runs the definition's
- * {@code claim_action} - the price included, since that action's default is the health it costs - so the loot
- * function, scripts and this gesture cannot disagree about what a refined stack looks like, and each of them
- * pays the same price. Holding an artifact that is already yours pours your own aura into it, one declared aura
- * at a time and one unit a tick, at the price the aura is counted in, and runs {@code pour_action} for every
- * tick that moved something. An artifact that belongs to somebody else is not this module's click at all:
- * {@link ArtifactHold#claims} declines it, the item answers the click itself, and all that is left here is to
- * say why nothing happened. Whatever the gesture did, a hold that ran to its end finishes with the definition's
- * {@code use_action}.</p>
- *
- * <p>Only the server writes. The client half of the gesture is the general hold module's - it arms the use
- * cycle, draws the pose and keeps it alive - and what a hold is worth is never decided there.</p>
+ * <p>Claiming goes through {@link ArtifactService#refine} so the loot function, scripts and this gesture cannot
+ * disagree about what a refined stack looks like - each pays the same price, which is the claim action's own
+ * default. Only the server writes: the client half of the gesture belongs to the general hold module.
  */
 @EventBusSubscriber
 public final class ArtifactHoldService {
-    /**
-     * How fast a held artifact is fed: one whole unit a tick, per declared aura, one for one. Nothing about the
-     * store's shape is assumed by it - a definition that declares several auras is fed several units a tick and
-     * simply takes longer to fill, and one that is full costs nothing.
-     */
+    // One whole unit a tick per declared aura, one for one: a definition declaring several auras just takes
+    // longer to fill, and one that is full costs nothing.
     public static final int POUR_INTAKE_PER_TICK = 1;
     public static final double POUR_COST_PER_UNIT = 1.0D;
 
-    /**
-     * The last action-bar line written to each holder, so a refusal repeated every tick of a hold is said once
-     * and a running total that has not moved is not rewritten. Keyed by the code rather than the message,
-     * because the message is rebuilt from the numbers each time.
-     */
+    // One line per holder, keyed by code rather than message because the message is rebuilt from the numbers.
     private static final Map<UUID, String> LAST_LINE = new ConcurrentHashMap<>();
 
-    /**
-     * What one held-button session has poured so far, and when it last moved.
-     *
-     * <p>A session is deliberately not one use cycle. Vanilla starts a new cycle for as long as the button is
-     * held, so a total cleared at every cycle boundary restarts from zero once per {@code hold_ticks} - which
-     * the reader sees as the artifact having been emptied and refilled from scratch. The total is therefore
-     * kept while pour ticks keep arriving, and starts over only after a pause long enough that the button can
-     * only have been let go (see {@link #SESSION_GAP_TICKS}).
-     */
+    // A session is deliberately not one use cycle: vanilla starts a new cycle for as long as the button is held,
+    // so a total cleared per cycle would restart from zero once per hold_ticks, which reads as the artifact having
+    // been emptied. The total is kept while pour ticks keep arriving and starts over only after
+    // SESSION_GAP_TICKS.
     private record Session(int total, long lastTick) {
     }
 
-    /**
-     * How long a gap between two pour ticks means "a new gesture". Two seconds is far longer than the gap
-     * between two use cycles of one held button, and far shorter than anybody picks an item up again in.
-     */
+    // Far longer than the gap between two use cycles of one held button, far shorter than anybody picks an item
+    // up again in.
     private static final long SESSION_GAP_TICKS = 40L;
     private static final Map<UUID, Session> POURED = new ConcurrentHashMap<>();
 
     private ArtifactHoldService() {
     }
 
-    /**
-     * Hands the hold module every artifact definition that declares a gesture, once, at construction.
-     */
+    // Every artifact definition that declares a gesture, handed to the hold module once at construction.
     public static void initialize() {
         HoldLookup.register(registries -> MxtDatapackRegistries.holders(registries, MxtResourceKeys.ARTIFACT)
                 .map(Reference::value)
@@ -105,10 +80,8 @@ public final class ArtifactHoldService {
                 .toList());
     }
 
-    /**
-     * Explains a click the gesture declined. Nothing is cancelled: a stack this module does not take over is one
-     * the item itself answers, and swallowing the click here would take that away.
-     */
+    // Nothing is cancelled: a stack this module does not take over is one the item itself answers, and swallowing
+    // the click would take that away.
     @SubscribeEvent
     public static void onItemUse(RightClickItem event) {
         LivingEntity holder = event.getEntity();
@@ -123,10 +96,8 @@ public final class ArtifactHoldService {
             show(holder, Component.translatable("actionbar.mxt.artifact.pour_full"), "full");
     }
 
-    /**
-     * Nothing is poured while an unclaimed artifact is held: that gesture is settled when it finishes. The pour
-     * total is deliberately not cleared here - a cycle boundary is not a gesture boundary, see {@link Session}.
-     */
+    // An unclaimed artifact is settled when the hold finishes, so nothing is poured while it is held. The pour
+    // total is deliberately not cleared here: a cycle boundary is not a gesture boundary.
     @SubscribeEvent
     public static void onUseStart(Start event) {
         if (event.getEntity().level().isClientSide()) return;
@@ -134,9 +105,7 @@ public final class ArtifactHoldService {
             POURED.remove(event.getEntity().getUUID());
     }
 
-    /**
-     * One tick of the pour. Server only: the aura is item state, and only the server may write it.
-     */
+    // Server only: the aura is item state, and only the server may write it.
     @SubscribeEvent
     public static void onUseTick(Tick event) {
         LivingEntity holder = event.getEntity();
@@ -148,10 +117,9 @@ public final class ArtifactHoldService {
         if (!ArtifactService.hasOwner(stack) || !ArtifactService.isOwner(stack, holder.getUUID())) return;
         int moved = pour(holder, stack, holder.level().registryAccess(), artifact);
         if (moved <= 0) {
-            // Nothing moved, and the two reasons are told apart rather than lumped together: an artifact that is
-            // full for everything it declares has nothing left to do and says nothing, while one whose aura the
-            // holder cannot pay names that aura. Asking "is there room anywhere" alone made a full second aura
-            // report as a shortfall, which is the answer this replaces.
+            // The two reasons are told apart rather than lumped together: an artifact that is full for everything
+            // it declares says nothing, while one whose aura the holder cannot pay names that aura. Asking "is
+            // there room anywhere" alone made a full second aura report as a shortfall.
             Holder<Aura> blocked = blockedAura(holder, stack, artifact);
             if (blocked != null)
                 show(holder, Component.translatable("actionbar.mxt.charge.insufficient_aura",
@@ -166,15 +134,9 @@ public final class ArtifactHoldService {
         show(holder, Component.translatable("actionbar.mxt.artifact.pouring", total), "pouring:" + total);
     }
 
-    /**
-     * The end of a use cycle: a finished hold claims an unclaimed artifact, and reports what a pour moved. A
-     * hold released early never reaches here, which is what makes the claim require the full gesture. Either way
-     * the definition's {@code use_action} runs last, because a use that was carried through is what just
-     * happened - whether it claimed the artifact or fed it.
-     *
-     * <p>The pour total is reported but not cleared: the button may still be held, and the next cycle then
-     * continues the same session rather than starting the reader's count over.
-     */
+    // A hold released early never reaches here, which is what makes the claim require the full gesture. The
+    // definition's use_action runs last either way. The pour total is reported but not cleared: the button may
+    // still be held, and the next cycle continues the same session.
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
         LivingEntity holder = event.getEntity();
@@ -203,43 +165,29 @@ public final class ArtifactHoldService {
         POURED.remove(event.getEntity().getUUID());
     }
 
-    /**
-     * The first aura this definition declares that has room but that the holder cannot put a whole unit into,
-     * or {@code null} when there is nothing to say.
-     *
-     * <p>This is the question the gesture used to answer with "is there room anywhere", which is also true for
-     * an artifact whose <em>other</em> aura is the one that cannot be paid - so a defensive talisman holding a
-     * full pool of one aura reported the reader's own aura as short. Naming the aura is what separates "this
-     * artifact is full" from "you cannot pay for it", and the answer is deliberately asked the same way
-     * {@link #pour} asks it, so the two cannot disagree about who is blocking.</p>
-     */
+    // Naming the aura is what separates "this artifact is full" from "you cannot pay for it". Asked the same way
+    // pour asks it, so the two cannot disagree about who is blocking.
     public static Holder<Aura> blockedAura(LivingEntity holder, ItemStack stack, Artifact artifact) {
         Provider access = holder.level().registryAccess();
         FormulaContext formula = FormulaContext.of(holder);
-        // Read-only: a holder with no resource attachment at all has nothing to pay with, which is the same
-        // answer as an empty pool, and asking must not create one on a player who never touched a resource.
+        // Read-only: a holder with no resource attachment has nothing to pay with, which is the same answer as an
+        // empty pool, and asking must not create one on a player who never touched a resource.
         ResourceHolderAttachment resources = holder.getExistingData(MxtAttachments.RESOURCE_HOLDER).orElse(null);
         for (Holder<Aura> aura : artifact.spiritCapacity().keySet()) {
             int room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
             if (room <= 0) continue;
             double pool = resources == null ? 0.0D : resources.get(aura.value().resource());
-            // The first aura with room decides the answer: if it can be paid then the tick above would have
-            // moved something, so a shortfall can only be somebody else's - and if it cannot, it is this one.
+            // The first aura with room decides: if it can be paid the tick above would have moved something, so a
+            // shortfall can only be somebody else's - and if it cannot, it is this one.
             return pool / POUR_COST_PER_UNIT >= 1.0D ? null : aura;
         }
         return null;
     }
 
-    /**
-     * Claims one artifact for one holder: the definition's own condition has to pass, and then the binding is
-     * written. Nothing else is asked.
-     *
-     * <p>There is no health check here. What claiming costs is part of the definition's {@code claim_action},
-     * which {@link ArtifactService#refine} runs for a binding that was really written - so a claim another mod
-     * cancels costs nothing, and a holder a price kills has still claimed the artifact. Health is dealt as damage
-     * rather than subtracted, which is what lets protections, absorption and death behave the way they do
-     * everywhere else, and what makes an invulnerable holder's claim free since nothing can collect it.</p>
-     */
+    // No health check here: the cost belongs to the definition's claim_action, which refine runs for a binding
+    // that was really written, so a cancelled claim costs nothing and a price that kills still claims. Health is
+    // dealt as damage rather than subtracted, which is what lets protections and absorption behave normally and
+    // makes an invulnerable holder's claim free.
     public static ClaimResult claim(LivingEntity holder, ItemStack stack, Provider access) {
         if (holder.level().isClientSide()) return ClaimResult.CLIENT_SIDE;
         if (ArtifactService.hasOwner(stack)) return ClaimResult.OWNED_BY_OTHER;
@@ -251,36 +199,25 @@ public final class ArtifactHoldService {
         return ClaimResult.CLAIMED;
     }
 
-    /**
-     * The definition's {@code pour_action}, run once per tick that really moved aura into the artifact - the
-     * settlement of a pour rather than the gesture around it. Public for the same reason {@link #pour} is: a
-     * probe drives one settlement without a use cycle.
-     */
+    // Once per tick that really moved aura into the artifact - the settlement of a pour rather than the gesture
+    // around it. Public so a probe can drive one settlement without a use cycle.
     public static void runPourAction(LivingEntity holder, ItemStack stack) {
         if (holder.level().isClientSide()) return;
         ArtifactService.definition(holder.level().registryAccess(), stack).ifPresent(holder_ ->
                 holder_.value().pourAction().execute(holder, stack, FormulaContext.of(holder)));
     }
 
-    /**
-     * The definition's {@code use_action}, run when this gesture finishes - a claim that was carried through, or
-     * the end of a pour. Nothing runs for a hold released early, because that gesture settled nothing.
-     */
+    // A claim carried through, or the end of a pour. Nothing runs for a hold released early, because that
+    // gesture settled nothing.
     public static void runUseAction(LivingEntity holder, ItemStack stack) {
         if (holder.level().isClientSide()) return;
         ArtifactService.definition(holder.level().registryAccess(), stack).ifPresent(holder_ ->
                 holder_.value().useAction().execute(holder, stack, FormulaContext.of(holder)));
     }
 
-    /**
-     * One tick of pouring: every aura the definition declares, one unit each, paid for out of the holder's own
-     * pool of that aura's resource. Returns how many whole units were taken in, which is what the gesture
-     * reports.
-     *
-     * <p>A pool that cannot afford a unit simply skips that aura for this tick instead of failing the whole
-     * gesture, and a payment is measured rather than assumed - a resource bound may trim what was asked for -
-     * so what is stored is what was really paid.</p>
-     */
+    // A pool that cannot afford a unit skips that aura for this tick rather than failing the whole gesture, and a
+    // payment is measured rather than assumed (a resource bound may trim what was asked for), so what is stored is
+    // what was really paid.
     public static int pour(LivingEntity holder, ItemStack stack, Provider access, Artifact artifact) {
         FormulaContext formula = FormulaContext.of(holder);
         ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
@@ -303,10 +240,8 @@ public final class ArtifactHoldService {
         return moved;
     }
 
-    /**
-     * Says how the gesture ended, in one line per ending rather than one per tick. The name and the price are
-     * re-read here rather than carried in the result, because the definition is what knows both.
-     */
+    // One line per ending rather than one per tick. The name and the price are re-read here rather than carried
+    // in the result, because the definition is what knows both.
     private static void report(LivingEntity holder, ItemStack stack, Provider access, ClaimResult result) {
         FormulaContext context = FormulaContext.of(holder);
         switch (result) {
@@ -327,18 +262,13 @@ public final class ArtifactHoldService {
         }
     }
 
-    /**
-     * Writes one action-bar line per holder, and only when it says something the last one did not.
-     */
+    // Writes one action-bar line per holder, and only when it says something the last one did not.
     private static void show(LivingEntity holder, MutableComponent line, String code) {
         if (!(holder instanceof ServerPlayer player)) return;
         if (code.equals(LAST_LINE.put(player.getUUID(), code))) return;
         player.sendSystemMessage(line.withStyle(ChatFormatting.AQUA), true);
     }
 
-    /**
-     * How one attempt at claiming ended, which is what a probe asserts without a use cycle.
-     */
     public enum ClaimResult {
         CLAIMED, OWNED_BY_OTHER, CONDITION_FAILED, CANCELLED, CLIENT_SIDE
     }

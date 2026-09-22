@@ -28,6 +28,7 @@ MiXianTu 是 NeoForge `26.1.2` / Minecraft `26.1.2` 的服务端权威修仙框�
 - 语义边界：`resource` 只是一套**数值系统**——`default_value`/`min`/`max`/`icon`/`particle_color`/`bars`，它**不知道自己这个数是干什么用的**；`aura`（`mxt:aura`，旧名 `cultivation`）才是**灵气身份**，回答"这是哪一种灵气"（`aura_type` 元素标记、`burst_amount` 射线量）以及"它怎么参与修炼"（境界链入口、`regen`、两个换算、`use_condition`），它引用一个 `resource` 作为**被计量的单位**（`Aura.resource()` 是"我用哪个数计量"，不是"我是什么"）。判断规则是**看使用场景**：凡是"哪一种灵气"的字段、参数、存储键一律用 `Holder<Aura>`——存取接口 `AuraAccess`/`ItemAuraAccess`、物品与方块存储（`mxt:spirit_storage` 的键、`mxt:spirit_burst` 的载荷）、世界灵气池（`aura_zone`/`block_aura`/`AuraResult`/客户端快照与 S2C 包）、`item_aura.type`、`has_realm`、`aura_costs`/`aura_gains`/`aura_cost`/`minimum_aura`/`max_bonus`/阵法 `storage.capacity`。按 `Holder<Resource>` 开键的只有**值**本身：玩家池子 `ResourceHolderAttachment` 与 `ResourceService`/`ResourceTransactions`（里面同时装纯计数器）、公式的 `resource_value.*` 与 `FormulaContext.ResourceSubject`、`Resource.bars`、`mastery_resource`、`add_resource`、`Cost`/`ResourceCost`/`ResourceGain`、`mxt:resource_container`（浮点池子副本）。`AuraLookup` 只保留 value→aura 一个方向（"这个值有没有带灵气"），不要再加整表反查。物品自己装的是哪种灵气也记在物品身上，不要靠"当前匹配到的定义"反推已有存量。**不要重新引入"灵气类型标记"（原 `aura_kinds`）这套裸字符串词汇**：一处环境有什么灵气就是它 `aura` 的键，"能在哪修炼"由 `CultivateAction` 的 `start_condition`/`condition` 表达，炼丹由 `minimum_aura` 表达。
 - 服务端负责消耗、校验、修炼、突破、交易和实体行为；客户端只显示和发送请求。
 - 颜色使用项目的 `MiscCodecs.COLOR`，不要重新引入字符串颜色解析。
+- 注释三律：命名先自解释；对外 API（`api/`、KubeJS 桥接）之外不写成套 Javadoc，只在有明确限制（顺序、重入、平台怪癖、魔数来历、单点实现约束）时点明；一处不超过两行且不重复解释。长解释写进 `research/` / `docs/`，代码里只留结论与约束（口径见 `AGENTS.md` 第 4 节）。
 
 ## 验证命令
 

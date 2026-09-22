@@ -46,32 +46,19 @@ import java.util.Set;
 import java.util.function.Function;
 
 /**
- * Registry-to-item catalogue behind the picker screen.
- *
- * <p>Every category names one registry and one function turning an entry into the rows that stand for it, so
- * the picker itself knows nothing about aura, currencies or bindings. This is the picker's <em>contents</em>
- * and nothing else: the screen builds its grid from here on the client, and taking an item out of that grid is
- * the vanilla creative inventory's own gesture, so no part of this catalogue has to be reproduced on the
- * server.</p>
- *
- * <p>A row is a {@link PickerItem}: the stack to draw, plus the names the row answers to. The names are the
- * provider's business because only the provider knows what a row <em>is</em> - for a plain item its display
- * name and its id say it, and for a definition carried by a stand-in item nothing on the stack does, so the
- * definition's name and id are handed over instead. The screen never has to reconstruct any of that from a
- * registry key and an entry id.</p>
+ * Registry-to-item catalogue behind the picker screen: each category names one registry and one function
+ * turning an entry into the rows that stand for it. Client-side contents only - the grid is built from the
+ * client's own synced registries, and taking an item out of it is the vanilla creative inventory's gesture.
  */
 public final class ItemPickerManager {
     private static final List<ItemProvider<?>> PROVIDERS = new LinkedList<>();
 
     static {
-        // Vanilla registries: every registered item, and every block that has an item form. A language key
-        // built from these two registries is the game's own item and block name, so the stack already says
-        // what the row is and nothing has to be written onto it.
+        // Vanilla registries: the game's own item and block name is already on the stack, so nothing is written onto it.
         registerSingle(Registries.ITEM, holder -> plain(holder.value().getDefaultInstance(), holder));
         registerSingle(Registries.BLOCK, holder -> plain(holder.value().asItem().getDefaultInstance(), holder));
 
-        // Item-shaped data pack registries: the definition already names the items it applies to, so the row
-        // is that item, and the definition it came from is named by its own language key.
+        // Item-shaped definitions: the row is the matched item, named by the definition's own language key.
         registerMatcher(MxtResourceKeys.ITEM_AURA, ItemAura::entries);
         registerMatcher(MxtResourceKeys.CURRENCY, CurrencyValue::items);
         registerMatcher(MxtResourceKeys.SPIRIT_HERB, SpiritHerb::entries);
@@ -81,8 +68,7 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.TECHNIQUE_BINDING, TechniqueBinding::entries);
         registerMatcher(MxtResourceKeys.ARTIFACT, Artifact::entries);
 
-        // Definitions carried by a dedicated item: the definition is written onto the stack, and the name the
-        // row shows is the definition's own rather than the stand-in item's.
+        // Definitions carried by a dedicated item: written onto the stack, and the definition's own name wins.
         registerSingle(MxtResourceKeys.CONTRACT_TYPE, holder -> described(
                 componentStack(new ItemStack(MxtItems.CONTRACT_SCROLL.get()), MxtDataComponents.CONTRACT_SCROLL,
                         new ContractScrollComponent(Optional.of(holder))),
@@ -109,10 +95,7 @@ public final class ItemPickerManager {
                 new ItemStack(MxtItems.IDENTIFICATION_MIRROR.get()), holder, holder.value().displayName()));
     }
 
-    /**
-     * The registered categories, in registration order. The wildcard key is unwidened here because that is
-     * the shape the picker passes around; nothing ever reads the entry type back out of it.
-     */
+    // Wildcard key is unwidened here because that is the shape the picker passes around; nothing reads the entry type back out.
     @SuppressWarnings("unchecked")
     public static List<ResourceKey<Registry<?>>> categories() {
         List<ResourceKey<Registry<?>>> keys = new ArrayList<>(PROVIDERS.size());
@@ -120,38 +103,24 @@ public final class ItemPickerManager {
         return List.copyOf(keys);
     }
 
-    /**
-     * Resolves the category id the open packet carries back to the registry it names.
-     */
     public static Optional<ResourceKey<Registry<?>>> category(Identifier id) {
         return categories().stream().filter(key -> key.identifier().equals(id)).findFirst();
     }
 
     /**
-     * One row the picker can offer: the stack to draw, and the names the row answers to.
-     *
-     * <p>The names are the provider's business, because only the provider knows what a row <em>is</em>. The
-     * row's display name is always among them - a row has to be reachable by what it looks like it is called -
-     * and the rest are the ids it goes by, so a definition carried by a stand-in item can be found both by the
-     * name on the stack and by the id it has in its registry. There is a list rather than a single name
-     * because a definition can be known by more than one.</p>
+     * One row the picker can offer. The row's display name is always among {@code names}, a list rather than a
+     * single name because a definition can be known by more than one.
      */
     public record PickerItem(ItemStack stack, List<Component> names) {
     }
 
-    /**
-     * Everything one category offers, in registry order.
-     */
     public static List<PickerItem> itemsOf(Provider provider, ResourceKey<Registry<?>> key) {
         ItemProvider<?> item = providerOf(key);
         if (item == null) return List.of();
         return item.collectItems(provider);
     }
 
-    /**
-     * Flattens matching entries into the items they name: an item entry becomes that item, a tag entry
-     * every item in the tag. Entries matching by anything else have no concrete item and are skipped.
-     */
+    // Entries matching by anything but item or tag have no concrete item and are dropped silently.
     public static List<ItemStack> stackItems(List<Entry> entries) {
         Set<Item> items = new LinkedHashSet<>();
         for (Entry entry : entries) {
@@ -168,25 +137,14 @@ public final class ItemPickerManager {
         return stacks;
     }
 
-    /**
-     * Registers one row per entry of a registry, which is what a category with nothing to expand needs.
-     */
     public static <T> void registerSingle(ResourceKey<Registry<T>> key, Function<Holder<T>, PickerItem> provider) {
         register(key, holder -> List.of(provider.apply(holder)));
     }
 
-    /**
-     * Registers a category whose entries expand to several rows.
-     */
     public static <T> void register(ResourceKey<Registry<T>> key, Function<Holder<T>, List<PickerItem>> provider) {
         PROVIDERS.add(new ItemProvider<>(key, provider));
     }
 
-    /**
-     * Registers the item-shaped entries of a definition: each entry expands to the items it matches, drawn as
-     * the plain items themselves, and a row answers to the name of the item it shows, the definition's name,
-     * and the definition's id.
-     */
     private static <T> void registerMatcher(ResourceKey<Registry<T>> key, Function<T, List<Entry>> entries) {
         register(key, holder -> {
             Identifier id = HolderHelper.idOrNull(holder);
@@ -199,41 +157,25 @@ public final class ItemPickerManager {
         });
     }
 
-    /**
-     * A row for a registry whose entries are their own item: the stack already says what it is, so the row is
-     * found by what it shows and by the id it is registered under.
-     */
     private static PickerItem plain(ItemStack stack, Holder<?> holder) {
         return new PickerItem(stack, names(stack.getHoverName(), idName(HolderHelper.idOrNull(holder))));
     }
 
-    /**
-     * A row for a definition nothing on the stack names - an item-shaped definition, or one carried by a
-     * stand-in item - so the row is searched by the name the definition's own language key gives it.
-     */
     private static PickerItem described(ItemStack stack, Holder<?> holder) {
         return described(stack, holder, DefinitionText.name(holder));
     }
 
-    /**
-     * A row for a definition that has a name of its own, such as a quality, where that name is what the row is
-     * searched by.
-     */
     private static PickerItem described(ItemStack stack, Holder<?> holder, Component name) {
         return new PickerItem(stack, names(name, idName(HolderHelper.idOrNull(holder))));
     }
 
-    /**
-     * The names a row answers to, in the order they are searched. A name that resolves to nothing is dropped
-     * rather than left to match every search term, which is also what a missing id contributes.
-     */
+    // A null or blank name is dropped rather than left to match every search term, which is also what a missing id contributes.
     private static List<Component> names(Component... names) {
         List<Component> kept = new ArrayList<>(names.length);
         for (Component name : names) if (name != null && !name.getString().isBlank()) kept.add(name.copy());
         return kept.isEmpty() ? List.of() : List.copyOf(kept);
     }
 
-    /** An id as one more name a row can be found by. */
     private static @Nullable Component idName(@Nullable Identifier id) {
         return id == null ? null : Component.literal(id.toString());
     }
@@ -249,10 +191,6 @@ public final class ItemPickerManager {
         return null;
     }
 
-    /**
-     * One category: the registry it walks, and how one entry of that registry becomes the rows standing for
-     * it.
-     */
     public record ItemProvider<T>(ResourceKey<Registry<T>> key, Function<Holder<T>, List<PickerItem>> items) {
         private List<PickerItem> collectItems(Provider provider) {
             List<PickerItem> collected = new ArrayList<>();

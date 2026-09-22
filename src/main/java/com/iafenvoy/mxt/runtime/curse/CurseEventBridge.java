@@ -33,17 +33,15 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Registers loaded cursed entities and services only their due lifecycle work.
+ * Registers loaded cursed entities and services only their due lifecycle work, never iterating every loaded
+ * entity.
  * <p>
  * It also owns the item side of a curse: a stack carrying {@code mxt:curse_container} transfers its curses to
- * whoever equips it, and takes them back when it is removed. The transfer runs through the ordinary transaction,
- * so the carried curses obey their own conditions, stacking and duration like any other.
+ * whoever equips it through the ordinary transaction, so they obey their own conditions, stacking and duration.
  */
 @EventBusSubscriber
 public final class CurseEventBridge {
-    /**
-     * The slots a carried curse is transferred from. The held slots count, so a cursed blade curses its wielder.
-     */
+    // The held slots count, so a cursed blade curses its wielder.
     private static final List<EquipmentSlot> SLOTS = List.of(EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND,
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET);
     private static final Identifier CURIOS_SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "curios_equipment");
@@ -61,19 +59,15 @@ public final class CurseEventBridge {
         if (event.getEntity() instanceof LivingEntity living) syncCarried(living);
     }
 
-    /**
-     * Answers an equipment change at once, rather than waiting for the slow cadence.
-     */
+    // Answers an equipment change at once, rather than waiting for the slow cadence.
     @SubscribeEvent
     public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
         if (event.getEntity().level().isClientSide()) return;
         syncCarried(event.getEntity());
     }
 
-    /**
-     * The slow cadence. It is what makes Curios carry curses, and what lets a carried curse come back by itself
-     * after it expired, was cleansed, or was released by the source that held it before.
-     */
+    // The slow cadence: what makes Curios carry curses, and what lets a carried curse come back by itself after
+    // it expired, was cleansed, or was released by the source that held it before.
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
@@ -86,14 +80,8 @@ public final class CurseEventBridge {
         if (event.getLevel() instanceof ServerLevel level) CurseScheduler.onLevelTick(level);
     }
 
-    /**
-     * Reconciles the curses an entity's gear carries with the curses it holds, per source and the same way the
-     * ability model reconciles its equipment: a stack applies what nobody holds yet, joins the ledger for the
-     * curses that are already there, and releases whatever it no longer declares. A curse only leaves when that
-     * release was its last source, so gear and an ability may hold the same curse at once.
-     * <p>
-     * Everything here is idempotent, so the equipment event and the slow cadence can both call it.
-     */
+    // Per source: a stack applies what nobody holds yet, joins the ledger for what is already there, and releases
+    // what it no longer declares. Idempotent, so the equipment event and the slow cadence can both call it.
     public static void syncCarried(LivingEntity entity) {
         Map<Identifier, List<ApplyCurseAction>> declared = new LinkedHashMap<>();
         for (EquipmentSlot slot : SLOTS) {
@@ -117,8 +105,8 @@ public final class CurseEventBridge {
             for (ApplyCurseAction action : entry.getValue()) {
                 Holder<Curse> curse = action.curse();
                 wanted.add(curse);
-                // Only a curse nobody holds yet needs applying. Joining one that is already there is the ledger's
-                // business, which is what stops carried gear from fighting another source over the same curse.
+                // Only a curse nobody holds yet needs applying; joining one that is already there is the ledger's
+                // business, which is what stops carried gear fighting another source over the same curse.
                 if (holder.instances().containsKey(curse)) continue;
                 double stacks = action.stacks().evaluate(context);
                 if (!Double.isFinite(stacks) || stacks < 1.0D || stacks > 256.0D) continue;
@@ -148,9 +136,7 @@ public final class CurseEventBridge {
                 && (source.getPath().startsWith(EQUIPMENT_PATH) || source.equals(CURIOS_SOURCE));
     }
 
-    /**
-     * One equipped stack's own source, in the same shape the ability model uses for its grants.
-     */
+    // One equipped stack's own source, in the same shape the ability model uses for its grants.
     private static Identifier source(EquipmentSlot slot, ItemStack stack) {
         Identifier item = stack.isEmpty() ? Identifier.fromNamespaceAndPath("minecraft", "air")
                 : BuiltInRegistries.ITEM.getKey(stack.getItem());

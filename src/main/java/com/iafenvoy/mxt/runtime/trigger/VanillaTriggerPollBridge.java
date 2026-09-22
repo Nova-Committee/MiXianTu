@@ -31,25 +31,17 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The ported vanilla triggers that vanilla itself polls.
+ * The ported vanilla triggers that vanilla itself polls: about a third of them are never fired from a call site
+ * but compared every tick, on landing or when a fall starts. Copying that comparison is what keeps them faithful
+ * ({@code research/33}); the state vanilla keeps in private fields (fall start, lava start, nether entry) is kept
+ * here instead.
  *
- * <p>About a third of vanilla's triggers are never fired from a call site: {@code ServerPlayer} compares
- * something every tick, on landing, or when a fall starts - the block it is inside, its location, levitation,
- * the two falls, lava under a vehicle, the nether round trip, the inventory, the item being used, and sleep.
- * Those are ported by copying that comparison, which is what makes them faithful: the state vanilla keeps in
- * its own fields (the fall start, the lava start, the nether entry position) is kept here instead, and the
- * state vanilla exposes publicly (the impulse position and the explosion cause) is read straight off the
- * player.</p>
- *
- * <p>Everything runs on {@link Post}, which wraps the same method vanilla polls in, and every
- * comparison is skipped unless something listens to its signal, so a player costs nothing while no definition
- * reacts to these.</p>
+ * <p>Everything runs on {@link Post}, which wraps the same method vanilla polls in. Each comparison is skipped
+ * unless something listens to its signal, so a player who triggers no definition costs nothing.
  */
 @EventBusSubscriber
 public final class VanillaTriggerPollBridge {
-    /**
-     * Vanilla asks for a location every second, not every tick.
-     */
+    // Vanilla asks for a location every second, not every tick.
     private static final int LOCATION_INTERVAL = 20;
     private static final String DURATION = "duration";
 
@@ -86,10 +78,8 @@ public final class VanillaTriggerPollBridge {
         if (sleeping) pollSleeping(player, state);
     }
 
-    /**
-     * Vanilla records where levitation started when the effect is added and clears it when the effect is gone;
-     * both are observed here on the first and last tick the effect is present.
-     */
+    // Vanilla records where levitation started when the effect is added and clears it when the effect is gone:
+    // observed here on the first and the last tick the effect is present.
     private static void pollLevitation(ServerPlayer player, PollState state) {
         if (!player.hasEffect(MobEffects.LEVITATION)) {
             state.levitating = false;
@@ -109,10 +99,8 @@ public final class VanillaTriggerPollBridge {
                 context -> context.payload(TriggerPayload.START_POSITION, start));
     }
 
-    /**
-     * Vanilla's {@code trackStartFallingPosition} and {@code resetFallDistance}, with the impulse position and
-     * the explosion cause read from the public fields vanilla itself writes.
-     */
+    // Vanilla's trackStartFallingPosition and resetFallDistance; the impulse position and the explosion cause are
+    // read off the public fields vanilla itself writes.
     private static void pollFall(ServerPlayer player, PollState state) {
         if (player.fallDistance > 0.0 && state.fallStart == null) {
             state.fallStart = player.position();
@@ -134,10 +122,8 @@ public final class VanillaTriggerPollBridge {
         }
     }
 
-    /**
-     * Vanilla's {@code trackEnteredOrExitedLavaOnVehicle}: the first tick records where the vehicle entered
-     * lava, and every tick after that reports the trip from there.
-     */
+    // Vanilla's trackEnteredOrExitedLavaOnVehicle: the first tick records where the vehicle entered lava, and
+    // every tick after that reports the trip from there.
     private static void pollVehicleLava(ServerPlayer player, PollState state) {
         Entity vehicle = player.getVehicle();
         if (vehicle != null && vehicle.isInLava()) {
@@ -154,12 +140,8 @@ public final class VanillaTriggerPollBridge {
         }
     }
 
-    /**
-     * Vanilla tests the blocks its movement passed through; this reports the blocks the player's box started
-     * overlapping since the previous tick, which is the same "walked into something" moment. Fluids count, and
-     * blocks without collision of their own - grass, torches - do not, the way vanilla's inside-shape test
-     * skips them.
-     */
+    // Vanilla tests the blocks its movement passed through; this reports the blocks the player's box started
+    // overlapping since the previous tick, which is the same "walked into something" moment.
     private static void pollEnterBlock(ServerPlayer player, PollState state) {
         ServerLevel level = player.level();
         AABB box = player.getBoundingBox();
@@ -189,12 +171,9 @@ public final class VanillaTriggerPollBridge {
         state.insideBlocks = inside;
     }
 
-    /**
-     * Vanilla hears about inventory changes from a container listener and reports the slot that changed; the
-     * same slots are found here by comparing against the previous tick, and every changed slot is reported.
-     * Two more of its triggers live on that same path - a bucket being filled, and an item losing durability -
-     * so they are recognised from the pair of stacks this comparison already holds.
-     */
+    // Vanilla hears about inventory changes from a container listener; the changed slots are found here by
+    // comparing against the previous tick, and every changed slot is reported. Two more of its triggers live on
+    // that path - a bucket filled, an item damaged - and are recognised from the pair of stacks this already has.
     private static void pollInventory(ServerPlayer player, PollState state, boolean changed, boolean bucket, boolean durability) {
         Inventory inventory = player.getInventory();
         List<ItemStack> current = new ArrayList<>(inventory.getContainerSize());
@@ -227,27 +206,20 @@ public final class VanillaTriggerPollBridge {
         state.inventory = current;
     }
 
-    /**
-     * Vanilla fires this where a bucket is filled, so the empty bucket it replaced is what the pair of stacks
-     * is asked for. A filled bucket that arrives any other way - out of a chest, off the ground - looks the
-     * same here, while vanilla would not have reported it.
-     */
+    // Vanilla fires this where a bucket is filled, so the empty bucket it replaced is what the pair is asked
+    // for. A bucket filled any other way - out of a chest, off the ground - looks the same here while vanilla
+    // would not have reported it.
     private static boolean filledBucket(ItemStack before, ItemStack now) {
         return before.is(Items.BUCKET) && !now.is(Items.BUCKET) && !now.isEmpty();
     }
 
-    /**
-     * Vanilla fires this where an item is damaged; a repair is written through another path and does not fire.
-     */
+    // Vanilla fires this where an item is damaged; a repair is written through another path and does not fire.
     private static boolean damaged(ItemStack now, ItemStack before) {
         return now.isDamageableItem() && now.getItem() == before.getItem()
                 && now.getDamageValue() > before.getDamageValue();
     }
 
-    /**
-     * Vanilla fires this where the player successfully falls asleep, which is the moment the sleeping flag
-     * turns on.
-     */
+    // Vanilla fires this where the player successfully falls asleep, which is the moment the flag turns on.
     private static void pollSleeping(ServerPlayer player, PollState state) {
         boolean sleeping = player.isSleeping();
         if (sleeping && !state.sleeping) {
@@ -256,18 +228,14 @@ public final class VanillaTriggerPollBridge {
         state.sleeping = sleeping;
     }
 
-    /**
-     * The state is runtime-only, so a player who leaves takes it with them.
-     */
+    // Runtime-only state: a player who leaves takes it with them.
     @SubscribeEvent
     public static void onLoggedOut(PlayerLoggedOutEvent event) {
         STATES.remove(event.getEntity().getUUID());
     }
 
-    /**
-     * Vanilla records where the player entered the nether and reports the trip when they come back to the
-     * overworld; the same walk from the pre-transfer event, which is the only dimension hook available.
-     */
+    // Vanilla records where the player entered the nether and reports the trip on the way back; same walk here,
+    // from the pre-transfer event, which is the only dimension hook available.
     @SubscribeEvent
     public static void onTravelToDimension(EntityTravelToDimensionEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;

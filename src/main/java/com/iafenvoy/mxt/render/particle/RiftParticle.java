@@ -11,12 +11,8 @@ import net.minecraft.util.RandomSource;
 import org.jspecify.annotations.NonNull;
 
 /**
- * A rift's sparkle: the vanilla portal particle in the rift's own colour.
- *
- * <p>Everything that makes the portal particle what it is - the sprite, the size, the rise, the fading light -
- * is inherited unchanged; the only thing replaced is the colour, which the portal particle hard-codes as violet
- * and a rift takes from the door it came out of. Brightness is still varied per particle the same way, so a
- * cloud of them keeps the uneven shimmer instead of looking like a flat wash.
+ * The vanilla portal particle in a rift's own colour: sprite, size, rise and fading light are inherited, only the
+ * hard-coded violet is replaced by the colour the rift carries.
  */
 public final class RiftParticle extends PortalParticle {
     private RiftParticle(ClientLevel level, double x, double y, double z, double velocityX, double velocityY,

@@ -15,8 +15,8 @@ import java.util.function.BooleanSupplier;
 
 /**
  * Callback storage for the JavaScript condition dispatch types. Every callback receives the
- * {@link FormulaContext} the condition was tested with, so a script reads the same event payload
- * variables a data pack condition would.
+ * {@link FormulaContext} the condition was tested with, so a script reads the same event payload variables a
+ * data pack condition would. A missing callback or a failing one answers {@code false}.
  */
 public final class MxtJsConditionCallbacks {
     private static final Map<String, TriPredicate<Entity, JsonObject, FormulaContext>> ENTITY = new ConcurrentHashMap<>();

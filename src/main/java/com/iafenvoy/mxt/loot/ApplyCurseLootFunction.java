@@ -19,13 +19,8 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/**
- * Vanilla loot integration for a server-validated curse application.
- */
 public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
-    /**
-     * What loot owes a curse it applies; one of the sources the shared ledger counts.
-     */
+    // Attribution for the shared curse ledger; the name is data, other sources name themselves differently.
     private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "loot");
 
     public static final MapCodec<ApplyCurseLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(

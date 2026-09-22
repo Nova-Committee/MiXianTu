@@ -9,9 +9,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * Factories for formula contexts. A context only records which objects the formula is evaluated
- * against; the entity and resource variables are read out of those objects on demand, so creating
- * one costs nothing beyond the event values the caller passes in.
+ * Factories for formula contexts; the entity and resource variables are read out of the recorded objects on
+ * demand, so creating one costs nothing beyond the event values the caller passes in.
  */
 public final class FormulaContexts {
     private FormulaContexts() {
@@ -29,25 +28,16 @@ public final class FormulaContexts {
         return new FormulaContext(finite(extra), caster.getRandom(), playerOf(caster, target), caster, target, null, false);
     }
 
-    /**
-     * Adds the acting entity to an existing context, keeping its explicit values, target and
-     * resource subject.
-     */
     public static FormulaContext forEntity(@NotNull Entity entity, @NotNull FormulaContext base) {
         return base.withCaster(entity);
     }
 
-    /**
-     * Adds both entities of a bi-entity formula to an existing context.
-     */
     public static FormulaContext forEntities(@NotNull Entity caster, @NotNull Entity target, @NotNull FormulaContext base) {
         return base.withCaster(caster).withTarget(target);
     }
 
-    /**
-     * Keeps the entries a formula can actually read: a null or non-finite extra value is dropped
-     * instead of failing the evaluation.
-     */
+    // Keeps the entries a formula can actually read: a null or non-finite extra value is dropped rather than
+    // failing the evaluation.
     static Map<String, Double> finite(Map<String, Double> extra) {
         if (extra.isEmpty()) return Map.of();
         for (Entry<String, Double> entry : extra.entrySet()) {

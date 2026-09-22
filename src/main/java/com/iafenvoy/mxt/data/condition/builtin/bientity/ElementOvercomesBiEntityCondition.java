@@ -13,9 +13,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Set;
 
 /**
- * True when at least one of the actor's spirit-root elements overcomes a target root element. The relation
- * itself is the question here, not what it is worth: how much an edge multiplies damage is the damage
- * pipeline's business ({@code DamageCalculationService}).
+ * True when one of the actor's spirit-root elements overcomes a target root element. Only the relation is asked
+ * here; how much an edge multiplies damage is the damage pipeline's business.
  */
 public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
     INSTANCE;

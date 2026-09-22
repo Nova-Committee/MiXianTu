@@ -11,12 +11,10 @@ import net.minecraft.world.entity.LivingEntity;
 import java.util.List;
 
 /**
- * Runtime physique operations exposed as {@code MxtPhysiques}.
- * <p>
- * A physique is the element-free half of a body's cultivation identity: it grants vanilla attributes and
- * abilities, scales the damage its holder deals and takes, and excludes other physiques by tag. Everything
- * here goes through the same services the data pack actions use, so the holder condition and the exclusive
- * tags are read against the entity as it is right now rather than trusted from the caller.
+ * Runtime physique operations exposed as {@code MxtPhysiques}. A physique is the element-free half of a body's
+ * cultivation identity: it grants vanilla attributes and abilities, scales the damage its holder deals and takes,
+ * and excludes other physiques by tag. Everything goes through the services the data pack actions use, so the
+ * holder condition and the exclusive tags are read against the entity as it is right now.
  */
 public final class MxtKubeJsPhysiqueBindings {
     @Info("Every physique the entity holds, sorted, whether or not it is switched on or its definition still exists.")

@@ -9,13 +9,12 @@ import java.util.Locale;
  * number keeps its width while it counts down.
  */
 public final class WheelDuration {
-    /** How many game ticks a second is. */
     private static final double TICKS_PER_SECOND = 20.0D;
 
     private WheelDuration() {
     }
 
-    /** A duration as "4.3s"; a non-finite value is written as zero rather than as {@code NaN}s. */
+    // A non-finite value is written as zero rather than as NaN seconds.
     public static Component seconds(double ticks) {
         double seconds = Double.isFinite(ticks) ? ticks / TICKS_PER_SECOND : 0.0D;
         return Component.translatable("wheel.mxt.tooltip.seconds",

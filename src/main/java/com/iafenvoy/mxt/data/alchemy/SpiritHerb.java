@@ -17,14 +17,9 @@ import net.minecraft.tags.TagKey;
 import java.util.List;
 
 /**
- * Metadata attached to existing items selected by {@code items}; this framework
- * never registers a dedicated herb Item for a datapack entry.
- *
- * <p>{@code element_tags} is the herb's affinity, written with the element registry: an entry names one
- * element, a {@code #} tag names every element in it, and elements a pack disabled are not part of either.
- * That is what makes "a fire-aligned herb" a single declaration here rather than a second vocabulary that has
- * to be kept in step with the element definitions by hand - see {@code mxt:herb_tag}, the matcher that reads
- * this field.</p>
+ * Metadata attached to existing items selected by {@code items}; the framework never registers a dedicated herb
+ * Item for a datapack entry. {@code element_tags} is the herb's affinity, written with the element registry, so
+ * elements a pack disabled are not part of it - see {@code mxt:herb_tag}, the matcher that reads this field.
  */
 public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, NumberProvider age,
                          List<Either<Holder<Element>, TagKey<Element>>> elementTags, List<Identifier> materialTags,

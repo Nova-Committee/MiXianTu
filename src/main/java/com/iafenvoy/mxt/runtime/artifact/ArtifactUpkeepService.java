@@ -17,22 +17,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The periodic price of carrying an artifact: what an {@code mxt:upkeep} entry charges whoever holds it.
+ * The periodic price of carrying an artifact, charged once a server tick to every carried artifact. The clock is
+ * the world's game time rather than a per-stack counter, which keeps a definition's cadence identical for client
+ * and server and leaves no state on the stack - so a price falls on every tick whose game time is a multiple of
+ * the interval, not "interval ticks after the artifact was picked up".
  *
- * <p>Once a server tick, every carried artifact - both hands and every equipped Curios slot - is asked for its
- * upkeep entry, and one whose game time falls on its interval pays. The clock is the world's rather than a
- * per-stack counter, which is what keeps a definition's cadence identical for client and server and leaves no
- * state behind on the stack; the consequence is that a price falls on every tick whose game time is a multiple
- * of the interval, not "interval ticks after the artifact was picked up".</p>
- *
- * <p>Paying is all or nothing, through the shared resource transaction, so a definition that names several
- * resources never takes half of them. A price that cannot be paid is not a refusal to do anything else: the
- * entry's own {@code on_fail} action runs, which is where a backlash or a wear cost belongs. Nothing here is
- * decided by the holder's health, and nothing is written to the artifact unless that action writes it.</p>
+ * <p>Paying is all or nothing, through the shared resource transaction, so a definition naming several resources
+ * never takes half of them. An unpayable price runs the entry's own {@code on_fail} action, which is where a
+ * backlash or a wear cost belongs.
  */
 @EventBusSubscriber
 public final class ArtifactUpkeepService {
-    /** A clock that cannot produce a shorter interval, so a division is never the reason a price is skipped. */
+    // A clock that cannot produce a shorter interval, so a division is never the reason a price is skipped.
     private static final long MIN_INTERVAL = 1L;
 
     private ArtifactUpkeepService() {
@@ -46,13 +42,9 @@ public final class ArtifactUpkeepService {
         }
     }
 
-    /**
-     * The artifact stacks an entity actually carries: the two hands plus every equipped Curios stack. Live
-     * stacks rather than copies, because a failure action is allowed to write to the artifact it belongs to.
-     *
-     * <p>Public because "what this entity carries" is one definition with more than one reader: the upkeep
-     * tick here, and the item-side factors the damage pipeline reads off a victim's gear.</p>
-     */
+    // Both hands plus every equipped Curios stack. Live stacks rather than copies, because a failure action may
+    // write to the artifact it belongs to. Public because the damage pipeline reads the same definition to get a
+    // victim's item-side factors.
     public static List<ItemStack> carried(LivingEntity holder) {
         List<ItemStack> stacks = new ArrayList<>(4);
         stacks.add(holder.getMainHandItem());
@@ -61,14 +53,9 @@ public final class ArtifactUpkeepService {
         return stacks;
     }
 
-    /**
-     * Charges one artifact for one tick, reporting whether a price was really paid.
-     *
-     * <p>Public so a probe can drive one settlement without a server tick, the same reason
-     * {@link ArtifactHoldService#claim} and {@link ArtifactHoldService#pour} are. An artifact whose entry asks
-     * for nobody in particular, whose definition declares no costs, that is not yet the holder's when the entry
-     * asks for an owner, or whose clock is between intervals, is left exactly as it is.</p>
-     */
+    // Public so a probe can drive one settlement without a server tick. An artifact whose entry asks for nobody in
+    // particular, whose definition declares no costs, that is not yet the holder's when the entry asks for an
+    // owner, or whose clock is between intervals, is left exactly as it is.
     public static boolean upkeep(LivingEntity holder, ItemStack stack, long gameTime) {
         UpkeepArtifactAbility upkeep = ArtifactService.upkeep(holder.level().registryAccess(), stack).orElse(null);
         if (upkeep == null || upkeep.costs().isEmpty()) return false;
@@ -91,11 +78,8 @@ public final class ArtifactUpkeepService {
         return false;
     }
 
-    /**
-     * How long this definition's interval is, in whole ticks. A declaration that evaluates to nothing usable
-     * falls back to the entry's own default rather than to "every tick", so a broken formula cannot turn a
-     * gentle price into a drain.
-     */
+    // A declaration that evaluates to nothing usable falls back to the entry's own default rather than to "every
+    // tick", so a broken formula cannot turn a gentle price into a drain.
     private static long interval(UpkeepArtifactAbility upkeep, FormulaContext context) {
         double value = upkeep.interval().evaluate(context);
         if (!Double.isFinite(value) || value < (double) MIN_INTERVAL || value > (double) Long.MAX_VALUE)

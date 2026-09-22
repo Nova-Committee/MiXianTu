@@ -10,10 +10,8 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import java.util.function.BiPredicate;
 
 /**
- * Script-backed vanilla loot conditions and functions exposed as {@code MxtLoot}.
- *
- * <p>Both run on the server while loot is generated, so a loot table can call into a server script
- * exactly like it calls a built-in condition or function.</p>
+ * Script-backed vanilla loot conditions and functions exposed as {@code MxtLoot}. Both run on the server while
+ * loot is generated, so a loot table can call into a server script exactly like it calls a built-in condition.
  */
 public final class MxtKubeJsLootBindings {
     @Info("Registers a script loot condition. Vanilla condition type: mxt:js")

@@ -12,9 +12,6 @@ public final class FormationSources {
     private FormationSources() {
     }
 
-    /**
-     * The source a formation's grants are released through.
-     */
     public static Identifier of(Identifier formation) {
         return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
                 "formation/" + formation.getNamespace() + "/" + formation.getPath());

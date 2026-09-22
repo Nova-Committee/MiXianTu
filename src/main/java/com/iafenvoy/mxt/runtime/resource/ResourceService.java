@@ -61,9 +61,6 @@ public final class ResourceService {
                 .map(resource -> change(holder, resource, amount, context)).orElse(Result.invalid());
     }
 
-    /**
-     * Applies a cultivation profile's passive regeneration over the elapsed ticks.
-     */
     public static Result regenerate(ResourceHolderAttachment holder, Holder<Resource> resource, NumberProvider regen,
                                     long elapsedTicks, FormulaContext context) {
         if (elapsedTicks < 0L) throw new IllegalArgumentException("Elapsed ticks cannot be negative");
@@ -72,10 +69,7 @@ public final class ResourceService {
         return change(holder, resource, amount * elapsedTicks, context);
     }
 
-    /**
-     * Adds resource-specific cultivation variables to a caller-provided formula context.
-     * {@code absorbed_aura} is zero when the player has no realm stage in this resource's chain.
-     */
+    // absorbed_aura is zero when the player has no realm stage in this resource's chain.
     public static FormulaContext formulaContext(CultivationAttachment spirit, Holder<Resource> resource, FormulaContext base) {
         return base.withResource(spirit, resource);
     }
@@ -85,9 +79,6 @@ public final class ResourceService {
                 .map(value -> formulaContext(spirit, value, base)).orElse(base);
     }
 
-    /**
-     * Builds the same resource context on either logical side from an entity attachment.
-     */
     public static FormulaContext formulaContext(LivingEntity entity, Holder<Resource> resource, FormulaContext base) {
         return FormulaContexts.forEntity(entity, base)
                 .withResource(entity.getData(MxtAttachments.CULTIVATION), resource);
@@ -108,10 +99,8 @@ public final class ResourceService {
         return resolveBounds(definition, context).orElse(null);
     }
 
-    /**
-     * Rank of this entity's stage in the chain, or {@code -1} when it has no stage in it. The chain
-     * holder is the state key, so no registry lookup is needed. Read by the resource formula variables.
-     */
+    // Rank of this entity's stage in the chain, or -1 when it has no stage in it. The chain holder is the state
+    // key, so no registry lookup is needed. Read by the resource formula variables.
     public static int realmRank(CultivationAttachment spirit, Holder<Aura> aura) {
         Holder<RealmStage> current = spirit.realmStage(aura);
         if (current != null) {

@@ -20,11 +20,8 @@ public interface TargetSelector {
 
     Stream<Entity> select(Entity actor, FormulaContext context);
 
-    /**
-     * The same selection, for an activation that happens somewhere other than where the actor stands - an item
-     * cast from a display stand. A selector that works off the actor's own place overrides this; the default
-     * ignores it, because most selectors ask about the actor itself rather than about a place.
-     */
+    // For an activation that happens somewhere other than where the actor stands (an item cast from a display
+    // stand). The default ignores it, because most selectors ask about the actor itself rather than about a place.
     default Stream<Entity> select(Entity actor, FormulaContext context, @Nullable Vec3 origin) {
         return this.select(actor, context);
     }

@@ -15,12 +15,10 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A rift anchor: it carries a destination and a colour and stamps them into rifts that already exist.
- *
- * <p>It deliberately places nothing - a rift block is placed with the rift's own block item, like any other
- * block. What is left here is the adjusting: used on a rift it re-aims and recolours that rift, and used while
- * sneaking it records the dimension the player is standing in, which is how a destination is chosen without any
- * command. The alternative spelling of all of this is {@code /mxt rift}.
+ * A rift anchor: it carries a destination and a colour and stamps them into rifts that already exist. It places
+ * nothing - a rift block is placed with the rift's own block item - so what is left here is the adjusting: used on
+ * a rift it re-aims and recolours it, used while sneaking it records the dimension the player stands in. The
+ * command spelling of all this is {@code /mxt rift}.
  */
 public final class RiftAnchorItem extends Item {
     public RiftAnchorItem(Properties properties) {

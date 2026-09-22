@@ -18,24 +18,15 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Matches a strike by the elements it is made of: true when any element the strike belongs to is one of the
- * listed ones (entry or tag).
- *
- * <p>Where that answer comes from is the whole point. The strike's elements are read by
- * {@link DamageElements#strike(net.minecraft.world.damagesource.DamageSource)} - the damage type's claimants,
- * or the attacker's spirit roots when nobody claims it - which is the same rule the damage pipeline applies.
- * A condition therefore cannot disagree with the number the target actually lost, and it covers a hit this mod
- * never dealt as readily as its own: {@code {"type": "mxt:element", "elements": ["example:fire"]}} answers
- * for a lava tick once that element claims {@code minecraft:lava}.</p>
+ * True when any element the strike is made of - {@link DamageElements#strike}: the damage type's claimants, or the
+ * attacker's spirit roots when nobody claims it - is one of the listed entries or tags.
  */
 public record ElementDamageCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements DamageCondition {
     public static final MapCodec<ElementDamageCondition> CODEC = RecordCodecBuilder.<ElementDamageCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(ElementDamageCondition::elements)
     ).apply(i, ElementDamageCondition::new)).validate(ElementDamageCondition::validate);
 
-    /**
-     * An empty list can never match, so it is a condition that silently never passes: refused at load.
-     */
+    // An empty list can never match, so it is a condition that silently never passes: refused at load.
     private static DataResult<ElementDamageCondition> validate(ElementDamageCondition condition) {
         return condition.elements().isEmpty()
                 ? DataResult.error(() -> "mxt:element needs at least one element to ask about")

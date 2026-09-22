@@ -11,10 +11,9 @@ import net.minecraft.world.item.Items;
 import java.util.Optional;
 
 /**
- * One entry of a blueprint's order-independent material requirement. Deliberately a plain {@code id} +
- * {@code count} pair rather than an {@link ItemStack}: native datapack registries are parsed before item
- * components are bound, so {@code ItemStack.CODEC} fails here; {@link #createStack()} resolves the
- * {@link Item} lazily instead.
+ * One entry of a blueprint's order-independent material requirement. Deliberately an id + count pair rather than
+ * an {@link ItemStack}: native datapack registries are parsed before item components are bound, so
+ * {@code ItemStack.CODEC} fails here, and the {@link Item} is resolved lazily instead.
  */
 public record ForgingMaterial(Identifier id, int count) {
     public static final Codec<ForgingMaterial> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -22,24 +21,15 @@ public record ForgingMaterial(Identifier id, int count) {
             Codec.intRange(1, 64).optionalFieldOf("count", 1).forGetter(ForgingMaterial::count)
     ).apply(i, ForgingMaterial::new));
 
-    /**
-     * The declared item, or {@link Items#AIR} when the id is unknown.
-     */
     public Item item() {
         return BuiltInRegistries.ITEM.getOptional(this.id).orElse(Items.AIR);
     }
 
-    /**
-     * A stack used for container matching. Empty when the item id does not resolve.
-     */
     public ItemStack createStack() {
         Item item = this.item();
         return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item, this.count);
     }
 
-    /**
-     * Whether this entry matches the given stack, ignoring the count.
-     */
     public boolean matches(ItemStack stack) {
         Item item = this.item();
         return item != Items.AIR && !stack.isEmpty() && stack.is(item);

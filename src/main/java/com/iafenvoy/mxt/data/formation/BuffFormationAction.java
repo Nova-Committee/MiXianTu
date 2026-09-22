@@ -18,10 +18,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The benefit module: what the array hands to the entities it covers, and what it does to the ground. No
- * field for attribute modifiers, because a granted {@link Ability} already carries its own {@code modifiers}.
- * {@code aura_zone} and {@code max_bonus} are benefits, so they live here rather than on every formation.
- * Under {@link TargetMode#ALLIES} an unidentifiable entity is not given the benefit.
+ * The benefit module: what the array hands to the entities it covers, and what it does to the ground. No field for
+ * attribute modifiers, because a granted {@link Ability} already carries its own {@code modifiers}. Under
+ * {@link TargetMode#ALLIES} an unidentifiable entity is not given the benefit.
  */
 public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode target,
                                   Optional<Holder<AuraZone>> auraZone,
@@ -38,15 +37,9 @@ public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode ta
         return CODEC;
     }
 
-    /**
-     * Who receives the benefit.
-     */
     public enum TargetMode implements StringRepresentable {
-        /// Everyone the array covers, friends and strangers alike.
         ALL,
-        /// The owner and whoever the owner's friend sources recognise. An unidentifiable entity gets nothing.
         ALLIES,
-        /// Only the owner.
         OWNER;
 
         public static final Codec<TargetMode> CODEC = StringRepresentable.fromEnum(TargetMode::values);

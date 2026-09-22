@@ -23,10 +23,8 @@ public interface FormationStructureValidator {
 
     FormationStructureValidator ALWAYS = (level, controller, definition) -> true;
 
-    /**
-     * Matches whichever shape the definition declares. An inline {@code structure} is the cheap path, since it
-     * is already parsed and immutable; a {@code structure_template} is re-fetched and re-parsed every period.
-     */
+    // Matches whichever shape the definition declares. An inline structure is the cheap path, since it is
+    // already parsed and immutable; a structure_template is re-fetched and re-parsed every period.
     FormationStructureValidator STRUCTURE = (level, controller, definition) -> {
         if (!definition.structure().isEmpty()) return matchesInline(level, controller, definition.structure());
         return definition.structureTemplate()
@@ -34,10 +32,7 @@ public interface FormationStructureValidator {
                 .orElse(false);
     };
 
-    /**
-     * Compares the world against an inline structure. The controller is the origin, so offsets are read
-     * exactly as written.
-     */
+    // The controller is the origin, so offsets are read exactly as written.
     private static boolean matchesInline(ServerLevel level, BlockPos controller, List<RequiredBlock> structure) {
         for (RequiredBlock required : structure) {
             if (!level.getBlockState(controller.offset(required.offset())).equals(required.state())) return false;
@@ -45,10 +40,8 @@ public interface FormationStructureValidator {
         return true;
     }
 
-    /**
-     * Validates the first matching palette in a vanilla structure template. The controller is the
-     * template origin, so data packs retain full control over the required layout.
-     */
+    // Validates the first matching palette; the controller is the template origin, so data packs retain full
+    // control over the required layout.
     private static boolean matchesTemplate(ServerLevel level, BlockPos controller, Identifier template) {
         return level.getStructureManager().get(template)
                 .map(loaded -> matchesSavedTemplate(level, controller, loaded.save(new CompoundTag())))
@@ -68,10 +61,8 @@ public interface FormationStructureValidator {
         return palettes.stream().anyMatch(palette -> matchesPalette(level, controller, blocks, palette));
     }
 
-    /**
-     * Compares the world against one palette of a saved template. Air is skipped rather than required, because
-     * the saved bounding box would otherwise make a formation fail over a torch that landed nearby.
-     */
+    // Air is skipped rather than required, because the saved bounding box would otherwise make a formation fail
+    // over a torch that landed nearby.
     private static boolean matchesPalette(ServerLevel level, BlockPos controller, ListTag blocks, ListTag palette) {
         if (palette.isEmpty()) return false;
         for (int index = 0; index < blocks.size(); index++) {

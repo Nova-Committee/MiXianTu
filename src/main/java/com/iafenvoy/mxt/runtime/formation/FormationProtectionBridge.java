@@ -23,8 +23,8 @@ import java.util.List;
 
 /**
  * Enforces formation wards at the events the world actually goes through, so a rule on the event boundary
- * cannot be bypassed by whichever code path a caller took. Handlers pass the two ends of their action and
- * let {@link FormationProtection} decide which matters, so they carry no position rule of their own.
+ * cannot be bypassed by whichever code path a caller took. Handlers pass the two ends of their action and let
+ * {@link FormationProtection} decide which matters, so they carry no position rule of their own.
  */
 @EventBusSubscriber
 public final class FormationProtectionBridge {
@@ -45,10 +45,8 @@ public final class FormationProtectionBridge {
             event.setCanceled(true);
     }
 
-    /**
-     * A right click on a block. Cancellations report {@code FAIL}, because the client has already predicted
-     * the interaction locally and would otherwise swing at a block that refuses to open.
-     */
+    // Cancellations report FAIL, because the client has already predicted the interaction locally and would
+    // otherwise swing at a block that refuses to open.
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onUse(RightClickBlock event) {
         if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
@@ -104,11 +102,9 @@ public final class FormationProtectionBridge {
             event.setCanceled(true);
     }
 
-    /**
-     * Strips the protected positions out of an explosion, rather than cancelling it: cancelling would spare
-     * the entities too, and only the ground is the ward's business. The list is edited in place because that
-     * is the list the explosion is about to iterate.
-     */
+    // Strips the protected positions out of an explosion rather than cancelling it: cancelling would spare the
+    // entities too, and only the ground is the ward's business. Edited in place because that is the list the
+    // explosion is about to iterate.
     @SubscribeEvent
     public static void onDetonate(Detonate event) {
         List<BlockPos> affected = event.getAffectedBlocks();

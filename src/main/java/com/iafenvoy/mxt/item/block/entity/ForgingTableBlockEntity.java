@@ -37,9 +37,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * Placed forge table: the slot surface plus the shared forging session, and the authority for both. It is not
- * what the open menu reads, since the client half cannot reach a block entity, so the server publishes
- * everything the screen shows into the menu's data slots.
+ * Placed forge table: the slot surface plus the shared forging session, and the authority for both. The open menu
+ * does not read it, since the client half cannot reach a block entity, so the server publishes everything the
+ * screen shows into the menu's data slots.
  */
 public final class ForgingTableBlockEntity extends BlockEntity implements ForgingSurface, WorldlyContainer, MenuProvider {
     private final SimpleContainer inventory = new SimpleContainer(TOTAL_SLOTS) {
@@ -79,25 +79,16 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
     }
 
-    /**
-     * The blueprint this table's session locked in, resolved live so a datapack reload is picked up
-     * outside a session. Null when no session is running.
-     */
+    // Resolved live, so a datapack reload is picked up outside a session. Null when no session is running.
     public ForgingBlueprint selectedBlueprint() {
         return this.forging.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
     }
 
-    /**
-     * Blueprint ids offered by the surface, for the selector list.
-     */
     public List<Identifier> selectableBlueprintIds() {
         return ForgingWorkstationService.selectableBlueprintIds(this.inventory);
     }
 
-    /**
-     * Method ids offered by the surface, for the selector list: the session's blueprint narrowed by the tools,
-     * or every unlocked method when no session is running.
-     */
+    // The session's blueprint narrowed by the tools, or every unlocked method when no session is running.
     public List<Identifier> availableMethodIds() {
         return this.level == null ? List.of()
                 : ForgingWorkstationService.availableMethodIds(this.inventory, this.level.registryAccess(), this.forging.blueprint().orElse(null));
@@ -110,11 +101,9 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
         return Component.translatable("screen.mxt.forging_table");
     }
 
-    /**
-     * Hands out an access, not the entity: the server half resolves it on demand and the client half gets
-     * {@code ContainerLevelAccess.NULL}. A session already finished is settled here, because opening the menu
-     * is the one moment the server holds the table and its player together outside a strike.
-     */
+    // An access, not the entity: the server half resolves it on demand and the client half gets
+    // ContainerLevelAccess.NULL. A finished session is settled here, the one moment the server holds the table
+    // and its player together outside a strike.
     @Override
     public AbstractContainerMenu createMenu(int containerId, @NonNull Inventory inventory, @NonNull Player player) {
         ContainerLevelAccess access = ContainerLevelAccess.create(player.level(), this.getBlockPos());
@@ -164,10 +153,6 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
         this.inventory.clearContent();
     }
 
-    /**
-     * Slot filter: blueprint slots take blueprint-bound items, tool slots tool-bound items, input slots only
-     * materials the selected blueprint declares, and the output slot never accepts.
-     */
     @Override
     public boolean canPlaceItem(int index, @NonNull ItemStack stack) {
         return ForgingSurface.canPlace(index, stack, this.forging.active(), this.selectedBlueprint());

@@ -40,37 +40,12 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * The creative tab's search page, over this mod's own contents: a title, a search well, a five by nine
- * scrollable grid and the player's hotbar underneath it.
- *
- * <p>Only the contents are this mod's. Everything else - the panel, the field, the scroller, the grid, the
- * hotbar row, and every way an item can be moved - is the tab's own machinery, so the picker stays in step
- * with the tab instead of being a lookalike that has to be maintained against it.</p>
- *
- * <h2>How an item leaves this screen</h2>
- *
- * <p>Nowhere does this screen hand out an item itself. Clicking the grid only moves the carried stack, which
- * is an illusion held on the client, exactly as it is in the tab; the carried stack belongs to the player's
- * real {@code InventoryMenu} rather than to this menu, which never exists on the server at all.</p>
- *
- * <p>An item becomes real one of two ways, and both are the vanilla creative channel:</p>
- * <ol>
- *   <li>It lands in a hotbar slot, either by being carried there or by the 1-9 swap keys. The inventory
- *       listener this screen keeps on the player's {@code InventoryMenu} notices the slot change and ships it
- *       as a {@code ServerboundSetCreativeModeSlotPacket}; and</li>
- *   <li>it is thrown out of the panel, which sends the same packet with slot {@code -1}.</li>
- * </ol>
- *
- * <p>That is what keeps the picker from being a way around creative mode. The packet is registered with a
- * codec modifier that refuses to decode it unless the <em>server's</em> copy of the player says creative, and
- * the handler behind it checks the same thing again, so a client that is not creative has nothing to send and
- * nothing to gain from sending it.</p>
+ * The creative tab's search page over this mod's own contents: a title, a search well, a five by nine scrollable
+ * grid and the player's hotbar. Nothing here hands out an item - the grid only moves the client-held carried
+ * stack, and an item becomes real only through the vanilla creative slot packet, which the server re-checks.
  */
 public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> {
-    /**
-     * The grid the vanilla tab uses: five rows of nine 18px slots starting at (9, 18) inside a 195x136 panel
-     * whose lower 112 pixels are the scrollable band.
-     */
+    // The vanilla tab's grid: five rows of nine 18px slots at (9, 18) inside a 195x136 panel whose lower 112 pixels scroll.
     private static final int COLUMNS = 9;
     private static final int ROWS = 5;
     private static final int SLOT_COUNT = COLUMNS * ROWS;
@@ -80,32 +55,28 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
     private static final int GRID_HEIGHT = 112;
     private static final int PANEL_WIDTH = 195;
     private static final int PANEL_HEIGHT = 136;
-    /**
-     * The tab's hotbar row, which its texture already draws the frames for: nine slots at (9, 112), over the
-     * player's real inventory rather than over the result list, so what is dropped there is a real item.
-     */
+    // The tab's hotbar row, whose frames the texture already draws: nine slots at (9, 112) over the player's real
+    // inventory, so what is dropped there is a real item.
     private static final int HOTBAR_LEFT = 9;
     private static final int HOTBAR_TOP = 112;
     private static final int HOTBAR_SLOTS = 9;
-    /** The tab's field: 89 wide starting at (82, 6), one pixel inside the well's inner area. */
+    // The tab's field: 89 wide starting at (82, 6), one pixel inside the well's inner area.
     private static final int SEARCH_LEFT = 82;
     private static final int SEARCH_TOP = 6;
     private static final int SEARCH_WIDTH = 89;
     private static final int SEARCH_HEIGHT = 9;
-    /** The tab's scrollbar strip, and the area that grabs it - wider than the six pixel track it draws in. */
+    // The tab's scrollbar strip: wider than the six pixel track the texture draws.
     private static final int SCROLLER_LEFT = 175;
     private static final int SCROLLER_WIDTH = 12;
     private static final int SCROLLER_HEIGHT = 15;
     private static final int SCROLLBAR_HIT_WIDTH = 14;
-    /** The tab's label colour, so the title reads the same over the same texture. */
+    // The tab's label colour, so the title reads the same over the same texture.
     private static final int LABEL_COLOR = -12566464;
     private static final int TEXT_COLOR = -1;
 
     private static final Identifier BACKGROUND = Identifier.withDefaultNamespace("textures/gui/container/creative_inventory/tab_item_search.png");
-    /**
-     * The tab's scroller. Both sprites are a six by thirty-two nine-slice, which is why the tab asks for them
-     * twelve wide: the slicer stretches the middle to the requested size.
-     */
+    // The tab's scroller: both sprites are a six by thirty-two nine-slice, which is why the tab asks for them
+    // twelve wide - the slicer stretches the middle to the requested size.
     private static final Identifier SCROLLER = Identifier.withDefaultNamespace("container/creative_inventory/scroller");
     private static final Identifier SCROLLER_DISABLED = Identifier.withDefaultNamespace("container/creative_inventory/scroller_disabled");
 
@@ -117,23 +88,11 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
     private EditBox searchBox;
     private float scrollOffs;
     private boolean scrolling;
-    /** Whether the last position the mouse was checked at was outside the panel, as the tab tracks it. */
     private boolean clickedOutside;
-    /**
-     * The tab's way of noticing that the player's own inventory changed: every slot the client edits is
-     * shipped as a creative slot packet. Rebuilt with the screen, so it goes on in {@link #init}.
-     */
+    // The tab's way of shipping the player's own inventory edits, so it is notified of the client's slot writes.
     private @Nullable CreativeInventoryListener listener;
 
-    /**
-     * A picker over a caller-supplied list of stacks.
-     *
-     * <p>A factory rather than a constructor only because the category path needs the same shape over its own
-     * entry type, and two constructors cannot differ by the element type of a {@code List}.</p>
-     *
-     * @param title the screen title, drawn in the panel header
-     * @param items every stack the picker may offer, in display order
-     */
+    // A factory rather than a constructor because the category path needs the same shape over another element type.
     public static ItemPickerScreen over(Component title, List<ItemStack> items) {
         return new ItemPickerScreen(title, toCandidates(items));
     }
@@ -144,13 +103,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         this.matched = entries;
     }
 
-    /**
-     * A picker over the categories a server named, or null when there is no world to build it in.
-     *
-     * <p>The grid is built here, from the registries this client already has synced. Building the screen does
-     * not open it; the caller decides when to show it, which is what lets it run inside the client packet
-     * handler.</p>
-     */
+    // The grid is built from the registries this client already has synced; the screen is not opened here, which is
+    // what lets the caller build it inside the client packet handler. Null when there is no world or no player.
     public static @Nullable ItemPickerScreen opening(Component title, List<Identifier> categories) {
         Minecraft minecraft = Minecraft.getInstance();
         RegistryAccess access = minecraft.level == null ? null : minecraft.level.registryAccess();
@@ -161,30 +115,18 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return new ItemPickerScreen(title, candidates(picked));
     }
 
-    /**
-     * The menu needs the inventory to point its hotbar slots at, and the container screen's superclass wants
-     * the same inventory to name under the grid; neither exists without a player.
-     */
     private static LocalPlayer player() {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) throw new IllegalStateException("The item picker can only be built while a player is in a world");
         return player;
     }
 
-    /**
-     * Turns the catalogue's rows into searchable ones. A row is found by exactly the names the catalogue gave
-     * it, so what a row answers to is decided where the row is described rather than guessed at here.
-     */
     private static List<Candidate> candidates(List<PickerItem> items) {
         List<Candidate> candidates = new ArrayList<>(items.size());
         for (PickerItem item : items) candidates.add(candidate(item.stack(), item.names()));
         return List.copyOf(candidates);
     }
 
-    /**
-     * A caller hands over bare stacks, so the names it has nothing to say about are the two obvious ones: what
-     * the stack is called, and the id it is registered under.
-     */
     private static List<Candidate> toCandidates(List<ItemStack> items) {
         List<ItemStack> source = List.copyOf(items);
         List<Candidate> candidates = new ArrayList<>(source.size());
@@ -196,13 +138,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return List.copyOf(candidates);
     }
 
-    /**
-     * One row, with its search index built once out of the names it answers to.
-     *
-     * <p>A row that declared no name at all still answers to what it looks like, which is what keeps "what you
-     * can see, you can type" true for every row rather than only for the ones a provider remembered to
-     * describe.</p>
-     */
+    // A row that declared no name at all still answers to what it looks like, so "what you can see, you can type" holds for it.
     private static Candidate candidate(ItemStack stack, List<Component> names) {
         StringBuilder index = new StringBuilder();
         for (Component name : names) {
@@ -213,13 +149,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return new Candidate(stack, index.toString().toLowerCase(Locale.ROOT));
     }
 
-    /**
-     * Builds the tab's field, hands it the keyboard, and starts listening to the player's inventory.
-     *
-     * <p>Like the tab's, the field never gives focus up, and it is never drawn by the widget pass -
-     * {@link #extractBackground} paints it inside the well instead, which is what keeps it in the background
-     * stratum under the items.</p>
-     */
+    // Like the tab's, the field never gives focus up and is never drawn by the widget pass - extractBackground paints
+    // it inside the well, which is what keeps it in the background stratum under the items.
     @Override
     protected void init() {
         super.init();
@@ -238,14 +169,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         this.listenToInventory();
     }
 
-    /**
-     * Follows the player's inventory, so that everything this screen writes into it - a hotbar slot filled from
-     * the grid, a hotbar key copying a stack across - is sent on as a creative slot packet without every one
-     * of those actions having to remember to send it.
-     *
-     * <p>The listener is a fresh one each time the widgets are rebuilt, and only ever one of them is attached,
-     * which is why the previous one is dropped first.</p>
-     */
+    // A fresh listener each time the widgets are rebuilt and only one is ever attached, so the previous one is dropped
+    // first; it is what ships every hotbar write this screen makes, without each action sending a packet itself.
     private void listenToInventory() {
         LocalPlayer player = this.minecraft.player;
         if (player == null) return;
@@ -261,10 +186,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         if (player != null && this.listener != null) player.inventoryMenu.removeSlotListener(this.listener);
     }
 
-    /**
-     * The tab closes itself the moment creative mode does, so an operator who is dropped back into survival
-     * with the picker still open does not keep a panel whose every action the server would now refuse.
-     */
+    // The tab closes itself the moment creative mode does: an operator dropped back into survival would otherwise keep
+    // a panel whose every action the server now refuses.
     @Override
     protected void containerTick() {
         super.containerTick();
@@ -272,7 +195,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         if (player != null && !player.hasInfiniteMaterials()) this.minecraft.setScreen(new InventoryScreen(player));
     }
 
-    /** Keeps the search text and the scrolled row across a window resize, which rebuilds every widget. */
+    // A resize rebuilds every widget, so the search text and the scrolled row are carried across.
     @Override
     public void resize(int width, int height) {
         int oldRow = this.menu.getRowIndexForScroll(this.scrollOffs);
@@ -284,14 +207,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         this.menu.scrollTo(this.scrollOffs);
     }
 
-    /**
-     * Filters the caller's list down to the entries matching every whitespace-separated token: a token
-     * starting with {@code @} only matches the item's namespace, everything else is a substring of the row's
-     * search index - its display name, its item id, and whatever text the catalogue added.
-     *
-     * <p>Because the grid is a window onto this list rather than the list itself, this is also what moves the
-     * window: the menu is told to re-copy the first page of the new match set into its slots.</p>
-     */
+    // Tokens split on whitespace: a token starting with @ matches the item's namespace, everything else is a substring
+    // of the row's search index. Copying the first page is also what moves the grid window, which is a view over this list.
     private void refreshResults() {
         String search = this.searchBox == null ? "" : this.searchBox.getValue();
         List<Candidate> matched = new ArrayList<>();
@@ -317,11 +234,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return true;
     }
 
-    /**
-     * The tab's click handling with the tab machinery taken out. A click on the grid never asks the server for
-     * anything - it only moves this side's carried stack - while a click on a hotbar slot runs against the
-     * real inventory and is then shipped by the inventory listener.
-     */
+    // A click on the grid never asks the server for anything, it only moves this side's carried stack; a click on a
+    // hotbar slot runs against the real inventory and is then shipped by the inventory listener.
     @Override
     protected void slotClicked(@Nullable Slot slot, int slotId, int buttonNum, @NonNull ContainerInput containerInput) {
         LocalPlayer player = this.minecraft.player;
@@ -350,35 +264,29 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         }
     }
 
-    /**
-     * The tab's handling of a click on a creative grid slot, which is entirely local: the grid is a view over
-     * the result list, so nothing is ever taken out of it, and the only thing that changes is the carried
-     * stack. The item itself only becomes real once it is carried somewhere real or thrown.
-     */
+    // Entirely local: the grid is a view over the result list, so nothing is taken out of it and only the carried stack
+    // changes. The item becomes real only once it is carried somewhere real or thrown.
     private void clickGridSlot(Slot slot, int buttonNum, boolean quickKey, ContainerInput input) {
         LocalPlayer player = this.minecraft.player;
         if (player == null) return;
         ItemStack carried = this.menu.getCarried();
         ItemStack clicked = slot.getItem();
         switch (input) {
-            // A hotbar key: a whole stack straight into that slot, or into the offhand for button 40.
+            // A hotbar key: a whole stack into that slot, or into the offhand for the vanilla index 40.
             case SWAP -> {
                 if (!clicked.isEmpty()) {
                     player.getInventory().setItem(buttonNum, clicked.copyWithCount(clicked.getMaxStackSize()));
                     player.inventoryMenu.broadcastChanges();
                 }
             }
-            // Middle click: fill the carried stack, leaving the grid alone.
             case CLONE -> {
                 if (carried.isEmpty() && !clicked.isEmpty())
                     this.menu.setCarried(clicked.copyWithCount(clicked.getMaxStackSize()));
             }
-            // Either drop key: one, or the whole stack, without touching the carried stack.
             case THROW -> {
                 if (!clicked.isEmpty())
                     this.throwCreative(clicked.copyWithCount(buttonNum == 0 ? 1 : clicked.getMaxStackSize()));
             }
-            // Pick up, top up a carried stack, or put the carried stack back.
             default -> {
                 if (!carried.isEmpty() && !clicked.isEmpty() && ItemStack.isSameItemSameComponents(carried, clicked)) {
                     if (buttonNum == 0) {
@@ -398,7 +306,6 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         }
     }
 
-    /** Dropping the carried stack by clicking past the panel, which throws all of it or one of it. */
     private void throwCarriedOutside(int buttonNum) {
         if (this.menu.getCarried().isEmpty() || !this.clickedOutside) return;
         if (buttonNum == 0) {
@@ -409,13 +316,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         }
     }
 
-    /**
-     * Throws a stack out of the panel as a creative drop.
-     *
-     * <p>The tab routes this through {@code gameMode.handleCreativeModeItemDrop}, which refuses to send while
-     * any container screen other than the tab is open - this screen is one of those, so the packet is built
-     * here instead. The local throw and the guards are the ones that method applies.</p>
-     */
+    // The tab routes this through gameMode.handleCreativeModeItemDrop, which refuses to send while a container screen
+    // other than the tab is open - this screen is one of those, so the packet is built here, with that method's guards.
     private void throwCreative(ItemStack stack) {
         LocalPlayer player = this.minecraft.player;
         ClientPacketListener connection = this.minecraft.getConnection();
@@ -430,10 +332,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return slot != null && slot.container == this.menu.grid;
     }
 
-    /**
-     * The tab's background, its field and its scroller - and nothing else. The panel border, the well, the
-     * slot frames of both the grid and the hotbar row, and the scrollbar track are all part of the texture.
-     */
+    // The panel border, the well, both slot frame rows and the scrollbar track are all part of the tab texture.
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(graphics, mouseX, mouseY, partialTick);
@@ -449,27 +348,19 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
                 SCROLLER_WIDTH, SCROLLER_HEIGHT);
     }
 
-    /**
-     * Where the scroller sits, in the tab's own terms: it travels the band less its own height and the two
-     * pixels the texture leaves under it.
-     */
+    // Travels the band less its own height and the two pixels the texture leaves under it.
     private int scrollerOffset() {
         return (int) ((GRID_HEIGHT - SCROLLER_HEIGHT - 2) * this.scrollOffs);
     }
 
-    /**
-     * Labels are drawn after the widgets so the title can share the top line with the search well: the tab
-     * leaves no room above the well for one. Vanilla draws its title at (8, 6) for the same reason.
-     */
+    // Drawn after the widgets so the title can share the top line with the search well - the tab leaves no room above
+    // the well; vanilla draws its title at (8, 6) for the same reason.
     @Override
     protected void extractLabels(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         graphics.text(this.font, this.title, 8, 6, LABEL_COLOR, false);
     }
 
-    /**
-     * Clicking the scrollbar strip grabs it. A scrollbar with nothing to scroll still swallows the click,
-     * exactly as the tab's does.
-     */
+    // A scrollbar with nothing to scroll still swallows the click, exactly as the tab's does.
     @Override
     public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == 0 && this.insideScrollbar(event.x(), event.y())) {
@@ -507,7 +398,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return true;
     }
 
-    /** The grab area, which is wider than the six pixel track the texture draws: the tab uses fourteen. */
+    // The grab area is wider than the six pixel track the texture draws; the tab uses fourteen.
     private boolean insideScrollbar(double mouseX, double mouseY) {
         int left = this.leftPos + SCROLLER_LEFT;
         int top = this.topPos + GRID_TOP;
@@ -519,19 +410,13 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return this.menu.canScroll();
     }
 
-    /**
-     * Remembers where the last click landed, because the throw-on-click-outside gesture needs to know whether
-     * the press started past the panel. The tab tracks this the same way.
-     */
+    // The throw-on-click-outside gesture needs to know whether the press started past the panel; the tab tracks it the same way.
     @Override
     protected boolean hasClickedOutside(double mouseX, double mouseY, int left, int top) {
         return this.clickedOutside = super.hasClickedOutside(mouseX, mouseY, left, top);
     }
 
-    /**
-     * The field gets the keyboard first, so typing a search term never reaches the screen's own shortcuts. The
-     * only key that falls through is escape, which closes the screen.
-     */
+    // The field gets the keyboard first, so a search term never reaches the screen's shortcuts; only escape falls through.
     @Override
     public boolean keyPressed(@NonNull KeyEvent event) {
         if (this.searchBox == null) return super.keyPressed(event);
@@ -554,19 +439,15 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         return super.charTyped(event);
     }
 
-    /** Input method pre-edits belong to the field as well, or composing a search term would be dropped. */
+    // Input method pre-edits belong to the field as well, or composing a search term would be dropped.
     @Override
     public boolean preeditUpdated(@Nullable PreeditEvent event) {
         return this.searchBox != null && this.searchBox.preeditUpdated(event);
     }
 
     /**
-     * The tab's item menu: five rows of nine slots whose contents are a window onto the filtered list, plus
-     * the tab's nine hotbar slots over the player's real inventory.
-     *
-     * <p>Everything {@link AbstractContainerScreen} draws - the item, its count, the hover highlight, the
-     * tooltip - is read straight out of these slots, and the carried stack is shared with the player's
-     * inventory menu rather than kept here, because that menu is the one the server knows about.</p>
+     * The tab's item menu: 5x9 grid slots that are a window onto the filtered list, plus the tab's nine hotbar
+     * slots over the player's real inventory. The carried stack is the inventory menu's, the menu the server knows.
      */
     public static final class PickerMenu extends AbstractContainerMenu {
         private final NonNullList<ItemStack> items = NonNullList.create();
@@ -599,10 +480,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
             this.inventoryMenu.setCarried(carried);
         }
 
-        /**
-         * Only the hotbar reaches this, and emptying the slot is what the tab does with it: the grid is a view
-         * over the result list, so shifting one of its slots has nothing to move.
-         */
+        // Only the hotbar reaches this and emptying the slot is what the tab does: shifting a grid slot has nothing to move.
         @Override
         public @NonNull ItemStack quickMoveStack(@NonNull Player player, int slotIndex) {
             if (slotIndex >= this.slots.size() - HOTBAR_SLOTS && slotIndex < this.slots.size()) {
@@ -622,10 +500,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
             return slot.container != this.grid;
         }
 
-        /**
-         * Copies one page of the list into the slots. This is the whole of the scrolling: the slots never
-         * move, only what is in them.
-         */
+        // This is the whole of the scrolling: the slots never move, only what is in them.
         private void scrollTo(float scrollOffs) {
             int rowToScrollTo = this.getRowIndexForScroll(scrollOffs);
             for (int row = 0; row < ROWS; row++) {
@@ -659,8 +534,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
     }
 
     /**
-     * A grid slot, which refuses to give up what the client could not use anyway: an item that is behind a
-     * disabled feature flag, or one the tab marks as not takeable.
+     * A grid slot, which refuses to give up what the client could not use anyway: an item behind a disabled
+     * feature flag, or one the tab marks as not takeable.
      */
     private static final class GridSlot extends Slot {
         private GridSlot(Container container, int slot, int x, int y) {

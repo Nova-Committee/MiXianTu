@@ -59,15 +59,14 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     @Override
     public int insert(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        // A store that has something to say about being filled is one that asked to be poured into: the reading
-        // is the storing interface, the report is the manual one.
+        // Only a store that asked to be poured into is filled here: the reading is the storing interface, the
+        // report is the manual one.
         if (!(this.displayedItem.getItem() instanceof ItemAuraAccess access)) return amount;
         if (this.level == null) return amount;
         int remaining = access.insert(entity, this.displayedItem, aura, amount, simulate);
         if (!simulate && remaining != amount && access instanceof UseItemAuraAccess manual) {
-            // The store is not in anybody's hands: whatever filled it can be standing somewhere else entirely,
-            // so the place it is at travels with the report instead of being read off the entity - and the item
-            // may spend itself in answer, which is a change this stand has to publish.
+            // The store is in nobody's hands, so the place it is at travels with the report instead of being read
+            // off the entity - and the item may spend itself in answer, which is a change this stand has to publish.
             manual.onCharged(SpiritSource.placed(this.level, this.worldPosition.getCenter(), entity), this.displayedItem);
             this.markChangedAndSync();
         }

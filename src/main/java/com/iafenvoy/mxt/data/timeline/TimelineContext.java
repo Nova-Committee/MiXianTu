@@ -7,18 +7,13 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * One evaluation of a timeline entry: the entity the run belongs to, the formula context of the current tick, the
- * tick itself, the definition's difficulty scale, and the slot the current entry keeps its own numbers in.
- *
- * <p>Every wait resolves its length through {@link #ticks(NumberProvider)}, so one rule scales all of them, and
- * the result is settled once, when the entry begins, rather than re-read every tick: a duration drawn from a
- * random provider is drawn once, and an aura change cannot stretch a wait that is already running.</p>
+ * tick itself, the definition's difficulty scale, and the slot the current entry keeps its own numbers in. Every
+ * wait resolves its length through {@link #ticks(NumberProvider)}, so one rule scales all of them and the result
+ * is settled once, when the entry begins, rather than re-read every tick.
  */
 public record TimelineContext(@NotNull LivingEntity entity, @NotNull FormulaContext formula, long gameTime,
                               double scale, @NotNull TimelineState state) {
-    /**
-     * Resolves a duration into whole ticks, applying the difficulty scale and the local aura influence;
-     * {@code -1} when the provider cannot produce a usable duration.
-     */
+    // -1 when the provider cannot produce a usable duration.
     public long ticks(NumberProvider duration) {
         double value = duration.evaluate(this.formula) * this.scale
                 * Math.max(0.0D, 1.0D + this.formula.value("aura_tribulation_modifier"));

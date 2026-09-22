@@ -17,11 +17,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * The cure side of the cleanse model: an antidote names the curse tags it removes, the tag files list the
- * curses, and the curse definition itself never declares what may cleanse it.
- * <p>
- * A held curse carrying <em>any one</em> of the listed tags is removed, which is what makes one antidote able to
- * answer several kinds of poison at once.
+ * The cure side of the cleanse model: the antidote names curse tags and the curse definition never declares
+ * what may cleanse it. A held curse carrying any one of the listed tags is removed.
  */
 public record RemoveCursesByTagAction(List<TagKey<Curse>> tags) implements EntityAction {
     public static final MapCodec<RemoveCursesByTagAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

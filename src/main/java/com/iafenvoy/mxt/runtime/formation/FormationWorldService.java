@@ -18,9 +18,9 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.util.UUID;
 
 /**
- * The two ends of a formation's life in the world: bringing one into the level index, and taking it out.
- * Neither half reads or writes resources - the payment and the activation costs live in
- * {@link FormationService} - and a period's upkeep belongs to {@link FormationWorldTicker}.
+ * The two ends of a formation's life in the world: bringing one into the level index, and taking it out. Neither
+ * half reads or writes resources - the payment and activation costs live in {@link FormationService} - and a
+ * period's upkeep belongs to {@link FormationWorldTicker}.
  */
 public final class FormationWorldService {
     private FormationWorldService() {
@@ -64,12 +64,9 @@ public final class FormationWorldService {
         return Result.activated(activated.instance());
     }
 
-    /**
-     * Removes the formation registered at the controller, if any, running its teardown. This is the single
-     * teardown path, so the deactivate action and the {@link Deactivate} event cannot drift apart between
-     * callers. Entities the formation was tracking are released first, because {@code deactivate_action} is
-     * a block action and cannot see them.
-     */
+    // The single teardown path, so the deactivate action and the Deactivate event cannot drift apart between
+    // callers. Entities the formation was tracking are released first, because deactivate_action is a block
+    // action and cannot see them.
     public static boolean deactivate(ServerLevel level, BlockPos controller) {
         FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).remove(controller).orElse(null);
         if (instance == null) return false;
@@ -83,11 +80,9 @@ public final class FormationWorldService {
         return true;
     }
 
-    /**
-     * Queues a block-aura rebuild for every chunk a formation's radius reaches, on both ends of its life,
-     * because which emitters are absorbed is a property of the rebuilt cache. Queued as a dirty mark rather
-     * than run here, so activation never scans chunks during the click.
-     */
+    // Queues a block-aura rebuild for every chunk a formation's radius reaches, on both ends of its life, since
+    // which emitters are absorbed is a property of the rebuilt cache. A dirty mark rather than a scan, so
+    // activation never reads chunks during the click.
     private static void invalidateAura(ServerLevel level, BlockPos controller, double radius) {
         int minChunkX = (int) Math.floor((controller.getX() - radius) / 16.0D);
         int maxChunkX = (int) Math.floor((controller.getX() + radius) / 16.0D);

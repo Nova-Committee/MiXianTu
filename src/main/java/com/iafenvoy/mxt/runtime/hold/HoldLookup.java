@@ -18,20 +18,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Which items are used by holding them down, and what each one's hold looks like. The question is asked from
- * paths that run every tick - the client's keep-alive and the click path - so vanilla's answers are cached per
- * item. The declarations come from every registered {@link HoldSource}, and this class knows none of them.
- * <p>
- * The cache is captured on {@link TagsUpdatedEvent} and {@link ServerStartedEvent} rather than by walking every
- * registered item up front, because building an {@code ItemStack} during a pack load reads unbound component
- * maps and throws.
+ * Which items are used by holding them down, and what each one's hold looks like. The question is asked from paths
+ * that run every tick, so vanilla's answers are cached per item. The declarations come from every registered
+ * {@link HoldSource}, and this class knows none of them.
+ *
+ * <p>The cache is captured on {@link TagsUpdatedEvent} and {@link ServerStartedEvent} rather than by walking every
+ * registered item up front, because building an {@code ItemStack} during a pack load reads unbound component maps
+ * and throws.
  */
 @EventBusSubscriber
 public final class HoldLookup {
-    /**
-     * Per-item answers, cleared whenever the holds are recaptured. Keyed by item because a declaration tests the
-     * item's identity and never the stack.
-     */
+    // Keyed by item, because a declaration tests the item's identity and never the stack.
     private static final Map<Item, Optional<HoldBinding>> RESOLVED = new ConcurrentHashMap<>();
     private static final List<HoldSource> SOURCES = new CopyOnWriteArrayList<>();
     private static volatile List<HoldBinding> holds = List.of();
@@ -39,9 +36,7 @@ public final class HoldLookup {
     private HoldLookup() {
     }
 
-    /**
-     * Adds one module's holds. Called once per module, at construction, long before a world can load.
-     */
+    // Called once per module, at construction, long before a world can load.
     public static void register(HoldSource source) {
         SOURCES.add(source);
     }
@@ -56,10 +51,7 @@ public final class HoldLookup {
         rebuild(event.getServer().registryAccess());
     }
 
-    /**
-     * The hold declared for this stack, or {@code null} when nothing holds this item down. Only declarations
-     * that ask for a hold are captured, so any answer means the item is used by holding it.
-     */
+    // Only declarations that ask for a hold are captured, so any answer means the item is used by holding it.
     public static @Nullable HoldBinding hold(ItemStack stack) {
         if (stack.isEmpty() || holds.isEmpty()) return null;
         Optional<HoldBinding> cached = RESOLVED.get(stack.getItem());
@@ -69,10 +61,7 @@ public final class HoldLookup {
         return found.orElse(null);
     }
 
-    /**
-     * Recaptures every registered module's holds from one registry view. Public so the server audit can drive it
-     * directly.
-     */
+    // Public so the server audit can drive it directly.
     public static void rebuild(Provider access) {
         holds = SOURCES.stream().flatMap(source -> source.holds(access).stream())
                 .filter(HoldBinding::requiresHold)

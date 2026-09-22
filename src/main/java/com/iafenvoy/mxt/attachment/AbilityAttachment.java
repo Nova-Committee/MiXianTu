@@ -17,12 +17,10 @@ import net.minecraft.resources.Identifier;
 import java.util.*;
 
 /**
- * Ability grants are tracked by source, so removing one source cannot remove another source's ability.
- *
- * <p>The state a granted ability keeps lives here too, in a {@link DataStorageHolder} addressed by the ability's
- * id: the values belong to the attachment that owns the ability, so they are saved and synced with it rather than
- * in a store every family shares. Revoking the ability's last source drops that state with it, so a re-granted
- * ability does not come back with the charges it had before.</p>
+ * Ability grants are tracked by source, so removing one source cannot remove another source's ability. The state a
+ * granted ability keeps lives here too, in a {@link DataStorageHolder} addressed by the ability's id: the values
+ * belong to this attachment, so they are saved and synced with it. Revoking the last source drops that state with
+ * it, so a re-granted ability does not come back with the charges it had before.
  */
 public final class AbilityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<AbilityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -57,9 +55,6 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return this.cooldowns;
     }
 
-    /**
-     * The state every granted ability keeps, addressed by the ability's id.
-     */
     public DataStorageHolder storage() {
         return this.storage;
     }
@@ -84,9 +79,7 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return true;
     }
 
-    /**
-     * Removes one source of an ability and, when it was the last one, drops the state the ability owned.
-     */
+    // When the revoked source was the last one, the state the ability owned goes with it.
     public boolean revoke(Holder<Ability> ability, Identifier source) {
         if (!this.sources.revoke(ability, source)) return false;
         if (!this.sources.holds(ability)) {
@@ -97,10 +90,8 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return true;
     }
 
-    /**
-     * Replaces one source's whole contribution, the same rule curses follow: what it no longer declares is
-     * released, what it declares and does not hold yet is granted.
-     */
+    // The same rule curses follow: what the source no longer declares is released, what it declares and does not
+    // hold yet is granted.
     public boolean reconcileSource(Identifier source, Collection<Holder<Ability>> desiredAbilities) {
         if (!this.sources.reconcile(source, desiredAbilities)) return false;
         this.markDirty();
@@ -121,10 +112,8 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         this.markDirty();
     }
 
-    /**
-     * Creates a detached draft for validation. It is never installed on an entity or synchronised, and its
-     * storage is a copy as well, so a rejected sequence of writes leaves the real values alone.
-     */
+    // A detached draft for validation: never installed on an entity or synchronised, and its storage is a copy as
+    // well, so a rejected sequence of writes leaves the real values alone.
     public AbilityAttachment copy() {
         return new AbilityAttachment(this.sources, this.cooldowns, this.channelledAbility, Optional.of(this.storage.copy()));
     }

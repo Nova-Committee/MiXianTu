@@ -19,13 +19,9 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * The built-in kinds. A data pack selects one by writing its id in an entry of a host's {@code components} list,
- * and the kind's class is then the slot its value lives in.
- *
- * <p>The runtime owns kinds of its own as well, and they are registered here so their values can be saved and
- * synced like any other: the ability cursors {@code cast_deadline}/{@code channel_pulse}/{@code aura_pulse}, and
- * the tribulation's {@code entry_began}/{@code idle_countdown}, which live in the run's single state slot rather
- * than in a holder keyed by id. No content declares any of them.
+ * The built-in kinds: a data pack selects one by writing its id in an entry of a host's {@code components}
+ * list, and the kind's class is then the slot its value lives in. The runtime's own kinds are registered here
+ * too, so their values save and sync like any other, but no content declares any of them.
  */
 @SuppressWarnings("unused")
 public final class MxtDataStorages {

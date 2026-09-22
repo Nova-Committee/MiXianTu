@@ -11,18 +11,15 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 
 /**
- * Picks one entry by positive integer weight. The weights are fixed once the definition is
- * loaded, so the total is computed here instead of on every evaluation.
+ * Picks one entry by positive integer weight. The weights are fixed once the definition is loaded, so the total is
+ * computed here instead of on every evaluation.
  */
 public final class WeightedList implements NumberProvider {
     public static final MapCodec<WeightedList> MAP_CODEC = Entry.MAP_CODEC.codec().listOf().fieldOf("distribution")
             .flatXmap(WeightedList::decode, list -> DataResult.success(list.distribution()));
 
     private final List<Entry> distribution;
-    /**
-     * Sum of all weights, or non-positive when the list overflows an {@code int} total and the
-     * provider has to refuse to roll.
-     */
+    // Sum of all weights, or non-positive when the list overflows an int total and the provider has to refuse.
     private final long total;
 
     public WeightedList(List<Entry> distribution) {
@@ -41,10 +38,8 @@ public final class WeightedList implements NumberProvider {
         return this.distribution;
     }
 
-    /**
-     * Reports an empty distribution as a decode error, so a broken weight list is collected with
-     * every other load error instead of aborting the load on its own.
-     */
+    // An empty distribution is a decode error, so a broken weight list is collected with every other load error
+    // instead of aborting the load on its own.
     private static DataResult<WeightedList> decode(List<Entry> distribution) {
         return distribution.isEmpty()
                 ? DataResult.error(() -> "Weighted list requires at least one entry")

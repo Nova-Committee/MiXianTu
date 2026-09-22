@@ -15,31 +15,20 @@ import net.minecraft.world.item.ItemUseAnimation;
 import java.util.List;
 
 /**
- * The hold one artifact definition declares: a stack it claims is used by holding it down, and what the gesture
- * does is {@link ArtifactHoldService}'s.
+ * The hold one artifact definition declares. Unlike a capability-matched hold, this <em>is</em> the definition:
+ * the gesture's length and the price of claiming are declared per artifact, so no second copy of those numbers
+ * exists and the declaration is the object the hold module matches.
  *
- * <p>Unlike {@link com.iafenvoy.mxt.runtime.spirit.SpiritChargeHold}, which matches a capability and is one
- * object for everything that will ever have it, a hold here <em>is</em> one definition: the length a gesture
- * lasts and the price of claiming it are declared per artifact, so the declaration is the object the hold module
- * matches and no second copy of those numbers exists.</p>
- *
- * <p>Its answer depends on who is holding it, which is why {@link HoldBinding} grew the entity-aware
- * {@code claims}: an artifact already bound to somebody else does not take the click over at all, so the item
- * answers it the way it would on its own, while a stack bound to the reader is taken over only for as long as
- * its store can still accept aura - a gesture that would move nothing is not worth playing.</p>
+ * <p>Its answer depends on who holds it: an artifact bound to somebody else does not take the click over at all,
+ * and a stack bound to the reader is taken over only while its store can still accept aura, because a gesture
+ * that would move nothing is not worth playing.
  */
 public record ArtifactHold(Artifact artifact) implements HoldBinding {
-    /**
-     * The pose the gesture plays. {@code BLOCK} holds the item up in both hands, which reads as working on it
-     * rather than as swinging it.
-     */
+    // BLOCK holds the item up in both hands, which reads as working on it rather than as swinging it.
     public static final ItemUseAnimation HOLD_ANIMATION = ItemUseAnimation.BLOCK;
 
-    /**
-     * The sound the gesture makes. Vanilla plays a hold's sound every four ticks, so this has to be short: a
-     * beacon blip reads as something taking hold and does not pile up into a drone, and it is not the chime the
-     * aura pour plays, so the two gestures are told apart with the eyes closed.
-     */
+    // Vanilla plays a hold's sound every four ticks, so this has to be short: a beacon blip reads as something
+    // taking hold, does not pile up into a drone, and is not the chime the aura pour plays.
     public static final Holder<SoundEvent> HOLD_SOUND = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.BEACON_POWER_SELECT);
 
     @Override
@@ -49,15 +38,15 @@ public record ArtifactHold(Artifact artifact) implements HoldBinding {
 
     @Override
     public int holdTicks() {
-        // The declaration's own length, read where no entity exists: it decides whether this definition is a
-        // hold at all, which is the question HoldLookup asks once per pack load.
+        // Read where no entity exists: this decides whether the definition is a hold at all, which is the question
+        // HoldLookup asks once per pack load.
         return ArtifactService.holdTicks(this.artifact, FormulaContext.EMPTY);
     }
 
     @Override
     public int holdTicks(LivingEntity holder, Provider registries, ItemStack stack) {
-        // With a holder the declared number is evaluated in that holder's context, so a pack may scale the
-        // gesture by the person making it.
+        // With a holder the declared number is evaluated in that holder's context, so a pack may scale the gesture
+        // by the person making it.
         return ArtifactService.holdTicks(this.artifact, FormulaContext.of(holder));
     }
 
@@ -65,11 +54,11 @@ public record ArtifactHold(Artifact artifact) implements HoldBinding {
     public boolean claims(LivingEntity holder, Provider registries, ItemStack stack) {
         if (stack.isEmpty()) return false;
         if (!ArtifactService.hasOwner(stack))
-            // Somebody has to be the first: the gesture on offer is the claim itself, and it is the same for
-            // every reader, so the price and the condition are settled when the hold finishes rather than here.
+            // Somebody has to be the first: the gesture on offer is the claim itself, and its price and condition
+            // are settled when the hold finishes rather than here.
             return true;
-        // An artifact that belongs to somebody is only held down by its owner, and only while it can still take
-        // aura. Both answers live on the stack and the definition, so the client and the server agree.
+        // An artifact that belongs to somebody is held down only by its owner, and only while it can still take
+        // aura. Both answers live on the stack and the definition, so client and server agree.
         return ArtifactService.isOwner(stack, holder.getUUID())
                 && ArtifactService.hasRoom(registries, stack, FormulaContext.of(holder));
     }

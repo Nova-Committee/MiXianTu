@@ -11,16 +11,10 @@ import net.minecraft.world.entity.LivingEntity;
 import java.util.List;
 
 /**
- * Runtime spirit root operations exposed as {@code MxtSpiritRoots}.
- * <p>
- * A spirit root is the element half of a body's cultivation identity: holding one binds an element, changes
- * how fast that element's aura is cultivated and scales the abilities adapted to it. Everything here goes
- * through the same services the data pack actions use, so a script cannot grant a root the conflict rules
- * would have refused.
- * <p>
- * Reads work on either side - the identity attachment is synchronised, so a client script (an item tooltip
- * asking whether the holder is a fire cultivator) reads the same copy the information panel does - while
- * everything that changes state is server-only and says so through the returned result.
+ * Runtime spirit root operations exposed as {@code MxtSpiritRoots}. Holding a root binds an element, changes how
+ * fast that element's aura is cultivated and scales the abilities adapted to it. Everything goes through the
+ * services the data pack actions use, so a script cannot grant a root the conflict rules would have refused.
+ * Reads work on either side; state changes are server-only and report that through the returned result.
  */
 public final class MxtKubeJsSpiritRootBindings {
     @Info("Every spirit root the entity holds, sorted, whether or not it is switched on or its definition still exists.")

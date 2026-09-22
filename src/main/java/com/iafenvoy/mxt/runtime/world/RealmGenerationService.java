@@ -43,10 +43,9 @@ import java.util.stream.Stream;
 
 /**
  * Creates, opens and discards realm instance dimensions.
- *
- * <p>Realm dimensions are named {@code <definition namespace>:realm/<definition path>/<index>} - the index is
- * always there, even for a definition that can only ever open one instance - for two reasons:
- * the folder of a dimension follows its identifier, which keeps every instance's terrain in its own directory,
+ * <p>
+ * Dimensions are named {@code <definition namespace>:realm/<definition path>/<index>}, index always included,
+ * because a dimension's folder follows its identifier - keeping every instance's terrain in its own directory -
  * and an aura zone can name that identifier to cover the dimension.
  */
 public final class RealmGenerationService {
@@ -63,20 +62,13 @@ public final class RealmGenerationService {
         return ResourceKey.create(Registries.DIMENSION, Identifier.fromNamespaceAndPath(definition.getNamespace(), path));
     }
 
-    /**
-     * The dimension an instance of this definition lives in. An {@code existing} realm has no dimension of its
-     * own, so the one it names is the instance's identity as well - which is also what keeps it from being
-     * unloaded or deleted when it empties.
-     */
+    // An existing realm has no dimension of its own, so the one it names is the instance's identity as well -
+    // which is also what keeps it from being unloaded or deleted when it empties.
     public static ResourceKey<Level> dimensionKey(Identifier definition, RealmGeneration generation, int index) {
         if (generation instanceof Existing(ResourceKey<Level> dimension)) return dimension;
         return dimensionKey(definition, index);
     }
 
-    /**
-     * Opens the dimension an instance lives in, creating it from the definition's generation parameters when it
-     * does not exist yet.
-     */
     public static Optional<ServerLevel> open(MinecraftServer server, RealmRecord record) {
         RealmInstance definition = record.instance();
         if (definition.generation() instanceof Existing(ResourceKey<Level> dimension)) {
@@ -104,11 +96,8 @@ public final class RealmGenerationService {
         }
     }
 
-    /**
-     * Builds the level stem a new dimension is created from, or {@code null} when the parameters cannot be
-     * resolved. Every registry read happens here rather than in the codec: datapack registries load in
-     * parallel, and the stem and dimension type layers are not available to a codec at all.
-     */
+    // Every registry read happens here rather than in the codec: datapack registries load in parallel, and the
+    // stem and dimension type layers are not available to a codec at all. Null when unresolved.
     @Nullable
     public static LevelStem buildStem(MinecraftServer server, RealmGeneration generation) {
         RegistryAccess registries = server.registryAccess();
@@ -134,21 +123,15 @@ public final class RealmGenerationService {
         }
     }
 
-    /**
-     * Removes the terrain of one instance dimension. A dimension a data pack declared through the level stem
-     * registry is never touched: the {@code realm/} folder convention must not be able to delete a real
-     * dimension that happens to sit under it.
-     */
+    // A dimension a data pack declared through the level stem registry is never touched: the realm/ folder
+    // convention must not be able to delete a real dimension that happens to sit under it.
     public static void clearData(MinecraftServer server, ResourceKey<Level> dimension) {
         if (declared(server, dimension)) return;
         discard(server, dimension.identifier());
     }
 
-    /**
-     * A discarded instance keeps nothing. The whole folder goes rather than only the chunk directories,
-     * because a dimension also stores its level data and its attachments under {@code data/}: reusing the key
-     * later must not resurrect the previous occupant's aura areas or formations.
-     */
+    // The whole folder goes rather than only the chunk directories, because a dimension also stores its level data
+    // and attachments under data/: reusing the key must not resurrect the previous occupant's aura areas.
     private static void discard(MinecraftServer server, Identifier dimension) {
         Path folder = server.getWorldPath(RealmSeedBridge.folder(dimension));
         if (!Files.isDirectory(folder)) return;
@@ -160,18 +143,12 @@ public final class RealmGenerationService {
         }
     }
 
-    /**
-     * Whether a data pack declared this dimension, as opposed to it being a runtime realm instance.
-     */
     private static boolean declared(MinecraftServer server, ResourceKey<Level> dimension) {
         return server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM)
                 .get(ResourceKey.create(Registries.LEVEL_STEM, dimension.identifier())).isPresent();
     }
 
-    /**
-     * Clears instance folders no record claims, which is what a realm destroyed by a crash or by a definition
-     * that has since been deleted leaves behind.
-     */
+    // What a realm destroyed by a crash, or by a definition that has since been deleted, leaves behind.
     public static void clearOrphans(MinecraftServer server, Set<ResourceKey<Level>> claimed) {
         Path root = server.getWorldPath(RealmSeedBridge.root());
         if (!Files.isDirectory(root)) return;
@@ -223,10 +200,8 @@ public final class RealmGenerationService {
         }
     }
 
-    /**
-     * The folder a dimension's data lives in, following vanilla: the overworld is the root, the nether and the
-     * end have their historical names, and anything else sits under {@code dimensions/}.
-     */
+    // Vanilla's folder names: the overworld is the root, the nether and the end have historical names, and
+    // anything else sits under dimensions/.
     private static String dimensionDataFolder(Identifier dimension) {
         if (dimension.equals(Level.OVERWORLD.identifier())) return "";
         if (dimension.equals(Level.NETHER.identifier())) return "DIM-1";
@@ -292,11 +267,8 @@ public final class RealmGenerationService {
                 .orElse(null);
     }
 
-    /**
-     * Whether a folder is a realm instance's own directory. Instance folders live under {@code realm/}, so any
-     * folder there that holds level data or chunk data is one - a definition path with slashes nests deeper,
-     * which is why this is checked rather than assumed from the depth.
-     */
+    // Instance folders live under realm/, so any folder there holding level data or chunk data is one. It is
+    // checked rather than assumed from the depth, because a definition path with slashes nests deeper.
     private static boolean holdsData(Path path) {
         if (Files.isRegularFile(path.resolve("level.dat"))) return true;
         for (String name : DATA_FOLDERS) if (Files.isDirectory(path.resolve(name))) return true;

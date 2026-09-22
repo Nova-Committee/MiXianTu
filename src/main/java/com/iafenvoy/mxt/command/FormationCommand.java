@@ -37,15 +37,12 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /mxt formation} subtree: diagnostics, and binding a plate to a formation. Also available as
- * a top-level {@code /formation} when the server option is enabled, and a disabled option removes only
- * the alias. {@code bind} is the one write, because nothing else could produce a usable plate.
+ * The {@code /mxt formation} subtree: diagnostics, and binding a plate to a formation. A disabled server option
+ * removes only the top-level {@code /formation} alias. {@code bind} is the one write, because nothing else could
+ * produce a usable plate.
  */
 public final class FormationCommand {
-    /**
-     * The same subtree as a top-level {@code /formation}, registered only when the server option allows
-     * it, and built by the same method as the {@code /mxt} copy so the two cannot drift.
-     */
+    // Built by the same method as the {@code /mxt} copy so the two cannot drift.
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("formation")
             .then(literal("list").executes(ctx -> listFormations(ctx.getSource())))
             .then(literal("info").executes(ctx -> formationCoverage(ctx.getSource())))
@@ -55,10 +52,7 @@ public final class FormationCommand {
                             .suggests(FormationCommand::suggestAllowed)
                             .executes(ctx -> bind(ctx.getSource(), IdentifierArgument.getId(ctx, "formation")))));
 
-    /**
-     * Offers the plate's own allow list, because {@code IdentifierArgument} would otherwise complete to
-     * nothing.
-     */
+    // The plate's own allow list, because IdentifierArgument would otherwise complete to nothing.
     private static CompletableFuture<Suggestions> suggestAllowed(CommandContext<CommandSourceStack> context,
                                                                  SuggestionsBuilder builder) {
         ServerPlayer player = context.getSource().getPlayer();
@@ -76,11 +70,8 @@ public final class FormationCommand {
         return MxtDatapackRegistries.registry(MxtResourceKeys.FORMATION);
     }
 
-    /**
-     * Writes a formation into the plate held in the main hand. Rebinding is allowed and overwrites, and a
-     * typo leaves the plate as it was because the id is resolved first. Public so the server audit can
-     * drive the command body with a {@code FakePlayer}.
-     */
+    // Rebinding is allowed and overwrites, and a typo leaves the plate as it was because the id resolves first.
+    // Public so the server audit can drive the command body with a FakePlayer.
     public static int bind(CommandSourceStack source, Identifier formation) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         Holder<Formation> definition = MxtDatapackRegistries
@@ -118,10 +109,7 @@ public final class FormationCommand {
         return formations.size();
     }
 
-    /**
-     * Every match is reported rather than a single winner, because overlapping formations are exactly
-     * what an operator is trying to see.
-     */
+    // Every match is reported rather than a single winner: overlapping formations are what an operator wants to see.
     private static int formationCoverage(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {

@@ -12,10 +12,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.UUID;
 
 /**
- * Whether the entity is somebody the owner of the formation being evaluated treats as his own. It reads the
- * carrier the ticker already hands to every per-entity action, because a formation's per-entity actions take an
- * {@link EntityCondition}, which has no second entity to pair with the formation's owner. Answers {@code false}
- * outside a formation context, with no owner, and for an entity nobody can identify.
+ * Whether the formation's owner treats the entity as his own, read from the carrier the ticker already hands to
+ * every per-entity action. Answers {@code false} outside a formation context or with no owner.
  */
 public enum FormationAllyEntityCondition implements EntityCondition {
     INSTANCE;

@@ -40,9 +40,6 @@ import java.util.UUID;
  */
 @EventBusSubscriber
 public final class FormationWorldTicker {
-    /**
-     * Ticks between two dispatch passes.
-     */
     public static final long PERIOD = 20L;
 
     private static final FormationStructureValidator VALIDATOR = FormationStructureValidator.STRUCTURE;
@@ -56,20 +53,14 @@ public final class FormationWorldTicker {
         dispatch(level);
     }
 
-    /**
-     * Whether a level tick is a formation tick.
-     *
-     * <p>This is also the granularity of the enter and exit actions, so it is the single knob that
-     * decides how long a formation can go without noticing a change.</p>
-     */
+    // Also the granularity of the enter and exit actions, so it is the single knob that decides how long a
+    // formation can go without noticing a change.
     public static boolean due(long gameTime) {
         return gameTime % PERIOD == 0L;
     }
 
-    /**
-     * One dispatch pass over every active formation in the level: validate, charge upkeep, run the per-entity
-     * actions, then the sweep that releases grants from formations a player has left.
-     */
+    // One dispatch pass over every active formation: validate, charge upkeep, run the per-entity actions, then
+    // the sweep that releases grants from formations a player has left.
     public static void dispatch(ServerLevel level) {
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
@@ -96,12 +87,8 @@ public final class FormationWorldTicker {
         for (ServerPlayer player : level.players()) releaseOutside(level, player);
     }
 
-    /**
-     * Charges one period of upkeep, and decides what an unpaid period means.
-     *
-     * @return whether the period may continue; false means the formation was taken down, or a listener
-     * cancelled {@link UpkeepFailed} to let it stand through a period it could not pay for
-     */
+    // Returns whether the period may continue; false means the formation was taken down, or a listener cancelled
+    // UpkeepFailed to let it stand through a period it could not pay for.
     private static boolean chargeUpkeep(ServerLevel level, BlockPos controller, FormationInstance instance, Formation definition) {
         Entity payer = instance.owner().map(level.getEntities()::get).orElse(null);
         // A formation with a store can pay while its owner is absent, which is most of what storing aura is
@@ -124,10 +111,8 @@ public final class FormationWorldTicker {
         return false;
     }
 
-    /**
-     * What the formation's own ground supplies this period: the emitters inside it plus, when the server
-     * option allows it, the ambient aura of the position it stands on, summed per resource.
-     */
+    // What the formation's own ground supplies this period: the emitters inside it plus, when the server option
+    // allows it, the ambient aura of the position it stands on, summed per resource.
     private static Map<Holder<Aura>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
         return combine(
                 FormationAbsorption.absorbedFor(level, controller, radius),
@@ -135,10 +120,8 @@ public final class FormationWorldTicker {
                 MxtServerConfig.INSTANCE.formations.drawsEnvironment.getValue());
     }
 
-    /**
-     * Sums the two supply sources. Split from the lookup so the rule is assertable without a level: the
-     * option either adds the ambient aura or leaves the formation with only what its own emitters give it.
-     */
+    // Split from the lookup so the rule is assertable without a level: the option either adds the ambient aura
+    // or leaves the formation with only what its own emitters give it.
     public static Map<Holder<Aura>, Double> combine(Map<Holder<Aura>, Double> absorbed,
                                                     Map<Holder<Aura>, Double> environment,
                                                     boolean drawsEnvironment) {
@@ -148,11 +131,8 @@ public final class FormationWorldTicker {
         return supply;
     }
 
-    /**
-     * Runs the per-entity actions for one formation: enter, tick, and exit. An entity the formation does not
-     * affect is treated as absent rather than present-but-skipped, which is what makes the exit path release
-     * what the formation granted it.
-     */
+    // An entity the formation does not affect is treated as absent rather than present-but-skipped, which is what
+    // makes the exit path release what the formation granted it.
     private static void executeEntityActions(ServerLevel level, BlockPos controller, FormationInstance instance,
                                              Formation definition) {
         double radius = instance.radius();
@@ -193,10 +173,7 @@ public final class FormationWorldTicker {
         }
     }
 
-    /**
-     * Releases the formation-scoped grants of a player who is no longer inside that formation. A player can
-     * leave without the formation ever seeing it, and the ability attachment is persistent.
-     */
+    // A player can leave without the formation ever seeing it, and the ability attachment is persistent.
     private static void releaseOutside(ServerLevel level, ServerPlayer player) {
         // A player who never held a granted ability cannot owe a release, and without this guard the sweep
         // would build a source identifier for every formation in the level, every period.

@@ -13,8 +13,7 @@ import java.util.Optional;
 
 /**
  * Reads how many uses the {@code mxt:charges} of a named host have left. A host that was never spent keeps no
- * count, which reads as full, so this answers with the declaration's {@code maximum} there. Without a range it
- * only asks whether the host declares a charge pool at all; a host that does not declare one is simply false.
+ * count and reads as full (the declaration's {@code maximum}); one that declares no charge pool is false.
  */
 public record StorageChargesEntityCondition(Identifier family, Identifier id,
                                             Optional<NumberRange> remaining) implements EntityCondition {

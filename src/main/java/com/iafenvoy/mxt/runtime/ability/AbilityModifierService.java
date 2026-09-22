@@ -14,11 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Resolves passive modifier abilities on demand without duplicate attribute mutation.
- * <p>
- * A passive answers to its own {@code condition}, re-evaluated here on the same per-tick pass the rest of the
- * attribute service runs on, so an ability can grant its modifiers only while the holder's state says so - the
- * behaviour an {@code aura} already had.
+ * Resolves passive modifier abilities on demand, without mutating attributes itself. A passive answers to its own
+ * {@code condition}, re-evaluated on the same per-tick pass the attribute service runs on, so an ability grants
+ * its modifiers only while the holder's state says so.
  */
 public final class AbilityModifierService {
     private AbilityModifierService() {

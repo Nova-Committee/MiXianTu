@@ -131,10 +131,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         return result;
     }
 
-    /**
-     * Changing the grid or recipe invalidates any partially supplied aura instead of retaining it as
-     * general-purpose block storage.
-     */
+    // Changing the grid or recipe invalidates any partially supplied aura rather than keeping it as general storage.
     public void configureAuraCosts(Map<Holder<Aura>, Integer> costs) {
         if (this.requiredAura.equals(costs)) return;
         this.requiredAura = new LinkedHashMap<>(costs);
@@ -151,10 +148,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         return costs.entrySet().stream().allMatch(entry -> entry.getValue() >= 0 && this.aura(entry.getKey()) >= entry.getValue());
     }
 
-    /**
-     * Deducts one craft's costs together, preserving any remaining active-recipe buffer for the next
-     * craft.
-     */
+    // One craft's costs are deducted together; any remaining active-recipe buffer stays for the next craft.
     public boolean consumeAura(Map<Holder<Aura>, Integer> costs) {
         if (!this.hasAura(costs)) return false;
         costs.forEach((aura, amount) -> {
@@ -254,10 +248,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         return Component.translatable("screen.mxt.spirit_crafting_table");
     }
 
-    /**
-     * Hands out a {@code ContainerLevelAccess}, not the entity, so nothing has to be null-checked in the
-     * menu's client half.
-     */
+    // A ContainerLevelAccess, not the entity, so nothing has to be null-checked in the menu's client half.
     @Override
     public AbstractContainerMenu createMenu(int id, @NonNull Inventory inventory, @NonNull Player player) {
         return new SpiritCraftingMenu(id, inventory, ContainerLevelAccess.create(player.level(), this.getBlockPos()));

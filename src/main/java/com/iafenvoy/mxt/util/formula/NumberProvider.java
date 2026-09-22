@@ -27,10 +27,8 @@ public interface NumberProvider {
 
     MapCodec<? extends NumberProvider> codec();
 
-    /**
-     * Verifies a runtime result before it is exposed to game logic.
-     * Callers must return a suitable fallback when this method returns {@code false}.
-     */
+    // Verifies a runtime result before it is exposed to game logic; callers must return a suitable fallback when
+    // this returns {@code false}.
     default boolean assertFinite(double value) {
         if (Double.isFinite(value)) return true;
         FormulaDiagnostics.report("Number provider " + this.getClass().getSimpleName()

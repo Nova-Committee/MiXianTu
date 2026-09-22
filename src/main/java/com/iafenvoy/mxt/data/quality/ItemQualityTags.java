@@ -14,10 +14,7 @@ public final class ItemQualityTags {
     private ItemQualityTags() {
     }
 
-    /**
-     * Creates a group tag: {@code mxt_test:forged} maps to {@code mxt_test:group/forged}, and an
-     * already-prefixed path is accepted as it is.
-     */
+    // mxt_test:forged maps to mxt_test:group/forged; an already-prefixed path is accepted as it is.
     public static TagKey<ItemQuality> group(Identifier id) {
         Identifier tagId = id.withPath(path -> path.startsWith(GROUP_PREFIX) ? path : GROUP_PREFIX + path);
         return create(tagId);

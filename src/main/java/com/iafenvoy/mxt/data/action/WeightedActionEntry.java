@@ -7,7 +7,7 @@ import net.minecraft.util.RandomSource;
 import java.util.List;
 
 /**
- * A data-driven action choice with the same JSON shape as Origins.
+ * A weighted action choice. Negative weights count as 0, and an all-zero table falls back to a uniform pick.
  */
 public record WeightedActionEntry<T>(T element, int weight) {
     public static <T> Codec<WeightedActionEntry<T>> codec(Codec<T> elementCodec) {

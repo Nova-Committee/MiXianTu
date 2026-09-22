@@ -18,24 +18,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Whether the entity wears or holds an item that satisfies an item condition. A passive that should only count
- * while the holder is equipped a certain way is written with this and an item condition such as {@code mxt:item_tag}
- * or {@code mxt:item_matcher}, which is the shape the equipment-side abilities already use for their own gating.
- *
- * <p>A slot is named either by a vanilla equipment slot or, for the Curios slots that have no vanilla counterpart,
- * by {@code curios:<slot id>}. Naming none asks every vanilla slot and every Curios slot, which is what "carrying
- * something like this" means for a passive; naming one asks only that slot, so an {@code mxt:or} of several slots
- * is not needed to express "either hand". An unknown name simply never matches.</p>
+ * Whether the entity wears or holds an item that satisfies an item condition. A slot is a vanilla equipment slot
+ * name or {@code curios:<slot id>}; naming none asks every slot, and an unknown name simply never matches.
  */
 public record HasEquippedItemCondition(ItemCondition itemCondition, List<String> slots) implements EntityCondition {
     public static final MapCodec<HasEquippedItemCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ItemCondition.optionalCodec("item_condition").forGetter(HasEquippedItemCondition::itemCondition),
             Codec.STRING.listOf().optionalFieldOf("slots", List.of()).forGetter(HasEquippedItemCondition::slots)
     ).apply(i, HasEquippedItemCondition::new));
-    /**
-     * The vanilla slots by their own names, resolved once: the codec carries names, and a condition is evaluated
-     * every tick for a passive.
-     */
+    // Resolved once from the slot names: the codec carries names, and a condition is evaluated every tick.
     private static final Map<String, EquipmentSlot> VANILLA_SLOTS = vanillaSlots();
     private static final String CURIOS_PREFIX = "curios:";
 

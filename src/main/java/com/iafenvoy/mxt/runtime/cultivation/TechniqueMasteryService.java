@@ -22,21 +22,15 @@ import java.util.List;
  * Advances a learned technique when its mastery reaches the next level. Only data decides: the level's
  * {@code mastery} says how much is needed, its {@code condition} says what else it takes, and
  * {@code mastery_resource} names the value that measures mastery. A promotion is committed before the
- * {@code mxt:technique_stage} signal is published, and granted abilities are recalculated once per pass.
+ * {@code mxt:technique_stage} signal is published.
  */
 public final class TechniqueMasteryService {
-    /**
-     * Bound on how many levels one pass may climb, so a misconfigured chain cannot stall a tick.
-     */
+    // Bound on how many levels one pass may climb, so a misconfigured chain cannot stall a tick.
     private static final int MAX_PROMOTIONS_PER_PASS = 64;
 
     private TechniqueMasteryService() {
     }
 
-    /**
-     * One promotion pass over every learned technique: techniques without a mastery resource, without a
-     * next level, or below its requirement are one comparison away from being skipped.
-     */
     public static void tick(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);

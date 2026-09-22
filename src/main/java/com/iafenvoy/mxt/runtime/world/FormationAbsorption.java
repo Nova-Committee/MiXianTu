@@ -16,18 +16,13 @@ import java.util.Map.Entry;
 
 /**
  * Decides which block aura emitters belong to a formation instead of the environment: an emitter inside a
- * formation's radius supplies that formation. The decision is made when a chunk's block aura is rebuilt, not
- * when aura is queried, because the shared stock subtracts the whole chunk aggregate and filtering at query
- * time would let the same aura be spent twice.
+ * formation's radius supplies that formation.
  */
 public final class FormationAbsorption {
     private FormationAbsorption() {
     }
 
-    /**
-     * Snapshot of the formations able to absorb anything in one chunk, taken once per rebuild so the
-     * per-block loop only does distance comparisons.
-     */
+    // Taken once per rebuild, so the per-block loop only does distance comparisons.
     public record Sources(List<Shape> shapes) {
         public static Sources of(ServerLevel level, int minX, int minZ, int maxX, int maxZ) {
             List<Shape> shapes = new ArrayList<>();
@@ -51,10 +46,7 @@ public final class FormationAbsorption {
             return false;
         }
 
-        /**
-         * Whether any formation could absorb anything at all, which lets the rebuild skip the distance test on
-         * a level with no formations.
-         */
+        // Lets the rebuild skip the distance test on a level with no formations.
         public boolean empty() {
             return this.shapes.isEmpty();
         }
@@ -63,10 +55,7 @@ public final class FormationAbsorption {
     public record Shape(BlockPos center, double radiusSquared) {
     }
 
-    /**
-     * The aura the emitters inside one formation's radius are supplying it, read from the chunks the radius
-     * overlaps. Summed without distance weighting, so a block inside the formation gives it everything.
-     */
+    // Summed without distance weighting, so a block inside the formation gives it everything.
     public static Map<Holder<Aura>, Double> absorbedFor(ServerLevel level, BlockPos controller, double radius) {
         Map<Holder<Aura>, Double> totals = new LinkedHashMap<>();
         int minChunkX = (int) Math.floor((controller.getX() - radius) / 16.0D);
@@ -84,11 +73,8 @@ public final class FormationAbsorption {
         return totals;
     }
 
-    /**
-     * The ambient aura of the ground a formation stands on, as a supply it can also spend. Read from the
-     * resolved aura at the controller, minus the part the formation's own emitters contribute
-     * ({@link AuraPool#supplied()}).
-     */
+    // The ambient aura of the ground a formation stands on, as a supply it can also spend: the resolved aura at
+    // the controller minus the part the formation's own emitters supply.
     public static Map<Holder<Aura>, Double> environmentSupply(ServerLevel level, BlockPos controller) {
         Map<Holder<Aura>, Double> supply = new LinkedHashMap<>();
         AuraService.getPositionAura(level, controller).aura().forEach((resource, pool) -> {

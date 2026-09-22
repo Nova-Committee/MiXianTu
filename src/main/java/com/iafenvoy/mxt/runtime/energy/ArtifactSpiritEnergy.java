@@ -7,11 +7,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * ISpiritEnergy view of one aura an artifact holds; the capacity stays the caller's so the definition decides
- * it once in {@link ArtifactService}.
- *
- * <p>An artifact may store several kinds of aura, so a caller keeping a single value has to say which one it
- * means. Amounts are whole units in the shared spirit store, so a write floors what it is given.</p>
+ * ISpiritEnergy view of one aura an artifact holds; the capacity stays the caller's, so the definition decides
+ * it once in {@link ArtifactService}. Amounts are whole units in the shared spirit store, so a write floors.
  */
 public final class ArtifactSpiritEnergy implements ISpiritEnergy {
     private final ItemStack stack;

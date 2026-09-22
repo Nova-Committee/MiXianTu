@@ -12,14 +12,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * Client-only controls for the mod's own overlays, laid out one tab per feature. Names stay short and the
- * explanation lives in the tooltip, the same way the server config is written; call sites read the entry
- * itself through {@link #INSTANCE}, and the serialised keys are short for the same reason: the old full
- * paths are translated on load.
- *
- * <p>The HUD layout is not here: it lives in {@link MxtHudConfig}, in its own file, because it is written by
- * dragging rather than by filling in a setting. The wheel's sectors are not here either: they are the player's
- * own layout, kept on the server, which is the side that validates them (see {@code WheelLayoutAttachment}).</p>
+ * Client-only controls for the mod's own overlays, one tab per feature; an entry's name stays short and its
+ * tooltip carries the explanation, which also lives in both lang files ({@code config.mxt.client.*}), so
+ * adding or renaming one means editing {@code zh_cn.json} and {@code en_us.json} too.
  */
 public final class MxtClientConfig extends AutoInitConfigContainer {
     public static final MxtClientConfig INSTANCE = new MxtClientConfig();
@@ -56,9 +51,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     }
 
     public static final class Information extends AutoInitConfigCategoryBase {
-        /**
-         * Ticks between two rebuilds of the information panel.
-         */
+        // Ticks between two rebuilds of the information panel.
         public final IntegerEntry refreshInterval = IntegerEntry.builder("config.mxt.client.information.refresh_interval", 20)
                 .key("refresh_interval")
                 .tooltip("config.mxt.client.information.refresh_interval.tooltip")
@@ -82,20 +75,14 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     }
 
     public static final class Rifts extends AutoInitConfigCategoryBase {
-        /**
-         * Draws rifts with the mod's own pipeline, which layers a drifting pattern over the points, links and
-         * fills a rift is built from. Off switches to plain translucent colour, which is there to fall back on
-         * when a shader pack or a driver disagrees with the custom pipeline.
-         */
+        // Off switches to plain translucent colour, which is what a shader pack or driver that disagrees with
+        // the custom pipeline falls back on.
         public final BooleanEntry shaders = BooleanEntry.builder("config.mxt.client.rifts.shaders", true)
                 .key("shaders")
                 .tooltip("config.mxt.client.rifts.shaders.tooltip")
                 .build();
-        /**
-         * How thick a rift is drawn: the side of the cube at each node, the diameter of a link and the thickness
-         * of the slab a triangle is filled with, all one measurement. The floor keeps a rift visible when the
-         * player wants it subtle; the ceiling keeps one block from overfilling its own cube.
-         */
+        // One measurement for a node's cube, a link's diameter and a fill slab's thickness: the floor keeps a
+        // subtle rift visible and the ceiling keeps one block from overfilling its own cube.
         public final DoubleEntry thickness = DoubleEntry.builder("config.mxt.client.rifts.thickness", RiftMesh.DEFAULT_THICKNESS)
                 .key("thickness")
                 .tooltip("config.mxt.client.rifts.thickness.tooltip")
@@ -108,8 +95,8 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     }
 
     /**
-     * How the wheel menu is driven. One entry, because the only choice left is whether the key holds the wheel
-     * up or toggles it; spending the selection is the use key's job, not a setting.
+     * How the wheel menu is driven: whether the key holds the wheel up or toggles it. Spending the selection is
+     * the use key's job, not a setting.
      */
     public static final class Wheel extends AutoInitConfigCategoryBase {
         public final EnumEntry<WheelMode> mode = EnumEntry.builder("config.mxt.client.wheel.mode", WheelMode.HOLD)

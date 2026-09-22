@@ -11,9 +11,8 @@ import net.neoforged.bus.api.ICancellableEvent;
 import java.util.Optional;
 
 /**
- * Lifecycle hooks for world-backed formation instances. The active formation id is
- * exposed through {@link FormationInstance#formation()}; no separate identifier field
- * is duplicated on the event.
+ * Lifecycle hooks for world-backed formation instances. The active configuration is read from
+ * {@link FormationInstance#formation()}; no identifier is duplicated on the event.
  */
 public abstract class FormationEvent extends Event {
     private final ServerLevel level;
@@ -51,10 +50,9 @@ public abstract class FormationEvent extends Event {
     }
 
     /**
-     * One settled period, posted once the formation's upkeep for it has been charged. Deliberately not
-     * cancellable: the resource has already been spent by the time it fires, so cancelling it would drain
-     * the payer while suppressing every effect. Observers that need every charged period belong here;
-     * anything that wants to suppress the work belongs on {@link TickEffects}.
+     * One settled period, posted once the formation's upkeep for it has been charged. Deliberately not cancellable:
+     * the resource is already spent, so cancelling would drain the payer while suppressing every effect. Anything
+     * that wants to suppress the work belongs on {@link TickEffects}.
      */
     public static final class Tick extends FormationEvent {
         public Tick(ServerLevel level, BlockPos pos, FormationInstance instance) {
@@ -63,9 +61,8 @@ public abstract class FormationEvent extends Event {
     }
 
     /**
-     * The part of a period that a listener may suppress: {@code tick_action} and the per-entity
-     * enter/tick/exit actions. Upkeep for the period has already been charged and is not refunded; to stop
-     * the formation, take it down.
+     * The part of a period a listener may suppress: {@code tick_action} and the per-entity enter/tick/exit actions.
+     * Upkeep for the period is already charged and is not refunded; to stop the formation, take it down.
      */
     public static final class TickEffects extends FormationEvent implements ICancellableEvent {
         public TickEffects(ServerLevel level, BlockPos pos, FormationInstance instance) {
@@ -74,9 +71,8 @@ public abstract class FormationEvent extends Event {
     }
 
     /**
-     * Upkeep for this period could not be paid, either because no payer could be resolved or because the
-     * payer is short of a resource. Cancelling keeps the formation registered and lets this period pass: it
-     * pays nothing and does nothing, so a formation can survive a lean stretch.
+     * Upkeep for this period could not be paid: no payer could be resolved, or the payer is short of a resource.
+     * Cancelling keeps the formation registered and lets the period pass, paying and doing nothing.
      */
     public static final class UpkeepFailed extends FormationEvent implements ICancellableEvent {
         private final Optional<Entity> payer;
@@ -89,16 +85,12 @@ public abstract class FormationEvent extends Event {
             this.failedResource = failedResource;
         }
 
-        /**
-         * Who was expected to pay. Empty when the owner is missing — offline, dead, or never recorded.
-         */
+        // Empty when the owner is missing: offline, dead, or never recorded.
         public Optional<Entity> payer() {
             return this.payer;
         }
 
-        /**
-         * The resource the payer came up short on, or empty when there was nobody to pay at all.
-         */
+        // Empty when there was nobody to pay at all.
         public Optional<Identifier> failedResource() {
             return this.failedResource;
         }

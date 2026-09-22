@@ -25,30 +25,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Draws a rift as a point, the links to the rifts around it, and the triangles those links close.
- *
- * <p>Every block draws only its own share: one point at its centre, one half of every link, and one share of
- * every triangle it takes part in. The other halves and shares come from the neighbours, so nothing here has to
- * know the shape of the whole structure and nothing has to be recomputed when one block of it changes.
- *
- * <p>The three parts are drawn at the same thickness and the same colour, which is what makes the structure read
- * as one material: a cube at each node, a beam of the same width along each link, and a triangle filled with a
- * slab of that width rather than a sheet.
- *
- * <p>A rift is drawn fully opaque, and that is fixed rather than a setting: a translucent fill both hid the
- * points and links inside it and made the block read as glass, which is not what a hole into another dimension
- * should look like.
+ * Draws a rift as a point, the links to the rifts around it and the triangles those links close. Every block draws
+ * only its own share - one point, half of every link, one share of every triangle - so no block needs to know the
+ * shape of the whole structure. Fully opaque on purpose: a translucent fill hid the inner points and links.
  */
 public final class RiftBlockEntityRenderer implements BlockEntityRenderer<RiftBlockEntity, State> {
-    /**
-     * Alpha every part of a rift is submitted with. Locked at one on purpose; see the class comment.
-     */
+    // Alpha every part is submitted with, locked at one on purpose; see the class comment.
     private static final float ALPHA = 1.0F;
 
-    /**
-     * The provider hands every block entity renderer a context; a rift needs nothing from it, since its shape is
-     * geometry and its texture belongs to the pipeline rather than to a model.
-     */
     public RiftBlockEntityRenderer(Context context) {
     }
 
@@ -84,10 +68,7 @@ public final class RiftBlockEntityRenderer implements BlockEntityRenderer<RiftBl
                 });
     }
 
-    /**
-     * Emits one part. Every mesh is a whole number of quads, so the vertex list goes straight into the buffer
-     * that both the rift pipeline and the plain fallback expect.
-     */
+    // Every mesh is a whole number of quads, which is what the rift pipeline and the plain fallback both expect.
     private static void emit(VertexConsumer buffer, Pose pose, Part part) {
         float red = ((part.argb() >> 16) & 0xFF) / 255.0F;
         float green = ((part.argb() >> 8) & 0xFF) / 255.0F;
@@ -97,18 +78,12 @@ public final class RiftBlockEntityRenderer implements BlockEntityRenderer<RiftBl
                     .setColor(red, green, blue, part.alpha());
     }
 
-    /**
-     * A neighbour's centre in this block's coordinates. Neighbours are at most one block away on each axis, so
-     * the difference is what is added to this block's own centre.
-     */
+    // Neighbours are at most one block away, so the difference added to CENTRE is their position in this block.
     private static Vec3 local(BlockPos other, BlockPos self) {
         return RiftMesh.CENTRE.add(other.getX() - self.getX(), other.getY() - self.getY(), other.getZ() - self.getZ());
     }
 
-    /**
-     * One piece of the drawing: a mesh of quads in block-local coordinates, the colour it is tinted with and how
-     * opaque it is.
-     */
+    // One piece of the drawing; the vertices are in block-local coordinates.
     private record Part(List<Vec3> vertices, int argb, float alpha) {
     }
 

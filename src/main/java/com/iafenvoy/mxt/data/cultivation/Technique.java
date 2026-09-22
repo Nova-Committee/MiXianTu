@@ -25,8 +25,8 @@ import java.util.Optional;
 /**
  * A learnable technique grants named abilities and cultivation modifiers, unconditionally
  * ({@code granted_abilities}) or by mastery ({@code configuration}), whose levels come from a shared
- * {@link SkillStage} chain. {@code default_stage} is the chain entry point and is mandatory as soon as any
- * level is configured; {@code mastery_resource} names the stored value that measures mastery.
+ * {@link SkillStage} chain. {@code default_stage} is the chain entry point and is mandatory as soon as any level
+ * is configured; {@code mastery_resource} names the stored value that measures mastery.
  */
 public record Technique(String grade, Optional<IconReference> icon, EntityCondition learnCondition,
                         List<Identifier> exclusiveTags,
@@ -58,11 +58,8 @@ public record Technique(String grade, Optional<IconReference> icon, EntityCondit
         return DataResult.success(technique);
     }
 
-    /**
-     * What one level of the technique's chain means to this technique: the requirement to reach it
-     * and the abilities it grants. {@code condition} is required - a level that needs nothing writes
-     * {@code mxt:always_true} - and {@code ability} may be omitted by a level that grants nothing.
-     */
+    // condition is required - a level that needs nothing writes mxt:always_true - and ability may be omitted by a
+    // level that grants nothing.
     public record StageConfiguration(EntityCondition condition,
                                      List<Either<Holder<Ability>, TagKey<Ability>>> abilities) {
         public static final Codec<StageConfiguration> CODEC = RecordCodecBuilder.create(i -> i.group(

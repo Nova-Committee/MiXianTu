@@ -63,9 +63,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight, Enti
             EntityAction.optionalCodec("fail_action").forGetter(RealmStage::failAction)
     ).apply(i, RealmStage::new));
 
-    /**
-     * Next-realm links are holder references, so diagnostic output must remain shallow.
-     */
+    // Next-realm links are holder references, so diagnostic output must remain shallow.
     @Override
     public @NonNull String toString() {
         return "RealmStage[aura=" + HolderHelper.id(this.aura) + ", hasNextRealm=" + this.nextRealm.isPresent()

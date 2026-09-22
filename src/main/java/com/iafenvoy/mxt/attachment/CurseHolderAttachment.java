@@ -18,12 +18,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Persistent curse instances only; definitions are looked up from the reloadable curse registry.
- * <p>
- * An instance is two things, kept in one place: the lifecycle payload that belongs to the curse itself - stacks,
- * when it was applied, when it expires - and the {@link SourceLedger} of who keeps it alive. That ledger is the
- * same one ability grants use, so "removing one source cannot remove another source's curse" and "the last source
- * leaving is what removes it" mean exactly what they mean for abilities.
+ * Persistent curse instances only; definitions are looked up from the reloadable curse registry. An instance keeps
+ * two things in one place: the lifecycle payload of the curse itself (stacks, applied time, expiry) and the
+ * {@link SourceLedger} of who keeps it alive - the same ledger ability grants use, so "removing one source cannot
+ * remove another source's curse" means here exactly what it means there.
  */
 public final class CurseHolderAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CurseHolderAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -47,9 +45,6 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
         return this.instances;
     }
 
-    /**
-     * Who keeps each held curse alive.
-     */
     public SourceLedger<Holder<Curse>> sources() {
         return this.sources;
     }
@@ -72,9 +67,7 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
         this.markDirty();
     }
 
-    /**
-     * Marks an instance whose definition is no longer loaded. Returns whether the flag was not already set.
-     */
+    // Returns whether the flag was not already set.
     public boolean markUnknown(Holder<Curse> curse) {
         State state = this.instances.get(curse);
         if (state == null || state.unknownDefinition()) return false;
@@ -91,10 +84,8 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
         return true;
     }
 
-    /**
-     * A save written before sources became a set records one free-form string per instance. It is read into the
-     * ledger here, so the rest of the runtime only ever sees the shared shape.
-     */
+    // A save written before sources became a set records one free-form string per instance; it is read into the
+    // ledger here so the rest of the runtime only ever sees the shared shape.
     private void migrateLegacySources() {
         this.instances.forEach((curse, state) -> state.legacySource()
                 .filter(ignored -> !this.sources.holds(curse))
@@ -108,10 +99,7 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
         return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "legacy/" + (path.isBlank() ? "unknown" : path));
     }
 
-    /**
-     * One applied curse: how many stacks it holds, when it was applied and when it expires. Who keeps it alive is
-     * the attachment's source ledger, not part of this payload.
-     */
+    // One applied curse. Who keeps it alive is the attachment's source ledger, not part of this payload.
     public record State(int stacks, long appliedAt, long expiresAt, boolean unknownDefinition, Optional<String> legacySource) {
         public static final Codec<State> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(1, 256).fieldOf("stacks").forGetter(State::stacks),

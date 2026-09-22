@@ -33,10 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A scrollable list of the player's learned techniques: one row per technique with its icon, level and
- * progress towards the next level. The panel is a view over synchronized state, so the rows are computed
- * locally and no packet is involved. The background is an art asset; the row separators and progress bars
- * are drawn in code.
+ * A scrollable list of the player's learned techniques, one row each: it is a view over synchronized state, so
+ * the rows are computed locally and no packet is involved.
  */
 public final class TechniquePanelScreen extends Screen {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/technique_panel.png");
@@ -45,9 +43,6 @@ public final class TechniquePanelScreen extends Screen {
     private static final int PANEL_HEIGHT = 300;
     private static final int CONTENT_PADDING = 12;
     private static final int EMPTY_INSET = 6;
-    /**
-     * Room kept beside the rows for the vanilla scrollbar.
-     */
     private static final int SCROLLBAR_ROOM = AbstractScrollArea.SCROLLBAR_WIDTH;
     private static final int ROW_HEIGHT = 34;
     private static final int ICON_SIZE = 24;
@@ -160,24 +155,17 @@ public final class TechniquePanelScreen extends Screen {
             this.setX(x);
         }
 
-        /**
-         * The panel's own art is the background; the vanilla translucent backdrop would dim it.
-         */
+        // The panel's own art is the background; the vanilla translucent backdrop would dim it.
         @Override
         protected void extractListBackground(@NonNull GuiGraphicsExtractor graphics) {
         }
 
-        /**
-         * Vanilla draws a line above the first row and below the last; each row already carries its own
-         * separator.
-         */
+        // Vanilla draws a line above the first row and below the last; each row already carries its own separator.
         @Override
         protected void extractListSeparators(@NonNull GuiGraphicsExtractor graphics) {
         }
 
-        /**
-         * Vanilla puts the scrollbar past the row and the widget, which lands on the panel's border.
-         */
+        // Vanilla puts the scrollbar past the row and the widget, which lands on the panel's border.
         @Override
         protected int scrollBarX() {
             return this.getRowRight();
@@ -237,10 +225,8 @@ public final class TechniquePanelScreen extends Screen {
                 if (hovered) graphics.setComponentTooltipForNextFrame(font, this.tooltip(), mouseX, mouseY);
             }
 
-            /**
-             * The level column, using the level's own display name when the data pack provides one and its
-             * rank otherwise, measured because the level and the progress value share one line.
-             */
+            // The level's own display name when the pack provides one, its rank otherwise; measured because the
+            // level and the progress value share one line.
             private Component levelText(Font font, int width) {
                 if (!this.row.hasStage()) return Component.translatable("screen.mxt.technique_panel.level_unknown");
                 Identifier stage = HolderHelper.id(this.row.stage());
@@ -260,19 +246,13 @@ public final class TechniquePanelScreen extends Screen {
                         format(this.progress.done()), format(this.progress.span()));
             }
 
-            /**
-             * Tinted with the mastery resource's own particle colour, like the crafting progress bar.
-             */
+            // Tinted with the mastery resource's own particle colour, like the crafting progress bar.
             private int fillColor() {
                 Holder<Resource> mastery = this.row.technique().value().masteryResource().orElse(null);
                 return mastery == null ? BAR_FALLBACK_COLOR : 0xFF000000 | mastery.value().particleColor();
             }
 
-            /**
-             * The technique's name, plus the level's own ID while it has one: the row itself only has room
-             * for the level's short display name or its rank. The grade is the one thing a row can never
-             * show, so it is spelled out here.
-             */
+            // A row has no room for the level id or the grade, so both are spelled out here.
             private List<Component> tooltip() {
                 MutableComponent line = DefinitionText.name(this.row.technique(), "technique").copy();
                 if (this.row.hasStage())
@@ -294,10 +274,8 @@ public final class TechniquePanelScreen extends Screen {
                 ? Long.toString(Math.round(value)) : String.format("%.1f", value);
     }
 
-    /**
-     * A grade is free-form text a data pack chooses, so it is shown exactly as written unless the language file
-     * names that value, which is what lets a pack translate its own grades without this code knowing them.
-     */
+    // A grade is free-form text a data pack chooses: shown exactly as written unless the language file names
+    // that value, which is how a pack translates its own grades without this code knowing them.
     private static Component gradeText(String grade) {
         String key = "mxt.technique_grade." + grade;
         return Language.getInstance().has(key) ? Component.translatable(key) : Component.literal(grade);

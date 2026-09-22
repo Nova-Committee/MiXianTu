@@ -31,43 +31,27 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * The forge table's menu: the nineteen machine slots of {@link ForgingSurface}, then the player inventory, at
- * the coordinates the screen paints against. The session has no container, so it is mirrored onto
- * {@link DataSlot}s by {@link #broadcastChanges()}: the client's {@link ContainerLevelAccess} answers empty to
- * every lookup, so every session value must be published first.
+ * The forge table's menu: the machine slots of {@link ForgingSurface} then the player inventory, at the
+ * coordinates the screen paints against. The session has no container, so it is mirrored onto
+ * {@link DataSlot}s; a client's {@link ContainerLevelAccess} answers every lookup with nothing.
  */
 public final class ForgingMenu extends AbstractContainerMenu {
-    /**
-     * Machine slots on the surface, player slots in the menu.
-     */
     public static final int MACHINE_SLOTS = ForgingSurface.TOTAL_SLOTS;
     public static final int PLAYER_START = MACHINE_SLOTS;
 
-
-    /**
-     * The six-step suffix is fixed size: a session keeps at most six history entries and a finish
-     * pattern is either empty or exactly six long.
-     */
+    // Fixed six: a session keeps at most six history entries and a finish pattern is empty or exactly six long.
     public static final int SUFFIX_STEPS = 6;
 
-    /**
-     * Sentinel for "no entry". Registry ids are never negative.
-     */
+    // Sentinel for "no entry"; registry ids are never negative.
     public static final int NONE = -1;
 
     // ---- synced indices
-    //
-    // Session state only. Neither selector's highlight is here: a pick is the player's own cursor over a
-    // list they can see, and only the press of a button turns it into a request. See ForgingScreen.
     private static final int IDX_ACTIVE = 0;
     private static final int IDX_VALUE = 1;
     private static final int IDX_STEPS = 2;
 
-    /**
-     * The shortest run the session's frozen plan allows, mirrored to the client: the plan's
-     * {@code optimal_steps}, which the quality formula subtracts from the player's step count. Reserved, but
-     * deleting it would renumber every index the finish-pattern rows read from.
-     */
+    // The plan's optimal_steps, which the quality formula subtracts from the player's step count.
+    // Reserved, but deleting it would renumber every index the finish-pattern rows read from.
     private static final int IDX_OPTIMAL = 3;
 
     private static final int IDX_METER_MIN = 4;
@@ -80,14 +64,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
     private static final int SYNCED = IDX_HISTORY_START + SUFFIX_STEPS;
 
     // ---- frame geometry, shared with ForgingScreen
-    //
-    // Every number here is a pixel in assets/mxt/textures/gui/forging_table.png. The texture is the
-    // layout: a slot's hitbox has to land on the cell already drawn for it, so the two cannot be
-    // allowed to drift apart and the screen reads these instead of repeating them.
-
-    /**
-     * The two selector cell grids: 3 columns of 18px cells, 19px pitch, inside the recessed areas.
-     */
+    // Every number here is a pixel in assets/mxt/textures/gui/forging_table.png: a slot's hitbox has to land
+    // on the cell already drawn for it, so the screen reads these instead of repeating them.
     public static final int CELLS = 3;
     public static final int CELL = 18;
     public static final int CELL_PITCH = 19;
@@ -95,44 +73,28 @@ public final class ForgingMenu extends AbstractContainerMenu {
     public static final int METHOD_GRID_X = 250;
     public static final int GRID_Y = 17;
 
-    /**
-     * The two recessed selector areas, measured off the texture.
-     */
     public static final int RECESS_Y = 17;
     public static final int RECESS_W = 49;
     public static final int RECESS_H = 76;
 
-    /**
-     * Where the scrollbar sprite's top-left corner goes. These are not derived from the recess: the texture
-     * draws the bar in the gutter right of it, so the sprite origin is four pixels past the recess's wall.
-     */
+    // Where the scrollbar sprite's top-left corner goes: the texture draws the bar in the gutter right of
+    // the recess, so these are not derived from it.
     public static final int SCROLLBAR_X = 58;
     public static final int SCROLLBAR_X_RIGHT = 301;
 
-    /**
-     * The three machine slot columns. The slot columns use an 18px pitch, the grids 19px.
-     */
     public static final int MACHINE_PITCH = 18;
     public static final int SLOT_TOP = 18;
 
-    /**
-     * The 4x3 material grid and the result, which sits level with the middle row.
-     */
     public static final int INPUT_X = 81;
 
-    /**
-     * The player inventory band, inside its own tab in the texture.
-     */
     public static final int INVENTORY_X = 81;
     public static final int INVENTORY_Y = 152;
     public static final int HOTBAR_Y = 210;
 
     private final Container machine;
     private final ContainerLevelAccess access;
-    /**
-     * The opener. The client half needs it for one thing only: the registries it resolves the two
-     * selector lists and the step icons against. It is never asked for the level's blocks.
-     */
+    // The opener; the client half needs it only for the registries behind the two selector lists and the
+    // step icons, never for the level's blocks.
     private final Player player;
 
     private final DataSlot[] synced = new DataSlot[SYNCED];
@@ -173,11 +135,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
         this.addSlot(new MachineSlot(ForgingSurface.OUTPUT_SLOT, 198, SLOT_TOP + MACHINE_PITCH));
     }
 
-    /**
-     * One slot on the machine surface. It exists because a plain {@code Slot} answers yes to everything, so
-     * the filter was only consulted by hoppers and shift-clicks; the rule is asked here too, through
-     * {@link ForgingSurface#canPlace}, because two copies would be free to disagree.
-     */
+    // One slot on the machine surface: a plain Slot answers yes to everything, so the rule is asked here
+    // too, through ForgingSurface.canPlace, rather than kept in a second copy.
     private final class MachineSlot extends Slot {
         MachineSlot(int index, int x, int y) {
             super(ForgingMenu.this.machine, index, x, y);
@@ -188,10 +147,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
             return ForgingMenu.this.accepts(this.getContainerSlot(), stack);
         }
 
-        /**
-         * The surface is not a chest: what it holds is locked in for as long as a session runs, and its
-         * snapshot is what a cancel or a failure returns.
-         */
+        // The surface is not a chest: what it holds is locked while a session runs, and its snapshot is
+        // what a cancel or a failure returns.
         @Override
         public boolean mayPickup(@NonNull Player player) {
             return ForgingSurface.canTake(this.getContainerSlot(), ForgingMenu.this.sessionLocked())
@@ -200,11 +157,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     }
 
-    /**
-     * Runs one read against the forge table, or returns {@code fallback} when there is none to read. It always
-     * goes through the {@link ContainerLevelAccess}, so a table broken under an open menu yields
-     * {@code fallback} instead of a stale object.
-     */
+    // Always goes through the ContainerLevelAccess, so a table broken under an open menu yields fallback
+    // instead of a stale object.
     private <T> T fromTable(Function<ForgingTableBlockEntity, T> reader, T fallback) {
         return this.access
                 .evaluate((level, pos) -> level.getBlockEntity(pos) instanceof ForgingTableBlockEntity table
@@ -214,71 +168,48 @@ public final class ForgingMenu extends AbstractContainerMenu {
                 .orElse(fallback);
     }
 
-    /**
-     * The table this menu is acting on, resolved on demand, or null when there is none: resolving it from the
-     * menu lets a request be keyed by "the table I am standing at" rather than a client-named position.
-     */
+    // Resolved on demand from the menu, so a request keys on "the table I am standing at" rather than a
+    // client-named position.
     public ForgingTableBlockEntity table() {
         return this.fromTable(table -> table, null);
     }
 
-    /**
-     * Whether the surface would accept a stack in a slot, by that slot's own rule —
-     * {@link ForgingSurface#canPlace}, which sits with the layout it describes, so the menu and the hopper path
-     * cannot enforce two different filters.
-     */
+    // ForgingSurface.canPlace is the one filter, so the menu and the hopper path cannot enforce two
+    // different rules.
     public boolean accepts(int index, ItemStack stack) {
         return ForgingSurface.canPlace(index, stack, this.active(),
                 this.fromTable(ForgingTableBlockEntity::selectedBlueprint, null));
     }
 
-    /**
-     * Whether a session has locked the surface, read from the synced flag so both sides answer alike: a slot
-     * that allowed a pickup the server would refuse is a desync the player sees as an item bouncing back.
-     */
+    // Reads the synced flag so both sides answer alike: a slot that allowed a pickup the server would refuse
+    // is a desync the player sees as an item bouncing back.
     public boolean sessionLocked() {
         return this.synced[IDX_ACTIVE].get() != 0;
     }
 
-
     // ------------------------------------------------------------------ the two lists
 
-    /**
-     * The blueprints offered: what the blueprint items in the blueprint slots provide, derived through the
-     * same rule the server validates against.
-     */
+    // Derived through the same rule the server validates against.
     public List<Identifier> blueprints() {
         return ForgingWorkstationService.selectableBlueprintIds(this.machine);
     }
 
-    /**
-     * The methods offered: what the tools unlock, narrowed by what the given blueprint allows. The blueprint is
-     * passed in so the list exists before a session does.
-     */
+    // The blueprint is passed in so the list exists before a session does.
     public List<Identifier> methods(Identifier blueprintId) {
         return ForgingWorkstationService.availableMethodIds(this.machine, this.player.level().registryAccess(), blueprintId);
     }
 
-    /**
-     * How many of one of a blueprint's declared materials the input slots hold, for the grid tooltip.
-     */
     public int inputCount(ForgingMaterial entry) {
         return ForgingWorkstationService.availableCount(this.machine, entry);
     }
 
-    /**
-     * Whether the inputs cover a blueprint's whole material list, the same rule {@code start} applies on the
-     * server, so a button disabled by it means a request that would have been refused.
-     */
+    // The server applies the same rule in its start action, so a button disabled here means a request that
+    // would have been refused.
     public boolean materialsCovered(Identifier blueprintId) {
         ForgingBlueprint blueprint = this.blueprint(blueprintId);
         return blueprint != null && ForgingWorkstationService.materialsCovered(this.machine, blueprint.input());
     }
 
-    /**
-     * A blueprint as this side's registries see it, or null when nothing is picked or the datapack no longer
-     * has it.
-     */
     public ForgingBlueprint blueprint(Identifier id) {
         return id == null ? null
                 : MxtDatapackRegistries.get(this.player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id).orElse(null);
@@ -296,9 +227,6 @@ public final class ForgingMenu extends AbstractContainerMenu {
         return this.synced[IDX_STEPS].get();
     }
 
-    /**
-     * The shortest run the plan allows, or {@code 0} when no session is running. Nothing reads it yet.
-     */
     public int optimalSteps() {
         return this.synced[IDX_OPTIMAL].get();
     }
@@ -323,16 +251,10 @@ public final class ForgingMenu extends AbstractContainerMenu {
         return this.synced[IDX_REQUIRED].get();
     }
 
-    /**
-     * The registry id of the required step at one suffix position, or {@link #NONE}.
-     */
     public int targetStep(int position) {
         return position < 0 || position >= SUFFIX_STEPS ? NONE : this.synced[IDX_TARGET_START + position].get();
     }
 
-    /**
-     * The registry id of the step taken at one suffix position, or {@link #NONE}.
-     */
     public int historyStep(int position) {
         return position < 0 || position >= SUFFIX_STEPS ? NONE : this.synced[IDX_HISTORY_START + position].get();
     }
@@ -341,9 +263,6 @@ public final class ForgingMenu extends AbstractContainerMenu {
         return registryId == NONE;
     }
 
-    /**
-     * Resolves a synced registry id back to its entry, through whichever registry access this side has.
-     */
     public static Identifier methodId(Player player, int registryId) {
         if (registryId == NONE) return null;
         Registry<ForgingMethod> registry = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.FORGING_METHOD);
@@ -352,9 +271,6 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     // ------------------------------------------------------------------ syncing
 
-    /**
-     * Pushes the session onto the data slots, then lets vanilla send whatever changed.
-     */
     @Override
     public void broadcastChanges() {
         this.syncFromTable();
@@ -362,8 +278,7 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     private void syncFromTable() {
-        // Server only: everything below is the server's answer and reaches the client through these very
-        // slots, so a client that recomputed it would overwrite what the packet had just put there.
+        // Server only: a client that recomputed this would overwrite what the packet just put in these slots.
         if (this.player.level().isClientSide()) return;
         ForgingTableBlockEntity surface = this.table();
         if (surface == null) return;
@@ -374,8 +289,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
         this.synced[IDX_ACTIVE].set(active ? 1 : 0);
         this.synced[IDX_VALUE].set(snapshot == null ? 0 : snapshot.value());
         this.synced[IDX_STEPS].set(snapshot == null ? 0 : snapshot.steps());
-        // From the plan, which is where the shortest run is computed and stored; the session only carries
-        // its own progress. Both are dropped together, so this is zero exactly when `snapshot` is.
+        // From the plan, not the session: the shortest run is computed and stored there, and both are
+        // dropped together, so this is zero exactly when `snapshot` is.
         this.synced[IDX_OPTIMAL].set(plan == null ? 0 : plan.optimalSteps());
         this.synced[IDX_METER_MIN].set(plan == null ? 0 : plan.meterMin());
         this.synced[IDX_METER_MAX].set(plan == null ? 0 : plan.meterMax());
@@ -387,37 +302,30 @@ public final class ForgingMenu extends AbstractContainerMenu {
         List<Identifier> history = snapshot == null ? List.of() : snapshot.history();
         this.synced[IDX_REQUIRED].set(required);
         for (int index = 0; index < SUFFIX_STEPS; index++) {
-            // Both rows describe the same six positions and are right-aligned, so position five is the
-            // most recent step in both.
+            // Both rows are right-aligned over the same six positions, so position five is the newest step
+            // in both.
             this.synced[IDX_TARGET_START + index].set(requiredStep(pattern, index, required));
             this.synced[IDX_HISTORY_START + index].set(historyStep(history, index));
         }
     }
 
-    /**
-     * The registry id of the required step at display position {@code position}, or {@link #NONE}: the last
-     * {@code required} entries of the six-step pattern, not the window the history row uses.
-     */
+    // The last `required` entries of the six-step pattern, right-aligned; not the window historyStep uses.
     static int requiredStep(List<Identifier> pattern, int position, int required) {
         if (required <= 0 || pattern.size() != SUFFIX_STEPS) return NONE;
         int first = SUFFIX_STEPS - required;
         return position < first ? NONE : registryId(pattern.get(position));
     }
 
-    /**
-     * The registry id of the step taken at display position {@code position}, or {@link #NONE}. The window is
-     * the last {@code history.size()} entries, so a short session shows its steps against the right-hand end.
-     */
+    // Right-aligned window over the last history.size() entries, so a short session shows its steps against
+    // the right-hand end.
     static int historyStep(List<Identifier> history, int position) {
         int source = position - (SUFFIX_STEPS - history.size());
         if (source < 0 || source >= history.size()) return NONE;
         return registryId(history.get(source));
     }
 
-    /**
-     * The integer registry id the client will resolve the icon from, sent as a number because a data slot
-     * carries an int — only a signed short on the wire, which is why a registry id is safe here.
-     */
+    // Sent as an int because a data slot carries only a signed short on the wire, which is why a registry id
+    // is safe here.
     private static int registryId(Identifier id) {
         if (id == null) return NONE;
         Registry<ForgingMethod> registry = MxtDatapackRegistries.registry(MxtResourceKeys.FORGING_METHOD);
@@ -426,10 +334,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     // ------------------------------------------------------------------ interaction
 
-    /**
-     * No menu buttons: a pick is local to {@code ForgingScreen} and the two presses name their entry's own id
-     * through {@code ForgingActionC2SPayload}, which the server re-resolves.
-     */
+    // No menu buttons: the two presses name their entry's own id through ForgingActionC2SPayload, which the
+    // server re-resolves.
     @Override
     public boolean clickMenuButton(@NonNull Player player, int id) {
         return false;

@@ -18,11 +18,9 @@ import java.util.UUID;
 
 /**
  * One realm instance: the definition it was opened from, where it lives, who claimed it and who is inside.
- *
- * <p>The membership list is part of the record so a single type describes an instance, but it is cleared when
- * a world is loaded: after a restart nobody is standing inside, and the players that were there are returned
- * by their own travel attachment. Everything else - identity, claim, anchor and seed - is what lets a dormant
- * claimed realm be woken up with the same terrain it had before.
+ * <p>
+ * The membership list is part of the record so one type describes an instance, but it is cleared when a world
+ * is loaded: after a restart nobody is standing inside.
  */
 public record RealmRecord(Holder<RealmInstance> definition, int index, ResourceKey<Level> dimension, long seed,
                           Optional<UUID> owner, long startedAt, long expiresAt, Optional<Vec3> anchor,
@@ -65,17 +63,13 @@ public record RealmRecord(Holder<RealmInstance> definition, int index, ResourceK
         return this.members.isEmpty();
     }
 
-    /**
-     * Whether the instance outlives its visitors. A claimed realm keeps the terrain its owner will come back
-     * to, and a realm built on an existing dimension has terrain that was never ours to discard.
-     */
+    // A claimed realm keeps the terrain its owner will come back to, and a realm built on an existing
+    // dimension has terrain that was never ours to discard.
     public boolean persists() {
         return this.instance().owned() || this.instance().generation() instanceof Existing;
     }
 
-    /**
-     * An instance nobody is inside: the clock stops until the next arrival, and the claim and terrain stay.
-     */
+    // Nobody inside: the clock stops until the next arrival, and the claim and terrain stay.
     public RealmRecord idle() {
         return new RealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, -1L, -1L,
                 this.anchor, this.prepared, List.of());
@@ -101,19 +95,13 @@ public record RealmRecord(Holder<RealmInstance> definition, int index, ResourceK
                 this.expiresAt, this.anchor, true, this.members);
     }
 
-    /**
-     * Starts a new visit: members are gone by definition, and a timed realm restarts its clock so a claimed
-     * realm cannot expire while it is dormant.
-     */
+    // A timed realm restarts its clock, so a claimed realm cannot expire while it is dormant.
     public RealmRecord restarted(long gameTime) {
         long duration = this.instance().durationTicks();
         return new RealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, gameTime,
                 duration <= 0L ? -1L : gameTime + duration, this.anchor, this.prepared, List.of());
     }
 
-    /**
-     * A record loaded from disk: the terrain and the claim survive, the visitors do not.
-     */
     public RealmRecord dormant() {
         return new RealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
                 this.expiresAt, this.anchor, this.prepared, List.of());

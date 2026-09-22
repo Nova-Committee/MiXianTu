@@ -23,9 +23,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 import java.util.Map;
 
-/**
- * A shaped recipe whose completion also consumes stored spirit power.
- */
+// Completion also consumes stored aura; matches scan the 3x3 grid for the pattern at any offset.
 public record SpiritShapedRecipe(List<String> pattern, Map<String, Ingredient> key, ItemStackTemplate result,
                                  Map<Holder<Aura>, NumberProvider> aura) implements SpiritRecipe {
     public static final MapCodec<SpiritShapedRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

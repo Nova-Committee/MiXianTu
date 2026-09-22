@@ -15,7 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForgeMod;
 
 /**
- * Authoritative generic flight controller for flying swords and artifacts.
+ * Authoritative generic flight controller for flying swords and artifacts: the server mounts the sword, charges
+ * the upkeep and owns every end of the flight.
  */
 public final class FlightService {
     private FlightService() {
@@ -52,12 +53,9 @@ public final class FlightService {
         return Result.mounted();
     }
 
-    /**
-     * Whether this stack is still the artifact the flight was started with: the same definition claims it, and
-     * that definition still lets this player use it. The definition is resolved from the item rather than read
-     * off a component, so re-defining an item mid-flight ends the flight instead of silently continuing with
-     * stale numbers.
-     */
+    // Still the artifact the flight was started with: the same definition claims it and that definition still lets
+    // this player use it. Resolved from the item rather than read off a component, so re-defining an item
+    // mid-flight ends the flight instead of silently continuing with stale numbers.
     public static boolean ownsEquippedArchetype(ServerPlayer player, ItemStack artifact, Holder<Artifact> archetype) {
         if (artifact.isEmpty() || !ArtifactService.mayUse(artifact, archetype, player.getUUID())) return false;
         return ArtifactService.definition(player.level().registryAccess(), artifact)
@@ -88,6 +86,7 @@ public final class FlightService {
         return Result.flying();
     }
 
+    // Whatever is left of the flight restores the player's own pre-flight state.
     public static Result dismount(ServerPlayer player, Failure reason) {
         FlightAttachment data = player.getData(MxtAttachments.FLIGHT);
         if (player.getVehicle() instanceof FlyingSwordEntity sword) {

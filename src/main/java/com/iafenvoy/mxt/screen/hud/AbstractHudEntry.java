@@ -3,72 +3,26 @@ package com.iafenvoy.mxt.screen.hud;
 import net.minecraft.util.Mth;
 
 /**
- * The half of a HUD entry that the framework owns: where it is, how big it says it is, and what happens to
- * that position when the window changes size.
- *
- * <p>Every subclass has to do three things - describe what it shows, answer {@link #layoutWidth()} and
- * {@link #layoutHeight()}, and suggest {@link #defaultX()} / {@link #defaultY()}. Everything else about
- * being placed lives here, which is what keeps a new HUD entry from re-implementing drag handling.</p>
- *
- * <h2>Coordinates</h2>
- * <p>Screen coordinates throughout, with the origin at the top-left corner of the window: x grows right, y
- * grows down, and the position of an entry is the top-left corner of its rectangle. That is what the drag
- * editor, the hit test and the drawing all agree on. {@link #anchor()} then says where the entry
- * <em>wants</em> that rectangle to hang from, which is what its default position is measured against and
- * what stays fixed when the entry resizes.</p>
- *
- * <h2>Storing</h2>
- * <p>A position is kept in screen pixels and clamped into the window, but <em>stored</em> as a ratio of the
- * window (see {@link HudLayout}). The clamped pixel value is what {@link #bounds()} answers; the stored
- * ratio is written only when the player moves the entry, never as a side effect of resizing or of the
- * window changing shape. So shrinking the window cannot silently rewrite a layout the player set on a
- * bigger one - the entry is drawn inside the smaller window, and the moment the window grows back it
- * returns to where it was.</p>
- *
- * <h2>One rule for subclasses</h2>
- * <p><strong>Nothing here asks a subclass anything while the entry is being constructed.</strong> That is not
- * a style preference: a subclass field - the width of a column of bars, say - is still null or zero during
- * {@code super(...)}, so a {@link #defaultX()} that read one would either see garbage or throw. The
- * placement is therefore applied lazily, from {@link #refreshPlacement()} on the first frame the framework
- * draws, by which point the subclass is fully built and the window exists. Everything that depends on
- * subclass state answers from {@link #layoutWidth()} / {@link #layoutHeight()}, which the framework asks
- * only once it is about to draw or hit test.</p>
+ * The half of a HUD entry that the framework owns: size, anchor point and the stored placement. Nothing here
+ * asks a subclass anything during construction - placement is applied lazily from {@link #refreshPlacement()}
+ * on the first frame, by which point the subclass is built and a window exists.
  */
 public abstract class AbstractHudEntry implements HudEntry {
     private final String layoutKey;
-    /**
-     * What the file said about this entry, or {@code null} when it has never been placed - which is also the
-     * state {@link #resetToDefault()} puts it back into. Read in the constructor because that is a plain file
-     * lookup, but not turned into pixels until there is a window.
-     *
-     * <p>{@code null} or not is the <em>only</em> thing that decides whether the entry follows the stored
-     * ratio or the default its class suggests, and that is on purpose: an earlier version kept a second
-     * boolean for the same fact, which nothing set on startup, so a placement read from the file was skipped
-     * and every restart looked like a layout that had never been saved. It is replaced whenever the entry is
-     * moved, in the same breath as the file is written, so {@link #refreshPlacement()} can never re-apply a
-     * stale position over one the player has just dragged to.</p>
-     */
+    // null means "never placed", which is also the state resetToDefault() restores; replaced in the same breath
+    // as the file write, so refreshPlacement() can never re-apply a position the player has just dragged to.
     private HudLayout.Placement storedPlacement;
-    /**
-     * The entry's anchor point in screen pixels - the point {@link #anchor()} names - which is the thing a
-     * drag moves and a resize keeps still. The top-left corner is derived from it and the current size.
-     */
+    // The anchor point in screen pixels - what a drag moves and a resize keeps still. The top-left corner,
+    // which is what the drag editor and the hit test use, is derived from it and the current size.
     private int anchorX;
     private int anchorY;
     private int width;
     private int height;
     private boolean visible = true;
     private boolean dragging;
-    /**
-     * Whether a placement has been turned into pixels yet. It happens on the first frame rather than in the
-     * constructor, because it needs both a window and a finished subclass.
-     */
+    // Turned into pixels on the first frame that has a window, not in the constructor.
     private boolean placed;
-    /**
-     * The window size the anchor point was computed against, or {@code null} before there has been one. A
-     * stored position is a ratio of the window, so it is only re-derived when the window is a different size
-     * than the one it was derived from - never on a frame that merely came after a drag.
-     */
+    // Window size the anchor point was derived against; a stored ratio is re-derived only when this differs.
     private int[] placedWindow;
 
     protected AbstractHudEntry(String layoutKey, int defaultWidth, int defaultHeight) {
@@ -91,17 +45,10 @@ public abstract class AbstractHudEntry implements HudEntry {
         return new ScreenBounds(this.x(), this.y(), this.layoutWidth(), this.layoutHeight());
     }
 
-    /**
-     * Whether this entry is drawn while the edit screen is open. Called by the entry's own render method so
-     * that editing shows the real element rather than a stand-in rectangle.
-     */
     public final boolean editMode() {
         return HudManager.editMode();
     }
 
-    /**
-     * The left edge of the rectangle for the current anchor point and size.
-     */
     @Override
     public final int x() {
         return this.anchor().toLeft(this.anchorX, this.layoutWidth());
@@ -119,18 +66,16 @@ public abstract class AbstractHudEntry implements HudEntry {
             this.anchorX = x;
             this.anchorY = y;
         } else {
-            // The player aims with the rectangle, which is drawn from its top-left corner; only then is that
-            // turned back into the anchor point the entry keeps.
+            // The player aims with the drawn rectangle, so only the top-left corner is clamped; it is then
+            // turned back into the anchor point the entry actually keeps.
             int left = Mth.clamp(x, 0, Math.max(0, window[0] - this.layoutWidth()));
             int top = Mth.clamp(y, 0, Math.max(0, window[1] - this.layoutHeight()));
             this.anchorX = left + this.anchorOfLeft(this.layoutWidth());
             this.anchorY = top + this.anchorOfTop(this.layoutHeight());
         }
         this.placed = true;
-        // Storing is also what makes the move stick: the frame hook re-derives a stored position only when
-        // the window changes size, so the anchor point just set is the one the next frame keeps. The file and
-        // the in-memory placement are written together, so there is no second copy of "where this entry is"
-        // for a frame to disagree with.
+        // Storing here is what makes the move stick: the frame hook re-derives a stored position only on a
+        // window resize, and the file and the in-memory placement are written together.
         this.store();
     }
 
@@ -142,8 +87,7 @@ public abstract class AbstractHudEntry implements HudEntry {
         this.width = newWidth;
         this.height = newHeight;
         // The anchor point is deliberately not touched: a column of bars that grows upward keeps standing on
-        // the same bottom edge, one that grows to the right keeps its left edge. Clamping comes last, so a
-        // rectangle that has grown past the edge of the window is pulled back in rather than left outside.
+        // the same bottom edge. Clamping comes last, so a rectangle that grew past the edge is pulled back in.
         if (this.placed) this.clamp();
     }
 
@@ -169,10 +113,8 @@ public abstract class AbstractHudEntry implements HudEntry {
         this.dragging = dragging;
     }
 
-    /**
-     * Whether a point is on this entry. Small entries get a couple of pixels of slack, because a health bar
-     * four pixels tall would otherwise be a test of precision rather than of intent.
-     */
+    // Small entries get a couple of pixels of slack, because a bar four pixels tall would otherwise be a test
+    // of precision rather than of intent.
     public boolean isMouseOver(double pointX, double pointY) {
         ScreenBounds bounds = this.bounds();
         int slack = Math.min(2, Math.max(0, Math.min(bounds.width(), bounds.height()) / 2));
@@ -180,13 +122,8 @@ public abstract class AbstractHudEntry implements HudEntry {
                 && pointY >= bounds.y() - slack && pointY < bounds.yEnd() + slack;
     }
 
-    /**
-     * Puts the entry back where its class suggests and forgets the stored placement, in memory and in the
-     * file. Erasing the value is what makes a reset mean anything across a restart: leaving it behind would
-     * bring the old position back on the next launch, which reads exactly like a layout that was never saved.
-     * With no stored placement the entry follows the window again, which is what its default position is
-     * defined against.
-     */
+    // Erasing the stored value is what makes a reset mean anything across a restart: leaving it behind would
+    // bring the old position back on the next launch, which reads exactly like a layout that was never saved.
     @Override
     public void resetToDefault() {
         this.storedPlacement = null;
@@ -195,12 +132,8 @@ public abstract class AbstractHudEntry implements HudEntry {
         this.refreshPlacement();
     }
 
-    /**
-     * Applies the position this entry's class suggests, without touching the stored layout, and re-clamps it.
-     * For an entry that computes its own position and has nothing to store - the two rows about the entity
-     * under the crosshair. A movable entry never needs it: this is the branch {@link #refreshPlacement()}
-     * takes on its own while there is no stored placement.
-     */
+    // Applies the class-suggested position without touching the stored layout, for an entry that computes its
+    // own position and has nothing to store. A movable entry reaches the same branch through refreshPlacement().
     protected final void placeAtDefault() {
         int[] window = HudLayout.window();
         if (window == null) return;
@@ -211,25 +144,15 @@ public abstract class AbstractHudEntry implements HudEntry {
         this.clamp();
     }
 
-    /**
-     * The "the window may have changed" hook, called once per frame immediately before drawing. It never
-     * writes the config, so it is safe to call every frame and it can never fight a drag or overwrite a
-     * layout.
-     *
-     * <p>Until a window exists there is nothing to compute, so the early frames simply wait. After that the
-     * position comes from exactly one of two places, and which one is decided by a single question - is there
-     * a stored placement for this entry. If there is, it is derived from the ratio when the window is a
-     * different size than the one it was derived from, and otherwise left alone. If there is not, the position
-     * the class suggests is re-read on every frame, which is what lets a default that depends on the window
-     * (a column centred on the screen) follow it.</p>
-     */
+    // Never writes the config, so it is safe every frame. With a stored placement the position is re-derived
+    // only when the window changed size; without one the class default is re-read every frame, which is what
+    // lets a default that depends on the window follow it.
     @Override
     public void refreshPlacement() {
         int[] window = HudLayout.window();
         if (window == null) return;
 
-        // A stored position is a ratio of the window, so it is re-derived when the window changes size - and
-        // only then. Re-deriving it every frame would make the anchor point a function of the file rather
+        // Only on a resize: re-deriving every frame would make the anchor point a function of the file rather
         // than of where the entry is, and the first frame after any write would move the entry back.
         boolean resized = this.placedWindow == null
                 || this.placedWindow[0] != window[0] || this.placedWindow[1] != window[1];
@@ -255,16 +178,10 @@ public abstract class AbstractHudEntry implements HudEntry {
         this.anchorY = top + this.anchorOfTop(this.layoutHeight());
     }
 
-    /**
-     * How far the anchor point sits from the left edge of a rectangle of this width.
-     */
     private int anchorOfLeft(int width) {
         return this.anchor().centered() ? width / 2 : 0;
     }
 
-    /**
-     * How far the anchor point sits below the top edge of a rectangle of this height.
-     */
     private int anchorOfTop(int height) {
         return this.anchor().bottom() ? height : 0;
     }
@@ -272,13 +189,12 @@ public abstract class AbstractHudEntry implements HudEntry {
     private void store() {
         int[] window = HudLayout.window();
         if (window == null) return;
-        // What is stored is the top-left corner, unchanged from the first version of this framework, so an
-        // existing layout keeps meaning what it meant even though entries may now be anchored differently.
+        // What is stored is the ratio of the top-left corner, as in the first version of this framework, so a
+        // layout written by it keeps meaning the same thing.
         double xRatio = (double) this.x() / window[0];
         double yRatio = (double) this.y() / window[1];
-        // The in-memory copy is replaced in the same breath as the file, and this is what keeps a drag: the
-        // only thing the frame hook re-applies is this placement, so leaving the old one here would undo the
-        // move on the very next frame.
+        // The in-memory copy is replaced in the same breath as the file: leaving the old one here would undo
+        // the move on the very next frame, because this placement is all the frame hook re-applies.
         this.storedPlacement = new HudLayout.Placement(xRatio, yRatio, this.visible);
         HudLayout.write(this.layoutKey, this.storedPlacement);
         HudManager.layoutChanged();

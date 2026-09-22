@@ -11,12 +11,9 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import java.util.List;
 
 /**
- * Entity data serializers this mod adds on top of the vanilla set.
- *
- * <p>A modded serializer has to go through {@link NeoForgeRegistries#ENTITY_DATA_SERIALIZERS}: the vanilla
- * registry refuses outside callers, because client and server would otherwise be free to disagree about the
- * wire ids. The instance is built here and the deferred entry registers that very instance, so the accessor an
- * entity defines and the registry entry are the same object rather than two equal ones.</p>
+ * Entity data serializers this mod adds. They must go through {@link NeoForgeRegistries#ENTITY_DATA_SERIALIZERS}
+ * (the vanilla registry refuses outside callers, which would let client and server disagree about the wire ids),
+ * and the one instance built here is what an entity's accessor and the registry entry both use.
  */
 public final class MxtEntityDataSerializers {
     public static final DeferredRegister<EntityDataSerializer<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.ENTITY_DATA_SERIALIZERS, MiXianTu.MOD_ID);

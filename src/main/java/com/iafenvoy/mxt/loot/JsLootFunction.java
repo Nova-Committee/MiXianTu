@@ -14,10 +14,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/**
- * A vanilla loot function whose behaviour is a server script callback, with the usual vanilla
- * {@code conditions} field available through {@link LootItemConditionalFunction}.
- */
+// Behaviour comes from a server-side KubeJS callback, which receives the stack being built.
 public final class JsLootFunction extends LootItemConditionalFunction {
     public static final MapCodec<JsLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(
             Codec.STRING.fieldOf("id").forGetter(function -> function.id),

@@ -12,9 +12,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Reads the {@code amount} of the {@code mxt:resource} of a named host, counting an unwritten one as 0; without a
- * range it only asks whether the host keeps a value of that kind at all. A host that does not declare that kind
- * is simply false.
+ * Reads the {@code amount} of the {@code mxt:resource} of a named host, counting an unwritten one as 0; a host
+ * that declares no such kind is simply false.
  */
 public record StorageResourceEntityCondition(Identifier family, Identifier id,
                                              Optional<NumberRange> amount) implements EntityCondition {

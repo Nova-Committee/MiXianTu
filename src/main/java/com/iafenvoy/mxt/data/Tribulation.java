@@ -15,16 +15,11 @@ import net.minecraft.resources.RegistryFixedCodec;
 import java.util.List;
 
 /**
- * Heavenly tribulation definition: the gate that has to pass for it to start, the wind-up that precedes the
- * timeline, the timeline itself, the difficulty scale every wait is measured against, whether the sky darkens
- * while the run lasts, and the behaviour of its two endings.
- *
- * <p>{@code condition} is a gate evaluated once when the tribulation is started, not an event trigger: the
- * caller has already decided to start it, and this only decides whether that attempt is accepted. The
- * timeline is a list of beats consumed one entry at a time, so a definition describes what happens rather
- * than how many phases it has. {@code windup} is the anticipation before the first beat and is resolved
- * through the same rule as every other wait, so the countdown a player watches is the number of ticks that
- * will really pass; {@code darkenSky} is a presentation switch the client reads for itself.</p>
+ * Heavenly tribulation definition: the gate that has to pass for it to start, the wind-up before the timeline,
+ * the timeline itself, the difficulty scale every wait is measured against, whether the sky darkens, and the two
+ * endings. {@code condition} is a gate evaluated once when it is started, not an event trigger; {@code windup}
+ * is resolved through the same rule as every other wait, so the countdown a player watches is the number of ticks
+ * that will really pass.
  */
 public record Tribulation(EntityCondition condition, List<TimelineEntry> timeline,
                           NumberProvider difficultyScale, NumberProvider windup, boolean darkenSky,

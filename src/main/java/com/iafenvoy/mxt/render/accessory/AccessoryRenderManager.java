@@ -30,7 +30,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Resource-reloadable definitions for Curios accessory item transforms.
+ * Client-side accessory item transforms, reloaded from {@code mxt/back_render} and {@code mxt/belt_render} with the
+ * resource pack.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public enum AccessoryRenderManager implements ResourceManagerReloadListener {
@@ -83,6 +84,7 @@ public enum AccessoryRenderManager implements ResourceManagerReloadListener {
     }
 
     private static AccessoryRenderDefinition resolve(ItemStack stack, List<Rule> rules, Map<Identifier, AccessoryRenderDefinition> cache, AccessoryRenderDefinition fallback) {
+        // Cached per item id, so a rule must not match on stack state beyond the item itself.
         Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         return cache.computeIfAbsent(id, ignored -> rules.stream()
                 .filter(rule -> rule.entries().stream().anyMatch(entry -> entry.matches(stack)))

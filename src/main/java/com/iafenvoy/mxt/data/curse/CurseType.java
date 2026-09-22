@@ -27,19 +27,10 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
 
     MapCodec<? extends CurseType> codec();
 
-    /**
-     * When an instance applied now with that resolved duration expires, where a negative value means it never
-     * does.
-     * <p>
-     * An empty result means the resolution cannot be applied at all. Callers reject the application instead of
-     * throwing, so one malformed definition - a formula that produced a nonsense duration, a definition whose
-     * duration was edited while instances existed - can never break a tick or an event handler.
-     */
+    // Empty means the resolution cannot be applied at all. Callers reject the application instead of throwing, so
+    // one malformed definition can never break a tick or an event handler.
     OptionalLong expiry(long duration, long gameTime);
 
-    /**
-     * Whether the type runs no behaviour of its own, which is how a definition can exist as a pure marker.
-     */
     default boolean inert() {
         return false;
     }
@@ -84,11 +75,8 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
         }
     }
 
-    /**
-     * A curse whose periodic behaviour is driven by the trigger system instead of a tick interval: while the
-     * curse is held, every signal one of its {@code triggers} matches runs {@code on_tick} once. It lasts like
-     * {@code mxt:timed} when it declares a duration and like {@code mxt:permanent} when it does not.
-     */
+    // Periodic behaviour comes from the trigger system instead of a tick interval: while the curse is held, every
+    // signal one of its triggers matches runs on_tick once. Lasts like mxt:timed with a duration, else permanent.
     record Triggered(List<Trigger> triggers) implements CurseType {
         public static final MapCodec<Triggered> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Trigger.CODEC.listOf().optionalFieldOf("triggers", List.of()).forGetter(Triggered::triggers)
@@ -114,9 +102,6 @@ public sealed interface CurseType permits Timed, Permanent, Triggered, Empty {
         }
     }
 
-    /**
-     * A marker type: it never expires and runs no behaviour, so a definition can exist while doing nothing.
-     */
     enum Empty implements CurseType {
         INSTANCE;
         public static final MapCodec<Empty> CODEC = MapCodec.unit(INSTANCE);

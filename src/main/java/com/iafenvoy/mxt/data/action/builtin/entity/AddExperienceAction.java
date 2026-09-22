@@ -12,7 +12,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Origins-compatible player experience action without Origin-specific state.
+ * Grants vanilla experience points and/or levels, to players only.
  */
 public record AddExperienceAction(Optional<Integer> points, Optional<Integer> levels) implements EntityAction {
     public static final MapCodec<AddExperienceAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

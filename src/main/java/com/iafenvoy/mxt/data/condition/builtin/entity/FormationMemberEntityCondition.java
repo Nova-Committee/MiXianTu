@@ -8,10 +8,8 @@ import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Whether the entity owns <em>any</em> registered formation in the current level — a formation "exists" while
- * it holds an entry in the level's formation index, with no separate active flag. This takes no arguments; for
- * "is this entity the owner of the formation we are inside", use {@code mxt:formation_owner} instead. The name
- * says "member" while the behaviour says "owner", kept because renaming the id would break existing data packs.
+ * Whether the entity owns <em>any</em> formation in the current level; a formation "exists" while it holds an
+ * entry in the level's formation index. The id says "member" because renaming it would break existing data packs.
  */
 public enum FormationMemberEntityCondition implements EntityCondition {
     INSTANCE;

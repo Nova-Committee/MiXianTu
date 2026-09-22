@@ -10,9 +10,8 @@ import java.util.regex.Pattern;
 
 /**
  * Resolver for the intrinsic {@code mxt:formula_variable} registry. Splitting a name into the variable that
- * claims it and the part that variable receives is context independent, so the resulting {@link Binding} can
- * be kept and reused as {@code Expression} does once per name. An unknown name is a content bug: both
- * environments keep evaluating with {@code 0}.
+ * claims it and the part that variable receives is context independent, so the resulting {@link Binding} can be
+ * cached once per name. An unknown name is a content bug: both environments keep evaluating with {@code 0}.
  */
 public final class FormulaVariables {
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
@@ -28,9 +27,6 @@ public final class FormulaVariables {
         return IDENTIFIER.matcher(name).matches();
     }
 
-    /**
-     * Every identifier an expression reads, minus the functions and constants the language knows.
-     */
     public static Set<String> find(String expression) {
         Set<String> functions = FormulaFunctions.names();
         LinkedHashSet<String> result = new LinkedHashSet<>();
@@ -57,18 +53,11 @@ public final class FormulaVariables {
         return read(name, context, binding);
     }
 
-    /**
-     * Resolves one name with a binding the caller already holds, for a provider that reads a single
-     * fixed name.
-     */
     public static double resolve(String name, FormulaContext context, Binding binding) {
         return read(name, context, binding);
     }
 
-    /**
-     * Resolves one name, reusing a per-formula binding cache; a {@code null} cache looks the name up every
-     * time.
-     */
+    // A null cache looks the name up every time.
     public static double resolve(String name, FormulaContext context, @Nullable Map<String, Binding> cache) {
         if (cache == null) return resolve(name, context);
         Binding binding = cache.get(name);
@@ -101,10 +90,7 @@ public final class FormulaVariables {
         }
     }
 
-    /**
-     * Resolves a name without reporting anything, for callers that treat a missing variable as a
-     * normal outcome; {@link Double#NaN} when the context cannot provide the name.
-     */
+    // Reports nothing, for callers that treat a missing variable as normal; NaN when the context cannot answer.
     public static double peek(String name, FormulaContext context) {
         Binding binding = bind(name);
         if (binding == null) return Double.NaN;
@@ -115,10 +101,8 @@ public final class FormulaVariables {
         }
     }
 
-    /**
-     * Finds the variables that claim a name; {@code null} means no variable provides it. The result
-     * depends only on the registry, so it stays valid for as long as the game runs.
-     */
+    // Null means no variable provides the name. The result depends only on the registry, so it stays valid for
+    // as long as the game runs.
     @Nullable
     public static Binding bind(String name) {
         Lookup index = lookup();
@@ -160,13 +144,10 @@ public final class FormulaVariables {
     }
 
     /**
-     * The variables that claim one requested name, in the order they are asked; the first candidate
-     * that can provide a value in the current context wins.
+     * The variables that claim one requested name, in the order they are asked; the first candidate that can
+     * provide a value in the current context wins.
      */
     public record Binding(List<Candidate> candidates) {
-        /**
-         * The value of the first candidate that can provide one, or {@link Double#NaN} when none can.
-         */
         public double value(FormulaContext context) {
             for (Candidate candidate : this.candidates) {
                 double value = candidate.value(context);
@@ -175,9 +156,6 @@ public final class FormulaVariables {
             return Double.NaN;
         }
 
-        /**
-         * One variable that claimed the name, together with the part of the name it receives.
-         */
         public record Candidate(FormulaVariable variable, String key, String suffix) {
             private double value(FormulaContext context) {
                 return this.variable.value(this.key, this.suffix, context);

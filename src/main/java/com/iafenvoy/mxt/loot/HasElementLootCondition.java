@@ -18,11 +18,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/**
- * Vanilla loot predicate for the elements an entity's spirit roots name: true when any of them is one of the
- * listed ones. The coarser half of {@link HasSpiritRootLootCondition}, for a table that keys on "a fire
- * cultivator" rather than on one named root.
- */
+// Coarser than HasSpiritRootLootCondition: asks whether any element the entity's roots name is listed.
 public record HasElementLootCondition(EntityTarget target,
                                       List<Either<Holder<Element>, TagKey<Element>>> elements) implements LootItemCondition {
     public static final MapCodec<HasElementLootCondition> CODEC = RecordCodecBuilder.<HasElementLootCondition>mapCodec(i -> i.group(
@@ -30,9 +26,7 @@ public record HasElementLootCondition(EntityTarget target,
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(HasElementLootCondition::elements)
     ).apply(i, HasElementLootCondition::new)).validate(HasElementLootCondition::validate);
 
-    /**
-     * An empty list can never match, so it is a condition that silently never passes: refused at load.
-     */
+    // An empty list can never match, so it is silently always-false; refuse it at load.
     private static DataResult<HasElementLootCondition> validate(HasElementLootCondition condition) {
         return condition.elements().isEmpty()
                 ? DataResult.error(() -> "mxt:has_element needs at least one element to ask about")

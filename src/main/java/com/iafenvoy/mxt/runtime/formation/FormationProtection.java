@@ -26,41 +26,28 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Answers whether a ward inside an active formation forbids an action. The decision lives here rather than
- * in the event subscribers so every path - breaking, placing, using, interacting, attacking, explosions,
- * mob griefing - asks one question with one answer that is assertable without a live block. A ward is
- * asked about both ends of the action: the flags apply when the actor or the target is inside the radius.
+ * Answers whether a ward inside an active formation forbids an action. The decision lives here rather than in
+ * the event subscribers so every path - breaking, placing, using, interacting, attacking, explosions, mob
+ * griefing - asks one question with one answer, assertable without a live block. A ward is asked about both ends
+ * of the action: the flags apply when the actor or the target is inside the radius.
  */
 public final class FormationProtection {
-    /**
-     * Definitions already reported as delegating with nothing to delegate to: one line per definition
-     * rather than one per activation.
-     */
+    // One line per definition rather than one per activation.
     private static final Set<Identifier> WARNED_DELEGATIONS = ConcurrentHashMap.newKeySet();
 
-    /**
-     * Whether the inert {@code claims_only} option has been reported: one line per server, not per attempt.
-     */
+    // Whether the inert claims_only option has been reported: one line per server, not per attempt.
     private static final AtomicBoolean WARNED_INERT_LINKAGE = new AtomicBoolean();
 
     private FormationProtection() {
     }
 
-    /**
-     * What is being attempted, each answered by one flag of the protection module.
-     */
     public enum Action {
         BREAK, PLACE, INTERACT, EXPLOSION, MOB_GRIEFING,
         ENTITY_INTERACT, ATTACK_ENTITY, ITEM_USE
     }
 
-    /**
-     * The actor's id is taken so the server audit can drive the rule without logged-in players.
-     *
-     * @param target  the block or entity acted on; a null target can still be refused by the actor's own
-     *                position
-     * @param actorId the player attempting it, null for an explosion or a mob
-     */
+    // The actor's id is taken so the server audit can drive the rule without logged-in players; a null target
+    // can still be refused by the actor's own position, and a null actor means an explosion or a mob.
     public static boolean prevented(ServerLevel level, Action action, @Nullable BlockPos target, @Nullable UUID actorId) {
         Entity actor = actorId == null ? null : level.getEntities().get(actorId);
         BlockPos actorPosition = actor == null ? null : actor.blockPosition();
@@ -83,9 +70,6 @@ public final class FormationProtection {
         return false;
     }
 
-    /**
-     * Whether the module says anything about this kind of action.
-     */
     public static boolean covers(ProtectionFormationAction ward, Action action) {
         return switch (action) {
             case BREAK -> ward.blockBreak();
@@ -99,12 +83,9 @@ public final class FormationProtection {
         };
     }
 
-    /**
-     * Whether this ward's enforcement belongs to the claim plugin rather than to the formation: either the
-     * module's {@code delegate_to_claims}, or the server option {@code claim_linkage} putting a claim in
-     * charge of every ward whose controller's chunk is claimed. The claim is asked about the controller's
-     * chunk, so a ward straddling a boundary is not governed by two rules at once.
-     */
+    // Either the module's delegate_to_claims, or the server option claim_linkage putting a claim in charge of
+    // every ward whose controller's chunk is claimed. The claim is asked about the controller's chunk, so a ward
+    // straddling a boundary is not governed by two rules at once.
     private static boolean handsOver(ProtectionFormationAction ward, ServerLevel level, BlockPos controller) {
         boolean declared = ward.delegateToClaims();
         boolean claimed = MxtServerConfig.INSTANCE.compat.claimLinkage.getValue() == ClaimLinkage.CLAIMS_PRECEDENCE
@@ -116,11 +97,8 @@ public final class FormationProtection {
         return definition.actions().stream().anyMatch(ProtectionFormationAction.class::isInstance);
     }
 
-    /**
-     * With no claim plugin installed there is nothing to require, so the option is inert rather than fatal -
-     * refusing every ward would make the formation unplaceable for a reason the operator cannot satisfy -
-     * but the first attempt says so once.
-     */
+    // With no claim plugin installed the option is inert rather than fatal - refusing every ward would make the
+    // formation unplaceable for a reason the operator cannot satisfy - but the first attempt says so once.
     public static boolean claimsOnlyRefuses(ServerLevel level, BlockPos controller) {
         if (MxtServerConfig.INSTANCE.compat.claimLinkage.getValue() != ClaimLinkage.CLAIMS_ONLY) return false;
         if (!FtbChunksCompat.loaded()) {
@@ -130,12 +108,10 @@ public final class FormationProtection {
         return !FtbChunksCompat.chunkClaimed(level, controller);
     }
 
-    /**
-     * Whether a ward here would stand on land somebody else has claimed and kept this person out of: being
-     * allowed to place a block somewhere is not by itself leave to legislate there, so the landowner's own
-     * answer decides. The claim plugin's edit permission is asked for rather than reproduced, since a second
-     * copy of its rule here would drift. Everything else is refused, including an unresolvable actor.
-     */
+    // Whether a ward here would stand on land somebody else has claimed and kept this person out of: being
+    // allowed to place a block somewhere is not by itself leave to legislate there, so the landowner's own
+    // answer decides. The claim plugin's edit permission is asked for rather than reproduced, since a second
+    // copy of its rule would drift; everything else is refused, including an unresolvable actor.
     public static boolean foreignClaimRefuses(ServerLevel level, BlockPos controller, @Nullable UUID actorId) {
         if (!MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.getValue() || !FtbChunksCompat.loaded())
             return false;
@@ -156,20 +132,15 @@ public final class FormationProtection {
                 + "protection formations can be raised anywhere, because there are no claims to require");
     }
 
-    /**
-     * Delegating only means anything while the claim plugin's rules exist, and by default
-     * {@code config.mxt.server.compat.delegate_requires_claims} insists they do. Asked on the decision
-     * path, so it stays cheap.
-     */
+    // Delegating only means anything while the claim plugin's rules exist, and by default
+    // config.mxt.server.compat.delegate_requires_claims insists they do. Asked on the decision path, so cheap.
     public static boolean delegationHandsOver() {
         if (!MxtServerConfig.INSTANCE.compat.delegateRequiresClaims.getValue()) return true;
         return FtbChunksCompat.claimsProtect();
     }
 
-    /**
-     * The fallback is not the declared answer and nothing in play distinguishes it from a ward leaning on a
-     * claim plugin, so it is said out loud once per definition on activation.
-     */
+    // The fallback is not the declared answer and nothing in play distinguishes it from a ward leaning on a claim
+    // plugin, so it is said out loud once per definition on activation.
     public static void warnIfDelegationFallsBack(Identifier id, Formation definition) {
         if (delegationHandsOver()) return;
         boolean delegates = definition.actions().stream()
@@ -184,11 +155,9 @@ public final class FormationProtection {
         return position != null && controller.distSqr(position) <= radius * radius;
     }
 
-    /**
-     * The owner always passes, and friends only while the ward declares {@code spare_friends} and the
-     * server option {@code respect_friends} is on. Everyone else is stopped, including an entity no friend
-     * source can identify, and an ownerless ward exempts nobody.
-     */
+    // The owner always passes, and friends only while the ward declares spare_friends and the server option
+    // respect_friends is on. Everyone else is stopped, including an entity no friend source can identify, and an
+    // ownerless ward exempts nobody.
     private static boolean exempt(ServerLevel level, FormationInstance instance, boolean spareFriends,
                                   @Nullable Entity actor) {
         if (actor == null) return false;

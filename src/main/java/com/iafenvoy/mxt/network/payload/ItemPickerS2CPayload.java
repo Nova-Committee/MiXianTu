@@ -13,9 +13,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * Tells the client to open the picker over some categories. It carries no items: both sides read the same
- * synced registries through {@code ItemPickerManager}, so the grid is built where it is drawn and the only
- * thing that has to travel is which categories to show.
+ * Tells the client to open the picker over some categories. It carries no items: both sides read the same synced
+ * registries through {@code ItemPickerManager}, so the grid is built where it is drawn and only the category list
+ * has to travel.
  */
 public record ItemPickerS2CPayload(Component title, List<Identifier> categories) implements CustomPacketPayload {
     public static final Type<ItemPickerS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "item_picker_s2c"));

@@ -15,8 +15,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Server-authoritative current values and resolved bounds. The bound snapshots are synchronised
- * with the attachment so clients never need to authoritatively evaluate a resource formula.
+ * Server-authoritative current values and resolved bounds. The bound snapshots are synchronised with the
+ * attachment, so clients never have to evaluate a resource formula authoritatively.
  */
 public final class ResourceHolderAttachment extends ShouldSyncAttachment {
     public static final MapCodec<ResourceHolderAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -50,9 +50,7 @@ public final class ResourceHolderAttachment extends ShouldSyncAttachment {
         this.markDirty();
     }
 
-    /**
-     * Records a server-side state change with the resolved definition bounds and an auditable source.
-     */
+    // A server-side state change recorded with the resolved definition bounds and an auditable source.
     public void set(Holder<Resource> resource, double value, double minSnapshot, double maxSnapshot, long changedAt, String source) {
         if (!Double.isFinite(value) || !Double.isFinite(minSnapshot) || !Double.isFinite(maxSnapshot)
                 || minSnapshot > maxSnapshot || changedAt < -1L || source == null || source.isBlank()) {
@@ -83,9 +81,7 @@ public final class ResourceHolderAttachment extends ShouldSyncAttachment {
         return this.audit.getOrDefault(resource, Audit.initial(this.get(resource)));
     }
 
-    /**
-     * A detached draft for validation; the live attachment is unchanged.
-     */
+    // A detached draft for validation; the live attachment is unchanged.
     public ResourceHolderAttachment copy() {
         return new ResourceHolderAttachment(this.values, this.audit);
     }

@@ -33,30 +33,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Which elements one strike belongs to, read from its damage type.
+ * The reverse index from a damage type to the elements claiming it, and the single answer both damage layers
+ * read ({@code research/29}). A type nobody claims falls back to the attacker's roots, which carry no element
+ * when there is no attacker.
  *
- * <p>An element claims damage types ({@code Element#damageTypes}), and a claim is a definition rather than a
- * mapping table: it is what says that a fireball, a lava bath and a burning blade are the same thing. This
- * class is the reading side - the reverse index from a damage type to the elements that speak for it - and it
- * is the reason the reduction layer can be elemental at all, because the only thing that layer is handed is a
- * {@link DamageSource}. The source's own {@code typeHolder()} is therefore enough: no per-strike state has to
- * travel between the two layers, and a hit this mod never dealt (a lava tick, a lightning bolt, another mod's
- * sword) is read exactly like one of ours.</p>
- *
- * <p>A damage type nobody claims leaves a strike with the reading it had before elements could claim anything:
- * the attacker's spirit-root elements, which is what the index falls back to in {@link #strike}. An unclaimed
- * type with no attacker therefore carries no element at all, which is the honest answer for a fall or a
- * cactus.</p>
- *
- * <p>Which of those two answers a strike got is kept as an {@link Origin}, because the two are not
- * interchangeable downstream: a claimed strike leaves its element on the target, while a body's own element
- * only reduces what it deals. Reading both halves in one call is what stops a caller from pairing the elements
- * of one answer with the origin of the other.</p>
- *
- * <p>The index is rebuilt when the damage type registry instance changes, which a data pack reload does: the
- * element registry is reloaded in the same step, so keying on one of the two is enough to notice both. A
- * damage type claimed by several elements keeps all of them and says so once, because every claim then
- * multiplies - the same rule several spirit roots already follow.</p>
+ * <p>A strike's element has to be readable off its {@link DamageSource}: that is all the reduction layer is
+ * handed. An {@link Origin#TYPE} strike also leaves its element on the target, a {@link Origin#ROOTS} one only
+ * reduces what it deals - which is why an elemental reaction is only ever started by a declared strike.
  */
 public final class DamageElements {
     private static final int MAX_CACHED_REGISTRIES = 4;
@@ -68,42 +51,27 @@ public final class DamageElements {
     private DamageElements() {
     }
 
-    /**
-     * The elements that speak for this damage type, empty when none claims it.
-     */
+    // Empty when no element claims the type.
     public static Set<Holder<Element>> of(RegistryAccess access, Holder<DamageType> type) {
         return of(access.lookupOrThrow(MxtResourceKeys.ELEMENT), access.lookupOrThrow(Registries.DAMAGE_TYPE), type);
     }
 
-    /**
-     * The same reading taken from the running server's registries, for the callers that only hold a
-     * {@link DamageSource} - the incoming-damage event and the damage conditions. A caller with no server to
-     * ask (a client-side script) gets no element rather than an exception: the alternative would let a
-     * harmless query bring down a client.
-     */
+    // A caller with no running server (a client-side script) gets no element rather than an exception: a
+    // harmless query must not be able to bring down a client.
     public static Set<Holder<Element>> of(DamageSource source) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return Set.of();
         return of(server.registryAccess(), source.typeHolder());
     }
 
-    /**
-     * The elements one strike belongs to, the damage type's claimants when it has any, and the attacker's
-     * spirit-root elements when it does not. This is the single rule both layers of the damage pipeline and the
-     * element damage condition read, so a condition can never disagree with the number the pipeline applied.
-     *
-     * <p>The origin is dropped here; callers that have to tell the two apart - the attachment step does - take
-     * {@link #reading(Level, Optional, Entity)} instead.</p>
-     */
+    // The single rule the pipeline and the damage condition both read, so a condition can never disagree with
+    // the number that was applied. The origin is dropped - use reading(...) when the two must be told apart.
     public static Set<Holder<Element>> strike(Level level, Optional<Holder<DamageType>> type, @Nullable Entity attacker) {
         return reading(level, type, attacker).elements();
     }
 
-    /**
-     * {@link #strike(Level, Optional, Entity)} with the origin and the amounts kept, for callers that treat the
-     * readings differently - the reduction step takes the elements, the buildup step also needs to know how much
-     * of each this kind of hit leaves.
-     */
+    // strike(...) with the origin and the amounts kept: the reduction step wants the elements, the buildup step
+    // also wants how much of each this kind of hit leaves.
     public static Strike reading(Level level, Optional<Holder<DamageType>> type, @Nullable Entity attacker) {
         RegistryAccess access = level.registryAccess();
         List<Claim> claimed = type.map(holder -> claims(access.lookupOrThrow(MxtResourceKeys.ELEMENT),
@@ -111,10 +79,7 @@ public final class DamageElements {
         return claimed.isEmpty() ? roots(attacker) : of(claimed);
     }
 
-    /**
-     * {@link #strike(DamageSource)} with the origin and the amounts kept, which is what the reduction and the
-     * attachment steps of the incoming event read.
-     */
+    // What the reduction and attachment steps of the incoming event read.
     public static Strike reading(DamageSource source) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
@@ -126,29 +91,22 @@ public final class DamageElements {
         return roots(source.getEntity());
     }
 
-    /**
-     * The fallback reading: nobody claimed the type, so the attacker's own roots answer. The amounts are the
-     * elements' own defaults, which only ever matter if a caller ignores the origin - the buildup step does not.
-     */
+    // Nobody claimed the type, so the attacker's own roots answer. The amounts are the elements' own defaults,
+    // which only matter to a caller that ignores the origin - the buildup step does not.
     private static Strike roots(@Nullable Entity attacker) {
         Set<Holder<Element>> elements = attacker == null ? Set.of() : Elements.of(attacker);
         return new Strike(elements, amounts(elements), Origin.ROOTS);
     }
 
-    /**
-     * What each of these elements would leave behind by its own declaration.
-     */
+    // What each element would leave behind by its own declaration.
     private static Map<Holder<Element>, Double> amounts(Set<Holder<Element>> elements) {
         Map<Holder<Element>, Double> attachment = new LinkedHashMap<>();
         for (Holder<Element> element : elements) attachment.put(element, element.value().damageAttachment());
         return Map.copyOf(attachment);
     }
 
-    /**
-     * The claimed reading: one entry per element, in the order the index lists them, with the amount its claim
-     * over this type carries. The first claim an element makes over a type is the one that speaks, which is the
-     * same reading the index itself keeps.
-     */
+    // One entry per element, in index order. The first claim an element makes over a type is the one that
+    // speaks, the same reading the index itself keeps.
     private static Strike of(List<Claim> claimed) {
         Set<Holder<Element>> elements = new LinkedHashSet<>();
         Map<Holder<Element>, Double> attachment = new LinkedHashMap<>();
@@ -157,34 +115,21 @@ public final class DamageElements {
         return new Strike(Set.copyOf(elements), Map.copyOf(attachment), Origin.TYPE);
     }
 
-    /**
-     * {@link #strike(Level, Optional, Entity)} for a source that already exists, which is what the reduction
-     * layer is handed. The causing entity is the attacker a source is credited with, so a plain mob swing that
-     * claims no damage type still reads the mob's own elements.
-     */
+    // What the reduction layer is handed. The causing entity is the attacker a source is credited with, so a
+    // plain mob swing claiming no damage type still reads the mob's own elements.
     public static Set<Holder<Element>> strike(DamageSource source) {
         return reading(source).elements();
     }
 
-    /**
-     * Where a strike's elements were read from, which decides whether they rub off.
-     *
-     * <p>Only two answers are observable from a {@link DamageSource}: the type was claimed, or nobody claimed it
-     * and the attacker's roots answered. A declared element resolves to a damage type before it travels, so a
-     * weapon's or an artefact's element arrives here as a claim, exactly like a claimed environmental type.</p>
-     */
+    // Only two answers are observable from a DamageSource: the type was claimed, or nobody claimed it and the
+    // attacker's roots answered. A declared element resolves to a type before it travels, so a weapon's element
+    // arrives here as a claim like any environmental type.
     public enum Origin {
-        /**
-         * A damage type names these elements, so the strike really is made of them: they reduce <em>and</em>
-         * they build up on the target.
-         */
+        // A damage type names these elements, so the strike really is made of them: they reduce and they build
+        // up on the target.
         TYPE(true),
-        /**
-         * Nobody claimed the type, so the attacker's spirit roots answered: a body's own element reduces what
-         * it deals but does not rub off on whoever it hits. This is what keeps "the fire in my blood" and "the
-         * fire in my blade" apart, and it is why an elemental reaction is only ever started by a strike that
-         * declared what it was.
-         */
+        // Nobody claimed the type, so the attacker's roots answered: a body's own element reduces what it deals
+        // but does not rub off on whoever it hits.
         ROOTS(false);
 
         private final boolean attaches;
@@ -193,40 +138,24 @@ public final class DamageElements {
             this.attaches = attaches;
         }
 
-        /**
-         * Whether a strike read from here leaves anything on the target.
-         */
+        // Whether a strike read from here leaves anything on the target.
         public boolean attaches() {
             return this.attaches;
         }
     }
 
-    /**
-     * One reading of a strike: what it is made of, where that came from, and how much of each element this kind
-     * of hit leaves behind. All three come from one registry lookup, so a caller cannot end up with the elements
-     * of one reading and the origin or the amounts of another.
-     *
-     * <p>{@code attachment} is populated for both origins and answers "what would this element leave"; only a
-     * {@link Origin#TYPE} reading is handed to the buildup, so a roots reading simply never gets asked. An
-     * element whose claim wrote its own number reports that number, and one that did not reports the element's
-     * own {@code damage_attachment}.</p>
-     */
+    // All three fields come from one registry lookup, so a caller cannot end up with the elements of one reading
+    // and the origin or the amounts of another. attachment answers "what would this element leave"; only a
+    // TYPE reading reaches the buildup, so a roots reading never gets asked.
     public record Strike(Set<Holder<Element>> elements, Map<Holder<Element>, Double> attachment, Origin origin) {
     }
 
-    /**
-     * One element's claim over one damage type, with the amount a strike of that type leaves behind already
-     * resolved against the element's own default. The index stores these rather than bare holders because the
-     * number belongs to the claim, not to the element.
-     */
+    // The number belongs to the claim, not to the element, so the index stores this rather than bare holders.
     public record Claim(Holder<Element> element, double attachment) {
     }
 
-    /**
-     * The damage type an element's own claim resolves to: the first claim it lists that exists, which is what
-     * lets a damage action say "this strike is fire" and still have a damage type to travel as. An element that
-     * claims nothing has no answer here, and {@link #resolveType} says so once for whoever needed one.
-     */
+    // The first claim the element lists that exists, which is what lets a damage action say "this strike is
+    // fire" and still have a type to travel as.
     public static Optional<Holder<DamageType>> typeOf(RegistryAccess access, Holder<Element> element) {
         Registry<DamageType> types = access.lookupOrThrow(Registries.DAMAGE_TYPE);
         for (DamageTypeClaim claim : element.value().damageTypes()) {
@@ -238,15 +167,8 @@ public final class DamageElements {
         return Optional.empty();
     }
 
-    /**
-     * The damage type a damage action's declaration travels as, resolved where registries can be read: the
-     * declared type (with the declaration checked against it), or the first type the declared element claims.
-     *
-     * <p>An empty result means the strike keeps the reading it always had - whatever the attacker's roots are.
-     * Every way a declaration can fail to name a type is reported once here rather than failing the load: a
-     * declaration names only tags (no single type to travel as), the named element claims no damage type, or the
-     * declared type is not one the element claims.</p>
-     */
+    // An empty result means the strike keeps the reading it always had (the attacker's roots). Every way a
+    // declaration can fail to name a type is reported here rather than failing the load.
     public static Optional<Holder<DamageType>> resolveType(RegistryAccess access,
                                                            List<Either<Holder<Element>, TagKey<Element>>> elements,
                                                            Optional<Holder<DamageType>> damageType) {
@@ -267,21 +189,10 @@ public final class DamageElements {
         return resolved;
     }
 
-    /**
-     * Checks a damage action's element declaration against the damage type the strike will travel as, and says
-     * so when the two do not agree.
-     *
-     * <p>The rule is the one the whole element channel rests on: the reduction layer only ever sees a
-     * {@link DamageSource}, so the element of a strike has to be readable from its damage type. A declaration
-     * the type does not support is therefore a strike that would be shaped as one element and reduced as
-     * another.</p>
-     *
-     * <p>It is checked on first use rather than while the pack loads, because it cannot be checked there: the
-     * value behind a declared element is not necessarily bound yet when another datapack registry page is being
-     * decoded (registries load in parallel), so reading it at load time would make the same pack pass or fail
-     * depending on which page happened to finish first. Each distinct complaint is reported once, and the run
-     * continues: the strike keeps the damage type it declared, and only the declaration is wrong.</p>
-     */
+    // Checked on first use, not at load: the value behind a declared element is not necessarily bound yet while
+    // another datapack registry page is being decoded (registries load in parallel), so a load-time check would
+    // make the same pack pass or fail depending on which page finished first. A mismatch means the strike would
+    // be shaped as one element and reduced as another; it warns and the strike keeps its declared type.
     public static void checkDeclaration(RegistryAccess access, List<Either<Holder<Element>, TagKey<Element>>> elements,
                                         Holder<DamageType> damageType) {
         for (Either<Holder<Element>, TagKey<Element>> entry : elements) {
@@ -293,10 +204,7 @@ public final class DamageElements {
         }
     }
 
-    /**
-     * Reports the same complaint once. A mismatch is a data-pack mistake that would otherwise repeat on every
-     * strike, and one line is enough to find it.
-     */
+    // A mismatch is a pack mistake that would otherwise repeat on every strike; REPORT_LIMIT caps the noise.
     private static void report(String message) {
         if (REPORTED.size() < REPORT_LIMIT && REPORTED.add(message)) MiXianTu.LOGGER.warn("{}", message);
     }
@@ -314,6 +222,8 @@ public final class DamageElements {
         return Set.copyOf(result);
     }
 
+    // Keyed on the damage type registry instance: a pack reload replaces it (the element registry is reloaded in
+    // the same step, so one key notices both), while /reload does not. MAX_CACHED_REGISTRIES bounds the map.
     private static Map<Holder<DamageType>, List<Claim>> index(Registry<Element> elements, Registry<DamageType> types) {
         Map<Holder<DamageType>, List<Claim>> cached = indexes.get(types);
         if (cached != null) return cached;
@@ -353,6 +263,7 @@ public final class DamageElements {
                               double attachment) {
         List<Claim> claimants = index.computeIfAbsent(type, ignored -> new ArrayList<>());
         for (Claim existing : claimants) if (existing.element().equals(element)) return;
+        // Every claim multiplies downstream, so a second claimant for one type is worth a warning.
         if (!claimants.isEmpty())
             MiXianTu.LOGGER.warn("Damage type {} is claimed by more than one element; every claim multiplies the element relation of such a strike",
                     HolderHelper.id(type));

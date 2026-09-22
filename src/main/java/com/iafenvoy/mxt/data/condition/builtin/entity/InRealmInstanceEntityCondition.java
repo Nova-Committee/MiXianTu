@@ -22,11 +22,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * True when the entity is inside a realm instance, optionally one this condition names.
- *
- * <p>This is the data pack's window onto membership and claims: {@code owned} records who claimed an instance,
- * and a pack turns that into "only the owner may bring guests" or "the owner earns the clear reward" without
- * the realm definition needing a permission field of its own.
+ * True when the entity is inside a realm instance, optionally one this condition names. The {@code role} field
+ * asks about membership and claims, so a realm definition needs no permission field of its own.
  */
 public record InRealmInstanceEntityCondition(Optional<Either<Holder<RealmInstance>, TagKey<RealmInstance>>> definition,
                                              Role role) implements EntityCondition {

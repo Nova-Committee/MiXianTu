@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.data.storage;
 import com.mojang.serialization.MapCodec;
 
 /**
- * The registry's default kind: it declares nothing and keeps nothing. It exists only so that a definition can
- * say it keeps no state of its own.
+ * The registry's default kind: it declares nothing and keeps nothing, and exists only so a definition can say it
+ * keeps no state of its own.
  */
 public enum EmptyDataStorage implements DataStorage {
     INSTANCE;

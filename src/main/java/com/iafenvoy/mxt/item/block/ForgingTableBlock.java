@@ -18,14 +18,11 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.NonNull;
 
 /**
- * The forge table. Its model is a 12/16 high desk built from the smithing table textures, so the collision
- * shape is a slab: a full-cube box would let players stand on an invisible layer above the model and would
- * stop neighbouring faces from culling.
+ * The forge table. The collision shape is a slab matching the model's height: a full-cube box would let players
+ * stand on an invisible layer above the model and would stop neighbouring faces from culling.
  */
 public final class ForgingTableBlock extends EconomyWorkstationBlock implements EntityBlock {
-    /**
-     * Matches the 12/16 height of {@code models/block/forging_table.json}.
-     */
+    // Matches the 12/16 height of models/block/forging_table.json.
     private static final VoxelShape SHAPE = Shapes.box(0.0D, 0.0D, 0.0D, 1.0D, 0.75D, 1.0D);
     private static final MapCodec<ForgingTableBlock> CODEC = simpleCodec(ForgingTableBlock::new);
 
@@ -58,8 +55,7 @@ public final class ForgingTableBlock extends EconomyWorkstationBlock implements 
         return SHAPE;
     }
 
-    // getOcclusionShape is inherited from EconomyWorkstationBlock, which already returns
-    // Shapes.empty() so the open-air counter top does not occlude its neighbours.
+    // getOcclusionShape is inherited from EconomyWorkstationBlock, which already returns Shapes.empty().
 
     @Override
     protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {

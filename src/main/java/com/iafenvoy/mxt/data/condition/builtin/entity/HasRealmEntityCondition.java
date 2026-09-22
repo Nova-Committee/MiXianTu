@@ -10,10 +10,8 @@ import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Matches entities that have entered the realm chain of the specified aura.
- * <p>
- * The chain is keyed by the aura in the state attachment, so this names an aura rather than the value it is
- * counted in: a plain counter has no realm chain to have entered.
+ * True when the entity has entered the realm chain of the named aura: the chain is keyed by the aura in the state
+ * attachment, so a plain counter has no realm chain to have entered.
  */
 public record HasRealmEntityCondition(Holder<Aura> aura) implements EntityCondition {
     public static final MapCodec<HasRealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

@@ -13,7 +13,8 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 
 /**
- * Owns the common lifecycle for runtime-only trigger subscriptions.
+ * Common lifecycle for the runtime-only trigger subscriptions: rebuilt on server start, on a datapack reload and
+ * on entity join, dropped on entity leave and on server stop.
  */
 @EventBusSubscriber
 public final class TriggerLifecycleEvents {

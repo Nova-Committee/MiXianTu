@@ -42,34 +42,24 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Server-side use path for books, jade slips and other technique items. A matching binding claims the
- * interaction, but a refusal is reported on the action bar, since it changes nothing else.
- * {@link ItemQualityService} watches the same interaction at a higher priority, so the gate check here speaks
- * for direct callers of {@link #use}. A binding teaches on the click, or on a hold.
- * <p>
- * The hold itself is not this class's work. This module only declares how long a read lasts and what it looks
- * and sounds like - {@link TechniqueBinding} implements {@link HoldBinding} and is registered as a hold source -
- * and the hold module drives the whole gesture without knowing what a technique is. What is left here is what
- * only this module can answer: which of its own holds this item is, how far through it is, what to teach, and
- * what to report afterwards.
+ * Server-side use path for books, jade slips and other technique items: a matching binding claims the
+ * interaction, and a refusal is reported on the action bar since it changes nothing else. The hold gesture
+ * itself belongs to the hold module, which drives it without knowing what a technique is; this class only
+ * declares how long a read lasts and answers what only this module can - which of its own holds this item is,
+ * how far through it is, what to teach and what to report afterwards. {@link ItemQualityService} watches the
+ * same interaction at a higher priority, so the gate check in {@link #use} speaks for direct callers.
  */
 @EventBusSubscriber
 public final class TechniqueItemService {
-    /**
-     * How the last reading gesture ended, for {@code /mxt technique diagnose}: a hold has two endings that
-     * look identical from outside, and only the ticks still left tell them apart.
-     */
+    // How the last reading gesture ended, for `/mxt technique diagnose`: a hold has two endings that look
+    // identical from outside, and only the ticks still left tell them apart.
     private static final Map<UUID, String> LAST_ENDING = new ConcurrentHashMap<>();
 
-    /**
-     * The last percentage shown to each player, so the action bar is only rewritten when the number moves.
-     */
+    // The last percentage shown to each player, so the action bar is rewritten only when the number moves.
     private static final Map<UUID, Integer> LAST_PROGRESS = new ConcurrentHashMap<>();
 
-    /**
-     * Wall-clock and tick counts for a read in progress: a read is measured in ticks but experienced in
-     * seconds, and the two agree only while the server keeps up.
-     */
+    // Wall-clock and tick counts for a read in progress: a read is measured in ticks but experienced in
+    // seconds, and the two agree only while the server keeps up.
     private static final Map<UUID, HoldTiming> HOLD_TIMING = new ConcurrentHashMap<>();
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -87,11 +77,8 @@ public final class TechniqueItemService {
         }
     }
 
-    /**
-     * Hands this module's holds to the hold module, once, at construction. This is the whole of the wiring
-     * between the two: the hold module drives the gesture and never learns what a technique is, and this module
-     * never touches the use cycle.
-     */
+    // The whole wiring between the two modules, done once at construction: the hold module drives the gesture
+    // and never learns what a technique is, and this module never touches the use cycle.
     public static void initialize() {
         HoldLookup.register(registries -> MxtDatapackRegistries.holders(registries, MxtResourceKeys.TECHNIQUE_BINDING)
                 .map(Reference::value)
@@ -100,20 +87,15 @@ public final class TechniqueItemService {
                 .toList());
     }
 
-    /**
-     * Claims the click for a technique item, and nothing else: a binding that asks for a hold answers
-     * {@code false}, so the click falls through to the hold module, which arms the stack for it.
-     */
+    // A binding that asks for a hold answers false, so the click falls through to the hold module, which arms
+    // the stack for it.
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onItemUse(RightClickItem event) {
         if (use(event.getEntity(), event.getEntity().getItemInHand(event.getHand()))) event.setCanceled(true);
     }
 
-    /**
-     * Shows how far a read has come, because the use pose does not: a player can see that something is
-     * happening but not how near the end they are. Only this module's own holds get the bar - another module's
-     * hold is not a technique being read, and its own percentage would be a lie here.
-     */
+    // Only this module's own holds get the bar: another module's hold is not a technique being read, and its
+    // percentage would be a lie here.
     @SubscribeEvent
     public static void onUseTick(Tick event) {
         LivingEntity entity = event.getEntity();
@@ -131,18 +113,12 @@ public final class TechniqueItemService {
                 .withStyle(ChatFormatting.AQUA), true);
     }
 
-    /**
-     * The bar the reading message draws, ten cells wide.
-     */
     private static String bar(int percent) {
         int filled = Mth.clamp(percent / 10, 0, 10);
         return "#".repeat(filled) + "-".repeat(10 - filled);
     }
 
-    /**
-     * Teaches the technique when a hold runs its full course. The hand stack is the live one; the event's
-     * own stack is a copy vanilla makes and discards.
-     */
+    // The hand stack is the live one; the event's own stack is a copy vanilla makes and discards.
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
         LivingEntity entity = event.getEntity();
@@ -165,10 +141,8 @@ public final class TechniqueItemService {
         learn(entity, stack, value);
     }
 
-    /**
-     * Records the other ending: a hold released before its duration ran out. Only manuals are recorded, so
-     * ordinary items releasing do not drown the diagnostic.
-     */
+    // Records the other ending. Only manuals are recorded, so ordinary items releasing do not drown the
+    // diagnostic.
     @SubscribeEvent
     public static void onUseStop(Stop event) {
         LivingEntity entity = event.getEntity();
@@ -185,10 +159,8 @@ public final class TechniqueItemService {
                 + binding.learnTime() + " ticks left");
     }
 
-    /**
-     * How the last reading gesture ended for this entity, or empty when none was seen. Wider than a player
-     * because {@link #record} keys any entity that reads, and the audit drives a hold on a pig.
-     */
+    // Wider than a player because {@link #record} keys any entity that reads, and the audit drives a hold on
+    // a pig.
     public static Optional<String> lastEnding(LivingEntity entity) {
         return Optional.ofNullable(LAST_ENDING.get(entity.getUUID()));
     }
@@ -197,10 +169,7 @@ public final class TechniqueItemService {
         LAST_ENDING.put(entity.getUUID(), ending);
     }
 
-    /**
-     * Reports how long a read took on the server, in ticks and milliseconds. Milliseconds per tick is the
-     * number that matters: 50 is a server keeping up and 100 is one at half speed.
-     */
+    // Milliseconds per tick is the number that matters: 50 is a server keeping up, 100 is one at half speed.
     private static void reportTiming(LivingEntity entity, String ending) {
         HoldTiming timing = HOLD_TIMING.remove(entity.getUUID());
         if (timing == null) return;
@@ -211,11 +180,8 @@ public final class TechniqueItemService {
                 timing.firstRemaining(), timing.lastRemaining());
     }
 
-    /**
-     * Attempts to learn a matching technique; a matching binding claims the interaction even when learning
-     * is rejected by its conditions. A binding that asks for a hold answers {@code false} so the click falls
-     * through to the hold module, which starts the cycle the hold is measured by.
-     */
+    // A matching binding claims the interaction even when learning is rejected by its conditions; a binding
+    // that asks for a hold answers false so the click falls through to the hold module.
     public static boolean use(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return false;
         Optional<TechniqueBinding> binding = ItemBindingService.technique(stack);
@@ -246,9 +212,7 @@ public final class TechniqueItemService {
         notifyLearned(entity, binding.technique());
     }
 
-    /**
-     * Success uses the action bar as the refusals do, because it is transient state.
-     */
+    // Success uses the action bar as the refusals do, because it is transient state.
     private static void notifyLearned(LivingEntity entity, Holder<Technique> technique) {
         if (!(entity instanceof ServerPlayer player)) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.learned",

@@ -37,16 +37,13 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /ability} command; also reachable as {@code /mxt ability}. Casting keeps its operator
- * requirement in both positions: an alias changes where a node hangs, never what it may do.
- * <p>
- * Granting and revoking go through the same source ledger content uses, under the command's own source, so an
- * operator cannot take away what a quest reward, a piece of gear or a cultivation identity granted.
+ * The {@code /ability} command; also reachable as {@code /mxt ability}. An alias changes where a node hangs, never
+ * what it may do, so casting keeps its operator requirement in both positions. Granting and revoking go through the
+ * same source ledger content uses, under the command's own source, so an operator cannot take away what a quest
+ * reward, a piece of gear or a cultivation identity granted.
  */
 public final class AbilityCommand {
-    /**
-     * What the command records as the source of what it grants, in the same shape the other modules use.
-     */
+    // Recorded as the source of what the command grants, in the same shape the other modules use.
     private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "command");
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("ability")
             .then(literal("list")
@@ -80,11 +77,8 @@ public final class AbilityCommand {
                 .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
     }
 
-    /**
-     * Prints what one holder carries, one line per ability, together with the sources that keep it granted. The
-     * list is read from the attachment rather than from the registry, so an ability whose definition was
-     * disabled or deleted is still reported: it is still held, and revoking it by name is still what takes it off.
-     */
+    // Read from the attachment rather than the registry, so an ability whose definition was disabled or deleted is
+    // still reported: it is still held, and revoking it by name is still what takes it off.
     private static int list(CommandSourceStack source, @Nullable Entity target) {
         if (target == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
@@ -105,9 +99,6 @@ public final class AbilityCommand {
         return 1;
     }
 
-    /**
-     * Grants one ability to every target under the command's own source, reporting each target separately.
-     */
     private static int grant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Identifier id = IdentifierArgument.getId(ctx, "ability");
@@ -133,10 +124,8 @@ public final class AbilityCommand {
         return granted;
     }
 
-    /**
-     * Drops one source, which only removes the ability when that was its last one; nothing else can be revoked,
-     * so a target that never held that source is a failure rather than a silent success.
-     */
+    // Dropping a source only removes the ability when that was its last one, so a target that never held the
+    // source is a failure rather than a silent success.
     private static int revoke(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Identifier id = IdentifierArgument.getId(ctx, "ability");
@@ -161,9 +150,7 @@ public final class AbilityCommand {
         return revoked;
     }
 
-    /**
-     * A source change moves which triggers the entity listens for, and only a living entity runs them.
-     */
+    // A source change moves which triggers the entity listens for.
     private static void rebuild(Entity target) {
         if (target instanceof LivingEntity living) AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }

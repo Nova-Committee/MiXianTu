@@ -10,9 +10,8 @@ import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Compares the block's blast resistance. The NeoForge replacement for
- * {@code getExplosionResistance()} needs an explosion, which this condition does not have, so it reads
- * the base value; that suppression is deliberate.
+ * Compares the block's blast resistance. Reads the base value on purpose: the NeoForge replacement for
+ * {@code getExplosionResistance()} needs an explosion, which this condition has none of.
  */
 @SuppressWarnings("deprecation")
 public record BlastResistanceCondition(Comparison comparison) implements BlockCondition {

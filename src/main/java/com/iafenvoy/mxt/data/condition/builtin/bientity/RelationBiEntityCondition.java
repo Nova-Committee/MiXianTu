@@ -9,8 +9,7 @@ import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Relationship predicate kept distinct from the team predicate so each builtin
- * registration owns a unique codec value, as required by Minecraft registries.
+ * Relationship predicate kept distinct from the team predicate: each builtin registration needs its own codec value.
  */
 public record RelationBiEntityCondition(boolean allied) implements BiEntityCondition {
     public static final MapCodec<RelationBiEntityCondition> CODEC = Codec.BOOL.optionalFieldOf("allied", true)

@@ -19,20 +19,10 @@ import net.minecraft.tags.TagKey;
 import java.util.List;
 
 /**
- * Element-independent innate or acquired physique. Intentionally has no element field.
- *
- * <p>"Intentionally" is a statement about the registry rather than a check on the file: a definition that also
- * declares an element or a spirit-root field keeps loading and that key is ignored, because the record codec
- * reads only the keys named below. Everything a physique may say is either a vanilla attribute, a granted
- * ability, a condition, an exclusive tag, a display rarity or a stacking rule - which is exactly the list
- * below.</p>
- *
- * <p>The two damage multipliers are the physique's own contribution to one strike, and they are the reason a
- * physique can be about fighting without being about elements: {@code damage_dealt_multiplier} scales what its
- * holder deals and {@code damage_taken_multiplier} scales what it receives, both element-independent, both
- * read by the two layers of the damage pipeline next to the element relations rather than instead of them.
- * Several physiques multiply together, because each one is its own source of the effect, and the defaults are
- * {@code 1} so a physique that says nothing about damage changes nothing.</p>
+ * Element-independent innate or acquired physique. Intentionally has no element field: a definition that also
+ * declares one or a spirit-root field keeps loading and that key is silently ignored, because the record codec
+ * reads only the keys named below. The two damage multipliers are read by the damage pipeline next to the element
+ * relations rather than instead of them; several physiques multiply together, and both default to 1.
  */
 public record Physique(List<AttributeEntry> attributeModifiers,
                        List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities, EntityCondition holderCondition,
@@ -52,10 +42,7 @@ public record Physique(List<AttributeEntry> attributeModifiers,
                     NumberProvider.CODEC.optionalFieldOf("damage_taken_multiplier", new Constant(1.0D)).forGetter(Physique::damageTakenMultiplier)
             ).apply(i, Physique::new)).validate(Physique::validate).codec();
 
-    /**
-     * A written number can be checked while the pack loads; a formula can only be checked when it runs, which
-     * the damage pipeline does.
-     */
+    // A written number is checked here; a formula only when it runs, which the damage pipeline does.
     private static DataResult<Physique> validate(Physique physique) {
         for (NumberProvider provider : List.of(physique.damageDealtMultiplier(), physique.damageTakenMultiplier()))
             if (provider instanceof Constant(double value) && (!Double.isFinite(value) || value < 0.0D))

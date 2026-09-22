@@ -18,10 +18,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/**
- * Vanilla loot predicate for an entity's independent spirit-root collection, asked as entries or as tags. A
- * disabled root is not held as far as this condition is concerned.
- */
+// A disabled root is not held as far as this condition is concerned.
 public record HasSpiritRootLootCondition(EntityTarget target,
                                          List<Either<Holder<SpiritRoot>, TagKey<SpiritRoot>>> spiritRoots) implements LootItemCondition {
     public static final MapCodec<HasSpiritRootLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

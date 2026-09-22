@@ -64,20 +64,13 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         return value >= this.meterMin && value <= this.meterMax;
     }
 
-    /**
-     * The method's delta, or {@code null} when this plan does not allow it: an unlisted method is an
-     * answer, not an accident. {@link #delta} is for callers entitled to treat the missing entry as a
-     * contract violation.
-     */
+    // An unlisted method is an answer, not an accident; {@link #delta} is for callers entitled to treat the
+    // missing entry as a contract violation.
     public @Nullable Integer deltaIfAllowed(@NotNull Identifier method) {
         return this.deltas.get(method);
     }
 
-    /**
-     * The method's delta, throwing when the plan does not allow the method.
-     *
-     * @see #deltaIfAllowed the non-throwing question
-     */
+    // Throws when the plan does not allow the method; see deltaIfAllowed for the non-throwing question.
     public int delta(@NotNull Identifier method) {
         Integer value = this.deltaIfAllowed(method);
         if (value == null) {
@@ -113,11 +106,8 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         throw new IllegalArgumentException("Forging plan cannot reach its target while satisfying the suffix rule");
     }
 
-    /**
-     * Whether the last {@code requiredSteps} entries of {@code history} equal the last
-     * {@code requiredSteps} entries of the six-long {@code pattern}. One definition, because the
-     * optimal-step search and {@link ForgingSession} must agree on when a session is finished.
-     */
+    // Whether the last requiredSteps entries of history equal the last requiredSteps of the six-long pattern.
+    // One definition, because the optimal-step search and ForgingSession must agree on when a session is done.
     public static boolean suffixMatches(List<Identifier> history, List<Identifier> pattern, int requiredSteps) {
         if (requiredSteps == 0) return true;
         if (history.size() < requiredSteps) return false;

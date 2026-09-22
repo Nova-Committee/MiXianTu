@@ -18,12 +18,8 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * The payload half of every ported vanilla trigger: each method rebuilds the arguments that trigger's own
- * call site would have passed and asks vanilla's instance the same question. Nothing here reimplements a
- * condition - the matching itself stays vanilla's.
- *
- * <p>Two payload names are shared with the signals MiXianTu already publishes, {@code damage} and
- * {@code blocked}, because vanilla's damage predicates read exactly the numbers its own hooks pass.</p>
+ * The payload half of every ported vanilla trigger: each method rebuilds the arguments that trigger's own call
+ * site would have passed and asks vanilla's instance - no condition is reimplemented here.
  */
 public final class VanillaTriggerMatchers {
     private static final String DAMAGE = "damage";
@@ -126,10 +122,8 @@ public final class VanillaTriggerMatchers {
         return context.item() != null && instance.matches(context.item(), hookedIn, items == null ? List.of() : items);
     }
 
-    /**
-     * Instances that describe nothing but the player - {@code location} and {@code slept_in_bed} - are answered
-     * by the player predicate alone, which {@link VanillaTrigger} evaluates for every ported trigger.
-     */
+    // The player predicate alone answers instances that describe nothing but the player; VanillaTrigger already
+    // evaluated it, so matching here is unconditional.
     public static boolean playerOnly(PlayerTrigger.TriggerInstance instance, TriggerContext context) {
         return true;
     }
@@ -200,10 +194,7 @@ public final class VanillaTriggerMatchers {
         return instance.matches(player, item, thrower == null ? null : VanillaTriggerSupport.forEntity(context, thrower));
     }
 
-    /**
-     * Both kill signals carry the same two objects, so they answer the same question: the victim as the
-     * context vanilla builds for it, and the killing blow.
-     */
+    // Both kill signals carry the same two objects, so they answer the same question.
     private static boolean killed(KilledTrigger.TriggerInstance instance, TriggerContext context) {
         ServerPlayer player = VanillaTriggerSupport.player(context);
         LootContext victim = VanillaTriggerSupport.forEntity(context, context.target());
@@ -211,11 +202,8 @@ public final class VanillaTriggerMatchers {
         return instance.matches(player, victim, context.damageSource());
     }
 
-    /**
-     * The travelled triggers - {@code fall_from_height}, {@code ride_entity_in_lava} and {@code nether_travel}
-     * - share one {@link DistanceTrigger} instance and one question: how far is the player from the place the
-     * signal recorded.
-     */
+    // The three travelled triggers share one DistanceTrigger instance and one question: how far the player is
+    // from the place the signal recorded.
     private static boolean distance(DistanceTrigger.TriggerInstance instance, TriggerContext context) {
         ServerPlayer player = VanillaTriggerSupport.player(context);
         Vec3 start = context.payload(TriggerPayload.START_POSITION);
@@ -223,20 +211,15 @@ public final class VanillaTriggerMatchers {
         return instance.matches(player.level(), start, player.position());
     }
 
-    /**
-     * Vanilla fires this where a bucket is filled, with the stack that came out of it; the poll sees the empty
-     * bucket being replaced, so the filled stack is the payload.
-     */
+    // Vanilla fires this with the stack that came out of the bucket; the poll only sees the empty bucket being
+    // replaced, so the filled stack is the payload.
     public static boolean filledBucket(FilledBucketTrigger.TriggerInstance instance, TriggerContext context) {
         ItemStack filled = context.payload(TriggerPayload.CHANGED_ITEM);
         return filled != null && instance.matches(filled);
     }
 
-    /**
-     * Vanilla's criterion runs before the new damage value is written, so both its {@code item} predicate and
-     * the arithmetic it does read the stack as it was: the previous snapshot is what it is handed, and the new
-     * damage value is the number.
-     */
+    // Vanilla's criterion runs before the new damage value is written, so it reads the previous snapshot and
+    // takes the new damage value as the number.
     public static boolean itemDurabilityChanged(TriggerInstance instance, TriggerContext context) {
         ItemStack previous = context.payload(TriggerPayload.PREVIOUS_ITEM);
         ItemStack changed = context.payload(TriggerPayload.CHANGED_ITEM);

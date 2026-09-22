@@ -38,9 +38,7 @@ public final class EconomySlots {
         }
     }
 
-    /**
-     * A configuration slot: it stores a template copy and never consumes the cursor stack.
-     */
+    // Stores a template copy and never consumes the cursor stack.
     public static final class Ghost extends Slot {
         private final AbstractContainerMenu menu;
 
@@ -64,9 +62,7 @@ public final class EconomySlots {
         }
     }
 
-    /**
-     * A template visible to customers but unavailable for every inventory operation.
-     */
+    // A template visible to customers but unavailable for every inventory operation.
     public static final class Display extends Output {
         public Display(Container container, int index, int x, int y) {
             super(container, index, x, y);

@@ -15,10 +15,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 /**
- * KubeJS registrations for the five intrinsic condition dispatch types.
- *
- * <p>Callbacks receive the {@link FormulaContext} of the test as their last argument, so the same
- * event payload variables a data pack condition reads are available to the script.</p>
+ * KubeJS registrations for the five intrinsic condition dispatch types. Callbacks receive the
+ * {@link FormulaContext} of the test as their last argument, so the same event payload variables a data pack
+ * condition reads are available to the script.
  */
 public final class MxtKubeJsConditionBindings {
     @Info("Registers an entity condition. Datapack type: mxt:js")

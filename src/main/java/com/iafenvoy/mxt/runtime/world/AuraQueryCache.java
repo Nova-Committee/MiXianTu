@@ -19,26 +19,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
- * Per-tick memo for the aura resolution pipeline: resolving one position walks the {@code aura_zone} registry,
- * expands the biome and dimension tiers and applies block-emitter falloff over a 7x7 chunk neighbourhood.
- * Every entry is valid for at most one {@link ServerLevel} tick, because the inputs are the chunk's mutable
- * aura stock and the game time; {@link #setEnabled} turns every lookup into a miss for the audit benchmark.
+ * Per-tick memo for the aura resolution pipeline. Every entry is valid for at most one {@link ServerLevel}
+ * tick, because the inputs are the chunk's mutable aura stock and the game time.
  */
 public final class AuraQueryCache {
     private static final Logger LOGGER = LogUtils.getLogger();
-    /**
-     * Hard ceiling on entries kept per level and tick. A huge entity count can never blow up memory, and
-     * dropping a table is safe because a miss only costs a recomputation.
-     */
+    // Hard ceiling per level and tick; dropping a table only costs a recomputation.
     private static final int MAX_ENTRIES = 16_384;
-    /**
-     * Session-wide switch, flipped only by the audit.
-     */
+    // Session-wide kill switch, flipped only by the audit benchmark.
     private static volatile boolean enabled = true;
-    /**
-     * Stage timer switch, kept in step with the config by the bridge; the audit turns it on so it can
-     * attribute cost to stages without touching the config file.
-     */
+    // Mirrors the config switch; the audit turns it on without touching the config file.
     private static volatile boolean timing = false;
 
     public static boolean timing() {
@@ -54,34 +44,19 @@ public final class AuraQueryCache {
     private static final Map<ServerLevel, Map<AuraLocation, Optional<Resolved>>> FORMATION = new IdentityHashMap<>();
     private static final Map<ServerLevel, Map<LevelPosition, AuraResult>> RESULT = new IdentityHashMap<>();
     private static final Map<ServerLevel, Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Aura>, AuraPool>>>> POOLS = new IdentityHashMap<>();
-    /**
-     * Availability of one block emitter for one aura: one query asks every source in a 7x7 chunk
-     * neighbourhood for every aura, so the same answer is requested hundreds of times.
-     */
+    // One query asks every source in a 7x7 chunk neighbourhood for every aura, so the same answer is
+    // requested hundreds of times.
     private static final Map<ServerLevel, Map<AvailabilityKey, Double>> AVAILABILITY = new IdentityHashMap<>();
-    /**
-     * Biome key per position: resolving one aura position asks for the biome of every block source in a 7x7
-     * chunk neighbourhood, and each read is far more expensive than a map lookup.
-     */
+    // Each biome read is far more expensive than a map lookup, and one query asks for every nearby source.
     private static final Map<ServerLevel, Map<LevelPosition, Identifier>> BIOME = new IdentityHashMap<>();
-    /**
-     * Definition to registry holder, memoised per level tick: locating a holder needs a registry scan because
-     * the selected definition travels as an inline codec value, so without this the scan would run once per
-     * contributing block source.
-     */
+    // Locating a holder needs a registry scan, so without this it would run once per contributing source.
     private static final Map<ServerLevel, Map<AuraZone, Optional<Holder<AuraZone>>>> HOLDER = new IdentityHashMap<>();
 
-    /**
-     * Query counter. It is unconditional because one increment is far cheaper than the two
-     * {@link System#nanoTime()} calls the diagnostic timer needs.
-     */
+    // Unconditional: one increment is far cheaper than the two System.nanoTime() calls the timer needs.
     private static final AtomicLong QUERIES = new AtomicLong();
     private static final AtomicLong NANOS = new AtomicLong();
 
-    /**
-     * Per-layer hit and miss counters, plus the number of level tick windows opened, so a live server can
-     * say which layer is still doing real work.
-     */
+    // Per-layer hit and miss counters, so a live server can say which layer is still doing real work.
     private static final AtomicLong STATIC_HITS = new AtomicLong();
     private static final AtomicLong STATIC_MISSES = new AtomicLong();
     private static final AtomicLong POOLS_HITS = new AtomicLong();
@@ -100,10 +75,7 @@ public final class AuraQueryCache {
     private AuraQueryCache() {
     }
 
-    /**
-     * Prints one diagnostic line describing what the resolver did since the previous call. The hit ratios
-     * are the point: a layer at ninety percent misses needs a cheaper computation, not more caching.
-     */
+    // Hit ratios are the point: a layer at ninety percent misses needs a cheaper computation, not more caching.
     public static void reportDiagnostics() {
         long ticks = TICKS.getAndSet(0L);
         if (ticks == 0L) return;
@@ -117,18 +89,13 @@ public final class AuraQueryCache {
                 AVAILABILITY_HITS.get(), AVAILABILITY_MISSES.get());
     }
 
-    /**
-     * Average microseconds per query over the whole session, or {@code -1} when the timer is off.
-     */
+    // Returns -1 when the diagnostic timer never ran.
     public static double usPerQuery() {
         long queries = QUERIES.get();
         if (queries == 0L) return -1.0D;
         return NANOS.get() / 1000.0D / queries;
     }
 
-    /**
-     * Plain snapshot of every layer counter, used by the audit to prove a layer is actually being reused.
-     */
     public record Stats(long availabilityHits, long availabilityMisses, long staticHits, long staticMisses,
                         long poolsHits, long poolsMisses, long resultHits, long formationHits, long formationMisses,
                         long holderHits, long holderMisses) {
@@ -140,9 +107,6 @@ public final class AuraQueryCache {
                 HOLDER_HITS.get(), HOLDER_MISSES.get());
     }
 
-    /**
-     * Nanosecond totals per pipeline stage, so a live server can say where one query spends its time.
-     */
     private static final AtomicLong BIOME_NANOS = new AtomicLong();
     private static final AtomicLong BIOME_CALLS = new AtomicLong();
     private static final AtomicLong STATIC_NANOS = new AtomicLong();
@@ -166,9 +130,6 @@ public final class AuraQueryCache {
         SOURCE_NANOS.addAndGet(nanos);
     }
 
-    /**
-     * Prints and resets the per-stage totals of one diagnostic window.
-     */
     public static void reportStageCosts() {
         long queries = Math.max(1L, QUERIES.get());
         long biomeCalls = BIOME_CALLS.getAndSet(0L);
@@ -181,10 +142,8 @@ public final class AuraQueryCache {
                 poolsNanos / 1000L / queries, sourceNanos / 1000L / queries);
     }
 
-    /**
-     * Opens this level's next tick window and drops everything computed under the previous one; called once
-     * per level tick, at the very end, so nothing from an older tick can be observed.
-     */
+    // Opens the next tick window and drops everything computed under the previous one; called once per
+    // level tick, at the very end.
     public static void advance(ServerLevel level, long gameTime) {
         EPOCH.put(level, gameTime);
         STATIC.remove(level);
@@ -196,11 +155,8 @@ public final class AuraQueryCache {
         TICKS.incrementAndGet();
     }
 
-    /**
-     * Memoised holder lookup for one definition. An empty optional is a real answer, so only a missing map
-     * entry counts as a miss; a null lookup result is stored as empty, so a caller's {@code .orElse(null)} sees
-     * a miss rather than an NPE.
-     */
+    // An empty optional is a real answer, so only a missing map entry misses; a null scan result is stored
+    // as empty so a caller's .orElse(null) sees a miss rather than an NPE.
     static Optional<Holder<AuraZone>> holder(ServerLevel level, AuraZone zone) {
         if (!enabled) return Optional.empty();
         Map<AuraZone, Optional<Holder<AuraZone>>> cache = HOLDER.get(level);
@@ -238,16 +194,8 @@ public final class AuraQueryCache {
         LAST_QUERY.clear();
     }
 
-    /**
-     * The last resolution input recorded for one entity, used to decide whether ticking it again can change
-     * its answer: a stationary entity keeps the same block and dimension.
-     */
     private static final Map<ServerLevel, Map<UUID, AuraLocation>> LAST_QUERY = new IdentityHashMap<>();
 
-    /**
-     * Whether this entity's next tick can produce a different answer than its last recorded one: true when the
-     * entity is new, moved to another block or dimension, or not re-checked within the configured interval.
-     */
     public static boolean needsQuery(ServerLevel level, UUID entity, AuraLocation position, int refreshInterval) {
         Map<UUID, AuraLocation> tracked = LAST_QUERY.get(level);
         AuraLocation previous = tracked == null ? null : tracked.get(entity);
@@ -265,20 +213,13 @@ public final class AuraQueryCache {
         return false;
     }
 
-    /**
-     * Entity ticks the gate answered with "nothing can have changed", which is the number that says whether
-     * the gate is doing its job on a live server.
-     */
     private static final AtomicLong SKIPPED = new AtomicLong();
 
     public static long skipped() {
         return SKIPPED.get();
     }
 
-    /**
-     * Records the input this entity was resolved at. Called only when a resolution actually ran, so a
-     * skipped tick never extends the staleness window.
-     */
+    // Only called when a resolution actually ran, so a skipped tick never extends the staleness window.
     public static void recordQuery(ServerLevel level, UUID entity, AuraLocation position) {
         LAST_QUERY.computeIfAbsent(level, ignored -> new HashMap<>()).put(entity, position);
     }
@@ -288,10 +229,7 @@ public final class AuraQueryCache {
         if (tracked != null) tracked.remove(entity);
     }
 
-    /**
-     * Drops the counters but keeps the memo, so a benchmark can measure the two halves of one run
-     * separately.
-     */
+    // Drops the counters but keeps the memo, so a benchmark can measure the two halves of one run separately.
     public static void resetStats() {
         QUERIES.set(0L);
         NANOS.set(0L);
@@ -310,25 +248,17 @@ public final class AuraQueryCache {
         NANOS.addAndGet(elapsedNanos);
     }
 
-    /**
-     * Counts one query without timing it. Used when the diagnostic timer is off, so the hot path
-     * never pays for two {@link System#nanoTime()} calls it will not report.
-     */
+    // Untimed variant, used when the diagnostic timer is off.
     static void count() {
         QUERIES.incrementAndGet();
     }
 
-    /**
-     * Builds a key without a registry lookup, so keying the memo never costs more than the memo
-     * saves.
-     */
+    // Built without a registry lookup, so keying the memo never costs more than the memo saves.
     static AuraLocation location(ServerLevel level, BlockPos pos) {
         return new AuraLocation(level.dimension().identifier(), pos.immutable(), level.getGameTime());
     }
 
-    /**
-     * Memoised biome key. Returns null on a miss so the caller can do the expensive read itself.
-     */
+    // Returns null on a miss so the caller can do the expensive read itself.
     static Identifier biome(ServerLevel level, AuraLocation location) {
         if (!enabled || !current(level, location)) return null;
         Map<LevelPosition, Identifier> cache = BIOME.get(level);
@@ -392,12 +322,8 @@ public final class AuraQueryCache {
         cache.put(location, value);
     }
 
-    /**
-     * Resolves one position's formation override through the memo, computing and storing it on a miss. The
-     * outer layer answers "was this position memoised?" and the inner one is the answer itself, which is often
-     * "no array covers here" and so is cached too. Only optionals are ever stored, so a null lookup can only
-     * mean the key is absent, never an answer.
-     */
+    // The outer layer answers "was this position memoised?", the inner optional is the answer itself - often "no
+    // array covers here" - and only optionals are stored, so a null lookup means the key is absent.
     @SuppressWarnings("OptionalAssignedToNull")
     static Optional<Resolved> computeFormationZone(ServerLevel level, AuraLocation location, Supplier<Optional<Resolved>> compute) {
         if (!enabled || !current(level, location)) return compute.get();
@@ -441,9 +367,7 @@ public final class AuraQueryCache {
         zones.computeIfAbsent(location, ignored -> new IdentityHashMap<>()).put(zone, pools);
     }
 
-    /**
-     * True when the key still belongs to the level's current tick window.
-     */
+    // True when the key still belongs to the level's current tick window.
     private static boolean current(ServerLevel level, AuraLocation location) {
         Long epoch = EPOCH.get(level);
         return epoch != null && epoch == location.gameTime();
@@ -471,24 +395,17 @@ public final class AuraQueryCache {
         cache.put(key, value);
     }
 
-    /**
-     * One block emitter's availability for one aura. The chunk attachment is part of the key, so
-     * two chunks that happen to describe the same source position can never share an entry.
-     */
+    // The chunk attachment is part of the key, so two chunks that happen to describe the same source
+    // position can never share an entry.
     record AvailabilityKey(Object attachment, BlockPos source, Holder<Aura> aura) {
     }
 
-    /**
-     * Key of one resolution input. The dimension travels with the position so a level can never be compared
-     * against another level's snapshot, and the game time makes the epoch check cheap.
-     */
+    // The dimension travels with the position so one level's snapshot can never be compared against
+    // another's; the game time makes the epoch check cheap.
     public record AuraLocation(Identifier dimension, BlockPos pos, long gameTime) {
     }
 
-    /**
-     * The block-emitter falloff is position sensitive, so a full result is keyed by the exact block
-     * that was queried.
-     */
+    // The block-emitter falloff is position sensitive, so a full result is keyed by the exact queried block.
     private record LevelPosition(BlockPos pos, long gameTime) {
     }
 }

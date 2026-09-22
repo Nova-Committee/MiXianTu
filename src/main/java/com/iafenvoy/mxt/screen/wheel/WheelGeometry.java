@@ -10,24 +10,24 @@ import net.minecraft.util.Mth;
  * the middle of the wheel stays a free target.
  */
 public final class WheelGeometry {
-    /** One sector per saved layout slot, so geometry and content cannot disagree. */
+    // One sector per saved layout slot, so geometry and content cannot disagree.
     public static final int SECTORS = WheelLayout.SLOTS;
     public static final double SECTOR_DEGREES = 360.0 / SECTORS;
-    /** How far the pointed-at sector is pushed out at full size, in GUI-scaled pixels. */
+    // How far the pointed-at sector is pushed out at full size, in GUI-scaled pixels.
     public static final double SELECTED_GROW = 3.0;
-    /** The ring's radii at full size, in GUI-scaled pixels; the hole in the middle is where the text goes. */
+    // The ring's radii at full size, in GUI-scaled pixels; the hole in the middle is where the text goes.
     private static final double INNER_RADIUS = 56.0;
     private static final double OUTER_RADIUS = 96.0;
-    /** How much room the ring leaves at the window's edge before it shrinks to fit. */
+    // How much room the ring leaves at the window's edge before it shrinks to fit.
     private static final double MARGIN = 8.0;
-    /** Fraction of its full size the ring starts at; the caller supplies the opening progress. */
+    // Fraction of its full size the ring starts at; the caller supplies the opening progress.
     private static final double OPEN_SCALE = 0.72;
     private static final double FIRST_SECTOR_CENTRE = -90.0;
 
     private WheelGeometry() {
     }
 
-    /** Pointer direction in degrees, from the raw mouse position - an angle is scale invariant. */
+    // Pointer direction in degrees, from the raw mouse position - an angle is scale invariant.
     public static double pointerAngle() {
         Minecraft minecraft = Minecraft.getInstance();
         double centreX = minecraft.getWindow().getScreenWidth() * 0.5D;
@@ -36,7 +36,7 @@ public final class WheelGeometry {
                 minecraft.mouseHandler.xpos() - centreX));
     }
 
-    /** The sector an angle falls in; an angle exactly on a boundary belongs to the sector it leads. */
+    // An angle exactly on a boundary belongs to the sector it leads.
     public static int sectorAt(double angleDegrees) {
         double offset = normalize(angleDegrees - sectorStart(0));
         return (int) Math.floor(offset / SECTOR_DEGREES) % SECTORS;
@@ -50,7 +50,7 @@ public final class WheelGeometry {
         return FIRST_SECTOR_CENTRE + SECTOR_DEGREES * slot;
     }
 
-    /** The ring for a window at the opening progress: {@code 0} just opened, {@code 1} fully grown. */
+    // growth: 0 just opened, 1 fully grown.
     public static Ring ring(int width, int height, double growth) {
         // A small window must not push the ring off screen, and the pop must shrink with it, hence the scale.
         double fit = Math.min(1.0D, (Math.min(width, height) * 0.5D - MARGIN) / OUTER_RADIUS);
@@ -63,10 +63,7 @@ public final class WheelGeometry {
         return ((angleDegrees % 360.0D) + 360.0D) % 360.0D;
     }
 
-    /**
-     * The ring's position and size at one moment of the animation, plus the trigonometry for points on it.
-     * {@code scale} rides along because the constants above are full-size numbers.
-     */
+    // scale rides along because the constants above are full-size numbers.
     public record Ring(int centreX, int centreY, double innerRadius, double outerRadius, double scale) {
         public double x(double angleDegrees, double radius) {
             return this.centreX + radius * Math.cos(Math.toRadians(angleDegrees));

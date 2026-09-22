@@ -18,9 +18,7 @@ import java.util.Set;
  * actor-less signal reaches subscriptions only.
  */
 public final class TriggerRuleService {
-    /**
-     * Guards one rule against re-entering itself through a signal its own action publishes.
-     */
+    // Guards one rule against re-entering itself through a signal its own action publishes.
     private static final ThreadLocal<Set<String>> DISPATCHING = ThreadLocal.withInitial(HashSet::new);
 
     private TriggerRuleService() {

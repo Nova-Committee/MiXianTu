@@ -34,25 +34,21 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Attachment bridge for the common curse transaction model. Callers supply a resolved definition for each operation.
+ * Attachment bridge for the common curse transaction model; callers supply a resolved definition.
  * <p>
- * Three things are deliberately centralized here rather than left to each caller: whether an instance is still
- * backed by a loaded definition, whether the same curse is already mid-transaction for that entity, and which
- * runtime subscriptions follow a change.
+ * Three things are centralized here rather than left to each caller: whether an instance is still backed by a
+ * loaded definition, whether the same curse is already mid-transaction for that entity, and which runtime
+ * subscriptions follow a change.
  */
 public final class CurseService {
-    /**
-     * The curse transactions one entity currently has open, so a behaviour that applies or removes the very curse
-     * running it cannot recurse forever. The trigger dispatcher guards its own dispatch the same way.
-     */
+    // One entity's open curse transactions, so a behaviour that applies or removes the very curse running it
+    // cannot recurse forever. The trigger dispatcher guards its own dispatch the same way.
     private static final ThreadLocal<Set<String>> IN_TRANSACTION = ThreadLocal.withInitial(HashSet::new);
 
     private CurseService() {
     }
 
-    /**
-     * Where one held instance stands relative to the definitions loaded now.
-     */
+    // Where one held instance stands relative to the definitions loaded now.
     public enum DefinitionState {
         /** The definition is loaded and enabled. */
         ACTIVE,
@@ -62,10 +58,8 @@ public final class CurseService {
         UNKNOWN
     }
 
-    /**
-     * Resolves that state for one held curse. Without a running server there are no datapack registries to judge
-     * against, and no curse transaction is server-authoritative anyway, so the instance reads as active.
-     */
+    // Without a running server there are no datapack registries to judge against, and no curse transaction is
+    // server-authoritative anyway, so the instance reads as active.
     public static DefinitionState definitionState(Holder<Curse> curse) {
         if (ServerLifecycleHooks.getCurrentServer() == null) return DefinitionState.ACTIVE;
         Optional<Reference<Curse>> current = MxtDatapackRegistries.rawHolder(MxtResourceKeys.CURSE, HolderHelper.id(curse));
@@ -91,10 +85,8 @@ public final class CurseService {
         Curse definition = curse.value();
         CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
         if (eventBus.post(event).isCanceled()) return ApplyResult.cancelledResult();
-        // A replacement discards an existing instance instead of merging with it, and the displaced instance is
-        // reported as a removal, because listeners would otherwise never learn that it disappeared. It runs no
-        // action of its own: being replaced is an outside decision, not one of the curse's two own moments. The
-        // sources that already kept it alive stay on it - ownership is not what a stacking mode replaces.
+        // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
+        // still learn it disappeared; it runs no action of its own, being an outside decision.
         State displaced = definition.stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
         Set<Identifier> displacedFrom = data.sources().of(curse);
         CurseLedger ledger = read(data);
@@ -102,8 +94,7 @@ public final class CurseService {
         if (applied.isEmpty()) return ApplyResult.rejected(ApplyFailure.INVALID_DURATION);
         CurseInstance result = applied.get();
         write(data, ledger);
-        // The shared rule with ability grants: this source now keeps the instance alive too, and one source
-        // leaving later cannot remove another source's curse.
+        // The shared rule with ability grants: a source leaving cannot remove another source's curse.
         data.sources().grant(curse, event.source());
         data.markKnown(curse);
         if (displaced != null) eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
@@ -127,10 +118,8 @@ public final class CurseService {
         return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
     }
 
-    /**
-     * Full entity-facing transaction: whether the instance may exist at all, the application condition, the state
-     * mutation, the behaviour a newly created instance owes, and the runtime subscriptions that follow it.
-     */
+    // Full entity-facing transaction: state mutation plus the behaviour a newly created instance owes and the
+    // runtime subscriptions that follow it.
     private static ApplyResult apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
                                      FormulaContext context, Identifier source, IEventBus eventBus, Optional<Long> durationOverride) {
         Curse definition = curse.value();
@@ -147,8 +136,8 @@ public final class CurseService {
             ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
                     context, source, eventBus, durationOverride);
             if (result.applied()) {
-                // "On apply" means the instance was created. Stacking onto, or refreshing, a curse that is
-                // already held is a later application of the same instance and must not repeat it.
+                // "On apply" means the instance was created: stacking onto, or refreshing, a curse already held is
+                // a later application of the same instance and must not repeat it.
                 if (created && !definition.typedType().inert()) definition.onApply().execute(target, context);
                 CurseScheduler.reschedule(target);
                 CurseTriggerSubscriptions.rebuild(target);
@@ -186,18 +175,13 @@ public final class CurseService {
         return result;
     }
 
-    /**
-     * Removes a curse without a caller-supplied formula context, for callers that have nothing richer than
-     * the target's own.
-     */
+    // For callers that have nothing richer than the target's own formula context.
     public static Optional<CurseInstance> remove(Entity target, Holder<Curse> curse, Reason reason, long gameTime) {
         return remove(target, curse, reason, gameTime, FormulaContext.of(target));
     }
 
-    /**
-     * Removes a curse, runs the action that reason belongs to, and refreshes everything that follows the
-     * transaction - the due schedule and the runtime subscriptions - after it commits.
-     */
+    // Runs the action that reason belongs to, then refreshes the due schedule and the runtime subscriptions
+    // after the transaction commits.
     public static Optional<CurseInstance> remove(Entity target, Holder<Curse> curse, Reason reason, long gameTime,
                                                  FormulaContext context) {
         String key = transactionKey(target, curse);
@@ -215,13 +199,8 @@ public final class CurseService {
         }
     }
 
-    /**
-     * Lets go of one source's claim. The curse only leaves when that was its last source: while another source
-     * still holds it nothing is removed and no removal event is posted, exactly as an ability granted by two
-     * sources survives the loss of one.
-     * <p>
-     * Returns the instance when this release is what removed it, and an empty result when the curse stays.
-     */
+    // The curse only leaves when that was its last source, exactly as an ability granted by two sources survives
+    // the loss of one. Returns the instance when this release removed it, empty when the curse stays.
     public static Optional<CurseInstance> release(Entity target, Holder<Curse> curse, Identifier source,
                                                   Reason reason, long gameTime, FormulaContext context) {
         String key = transactionKey(target, curse);
@@ -246,19 +225,14 @@ public final class CurseService {
         }
     }
 
-    /**
-     * Replaces one source's whole contribution, the same call the ability model makes: what that source no longer
-     * declares is released, and the instances whose last source was just released are removed.
-     * <p>
-     * Applying the payloads of newly declared curses is the caller's job, because only it knows the stacks and
-     * duration each declaration carries.
-     */
+    // The same call the ability model makes: what that source no longer declares is released. Applying the
+    // payloads of newly declared curses is the caller's job, because only it knows the stacks and duration.
     public static boolean reconcileSource(Entity target, Identifier source, Collection<Holder<Curse>> desired,
                                           long gameTime, FormulaContext context) {
         CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
         Set<Holder<Curse>> previous = data.sources().keysHeldBy(source);
-        // Read before the reconcile, so an instance that loses its last source here still reports the sources it
-        // was being kept alive by rather than the empty set the reconcile leaves behind.
+        // Read before the reconcile, so an instance losing its last source here still reports the sources that
+        // were keeping it alive rather than the empty set the reconcile leaves behind.
         Map<Holder<Curse>, Set<Identifier>> before = new LinkedHashMap<>();
         previous.forEach(curse -> before.put(curse, data.sources().of(curse)));
         if (!data.sources().reconcile(source, desired)) return false;
@@ -273,11 +247,8 @@ public final class CurseService {
         return true;
     }
 
-    /**
-     * Expiry and cleansing are the only two moments a curse reacts to on its own, so they own an action each.
-     * Every other reason is an outside decision: the caller decides what to run, not the definition. An inert
-     * type runs nothing at all.
-     */
+    // Expiry and cleansing are the only two moments a curse reacts to on its own, so they own an action each;
+    // every other reason is an outside decision, and an inert type runs nothing at all.
     private static void runRemovalAction(Curse definition, Entity target, FormulaContext context, Reason reason) {
         if (definition.typedType().inert()) return;
         EntityAction action = switch (reason) {
@@ -288,16 +259,13 @@ public final class CurseService {
         if (action != null) action.execute(target, context);
     }
 
-    /**
-     * Runs due periodic effects and expires instances without scanning unrelated entities.
-     */
     public static int tick(Entity target, long gameTime,
                            FormulaContext context) {
         CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
         int executed = 0;
         boolean changed = false;
-        // The attachment's own order, snapshotted before anything runs: it is the order the instances were applied
-        // in, it is persisted with them, and unlike a sort by definition id it never has to resolve a holder key.
+        // The attachment's own order, snapshotted before anything runs: it is the order the instances were
+        // applied in and it is persisted with them, unlike a sort by definition id.
         for (Entry<Holder<Curse>, State> entry : List.copyOf(data.instances().entrySet())) {
             Holder<Curse> curse = entry.getKey();
             State state = entry.getValue();
@@ -385,8 +353,7 @@ public final class CurseService {
     private static void write(CurseHolderAttachment data, CurseLedger ledger) {
         Map<Holder<Curse>, State> instances = new LinkedHashMap<>();
         // The ledger models what a transaction changes; the unknown-definition flag is not part of that, so it is
-        // carried over from the state being replaced instead of being cleared by every unrelated transaction.
-        // Sources live in the attachment's own ledger and are untouched here.
+        // carried over from the state being replaced. Sources live in the attachment's own ledger, untouched.
         ledger.snapshot().forEach((curse, state) -> {
             State previous = data.instances().get(curse);
             instances.put(curse, new State(state.stacks(), state.appliedAt(), state.expiresAt(),

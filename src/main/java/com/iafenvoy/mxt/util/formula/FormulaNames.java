@@ -18,10 +18,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Turns registry ids into the flat identifiers a formula can name, and keeps the name indexes the entity
- * variables resolve {@code caster_<resource>}, {@code caster_<attribute>} and {@code caster_<element>} against.
- * The attribute registry is static, so its index is built once; the resource and element indexes are keyed by
- * registry instance and hold registry keys rather than entries, so neither keeps an old world alive.
+ * Turns registry ids into the flat identifiers a formula can name, and keeps the indexes behind
+ * {@code caster_<resource>}, {@code caster_<attribute>} and {@code caster_<element>}. The attribute registry is
+ * static so its index is built once; the other two are keyed by registry instance and hold registry keys, so no
+ * old world stays reachable.
  */
 public final class FormulaNames {
     private static final int MAX_CACHED_REGISTRIES = 4;
@@ -35,17 +35,11 @@ public final class FormulaNames {
     private FormulaNames() {
     }
 
-    /**
-     * Flattens a registry id into an exp4j identifier: namespace and path joined by an underscore,
-     * with every {@code /}, {@code .} and {@code -} replaced by an underscore.
-     */
+    // The flat id shape every formula name uses: exp4j identifiers cannot hold / . -
     public static String flatten(Identifier id) {
         return (id.getNamespace() + "_" + id.getPath()).replace('/', '_').replace('.', '_').replace('-', '_');
     }
 
-    /**
-     * Resolves a flattened attribute name, or {@code null} when no attribute uses it.
-     */
     @Nullable
     public static Holder<Attribute> attribute(String name) {
         Map<String, Holder<Attribute>> index = attributeNames;
@@ -58,10 +52,6 @@ public final class FormulaNames {
         return index.get(name);
     }
 
-    /**
-     * Resolves a flattened resource name against the registry access that owns it, or {@code null}
-     * when no resource uses it.
-     */
     @Nullable
     public static Holder<Resource> resource(RegistryAccess access, String name) {
         Registry<Resource> registry = access.lookupOrThrow(MxtResourceKeys.RESOURCE);
@@ -92,12 +82,8 @@ public final class FormulaNames {
         }
     }
 
-    /**
-     * Resolves a flattened element name against the registry access that owns it, or {@code null} when no
-     * element uses it. The name is the same flattened id shape resources and attributes use, so
-     * {@code caster_<namespace>_<path>} answers {@code 1} or {@code 0} for "is this element among the ones
-     * this entity's spirit roots name".
-     */
+    // Null when no element uses that name. {@code caster_<namespace>_<path>} answers 1 or 0 for "is this element
+    // among the ones this entity's spirit roots name".
     @Nullable
     public static Holder<Element> element(RegistryAccess access, String name) {
         Registry<Element> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT);

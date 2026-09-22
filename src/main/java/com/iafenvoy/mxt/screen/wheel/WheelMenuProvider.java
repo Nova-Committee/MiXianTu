@@ -13,12 +13,7 @@ import java.util.List;
  */
 @FunctionalInterface
 public interface WheelMenuProvider {
-    /**
-     * The entries one source contributes, in the order its cells are filled: shorter than a page is fine and a
-     * {@code null} element is an empty cell.
-     *
-     * <p>There is no upper bound. A source that holds more entries than one page fits takes another page, so
-     * giving the player fifteen abilities gives them four rows of cells, not twelve and three lost ones.</p>
-     */
+    // The entries one source contributes, in fill order: shorter than a page is fine and null is an empty cell.
+    // No upper bound - a source with more entries than a page fits takes another page.
     List<@Nullable WheelMenuEntry> entries(@Nullable Player player, WheelSource source);
 }

@@ -9,10 +9,8 @@ import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Whether the entity owns the formation currently being evaluated. Deliberately narrow:
- * {@link FormationMemberEntityCondition} answers whether the entity owns <em>any</em> active formation in the
- * level, and the two must not be conflated. Outside a formation context the answer is {@code false}, because a
- * skill or item-binding condition has no formation to ask about.
+ * Whether the entity owns the formation currently being evaluated; {@code false} outside a formation context.
+ * Not to be conflated with {@link FormationMemberEntityCondition}, which asks about any formation in the level.
  */
 public enum FormationOwnerEntityCondition implements EntityCondition {
     INSTANCE;

@@ -9,25 +9,15 @@ import net.minecraft.network.chat.Component;
 import java.util.Optional;
 
 /**
- * The client-side half of {@link IconReference}: the only place that turns an icon into pixels. A screen
- * passes the graphics and the box it has room for, and this picks the item branch or the texture branch and
- * centres it.
+ * The client-side half of {@link IconReference} and the only place that turns an icon into pixels.
  */
 public final class IconRenderer {
-    /**
-     * The size an icon is drawn at. Vanilla items render at 16x16 and a GUI texture is authored at 16x16,
-     * so a roomier slot centres the icon instead of stretching it.
-     */
+    // Vanilla items and GUI textures are authored 16x16, so a roomier box centres the icon instead of stretching it.
     public static final int ICON_SIZE = 16;
-    /**
-     * How far a stand-in made of the name sits below the icon's own position: the nudge the compact slots
-     * were drawn with.
-     */
+    // The nudge the compact slots drew the name with, below the icon's own position.
     private static final int NAME_OFFSET = 7;
     private static final int NAME_COLOR = 0xFFE0E5EF;
-    /**
-     * How much of the box's width the name may not use, so the frame it sits in stays visible.
-     */
+    // Keeps the frame around the box visible.
     private static final int NAME_INSET = 2;
 
     private IconRenderer() {
@@ -45,10 +35,7 @@ public final class IconRenderer {
                         x, y, 0.0F, 0.0F, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE)));
     }
 
-    /**
-     * Draws an icon in a box, or as much of the name as fits when there is no icon. The name is cut to the box
-     * rather than to a fixed character count, so it can never be drawn over the neighbouring box.
-     */
+    // The name is cut to the box rather than to a character count, so it can never overdraw the neighbouring box.
     public static void renderOrName(GuiGraphicsExtractor graphics, Font font, Optional<IconReference> icon,
                                     Component name, int x, int y, int boxSize) {
         if (icon.isPresent()) {
@@ -61,19 +48,14 @@ public final class IconRenderer {
                 y + Math.max(0, (boxSize - ICON_SIZE) / 2) + NAME_OFFSET, NAME_COLOR, true);
     }
 
-    /**
-     * Draws a name centred on a point, cut to the given width: the same rule as {@link #renderOrName} for
-     * callers that are not filling a box (the wheel writes a sector's name where its icon would have been).
-     */
+    // Same cut-to-width rule as renderOrName, for callers that are not filling a box.
     public static void renderName(GuiGraphicsExtractor graphics, Font font, Component name, int centreX, int centreY, int maxWidth) {
         String text = fit(font, name.getString(), maxWidth);
         if (text.isEmpty()) return;
         graphics.text(font, text, centreX - font.width(text) / 2, centreY - font.lineHeight / 2, NAME_COLOR, true);
     }
 
-    /**
-     * The longest prefix that fits the width, counted in code points so a character is never cut in half.
-     */
+    // Counted in code points, so a character is never cut in half.
     private static String fit(Font font, String text, int maxWidth) {
         if (maxWidth <= 0) return "";
         String best = "";

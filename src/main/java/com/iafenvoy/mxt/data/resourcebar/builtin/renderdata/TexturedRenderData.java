@@ -10,9 +10,8 @@ import net.minecraft.resources.Identifier;
 public record TexturedRenderData(Identifier backgroundSprite, Identifier fillSprite, int width, int height,
                                  int fillColor,
                                  boolean showValue) implements ResourceBarRenderData {
-    // TODO::Consider migrating `background_sprite`/`fill_sprite` to IconReference later. They stay bare
-    //  Identifiers for now: they are a background/fill pair stretched to the bar's own width and height
-    //  (1..1024), while IconReference is a single 16x16 icon. Revisit if bars ever need per-definition icons.
+    // TODO: the two sprites stay bare Identifiers rather than IconReferences - they are a background/fill pair
+    // stretched to the bar's own width and height, which a single 16x16 icon cannot express.
     public static final MapCodec<TexturedRenderData> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.fieldOf("background_sprite").forGetter(TexturedRenderData::backgroundSprite),
             Identifier.CODEC.fieldOf("fill_sprite").forGetter(TexturedRenderData::fillSprite),

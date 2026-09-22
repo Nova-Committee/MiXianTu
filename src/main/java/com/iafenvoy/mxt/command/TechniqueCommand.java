@@ -42,11 +42,9 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /technique} command; also reachable as {@code /mxt technique}. It deals with technique data
- * that points at entries the current data pack no longer provides: such a reference survives but fails
- * quietly, since {@code CollectionCodecs.list} drops the elements that fail to decode. {@code repair}
- * removes them and rebuilds the attributes and abilities derived from what remains; the log line
- * {@code Ignoring invalid list element} is the tell for whether there is anything to repair.
+ * The {@code /technique} command; also reachable as {@code /mxt technique}. It handles stored technique
+ * references the current data pack no longer provides: {@code CollectionCodecs.list} drops undecodable elements,
+ * so such a reference survives but fails quietly ({@code Ignoring invalid list element} in the log is the tell).
  */
 public final class TechniqueCommand {
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("technique")
@@ -60,10 +58,6 @@ public final class TechniqueCommand {
                             .executes(ctx -> drop(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
             .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
 
-    /**
-     * Reports why the item in hand cannot be used, one gate at a time: the gates are spread across a
-     * binding, a quality group and a learn condition, and each can refuse independently.
-     */
     private static int diagnose(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         ItemStack stack = player.getMainHandItem();
@@ -74,7 +68,6 @@ public final class TechniqueCommand {
         Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.item", itemId.toString()), false);
 
-        // 1. Does the item carry a technique binding at all?
         Optional<TechniqueBinding> binding = ItemBindingService.technique(stack);
         if (binding.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.no_binding"), false);
@@ -85,47 +78,35 @@ public final class TechniqueCommand {
                 value.technique().unwrapKey().map(key -> key.identifier().toString()).orElse("?"),
                 value.learnTime(), value.holdAnimation().getSerializedName()), false);
 
-        // 2. Does the item gate refuse it? This is the one that cancels Start and Tick, which is what a
-        // pose that appears and then aborts looks like.
+        // This gate cancels Start and Tick, so a refusal here is what a pose that appears and then aborts looks like.
         Optional<Failure> refusal = ItemQualityService.check(player, stack);
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.gate", refusal.map(Enum::name).orElse("OK")), false);
 
-        // 3. Is it already known, or blocked by an exclusive tag?
         SpiritIdentityAttachment spirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         boolean known = spirit.learnedTechniques().contains(value.technique());
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.known",
                 known ? "yes" : "no", spirit.learnedTechniques().size()), false);
 
-        // 4. Does the technique's own condition pass?
         boolean condition = value.technique().value().learnCondition()
                 .test(player, FormulaContext.of(player));
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.condition",
                 condition ? "PASS" : "FAIL"), false);
 
-        // 5. Is the item on cooldown right now?
         boolean cooldown = player.getCooldowns().isOnCooldown(stack);
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.cooldown",
                 cooldown ? "YES" : "no"), false);
 
-        // 6. Does the server recognise this item as one of this module's held manuals at all? This is what the
-        // hold module resolves, and an empty answer here means no hold can start on this side no matter what the
-        // data pack says.
+        // What the hold module resolves on this side: empty here means no hold can start whatever the pack says.
         boolean recognised = HoldLookup.hold(stack) instanceof TechniqueBinding;
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.hold",
                 recognised ? "YES" : "no"), false);
 
-        // 7. How the last reading gesture ended. A hold has two endings - it ran its full course, or it
-        // was let go early - and the ticks left at that moment is the only thing that tells them apart.
+        // A hold ends either by running its course or by being let go early; the ticks left is what tells them apart.
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.ending",
                 TechniqueItemService.lastEnding(player).orElse("(none seen yet)")), false);
         return 1;
     }
 
-    /**
-     * Sweeps the attachment and removes every reference that no longer resolves.
-     *
-     * @param dryRun when true, reports what would be removed and changes nothing
-     */
     private static int repair(CommandSourceStack source, boolean dryRun) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
@@ -152,10 +133,7 @@ public final class TechniqueCommand {
         return count;
     }
 
-    /**
-     * Removes one named technique from the holder, whether or not it still resolves. The sweep cannot
-     * reach a reference that is already gone, and naming the entry also undoes a mistaken grant.
-     */
+    // The sweep cannot reach a reference that is already gone, and naming the entry also undoes a mistaken grant.
     private static int drop(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
@@ -181,19 +159,12 @@ public final class TechniqueCommand {
         return 1;
     }
 
-    /**
-     * Rebuilds the state derived from the technique list after it changed: granted abilities, passive
-     * attributes and resource ceilings all came from the definitions that were just dropped.
-     */
+    // Granted abilities, passive attributes and resource ceilings all derive from the definitions just dropped.
     private static void rebuild(ServerPlayer player, SpiritIdentityAttachment identity) {
         CultivationGrantService.recalculate(player, identity, player.getData(MxtAttachments.ABILITY_HOLDER));
     }
 
-    /**
-     * Drops every stored technique that no longer resolves, keeping the rest in order.
-     *
-     * <p>Package-visible so the server audit can exercise the sweep directly.</p>
-     */
+    // Package-visible so the server audit can exercise the sweep directly.
     public static List<Holder<Technique>> prune(List<Holder<Technique>> values, List<Identifier> removed) {
         List<Holder<Technique>> kept = new ArrayList<>(values.size());
         Set<Identifier> seen = new LinkedHashSet<>();
@@ -221,11 +192,8 @@ public final class TechniqueCommand {
         return kept;
     }
 
-    /**
-     * Whether a stored technique still resolves to an enabled definition, checked by id against the live
-     * registry: a removed entry has no value to read, and asking for one would throw. Package-visible for
-     * the server audit, which cannot build a genuine unbound holder.
-     */
+    // Checked by id against the live registry: a removed entry has no value to read, and asking for one would
+    // throw. Package-visible for the server audit, which cannot build a genuine unbound holder.
     public static boolean resolves(Holder<Technique> technique) {
         if (technique == null) return false;
         Identifier id = HolderHelper.id(technique);

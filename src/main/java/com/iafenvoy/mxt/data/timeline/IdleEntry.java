@@ -6,8 +6,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
- * Does nothing for a fixed number of ticks, which is how a timeline holds a beat open. The beat counts itself
- * down in the run's state, so the length it was given when it began is what it waits out, tick by tick.
+ * Does nothing for a fixed number of ticks, which is how a timeline holds a beat open. The beat counts itself down
+ * in the run's state, so the length it was given when it began is what it waits out.
  */
 public record IdleEntry(NumberProvider duration) implements TimelineEntry {
     public static final MapCodec<IdleEntry> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

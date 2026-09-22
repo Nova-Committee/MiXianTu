@@ -19,9 +19,6 @@ import java.util.Optional;
 public record ResourceBar(ResourceBarContext context, Anchor anchor, int order,
                           ResourceBarVisibility visibility, ResourceBarRenderData renderer, ValueDisplay valueDisplay,
                           Optional<Double> maximum) {
-    /**
-     * Inline codec used by the owning {@link Resource} definition.
-     */
     public static final Codec<ResourceBar> CODEC = RecordCodecBuilder.create(i -> i.group(
             ResourceBarContext.CODEC.optionalFieldOf("context", SelfHudContext.INSTANCE).forGetter(ResourceBar::context),
             Anchor.CODEC.fieldOf("anchor").forGetter(ResourceBar::anchor),
@@ -46,9 +43,6 @@ public record ResourceBar(ResourceBarContext context, Anchor anchor, int order,
         }
     }
 
-    /**
-     * Numeric label drawn over graphical renderers. Omit the field to render only the bar itself.
-     */
     public enum ValueDisplay implements StringRepresentable {
         NONE, CURRENT, CURRENT_AND_MAXIMUM, PERCENTAGE;
         public static final Codec<ValueDisplay> CODEC = StringRepresentable.fromValues(ValueDisplay::values);

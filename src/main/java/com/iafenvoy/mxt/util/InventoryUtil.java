@@ -5,8 +5,8 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Shared exact-item inventory operations for station transactions. Both mutation helpers are
- * atomic: they either apply in full or leave the target container untouched.
+ * Shared exact-item inventory operations for station transactions; both mutation helpers are atomic, applying in
+ * full or leaving the target container untouched.
  */
 public final class InventoryUtil {
     private InventoryUtil() {
@@ -23,9 +23,6 @@ public final class InventoryUtil {
         return removeItems(copy(target), requirements);
     }
 
-    /**
-     * Removes every requirement from the target; on failure the target is left untouched.
-     */
     public static boolean removeItems(Container target, Container requirements) {
         int size = target.getContainerSize();
         ItemStack[] snapshot = new ItemStack[size];
@@ -58,9 +55,6 @@ public final class InventoryUtil {
         return true;
     }
 
-    /**
-     * Inserts every addition into the target; on failure the target is left untouched.
-     */
     public static boolean insertItems(Container target, Container additions) {
         int size = target.getContainerSize();
         ItemStack[] snapshot = new ItemStack[size];

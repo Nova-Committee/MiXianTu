@@ -13,11 +13,8 @@ import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Builds up one element on the acting entity, which is how a reaction is started by something other than a
- * strike: a bath in a lava pool, a pill, a curse that keeps feeding fire into a body.
- *
- * <p>A negative amount takes buildup away, so the same action cleanses. What it does when the buildup crosses
- * a reaction's demand is not this action's business - it goes through the same pipeline a strike does.</p>
+ * Builds up one element on the acting entity, starting a reaction without a strike (lava bath, pill, curse).
+ * A negative amount takes buildup away, so the same action cleanses.
  */
 public record AttachElementAction(Holder<Element> element, NumberProvider amount) implements EntityAction {
     public static final MapCodec<AttachElementAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

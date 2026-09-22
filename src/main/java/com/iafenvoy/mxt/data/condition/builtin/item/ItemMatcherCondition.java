@@ -13,8 +13,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * Matches any item or item tag in one entry. The {@code items} field accepts a
- * single value or an array, and the array may freely mix item ids and tags.
+ * The {@code items} field takes one entry or an array, and the array may freely mix item ids and tags.
  */
 public record ItemMatcherCondition(List<Entry> entries) implements ItemCondition, ItemMatcher {
     public static final MapCodec<ItemMatcherCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

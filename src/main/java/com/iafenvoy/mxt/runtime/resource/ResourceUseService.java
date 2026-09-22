@@ -13,11 +13,8 @@ public final class ResourceUseService {
     private ResourceUseService() {
     }
 
-    /**
-     * Whether this aura's own gate allows the holder to spend it right now. The gate is a field of the aura, so
-     * it is asked of the aura rather than of the value the aura is counted in; a value that carries no aura has
-     * no gate at all, and asking for one is the caller's decision rather than this method's.
-     */
+    // The gate is a field of the aura, so it is asked of the aura rather than of the value the aura is counted
+    // in. A value carrying no aura has no gate at all, and asking for one is the caller's decision.
     public static boolean canUse(@NotNull LivingEntity entity, @NotNull Holder<Aura> aura) {
         FormulaContext context = ResourceService.formulaContext(entity, aura.value().resource(), FormulaContext.of(entity));
         return aura.value().useCondition().test(entity, context);

@@ -22,9 +22,9 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import java.util.function.Consumer;
 
 /**
- * Explains what a {@code mxt:tool_binding} or {@code mxt:blueprint_binding} actually grants: the forge table
- * reads the two components, but on an item they are invisible until it is placed on a table. Both are
- * datapack holders, so the tooltip is built from the registry the item was decoded against.
+ * Explains what a {@code mxt:tool_binding} or {@code mxt:blueprint_binding} grants: the forge table reads the two
+ * components, but on an item they are invisible until it is placed on a table. Both are datapack holders, so the
+ * tooltip is built from the registry the item was decoded against.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class ForgingBindingTooltipAppender {
@@ -63,18 +63,10 @@ public final class ForgingBindingTooltipAppender {
         }
     }
 
-    /**
-     * The heading says what kind of list follows rather than whose it is; the item's own name is already a
-     * line above.
-     */
     private static void header(Consumer<Component> builder, String key) {
         builder.accept(Component.translatable(key).withStyle(ChatFormatting.GOLD));
     }
 
-    /**
-     * The registry id under the name it belongs to, and only with advanced tooltips on: it is what a
-     * datapack author needs. Indented to the name's own column, so it reads as that entry's id.
-     */
     private static void advancedId(Consumer<Component> builder, TooltipFlag flag, Identifier id) {
         if (!flag.isAdvanced()) return;
         builder.accept(Component.literal("   " + id).withStyle(ChatFormatting.DARK_GRAY));
@@ -84,17 +76,11 @@ public final class ForgingBindingTooltipAppender {
         return Component.literal(" - ").append(name).withStyle(ChatFormatting.GRAY);
     }
 
-    /**
-     * Named by the item it draws itself with, because that is the icon the selector grid shows.
-     * {@link ForgingMethod#displayName} owns that rule, so this list and the grid cannot disagree.
-     */
+    // ForgingMethod#displayName owns that rule, so this list and the selector grid cannot disagree.
     private static Component methodName(Holder<ForgingMethod> method) {
         return method.value().displayName(HolderHelper.id(method));
     }
 
-    /**
-     * A blueprint is named by the item it produces, for the same reason: that is the icon on the grid.
-     */
     private static Component blueprintName(Holder<ForgingBlueprint> blueprint) {
         return BuiltInRegistries.ITEM.getOptional(blueprint.value().result())
                 .map(item -> new ItemStack(item).getHoverName())

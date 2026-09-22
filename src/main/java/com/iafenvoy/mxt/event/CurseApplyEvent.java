@@ -58,9 +58,7 @@ public abstract class CurseApplyEvent extends Event {
             return this.stacks;
         }
 
-        /**
-         * Who is applying it. A listener may change it, which decides which source the new instance is credited to.
-         */
+        // A listener may change it, which decides which source the new instance is credited to.
         public Identifier source() {
             return this.source;
         }

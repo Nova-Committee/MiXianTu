@@ -8,8 +8,8 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 
 /**
- * A running duration. {@code endsAt} is the tick the timer ends at, so a reader compares it against the current
- * tick without having to know when the timer started.
+ * A running duration. {@code endsAt} is the tick the timer ends at, so a reader compares it against the current tick
+ * without having to know when the timer started.
  */
 public record TimerDataStorage(NumberProvider duration, Optional<Double> endsAt) implements DataStorage {
     public static final MapCodec<TimerDataStorage> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

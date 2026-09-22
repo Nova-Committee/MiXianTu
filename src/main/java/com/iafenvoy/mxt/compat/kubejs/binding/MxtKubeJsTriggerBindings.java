@@ -15,9 +15,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Custom trigger signals exposed as {@code MxtTriggers}: a data pack publishes by declaring ability
- * triggers, a script subscribes without owning a definition, and both enter the same runtime
- * {@code TriggerDispatcher}.
+ * Custom trigger signals exposed as {@code MxtTriggers}: a data pack publishes by declaring ability triggers, a
+ * script subscribes without owning a definition, and both enter the same runtime {@code TriggerDispatcher}.
  */
 public final class MxtKubeJsTriggerBindings {
     @Info("Registers a script trigger matcher. Datapack type: mxt:js")

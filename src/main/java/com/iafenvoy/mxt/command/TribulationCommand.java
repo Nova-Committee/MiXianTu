@@ -39,16 +39,10 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 /**
- * The {@code /mxt tribulation} subtree: run a trial by hand instead of waiting for the breakthrough that would
- * have started it, and read back what a run is doing. Everything it does goes through the same
- * {@link TribulationService} the breakthrough path uses, so the gate, the validation and the timeline itself
- * behave exactly as they do in play; only the decision to start one is replaced.
- *
- * <p>The run belongs to an entity — the caller by default, or a named target, which is what lets a trial be
- * reproduced on a summon instead of only on a player. {@code status} reports the state slot in the spelling the
- * codec saves, which is the one form that shows exactly what the current entry has kept: the ticks an idle has
- * left, or nothing but the marker that the entry began. A run that is still counting itself in has no beat to
- * report at all, so it reports what is left of its wind-up instead.</p>
+ * The {@code /mxt tribulation} subtree: run a trial by hand instead of waiting for the breakthrough that would have
+ * started it, and read back what a run is doing. It goes through the same {@link TribulationService} the
+ * breakthrough path uses, so the gate, the validation and the timeline behave exactly as they do in play; only the
+ * decision to start one is replaced. {@code status} prints the state slot in the spelling the codec saves.
  */
 public final class TribulationCommand {
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("tribulation")
@@ -69,9 +63,7 @@ public final class TribulationCommand {
     private TribulationCommand() {
     }
 
-    /**
-     * The optional {@code target} node all three verbs share: without it the command works on the caller.
-     */
+    // Optional: without it the command works on the caller.
     private static RequiredArgumentBuilder<CommandSourceStack, EntitySelector> target(Command<CommandSourceStack> verb) {
         return argument("target", EntityArgument.entity()).executes(verb);
     }
@@ -144,9 +136,6 @@ public final class TribulationCommand {
         return 1;
     }
 
-    /**
-     * The entity the run belongs to: the named target, or the caller when there is none.
-     */
     private static LivingEntity target(CommandSourceStack source, @Nullable Entity target) {
         Entity entity = target != null ? target : source.getPlayer();
         if (entity instanceof LivingEntity living) return living;
@@ -154,10 +143,7 @@ public final class TribulationCommand {
         return null;
     }
 
-    /**
-     * The state slot in its saved spelling. The codec is the only thing that knows what a kind holds, so this
-     * prints whatever the next save would have written instead of a shape the command would have to know.
-     */
+    // The codec is the only thing that knows what a kind holds, so this prints whatever the next save would write.
     private static Component describeState(DataStorage value) {
         return DataStorage.CODEC.encodeStart(JsonOps.INSTANCE, value).result()
                 .<Component>map(json -> Component.literal(json.toString()))

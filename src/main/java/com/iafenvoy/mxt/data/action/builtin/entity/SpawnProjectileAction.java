@@ -34,8 +34,7 @@ public record SpawnProjectileAction(EntityType<?> entityType, NumberProvider vel
         Entity created = this.entityType.create(entity.level(), EntitySpawnReason.TRIGGERED);
         if (!(created instanceof Projectile projectile)) return;
         projectile.setOwner(entity);
-        // Leaves the place the activation happens at - the actor's eyes, or somewhere else entirely when an item
-        // cast it from there. The facing stays the actor's: whoever answered for the activation is who aimed it.
+        // Spawns where the activation happened, but faces the actor: whoever answered for the activation aimed it.
         projectile.setPos(ctx.launchPosition());
         projectile.setYRot(entity.getYRot());
         projectile.setXRot(entity.getXRot());

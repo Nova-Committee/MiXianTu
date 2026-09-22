@@ -27,7 +27,7 @@ public record AutoIgnoreMapCodec<K, V>(Codec<K> keyCodec,
         DataResult<Unit> result = input.entries().reduce(DataResult.success(Unit.INSTANCE, Lifecycle.stable()), (r, pair) -> {
                     DataResult<K> key = this.keyCodec().parse(ops, pair.getFirst());
                     DataResult<V> value = this.elementCodec().parse(ops, pair.getSecond());
-                    //Key modify point, ignore all errors
+                    // A key or value that does not decode is logged and dropped, never propagated.
                     if (key.isError()) {
                         LOGGER.warn("Failed to decode key: {}, error: {}", pair.getFirst(), key.error().orElseThrow());
                         return r;

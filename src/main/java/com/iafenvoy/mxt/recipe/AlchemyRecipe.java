@@ -24,9 +24,6 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Native RecipeManager entry for an alchemy recipe.
- */
 public record AlchemyRecipe(List<Identifier> inputs, NumberProvider targetTemperature,
                             NumberProvider temperatureTolerance, int minimumFurnaceTier, NumberProvider duration,
                             Map<Holder<Aura>, NumberProvider> minimumAura,

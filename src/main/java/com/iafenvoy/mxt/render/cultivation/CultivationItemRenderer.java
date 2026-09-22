@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Renders the item currently reserved by the cultivation fuel consumer.
+ * Renders the item currently reserved by the cultivation fuel consumer, as a player-model render layer.
  */
 public final class CultivationItemRenderer extends RenderLayer<AvatarRenderState, PlayerModel> {
     private static final float PIXEL = 1.0F / 16.0F;

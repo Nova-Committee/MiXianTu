@@ -46,8 +46,8 @@ public final class CultivationGrantService {
         for (Holder<Technique> technique : spirit.learnedTechniques()) {
             Identifier source = source("technique", HolderHelper.id(technique));
             granted += grantAll(abilities, technique.value().grantedAbilities(), source);
-            // Mastery adds to the same source: a technique's grants are revoked and rebuilt together,
-            // so a promotion only has to change the level, not the sources.
+            // Mastery adds to the same source, so a promotion only has to change the level: a technique's
+            // grants are revoked and rebuilt together.
             granted += SkillStageService.currentStage(spirit, technique)
                     .map(current -> grantResolved(abilities, SkillStageService.unlockedAbilities(technique.value(), current), source))
                     .orElse(0);
@@ -55,9 +55,6 @@ public final class CultivationGrantService {
         return new Result(granted, revoked);
     }
 
-    /**
-     * Recalculates identity-granted abilities and immediately rehydrates their runtime triggers.
-     */
     public static Result recalculate(LivingEntity entity, SpiritIdentityAttachment spirit, AbilityAttachment abilities) {
         Result result = recalculate(spirit, abilities);
         AbilityEventBridge.rebuildTriggerSubscriptions(entity);

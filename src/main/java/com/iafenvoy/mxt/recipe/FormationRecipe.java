@@ -13,9 +13,6 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Native recipe entry containing the complete formation payload.
- */
 public record FormationRecipe(Formation definition) implements Recipe<SingleRecipeInput> {
     public static final MapCodec<FormationRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Formation.DIRECT_CODEC.fieldOf("definition").forGetter(FormationRecipe::definition)

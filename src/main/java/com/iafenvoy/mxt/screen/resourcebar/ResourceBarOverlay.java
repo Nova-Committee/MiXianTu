@@ -36,32 +36,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Answers which resource bars want to be drawn, in which order, and at what slot of their stack.
- *
- * <p>It is a plain utility, not a renderer and not a GUI layer: every part of the screen it describes is
- * drawn by the HUD framework's single renderer, from the two movable columns to the two fixed rows about the
- * entity being looked at. Keeping the gathering here - rather than in the entries - is what lets the
- * entries stay about placement: an entry asks for a list of bars and hands the resulting blocks to the
- * layout.</p>
- *
- * <p>Every layout is split by the bar's own {@code anchor} into a left and a right pass, so a bar declared
- * {@code anchor: right} genuinely draws on the right.</p>
+ * Answers which resource bars want to be drawn, in which order, and at what slot of their stack; everything it
+ * describes is drawn by the HUD framework's single renderer. Gathering here rather than in the entries is what
+ * lets the entries stay about placement, and bars are split by their own anchor into a left and a right pass.
  */
 public final class ResourceBarOverlay {
-    /** Clearance between an overlay row and the centre of the screen. */
     private static final int OVERLAY_GAP = 8;
 
     private ResourceBarOverlay() {
     }
 
-    /**
-     * The player's own bars of one column, top to bottom, with their slots already resolved.
-     *
-     * <p>Asked once per column per frame by its entry - once to work out the column's size before placing
-     * it, once to draw it. The answer is built from attachments that are already on the client, so the
-     * second call costs an allocation and nothing else - cheaper than deciding which of the two callers is
-     * allowed to work from a frame-old answer.</p>
-     */
+    // Asked once per column per frame - once to size it, once to draw it. The answer is built from attachments
+    // already on the client, so the second call costs an allocation and not a second source of truth.
     public static List<ResourceBarRenderState> column(Anchor anchor) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
@@ -74,9 +60,6 @@ public final class ResourceBarOverlay {
         return stack(sort(collected));
     }
 
-    /**
-     * The bars of one fixed row - about the entity being looked at - with their slots already resolved.
-     */
     public static List<ResourceBarRenderState> row(LivingEntity target, Layout layout) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return List.of();
@@ -88,25 +71,13 @@ public final class ResourceBarOverlay {
         return stack(sort(collected));
     }
 
-    /**
-     * Where a fixed row's column starts, measured from the middle of the screen outwards. Unchanged from the
-     * original overlay: a row is as wide as its widest bar, and it is placed by the edge that faces the
-     * middle.
-     */
+    // A row is as wide as its widest bar and is placed by the edge that faces the middle of the screen.
     public static int rowX(int screenWidth, Anchor side, int barWidth) {
         return side == Anchor.LEFT ? screenWidth / 2 - OVERLAY_GAP - barWidth : screenWidth / 2 + OVERLAY_GAP;
     }
 
-    /**
-     * Brings a sorted list of bars into the shape the layout wants: order resolved, slot left at zero.
-     *
-     * <p>The horizontal slot is zero because bars are left-aligned in their column. The vertical slot is zero
-     * too, and that is the important half: the layout stacks blocks back to back by the heights they report,
-     * so a bar's y position is decided in exactly one place. The original overlay instead accumulated a
-     * running y here, and keeping both meant the same stack had two answers - the accumulated one was counted
-     * again when the column's height was measured, which made every column twice as tall as it drew and left
-     * the gap this was chasing.</p>
-     */
+    // Slots are zeroed here on purpose: the layout stacks blocks by the heights they report, so a bar's y has
+    // exactly one answer. The original accumulated a running y here as well, which double-counted the height.
     private static List<ResourceBarRenderState> stack(List<ResourceBarRenderState> collected) {
         List<ResourceBarRenderState> stacked = new ArrayList<>(collected.size());
         for (ResourceBarRenderState state : collected) stacked.add(state.at(0, 0));
@@ -124,8 +95,7 @@ public final class ResourceBarOverlay {
                                          LivingEntity entity, Layout layout, Anchor anchor) {
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
-            // A bar is declared on a value; the use gate belongs to the aura that value carries, and a value
-            // without one is ungated.
+            // A bar is declared on a value; the use gate belongs to the aura that value carries (no aura = ungated).
             Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
             if (aura != null && !ResourceUseService.canUse(entity, aura)) continue;
             Identifier id = HolderHelper.idOrNull(resource);
@@ -185,15 +155,8 @@ public final class ResourceBarOverlay {
         return Double.isFinite(dynamic) && dynamic > 0.0D ? dynamic : fallback;
     }
 
-    /**
-     * Registers everything this class describes with the HUD framework, once.
-     *
-     * <p>Called from client setup rather than left to the first frame. The framework's own layer is only
-     * rendered while a world is loaded, so an editor opened from the main menu - or from the pause menu of a
-     * world that has not drawn a frame yet - would otherwise find an empty registry and show nothing at all,
-     * which is exactly what it looks like when a feature is broken. Doing it here makes "the elements exist"
-     * independent of where the player is standing when they open the editor.</p>
-     */
+    // Called from client setup, not left to the first frame: the framework's layer only renders inside a world,
+    // so an editor opened from the main menu would otherwise find an empty registry and show nothing at all.
     public static void registerEntries() {
         HudManager.register(new ResourceBarEntry("resource_bars.left", Anchor.LEFT));
         HudManager.register(new ResourceBarEntry("resource_bars.right", Anchor.RIGHT));

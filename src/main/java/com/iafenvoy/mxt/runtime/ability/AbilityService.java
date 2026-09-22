@@ -53,7 +53,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * Server-side ability cost and cooldown transaction; actions are committed only after this service approves them.
+ * Server-side ability cost and cooldown transaction: actions are committed only after this service approves
+ * them, as one server-thread operation. World actions are deliberately never rolled back, which is why every
+ * child of a composite is validated first and paid before any of them runs.
  */
 public final class AbilityService {
     private AbilityService() {
@@ -99,9 +101,6 @@ public final class AbilityService {
         return PrepareResult.prepared(new PreparedUse(ability, costs, definition.costs(), Math.round(castTime), Math.round(cooldown), channelInterval, charges.isPresent(), chargeBefore));
     }
 
-    /**
-     * Commits cost, stored state and cooldown as one server-thread operation.
-     */
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime, LivingEntity payer) {
         Player player = payer instanceof Player value ? value : null;
         if (abilities.isOnCooldown(use.ability(), gameTime)) return CommitResult.rejected(Failure.COOLDOWN, null);
@@ -128,16 +127,9 @@ public final class AbilityService {
         return use(ability, definition, actor, abilities, resources, gameTime, context, true, null);
     }
 
-    /**
-     * Uses an ability the actor does not hold, because an item of theirs carries it: a filled talisman is its
-     * own permission, which is the whole point of carrying one. Everything else is the ordinary path - the
-     * definition's condition and word, the actor's cooldown and charges, the ability's own costs, and the two
-     * events - so an ability fired from an item is gated exactly like a learned one, apart from the grant.
-     * <p>
-     * {@code origin} is where it happens when that is not where the actor is: a talisman on a display stand
-     * fires from the stand. Passing null means the actor's own position, which is what every other entry point
-     * here does.
-     */
+    // For an ability the actor does not hold but an item of theirs carries: the filled item is its own
+    // permission, and everything else is the ordinary path. origin is where it happens when that is not where
+    // the actor is (a talisman on a display stand fires from the stand); null means the actor's own position.
     public static UseResult useCarried(Holder<Ability> ability, Ability definition, @NotNull Entity actor,
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context, @Nullable Vec3 origin) {
@@ -153,11 +145,9 @@ public final class AbilityService {
             if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
-        // A carried ability takes effect at once. A cast is finished by walking the abilities the actor *holds*
-        // ({@code AbilityEventBridge.finishDueCasts}) and a channel re-checks that grant on every pulse
-        // ({@link #tickChannel}), so neither can be started by an item that grants nothing: the cast would never
-        // be finished and the channel would stop on its first tick. Refusing here is the honest answer, and
-        // nothing has been paid for by the time it is given.
+        // A carried ability must take effect at once: a cast is finished by walking the abilities the actor
+        // *holds*, and a channel re-checks that grant on every pulse, so an item-granted one would never finish
+        // its cast or would stop on its first tick. Refused here, before anything has been paid for.
         if (!requiresGrant && (definition.castTime().evaluate(context) > 0.0D
                 || definition.type() instanceof ChannelledAbilityType))
             return UseResult.rejected(Failure.CARRIED_NOT_INSTANT, null);
@@ -196,8 +186,8 @@ public final class AbilityService {
         AbilityStorage.clearCast(abilities, ability, gameTime);
         if (!definition.condition().test(actor, context)) return UseResult.rejected(Failure.CONDITION_FAILED, null);
         if (!validateWord(definition, actor, context)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
-        // A cast this far along was started by something that could start one, so the grant it was approved
-        // under is not asked for a second time here.
+        // Already started by something that could start one, so the grant it was approved under is not asked for
+        // a second time.
         PrepareResult prepared = prepare(ability, definition, abilities, resources, gameTime, context,
                 actor instanceof LivingEntity living ? living : null, false);
         if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
@@ -229,9 +219,7 @@ public final class AbilityService {
         return UseResult.committed(committed.amounts());
     }
 
-    /**
-     * Call this only from the server entity tick bridge.
-     */
+    // Server entity tick bridge only.
     public static ChannelResult tickChannel(Holder<Ability> ability, Ability definition, Entity actor,
                                             AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                             FormulaContext context) {
@@ -289,9 +277,7 @@ public final class AbilityService {
         return true;
     }
 
-    /**
-     * Clears a pending cast without touching resources, cooldowns or unrelated stored state.
-     */
+    // Clears a pending cast without touching resources, cooldowns or unrelated stored state.
     public static boolean cancelCast(Holder<Ability> ability, AbilityAttachment abilities, long gameTime) {
         if (!AbilityStorage.hasCast(abilities, ability)) return false;
         AbilityStorage.clearCast(abilities, ability, gameTime);
@@ -314,14 +300,9 @@ public final class AbilityService {
         }
     }
 
-    /**
-     * Applies the effect payload of one activation. The one-shot entity action runs for every
-     * activation, {@link WordAbilityType} excepted because its payload replaces the whole pipeline.
-     * <p>
-     * {@code origin} is where the payload happens when the activation was given a place of its own - an item
-     * cast from a display stand - and null when it is simply where the actor is. It reaches the action through
-     * its context, so a nested action inherits it.
-     */
+    // The one-shot entity action runs for every activation, WordAbilityType excepted because its payload replaces
+    // the whole pipeline. origin is where the payload happens when the activation has a place of its own; null
+    // means where the actor is, and a nested action inherits it through the context.
     private static void executeEffects(Ability definition, Entity actor, FormulaContext context, @Nullable Vec3 origin) {
         try {
             if (definition.type() instanceof WordAbilityType word) {
@@ -345,10 +326,8 @@ public final class AbilityService {
         }
     }
 
-    /**
-     * Validates every required child against detached drafts, then commits all costs before any action.
-     * World actions are deliberately never rolled back.
-     */
+    // Every required child is validated against detached drafts and all costs are committed before any action
+    // runs, because world actions are deliberately never rolled back.
     private static UseResult useComposite(Holder<Ability> composite, Ability compositeDefinition, Entity actor,
                                           AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                           FormulaContext context, boolean requiresGrant, @Nullable Vec3 origin) {
@@ -458,24 +437,13 @@ public final class AbilityService {
         return new Evaluation(amounts);
     }
 
-    /**
-     * Resource-only costs can run without a Player; item and other costs still require one.
-     */
+    // Resource-only costs can run without a Player; item and every other cost still require one.
     private static boolean requiresPlayerCost(List<Cost> costs) {
         return costs.stream().anyMatch(cost -> !(cost instanceof com.iafenvoy.mxt.data.cost.ResourceCost));
     }
 
-    /**
-     * Adds the read-only values a casting ability exposes to its own formulas: {@code element_modifier} for
-     * the element affinity of its roots, and {@code damage_multiplier} for the mastery of the chain that
-     * grants it.
-     *
-     * <p>Both are read by the damage pipeline on the attacker's side of a hit - the mastery as it stands, the
-     * affinity as the element factor of layer one - so a data pack writes the damage it means instead of
-     * multiplying either in by hand, and a pack that wants the same numbers for something else (a cost, a
-     * duration) can read the same names. They are put on the context here, where the ability being cast is
-     * still known, because a damage action only ever sees a formula context.</p>
-     */
+    // Put on the context here, where the ability being cast is still known, because a damage action only ever
+    // sees a formula context: the damage pipeline reads both names on the attacker's side of a hit.
     private static FormulaContext withAbilityScaling(LivingEntity actor, Holder<Ability> ability, Ability definition,
                                                      FormulaContext context) {
         FormulaContext scaled = context;
@@ -491,9 +459,7 @@ public final class AbilityService {
         return definition.storages().stream().filter(type::isInstance).map(type::cast).findFirst();
     }
 
-    /**
-     * Applies a bi-entity action to each selected target; one failing action never stops the rest.
-     */
+    // One failing action never stops the rest.
     private static void executeTargetAction(Ability definition, Entity actor, FormulaContext context, @Nullable Vec3 origin) {
         try {
             definition.targetSelector().select(actor, context, origin)
@@ -513,8 +479,8 @@ public final class AbilityService {
             FormulaContext targetContext = actor instanceof LivingEntity caster && target instanceof LivingEntity livingTarget
                     ? FormulaContexts.forEntities(caster, livingTarget, context) : context;
             if (definition.targetCondition().test(actor, target, targetContext))
-                // The place travels with the activation, so a bi-entity action that moves an endpoint to "the
-                // actor" moves it to where the ability happened - a stand's ward pulls to the stand.
+                // The place travels with the activation: a bi-entity action that moves an endpoint to "the actor"
+                // moves it to where the ability happened - a stand's ward pulls to the stand.
                 definition.biEntityAction().execute(actor, target, new BiEntityActionContext(actor, target, targetContext, origin));
         } catch (RuntimeException exception) {
             MiXianTu.LOGGER.error("Ability target action failed", exception);

@@ -15,9 +15,6 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
-/**
- * Native recipe entry containing the complete artifact archetype payload.
- */
 public record RefiningRecipe(Identifier input, Artifact archetype) implements Recipe<SingleRecipeInput> {
     public static final MapCodec<RefiningRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.fieldOf("input").forGetter(RefiningRecipe::input),

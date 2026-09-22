@@ -38,7 +38,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -58,10 +57,13 @@ import java.util.*;
 import java.util.function.Consumer;
 
 /**
- * Centralizes vanilla-event subscriptions and dispatches only abilities held by the affected entity.
+ * Centralizes the vanilla-event subscriptions and dispatches only abilities held by the affected entity.
+ * Reconciliation is the only thing that registers ability subscriptions: publishing a signal never mutates the
+ * index, so a publication reads exactly what the last reconciliation built.
  */
 @EventBusSubscriber
 public final class AbilityEventBridge {
+    // Guards one entity/ability pair against re-entering itself through an effect its own use publishes.
     private static final ThreadLocal<Set<DispatchKey>> DISPATCHING = ThreadLocal.withInitial(HashSet::new);
 
     static {
@@ -81,9 +83,7 @@ public final class AbilityEventBridge {
     private AbilityEventBridge() {
     }
 
-    /**
-     * Forces class initialization so the rehydrator is registered before the first server lifecycle event.
-     */
+    // Forces class initialization so the rehydrator is registered before the first server lifecycle event.
     public static void initialize() {
     }
 
@@ -206,19 +206,14 @@ public final class AbilityEventBridge {
                         .set("equipment_slot", (double) event.getSlot().ordinal()));
     }
 
-    /**
-     * Every ability one stack contributes: what its artifact definition grants plus whatever the component on
-     * the stack was written with. The definition is resolved here rather than where the stack was made, so an
-     * artifact grants its skills by being held.
-     */
+    // The artifact definition is resolved here rather than where the stack was made, so an artifact grants its
+    // skills by being held.
     private static List<Identifier> itemAbilities(LivingEntity entity, ItemStack stack) {
         if (stack.isEmpty()) return List.of();
         return ArtifactService.abilityIds(entity.level().registryAccess(), stack);
     }
 
-    /**
-     * Curios gear counts in the same source-counted ability model.
-     */
+    // Curios gear counts in the same source-counted ability model.
     private static boolean syncCuriosAbilities(LivingEntity entity, AbilityAttachment holder) {
         Set<Holder<Ability>> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
@@ -229,9 +224,7 @@ public final class AbilityEventBridge {
         return holder.reconcileSource(AbilitySources.CURIOS, current);
     }
 
-    /**
-     * Called by server-side cultivation entry points after a successful breakthrough.
-     */
+    // Called by the server-side cultivation entry points after a successful breakthrough.
     public static void onBreakthrough(LivingEntity entity, Identifier target, FormulaContext context) {
         dispatch(TriggerSignals.BREAKTHROUGH, entity, context.with("breakthrough", 1.0D));
     }
@@ -240,10 +233,8 @@ public final class AbilityEventBridge {
         return FormulaContext.of(entity, Map.of("block_x", (double) pos.getX(), "block_y", (double) pos.getY(), "block_z", (double) pos.getZ()));
     }
 
-    /**
-     * HUD resources are part of the player's visible baseline state, rather than
-     * being created only after an ability happens to spend or restore them.
-     */
+    // HUD resources are part of the player's visible baseline state, rather than being created only after an
+    // ability happens to spend or restore them.
     private static boolean initializeHudResources(LivingEntity entity, ResourceHolderAttachment holder) {
         if (!(entity instanceof Player)) return false;
         return MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
@@ -256,11 +247,8 @@ public final class AbilityEventBridge {
                 ResourceService.formulaContext(entity, id, resource.value(), FormulaContext.EMPTY)).changed()).orElse(false);
     }
 
-    /**
-     * Refills the charges of every held ability whose declaration recharges. Only an ability that declares
-     * {@code mxt:charges} is looked at, and {@link AbilityStorage#recharge} writes only when a step is actually
-     * due, so an entity holding no such ability costs one scan of its grants per tick and nothing else.
-     */
+    // Only an ability that declares mxt:charges is looked at, and AbilityStorage.recharge writes only when a step
+    // is actually due, so an entity holding no such ability costs one scan of its grants per tick.
     private static void rechargeCharges(LivingEntity actor, AbilityAttachment abilities, long gameTime) {
         for (Holder<Ability> ability : abilities.sources().keys()) {
             ChargesDataStorage declaration = ability.value().storages().stream()
@@ -324,14 +312,7 @@ public final class AbilityEventBridge {
         TriggerPublishing.publish(signalType, entity, context, enrich);
     }
 
-    /**
-     * Rebuilds the runtime ability subscriptions from the persisted ability
-     * attachment. This is intentionally idempotent and can be called after
-     * datapack reloads or source reconciliation.
-     *
-     * <p>Reconciliation is the only thing that registers ability subscriptions: publishing a signal never
-     * mutates the index, so a publication reads exactly what the last reconciliation built.</p>
-     */
+    // Intentionally idempotent, and can be called after datapack reloads or source reconciliation.
     public static void rebuildTriggerSubscriptions(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         syncAbilitySubscriptions(entity);
@@ -375,9 +356,7 @@ public final class AbilityEventBridge {
         }
     }
 
-    /**
-     * A triggered ability's chance is evaluated by the server immediately before dispatch.
-     */
+    // A triggered ability's chance is evaluated by the server immediately before dispatch.
     private static boolean passesTriggerChance(LivingEntity entity, Ability definition, FormulaContext context) {
         if (!(definition.type() instanceof TriggeredAbilityType triggered)) return true;
         final double chance;

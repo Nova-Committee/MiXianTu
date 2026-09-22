@@ -9,14 +9,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * The server-side switches: one tab per system, in the order the screen shows them, so this file is the layout.
- * An entry's name is what an admin scans and its tooltip is where the reasoning goes; call sites read the entry
- * itself through {@link #INSTANCE}, so there is no wrapper to keep in step with it. Numeric entries carry their
- * own range, which is also their decode check, so nothing downstream clamps them again.
- *
- * <p>Serialised keys are short, so the saved file reads {@code {"formation": {"respect_friends": true}}}. The
- * first layout spelled every key out in full ({@code config.mxt.server.formation.respect_friends}) and kept the
- * friend ranks in a tab of their own; the key rules in the constructor translate both on load.</p>
+ * One tab per system, in the order the config screen shows them; a numeric entry's range is also its decode
+ * check, so nothing downstream clamps again. Entry names and tooltips also live in both lang files
+ * ({@code config.mxt.server.*}), so adding or renaming one means editing {@code zh_cn.json} and {@code en_us.json}.
  */
 public final class MxtServerConfig extends AutoInitConfigContainer {
     public static final MxtServerConfig INSTANCE = new MxtServerConfig();
@@ -131,9 +126,6 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 .key("plate_auto_detect")
                 .tooltip("config.mxt.server.formation.plate_auto_detect.tooltip")
                 .build();
-        /**
-         * What an empty allow list means; every plate written before the list existed relies on the default.
-         */
         public final BooleanEntry emptyAllowsAll = BooleanEntry.builder("config.mxt.server.formation.empty_plate_allows_all", true)
                 .key("empty_plate_allows_all")
                 .tooltip("config.mxt.server.formation.empty_plate_allows_all.tooltip")
@@ -142,17 +134,10 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 .key("draws_environment")
                 .tooltip("config.mxt.server.formation.draws_environment.tooltip")
                 .build();
-        /**
-         * Whether a formation that declares {@code spare_friends} spares whoever its owner counts as a friend.
-         * It changes nothing on its own: a formation only identifies friends by declaring the switch.
-         */
         public final BooleanEntry respectFriends = BooleanEntry.builder("config.mxt.server.formation.respect_friends", true)
                 .key("respect_friends")
                 .tooltip("config.mxt.server.formation.respect_friends.tooltip")
                 .build();
-        /**
-         * Whether the owner's friends may take a formation down as well; off leaves it to the owner and operators.
-         */
         public final BooleanEntry teammatesCanDismantle = BooleanEntry.builder("config.mxt.server.formation.teammates_can_dismantle", false)
                 .key("teammates_can_dismantle")
                 .tooltip("config.mxt.server.formation.teammates_can_dismantle.tooltip")
@@ -189,20 +174,14 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
     /**
      * Everything that only means something with another mod installed: FTB Teams answers the friend
-     * judgement, FTB Chunks is what the claim switches hand protection to. Curios is deliberately not here —
+     * judgement, FTB Chunks is what the claim switches hand protection to. Curios is deliberately not here -
      * the equipment slots are part of this mod's own model, not an integration.
      */
     public static final class Compat extends AutoInitConfigCategoryBase {
-        /**
-         * FTB Teams' own "this outsider is with us" rank; off leaves only real team members.
-         */
         public final BooleanEntry ftbTeamsAlly = BooleanEntry.builder("config.mxt.server.compat.ftb_teams_ally", true)
                 .key("ftb_teams_ally")
                 .tooltip("config.mxt.server.compat.ftb_teams_ally.tooltip")
                 .build();
-        /**
-         * Off by default: a free-to-join team reports that rank for anybody at all.
-         */
         public final BooleanEntry ftbTeamsInvited = BooleanEntry.builder("config.mxt.server.compat.ftb_teams_invited", false)
                 .key("ftb_teams_invited")
                 .tooltip("config.mxt.server.compat.ftb_teams_invited.tooltip")
@@ -212,16 +191,10 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
                 .tooltip("config.mxt.server.compat.claim_linkage.tooltip")
                 .nameProvider(value -> Component.translatable("config.mxt.server.compat.claim_linkage." + value.name().toLowerCase()))
                 .build();
-        /**
-         * Off hands protection over even where there is nothing to hand it to, protecting nothing at all.
-         */
         public final BooleanEntry delegateRequiresClaims = BooleanEntry.builder("config.mxt.server.compat.delegate_requires_claims", true)
                 .key("delegate_requires_claims")
                 .tooltip("config.mxt.server.compat.delegate_requires_claims.tooltip")
                 .build();
-        /**
-         * Three ways through, all of them the landowner's own answer; inert without a claim plugin.
-         */
         public final BooleanEntry wardsNeedClaimPermission = BooleanEntry.builder("config.mxt.server.compat.wards_need_claim_permission", true)
                 .key("wards_need_claim_permission")
                 .tooltip("config.mxt.server.compat.wards_need_claim_permission.tooltip")
@@ -240,12 +213,11 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
      * Which of a protection formation and a claim plugin is in charge where they overlap.
      */
     public enum ClaimLinkage {
-        /// A protection formation may only be raised with its centre inside claimed land.
+        // Only inside claimed land.
         CLAIMS_ONLY,
-        /// A protection formation may be raised anywhere; one standing inside claimed land is governed by the
-        /// claim's rules instead of its own.
+        // Anywhere; standing inside claimed land, the claim's rules win over the formation's own.
         CLAIMS_PRECEDENCE,
-        /// The two are independent: the formation protects by its own rules wherever it stands.
+        // Independent: the formation protects by its own rules wherever it stands.
         NONE
     }
 

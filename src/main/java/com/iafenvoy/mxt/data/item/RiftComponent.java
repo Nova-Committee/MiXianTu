@@ -21,10 +21,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.function.Consumer;
 
 /**
- * The destination and colour an anchor stamps into a rift.
- *
- * <p>Carrying this on the item is what lets a rift be configured before it exists: one stack describes the rift
- * it will place, and the same stack reconfigures a rift it is used on.
+ * The destination and colour an anchor stamps into a rift. Carrying this on the item is what lets a rift be
+ * configured before it exists: one stack describes the rift it will place, and reconfigures a rift it is used on.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public record RiftComponent(Identifier target, int color) implements TooltipProvider {

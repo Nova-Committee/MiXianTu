@@ -35,46 +35,23 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * The rules of one artifact, shared by every item {@code items} opts into them.
- *
- * <p>An artifact is not a new item but an existing one that behaves differently, so {@code items} answers "is
- * this stack an artifact, and which one" - the same reading {@code item_binding} and {@code spirit_herb} use.
- * There is no field naming a "kind" of artifact: the definition's own registry id is that name, and a pack that
- * wants one label over several definitions says it with an item tag. What it does is a list of
- * {@link ArtifactAbility} entries, one entry per kind (granting skills, flight,
- * storage, upkeep) rather than a group of fields on this record; flight, storage and upkeep are meaningful once
- * each, so a second one is refused below. An entry that is a {@link ToggableArtifactAbility} needs a key to fire,
- * so it becomes a cell on the wheel - and several of them fit, one per key, which is what lets one sword offer
- * both flight and storage. Aura amounts live in the shared {@code mxt:spirit_storage} component
- * and only the per-aura ceiling is declared here; the feeding bonus that raises it stays in
- * {@link com.iafenvoy.mxt.runtime.artifact.ArtifactService}. Whether flight, storage and upkeep insist on an
- * owner is {@code require_owner} (or the entry's own {@code owner_only}): off, an artifact is open to anyone
- * until it is refined, and answers to its owner from then on.</p>
- *
- * <p>Claiming is described by three fields: what the gesture has to be ({@code hold_ticks}), whether it is
- * allowed at all ({@code claim_condition}) and what it does ({@code claim_action}). The gesture that reads them
- * is one implementation in {@link com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService}.</p>
- *
- * <p>The price is one of the things {@code claim_action} does rather than a field of its own: its default is
- * {@link ConsumeHealthItemAction} for {@link #DEFAULT_CLAIM_HEALTH}
- * points of health, so an artifact that says nothing still charges two hearts to claim, and a definition that
- * wants a free binding says {@code mxt:no_op}. Every other action-shaped field defaults to doing nothing. What
- * this action charges is the whole price - three writers of a binding run it, and none of them asks whether the
- * holder can afford it.</p>
+ * The rules of one artifact, shared by every item {@code items} opts into them. There is no field naming a
+ * "kind": the definition's own registry id is that name, and a pack that wants one label over several
+ * definitions says it with an item tag. Aura amounts live in the shared {@code mxt:spirit_storage} component and
+ * only the per-aura ceiling is declared here. At most one {@code mxt:flight}, {@code mxt:storage} and
+ * {@code mxt:upkeep} entry, and at most one togglable per key (the wheel addresses a cell by artifact id + key).
  */
 public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spiritCapacity,
                        List<ArtifactAbility> abilities, boolean curiosEquipable, boolean requireOwner,
                        ItemAction claimAction, EntityCondition claimCondition,
                        ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks,
                        List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier) implements ItemMatcher {
-    /** What a definition that does not say costs to claim: four points of health, two hearts. */
+    // Two hearts.
     public static final double DEFAULT_CLAIM_HEALTH = 4.0D;
-    /** How long the gesture lasts when a definition does not say: one second. */
+    // One second.
     public static final double DEFAULT_HOLD_TICKS = 20.0D;
-    /**
-     * What claiming does when a definition does not say, which is also what it costs: the price has one shape
-     * everywhere, so a pack replaces it with any other action and a free claim is {@code mxt:no_op}.
-     */
+    // The price of a claim has one shape everywhere: replacing this action is how a pack makes a claim free
+    // (mxt:no_op) or charges something else.
     public static final ItemAction DEFAULT_CLAIM_ACTION = new ConsumeHealthItemAction(new Constant(DEFAULT_CLAIM_HEALTH));
     public static final Codec<Holder<Artifact>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ARTIFACT);
     private static final MapCodec<Artifact> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -91,11 +68,9 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(Artifact::element),
             MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier)
     ).apply(i, Artifact::new));
-    /**
-     * Unknown keys are dropped, so the keys this record used to carry are not read any more: a pack still
-     * writing {@code granted_abilities}, {@code flight_speed}, {@code refine_action}, {@code refine_condition},
-     * {@code refine_health_cost}, {@code claim_cost} or {@code item_type} loads and those keys do nothing.
-     */
+    // Unknown keys are dropped, so the keys this record used to carry are not read any more: a pack still writing
+    // granted_abilities, flight_speed, refine_action, refine_condition, refine_health_cost, claim_cost or
+    // item_type loads and those keys do nothing.
     public static final Codec<Artifact> DIRECT_CODEC = RAW_CODEC.codec();
 
     public Artifact {
@@ -120,10 +95,7 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
         return this.items;
     }
 
-    /**
-     * The abilities this definition grants, in the order the entries write them. Tags are expanded by the
-     * caller, which is the side that has a registry to expand them against.
-     */
+    // Tags are expanded by the caller, which is the side that has a registry to expand them against.
     public List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities() {
         return this.abilities.stream()
                 .filter(GrantArtifactAbility.class::isInstance)
@@ -144,10 +116,7 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
         return this.findAbility(UpkeepArtifactAbility.class);
     }
 
-    /**
-     * The capabilities that need a key and therefore become wheel cells, in the order the entries write them. One
-     * per key (see the constructor), so "this artifact plus a key" names exactly one of them.
-     */
+    // One per key (see the constructor), so "this artifact plus a key" names exactly one of them.
     public List<ToggableArtifactAbility> toggables() {
         return this.abilities.stream().filter(ToggableArtifactAbility.class::isInstance)
                 .map(ToggableArtifactAbility.class::cast).toList();

@@ -13,8 +13,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * Currency-only operations shared by cheque and future station menus. No item
- * is modified before a complete plan has been validated.
+ * Currency-only operations shared by cheque and future station menus. No item is modified before a complete
+ * plan has been validated.
  */
 public final class CurrencyPaymentService {
     private CurrencyPaymentService() {

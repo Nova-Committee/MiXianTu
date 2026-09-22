@@ -9,7 +9,7 @@ import net.minecraft.core.Holder;
 import java.util.Optional;
 
 /**
- * State tied to one resource. The resource names which one, so two of these in one host can track two different
+ * State tied to one resource: the resource names which one, so two of these in one host track two different
  * resources, and {@code amount} is what is kept for it.
  */
 public record ResourceDataStorage(Holder<Resource> resource, Optional<Double> amount) implements DataStorage {

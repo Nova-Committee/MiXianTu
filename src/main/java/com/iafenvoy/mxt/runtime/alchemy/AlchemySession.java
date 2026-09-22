@@ -37,16 +37,8 @@ public final class AlchemySession {
         return start(holder, furnaceTier, inputs, context, ItemQualityService.DEFAULT_MODIFIER);
     }
 
-    /**
-     * Starts a batch. The duration is read through the alchemy modifier of the batch's own ingredients, so
-     * a recipe brewed from a quality-bearing herb finishes in less time: the modifier divides the declared
-     * duration, because it is declared as an improvement (a grade above one is presented as raising the
-     * alchemy effect) and the brewing time is the alchemy figure this settlement owns. The duration rather
-     * than the success window, because the ingredients are released the moment the session locks - the
-     * workstation clears its input list - while the temperature tolerance is re-read from the recipe on
-     * every tick, so only a value settled here can still see what was put in. A modifier of exactly one,
-     * which is the codec default and therefore every existing quality, leaves the recipe's own duration.
-     */
+    // The alchemy modifier of the batch's own ingredients divides the declared duration, which is declared as an
+    // improvement; only the duration, because lock() releases the stacks the moment the session is stored.
     public static StartResult start(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, int furnaceTier,
                                     List<Identifier> inputs, FormulaContext context, double alchemyModifier) {
         AlchemyRecipe recipe = holder.value().definition();
@@ -60,21 +52,15 @@ public final class AlchemySession {
         return StartResult.started(new AlchemySession(holder, Math.max(1L, Math.round(duration)), false, false));
     }
 
-    /**
-     * The duration a batch actually runs for. A scaled duration that is not a positive finite number
-     * leaves the declared one alone, so an unusable modifier can only ever mean "no change" and never a
-     * batch that cannot be started. The result is deliberately not rounded here: the caller rounds the
-     * tick count, and rounding twice would answer a question the recipe did not ask.
-     */
+    // An unusable modifier can only ever mean "no change". Deliberately not rounded here: the caller rounds the
+    // tick count, and rounding twice would answer a question the recipe did not ask.
     static double effectiveDuration(double duration, double alchemyModifier) {
         if (alchemyModifier == ItemQualityService.DEFAULT_MODIFIER) return duration;
         double scaled = duration / alchemyModifier;
         return Double.isFinite(scaled) && scaled > 0.0D ? scaled : duration;
     }
 
-    /**
-     * Restores runtime state only; the caller must resolve the recipe holder from the snapshot id.
-     */
+    // Runtime state only; the caller must resolve the recipe holder from the snapshot id.
     public static AlchemySession restore(Snapshot snapshot, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder) {
         if (snapshot.remainingTicks() < 0L)
             throw new IllegalArgumentException("Alchemy snapshot has negative remaining ticks");
@@ -87,9 +73,7 @@ public final class AlchemySession {
         return new Snapshot(this.holder.id().identifier(), this.remainingTicks, this.spoiled, this.complete);
     }
 
-    /**
-     * Returns an output once, after the final tick. Temperature outside the tolerance makes the batch fail.
-     */
+    // Outputs are handed back once, after the final tick; a temperature outside the tolerance spoils the batch.
     public TickResult tick(double temperature, FormulaContext context) {
         if (this.complete) return TickResult.idle();
         AlchemyRecipe recipe = this.holder.value().definition();

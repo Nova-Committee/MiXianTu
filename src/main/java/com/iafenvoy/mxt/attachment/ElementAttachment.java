@@ -12,16 +12,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * How much of each element has built up on one entity.
- *
- * <p>This is the storage half of the element accumulation system: a number per element, no opinions. What
- * builds it up is a strike of that element ({@code damage_attachment}) or anything that applies it directly;
- * what it does when it is full enough is a {@code mxt:element_reaction}; what wears it off is
- * {@code attachment_decay}. Keeping the three apart is what lets a pack change one without touching the
- * others, and it is also why this attachment holds no rules of its own.</p>
- *
- * <p>An amount that reaches zero is dropped rather than stored, so "nothing has built up" has one
- * representation and an entity that has never been touched by an element carries an empty map.</p>
+ * How much of each element has built up on one entity: a number per element, no opinions. Buildup, the reaction that
+ * reads it and the decay that wears it off are kept apart, so a pack can change one without touching the others -
+ * which is why this attachment holds no rules of its own. An amount that reaches zero is dropped rather than stored,
+ * so "nothing has built up" has one representation.
  */
 public final class ElementAttachment extends ShouldSyncAttachment {
     public static final MapCodec<ElementAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -57,10 +51,8 @@ public final class ElementAttachment extends ShouldSyncAttachment {
         else this.amounts.put(element, value);
     }
 
-    /**
-     * Adds to one element's buildup and answers the new total. A negative amount takes away, which is how a
-     * cleanse is written; the floor is zero because a negative buildup has no meaning.
-     */
+    // A negative delta takes away, which is how a cleanse is written; the floor is zero, since a negative buildup
+    // has no meaning.
     public double add(Holder<Element> element, double delta) {
         double total = Math.max(0.0D, this.amount(element) + delta);
         this.set(element, total);

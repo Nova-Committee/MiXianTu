@@ -16,7 +16,7 @@ import java.util.List;
  * can mix abilities and auras.
  */
 public record WheelSlot(WheelEntryKind kind, Identifier id) {
-    /** Empty-sector sentinel id: never looked up, and the server forces it onto empty slots. */
+    // Never looked up, and the server forces it onto empty slots.
     public static final Identifier EMPTY_ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
     public static final WheelSlot EMPTY = new WheelSlot(WheelEntryKind.EMPTY, EMPTY_ID);
     public static final Codec<WheelSlot> CODEC = RecordCodecBuilder.create(i -> i.group(

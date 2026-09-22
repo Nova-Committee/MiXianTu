@@ -11,8 +11,8 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.core.Holder;
 
 /**
- * Server-authoritative cooldowns for spirit bursts. The client receives this attachment only to draw the
- * remaining fraction on the wheel, following vanilla item cooldown semantics.
+ * Server-authoritative cooldowns for spirit bursts. The client receives this attachment only to draw the remaining
+ * fraction on the wheel, following vanilla item cooldown semantics.
  */
 public final class SpiritBurstCooldownAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritBurstCooldownAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -42,10 +42,7 @@ public final class SpiritBurstCooldownAttachment extends ShouldSyncAttachment {
         this.markDirty();
     }
 
-    /**
-     * Removes expired entries, mirroring {@code ItemCooldowns.tick()} so long-running servers do
-     * not retain a key for every aura a player has ever fired.
-     */
+    // Mirrors ItemCooldowns.tick(), so a long-running server does not retain a key for every aura ever fired.
     public boolean clearExpired(long gameTime) {
         boolean changed = this.cooldowns.object2LongEntrySet().removeIf(entry -> entry.getLongValue() <= gameTime);
         if (changed) this.markDirty();

@@ -27,11 +27,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Blows a hole where the action happens. The blast is credited to the caster, unlike {@code mxt:damage}:
- * something caused this explosion, and the entity that ran the action is that something, so a kill from it
- * counts as theirs and the element edges of their roots are read. The damage each entity takes is then shaped
- * by the same first layer every other strike goes through, which is why the calculator is wrapped rather than
- * left to vanilla.
+ * Blows a hole where the action happens, credited to the caster, unlike {@code mxt:damage}: a kill counts as
+ * theirs. Entity damage is wrapped because it goes through the pipeline's first layer like every other strike.
  */
 public record ExplodeAction(float power, ExplosionInteraction interaction, Optional<BlockCondition> indestructible,
                             boolean createFire) implements EntityAction {
@@ -48,6 +45,7 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
         Level level = entity.level();
         if (level.isClientSide() || !Float.isFinite(this.power) || this.power < 0.0F) return;
         ExplosionDamageCalculator calculator = this.indestructible.<ExplosionDamageCalculator>map(condition -> new ExplosionDamageCalculator() {
+            // A matching block is handed a resistance nothing survives, so the blast cannot break it.
             @Override
             public @NonNull Optional<Float> getBlockExplosionResistance(@NonNull Explosion explosion, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull BlockState state, @NonNull FluidState fluid) {
                 Optional<Float> original = super.getBlockExplosionResistance(explosion, level, pos, state, fluid);
@@ -56,8 +54,7 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
         }).orElseGet(ExplosionDamageCalculator::new);
         Entity caster = ctx.formula().caster();
         DamageSource source = level.damageSources().explosion(entity, caster);
-        // The blast's own damage type is what its element is read from, exactly like every other strike: a pack
-        // that claims minecraft:explosion for an element gives every explosion of this kind that meaning.
+        // The blast's own damage type is what its element is read from, exactly like every other strike.
         Set<Holder<Element>> elements = DamageElements.strike(level, Optional.of(source.typeHolder()), caster);
         level.explode(entity, source, new ShapedCalculator(calculator, caster, ctx.formula(), elements,
                 DamageCalculationService.bypasses(source)), ctx.position(), this.power, this.createFire, this.interaction);
@@ -68,15 +65,8 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
         return CODEC;
     }
 
-    /**
-     * The blast's own rules with the damage pipeline layered on top: every other answer is the wrapped
-     * calculator's, and only what one entity loses passes through layer one. Without this, a caster's
-     * explosion would be the one hit in the mod that ignores their mastery and their roots.
-     *
-     * <p>A damage type the pack exempted ({@code mxt:no_bonus}) is the exception, and it is decided once for
-     * the whole blast: the base amount is handed on untouched, exactly as {@code deal} does for a strike, and
-     * the reduction layer reaches the same verdict from the same source.</p>
-     */
+    // Wraps the blast's own rules and runs only the entity damage through the pipeline's first layer; without
+    // this a caster's explosion would be the one hit that ignores their mastery and their roots.
     private static final class ShapedCalculator extends ExplosionDamageCalculator {
         private final ExplosionDamageCalculator base;
         private final Entity attacker;
@@ -113,6 +103,8 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
             return this.base.getKnockbackMultiplier(entity);
         }
 
+        // An exempted damage type (mxt:no_bonus) is decided once for the whole blast and passed on untouched,
+        // exactly as deal does for a strike.
         @Override
         public float getEntityDamageAmount(@NonNull Explosion explosion, @NonNull Entity entity, float exposure) {
             double amount = this.base.getEntityDamageAmount(explosion, entity, exposure);

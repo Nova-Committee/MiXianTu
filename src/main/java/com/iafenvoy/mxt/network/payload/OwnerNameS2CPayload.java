@@ -13,12 +13,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Answers {@link OwnerNameC2SPayload} with the name the server has for that id, or with nothing when it has
- * never seen the player.
- *
- * <p>Nothing is a real answer rather than a failure: it means the tooltip keeps showing the id, which is what it
- * would have shown anyway. The client remembers the answer - including that one - so a name is asked for once
- * per session instead of once per rendered frame.</p>
+ * Answers {@link OwnerNameC2SPayload} with the name the server has for that id, or with nothing when it has never
+ * seen the player. Nothing is a real answer rather than a failure: it means the tooltip keeps showing the id. The
+ * client remembers the answer - including that one - so a name is asked for once per session, not per frame.
  */
 public record OwnerNameS2CPayload(UUID owner, Optional<String> name) implements CustomPacketPayload {
     public static final Type<OwnerNameS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "owner_name_s2c"));

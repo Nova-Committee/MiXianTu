@@ -19,9 +19,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/**
- * Grants a persistent ability source to the selected loot-context entity.
- */
 public final class GrantAbilityLootFunction extends LootItemConditionalFunction {
     public static final MapCodec<GrantAbilityLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(function -> function.target),

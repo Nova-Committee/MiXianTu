@@ -28,7 +28,7 @@ public record WheelLayout(List<WheelSlot> slots) {
         slots = List.copyOf(normalized);
     }
 
-    /** The content of one sector; out-of-range indices answer an empty slot rather than throwing. */
+    // Out-of-range indices answer an empty slot rather than throwing.
     public WheelSlot slot(int sector) {
         return sector < 0 || sector >= SLOTS ? WheelSlot.EMPTY : this.slots.get(sector);
     }

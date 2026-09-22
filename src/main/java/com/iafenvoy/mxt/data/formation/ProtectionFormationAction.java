@@ -5,13 +5,11 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
- * The protection module: what may not be done to the array, or from inside it. The flags answer for either
- * end of an action — the player doing it is inside, or the block or entity being acted on is inside — and
- * every flag defaults to true, so declaring the module is the whole statement.
- *
- * <p>{@code delegate_to_claims} hands the job to the server's claim plugin: no flag is enforced and only
- * claimed land is protected. The owner is always exempt and friends only while {@code spare_friends} and the
- * server option are on; an unidentifiable entity counts as a stranger and is stopped.
+ * The protection module: what may not be done to the array, or from inside it. The flags answer for either end of an
+ * action (the player doing it is inside, or the target is), and every flag defaults to true, so declaring the
+ * module is the whole statement. {@code delegate_to_claims} hands the job to the server's claim plugin: no flag is
+ * enforced and only claimed land is protected. The owner is always exempt, friends only while
+ * {@code spare_friends} and the server option are on, and an unidentifiable entity counts as a stranger.
  */
 public record ProtectionFormationAction(boolean blockBreak, boolean blockPlace, boolean blockInteract,
                                         boolean explosions, boolean mobGriefing, boolean entityInteract,

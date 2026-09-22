@@ -16,27 +16,21 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Where one wheel's contents come from, and therefore which wheel it is. The first page is the player's own
- * twelve saved slots; every page after it is derived from what the player carries right now, so those pages are
- * read rather than edited and follow the equipment on their own.
+ * Where one wheel's contents come from, and therefore which wheel it is: the first page is the player's own twelve
+ * saved slots, every page after it is derived from what the player carries right now.
  *
- * <p>A page is identified by this enum rather than by a number, and every request carries it: the server re-reads
- * the page the request names, so an entry is only honoured while the page it claims to come from still holds it.
- * Order is the order the switch keys walk, and index 0 is the page the wheel always opens on.</p>
+ * <p>A page is identified by this enum rather than a number, and every request carries it, so the server can re-read
+ * the page the request names. Order is the order the switch keys walk, and index 0 is the page the wheel opens on.
  */
 public enum WheelSource implements StringRepresentable {
-    /** The player's own twelve slots, stored in the wheel layout attachment and edited by the configuration screen. */
     CONFIGURED,
-    /** Whatever the item in the main hand grants right now. */
     MAIN_HAND,
-    /** Whatever the item in the off hand grants right now. */
     OFF_HAND,
-    /** Whatever the equipped Curios artifacts grant right now. */
     CURIOS;
 
     public static final Codec<WheelSource> CODEC = StringRepresentable.fromEnum(WheelSource::values);
     public static final StreamCodec<ByteBuf, WheelSource> STREAM_CODEC = MiscStreamCodecs.enumCodec(WheelSource.class);
-    /** Every page, in the order the switch keys walk them and the order the page numbers count. */
+    // Every page, in the order the switch keys walk them and the order the page numbers count.
     public static final List<WheelSource> PAGES = List.of(values());
 
     @Override
@@ -44,26 +38,23 @@ public enum WheelSource implements StringRepresentable {
         return this.name().toLowerCase(Locale.ROOT);
     }
 
-    /** Whether this page is the player's saved layout rather than a reading of what they carry. */
+    // Whether this page is the player's saved layout rather than a reading of what they carry.
     public boolean configured() {
         return this == CONFIGURED;
     }
 
-    /** This page {@code delta} steps along, wrapping at both ends so the switch keys never dead-end. */
+    // Wrapping at both ends, so the switch keys never dead-end.
     public WheelSource step(int delta) {
         return PAGES.get(Math.floorMod(this.ordinal() + delta, PAGES.size()));
     }
 
-    /** {@code 1}-based page number, which is what the player sees and never the index. */
+    // 1-based, which is what the player sees and never the index.
     public int page() {
         return this.ordinal() + 1;
     }
 
-    /**
-     * The ability-grant sources this page reads right now, empty for the configured page. Naming the equipment
-     * rather than the entries is what makes a page follow the item: the grants were recorded under the same ids
-     * when the item was equipped.
-     */
+    // Empty for the configured page. Naming the equipment rather than the entries is what makes a page follow the
+    // item: the grants were recorded under the same ids when the item was equipped.
     public List<Identifier> grantSources(LivingEntity entity) {
         return switch (this) {
             case CONFIGURED -> List.of();

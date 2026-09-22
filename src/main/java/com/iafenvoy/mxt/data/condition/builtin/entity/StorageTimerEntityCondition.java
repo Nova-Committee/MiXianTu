@@ -14,8 +14,7 @@ import java.util.Optional;
 
 /**
  * Reads how much of the {@code mxt:timer} of a named host is left as ticks until its stored {@code ends_at}, and
- * whether that end has passed. A timer with no {@code ends_at} is not running, so it has no time left and counts
- * as ended, and an elapsed timer has no time left either. A host that does not declare that kind is simply false.
+ * whether that end has passed. A timer with no {@code ends_at} is not running, so it counts as ended.
  */
 public record StorageTimerEntityCondition(Identifier family, Identifier id, Optional<NumberRange> remaining,
                                           Optional<Boolean> ended) implements EntityCondition {

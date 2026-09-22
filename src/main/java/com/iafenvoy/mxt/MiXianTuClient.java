@@ -22,16 +22,12 @@ public final class MiXianTuClient {
         ConfigManager.getInstance().registerConfigHandler(MxtClientConfig.INSTANCE);
         ConfigManager.getInstance().registerConfigHandler(MxtHudConfig.INSTANCE);
         CultivationAnimationController.register();
-        // The resource-bar elements - two movable columns plus two fixed rows about the entity under the
-        // crosshair - are HUD elements before they are anything else. Registering them here, rather than on the
-        // first frame the framework draws, is what lets the layout editor show them from the main menu as well
-        // as from inside a world.
+        // Registered here rather than on the first frame the framework draws, so the layout editor shows the
+        // resource-bar elements from the main menu as well as from inside a world.
         ResourceBarOverlay.registerEntries();
-        // The wheel's contents are the player's own twelve sectors, so the provider is published before the
-        // wheel can be opened.
+        // The provider is published before the wheel can be opened: the contents are the player's own sectors.
         WheelContent.register();
-        // The cell showing which sector the use key would spend: the use key works with the wheel closed, and
-        // this is what keeps that from being a blind cast.
+        // The use key works with the wheel closed, so this cell is what keeps that from being a blind cast.
         WheelSelectionEntry.register();
         event.getContainer().registerExtensionPoint(IConfigScreenFactory.class, (_, parent) -> ConfigSelectScreen.builder("config.mxt.title", parent).client(MxtClientConfig.INSTANCE).client(MxtHudConfig.INSTANCE).server(MxtServerConfig.INSTANCE).build());
     }

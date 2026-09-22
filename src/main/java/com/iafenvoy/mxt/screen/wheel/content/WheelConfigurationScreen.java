@@ -21,12 +21,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * The wheel editor: two pools (auras left, everything else right, each scrollable) over the twelve sectors of the
- * first page, which share one row so any kind fits any sector. It edits a draft and sends the whole layout on
- * close, {@code Escape} included, so the two sides cannot disagree about a sector.
- *
- * <p>Only the first page is edited here. The pages behind it are read from what the player carries - the item in
- * each hand and the equipped artifacts - so there is nothing about them to arrange; a header line says so.</p>
+ * The wheel editor: two scrollable pools - auras on the left, everything else on the right, sharing one row so
+ * any kind fits any sector - over the twelve sectors of the first page. It edits a draft and sends the whole
+ * layout on close, {@code Escape} included, so the two sides cannot disagree about a sector.
  */
 public final class WheelConfigurationScreen extends Screen {
     private static final int SLOT_SIZE = 22;
@@ -40,7 +37,7 @@ public final class WheelConfigurationScreen extends Screen {
     private static final int PANEL_MARGIN = 12;
     private static final int HEADER_HEIGHT = 30;
     private static final int POOL_HEADING_HEIGHT = 12;
-    /** Divider, heading, hint, numbers and cells each get a line: the heading and hint would overlap. */
+    // Divider, heading, hint, numbers and cells each get a line: the heading and hint would overlap.
     private static final int SLOT_ROW_HEIGHT = 67;
     private static final int SLOT_HEADING_OFFSET = 7;
     private static final int SLOT_HINT_OFFSET = 18;
@@ -57,7 +54,7 @@ public final class WheelConfigurationScreen extends Screen {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/wheel_configuration.png");
     private static final Identifier SLOT = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/slot_22.png");
     private static final Identifier SELECTED_SLOT = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/slot_22_selected.png");
-    /** The panel texture is drawn as nine slices so its 3px border and title band keep their authored size. */
+    // The panel texture is drawn as nine slices so its 3px border and title band keep their authored size.
     private static final int BACKGROUND_WIDTH = 232;
     private static final int BACKGROUND_HEIGHT = 260;
     private static final int BACKGROUND_BORDER = 3;
@@ -66,10 +63,8 @@ public final class WheelConfigurationScreen extends Screen {
     private static final int ABILITY_POOL = 1;
 
     private final List<WheelMenuEntry> auras;
-    /**
-     * The right-hand pool: the skills the player holds and the artifact capabilities they carry, which is what
-     * {@link WheelContent#pool} answers with. Both go in one grid because a sector holds either.
-     */
+    // The right-hand pool: the skills the player holds and the artifact capabilities they carry, in one grid
+    // because a sector holds either.
     private final List<WheelMenuEntry> options;
     private final double[] scroll = new double[2];
     private final int[] poolLeft = new int[2];
@@ -92,7 +87,6 @@ public final class WheelConfigurationScreen extends Screen {
         this.draft = WheelContent.layoutFor(player);
     }
 
-    /** Opens the editor for the local player; {@code false} when there is no player to edit. */
     public static boolean open() {
         Player player = Minecraft.getInstance().player;
         if (player == null) return false;
@@ -134,8 +128,7 @@ public final class WheelConfigurationScreen extends Screen {
         Component save = Component.translatable("wheel.mxt.config.save");
         graphics.text(this.font, save, this.panelLeft + this.panelWidth - 10 - this.font.width(save),
                 this.panelTop + 10, HINT_COLOR, false);
-        // The second header line: this screen edits the first page only, and a player who goes looking for the
-        // pages that follow is owed the reason they are not here.
+        // The header line that says why the pages behind the first are not editable here.
         Component derived = Component.translatable("wheel.mxt.config.derived",
                 MxtKeyMappings.WHEEL_PREVIOUS.get().getTranslatedKeyMessage(),
                 MxtKeyMappings.WHEEL_NEXT.get().getTranslatedKeyMessage());
@@ -164,10 +157,8 @@ public final class WheelConfigurationScreen extends Screen {
         }
     }
 
-    /**
-     * Nine slices, so the border and title band keep their authored size; one scaled blit would also let the
-     * sampler repeat the texture and wrap a second border into the middle.
-     */
+    // Nine slices, so the border and title band keep their authored size; one scaled blit would also let the
+    // sampler repeat the texture and wrap a second border into the middle.
     private void extractPanel(GuiGraphicsExtractor graphics) {
         int right = this.panelLeft + this.panelWidth;
         int bottom = this.panelTop + this.panelHeight;
@@ -320,7 +311,7 @@ public final class WheelConfigurationScreen extends Screen {
         return this.selectedOption < options.size() ? options.get(this.selectedOption) : null;
     }
 
-    /** Resolved the same way the wheel does, so a cell shows what that sector will actually draw. */
+    // Resolved the same way the wheel does, so a cell shows what that sector will actually draw.
     private @Nullable WheelMenuEntry entryOf(WheelSlot slot) {
         if (slot.isEmpty()) return null;
         for (WheelMenuEntry entry : this.pool(slot.kind() == WheelEntryKind.AURA ? AURA_POOL : ABILITY_POOL))
@@ -328,7 +319,6 @@ public final class WheelConfigurationScreen extends Screen {
         return null;
     }
 
-    /** {@code {pool, index}} for a point inside a pool, or {@code null}. */
     private int @Nullable [] optionAt(double mouseX, double mouseY) {
         if (mouseY < this.poolsTop || mouseY >= this.poolsBottom) return null;
         for (int pool = 0; pool < 2; pool++) {

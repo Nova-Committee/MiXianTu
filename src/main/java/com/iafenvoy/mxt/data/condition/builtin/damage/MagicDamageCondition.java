@@ -9,7 +9,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import org.jspecify.annotations.NonNull;
 
 /**
- * Matches vanilla damage sources classified as magic by the same tags Origins uses.
+ * Vanilla has no dedicated magic tag: both the guardian-thorns and witch-resistance tags have to match.
  */
 public final class MagicDamageCondition implements DamageCondition {
     public static final MagicDamageCondition INSTANCE = new MagicDamageCondition();

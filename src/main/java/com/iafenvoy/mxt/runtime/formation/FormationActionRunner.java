@@ -34,13 +34,9 @@ public final class FormationActionRunner {
     private FormationActionRunner() {
     }
 
-    /**
-     * Runs the modules that act on the formation itself, once per period. Only the display module lives here;
-     * the stock has no period of its own, because it is settled where the upkeep is charged.
-     *
-     * @return how many modules of that kind were reached, which is how the audit tells a module that ran from
-     * one that is declared and never read; the ticker ignores it
-     */
+    // Runs the modules that act on the formation itself, once per period. Only the display module lives here;
+    // the stock has no period of its own, because it is settled where the upkeep is charged. The return is how
+    // the audit tells a module that ran from one that is declared and never read; the ticker ignores it.
     public static int perPeriod(ServerLevel level, Formation definition, FormationInstance instance, BlockPos controller) {
         int reached = 0;
         for (FormationActionType module : definition.actions()) {
@@ -77,10 +73,8 @@ public final class FormationActionRunner {
         for (ApplyEffectAction effect : attack.effects()) effect.execute(context);
     }
 
-    /**
-     * Grants the module's abilities under the source convention, which is also what releases them: nothing
-     * here does, because the ticker drops every ability of that source for an entity that leaves.
-     */
+    // Grants under the source convention, which is also what releases them: nothing here does, because the
+    // ticker drops every ability of that source for an entity that leaves.
     private static void buff(BuffFormationAction buff, Entity entity, EntityActionContext context,
                              FormationInstance instance, @Nullable Entity owner, @Nullable UUID ownerId) {
         Identifier source = FormationSources.of(instance.formation());
@@ -97,10 +91,8 @@ public final class FormationActionRunner {
         }
     }
 
-    /**
-     * Whether the module's benefit reaches this entity. {@code ALLIES} asks the friend system and leaves out an
-     * unidentifiable entity, because handing a stranger the owner's bonus is the failure this avoids.
-     */
+    // ALLIES asks the friend system and leaves out an unidentifiable entity, because handing a stranger the
+    // owner's bonus is the failure this avoids.
     private static boolean targets(TargetMode mode, Entity entity,
                                    @Nullable Entity owner, @Nullable UUID ownerId) {
         return switch (mode) {

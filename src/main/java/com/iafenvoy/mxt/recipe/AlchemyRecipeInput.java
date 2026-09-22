@@ -9,10 +9,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Recipe input used by alchemy stations, which may contain multiple stacks.
- */
 public record AlchemyRecipeInput(List<ItemStack> stacks) implements RecipeInput {
+    // Copies and drops empty stacks: the input outlives the station's slot contents.
     public AlchemyRecipeInput {
         stacks = stacks.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList();
     }

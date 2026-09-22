@@ -48,9 +48,6 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         return ID;
     }
 
-    /**
-     * Jade-style single-item row: item icon on the left and its name on the right.
-     */
     private static final class DisplayedItemElement extends Element {
         private static final float ICON_SCALE = 0.75F;
         private final ItemStack item;
@@ -81,9 +78,6 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         }
     }
 
-    /**
-     * Jade layout element with a real filled rectangle instead of a text-made bar.
-     */
     private static final class ChargeBarElement extends Element {
         private static final int BAR_WIDTH = 100;
         private static final int BAR_HEIGHT = 8;

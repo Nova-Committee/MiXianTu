@@ -54,9 +54,6 @@ public final class CultivationModeService {
         return true;
     }
 
-    /**
-     * Sends the user-facing reason for a failed cultivation-mode transition.
-     */
     public static void notifyFailure(ServerPlayer player, Result result) {
         if (result == null || result.failure() == null) return;
         String reasonKey = "actionbar.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
@@ -66,9 +63,6 @@ public final class CultivationModeService {
         player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
     }
 
-    /**
-     * Resolves the selected cultivation behavior without requiring a cultivation technique.
-     */
     public static Optional<Holder<CultivateAction>> resolveAction(CultivationAttachment spirit) {
         Optional<Holder<CultivateAction>> configured = MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATE_ACTION)
                 .filter(action -> action.value().defaultAction())

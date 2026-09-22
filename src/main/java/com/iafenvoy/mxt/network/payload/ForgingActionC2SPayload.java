@@ -13,10 +13,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * A forging request. {@code definition} is the blueprint id for {@link ForgingAction#SELECT} and the method id
- * for {@link ForgingAction#STRIKE}, while the other transitions carry none because the server reads
- * everything else from its own session state. The request names no table: the server resolves it from the menu
- * the sending player has open, so it can only act on the table that player is standing at.
+ * A forging request. {@code definition} is the blueprint id for {@link ForgingAction#SELECT} and the method id for
+ * {@link ForgingAction#STRIKE}; the other transitions carry none, because the server reads everything else from its
+ * own session state. The request names no table: the server resolves it from the menu the sending player has open.
  */
 public record ForgingActionC2SPayload(ForgingAction action,
                                       Optional<Identifier> definition) implements CustomPacketPayload {
@@ -34,9 +33,6 @@ public record ForgingActionC2SPayload(ForgingAction action,
         }
     }
 
-    /**
-     * Selects the blueprint, which starts a session when the materials are present.
-     */
     public static ForgingActionC2SPayload select(Identifier blueprint) {
         return new ForgingActionC2SPayload(ForgingAction.SELECT, Optional.of(blueprint));
     }
@@ -58,25 +54,11 @@ public record ForgingActionC2SPayload(ForgingAction action,
         return TYPE;
     }
 
-    /**
-     * Every supported state transition of one server-owned forging session.
-     */
     public enum ForgingAction {
-        /**
-         * Opens a session for the given blueprint id.
-         */
         SELECT(true),
-        /**
-         * Executes one strike with the given forging method id.
-         */
         STRIKE(true),
-        /**
-         * Settles the active session.
-         */
         FINISH(false),
-        /**
-         * Cancels the active session and returns the locked materials.
-         */
+        // Returns the locked materials to the player.
         CANCEL(false);
 
         public static final StreamCodec<ByteBuf, ForgingAction> STREAM_CODEC = MiscStreamCodecs.enumCodec(ForgingAction.class);

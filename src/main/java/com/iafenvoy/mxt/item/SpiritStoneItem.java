@@ -18,13 +18,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 /**
- * A chargeable spirit stone whose capacity is supplied by its {@code item_aura} definition and whose content is
- * what its store holds - see {@link SpiritStorageComponent}. A stone holds one aura at a time, so it reads the
- * store's sole aura rather than answering for every aura the store could name.
- * <p>
- * It is a {@link UseItemAuraAccess} item because it is filled by hand, not because it describes itself: its pour
- * is left to the {@code item_aura} definition that describes the item, which is what that interface's empty
- * {@code pour} means.
+ * A chargeable spirit stone whose capacity comes from its {@code item_aura} definition and whose content is what
+ * its store holds (see {@link SpiritStorageComponent}). A stone holds one aura at a time, so it reads the store's
+ * sole aura rather than answering for every aura the store could name. It is a {@link UseItemAuraAccess} because it
+ * is filled by hand, not because it describes itself: its pour is left to that definition, which is what the
+ * interface's empty {@code pour} means.
  */
 public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     public SpiritStoneItem(Properties properties) {
@@ -72,15 +70,8 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
         return amount - extracted;
     }
 
-    /**
-     * Which aura this stack's store holds: the one it was written under, or - for a stack that has never been
-     * written to, or one that was drained - the type its {@code item_aura} definition declares. Answers
-     * {@code null} when neither says, which is an item that stores nothing.
-     * <p>
-     * The store is asked before the definition because a store cannot be reinterpreted: its amounts are filed
-     * under the aura they count, so a definition re-typed by a data pack can only stop matching what is already
-     * in the world.
-     */
+    // The store is asked before the definition because a store cannot be reinterpreted: its amounts are filed under
+    // the aura they count, so a definition re-typed by a data pack can only stop matching what is already in the world.
     private Holder<Aura> contentType(ItemStack stack) {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         return (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
@@ -91,9 +82,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
         return stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
     }
 
-    /**
-     * A missing component represents a pristine, fully charged spirit stone.
-     */
+    // A missing component means a pristine, fully charged spirit stone.
     private int normalizeStored(ItemStack stack, int capacity, Holder<Aura> aura, boolean simulate) {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         if (component == null) return capacity;

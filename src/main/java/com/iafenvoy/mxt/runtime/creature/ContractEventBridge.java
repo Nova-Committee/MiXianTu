@@ -46,9 +46,7 @@ public final class ContractEventBridge {
         definition.followAction().execute(pet, FormulaContext.of(pet));
     }
 
-    /**
-     * Contract combat callbacks run after vanilla damage is resolved and never mutate the original hit.
-     */
+    // Contract combat callbacks run after vanilla damage is resolved and never mutate the original hit.
     @SubscribeEvent
     public static void onLivingDamage(Post event) {
         if (event.getEntity().level().isClientSide() || !(event.getSource().getEntity() instanceof Mob pet)) return;
@@ -59,9 +57,7 @@ public final class ContractEventBridge {
         });
     }
 
-    /**
-     * A pet death closes its persisted contract and exposes both break and penalty hooks.
-     */
+    // A pet death closes its persisted contract and exposes both break and penalty hooks.
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Mob pet)) return;

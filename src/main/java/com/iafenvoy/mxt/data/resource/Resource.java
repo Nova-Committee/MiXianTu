@@ -15,10 +15,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Datapack definition of a stored value: its bounds and how it is displayed. A resource stores nothing about
- * where it comes from or what it is for — that is the job of the
- * {@link com.iafenvoy.mxt.data.aura.Aura} referencing it, so one without a profile is
- * simply a counter.
+ * Datapack definition of a stored value: its bounds and how it is displayed. A resource stores nothing about where
+ * it comes from or what it is for - that is the job of the {@link com.iafenvoy.mxt.data.aura.Aura} referencing it -
+ * so one without a profile is simply a counter.
  */
 public record Resource(NumberProvider defaultValue, NumberProvider min, NumberProvider max,
                        Optional<IconReference> icon, int particleColor, List<ResourceBar> bars) {

@@ -10,11 +10,9 @@ import net.minecraft.resources.Identifier;
 import java.util.Map;
 
 /**
- * Fully resolved aura at one position. Consumers must use this instead of raw chunk data.
- * <p>
- * What is present here is the whole answer to "which auras is this place made of": {@link #aura}'s key set.
- * There is no second vocabulary of aura kinds, because a place that names an aura it does not hold is a claim
- * nothing could check.
+ * Fully resolved aura at one position; consumers must use this instead of raw chunk data. The key set of
+ * {@link #aura} is the whole answer to "which auras is this place made of", so a place can never name an aura
+ * it does not hold.
  */
 public record AuraResult(Map<Holder<Aura>, AuraPool> aura,
                          Rules rules, double elementFitBonus,

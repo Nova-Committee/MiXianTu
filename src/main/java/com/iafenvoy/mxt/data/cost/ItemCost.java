@@ -57,9 +57,7 @@ public record ItemCost(ItemMatcher matcher, NumberProvider amount) implements Co
         player.getInventory().setChanged();
     }
 
-    /**
-     * Resolves the requested item count without changing the inventory.
-     */
+    // A non-positive or non-finite amount means the cost cannot be paid at all.
     public int required(Player player) {
         double value = this.amount.evaluate(FormulaContext.of(player));
         return Double.isFinite(value) && value > 0.0D ? (int) Math.ceil(value) : 0;

@@ -20,8 +20,8 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * Authoritative chunk-local aura stock. Every value is independently keyed by
- * its resource; there is deliberately no aggregate aura pool.
+ * Authoritative chunk-local aura stock. Every value is independently keyed by its resource; there is deliberately
+ * no aggregate aura pool.
  */
 public final class AuraChunkAttachment {
     public static final MapCodec<AuraChunkAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -37,9 +37,7 @@ public final class AuraChunkAttachment {
     private final Map<Holder<Aura>, AuraValue> absorbedAura;
     private final Int2ObjectMap<BlockAuraSectionCache> blockAuraSections;
     private final Map<Holder<Aura>, AuraPool> auras;
-    /**
-     * Runtime-only; never saved.
-     */
+    // Runtime-only; never saved.
     private final Map<SectionPos, Integer> auraVisitors = new LinkedHashMap<>();
 
     public AuraChunkAttachment() {
@@ -108,9 +106,7 @@ public final class AuraChunkAttachment {
         this.initialized = true;
     }
 
-    /**
-     * Atomically consumes all requested aura pools.
-     */
+    // All-or-nothing: every pool is checked before any is spent.
     public boolean consume(Map<Holder<Aura>, Double> costs) {
         for (Entry<Holder<Aura>, Double> entry : costs.entrySet()) {
             double cost = entry.getValue();
@@ -121,9 +117,7 @@ public final class AuraChunkAttachment {
         return true;
     }
 
-    /**
-     * Adds or removes aura while respecting the pool's own maximum.
-     */
+    // Add or remove, clamped by the pool's own maximum.
     public void change(Map<Holder<Aura>, Double> amounts) {
         amounts.forEach((aura, amount) -> {
             if (Double.isFinite(amount)) this.auras.computeIfPresent(aura, (ignored, pool) -> pool.change(amount));
@@ -135,12 +129,9 @@ public final class AuraChunkAttachment {
         this.auras.replaceAll((aura, pool) -> pool.change(pool.regenPerTick() * elapsedTicks));
     }
 
-    /**
-     * Replaces the cached block contribution while retaining the already-consumed portion of every
-     * affected aura. {@link BlockAuraContribution#absorbed()} emitters stay out of the shared stock
-     * and the per-section caches: the environment subtracts this chunk's aggregate from the pool, so
-     * leaving them in would hand the same aura back to every query.
-     */
+    // Replaces the cached block contribution while retaining the already-consumed part of every affected aura.
+    // Absorbed emitters stay out of the shared stock and the per-section caches: the environment subtracts this
+    // chunk's aggregate from the pool, so leaving them in would hand the same aura back to every query.
     public void setBlockContribution(List<BlockAuraContribution> sources) {
         Map<Holder<Aura>, AuraValue> previous = new LinkedHashMap<>(this.blockAura);
         this.blockAuraSections.clear();
@@ -162,18 +153,12 @@ public final class AuraChunkAttachment {
         if (this.initialized) this.applyBlockContribution(previous, this.blockAura);
     }
 
-    /**
-     * Totals of the emitters that stand inside a formation, which the formation spends instead of the
-     * environment.
-     */
+    // Totals of the emitters inside a formation, which the formation spends instead of the environment.
     public Map<Holder<Aura>, AuraValue> absorbedAura() {
         return this.absorbedAura;
     }
 
-    /**
-     * Invalidates the per-subsection emitter details while retaining the
-     * aggregate as the baseline for an immediate rebuild.
-     */
+    // Drops the per-subsection emitter details, keeping the aggregate as the baseline for an immediate rebuild.
     public void clearBlockAuraCache() {
         this.blockAuraSections.clear();
     }

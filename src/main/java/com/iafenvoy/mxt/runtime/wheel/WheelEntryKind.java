@@ -16,21 +16,16 @@ import org.jspecify.annotations.NonNull;
 import java.util.Locale;
 
 /**
- * What kind of thing one wheel sector holds; the kind names the registry an id has to resolve in, which is
- * what lets one twelve-cell wheel mix abilities and auras.
+ * What kind of thing one wheel sector holds; the kind names the registry an id has to resolve in, which is what lets
+ * one twelve-cell wheel mix abilities and auras.
  */
 public enum WheelEntryKind implements StringRepresentable {
-    /** An empty sector: part of this enum so a layout is always twelve entries, never a null kind. */
+    // Part of this enum so a layout is always twelve entries, never a null kind.
     EMPTY,
-    /** An entry of the {@code mxt:ability} registry. */
     ABILITY,
-    /** An entry of the {@code mxt:aura} registry. */
     AURA,
-    /**
-     * An entry of the {@code mxt:artifact} registry that declares a {@code ToggableArtifactAbility}: the cell is
-     * something the player presses for - a switch or a one-shot - named by the artifact's own id with the
-     * capability's key appended.
-     */
+    // An mxt:artifact entry declaring a ToggableArtifactAbility - something the player presses for, named by the
+    // artifact's own id with the capability's key appended.
     ARTIFACT;
 
     public static final Codec<WheelEntryKind> CODEC = StringRepresentable.fromEnum(WheelEntryKind::values);
@@ -45,7 +40,7 @@ public enum WheelEntryKind implements StringRepresentable {
         return this != EMPTY;
     }
 
-    /** Whether {@code id} resolves in this kind's registry; each side passes its own registry access. */
+    // Each side passes its own registry access.
     public boolean exists(RegistryAccess access, Identifier id) {
         if (id == null) return false;
         return switch (this) {

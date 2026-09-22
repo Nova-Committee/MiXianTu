@@ -26,10 +26,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
 
     double resolve(ResourceHolderAttachment holder, Holder<Resource> resource, FormulaContext context);
 
-    /**
-     * Resolves a value with the owning entity available. Providers that depend on world state
-     * override this overload; attachment-backed providers keep the original implementation.
-     */
+    // Providers that depend on world state override this overload; attachment-backed ones keep the original.
     default double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
         return this.resolve(entity.getData(MxtAttachments.RESOURCE_HOLDER), resource, context);
     }
@@ -97,9 +94,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         }
     }
 
-    /**
-     * Only the environmental template contribution, excluding chunk storage and emitters.
-     */
+    // Only the environmental template contribution, excluding chunk storage and emitters.
     enum EnvironmentConcentration implements ResourceValueProvider {
         INSTANCE;
         public static final MapCodec<EnvironmentConcentration> CODEC = MapCodec.unit(INSTANCE);
@@ -126,9 +121,7 @@ public sealed interface ResourceValueProvider permits Current, Maximum, Regen, M
         }
     }
 
-    /**
-     * The complete resolved concentration, including stored and block/formation contributions.
-     */
+    // The complete resolved concentration, including stored and block/formation contributions.
     enum ActualConcentration implements ResourceValueProvider {
         INSTANCE;
         public static final MapCodec<ActualConcentration> CODEC = MapCodec.unit(INSTANCE);

@@ -10,8 +10,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 /**
- * Resolves a declared variable directly, with a finite fallback for absent context values.
- * The binding depends only on the variable registry, so it is resolved once and reused.
+ * Resolves a declared variable directly, with a finite fallback for absent context values. The binding depends
+ * only on the variable registry, so it is resolved once and reused.
  */
 public final class ContextVariable implements NumberProvider {
     private static final MapCodec<ContextVariable> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

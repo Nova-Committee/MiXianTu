@@ -13,10 +13,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Reads how much of the {@code mxt:cooldown} of a named host is left. The length is the one the last use actually
- * got, or, for a value content wrote without one, the declaration's own {@code ticks}; the countdown starts at the
- * tick the value was written, which is the same anchor the runtime reads. Nothing written means nothing is
- * running, so a host that never used the ability it is about answers "ready" with no time left.
+ * Reads how much of the {@code mxt:cooldown} of a named host is left, anchored at the tick the value was written -
+ * the same anchor the runtime reads. Nothing written means nothing is running: ready, with no time left.
  */
 public record StorageCooldownEntityCondition(Identifier family, Identifier id, Optional<NumberRange> remaining,
                                              Optional<Boolean> ready) implements EntityCondition {

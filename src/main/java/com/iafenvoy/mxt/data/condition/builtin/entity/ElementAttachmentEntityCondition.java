@@ -17,17 +17,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Map;
 
 /**
- * Tests how much of an element has built up on an entity, with the same lower/upper bound shape aura ranges
- * use. Every entry has to pass.
- *
- * <p>It is the read side of the accumulation system: a pack can make an effect depend on how much fire a body
- * is carrying without any reaction firing, which is what a "the more it builds the worse it gets" design
- * needs.</p>
- *
- * <p>A {@code mxt:disabled} element answers no, whatever is left on the body: the buildup of an element a pack
- * took out of play is not a fact about that element any more than its relations or its aura are, and this is
- * the only reader of the accumulation, so the rule is stated here once. An empty table is refused at load
- * rather than read as "always true".</p>
+ * Reads how much of an element has built up on an entity. An element disabled by {@code mxt:disabled} answers no
+ * however much has built up, and an empty table is refused at load rather than read as "always true".
  */
 public record ElementAttachmentEntityCondition(Map<Holder<Element>, AuraRequirement> elements) implements EntityCondition {
     public static final MapCodec<ElementAttachmentEntityCondition> CODEC = CollectionCodecs.map(Element.CODEC, AuraRequirement.CODEC)

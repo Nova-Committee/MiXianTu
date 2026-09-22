@@ -20,21 +20,20 @@ import java.util.Optional;
 
 /**
  * Mirrors the chosen cell with the server: restores the number remembered at login and publishes the one the
- * player moves to. What travels is the number and nothing else - cells are numbered across the whole wheel, so
- * the number is the whole of what has to be remembered, and it stays valid while the pages it was counted on
- * come and go.
+ * player moves to. Only the number travels - cells are numbered across the whole wheel, so it stays valid while
+ * the pages it was counted on come and go.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class WheelSelectionSync {
-    /** Whether this session has read the server's copy; until it has, an unarmed session stays silent. */
+    // Whether this session has read the server's copy; until it has, an unarmed session stays silent.
     private static boolean consulted;
-    /** The number the server was last told about; {@code null} before anything has been sent. */
+    // The number the server was last told about; null before anything has been sent.
     private static @Nullable Integer synced;
 
     private WheelSelectionSync() {
     }
 
-    /** {@link EventPriority#LOWEST} keeps it after the wheel controller: the cell picked this tick wins. */
+    // EventPriority#LOWEST keeps it after the wheel controller: the cell picked this tick wins.
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void tick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -54,14 +53,14 @@ public final class WheelSelectionSync {
         ClientPacketDistributor.sendToServer(new WheelSelectionC2SPayload(Optional.ofNullable(armed)));
     }
 
-    /** What was chosen does not survive a world change: the attachment is the server's, the pages may differ. */
+    // What was chosen does not survive a world change: the attachment is the server's, the pages may differ.
     @SubscribeEvent
     public static void onLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
         consulted = false;
         synced = null;
     }
 
-    /** Re-sends the chosen cell, because the pages it was counted on were just replaced by the editor. */
+    // Re-sends the chosen cell, because the pages it was counted on were just replaced by the editor.
     static void republish() {
         synced = null;
     }

@@ -163,9 +163,7 @@ import java.util.function.Consumer;
 
 import static net.minecraft.commands.Commands.literal;
 
-/**
- * Commands that assemble a playable, development-only Qingxiao cultivation scenario.
- */
+/** Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario. */
 public final class MxtTestCommands {
     private static final Identifier QI = id("qi");
     private static final Identifier QI_REFINING = id("qi_refining");
@@ -204,19 +202,19 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_TECHNIQUE_STAGE = id("sword_art_2");
     private static final Identifier PROBE_ABILITY = id("artifact_guard");
     private static final Identifier SWORD_FOCUS = id("sword_focus");
-    /** Wrong on purpose: it grants an active ability as {@code mxt:passive}. */
+    // Wrong on purpose: grants an active ability as mxt:passive.
     private static final Identifier MISDECLARED_ARTIFACT = id("misdeclared_grant_probe");
-    /** Wrong on purpose: it claims the item {@link #MISDECLARED_ARTIFACT} already claims. */
+    // Wrong on purpose: claims the item MISDECLARED_ARTIFACT already claims.
     private static final Identifier CLAIM_CONFLICT_ARTIFACT = id("claim_conflict_probe");
-    /** Wheel probe: an active ability, so a derived page may list it while it is granted. */
+    // Active, so a derived wheel page may list it while it is granted.
     private static final Identifier PROBE_WHEEL_ABILITY = id("firebolt");
-    /** Wheel probe: declared {@code mxt:modifier}, so a derived page must leave it out even while granted. */
+    // Declared mxt:modifier, so a derived page must leave it out even while granted.
     private static final Identifier PROBE_WHEEL_PASSIVE = id("artifact_guard");
-    /** Wheel probe: the fixture that declares {@code mxt:flight}, which is a togglable artifact capability. */
+    // Declares mxt:flight, which is a togglable artifact capability.
     private static final Identifier PROBE_WHEEL_TOGGLE = id("bound_sword");
-    /** Wheel probe: a fixture artifact with no capability at all, so neither key of it is a wheel cell. */
+    // A fixture artifact with no capability at all, so neither of its keys is a wheel cell.
     private static final Identifier PROBE_WHEEL_PLAIN_ARTIFACT = id("ward_jade_talisman");
-    /** Wheel probe: more active abilities than one page holds, so the overflow is thirteen entries and up. */
+    // More active abilities than one page holds; the overflow leg expects thirteen entries and up.
     private static final List<Identifier> PROBE_WHEEL_MANY = List.of(
             id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence"),
             id("curse_apply_probe"), id("curse_cleanse_probe"), id("curse_query_probe"),
@@ -255,9 +253,7 @@ public final class MxtTestCommands {
                 .then(literal("guide").executes(context -> showGuide(context.getSource()))));
     }
 
-    /**
-     * Re-checks the behaviour that has no other observable entry point: the aura zone priority selection.
-     */
+    // Re-checks the one behaviour with no other observable entry point: aura zone priority selection.
     private static int verify(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
@@ -270,10 +266,8 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    /**
-     * Asserts the documented rule: highest priority wins inside a tier, the registry ID breaks ties, and
-     * a dimension binding is never outranked by a biome binding.
-     */
+    // The documented rule: highest priority wins inside a tier, the registry ID breaks ties, and a dimension
+    // binding is never outranked by a biome binding.
     private static String verifyAuraPriority(ServerPlayer player) {
         Identifier level = player.level().dimension().identifier();
         List<Reference<AuraZone>> biomeZones = new ArrayList<>();
@@ -300,10 +294,7 @@ public final class MxtTestCommands {
                 : "biome winner mismatch: expected " + expected + " but resolved " + resolved.source();
     }
 
-    /**
-     * The production ordering helper must return the maximum priority and, for equal priorities,
-     * the ascending registry ID. This is asserted through the same helper the runtime uses.
-     */
+    // Asserts the production ordering helper itself: maximum priority first, ascending registry ID on a tie.
     private static String verifyPriorityOrdering(List<Reference<AuraZone>> biomeZones,
                                                  List<Reference<AuraZone>> dimensionZones) {
         for (List<Reference<AuraZone>> candidates : List.of(biomeZones, dimensionZones)) {
@@ -326,32 +317,28 @@ public final class MxtTestCommands {
                 .map(key -> key.identifier().equals(level)).orElse(false));
     }
 
-    /**
-     * Drives both layers of the damage pipeline against throwaway entities whose element edges are known,
-     * because a pipeline is the one thing a data file cannot show: the numbers below are the fixture's own
-     * (fire overcomes water {@code 1.5}, water is adapted to fire {@code 0.5}) read back through the same
-     * calls the runtime uses, so a regression in either layer or in the incoming event shows up as a
-     * mismatch here rather than as quiet damage drift in play.
-     *
-     * <p>The mastery leg then walks a real chain: the entry stage of {@code mxt_test:sword_manual} is worth
-     * {@code 1.1} on the ability it grants and the second stage {@code 1.25}, and the hit asserts that the
-     * value reaches both the health of the target and the context a real cast dispatches with. A last leg
-     * takes damage the pipeline never shaped - a plain vanilla mob attack - and asserts only the defender's
-     * adaptation touched it, which is what makes the two layers two rather than one applied twice.</p>
-     *
-     * <p>Two legs pin the two strikes the pipeline declines to scale: damage with nobody credited reads no
-     * element relation but keeps the casting's own mastery, and a damage type in {@code mxt:no_bonus} travels
-     * untouched through both layers. The second one also asserts that the shipped default tag really does hold
-     * the void, because a misplaced tag file would otherwise change nothing anyone could see.</p>
-     *
-     * <p>Two more pin what the shaping layer was taught on 2026-09-22: a weapon the striker's own roots conflict
-     * with weakens everything they deal (the fixture prices the water sword at 0.5 for a fire body), and only an
-     * element the strike <em>declared</em> rubs off on the target - a fire read off the striker's roots reduces
-     * the hit and leaves nothing behind, which is the difference the {@code origin} leg measures as 4 versus 0.
-     * Two more again: what the victim <em>carries</em> decides how much of that element gets through (the ward
-     * artifact halves it), and a damage type's claim may price the buildup itself, so the same element read off
-     * {@code minecraft:magic} leaves 4 while {@code minecraft:lava} leaves the 2 its claim wrote.</p>
-     */
+    // Drives both damage pipeline layers against throwaway probes whose element edges are fixture-known: fire
+    // overcomes water x1.5 and water is adapted to fire x0.5, so 10 reads as outgoing 15.0 / adapted 7.5, read
+    // back through the same calls the runtime uses. Legs and their arithmetic:
+    //   mastery  - sword_manual stage 1 is x1.1 and stage 2 x1.25, so 4 x 1.25 = 3.75 lost, and the value must
+    //              also reach the context a real cast dispatches with (driven through AbilityService);
+    //   foreign  - a plain mob attack never shaped by the pipeline: only adaptation may touch it, 4 x 0.5 = 2;
+    //   physique - probe_body multiplies dealt x1.5 and taken x0.5, so 10 * 1.5 * 1.5 = 22.5 then
+    //              22.5 * 0.5 * 0.5 = 5.625 (the taken side is a formula, so this leg covers that path too);
+    //   affinity - the fire root's element_ability_modifier 1.1 is a shaping factor: 10 * 1.1 * 1.5 = 16.5,
+    //              then 16.5 * 0.5 = 8.25, and a real cast must read the same value off its context;
+    //   unowned  - nobody credited reads no element relation, but the cast's own mastery stays: 4 * 2 = 8,
+    //              separating 8.0 (correct) from 12.0 (relation read anyway) and 4.0 (mastery dropped);
+    //   no_bonus - a mxt:no_bonus type travels untouched through both layers (6.0 handed, 6.0 lost), which also
+    //              proves the shipped default tag holds the void;
+    //   self_conflict - a water sword in a fire body whose root conflicts with water: 4 x 0.5 = 2 wielded vs 4
+    //              unarmed;
+    //   origin   - only an element the strike declared rubs off: the same fire strike leaves 4 read off
+    //              minecraft:magic and 0 read off the striker's roots (claim leg 4 versus origin leg 0);
+    //   ward     - the carried artifact halves the buildup: 4 left on a bare body, 2 on one holding the ward,
+    //              while the strike's own damage is untouched;
+    //   claim    - a type's claim may price the buildup: fire's own 4.0 from minecraft:magic, but 2.0 from
+    //              minecraft:lava.
     private static int probeDamage(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         BlockPos origin = source.getPlayer() != null
@@ -359,8 +346,8 @@ public final class MxtTestCommands {
                 : level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO);
         LivingEntity attacker = spawnProbe(level, origin.above(), PROBE_FIRE_ROOT);
         LivingEntity defender = spawnProbe(level, origin.above(2), PROBE_WATER_ROOT);
-        // The mastery leg needs a defender of its own: a hit leaves the target briefly invulnerable, and the
-        // second strike would land in that window and be refused rather than measured.
+        // The mastery leg needs a defender of its own: the first hit leaves the target briefly invulnerable,
+        // and a second strike in that window is refused rather than measured.
         LivingEntity masteryDefender = spawnProbe(level, origin.above(3), PROBE_WATER_ROOT);
         LivingEntity foreignDefender = spawnProbe(level, origin.above(4), PROBE_WATER_ROOT);
         LivingEntity bodyAttacker = spawnProbe(level, origin.above(5), PROBE_FIRE_ROOT);
@@ -406,9 +393,8 @@ public final class MxtTestCommands {
             DamageCalculationService.deal(attacker, masteryDefender, 4.0D, Optional.empty(),
                     context.with(DamageCalculationService.DAMAGE_MULTIPLIER, advanced));
             double masteryLost = masteryBefore - masteryDefender.getHealth();
-            // The value has to reach the context a real cast dispatches with, not merely exist here: this
-            // drives the ability service itself and reads the formula value off the event it posts before
-            // running any action, which is the same context a damage action would be handed.
+            // The value must reach the context a real cast dispatches with, not merely exist here: this drives
+            // AbilityService and reads the formula value off the event it posts before any action runs.
             double[] dispatched = {Double.NaN};
             Consumer<Pre> listener = event ->
                     dispatched[0] = event.context().explicit(DamageCalculationService.DAMAGE_MULTIPLIER);
@@ -426,9 +412,8 @@ public final class MxtTestCommands {
                     + " advanced=" + advanced + " health_lost=" + masteryLost + " dispatched=" + dispatched[0]
                     + (mastery ? " OK" : " MISMATCH")), false);
 
-            // A source the pipeline never saw has to be reduced all the same: this is a plain vanilla mob
-            // attack, so only the defender's adaptation may touch it - the attacker's edge must not, or the
-            // two layers would not really be two.
+            // A source the pipeline never saw must still be reduced: this is a plain vanilla mob attack, so only
+            // the defender's adaptation may touch it - 4 x 0.5 = 2 - never the attacker's edge.
             float foreignBefore = foreignDefender.getHealth();
             foreignDefender.hurtServer(level, level.damageSources().mobAttack(attacker), 4.0F);
             double foreignLost = foreignBefore - foreignDefender.getHealth();
@@ -436,12 +421,9 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("damage probe: foreign health_lost=" + foreignLost
                     + (foreign ? " OK" : " MISMATCH")), false);
 
-            // The physique half of the shaping and the reduction. One fixture is granted to both sides - it
-            // multiplies what its holder deals by 1.5 and what its holder takes by 0.5 - so one pair of numbers
-            // reads both: 10 * 1.5 (fire overcomes water) * 1.5 (dealt) = 22.5, then
-            // 22.5 * 0.5 (water is adapted to fire) * 0.5 (taken) = 5.625. The taken multiplier is written as
-            // an expression rather than a number, so this leg covers the formula path as well as the constant
-            // one, and it is evaluated against the physique holder's own context rather than the attacker's.
+            // The physique half, granted to both sides (dealt x1.5, taken x0.5):
+            // 10 * 1.5 (fire overcomes water) * 1.5 (dealt) = 22.5, then 22.5 * 0.5 (water adapted to fire)
+            // * 0.5 (taken) = 5.625. The taken multiplier is a formula, evaluated against its own holder.
             boolean bodyGranted = grantProbePhysique(bodyAttacker, PROBE_PHYSIQUE)
                     && grantProbePhysique(bodyDefender, PROBE_PHYSIQUE);
             FormulaContext bodyContext = FormulaContext.of(bodyAttacker);
@@ -455,11 +437,10 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("damage probe: physique outgoing=" + bodyOutgoing
                     + " taken=" + bodyIncoming + " health_lost=" + bodyLost + (physique ? " OK" : " MISMATCH")), false);
 
-            // The spirit root's affinity is a factor of the shaping layer now, not only a value a damage
-            // formula has to remember: 10 * 1.1 (the fire root's element_ability_modifier) * 1.5 = 16.5, and
-            // 16.5 * 0.5 = 8.25 once the water body answers for it. The second half drives a real cast and
-            // reads the same value off the context it dispatched with, which is what proves the number the
-            // pipeline applies and the number a pack could read are the same one.
+            // The spirit root's affinity is a shaping factor now, not just a value a formula must remember:
+            // 10 * 1.1 (the fire root's element_ability_modifier) * 1.5 = 16.5, then 16.5 * 0.5 = 8.25 once the
+            // water body answers. The second half drives a real cast to prove the pipeline's number and the one
+            // a pack could read off the dispatched context are the same.
             FormulaContext affinityContext = FormulaContext.of(affinityAttacker)
                     .with(DamageCalculationService.ELEMENT_MODIFIER, PROBE_FIRE_AFFINITY);
             double affinityOutgoing = DamageCalculationService.outgoing(affinityAttacker, affinityDefender, 10.0D, affinityContext);
@@ -485,12 +466,10 @@ public final class MxtTestCommands {
                     + " reduced=" + affinityIncoming + " health_lost=" + affinityLost + " cast=" + castAffinity[0]
                     + (affinity ? " OK" : " MISMATCH")), false);
 
-            // Damage with nobody credited reads no element relation, even when its own declared damage type
-            // would lend it one: `minecraft:magic` is claimed by fire in the test package, so the relation
-            // exists here and must not be read. The casting's own factors are a different matter and stay,
-            // which is why the mastery is written as 2.0 - the leg then separates 8.0 (correct: 4 * 2, relation
-            // dropped) from 12.0 (the relation was read anyway) and from 4.0 (the mastery was dropped along
-            // with it), where a mastery of 1.0 could not have told those last two apart.
+            // Nobody credited reads no element relation even when the declared type would lend it one:
+            // minecraft:magic is fire-claimed in the test package, so that relation exists and must not be read.
+            // The cast's own factors stay, hence a mastery of 2.0 - that separates 8.0 (correct: 4 * 2, relation
+            // dropped) from 12.0 (relation read anyway) and 4.0 (mastery dropped too), which 1.0 could not.
             Holder<DamageType> magicDamage = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
                     .getOrThrow(DamageTypes.MAGIC);
             Set<Holder<Element>> declared = DamageElements.of(level.registryAccess(), magicDamage);
@@ -504,11 +483,10 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("damage probe: unattributed outgoing=" + unowned
                     + " health_lost=" + unownedLost + (unattributed ? " OK" : " MISMATCH")), false);
 
-            // A damage type the pack exempted travels as the number it was handed. Both bodies carry the same
-            // physique (dealt * 1.5, taken * 0.5) that the untagged legs above measure with, so the four
-            // readings are far apart: 6.0 means both layers stood aside, 9.0 means only the reduction did,
-            // 3.0 means only the shaping did, and 4.5 means neither did. The same line asserts that the void
-            // really is in the shipped default tag - a misplaced tag file would otherwise go unnoticed.
+            // A type the pack exempted travels as the number it was handed. Both bodies carry the same physique
+            // (dealt x1.5, taken x0.5) the untagged legs measure with, so the readings are far apart: 6.0 means
+            // both layers stood aside, 9.0 only the reduction did, 3.0 only the shaping did, 4.5 neither. The
+            // same line asserts the void really is in the shipped default tag, which a misplaced file would hide.
             Holder<DamageType> voidDamage = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
                     .getOrThrow(DamageTypes.FELL_OUT_OF_WORLD);
             boolean tagged = DamageCalculationService.bypasses(level.damageSources().fellOutOfWorld())
@@ -524,11 +502,10 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("damage probe: no_bonus tagged=" + tagged + " dealt=" + handed
                     + " health_lost=" + taggedLost + (exempt ? " OK" : " MISMATCH")), false);
 
-            // A weapon the striker's own roots conflict with weakens everything they deal. The fixture root
-            // (`anti_water_root`) is a fire body that lists water in its `conflicting_elements`, the golden sword
-            // is declared water, and `mxt_test:water` prices that at 0.5 - so the same 4 reads as 2 in that hand
-            // and as 4 in an empty one. The victim has no roots and the striker's own element is fire against
-            // nothing, so no relation confuses the two numbers.
+            // A weapon the striker's own roots conflict with weakens everything they deal: the fixture root
+            // (anti_water_root) is a fire body listing water in conflicting_elements, the golden sword is
+            // declared water, and mxt_test:water prices it at 0.5 - so the same 4 reads as 2 in that hand and as
+            // 4 in an empty one. The victim has no roots and fire meets nothing, so no relation confuses this.
             conflictAttacker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLDEN_SWORD));
             FormulaContext conflictContext = FormulaContext.of(conflictAttacker);
             double conflicting = DamageCalculationService.outgoing(conflictAttacker, conflictDefender, 4.0D, conflictContext);
@@ -544,10 +521,10 @@ public final class MxtTestCommands {
                     + (selfConflict ? " OK" : " MISMATCH")), false);
 
             // Only an element the strike declared rubs off. Both victims take a fire strike of 10 with no roots
-            // of their own, so neither has an element edge; the difference is where the fire came from: the first
-            // strike travels as `minecraft:magic`, which the test package has fire claim, so fire's own
-            // `damage_attachment` of 4 is left on the target - while the second declares nothing, reads fire off
-            // the striker's roots, and leaves nothing behind.
+            // of their own, so neither has an element edge; the difference is the source: the first travels as
+            // minecraft:magic, which the test package has fire claim, so fire's own damage_attachment of 4 is
+            // left on the target, while the second declares nothing, reads fire off the striker's roots, and
+            // leaves nothing behind.
             float claimedBefore = claimedVictim.getHealth();
             Holder<Element> probeFire = require(MxtResourceKeys.ELEMENT, PROBE_FIRE_ELEMENT);
             DamageCalculationService.deal(attacker, claimedVictim, 10.0D, Optional.of(magicDamage), FormulaContext.of(attacker));
@@ -564,8 +541,8 @@ public final class MxtTestCommands {
                     + (strikeOrigin ? " OK" : " MISMATCH")), false);
 
             // What the victim carries decides how much of that element gets through: the ward artifact prices
-            // itself at 0.5, so the same claimed fire strike that left 4 on a bare body leaves 2 on a body
-            // holding one - and the reduction is the item's, so the strike's damage is untouched.
+            // itself at 0.5, so the same claimed fire strike leaves 2 where a bare body kept 4 - and the
+            // reduction is the item's, so the strike's own damage is untouched.
             wardVictim.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.PRISMARINE_SHARD));
             double wardMultiplier = DamageCalculationService.attachmentMultiplier(wardVictim);
             float wardBefore = wardVictim.getHealth();
@@ -578,10 +555,9 @@ public final class MxtTestCommands {
                     + " left=" + wardLeft + " health_lost=" + wardLost
                     + (warded ? " OK" : " MISMATCH")), false);
 
-            // A damage type's claim may price the buildup itself: the fixture element claims `minecraft:magic`
-            // plainly, so fire's own 4.0 answers, and `minecraft:lava` with a 2.0 of its own - so one element read
-            // off two different types leaves two different amounts. That is what makes the claimed types usable
-            // as groups: a lava bath builds up half as fast as a fireball without the element being split in two.
+            // A type's claim may price the buildup itself: the fixture element claims minecraft:magic plainly,
+            // so fire's own 4.0 answers, and minecraft:lava with a 2.0 of its own - so one element read off two
+            // types leaves two amounts, which is what makes claimed types usable as groups.
             Holder<DamageType> lavaDamage = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
                     .getOrThrow(DamageTypes.LAVA);
             float lavaBefore = lavaVictim.getHealth();
@@ -621,28 +597,19 @@ public final class MxtTestCommands {
         }
     }
 
-    /**
-     * Hands one disposable probe a physique through the authoritative service, which is the same path a data
-     * pack action takes; {@code false} means the definition was refused, and the leg that asked for it fails
-     * rather than measuring a body that never got it.
-     */
+    // Grants through the authoritative service a data pack action would take; false means the definition was
+    // refused, and the leg that asked for it fails rather than measuring a body that never got it.
     private static boolean grantProbePhysique(LivingEntity entity, Identifier id) {
         return CultivationIdentityService.grantPhysique(entity, id, require(MxtResourceKeys.PHYSIQUE, id).value(),
                 FormulaContext.of(entity)).changed();
     }
 
-    /**
-     * Drives the cultivation identity surface end to end: the script API, the rarity a definition now reports,
-     * and the reading of a physique written as if it were elemental. Every leg is a number or a boolean rather
-     * than a log line, because the point of the probe is to fail loudly when a guarantee the documentation
-     * makes stops holding.
-     *
-     * <p>The three guarantees it pins: a switched-off root or physique is still <em>held</em> while
-     * contributing nothing (so the reads have to answer both questions separately, and a switched-off physique
-     * must not scale anything); a rarity is a field with a reader rather than a comment; and a field belonging
-     * to another registry is ignored while the definition still loads, which is what the record codec does with
-     * every key it was not told about.</p>
-     */
+    // Drives the cultivation identity surface end to end: the script API, the rarity a definition now reports,
+    // and the reading of a physique written as if it were elemental. The three guarantees pinned: a switched-off
+    // root or physique is still held while contributing nothing (so the reads answer both questions separately,
+    // and a switched-off physique must not scale anything); a rarity is a field with a reader; and a field
+    // belonging to another registry is ignored while the definition still loads. Every leg is a number or a
+    // boolean rather than a log line, so the probe fails loudly when a documented guarantee stops holding.
     private static int probeIdentity(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         BlockPos origin = source.getPlayer() != null
@@ -684,16 +651,16 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("identity probe: granted=" + granted + " listed=" + listed
                     + " switched_off=" + switchedOff + " removed=" + removed + (identity ? " OK" : " MISMATCH")), false);
 
-            // A rarity is content's own word, so it is read back as written and falls back to itself when no
-            // language file names it - the two things a consumer that reports it has to be able to do.
+            // A rarity is content's own word: read back as written, falling back to itself when no language file
+            // names it.
             Holder<Physique> physique = require(MxtResourceKeys.PHYSIQUE, PROBE_PHYSIQUE);
             boolean rarity = physique.value().rarity().equals("probe") && DefinitionText.rarity("probe").getString().equals("probe") && require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().rarity().equals("uncommon");
             source.sendSuccess(() -> Component.literal("identity probe: rarity=" + rarity
                     + (rarity ? " OK" : " MISMATCH")), false);
 
-            // A physique that also names an element, an element relation or a spirit-root field keeps loading
-            // and those keys are ignored, which is the record codec's own reading of a key it was not told
-            // about. A written number is still checked while the pack loads, so a broken multiplier is not.
+            // A physique that also names an element, an element relation or a spirit-root field keeps loading and
+            // those keys are ignored - the record codec's own reading of a key it was not told about. A written
+            // number is still checked while the pack loads, so a broken multiplier is not.
             boolean foreignIgnored = ignoresForeignFields();
             boolean negative = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("damage_dealt_multiplier", -1.0D)).isError();
             boolean plain = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("rarity", "probe")).result().isPresent();
@@ -712,11 +679,7 @@ public final class MxtTestCommands {
         }
     }
 
-    /**
-     * Whether a physique written as if it were elemental decodes the same as one that never mentioned those
-     * keys. Ignoring a field is only a guarantee if it leaves no trace, which comparing the two decoded
-     * definitions checks.
-     */
+    // Ignoring a field is only a guarantee if it leaves no trace, so the two decoded definitions are compared.
     private static boolean ignoresForeignFields() {
         JsonObject foreign = new JsonObject();
         foreign.addProperty("element", "mxt_test:fire");
@@ -727,10 +690,7 @@ public final class MxtTestCommands {
                 .equals(Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("rarity", "probe")).result());
     }
 
-    /**
-     * One-field JSON object, for the decode checks that ask whether a single key is enough to break a
-     * definition.
-     */
+    // One-field JSON object, for decode checks that ask whether a single key is enough to break a definition.
     private static JsonObject single(String key, Object value) {
         JsonObject object = new JsonObject();
         if (value instanceof Number number) object.addProperty(key, number);
@@ -739,16 +699,12 @@ public final class MxtTestCommands {
         return object;
     }
 
-    /**
-     * Drives the artifact module: a definition claims a real item, the stack is bound to its owner, aura is
-     * poured into one of the two kinds it names, its abilities follow the equipment slot, its inventory answers
-     * only its owner, its flight entry carries the holder, and it fits the four charm slots.
-     *
-     * <p>Fixture numbers: {@code mxt_test:qi} declares {@code 100} and {@code mxt_test:water_power} {@code 50},
-     * and {@code mxt_test:soul_power} declares nothing. A half feeding therefore raises the ceiling to
-     * {@code floor(100 * 1.25) = 125}, the next fill takes the remaining {@code 75}, and a fully fed artifact
-     * reaches {@code 100 * 1.5 = 150}.</p>
-     */
+    // Drives the artifact module: a definition claims a real item, the stack is bound to its owner, aura is
+    // poured into one of the two kinds it names, its abilities follow the equipment slot, its inventory answers
+    // only its owner, its flight entry carries the holder, and it fits the four charm slots.
+    // Fixture numbers: qi declares 100 and water_power 50, soul_power declares nothing - so a half feeding
+    // raises the ceiling to floor(100 * 1.25) = 125, the next fill takes the remaining 75, and a fully fed
+    // artifact reaches 100 * 1.5 = 150.
     private static int probeArtifact(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
@@ -855,18 +811,15 @@ public final class MxtTestCommands {
         return 0;
     }
 
-    /**
-     * The artifact fixture roster: one row per item, every question asked through the service the game itself uses.
-     * Together the rows cover item matching by id, by list and by item tag, per-aura ceilings (one of them written
-     * as a formula), storage slots from a formula, an {@code mxt:empty} placeholder beside a grant that mixes an id
-     * with an ability tag, the charm gate, the ownership gate {@code require_owner} switches, a refine action that
-     * charges on the way in, and the flight entry's own numbers.
-     *
-     * <p>Two fixtures are wrong on purpose, because the checks they trip live in {@code ServerCache} and have no
-     * other way to be observed: {@code mxt_test:misdeclared_grant_probe} grants an active ability as
-     * {@code mxt:passive}, and {@code mxt_test:claim_conflict_probe} claims an item the first one also claims.
-     * Registry order decides which of the two the claim problem names, so that assertion accepts either.</p>
-     */
+    // The artifact fixture roster: one row per item, every question asked through the service the game itself
+    // uses. The rows cover item matching by id, by list and by item tag, per-aura ceilings (one a formula),
+    // storage slots from a formula, an mxt:empty placeholder beside a grant mixing an id with an ability tag,
+    // the charm gate, the require_owner gate, a refine action that charges on the way in, and the flight
+    // entry's own numbers.
+    // Two fixtures are wrong on purpose, because the checks they trip live in ServerCache and are observable no
+    // other way: misdeclared_grant_probe grants an active ability as mxt:passive, and claim_conflict_probe
+    // claims an item the first one also claims - and registry order decides which the claim problem names, so
+    // that assertion accepts either.
     private static int probeArtifactRoster(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
@@ -887,7 +840,7 @@ public final class MxtTestCommands {
             ItemStack stack = new ItemStack(row.item());
             Reference<Artifact> holder = ArtifactService.definition(access, stack).orElse(null);
             Artifact definition = holder == null ? null : holder.value();
-            // Which definition answered is the row's first claim: the registry id is the artifact's own name.
+            // The registry id of the definition that answered is the row's first claim.
             boolean matches = holder != null && HolderHelper.id(holder).equals(id(row.definition()))
                     && row.curiosEquipable() == ArtifactService.curiosEquipable(access, stack)
                     && row.requireOwner() == definition.requireOwner()
@@ -947,19 +900,19 @@ public final class MxtTestCommands {
                 && !ArtifactService.hasOwner(plainJade) && ArtifactService.hasOwner(jadeStack);
         ok &= check(source, "artifact roster ownership gate require_owner=true refuses, =false binds", ownershipGate);
 
-        // The tooltip is built by ArtifactDescription so the same list can be read here without a client: the
-        // rendered words belong to a language file, but how many lines a definition earns belongs to this module.
+        // ArtifactDescription builds the tooltip so the same list is readable here without a client: the rendered
+        // words belong to a language file, but how many lines a definition earns belongs to this module.
         // Ownership and warmth are known because the fresh stacks carry neither and the jade was just refined.
         List<String> flightLines = ArtifactDescription.keys(ArtifactDescription.describe(access, flightStack, player, false));
         List<String> jadeLines = ArtifactDescription.keys(ArtifactDescription.describe(access, new ItemStack(Items.AMETHYST_SHARD), player, false));
         List<String> fedLines = ArtifactDescription.keys(ArtifactDescription.describe(access, jadeStack, player, false));
         List<String> wardLines = ArtifactDescription.keys(ArtifactDescription.describe(access, wardStack, player, false));
         // Anything a definition's own action charges is reported as a price; the blood-priced probe is the one
-        // fixture that charges health, and it is the only one whose claim line names a number.
+        // fixture charging health, and the only one whose claim line names a number.
         List<String> bloodLines = ArtifactDescription.keys(ArtifactDescription.describe(access, new ItemStack(Items.BLAZE_ROD), player, false));
         List<String> upkeepLines = ArtifactDescription.keys(ArtifactDescription.describe(access, new ItemStack(Items.IRON_SHOVEL), player, false));
-        // The long press closes every tooltip that has a gesture, and an unowned artifact is offered the claim
-        // while one the reader owns is offered the pour - the two halves never appear together.
+        // The long press closes every tooltip with a gesture, and an unowned artifact is offered the claim while
+        // one the reader owns is offered the pour - the two halves never appear together.
         boolean tooltip = flightLines.equals(List.of(tooltipKey("header"), tooltipKey("unowned"),
                         // One entry, one line: the speed and what riding costs share a line, so a definition with
                         // four abilities produces four lines rather than a paragraph.
@@ -987,21 +940,21 @@ public final class MxtTestCommands {
                 + " upkeep=" + upkeepLines.size(), tooltip);
 
         // The long press: what a definition declares, who it takes over for, and the two settlements it can make.
-        // The gesture is driven through the service rather than through a real use cycle, because the arming half
-        // belongs to the hold module and is what the client sees; the numbers below are the server's half.
+        // Driven through the service rather than a real use cycle, because the arming half belongs to the hold
+        // module and is what the client sees; the numbers below are the server's half.
         ItemStack dormantStack = new ItemStack(Items.GUNPOWDER);
         boolean declaredHold = ArtifactService.holdTicks(access, flightStack, context) == 20
                 && ArtifactService.holdTicks(access, jadeStack, context) == 30
                 && ArtifactService.holdTicks(access, new ItemStack(Items.GLOWSTONE_DUST), context) == 5
-                // The price is the default of `claim_action`, so it is read back out of that action: a definition
-                // that says nothing charges two hearts, one that does something else entirely (the jade) charges
-                // none, and one whose action states a plainly written consume_health reports that number.
+                // The price is the default of `claim_action`, read back out of that action: saying nothing charges
+                // two hearts, doing something else entirely (the jade) charges none, and a plainly written
+                // consume_health reports that number.
                 && ArtifactService.claimHealthCost(access, flightStack, context) == 4.0D
                 && ArtifactService.claimHealthCost(access, wardStack, context) == 4.0D
                 && ArtifactService.claimHealthCost(access, jadeStack, context) == 0.0D
                 && ArtifactService.claimHealthCost(access, new ItemStack(Items.GLOWSTONE_DUST), context) == 1.0D
                 && ArtifactService.claimHealthCost(access, new ItemStack(Items.BLAZE_ROD), context) == 3.0D
-                // hold_ticks: 0 is the escape hatch - the definition is not a hold, so nothing matches the item.
+                // hold_ticks 0 is the escape hatch: the definition is not a hold, so nothing matches the item.
                 && ArtifactService.holdTicks(access, dormantStack, context) == 0
                 && HoldLookup.hold(dormantStack) == null
                 && HoldLookup.hold(flightStack) instanceof ArtifactHold;
@@ -1010,7 +963,7 @@ public final class MxtTestCommands {
 
         ItemStack ownedHoldSword = flightStack.copy();
         ArtifactService.refine(ownedHoldSword, player);
-        // Filling every declared aura is what makes the pour pointless, so the gesture must stop being taken over.
+        // Filling every declared aura is what makes the pour pointless, so the gesture must stop being offered.
         ItemStack fullJade = new ItemStack(Items.AMETHYST_SHARD);
         ArtifactService.refine(fullJade, player);
         for (int round = 0; round < 3; round++) {
@@ -1050,9 +1003,8 @@ public final class MxtTestCommands {
         ClaimResult freeHold = ArtifactHoldService.claim(player, freeJade, access);
         boolean freeClaim = freeHold == ClaimResult.CLAIMED && ArtifactService.isOwner(freeJade, player.getUUID())
                 && close(player.getHealth(), 4.0D);
-        // There is no health pre-check any more: a price the holder cannot survive is charged anyway and the
-        // binding still stands. Driven on a disposable probe, because the other way to show it is killing the
-        // player halfway through the run.
+        // No health pre-check any more: a price the holder cannot survive is charged anyway and the binding
+        // still stands. Driven on a disposable probe, since the alternative is killing the player mid-run.
         LivingEntity poorClaimant = spawnProbe(source.getLevel(), player.blockPosition().above(3), null);
         boolean unguarded = false;
         if (poorClaimant != null) {
@@ -1070,9 +1022,8 @@ public final class MxtTestCommands {
         ClaimResult sealedHold = ArtifactHoldService.claim(player, sealedStack, access);
         boolean sealedRefused = sealedHold == ClaimResult.CONDITION_FAILED && !ArtifactService.hasOwner(sealedStack)
                 && close(player.getHealth(), 4.0F);
-        // Charging belongs to the actions, so every writer of a binding pays it: the loot function and a script
-        // reach `refine` directly, and both of the fixture's actions run there as well. Health is topped up
-        // first, because this path is not guarded by anything - it charges whatever the definition says.
+        // Charging belongs to the actions, so every writer of a binding pays it - the loot function and a script
+        // reach `refine` directly. Health is topped up first, because this path is guarded by nothing.
         player.setHealth(player.getMaxHealth());
         float healthBeforeScript = player.getHealth();
         ItemStack scriptedBlood = new ItemStack(Items.BLAZE_ROD);
@@ -1084,16 +1035,16 @@ public final class MxtTestCommands {
                 + " condition=" + sealedRefused + " script=" + scriptPaid,
                 pricePaid && freeClaim && unguarded && sealedRefused && scriptPaid);
 
-        // Whose a stack is is reported by name: the claim above wrote this player's name next to their UUID, and
+        // Whose a stack is is reported by name: the claim above wrote this player's name next to their UUID and
         // the tooltip line carries that name rather than the id. The id stays reachable - as the indented line
         // under an advanced tooltip - but never as the only thing a reader is given.
         boolean ownerNamed = ArtifactService.state(claimBlood).ownerName()
                 .filter(player.getGameProfile().name()::equals).isPresent()
                 && ArtifactDescription.describe(access, claimBlood, player, false).stream()
                 .anyMatch(line -> ownedLineNames(line, player.getGameProfile().name()));
-        // The name behind an id is also answerable on demand, which is what a client that holds a stack claimed
-        // before names were kept asks for: the server answers from its player list, and admits when it has never
-        // seen the player rather than making something up.
+        // The name behind an id is answerable on demand, which is what a client holding a stack claimed before
+        // names were kept asks for: the server answers from its player list and admits when it has never seen
+        // the player rather than making something up.
         boolean ownerLookup = PlayerNames.knownToServer(source.getServer(), player.getUUID())
                 .filter(player.getGameProfile().name()::equals).isPresent()
                 && PlayerNames.knownToServer(source.getServer(), UUID.randomUUID()).isEmpty();
@@ -1101,13 +1052,13 @@ public final class MxtTestCommands {
                 ownerNamed && ownerLookup);
 
         // The periodic price is an ability entry rather than a claim field: it falls due on its own interval
-        // while the artifact is carried, it asks nobody who is not the owner when the entry says owner_only, and
-        // a price that cannot be paid runs the entry's own failure action instead of being skipped silently.
+        // while the artifact is carried, it asks nobody but the owner when the entry says owner_only, and an
+        // unpayable price runs the entry's own failure action instead of being skipped silently.
         ItemStack upkeepStack = new ItemStack(Items.IRON_SHOVEL);
         ArtifactService.refine(upkeepStack, player);
         ResourceHolderAttachment upkeepPools = player.getData(MxtAttachments.RESOURCE_HOLDER);
         // The fixture charges water_power rather than qi on purpose: qi's aura declares a realm gate, and this
-        // leg drives the real resource transaction, which asks that gate.
+        // leg drives the real resource transaction, which asks it.
         ensureResource(player, upkeepPools, waterPower.value().resource(), 10.0D);
         double upkeepPool = upkeepPools.get(waterPower.value().resource());
         boolean upkeepPaid = ArtifactUpkeepService.upkeep(player, upkeepStack, 10L)
@@ -1149,9 +1100,8 @@ public final class MxtTestCommands {
         ok &= check(source, "artifact hold pour units=" + poured + " qi=" + ArtifactService.stored(pourStack, qi)
                 + " water=" + ArtifactService.stored(pourStack, waterPower), pourLeg);
 
-        // The two gesture-shaped actions: pour_action settles every tick that really moved aura, use_action closes
-        // a gesture that ran to its end. Driven through the same methods the event handlers call, for the same
-        // reason the claim and the pour are.
+        // The two gesture-shaped actions: pour_action settles every tick that really moved aura, use_action
+        // closes a gesture that ran to its end. Driven through the methods the event handlers call.
         int beforePourAction = ArtifactService.stored(pourStack, qi);
         ArtifactHoldService.runPourAction(player, pourStack);
         int beforeUseAction = ArtifactService.stored(pourStack, qi);
@@ -1161,10 +1111,9 @@ public final class MxtTestCommands {
         ok &= check(source, "artifact gesture actions pour=+" + (beforeUseAction - beforePourAction)
                 + " use=+" + (ArtifactService.stored(pourStack, qi) - beforeUseAction), gestureActions);
 
-        // A pour with nothing to move has two different reasons, and they are told apart: an artifact that is full
-        // for everything it declares has nothing to say, while one whose aura the holder cannot pay names it. The
-        // ward is filled to its ceiling for the first half, and the qi pool is drained for the second - so a full
-        // artifact can never report the reader's own aura as short.
+        // A pour with nothing to move has two reasons, and they are told apart: an artifact full for everything
+        // it declares says nothing, while one whose aura the holder cannot pay names it. The ward is filled to
+        // its ceiling for the first half and the qi pool drained for the second.
         ItemStack fullWard = new ItemStack(Items.PRISMARINE_SHARD);
         ArtifactService.addEnergy(access, fullWard, qi, 1000.0D, 0.0D, context);
         Artifact fullWardDefinition = ArtifactService.definition(access, fullWard).map(Reference::value).orElseThrow();
@@ -1196,23 +1145,18 @@ public final class MxtTestCommands {
         return 0;
     }
 
-    /**
-     * One roster row: an item, and what every consumer must answer about the definition claiming it.
-     */
+    // One roster row: an item, and what every consumer must answer about the definition claiming it.
     private record ArtifactRow(Item item, String definition, int qi, int waterPower, int soulPower, int slots,
                                boolean curiosEquipable, boolean flight, boolean requireOwner) {
     }
 
-    /** One artifact tooltip key, so the roster can spell out the lines a definition has to produce for a stack. */
+    // One artifact tooltip key, so the roster can spell out the lines a definition must produce for a stack.
     private static String tooltipKey(String path) {
         return "tooltip.mxt.artifact." + path;
     }
 
-    /**
-     * Whether one tooltip line is the ownership line and names this owner. The rendered words belong to a
-     * language file, so the check reads the component's own argument - the same division the line-set checks
-     * make. The line is a mark with the sentence appended, so its siblings are searched too.
-     */
+    // The rendered words belong to a language file, so the check reads the component's own argument. The line is
+    // a mark with the sentence appended, so its siblings are searched too.
     private static boolean ownedLineNames(Component line, String owner) {
         if (line.getContents() instanceof TranslatableContents contents
                 && contents.getKey().equals(tooltipKey("owned"))
@@ -1221,12 +1165,10 @@ public final class MxtTestCommands {
         return line.getSiblings().stream().anyMatch(sibling -> ownedLineNames(sibling, owner));
     }
 
-    /**
-     * One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck
-     * with is never a question. A pig is used because it has no armour and no innate resistance, which keeps
-     * the health it loses equal to the amount the pipeline handed over. A null root leaves the probe carrying
-     * none, which is how "the element came from the damage type and not from the caster" is told apart.
-     */
+    // One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck with
+    // is never a question. A pig is used because it has no armour and no innate resistance, which keeps the
+    // health it loses equal to what the pipeline handed over. A null root leaves it carrying none, which is how
+    // "the element came from the damage type and not from the caster" is told apart.
     private static LivingEntity spawnProbe(ServerLevel level, BlockPos pos, @Nullable Identifier root) {
         Pig pig = EntityType.PIG.create(level, EntitySpawnReason.COMMAND);
         if (pig == null) return null;
@@ -1238,18 +1180,14 @@ public final class MxtTestCommands {
         return pig;
     }
 
-    /**
-     * Drives the element channel end to end: which element a strike is read as, where that reading comes from,
-     * what a strike leaves behind, which reaction answers it, and what the enable/disable module does to all of
-     * it. Every leg below runs against disposable probe entities, so a mismatch is a number rather than a
-     * difference nobody notices in play.
-     *
-     * <p>The fixture numbers are the ones the test package writes: fire overcomes water {@code 1.5} and water
-     * is adapted to fire {@code 0.5}, so a fire strike of {@code 10} on a water body lands as
-     * {@code 10 * 1.5 * 0.5 = 7.5} while a water strike on a water body lands as {@code 10 * 0.5 = 5}. That
-     * difference is what makes the legs tell the readings apart: the claim leg uses a caster with no roots at
-     * all, and the declaration leg a water caster whose art is written as fire.</p>
-     */
+    // Drives the element channel end to end: which element a strike is read as, where that reading comes from,
+    // what a strike leaves behind, which reaction answers it, and what the enable/disable module does to all of
+    // it. Every leg runs against disposable probe entities.
+    // Fixture numbers, which is why changing test-pack content changes a leg's arithmetic: fire overcomes water
+    // x1.5 and water is adapted to fire x0.5, so a fire strike of 10 on a water body lands as
+    // 10 * 1.5 * 0.5 = 7.5 while a water strike on a water body lands as 10 * 0.5 = 5. That difference is what
+    // tells the readings apart: the claim leg uses a rootless caster, the declaration leg a water caster whose
+    // art is written as fire.
     private static int probeElement(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         BlockPos origin = source.getPlayer() != null
@@ -1305,8 +1243,8 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: declared element on a water caster, health_lost="
                     + declaredLost + (declared ? " OK" : " MISMATCH")), false);
 
-            // 3. A strike leaves its element behind, and enough of it is answered by the fixture reaction,
-            //    which takes the buildup away and deals its own 6 (no attacker, no claim: unchanged).
+            // 3. A strike leaves its element behind, and enough of it is answered by the fixture reaction, which
+            //    takes the buildup away and deals its own 6 (no attacker, no claim: unchanged).
             ElementReactionService.applyFromStrike(reactionVictim, Set.of(fire), FormulaContext.of(reactionVictim));
             double built = ElementReactionService.amount(reactionVictim, fire);
             double beforeReaction = reactionVictim.getHealth();
@@ -1317,9 +1255,9 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: attachment built=" + built
                     + " reaction damage=" + reactionLost + " left=" + leftOver + (reaction ? " OK" : " MISMATCH")), false);
 
-            // 4. A disabled element stops applying: its own root contributes nothing, and the condition that
-            //    asks about it says no. The fixture element is fetched raw, because the enabled accessor is
-            //    exactly what it is here to prove is empty.
+            // 4. A disabled element stops applying: its own root contributes nothing and the condition asking
+            //    about it says no. The fixture element is fetched raw, because the enabled accessor is exactly
+            //    what this leg is here to prove is empty.
             Holder<Element> inert = MxtDatapackRegistries.rawHolder(MxtResourceKeys.ELEMENT, PROBE_INERT_ELEMENT)
                     .orElseThrow(() -> new IllegalStateException("Missing disabled element fixture " + PROBE_INERT_ELEMENT));
             boolean disabled = !Elements.enabled(inert) && Elements.of(inertHolder).isEmpty() && Elements.enabled(fire);
@@ -1333,7 +1271,7 @@ public final class MxtTestCommands {
                     .test(waterVictim, FormulaContext.of(waterVictim))
                     && new HasElementEntityCondition(List.of(Either.right(elementTag())))
                     .test(toggleProbe, FormulaContext.of(toggleProbe));
-            // The aura leg asks the environment for the same number first and then brackets it, so it tests the
+            // The aura leg asks the environment for the same number first and brackets it, so it tests the
             // element aggregation rather than this world's stock: a chunk emptied by an earlier run reads as
             // "zero fire aura" and the condition is still expected to say so.
             AuraResult resolved = AuraService.getPositionAura(level, toggleProbe.blockPosition());
@@ -1371,11 +1309,10 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: toggle off=" + off + " on=" + on
                     + " unchanged=" + unchanged + " not_held=" + notHeld + (toggle ? " OK" : " MISMATCH")), false);
 
-            // 7. A reaction whose own action applies the element it just consumed feeds itself. The nested
-            //    application joins the chain that is already running for this body instead of opening another
-            //    one, so the call comes back: every pass takes the demand away and puts it straight back, which
-            //    leaves the body carrying exactly what was applied however many passes the bound allows. Before
-            //    that guard this leg did not answer at all - the nesting had no floor.
+            // 7. A reaction whose own action applies the element it just consumed feeds itself, which would have
+            //    no floor without the reentrancy guard: the nested application joins the chain already running
+            //    for this body instead of opening another. Every pass takes the demand away and puts it straight
+            //    back, so the body carries exactly what was applied however many passes the bound allows.
             ElementReactionService.apply(loopVictim, water, 8.0D, FormulaContext.of(loopVictim));
             double loopLeft = ElementReactionService.amount(loopVictim, water);
             boolean loop = close(loopLeft, 8.0D);
@@ -1400,12 +1337,12 @@ public final class MxtTestCommands {
                     + " inert_free=" + inertFree + " reopened=" + reopened
                     + (conflict ? " OK" : " MISMATCH")), false);
 
-            // 9. The five-phase set the test package now ships: metal beats wood in the shaping layer and wood
-            //    is soft against metal in the reduction layer, so the same 4 lands as 4 * 1.4 * 1.25 = 7, while
-            //    the opposite direction has neither edge and lands as 4. Neither strike declares a damage type,
-            //    so both read their element off the striker's roots - and since 2026-09-22 a roots reading
-            //    reduces without rubbing off, which is why `metal_left` is now zero where it used to be 3. The
-            //    damage probe's `origin` leg is where leaving an element behind is measured.
+            // 9. The five-phase set the test package ships: metal beats wood in the shaping layer and wood is
+            //    soft against metal in the reduction layer, so the same 4 lands as 4 * 1.4 * 1.25 = 7, while the
+            //    opposite direction has neither edge and lands as 4. Neither strike declares a damage type, so
+            //    both read their element off the striker's roots - and a roots reading reduces without rubbing
+            //    off, which is why `metal_left` is 0. The damage probe's `origin` leg measures leaving an element
+            //    behind.
             double metalBefore = woodVictim.getHealth();
             DamageCalculationService.deal(metalCaster, woodVictim, 4.0D, Optional.empty(), FormulaContext.of(metalCaster));
             double metalOnWood = metalBefore - woodVictim.getHealth();
@@ -1420,9 +1357,9 @@ public final class MxtTestCommands {
                     + " wood_on_metal=" + woodOnMetal + " metal_left=" + metalLeft
                     + (fivePhases ? " OK" : " MISMATCH")), false);
 
-            // 10. A reaction that demands two elements at once, spends only one of them and acts twice: wood
-            //     alone does not answer it, and afterwards the water that completed the demand is still there
-            //     while the earth the action left behind has not reached its own demand.
+            // 10. A reaction demanding two elements at once, spending only one and acting twice: wood alone does
+            //     not answer it, and afterwards the water that completed the demand is still there while the
+            //     earth the action left behind has not reached its own demand.
             ElementReactionService.apply(bloomVictim, wood, 6.0D, FormulaContext.of(bloomVictim));
             boolean halfDemand = close(ElementReactionService.amount(bloomVictim, wood), 6.0D);
             double bloomBefore = bloomVictim.getHealth();
@@ -1438,8 +1375,8 @@ public final class MxtTestCommands {
                     + (bloom ? " OK" : " MISMATCH")), false);
 
             // 11. A reaction that consumes nothing answers the same demand on every pass, so one application
-            //     fires it exactly as many times as the chain allows and leaves the buildup untouched. The
-            //     count is the documented bound, written out here so changing it has to be a decision.
+            //     fires it exactly as many times as the chain allows and leaves the buildup untouched. The count
+            //     is the documented bound, written out here so changing it has to be a decision.
             settleVictim.getData(MxtAttachments.ELEMENT_ATTACHMENT).add(earth, 10.0D);
             int settleFired = ElementReactionService.trigger(settleVictim, FormulaContext.of(settleVictim));
             double settleLeft = ElementReactionService.amount(settleVictim, earth);
@@ -1448,10 +1385,10 @@ public final class MxtTestCommands {
                     + " left=" + settleLeft + (settle ? " OK" : " MISMATCH")), false);
 
             // 12. What an item is made of. The sword's weapon binding declares fire; the jade's artifact declares
-            //     the whole #mxt_test:basic tag, which is fire and water; the spirit crystal declares nothing at
-            //     all, so it is read from the aura it carries - `mxt_test:spirit_power` names fire as its
-            //     `aura_type`; and a stick matches no definition and carries no aura, so it is made of nothing.
-            //     The condition is the same reading from a data pack's side.
+            //     the whole #mxt_test:basic tag, which is fire and water; the spirit crystal declares nothing, so
+            //     it is read from the aura it carries - spirit_power names fire as its `aura_type`; a stick
+            //     matches no definition and carries no aura, so it is made of nothing. The condition is the same
+            //     reading from a data pack's side.
             Set<Holder<Element>> swordElements = ItemElements.of(level.registryAccess(),
                     new ItemStack(Items.DIAMOND_SWORD));
             Set<Holder<Element>> jadeElements = ItemElements.of(level.registryAccess(),
@@ -1489,17 +1426,11 @@ public final class MxtTestCommands {
         return TagKey.create(MxtResourceKeys.ELEMENT, PROBE_ELEMENT_TAG);
     }
 
-    /**
-     * Drives the wheel's pages: which pages exist and in what order, that a derived page is a live reading of the
-     * ability grants and the artifact switches rather than a stored list, and that the first page is stored
-     * instead.
-     *
-     * <p>Everything here runs against a disposable probe entity holding the two attachments the pages read, so a
-     * mismatch is a number. The dispatch behind an ability trigger is deliberately not driven - firing a real
-     * ability to watch it land would be a different probe - but the check every trigger passes through is; the one
-     * dispatch that is driven is the artifact switch, because mounting a flying sword is observable and the call
-     * is the very one the server makes for it.</p>
-     */
+    // Drives the wheel's pages: which pages exist and in what order, that a derived page is a live reading of the
+    // ability grants and artifact switches rather than a stored list, and that the first page is stored instead.
+    // Everything runs against a disposable probe holding the two attachments the pages read. The dispatch behind
+    // an ability trigger is deliberately not driven - only the check every trigger passes through - but the
+    // artifact switch is, because mounting a flying sword is observable and it is the very call the server makes.
     private static int probeWheel(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         BlockPos origin = source.getPlayer() != null
@@ -1511,8 +1442,8 @@ public final class MxtTestCommands {
                 source.sendFailure(Component.literal("wheel probe: could not create the probe entity"));
                 return 0;
             }
-            // 1. The pages: four of them, the configured one first, walked in enum order and wrapping at both
-            //    ends so neither switch key can dead-end. Page numbers are 1-based, which is what the player sees.
+            // 1. The pages: four, the configured one first, walked in enum order and wrapping at both ends so
+            //    neither switch key can dead-end. Page numbers are 1-based, which is what the player sees.
             boolean pages = WheelSource.PAGES.size() == 4
                     && WheelSource.PAGES.getFirst() == WheelSource.CONFIGURED
                     && WheelSource.CONFIGURED.step(1) == WheelSource.MAIN_HAND
@@ -1558,8 +1489,8 @@ public final class MxtTestCommands {
                     + (follows ? " OK" : " MISMATCH")), false);
 
             // 4. The first page is stored instead: the very same ability is on it once the saved layout holds it,
-            //    with no grant anywhere - and the entry is only offered under the kind the sector stores, which is
-            //    what stops "page 1 holds it" from meaning "any id of that name is fine".
+            //    with no grant anywhere - and the entry is offered only under the kind the sector stores, which
+            //    stops "page 1 holds it" from meaning "any id of that name is fine".
             WheelLayoutAttachment layout = probe.getData(MxtAttachments.WHEEL_LAYOUT);
             layout.setLayout(WheelLayout.EMPTY.with(3, WheelSlot.of(WheelEntryKind.ABILITY, PROBE_WHEEL_ABILITY)));
             boolean configured = offers(probe, WheelSource.CONFIGURED, PROBE_WHEEL_ABILITY)
@@ -1571,8 +1502,8 @@ public final class MxtTestCommands {
                     + (configured ? " OK" : " MISMATCH")), false);
 
             // 5. A source is not cut to one page: more entries than a page holds are all still offered, because
-            //    what does not fit on one page takes another - which is the client's numbering to lay out, and
-            //    the server only ever asks whether one id is in the list.
+            //    what does not fit takes another page - the client's numbering to lay out, while the server only
+            //    ever asks whether one id is in the list.
             for (Identifier ability : PROBE_WHEEL_MANY)
                 abilities.grant(require(MxtResourceKeys.ABILITY, ability), mainHand);
             int overflowSize = WheelSources.abilities(probe, WheelSource.MAIN_HAND).size();
@@ -1582,9 +1513,9 @@ public final class MxtTestCommands {
                     + " page=" + WheelLayout.SLOTS + (overflow ? " OK" : " MISMATCH")), false);
 
             // 6. Every capability that needs a key is a cell of its own kind: the sword's definition declares both
-            //    mxt:flight and mxt:storage, so the page named by the hand it is in holds two cells, each addressed
-            //    as `<artifact>/<capability>`. No other page claims them, the kind refuses an artifact that
-            //    declares no capability at all, and it refuses a bare artifact id too - a capability is the pair.
+            //    mxt:flight and mxt:storage, so the page named by the hand it is in holds two cells, each
+            //    addressed as `<artifact>/<capability>`. No other page claims them, the kind refuses an artifact
+            //    declaring no capability at all, and it refuses a bare artifact id too - a capability is the pair.
             probe.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
             List<ArtifactToggleService.Toggle> toggles = WheelSources.toggles(probe, WheelSource.MAIN_HAND);
             Identifier flightCell = capability(PROBE_WHEEL_TOGGLE, FlightArtifactAbility.KEY);
@@ -1606,9 +1537,9 @@ public final class MxtTestCommands {
                     + " storage_state=" + (toggles.size() < 2 ? "none" : toggles.get(1).state())
                     + " kind=" + knownKind + (listed ? " OK" : " MISMATCH")), false);
 
-            // 7. The switch behind the flight cell really moves: pressed through the service the trigger uses the
-            //    player mounts a flying sword and lands again. A probe entity cannot stand in for it, because
-            //    flight belongs to a player's own connection and abilities.
+            // 7. The switch behind the flight cell really moves: pressed through the service the trigger uses, the
+            //    player mounts a flying sword and lands again. A probe entity cannot stand in, because flight
+            //    belongs to a player's own connection and abilities.
             ServerPlayer pilot = source.getPlayer();
             boolean flipped = pilot != null && flipsFlightSwitch(pilot, flightCell);
             source.sendSuccess(() -> Component.literal("wheel probe: flight flipped=" + flipped
@@ -1620,11 +1551,11 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("wheel probe: storage opened=" + opened
                     + " pilot=" + (pilot != null) + (opened ? " OK" : " MISMATCH")), false);
 
-            // 9. What a slot sync actually encodes: the component has to survive the network codec with a hole in
+            // 9. What a slot sync actually encodes: the component must survive the network codec with a hole in
             //    it. An empty stack is a real value in there - it is how "this slot is empty" is spelled - and
-            //    ItemStack.CODEC refuses one, which is the shape the storage window's crash had: the packet that
-            //    carries the artifact's own slot failed to encode, so the screen never saw the change. A probe can
-            //    only see this by running the codec, since nothing about opening the window goes wrong.
+            //    ItemStack.CODEC refuses one, which is the shape of the storage window's crash: the packet
+            //    carrying the artifact's own slot failed to encode, so the screen never saw the change. A probe
+            //    only reaches this by running the codec, since nothing about opening the window goes wrong.
             ArtifactStorageComponent holed = ArtifactStorageComponent.of(ArtifactService.STORAGE_COLUMNS,
                     List.of(ItemStack.EMPTY, new ItemStack(Items.STONE, 3)));
             boolean storageCodec = roundTripsStorage(holed, level.registryAccess());
@@ -1642,16 +1573,14 @@ public final class MxtTestCommands {
         }
     }
 
-    /** The wheel id of one capability of one artifact: the artifact's id with the capability's key appended. */
+    // The wheel id of one capability of one artifact: the artifact's id with the capability's key appended.
     private static Identifier capability(Identifier artifact, String key) {
         return new ArtifactCapability(artifact, key).id();
     }
 
-    /**
-     * Presses the fixture artifact's flight cell - the same {@code activate} call the wheel's trigger makes - and
-     * reports whether the player really mounted a flying sword and landed again. The main hand is taken over and
-     * restored, since a cell is read off the stacks the page names.
-     */
+    // Presses the fixture artifact's flight cell - the same activate call the wheel's trigger makes - and reports
+    // whether the player really mounted a flying sword and landed again. The main hand is taken over and
+    // restored, since a cell is read off the stacks the page names.
     private static boolean flipsFlightSwitch(ServerPlayer player, Identifier cell) {
         ItemStack previous = player.getMainHandItem().copy();
         try {
@@ -1671,10 +1600,8 @@ public final class MxtTestCommands {
         }
     }
 
-    /**
-     * Presses the fixture artifact's storage cell and reports whether a chest menu of the declared size really
-     * opened over the artifact's contents. The window is closed again before the caller gets control back.
-     */
+    // Presses the fixture artifact's storage cell and reports whether a chest menu of the declared size really
+    // opened over the artifact's contents. The window is closed again before the caller gets control back.
     private static boolean opensStorage(ServerPlayer player, Identifier cell) {
         ItemStack previous = player.getMainHandItem().copy();
         try {
@@ -1695,17 +1622,15 @@ public final class MxtTestCommands {
         }
     }
 
-    /** One page's answer to "would a trigger for this ability from this page be honoured". */
+    // One page's answer to "would a trigger for this ability from this page be honoured".
     private static boolean offers(LivingEntity probe, WheelSource source, Identifier ability) {
         return WheelSources.offers(probe, source, WheelEntryKind.ABILITY, ability);
     }
 
-    /**
-     * Sends one storage component through the registered network codec and reads it back - the very codec the
-     * server uses when it hands a container slot to a client - and reports whether the contents came back whole.
-     * This is the only way a probe reaches that failure: it happens while encoding a packet, not while opening the
-     * window, so the window looks healthy right up to the moment the stack is synced.
-     */
+    // Sends one storage component through the registered network codec and reads it back - the very codec the
+    // server uses when handing a container slot to a client. This is the only way a probe reaches that failure:
+    // it happens while encoding a packet, not while opening the window, so the window looks healthy right up to
+    // the moment the stack is synced.
     private static boolean roundTripsStorage(ArtifactStorageComponent component, RegistryAccess registries) {
         DataComponentType<ArtifactStorageComponent> type = MxtDataComponents.ARTIFACT_STORAGE.get();
         // The connection type only tells NeoForge what the other end is; NEOFORGE is what this server's own
@@ -1723,10 +1648,7 @@ public final class MxtTestCommands {
         }
     }
 
-    /**
-     * The ids of one element set, sorted, for a probe line that has to show <em>which</em> elements an item was
-     * read as rather than only how many.
-     */
+    // Sorted, for a probe line that has to show which elements an item was read as rather than only how many.
     private static List<String> elementIds(Set<Holder<Element>> elements) {
         return elements.stream().map(HolderHelper::id).map(Object::toString).sorted().toList();
     }
@@ -1743,11 +1665,9 @@ public final class MxtTestCommands {
         return Math.abs(actual - expected) < 1.0E-3D;
     }
 
-    /**
-     * Exercises the realm instance machine end to end without a player. An instance is a dimension, so every
-     * leg drives the registry and the generation service directly and then inspects the world that came out of
-     * it: its border, its placed structure, its landing spot, the instance cap and the claim rules.
-     */
+    // Exercises the realm instance machine end to end without a player. An instance is a dimension, so every leg
+    // drives the registry and the generation service directly and then inspects the world that came out: its
+    // border, its placed structure, its landing spot, the instance cap and the claim rules.
     private static int probeRealm(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
         ServerLevel overworld = server.overworld();
@@ -1880,10 +1800,8 @@ public final class MxtTestCommands {
         return 0;
     }
 
-    /**
-     * Leaves one claimed instance behind instead of cleaning up, so a restart can be checked for keeping it.
-     * The realm probe itself destroys everything it opens.
-     */
+    // Leaves one claimed instance behind instead of cleaning up, so a restart can be checked for keeping it.
+    // The realm probe itself destroys everything it opens.
     private static int keepRealm(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
         Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
@@ -1898,10 +1816,8 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    /**
-     * Reopens a dormant instance the way an entry does, to prove that a claimed realm comes back with the
-     * terrain it had instead of being generated and furnished again.
-     */
+    // Reopens a dormant instance the way an entry does, to prove a claimed realm comes back with the terrain it
+    // had instead of being generated and furnished again.
     private static int reopenRealm(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
         Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
@@ -1923,13 +1839,10 @@ public final class MxtTestCommands {
         return 0;
     }
 
-    /**
-     * Exercises the rift's linking rule, the mesh it is drawn from and its portal behaviour without a client.
-     *
-     * <p>Every leg drives the calls the renderer and the portal use - the point, link and triangle meshes, the
-     * 3x3x3 neighbour scan, the colour derivation, the stored state, the transition - and then inspects the world
-     * that came out of it. What cannot be checked from a server is the drawing itself.
-     */
+    // Exercises the rift's linking rule, the mesh it is drawn from and its portal behaviour without a client.
+    // Every leg drives the calls the renderer and the portal use - the point, link and triangle meshes, the 3x3x3
+    // neighbour scan, the colour derivation, the stored state, the transition - and then inspects the world that
+    // came out. What cannot be checked from a server is the drawing itself.
     private static int probeRift(CommandSourceStack source) {
         double thickness = RiftMesh.DEFAULT_THICKNESS;
         MinecraftServer server = source.getServer();
@@ -1985,8 +1898,8 @@ public final class MxtTestCommands {
                             && close(straightReach, 0.5) && close(diagonalReach, Math.sqrt(2.0) / 2.0)
                             && close(linkWidth, thickness));
 
-            //    Counting the loops of the whole wall catches a triangle that two of its blocks both claim or
-            //    neither of them draws: nine blocks see forty-eight loops, which is sixteen triangles three ways.
+            //    Counting the loops of the whole wall catches a triangle two of its blocks both claim or neither
+            //    draws: nine blocks see forty-eight loops, which is sixteen triangles three ways.
             int loopTotal = 0;
             for (int x = 0; x < 3; x++)
                 for (int y = 0; y < 3; y++) {
@@ -2060,8 +1973,8 @@ public final class MxtTestCommands {
                             && resolvedAutomatic == derived && resolvedOverride == 0xFF12AB34);
 
             // 7. Destination and colour override survive a save and load, and nothing else is stored: a rift has
-            //    no direction and no opacity to lose. The metadata-carrying form is used because a static load
-            //    has to read the block entity id back out of the tag.
+            //    no direction and no opacity to lose. The metadata-carrying form is used because a static load has
+            //    to read the block entity id back out of the tag.
             CompoundTag saved = lone.saveWithFullMetadata(level.registryAccess());
             BlockEntity reloaded = BlockEntity.loadStatic(lonePos, level.getBlockState(lonePos), saved, level.registryAccess());
             boolean persisted = reloaded instanceof RiftBlockEntity copy
@@ -2119,10 +2032,8 @@ public final class MxtTestCommands {
         return null;
     }
 
-    /**
-     * The closest rift leading to {@code target} within a small box, which is how the arrival service's own
-     * "carve one and then find it again" behaviour can be observed from the outside.
-     */
+    // The closest rift leading to {@code target} within a small box, which is how the arrival service's own
+    // "carve one and then find it again" behaviour is observed from the outside.
     @Nullable
     private static BlockPos findRiftNear(ServerLevel level, BlockPos around, Identifier target) {
         BlockPos min = around.offset(-3, -3, -3);
@@ -2135,18 +2046,14 @@ public final class MxtTestCommands {
         return null;
     }
 
-    /**
-     * A neighbour's centre in {@code self}'s block-local coordinates, which is where the renderer places the
-     * links it draws: a neighbour is at most one block away on each axis.
-     */
+    // A neighbour's centre in {@code self}'s block-local coordinates, which is where the renderer places the
+    // links it draws: a neighbour is at most one block away on each axis.
     private static Vec3 local(BlockPos other, BlockPos self) {
         return RiftMesh.CENTRE.add(other.getX() - self.getX(), other.getY() - self.getY(), other.getZ() - self.getZ());
     }
 
-    /**
-     * The side of a vertex list that is a cube, or {@code -1} when its three extents are not all the same, which
-     * is how a mesh claiming to be a point is caught being a flat square instead.
-     */
+    // The side of a vertex list that is a cube, or -1 when its three extents differ, which is how a mesh claiming
+    // to be a point is caught being a flat square instead.
     private static double cubeSide(List<Vec3> vertices) {
         double minX = Double.POSITIVE_INFINITY;
         double minY = Double.POSITIVE_INFINITY;
@@ -2168,10 +2075,8 @@ public final class MxtTestCommands {
         return close(width, height) && close(height, depth) ? width : -1.0;
     }
 
-    /**
-     * How far a mesh reaches along an axis, measured from the rift's own centre. A link half must reach exactly
-     * as far as the midpoint it meets its neighbour's half at.
-     */
+    // How far a mesh reaches along an axis, measured from the rift's own centre. A link half must reach exactly
+    // as far as the midpoint it meets its neighbour's half at.
     private static double axialReach(List<Vec3> vertices, Vec3 axis) {
         Vec3 unit = axis.normalize();
         double reach = 0.0;
@@ -2179,10 +2084,8 @@ public final class MxtTestCommands {
         return reach;
     }
 
-    /**
-     * How far a mesh reaches away from an axis, measured from the rift's own centre. For a beam that is the
-     * corner of its cross-section, so it checks the thickness the link claims to have.
-     */
+    // How far a mesh reaches away from an axis, measured from the rift's own centre. For a beam that is the corner
+    // of its cross-section, so it checks the thickness the link claims to have.
     private static double radialReach(List<Vec3> vertices, Vec3 axis) {
         Vec3 unit = axis.normalize();
         double reach = 0.0;
@@ -2193,11 +2096,8 @@ public final class MxtTestCommands {
         return reach;
     }
 
-    /**
-     * Whether the block at {@code partner} also sees the loop through {@code self} and {@code other}. All three
-     * blocks of a loop have to draw their own share of it, so two of them agreeing would leave a gap and this is
-     * how a disagreement shows up.
-     */
+    // Whether the block at {@code partner} also sees the loop through {@code self} and {@code other}. All three
+    // blocks of a loop draw their own share, so two agreeing would leave a gap and this is how it shows up.
     private static boolean agreesOnLoop(ServerLevel level, BlockPos partner, BlockPos self, BlockPos other) {
         if (!(level.getBlockEntity(partner) instanceof RiftBlockEntity)) return false;
         for (Loop candidate : RiftConnections.loops(partner, RiftConnections.connected(level, partner)))
@@ -2206,11 +2106,9 @@ public final class MxtTestCommands {
         return false;
     }
 
-    /**
-     * The distance between the two surfaces of a filled triangle share, which is the thickness the fill claims
-     * to have. A share is laid out top face, bottom face and then the rims, so a surface vertex and the one four
-     * places after it are the same corner of the triangle above and below.
-     */
+    // The distance between the two surfaces of a filled triangle share, which is the thickness the fill claims to
+    // have. A share is laid out top face, bottom face and then the rims, so a surface vertex and the one four
+    // places after it are the same corner of the triangle above and below.
     private static double slabThickness(List<Vec3> share) {
         if (share.size() < 8) return -1.0;
         return share.get(0).distanceTo(share.get(4));
@@ -2291,8 +2189,8 @@ public final class MxtTestCommands {
         CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
         TEST_ACTIVE_ABILITIES.forEach(id -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)
                 .ifPresent(ability -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, TEST_ABILITY_SOURCE)));
-        // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt
-        // where the ability sources actually change.
+        // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt where
+        // the ability sources actually change.
         AbilityEventBridge.rebuildTriggerSubscriptions(player);
     }
 
@@ -2310,10 +2208,8 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    /**
-     * Prints the character panel's own line model, so what the panel would show can be read from the server
-     * instead of a screenshot. It calls the very same {@code InformationManager.collectEntries} the screen does.
-     */
+    // Prints the character panel's own line model, so what the panel would show is readable from the server
+    // instead of a screenshot. It calls the very same InformationManager.collectEntries the screen does.
     private static int showInformation(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
@@ -2347,8 +2243,8 @@ public final class MxtTestCommands {
 
     private static ItemStack formationPlate() {
         ItemStack stack = new ItemStack(MxtItems.FORMATION_PLATE.get());
-        // An empty allow list, which is the shipped plate: unrestricted unless the server option says
-        // otherwise, and therefore bound to whatever the kit's own formation is.
+        // An empty allow list, which is the shipped plate: unrestricted unless the server option says otherwise,
+        // and therefore bound to whatever the kit's own formation is.
         stack.set(MxtDataComponents.FORMATION_PLATE,
                 new FormationPlateComponent(List.of(), Optional.of(require(MxtResourceKeys.FORMATION, FORMATION))));
         return stack;
@@ -2366,7 +2262,7 @@ public final class MxtTestCommands {
         return stack;
     }
 
-    /** Gives one artifact fixture bound to the player, since the test pack has no other way to refine an item. */
+    // Gives one artifact fixture bound to the player, since the test pack has no other way to refine an item.
     private static void giveArtifact(ServerPlayer player, Item item) {
         ItemStack stack = new ItemStack(item);
         ArtifactService.refine(stack, player);

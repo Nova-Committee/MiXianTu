@@ -22,27 +22,22 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Reads a technique's mastery: the abilities each configured level grants and the conditions to climb. The
- * chain belongs to {@link SkillStage}, and an entry's {@code ability} is a minimum requirement — its
- * abilities are active on that level or any later one — while its {@code condition} is asked for the level a
- * holder advances to. Ordering comes from {@link ServerCache}.
+ * Reads a technique's mastery: the abilities each configured level grants and the conditions to climb. An
+ * entry's {@code ability} is a minimum requirement - its abilities are active on that level or any later one -
+ * while its {@code condition} is asked for the level a holder advances to. Ordering comes from
+ * {@link ServerCache}.
  */
 public final class SkillStageService {
     private SkillStageService() {
     }
 
-    /**
-     * The level the holder stands on: the one it advanced to, or the technique's entry level while it
-     * never advanced. Empty means the technique has no chain, so nothing can be granted or climbed.
-     */
+    // The level it advanced to, or the technique's entry level while it never advanced; empty means the
+    // technique has no chain, so nothing can be granted or climbed.
     public static Optional<Holder<SkillStage>> currentStage(SpiritIdentityAttachment spirit, Holder<Technique> technique) {
         Holder<SkillStage> stored = spirit.techniqueStage(technique);
         return Optional.ofNullable(stored != null ? stored : technique.value().defaultStage().orElse(null));
     }
 
-    /**
-     * Every ability granted at the given level, with tags expanded and duplicates removed.
-     */
     public static List<Holder<Ability>> unlockedAbilities(Technique technique, Holder<SkillStage> current) {
         if (technique.configuration().isEmpty() || current == null) return List.of();
         ServerCache cache = ServerCache.get().orElse(null);
@@ -55,10 +50,7 @@ public final class SkillStageService {
                 .toList();
     }
 
-    /**
-     * The level this technique advances to, or empty at the top of the chain. The chain is the one its
-     * {@code default_stage} names, so a level of another chain is never the next step.
-     */
+    // The chain is the one its default_stage names, so a level of another chain is never the next step.
     public static Optional<Holder<SkillStage>> nextStage(Technique technique, Holder<SkillStage> current) {
         if (current == null) return Optional.empty();
         Identifier skill = technique.defaultStage().map(stage -> stage.value().skill()).orElse(current.value().skill());
@@ -66,34 +58,22 @@ public final class SkillStageService {
         return current.value().nextStage().filter(next -> next.value().skill().equals(skill));
     }
 
-    /**
-     * The condition required to reach the given level; an unconfigured level requires nothing. The cache
-     * rejects a chain with unconfigured steps, so that is only the entry level, which none advances into.
-     */
+    // An unconfigured level requires nothing; the cache rejects a chain with unconfigured steps, so that is
+    // only the entry level, which none advances into.
     public static EntityCondition advanceCondition(Technique technique, Holder<SkillStage> target) {
         return Optional.ofNullable(technique.configuration().get(target))
                 .map(StageConfiguration::condition).orElse(AlwaysTrueCondition.INSTANCE);
     }
 
-    /**
-     * Whether the holder may advance from its current level to the next. Read-only.
-     */
     public static boolean canAdvance(LivingEntity entity, Technique technique, Holder<SkillStage> current,
                                      FormulaContext context) {
         Holder<SkillStage> target = nextStage(technique, current).orElse(null);
         return target != null && advanceCondition(technique, target).test(entity, context);
     }
 
-    /**
-     * What the holder's mastery is worth on one ability: the {@code damage_multiplier} of the level it stands
-     * on, for a chain whose configuration grants that ability at that level, or {@code 1.0} when no chain it
-     * has climbed does.
-     *
-     * <p>A chain speaks for the abilities it unlocks, which is why this is asked per ability rather than per
-     * holder: the multiplier of a body-refining manual belongs to what that manual grants, not to every hit
-     * the holder lands. Several techniques can grant the same ability, and the best of them is taken - the hit
-     * is one hit, so the strongest chain the holder stands on speaks for it instead of every chain stacking.</p>
-     */
+    // Asked per ability rather than per holder, because a chain speaks for the abilities it unlocks: the
+    // multiplier of a body-refining manual belongs to what that manual grants, not to every hit the holder
+    // lands. Several techniques can grant the same ability and the best is taken - the hit is one hit.
     public static double damageMultiplier(LivingEntity holder, Holder<Ability> ability) {
         SpiritIdentityAttachment spirit = holder.getData(MxtAttachments.SPIRIT_IDENTITY);
         double best = 1.0D;

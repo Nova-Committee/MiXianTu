@@ -22,8 +22,7 @@ import java.util.function.Consumer;
 
 /**
  * Displays the current charge of item stacks that implement {@code ItemAuraAccess}. The reading itself is
- * {@link SpiritChargeService}'s, so what is shown here is the same number the pour writes and the item
- * conditions test.
+ * {@link SpiritChargeService}'s, so what is shown is the same number the pour writes and the conditions test.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class SpiritStorageTooltipAppender {

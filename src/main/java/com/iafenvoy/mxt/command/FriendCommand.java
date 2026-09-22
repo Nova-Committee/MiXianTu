@@ -31,9 +31,9 @@ import static net.minecraft.commands.Commands.literal;
 
 /**
  * The {@code /friend} subtree: the players the holder recognises, and the two ways of adding one. A disabled
- * server option removes the top-level alias and never the command itself. {@code add} and {@code permanent
- * add} differ in the storage rather than the syntax — a temporary friend is not in the attachment's codec, so
- * it is gone after a relog — and bare {@code /friend} answers with click-to-fill rows, not a usage error.
+ * server option removes the top-level alias and never the command itself. A temporary friend is not in the
+ * attachment's codec, so it is gone after a relog, and bare {@code /friend} answers with help rather than a usage
+ * error.
  */
 public final class FriendCommand {
     private static final SimpleCommandExceptionType ERROR_NOT_SINGLE_PLAYER =
@@ -69,10 +69,7 @@ public final class FriendCommand {
         return 1;
     }
 
-    /**
-     * One help row: the usage as it reads, what clicking it fills in, and what the command is for. The argument
-     * is named rather than spelled out so the placeholder is translated.
-     */
+    // The argument is named rather than spelled out so the placeholder stays translated.
     private static Component entry(String suggestion, boolean named, String description) {
         MutableComponent command = named ? usage(suggestion) : Component.literal(suggestion);
         return Component.literal(" ")
@@ -83,16 +80,11 @@ public final class FriendCommand {
                         .withHoverEvent(new ShowText(Component.translatable("command.mxt.friend.hover", suggestion))));
     }
 
-    /**
-     * One command as it should be read back to a player, with its argument placeholder attached.
-     */
     private static MutableComponent usage(String command) {
         return Component.literal(command).append(Component.translatable("command.mxt.friend.argument"));
     }
 
-    /**
-     * The root a suggestion has to use: the alias only exists while the server option allows it.
-     */
+    // Suggestions have to name the root that exists: the alias is only there while the server option allows it.
     private static String root() {
         return MxtServerConfig.INSTANCE.commands.friend.getValue() ? "/friend " : "/mxt friend ";
     }
@@ -110,9 +102,6 @@ public final class FriendCommand {
         return friends.permanent().size() + friends.temporary().size();
     }
 
-    /**
-     * The list as one clickable name per entry, so leaving a list is the same gesture as entering it.
-     */
     private static Component listing(List<NameAndId> friends, boolean permanent) {
         if (friends.isEmpty())
             return Component.translatable("command.mxt.friend.list.none").withStyle(ChatFormatting.DARK_GRAY);
@@ -166,21 +155,15 @@ public final class FriendCommand {
         return 1;
     }
 
-    /**
-     * The one player the argument named. {@link GameProfileArgument} resolves through the server's profile
-     * cache rather than the online player list, which is what makes a friend removable while offline.
-     */
+    // GameProfileArgument resolves through the server's profile cache rather than the online player list, which is
+    // what makes a friend removable while offline.
     private static NameAndId single(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         Collection<NameAndId> profiles = GameProfileArgument.getGameProfiles(ctx, "player");
         if (profiles.size() != 1) throw ERROR_NOT_SINGLE_PLAYER.create();
         return profiles.iterator().next();
     }
 
-    /**
-     * Offers the temporary friends, which is the set {@code remove} can act on; the permanent ones are
-     * deliberately absent, because a completion that leads straight to a refusal is a worse answer than
-     * no completion at all.
-     */
+    // Only the temporary friends are offered: a completion that leads straight to a refusal is worse than none.
     private static CompletableFuture<Suggestions> suggestRemovable(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
         return suggest(ctx, builder, false);
     }

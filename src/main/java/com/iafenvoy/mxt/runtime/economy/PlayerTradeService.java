@@ -30,16 +30,14 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Server-owned request and settlement state for direct player-to-player trades. Session state is
- * append-only while a trade is live, and every terminal transition is one-shot through
- * {@link Session#closed}, so a stale action holding an old session reference cannot move items twice.
+ * Server-owned request and settlement state for direct player-to-player trades. Session state is append-only
+ * while a trade is live, and every terminal transition is one-shot through {@link Session#closed}, so a stale
+ * action holding an old session reference cannot move items twice.
  */
 @EventBusSubscriber
 public final class PlayerTradeService {
     private static final long REQUEST_LIFETIME_TICKS = 20L * 60L;
-    /**
-     * How often the module re-checks live state for the sessions and requests it still holds.
-     */
+    // How often the module re-checks live state for the sessions and requests it still holds.
     private static final long STALE_CHECK_INTERVAL_TICKS = 20L;
     private static final Map<UUID, Request> REQUESTS = new HashMap<>();
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
@@ -86,11 +84,8 @@ public final class PlayerTradeService {
         }
     }
 
-    /**
-     * Reclaims state this module still holds. Requests already expire lazily on
-     * {@link #request(ServerPlayer, ServerPlayer)}; this pass also drops sessions whose sides are no
-     * longer connected, which lazy expiry cannot observe.
-     */
+    // Requests already expire lazily on `request`; this pass also drops sessions whose sides are no longer
+    // connected, which lazy expiry cannot observe.
     @SubscribeEvent
     public static void onLevelTick(Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
@@ -102,9 +97,7 @@ public final class PlayerTradeService {
         removeExpiredRequests(level.getGameTime());
     }
 
-    /**
-     * A disconnect must not leave partner items inside an offer container that nobody can reach.
-     */
+    // A disconnect must not leave partner items inside an offer container that nobody can reach.
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
@@ -113,10 +106,8 @@ public final class PlayerTradeService {
         if (session != null) session.discard(session.side(player));
     }
 
-    /**
-     * Death drops the inventory, so a settled session is returned before it can move items into an
-     * inventory that is about to be emptied.
-     */
+    // Death drops the inventory, so a settled session is returned before it can move items into an inventory
+    // that is about to be emptied.
     @SubscribeEvent
     public static void onPlayerDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
@@ -129,10 +120,8 @@ public final class PlayerTradeService {
         REQUESTS.values().removeIf(request -> request.expiresAt() < now);
     }
 
-    /**
-     * Removes one side's session entry only when it still points at the given session, so a newer
-     * session registered under the same UUID is never evicted by an older close.
-     */
+    // Removes one side's entry only when it still points at the given session, so a newer session registered
+    // under the same UUID is never evicted by an older close.
     private static void forgetSession(UUID player, Session session) {
         SESSIONS.remove(player, session);
     }
@@ -140,9 +129,6 @@ public final class PlayerTradeService {
     private record Request(UUID target, long expiresAt) {
     }
 
-    /**
-     * One live trade between two connected players.
-     */
     private static final class Session {
         private final Side first;
         private final Side second;
@@ -185,9 +171,6 @@ public final class PlayerTradeService {
             if (this.first.accepted && this.second.accepted) this.complete();
         }
 
-        /**
-         * Both offers move into the partner's inventory; overflow is committed to the ground.
-         */
         private void complete() {
             if (this.closed) return;
             this.swap(this.first, this.second);
@@ -197,10 +180,8 @@ public final class PlayerTradeService {
             this.close();
         }
 
-        /**
-         * Moves {@code source.offer} into {@code receiver}'s inventory, then clears the offer so no
-         * item can be handed out twice.
-         */
+        // Moves source.offer into receiver's inventory, then clears the offer so no item can be handed out
+        // twice.
         private void swap(Side receiver, Side source) {
             for (int index = 0; index < source.offer.getContainerSize(); index++) {
                 ItemStack stack = source.offer.getItem(index);
@@ -214,10 +195,7 @@ public final class PlayerTradeService {
             source.offer.setChanged();
         }
 
-        /**
-         * Commits one side's overflow to the ground. {@code Inventory.add} empties the stack it
-         * successfully inserts, so the common path has nothing left to drop.
-         */
+        // Inventory.add empties the stack it successfully inserts, so the common path has nothing left to drop.
         private void settleOverflow(Side side) {
             for (ItemStack stack : side.overflow) {
                 if (!stack.isEmpty()) side.player.drop(stack, false);
@@ -234,10 +212,8 @@ public final class PlayerTradeService {
             this.close();
         }
 
-        /**
-         * Disconnecting or dying must never leave partner items inside an unreachable offer
-         * container, so both sides are returned before the session is dropped.
-         */
+        // Disconnecting or dying must never leave partner items inside an unreachable offer container, so both
+        // sides are returned before the session is dropped.
         private void discard(Side leaving) {
             if (this.closed) return;
             InventoryUtil.insertItems(this.first.player.getInventory(), this.first.offer);
@@ -266,9 +242,7 @@ public final class PlayerTradeService {
             return this.second.player == player ? this.second : null;
         }
 
-        /**
-         * A session stays usable only while both sides are connected.
-         */
+        // A session stays usable only while both sides are connected.
         private boolean isLive() {
             return this.isOnline(this.first.player) && this.isOnline(this.second.player);
         }
@@ -285,10 +259,8 @@ public final class PlayerTradeService {
     private static final class Side {
         private final ServerPlayer player;
         private final Container offer = new SimpleContainer(20);
-        /**
-         * Items that could not fit when this side received a partner offer. They are dropped next to
-         * this side when the session closes.
-         */
+        // Items that could not fit when this side received a partner offer; dropped next to this side when the
+        // session closes.
         private final List<ItemStack> overflow = new ArrayList<>();
         private PlayerTradeMenu menu;
         private boolean accepted;

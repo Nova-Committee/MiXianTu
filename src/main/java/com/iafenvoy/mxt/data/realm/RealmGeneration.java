@@ -15,12 +15,9 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * How a secret realm instance dimension is produced. The whole point of a realm is that its dimension is
- * created on demand, so this is the one required section of a realm definition.
- *
- * <p>Every registry reference is resolved when an instance is created rather than while the datapack
- * registry is decoded: datapack registries load in parallel, so a holder read at decode time may still be
- * unbound, and the level stem and dimension type layers are not even available to a codec.
+ * How a secret realm instance dimension is produced; the one required section of a realm definition. Every
+ * registry reference is resolved when an instance is created rather than at decode: datapack registries load in
+ * parallel, so a holder read at decode time may still be unbound.
  */
 public sealed interface RealmGeneration {
     Codec<RealmGeneration> CODEC = MxtRegistries.REALM_GENERATION_TYPE.byNameCodec()
@@ -28,9 +25,6 @@ public sealed interface RealmGeneration {
 
     MapCodec<? extends RealmGeneration> codec();
 
-    /**
-     * Reuses one registered {@code LevelStem} (generator plus dimension type) under a new dimension key.
-     */
     record Stem(ResourceKey<LevelStem> stem) implements RealmGeneration {
         public static final MapCodec<Stem> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 ResourceKey.codec(Registries.LEVEL_STEM).fieldOf("stem").forGetter(Stem::stem)
@@ -42,10 +36,8 @@ public sealed interface RealmGeneration {
         }
     }
 
-    /**
-     * A superflat world. The preset string follows the vanilla layer syntax, for example
-     * {@code "1*minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block;minecraft:plains"}.
-     */
+    // The preset string follows the vanilla layer syntax, for example
+    // "1*minecraft:bedrock,2*minecraft:dirt,minecraft:grass_block;minecraft:plains".
     record Flat(String preset, Optional<ResourceKey<DimensionType>> dimensionType,
                 boolean structures) implements RealmGeneration {
         public static final MapCodec<Flat> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -60,10 +52,8 @@ public sealed interface RealmGeneration {
         }
     }
 
-    /**
-     * An empty world: no layers, one biome, and by default no structures. This is the usual floor for a
-     * realm that is furnished entirely from structure templates.
-     */
+    // No layers, one biome, and by default no structures - the usual floor for a realm furnished entirely from
+    // structure templates.
     record Void(Optional<ResourceKey<Biome>> biome, Optional<ResourceKey<DimensionType>> dimensionType,
                 boolean structures) implements RealmGeneration {
         public static final MapCodec<Void> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -78,10 +68,7 @@ public sealed interface RealmGeneration {
         }
     }
 
-    /**
-     * Copies a pre-built level from {@code <server directory>/mxt_realm/<template>/} into the instance
-     * before it loads, so a hand-built map becomes a realm.
-     */
+    // Copies a pre-built level from <server directory>/mxt_realm/<template>/ into the instance before it loads.
     record Template(String template, ResourceKey<LevelStem> stem) implements RealmGeneration {
         public static final MapCodec<Template> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.STRING.fieldOf("template").forGetter(Template::template),
@@ -94,10 +81,8 @@ public sealed interface RealmGeneration {
         }
     }
 
-    /**
-     * Uses an already loaded dimension as the realm and creates nothing. {@code max_instances} is
-     * meaningless here, and the dimension is never destroyed by the realm service.
-     */
+    // Uses an already loaded dimension and creates nothing: max_instances is meaningless here, and the service
+    // never destroys that dimension.
     record Existing(ResourceKey<Level> dimension) implements RealmGeneration {
         public static final MapCodec<Existing> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 ResourceKey.codec(Registries.DIMENSION).fieldOf("dimension").forGetter(Existing::dimension)

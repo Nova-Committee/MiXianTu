@@ -17,9 +17,9 @@ import java.util.UUID;
 
 /**
  * A live formation instance: which definition it runs, where it reaches, who pays for it, how much upkeep it
- * has already paid, and how much it has banked. The banked amount is the one field no definition supplies, and
- * persisting it is what lets a lean period be paid for. Being in the level's index {@code is} being active:
- * there is no {@code active} flag, and a hand-written one is ignored while upkeep is charged regardless.
+ * has already paid, and how much it has banked - the one field no definition supplies, and persisting it is what
+ * lets a lean period be paid for. Being in the level's index {@code is} being active: there is no {@code active}
+ * flag, and a hand-written one is ignored while upkeep is charged regardless.
  */
 public final class FormationInstance {
     public static final Codec<FormationInstance> CODEC = RecordCodecBuilder.<FormationInstance>create(i -> i.group(
@@ -27,17 +27,15 @@ public final class FormationInstance {
             Codec.DOUBLE.fieldOf("radius").forGetter(FormationInstance::radius),
             UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(FormationInstance::owner),
             Codec.LONG.optionalFieldOf("maintenance_count", 0L).forGetter(FormationInstance::maintenanceCount),
-            // Written only when something is actually banked, so a save of the common case does not grow a
-            // field per formation. Strict rather than tolerant: this map is written by the mod itself, so a
-            // row that does not read back is a bug worth seeing, not a row to drop silently.
+            // Written only when something is banked, so a save of the common case does not grow a field. Strict
+            // rather than tolerant: this map is written by the mod itself, so a row that does not read back is a
+            // bug worth seeing, not a row to drop silently.
             Codec.unboundedMap(Aura.CODEC, Codec.DOUBLE).optionalFieldOf("stored")
                     .forGetter(instance -> instance.stored.isEmpty() ? Optional.empty() : Optional.of(instance.stored))
     ).apply(i, FormationInstance::new)).flatXmap(FormationInstance::validate, FormationInstance::validate);
 
-    /**
-     * Checks a decoded value and reports the problem instead of throwing it, so a single malformed row does
-     * not fail the whole attachment by escaping the tolerant list decoder that is supposed to skip bad rows.
-     */
+    // Reports the problem instead of throwing it, so one malformed row does not fail the whole attachment by
+    // escaping the tolerant list decoder that is supposed to skip bad rows.
     private static DataResult<FormationInstance> validate(FormationInstance instance) {
         if (!Double.isFinite(instance.radius) || instance.radius <= 0.0D)
             return DataResult.error(() -> "Formation radius must be finite and positive: " + instance.radius);
@@ -56,9 +54,6 @@ public final class FormationInstance {
     private final double radius;
     private final Optional<UUID> owner;
     private long maintenanceCount;
-    /**
-     * Aura the array has banked but not spent, per aura.
-     */
     private final Map<Holder<Aura>, Double> stored;
 
     FormationInstance(Identifier formation, double radius) {
@@ -99,10 +94,8 @@ public final class FormationInstance {
         return this.maintenanceCount;
     }
 
-    /**
-     * What the array has banked, per resource id, as the live map the upkeep pass reads and writes through
-     * {@link #deposit} / {@link #withdraw}. Empty for a formation that declares no storage.
-     */
+    // The live map the upkeep pass reads and writes through {@link #deposit} / {@link #withdraw}; empty for a
+    // formation that declares no storage.
     public Map<Holder<Aura>, Double> stored() {
         return this.stored;
     }
@@ -111,10 +104,8 @@ public final class FormationInstance {
         this.maintenanceCount++;
     }
 
-    /**
-     * Banks a period's surplus, dropping an entry that rounds to nothing. The capacity is the caller's
-     * business: it was already applied when the amount was worked out.
-     */
+    // Banks a period's surplus, dropping an entry that rounds to nothing. Capacity is the caller's business:
+    // it was already applied when the amount was worked out.
     void deposit(Map<Holder<Aura>, Double> amounts) {
         amounts.forEach((resource, amount) -> {
             if (resource == null || amount == null || !Double.isFinite(amount) || amount <= 0.0D) return;
@@ -124,10 +115,8 @@ public final class FormationInstance {
         });
     }
 
-    /**
-     * Spends banked aura, removing an entry that reaches zero. The amount was already clamped to what is on
-     * hand when the period was planned, and the removal keeps a drained bank out of the save.
-     */
+    // The amount was already clamped to what is on hand when the period was planned, and removing a drained
+    // entry keeps it out of the save.
     void withdraw(Map<Holder<Aura>, Double> amounts) {
         amounts.forEach((resource, amount) -> {
             if (resource == null || amount == null || !Double.isFinite(amount) || amount <= 0.0D) return;

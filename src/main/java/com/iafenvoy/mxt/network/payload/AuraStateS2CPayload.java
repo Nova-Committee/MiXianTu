@@ -17,10 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Server-authoritative aura source, fully resolved pools, and environmental pools for the local player. The
- * two maps intentionally have different meanings: {@code actual} contains every active source, while
- * {@code environment} contains only the selected zone's environmental template. Both are keyed by the aura
- * they hold; the ids travel as aura ids and are decoded against the synced aura registry.
+ * Server-authoritative aura state for the local player. The two maps intentionally differ: {@code actual} holds every
+ * active source, while {@code environment} holds only the selected zone's environmental template. Both are keyed by
+ * the aura they hold, and the ids decode against the synced aura registry.
  */
 public record AuraStateS2CPayload(Identifier source, Map<Holder<Aura>, AuraPool> actual,
                                   Map<Holder<Aura>, AuraPool> environment) implements CustomPacketPayload {

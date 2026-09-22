@@ -15,9 +15,9 @@ import java.util.UUID;
 
 /**
  * Persistable, inventory-neutral forging session state owned by a forge table block entity: the selected
- * blueprint id, the resolved {@link ForgingPlan}, the live session snapshot and the stacks locked away when
- * the session started. The plan is snapshotted because it carries {@code optimalSteps}, and recomputing it
- * after a datapack reload would change the extra-step count of a session already in progress.
+ * blueprint id, the resolved {@link ForgingPlan}, the live session snapshot and the stacks locked away when the
+ * session started. The plan is snapshotted because it carries {@code optimalSteps}, and recomputing it after a
+ * datapack reload would change the extra-step count of a session already in progress.
  */
 public final class ForgingTableState {
     public static final MapCodec<ForgingTableState> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -51,11 +51,8 @@ public final class ForgingTableState {
         }
     }
 
-    /**
-     * Whether a session is running, which is deliberately not the same question as whether a blueprint is
-     * locked: a session holds the materials it consumed, and it is those that have to stay put until it
-     * settles.
-     */
+    // Deliberately not the same question as whether a blueprint is locked: a session holds the materials it
+    // consumed, and it is those that have to stay put until it settles.
     public boolean active() {
         return this.session != null;
     }
@@ -64,9 +61,7 @@ public final class ForgingTableState {
         return Optional.ofNullable(this.blueprint);
     }
 
-    /**
-     * The plan frozen when the session started, still valid after a datapack reload.
-     */
+    // Frozen when the session started, so it stays valid after a datapack reload.
     public Optional<ForgingPlan> plan() {
         return Optional.ofNullable(this.plan);
     }
@@ -75,23 +70,16 @@ public final class ForgingTableState {
         return Optional.ofNullable(this.session);
     }
 
-    /**
-     * The material stacks removed from the container when the session started.
-     */
     public List<ItemStack> consumed() {
         return this.consumed;
     }
 
-    /**
-     * Who opened the shared session. Every player may keep striking; this is informational only.
-     */
+    // Informational only: every player may keep striking the shared session.
     public Optional<UUID> starter() {
         return Optional.ofNullable(this.starter);
     }
 
-    /**
-     * Opens a session. The caller has already removed {@code consumed} from the block entity container.
-     */
+    // The caller has already removed the consumed stacks from the block entity container.
     public void lock(Identifier blueprint, ForgingPlan plan, ForgingSession value, List<ItemStack> consumed, UUID starter) {
         if (this.active()) throw new IllegalStateException("Forging session already active");
         this.blueprint = blueprint;
@@ -106,11 +94,8 @@ public final class ForgingTableState {
         this.session = value.snapshot();
     }
 
-    /**
-     * Fully resets the workstation state. The only reset there is: dropping the session while keeping the
-     * blueprint would leave a shape with no plan behind the blueprint, which this class's own codec rejects
-     * and which would keep the surface locked with nothing left to cancel.
-     */
+    // The only reset there is: dropping the session while keeping the blueprint would leave a shape with no
+    // plan behind it, which this class's own codec rejects and which would keep the surface locked for nothing.
     public void clear() {
         this.blueprint = null;
         this.plan = null;
@@ -119,10 +104,7 @@ public final class ForgingTableState {
         this.starter = null;
     }
 
-    /**
-     * Copies decoded state into this instance. Block entities hold a final field, so the codec
-     * result is copied in rather than replacing the reference.
-     */
+    // Block entities hold a final field, so the codec result is copied in rather than replacing the reference.
     public void copyFrom(ForgingTableState other) {
         this.blueprint = other.blueprint;
         this.plan = other.plan;

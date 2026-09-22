@@ -39,31 +39,21 @@ import java.util.Optional;
 public final class ServerNetworkHandler {
     public static final Logger MXT_DEBUG = LogUtils.getLogger();
 
-    /**
-     * One wheel entry was chosen. The payload carries what was chosen, off which page, and nothing else: the page
-     * and the kind say where the id has to resolve, and whether the player may use it is decided here and by the
-     * pipeline behind it, never by the screen that sent this.
-     */
+    // The payload carries what was chosen and off which page, and nothing else: whether the player may use it is
+    // decided here and by the pipeline behind it, never by the screen that sent this.
     static void onWheelAction(WheelActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         WheelService.trigger(player, payload.source(), payload.kind(), payload.id());
     }
 
-    /**
-     * A wheel layout from the configuration screen: forced to twelve sectors with every id resolved, so it can
-     * only ever contain things this server could trigger.
-     */
+    // Forced to twelve sectors with every id resolved, so it can only contain things this server could trigger.
     static void onWheelLayout(WheelLayoutC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         WheelLayoutAttachment attachment = player.getData(MxtAttachments.WHEEL_LAYOUT);
         attachment.setLayout(WheelService.sanitize(player, payload.layout()));
     }
 
-    /**
-     * The player armed another cell, or nothing. What travels is the cell's number, so there is nothing to
-     * resolve against the registries; a number outside the numbering is stored as "nothing armed" - logged,
-     * since only a client bug can produce one.
-     */
+    // A number outside the numbering is stored as "nothing armed" and logged, since only a client bug produces one.
     static void onWheelSelection(WheelSelectionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         Integer submitted = payload.armed().orElse(null);
@@ -76,20 +66,14 @@ public final class ServerNetworkHandler {
 
     static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        // The table comes from the menu the player has open, not from the packet. The client cannot
-        // reach the block at all - its ContainerLevelAccess is NULL - so a position in the request
-        // would have to be published to it first and trusted coming back. Resolving here also scopes a
-        // request to the table this player is actually standing at, which is what makes the distance
-        // check below the only remaining thing to verify.
+        // The table comes from the menu the player has open, not from the packet: the client cannot reach the block
+        // at all (its ContainerLevelAccess is NULL), so a position in the request would have to be trusted coming
+        // back. Resolving here is what leaves the distance check as the only remaining thing to verify.
         if (!(player.containerMenu instanceof ForgingMenu menu)) return;
         if (!(menu.table() instanceof ForgingTableBlockEntity table)) return;
         Identifier definition = payload.definition().orElse(null);
-        // The outcomes carry the reason a request was refused, and every branch below used to throw it
-        // away - which makes "nothing happens" the only symptom a player can report.
-        //
-        // `active` is logged after the call for the two actions that can settle a session by themselves:
-        // a strike that completes the piece ends it, so "the session is gone afterwards" is the success
-        // path rather than something to go looking for.
+        // `active` is logged after the call for the two actions that can settle a session by themselves: a strike
+        // that completes the piece ends it, so "the session is gone afterwards" is the success path.
         switch (payload.action()) {
             case SELECT -> MXT_DEBUG.info("forging SELECT definition={} selectable={} methods={} outcome={} active={}",
                     definition, table.selectableBlueprintIds(), table.availableMethodIds(),
@@ -154,13 +138,8 @@ public final class ServerNetworkHandler {
         if (!result.started() && !result.stopped()) CultivationModeService.notifyFailure(player, result);
     }
 
-    /**
-     * Answers what an owner id is called, out of what this server already knows: the player if they are online,
-     * otherwise the name its profile cache kept from a previous login. Nothing is fetched - see
-     * {@link PlayerNames#knownToServer} - so answering costs a map lookup rather than a web request, and a
-     * player this server has never seen is answered with nothing, which leaves the asking client showing the id
-     * it already had.
-     */
+    // Answered out of what the server already knows - the online player, or the name its profile cache kept from a
+    // previous login. Nothing is fetched (see PlayerNames#knownToServer), so an unknown id answers with nothing.
     static void onOwnerNameRequest(OwnerNameC2SPayload payload, IPayloadContext context) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         Optional<String> name = server == null ? Optional.empty() : PlayerNames.knownToServer(server, payload.owner());

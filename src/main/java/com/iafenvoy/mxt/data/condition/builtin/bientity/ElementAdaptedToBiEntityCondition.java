@@ -13,13 +13,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Set;
 
 /**
- * True when the actor is adapted to an element the target carries - the defensive mirror of
- * {@code mxt:element_overcomes}.
- *
- * <p>{@code adapted_to} is the half of an element's relations that damage reduction reads, and until this
- * condition existed a pack could ask "do I beat you" but not "do I resist you", which is the question a ward, a
- * shield or a reactive effect is actually written around. The relation is the question here, not what it is
- * worth: the multiplier is the damage pipeline's business.</p>
+ * True when the actor is adapted to an element the target carries - the mirror of {@code mxt:element_overcomes}.
+ * Only the relation is asked here; the multiplier is the damage pipeline's business.
  */
 public enum ElementAdaptedToBiEntityCondition implements BiEntityCondition {
     INSTANCE;

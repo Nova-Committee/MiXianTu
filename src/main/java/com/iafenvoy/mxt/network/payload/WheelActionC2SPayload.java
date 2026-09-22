@@ -11,8 +11,8 @@ import org.jspecify.annotations.NonNull;
 
 /**
  * "The player chose this entry, off this page": the one channel every wheel trigger travels on, resolved
- * server-side. The page is part of the request because it is what makes an entry reachable - the server re-reads
- * that page and refuses the trigger when the page no longer holds the entry.
+ * server-side. The page is part of the request because the server re-reads that page and refuses the trigger when the
+ * page no longer holds the entry.
  */
 public record WheelActionC2SPayload(WheelSource source, WheelEntryKind kind, Identifier id) implements CustomPacketPayload {
     public static final Type<WheelActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "wheel_action_c2s"));

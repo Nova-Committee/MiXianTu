@@ -80,8 +80,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Adds one source's claim on an ability, which is how every other module grants one. An unknown ability is
-     * not an error: nothing can be held by a name the ledger does not have, so the answer is simply {@code false}.
+     * Adds one source's claim, the only way an ability is granted. An unknown ability answers {@code false}
+     * instead of throwing.
      */
     public static boolean grantAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
@@ -91,8 +91,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Drops one source's claim. The ability itself only disappears when that was its last source, which is also
-     * when its cooldowns and its stored values go; an unknown ability answers {@code false}.
+     * Drops one source's claim; the ability goes only with its last source, and its cooldowns and stored values
+     * go with it. An unknown ability answers {@code false}.
      */
     public static boolean revokeAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
@@ -102,22 +102,21 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Whether the entity holds that ability, read from the attachment rather than from the registry, so an
-     * ability whose definition was disabled or deleted still answers honestly.
+     * Read from the attachment, not the registry: a definition that was disabled or deleted still answers.
      */
     public static boolean hasAbility(@NotNull Entity entity, Identifier id) {
         return findAbilityHolder(entity, id).isPresent();
     }
 
     /**
-     * Every ability the entity holds, sorted, read from the attachment for the same reason as {@link #hasAbility}.
+     * Every ability the entity holds, sorted; read from the attachment, as {@link #hasAbility}.
      */
     public static List<String> abilities(@NotNull Entity entity) {
         return abilityKeys(entity).map(HolderHelper::id).map(Identifier::toString).sorted().toList();
     }
 
     /**
-     * Which sources keep that ability granted right now, empty when the entity does not hold it.
+     * Which sources keep that ability granted, empty when it is not held.
      */
     public static List<String> abilitySources(@NotNull Entity entity, Identifier id) {
         return findAbilityHolder(entity, id)
@@ -126,21 +125,14 @@ public final class MxtKubeJsApi {
                 .orElseGet(List::of);
     }
 
-    /**
-     * A source change moves which triggers the entity listens for, so the runtime index is rebuilt whenever
-     * something actually changed.
-     */
+    // A source change moves which triggers the entity listens for, so the runtime index is rebuilt.
     private static boolean changed(Entity entity, boolean changed) {
         if (changed && entity instanceof LivingEntity living)
             AbilityEventBridge.rebuildTriggerSubscriptions(living);
         return changed;
     }
 
-    /**
-     * What the entity's ability ledger actually holds, which is the only source of truth a lookup uses. A client
-     * script reads nothing: a grant lives on the server, and the copy a client happens to hold is not what any
-     * answer here should be based on, which is also what {@link #hasAbility} and {@link #abilitySources} answer.
-     */
+    // The ledger is the only source of truth a lookup uses; a client script reads nothing.
     private static Stream<Holder<Ability>> abilityKeys(Entity entity) {
         if (entity.level().isClientSide()) return Stream.empty();
         return entity.getData(MxtAttachments.ABILITY_HOLDER).sources().keys().stream();
@@ -164,7 +156,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Lets go of one source's claim, which only removes the curse when no other source holds it.
+     * Lets go of one source's claim; the curse goes only when no other source holds it.
      */
     public static boolean releaseCurse(@NotNull Entity target, Identifier id, Identifier source) {
         return !target.level().isClientSide() && findCurseHolder(target, id)
@@ -173,7 +165,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Which sources keep that curse alive right now, empty when the entity does not hold it.
+     * Which sources keep that curse alive, empty when it is not held.
      */
     public static Set<Identifier> curseSources(@NotNull Entity target, Identifier id) {
         return findCurseHolder(target, id)
@@ -182,7 +174,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Same as {@link #applyCurse}, with a duration the definition may shorten but never be outlasted by.
+     * {@link #applyCurse} with a duration the definition may shorten but never be outlasted by.
      */
     public static ApplyResult applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
                                             long durationTicks, FormulaContext context) {
@@ -195,8 +187,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Whether the entity holds that curse, read from the attachment rather than from the registry, so a curse
-     * whose definition was disabled or deleted still answers honestly.
+     * Read from the attachment, not the registry: a definition that was disabled or deleted still answers.
      */
     public static boolean hasCurse(@NotNull Entity target, Identifier id) {
         return findCurse(target, id).isPresent();
@@ -207,8 +198,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Ticks left on that curse, or {@code -1} when it never expires. A curse the entity does not hold answers
-     * {@code 0}, so a script can tell the two apart.
+     * Ticks left on that curse, {@code -1} when it never expires, {@code 0} when the entity does not hold it.
      */
     public static long curseRemainingTicks(@NotNull Entity target, Identifier id) {
         return findCurse(target, id)
@@ -229,15 +219,14 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Lets a rescue integration complete an explicit, server-authoritative soul recovery.
+     * Server-only; lets a rescue integration complete an explicit soul recovery.
      */
     public static boolean reclaimSoul(@NotNull Entity entity) {
         return !entity.level().isClientSide() && SoulService.reclaim(entity);
     }
 
     /**
-     * The live elements an entity's spirit roots name, sorted. This is the element half of "what is this body",
-     * asked of the body rather than of the registry, so a script can tell a fire cultivator from a water one
+     * The live elements the entity's spirit roots name, sorted. Asked of the body, not the registry, so it works
      * without knowing which roots exist.
      */
     public static List<String> elements(@NotNull Entity entity) {
@@ -249,10 +238,9 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * How much of one element has built up on the entity. Read through the accessor that works on either side,
-     * because the accumulation is a synchronised attachment and a client script (an item tooltip, for example)
-     * has a copy of it. A disabled or unknown element answers {@code 0} rather than whatever is left on the
-     * body, which is the same rule the {@code mxt:element_attachment} condition follows.
+     * How much of one element has built up on the entity, readable on either side because the accumulation is a
+     * synchronised attachment. A disabled or unknown element answers {@code 0}, the same rule the
+     * {@code mxt:element_attachment} condition follows.
      */
     public static double elementAmount(@NotNull Entity entity, Identifier id) {
         return MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.ELEMENT, id)
@@ -260,9 +248,9 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Builds one element up on the entity and answers the new total, through the same pipeline a strike uses:
-     * a reaction whose demand the new total meets fires here exactly as it would from damage. A negative amount
-     * wears the buildup off, and a disabled or unknown element changes nothing.
+     * Builds one element up on the entity and answers the new total, through the pipeline a strike uses, so a
+     * reaction can fire here. A negative amount wears the buildup off; a disabled or unknown element changes
+     * nothing.
      */
     public static double attachElement(@NotNull Entity entity, Identifier id, double amount) {
         if (entity.level().isClientSide() || !Double.isFinite(amount) || amount == 0.0D) return 0.0D;
@@ -273,10 +261,9 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Every spirit root the entity holds, sorted. The answer is read off the body rather than off the
-     * registry, so a root whose definition a pack disabled or deleted is still reported: the body holds it,
-     * and {@link #removeSpiritRoot} by that name is still what takes it off. This is the held list - the roots
-     * that actually count right now are {@link #activeSpiritRoots}.
+     * Every spirit root the entity holds, sorted. Read off the body, so a root a pack disabled or deleted is
+     * still reported and {@link #removeSpiritRoot} by that name still takes it off. This is the held list; the
+     * roots that count right now are {@link #activeSpiritRoots}.
      */
     public static List<String> spiritRoots(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);
@@ -285,12 +272,9 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The held roots that count right now, sorted. A root is left out while it is switched off, and a root
-     * whose element is not live is left out too, because neither contributes anything to the body.
-     *
-     * <p>The element is read by resolving the root's id against the registry the entity's level provides,
-     * which is the same reading {@code Elements.of} does: a held reference that no longer resolves to an
-     * enabled definition answers nothing rather than throwing, on either side.</p>
+     * The held roots that count, sorted: a root switched off, or whose element is not live, is left out. The
+     * element is resolved against the entity's level registry, so an unresolvable or disabled definition answers
+     * false instead of throwing, on either side.
      */
     public static List<String> activeSpiritRoots(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);
@@ -307,9 +291,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Whether that held root is switched on. A root the entity does not hold answers {@code false}, which is
-     * the same answer "switched off" gets - a script that needs to tell the two apart asks
-     * {@link #hasSpiritRoot} as well.
+     * Whether that held root is switched on; a root not held answers {@code false} too, so a script that needs
+     * to tell the two apart asks {@link #hasSpiritRoot} as well.
      */
     public static boolean isSpiritRootEnabled(@NotNull Entity entity, Identifier id) {
         SpiritIdentityAttachment spirit = identity(entity);
@@ -318,9 +301,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Grants one spirit root through the same service the data pack action uses, so the conflict rules and the
-     * granted abilities behave identically. Unknown or disabled definitions are refused rather than granted by
-     * name: the definition is what says which element the root binds.
+     * Grants one spirit root through the service the data pack action uses, so conflict rules and granted
+     * abilities behave identically. Unknown or disabled definitions are refused, not granted by name.
      */
     public static CultivationIdentityService.Result grantSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
@@ -336,8 +318,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Switches a held root on or off without giving it up, which is the module the data pack turns to when a
-     * body should keep an identity it is not currently running on.
+     * Switches a held root on or off without giving it up.
      */
     public static CultivationToggleService.Result setSpiritRootEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
         if (entity.level().isClientSide())
@@ -349,7 +330,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Every physique the entity holds, sorted, read off the body for the same reason the roots are.
+     * Every physique the entity holds, sorted; read off the body, as {@link #spiritRoots}.
      */
     public static List<String> physiques(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);
@@ -374,8 +355,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Grants one physique through the same service the data pack action uses, including its holder condition
-     * and its exclusive tags, which are read against the entity as it is right now.
+     * Grants one physique through the service the data pack action uses, including its holder condition and
+     * exclusive tags, read against the entity as it is right now.
      */
     public static CultivationIdentityService.Result grantPhysique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
@@ -399,10 +380,7 @@ public final class MxtKubeJsApi {
                 : CultivationToggleService.setPhysiqueEnabled(entity, physique, enabled);
     }
 
-    /**
-     * The identity a read is about, or {@code null}. Read, never created: asking whether a body holds a root
-     * must not be the reason it comes away holding an empty identity.
-     */
+    // Read, never created: asking whether a body holds a root must not leave it holding an empty identity.
     private static SpiritIdentityAttachment identity(Entity entity) {
         return entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
     }
@@ -433,7 +411,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Adds non-negative cultivation only; content scripts cannot set arbitrary negative or non-finite state.
+     * Adds non-negative cultivation only; a script cannot set arbitrary negative or non-finite state.
      */
     public static boolean addCultivation(LivingEntity entity, Identifier auraId, double amount) {
         if (entity == null || entity.level().isClientSide() || !Double.isFinite(amount) || amount < 0.0D) return false;
@@ -444,7 +422,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Performs the same all-or-nothing resource transaction used by abilities and other server systems.
+     * The same all-or-nothing resource transaction abilities and other server systems use.
      */
     public static Result tryConsumeResources(Entity entity, List<ResourceCost> costs, FormulaContext context) {
         if (entity == null || entity.level().isClientSide())
@@ -463,8 +441,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Publishes a server-authoritative custom trigger signal: finite numeric values are also added to
-     * the formula context, and the actor and level cannot be spoofed.
+     * Publishes a server-authoritative custom trigger signal; finite numeric values are also added to the formula
+     * context. The actor and level cannot be spoofed by the script.
      */
     public static boolean publishTrigger(@NotNull Entity actor, @NotNull Identifier signal,
                                          Map<String, Object> values) {

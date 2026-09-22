@@ -43,37 +43,22 @@ import java.util.Map;
 
 /**
  * The talisman carrier's own half of the pour: what a carrier takes to fill, and what happens once it is full.
- * <p>
- * A definition bills aura in {@code aura_cost}, and the carrier's capacity is that bill - summed over every
- * definition written on it, one entry per aura. So "full" is not a number somebody picked: it is exactly what
- * the invocation is going to cost, and pouring it in is how the carrier is loaded. The pour itself is the
- * spirit module's ({@link UseItemAuraAccess#pour}), and a carrier takes one unit a tick at one for one, which
- * makes the bill its pouring time as well as its price.
- * <p>
- * Firing is the carrier's answer to being charged ({@link UseItemAuraAccess#onCharged}) and the same answer a
- * right-click gets once there is nothing left to pour, so a carrier billed nothing at all is still usable. It
- * does not have to be in anybody's hands to fire: a display stand reports the same moment from where it stands
- * (see {@link SpiritSource}), which is what makes the position a parameter rather than the holder.
- * <p>
- * The invocation is an ordinary ability use with one thing changed: the carrier answers for the grant. Every
- * other gate still applies - the ability's own condition, word, cooldown, charges and costs, and both use
- * events - which is what keeps a talisman from being a way around them. What the carrier cannot carry is an
- * ability that needs a caster at all: see {@link AbilityService#useCarried}.
+ * A carrier's capacity is its {@code aura_cost} bill summed over every definition written on it, so "full" is
+ * exactly what the invocation will cost rather than a number somebody picked; the pour itself belongs to the
+ * spirit module ({@link UseItemAuraAccess#pour}), and a carrier takes one unit a tick at one for one. Firing is
+ * the carrier's answer both to being charged and to a right-click once there is nothing left to pour, so a
+ * carrier billed nothing at all is still usable. The invocation is an ordinary ability use with one thing
+ * changed - the carrier answers for the grant - which is what keeps a talisman from being a way around every
+ * other gate.
  */
 public final class TalismanService {
     private TalismanService() {
     }
 
-    /**
-     * What this stack's inscribed definitions bill, one entry per aura, in the order the definitions were
-     * written. That order is what decides which aura a pour fills next, so it is a list rather than a map with
-     * an iteration order of its own.
-     * <p>
-     * The bill is read against the empty context, because it has to be: what a carrier takes is also how long a
-     * pour lasts, and the client sizes the same gesture from the same stack. A bill that cannot be priced
-     * without a holder therefore prices to nothing and is left out - a carrier billed nothing at all is fired by
-     * a click rather than poured into, the same as one whose {@code aura_cost} is absent.
-     */
+    // One entry per aura, in the order the definitions were written, because that order decides which aura a
+    // pour fills next - so a list, not a map with an iteration order of its own. Priced against the empty
+    // context because it has to be: the bill is also how long a pour lasts, and the client sizes the same
+    // gesture from the same stack.
     public static Map<Holder<Aura>, Integer> bill(ItemStack stack) {
         Map<Holder<Aura>, Integer> totals = new LinkedHashMap<>();
         for (Holder<Talisman> talisman : inscribed(stack)) {
@@ -87,34 +72,18 @@ public final class TalismanService {
         return totals;
     }
 
-    /**
-     * Whether this stack is a carrier with nothing left to pour - which includes one that was billed nothing at
-     * all, so a free talisman is fired by the same click as a filled one.
-     */
+    // A bill that cannot be priced without a holder prices to nothing and is left out, so this includes a
+    // carrier billed nothing at all: a free talisman is fired by the same click as a filled one.
     public static boolean ready(Provider registries, ItemStack stack) {
         if (!(stack.getItem() instanceof UseItemAuraAccess access)) return false;
         SpiritPour pour = access.pour(registries, stack).orElse(null);
         return pour == null || pour.full();
     }
 
-    /**
-     * Fires what is written on a carrier and spends one of them. The one entry every trigger shares - a hand
-     * ({@link TalismanItem#use}) and a carrier that filled itself
-     * ({@link TalismanItem#onCharged}) - so neither way in can drift from the other.
-     * <p>
-     * Two rules, one per way in, and both read off the source rather than decided here: the use window belongs
-     * to a hand, so a carrier in one is rate-limited and leaves the window that rate-limits it, while a placed
-     * carrier is outside every window; and spending belongs to the way in, so a hand keeps what a creative hand
-     * would not spend while a placed carrier is always spent. See {@link SpiritSource#consumedByHand()}.
-     * <p>
-     * A hand still charges the window for the <em>attempt</em> rather than for the firing: an ability that
-     * refused costs it, while a carrier that is blank or uncharged never became an attempt - and a click refused
-     * for the window itself starts nothing.
-     * <p>
-     * The window is filed against a copy taken before the invocation, because firing burns the stack it was made
-     * from and vanilla reads the cooldown group off the stack: the emptied one would file it under
-     * {@code minecraft:air}.
-     */
+    // The one entry every trigger shares - a hand (TalismanItem#use) and a carrier that filled itself - so
+    // neither way in can drift from the other; which rule applies is read off the source, never decided here.
+    // A hand charges the window for the attempt rather than the firing. The window is filed against a copy
+    // taken before the invocation, because firing burns the stack and vanilla reads the cooldown group off it.
     public static boolean invokeOnUse(SpiritSource source, ItemStack stack) {
         ItemStack beforeUse = stack.copy();
         Attempt attempt = attempt(source, stack);
@@ -122,24 +91,16 @@ public final class TalismanService {
         return attempt.fired();
     }
 
-    /**
-     * Whether the carrier's own mode lets it fire the moment it is full. Asking this is the caller's job - the
-     * item answers its own "I was written to" report with it, because firing on being filled is a thing a
-     * carrier does rather than a thing a writer does. {@code STORE} is a carrier that only accumulates: it is
-     * filled to its bill and sits there, waiting for a hand or for a switch back.
-     */
+    // Whether the carrier's own mode lets it fire the moment it is full. STORE is a carrier that only
+    // accumulates: filled to its bill and sitting there, waiting for a hand or for a switch back.
     public static boolean autoFires(ItemStack stack) {
         return component(stack).mode() == TriggerMode.FIRE;
     }
 
-    /**
-     * The switch a hand makes with a sneaking use: a carrier that fires on its own stops doing so, and one that
-     * stores starts. A full carrier in {@code STORE} is not switched at all - it fires instead, because a stored
-     * charge exists to be spent and asking for the firing mode is the clearest way to say so.
-     *
-     * @return whether anything was asked of the carrier, which is what tells a click that fired from one that
-     * only changed a mode.
-     */
+    // The switch a hand makes with a sneaking use: firing on its own stops, storing starts. A full carrier in
+    // STORE is not switched at all - it fires instead, because a stored charge exists to be spent. The return
+    // is whether anything was asked of the carrier, which tells a click that fired from one that only changed
+    // a mode.
     public static boolean toggleMode(SpiritSource source, ItemStack stack) {
         if (inscribed(stack).isEmpty()) return false;
         TalismanComponent component = component(stack);
@@ -156,38 +117,24 @@ public final class TalismanService {
         return false;
     }
 
-    /**
-     * Whether the hand may pour into this carrier right now - the answer {@link UseItemAuraAccess#canPourInto}
-     * gives for it. False inside the use window, because the aura a tick would move would buy a charge the click
-     * is not going to spend.
-     * <p>
-     * A full carrier is left out by the caller rather than here: nothing is missing, so the pour has nothing to
-     * add and the gesture's own "already full" answer is the one to give.
-     * <p>
-     * Deliberately not asked by a display stand: that carrier is a placed object, so the stand fills it whatever
-     * window the thrower is inside - see {@link #invokeOnUse}.
-     */
+    // False inside the use window, because the aura a tick would move would buy a charge the click is not going
+    // to spend. A full carrier is left out by the caller rather than here, and a display stand never asks.
     public static boolean canFireFrom(@Nullable LivingEntity holder, ItemStack stack) {
         return !coolingDown(holder, stack);
     }
 
-    /**
-     * One invocation, and whether it got as far as being one. The two answers differ exactly where the use
-     * cooldown reads them: every ability refusing still means the carrier was used, while a carrier that is
-     * blank, uncharged, inert or still cooling down was never attempted - and says so.
-     */
+    // One invocation, and whether it got as far as being one: every ability refusing still means the carrier
+    // was used, while a carrier that is blank, uncharged, inert or cooling down was never attempted.
     private static Attempt attempt(SpiritSource source, ItemStack stack) {
         LivingEntity holder = source.actor();
-        // Nothing living is answerable for it: an ability needs somebody to pay, to be credited and to answer for
-        // it, and there is nobody. The carrier stays charged, which is what a click by a person can use.
+        // Nothing living is answerable for it: an ability needs somebody to pay, to be credited and to answer
+        // for it. The carrier stays charged, which is what a click by a person can use.
         if (holder == null || source.level().isClientSide() || !(stack.getItem() instanceof TalismanItem))
             return Attempt.NOT_AN_ATTEMPT;
-        // Two rules, one per way in. The use window is about the hand alone: in a hand the invocation is
-        // rate-limited and leaves the window that rate-limits it, while a carrier standing on a display stand is
-        // outside every window - it does not read one and does not leave one. The burn is about where the carrier
-        // is: a hand keeps what a creative hand would not spend, a placed carrier is spent whenever it fires.
-        // The source's own flag says which of the two this is, so nothing has to infer it from whether an actor
-        // happened to be passed.
+        // Two rules, one per way in. The use window is about the hand alone: a placed carrier on a display stand
+        // is outside every window - it reads none and leaves none. The burn is about where the carrier is: a
+        // hand keeps what a creative hand would not spend, a placed carrier is always spent. The source's own
+        // flag says which this is, so nothing infers it from whether an actor happened to be passed.
         boolean inHand = source.consumedByHand();
         if (inHand && coolingDown(holder, stack)) {
             say(holder, Component.translatable("actionbar.mxt.talisman.cooldown"));
@@ -247,31 +194,22 @@ public final class TalismanService {
         return Attempt.FIRED;
     }
 
-    /**
-     * What one invocation did. An attempt is what the use cooldown is charged for, so the two answers are kept
-     * apart rather than flattened into a boolean the caller would have to guess at.
-     */
+    // An attempt is what the use cooldown is charged for, so the two answers are kept apart rather than
+    // flattened into a boolean the caller would have to guess at.
     private record Attempt(boolean attempted, boolean fired) {
         private static final Attempt NOT_AN_ATTEMPT = new Attempt(false, false);
         private static final Attempt REFUSED = new Attempt(true, false);
         private static final Attempt FIRED = new Attempt(true, true);
     }
 
-    /**
-     * Whether this carrier is still on the cooldown its own use set. Vanilla's tracker is per player and keyed by
-     * the item, and every carrier is the same item - so one window covers every carrier a player holds, which is
-     * the point of it. A group of its own is what {@code cooldown_group} is for.
-     */
+    // Vanilla's tracker is per player and keyed by the item, and every carrier is the same item, so one window
+    // covers every carrier a player holds. A group of its own is what `cooldown_group` is for.
     private static boolean coolingDown(@Nullable LivingEntity holder, ItemStack stack) {
         return useCooldownTicks() > 0 && holder instanceof Player player && player.getCooldowns().isOnCooldown(stack);
     }
 
-    /**
-     * Vanilla's own tracker through vanilla's own call, with the window coming from the server option instead of
-     * from a component. The group is read off the stack - the item's {@code use_cooldown} component if it has
-     * one, its registry key if not - so the stack handed in has to be one that still holds what was used. The
-     * server announces the window to the client by itself.
-     */
+    // Vanilla's own tracker through vanilla's own call, with the window from the server option instead of a
+    // component. The group is read off the stack handed in, so it has to be one that still holds what was used.
     private static void applyCooldown(@Nullable LivingEntity holder, ItemStack stackBeforeUse) {
         int ticks = useCooldownTicks();
         if (ticks <= 0 || !(holder instanceof Player player)) return;
@@ -282,25 +220,17 @@ public final class TalismanService {
         return MxtServerConfig.INSTANCE.talisman.useCooldown.getValue();
     }
 
-    /**
-     * What is written on one carrier, in the order it was written.
-     */
     public static List<Holder<Talisman>> inscribed(ItemStack stack) {
         return component(stack).talismans();
     }
 
-    /**
-     * The carrier's own component, with the defaults a missing one means: nothing inscribed, and the firing
-     * mode - which is also what every carrier written before the mode existed decodes as.
-     */
+    // Defaults a missing component means: nothing inscribed, and the firing mode - which is also what every
+    // carrier written before the mode existed decodes as.
     private static TalismanComponent component(ItemStack stack) {
         return stack.getOrDefault(MxtDataComponents.TALISMAN, TalismanComponent.EMPTY);
     }
 
-    /**
-     * Every ability the inscribed definitions name, with the tags they accept expanded, once each: a carrier
-     * that names the same ability twice fires it once.
-     */
+    // With the tags they accept expanded, once each: a carrier that names the same ability twice fires it once.
     private static List<Holder<Ability>> abilities(List<Holder<Talisman>> written) {
         Registry<Ability> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY);
         return written.stream()
@@ -308,10 +238,8 @@ public final class TalismanService {
                 .distinct().toList();
     }
 
-    /**
-     * The whole bill of a stack, as the pour reads it: one entry per aura, in declaration order, with whatever
-     * has been poured into it so far.
-     */
+    // The whole bill of a stack as the pour reads it: one entry per aura, in declaration order, with whatever
+    // has been poured in so far.
     public static List<Entry> entries(ItemStack stack) {
         Map<Holder<Aura>, Integer> bill = bill(stack);
         if (bill.isEmpty()) return List.of();

@@ -14,10 +14,8 @@ import net.minecraft.world.entity.LivingEntity;
 import java.util.Optional;
 
 /**
- * Selects the value source and presentation context for a resource bar.
- *
- * <p>Contexts are Java-owned registry entries so datapacks can select them but cannot introduce
- * client-side rendering behaviour through JSON.
+ * Selects the value source and presentation context for a resource bar. Contexts are Java-owned registry entries,
+ * so datapacks can select them but cannot introduce client-side rendering behaviour through JSON.
  */
 public interface ResourceBarContext {
     Codec<ResourceBarContext> CODEC = MxtRegistries.RESOURCE_BAR_CONTEXT.byNameCodec();
@@ -36,9 +34,6 @@ public interface ResourceBarContext {
         SELF_HUD, TARGET_OVERLAY, BOSS_OVERLAY
     }
 
-    /**
-     * Common extraction for contexts backed by an entity's resource attachment.
-     */
     static Optional<Values> extractStored(LivingEntity entity, Holder<Resource> resource) {
         ResourceHolderAttachment holder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         if (!holder.contains(resource)) return Optional.empty();

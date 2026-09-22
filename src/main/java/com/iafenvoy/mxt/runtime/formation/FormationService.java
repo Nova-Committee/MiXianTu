@@ -37,19 +37,12 @@ public final class FormationService {
         return ActivateResult.activated(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
     }
 
-    /**
-     * Charges one period of upkeep. Only ever pays: a failure leaves the instance untouched rather than marking
-     * it inactive, because tearing a formation down belongs to {@link FormationWorldService#deactivate}.
-     */
     public static MaintainResult maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
         return maintain(instance, definition, resources, context, Map.of());
     }
 
-    /**
-     * Charges one period of upkeep: the formation's own blocks pay first, then its stock. A failure leaves the
-     * instance untouched rather than marking it inactive, because tearing a formation down belongs to
-     * {@link FormationWorldService#deactivate}.
-     */
+    // The formation's own blocks pay first, then its stock. A failure leaves the instance untouched rather than
+    // marking it inactive, because tearing a formation down belongs to FormationWorldService#deactivate.
     public static MaintainResult maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources,
                                           FormulaContext context, Map<Holder<Aura>, Double> supplied) {
         Map<Holder<Aura>, Double> capacity = definition.storage()
@@ -63,19 +56,14 @@ public final class FormationService {
         return MaintainResult.paid();
     }
 
-    /**
-     * How much of a period's upkeep is left for the payer once the formation's own blocks have supplied what
-     * they supply, and once its stock has covered what that left.
-     */
+    // What is left for the payer once the formation's own blocks have supplied what they supply and its stock
+    // has covered what that left.
     public static final class MaintainRule {
         private MaintainRule() {
         }
 
-        /**
-         * The capacity of each aura a formation's storage declaration names, evaluated once per period.
-         * A capacity that comes out non-finite, zero or negative is dropped rather than clamped: it means
-         * this aura is not stored.
-         */
+        // Evaluated once per period. A capacity that comes out non-finite, zero or negative is dropped rather
+        // than clamped: it means this aura is not stored.
         public static Map<Holder<Aura>, Double> capacities(Storage storage, FormulaContext context) {
             Map<Holder<Aura>, Double> capacities = new LinkedHashMap<>();
             storage.capacity().forEach((aura, provider) -> {
@@ -86,10 +74,8 @@ public final class FormationService {
             return capacities;
         }
 
-        /**
-         * @return cost per resource id, with the supplied aura subtracted, and nothing left for a cost that
-         * is fully covered
-         */
+        // The plain reading of "what does the payer owe": cost per resource id with the supplied aura
+        // subtracted, run through the same code path upkeep uses with an empty bank.
         public static Map<Identifier, Double> remaining(Formation definition, FormulaContext context,
                                                         Map<Holder<Aura>, Double> supplied) {
             // The plain reading of "what does the payer owe": the cost minus the ground's contribution, run
@@ -97,19 +83,11 @@ public final class FormationService {
             return plan(definition, context, supplied, Map.of(), Map.of()).fromOwner();
         }
 
-        /**
-         * The three-way split of one period's bill: what the stock pays, what the stock gains, and what is left
-         * to the payer. A pure function of its arguments, because it is the only part of upkeep where a wrong
-         * answer is invisible in play.
-         * <p>
-         * The bill is written per value - what a pool is charged in - while the supply, the stock and its
-         * capacity are per aura. The two are reconciled by the only thing that connects them, the value an aura
-         * names ({@code Aura#resource()}), so nothing here reads a registry.
-         *
-         * @param supplied what the formation's own blocks and (optionally) its ground supply this period
-         * @param stored   what the stock holds right now
-         * @param capacity what the stock may hold, per aura; an aura it does not name is not stored
-         */
+        // The three-way split of one period's bill: what the stock pays, what the stock gains, and what is left
+        // to the payer. A pure function of its arguments, because it is the only part of upkeep where a wrong
+        // answer is invisible in play. The bill is per value - what a pool is charged in - while the supply, the
+        // stock and its capacity are per aura; the two are reconciled by the only thing that connects them, the
+        // value an aura names (Aura#resource()), so nothing here reads a registry.
         public static PaymentPlan plan(Formation definition, FormulaContext context,
                                        Map<Holder<Aura>, Double> supplied,
                                        Map<Holder<Aura>, Double> stored, Map<Holder<Aura>, Double> capacity) {
@@ -151,10 +129,8 @@ public final class FormationService {
             return new PaymentPlan(fromStock, fromPayer, deposit);
         }
 
-        /**
-         * One period's decided split, before anything is written: a plan that fails to be paid for must
-         * leave everything as it was, including the stock.
-         */
+        // One period's decided split, before anything is written: a plan that fails to be paid for must leave
+        // everything as it was, including the stock.
         public record PaymentPlan(Map<Holder<Aura>, Double> fromStock, Map<Identifier, Double> fromOwner,
                                   Map<Holder<Aura>, Double> deposit) {
             public PaymentPlan {
@@ -163,9 +139,7 @@ public final class FormationService {
                 deposit = new LinkedHashMap<>(deposit);
             }
 
-            /**
-             * Applies the split to a live instance: spend the old stock, then bank this period's surplus.
-             */
+            // Spend the old stock, then bank this period's surplus.
             public void applyTo(FormationInstance instance) {
                 instance.withdraw(this.fromStock);
                 instance.deposit(this.deposit);

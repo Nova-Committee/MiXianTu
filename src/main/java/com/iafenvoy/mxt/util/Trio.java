@@ -13,15 +13,11 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * A value that contains exactly one of three possible types.
- *
- * <p>Like {@link Either}, the active branch is preserved by mapping and codec
- * operations; no nullable sentinel or parallel optional fields are needed.</p>
+ * A value that contains exactly one of three possible types. Like {@link Either}, the active branch is preserved
+ * by mapping and codec operations.
  */
 public sealed interface Trio<F, S, T> permits First, Second, Third {
-    /**
-     * Builds a three-way codec; decoding is attempted in the supplied codec order.
-     */
+    // Decoding is attempted in the supplied codec order.
     static <F, S, T> Codec<Trio<F, S, T>> codec(Codec<F> first, Codec<S> second, Codec<T> third) {
         return new TrioCodec<>(first, second, third);
     }

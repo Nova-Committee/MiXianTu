@@ -17,15 +17,12 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * The vanilla lightning geometry with its three hard-coded colour constants replaced by per-bolt values, plus
- * an optional palette that tints the strand seam by seam.
- * Strand generation, the render type and the additive blending are copied from {@code LightningBoltRenderer},
- * because the pipeline takes its colour from the vertices alone.
+ * Vanilla lightning geometry with its hard-coded colour constants replaced by per-bolt values and an optional
+ * palette that tints the strand seam by seam. Strand generation and the additive render type are copied from
+ * {@code LightningBoltRenderer}, because that pipeline takes its colour from the vertices alone.
  */
 public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightningBolt, ColoredLightningBoltRenderState> {
-    /**
-     * The bolt spans eight blocks, so its geometry has nine horizontal seams to tint.
-     */
+    // The bolt spans eight blocks, so its geometry has nine horizontal seams to tint.
     private static final int SEAMS = 8;
 
     public ColoredLightningBoltRenderer(Context context) {
@@ -99,12 +96,9 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
         });
     }
 
-    /**
-     * One tint per seam, index zero being the ground and {@link #SEAMS} the top. A palette is read from its
-     * first entry at the top seam to its last at the ground, so the strand reads as a gradient; with no palette
-     * every seam takes the flat colour. Branch strands reuse the same seams, which is what keeps a branch the
-     * same colour as the trunk it leaves.
-     */
+    // One tint per seam, index zero at the ground and SEAMS at the top. A palette is read from its first entry at
+    // the top seam to its last at the ground; branches reuse the trunk's seams, which keeps a branch the same
+    // colour as the trunk it leaves.
     private static void tints(ColoredLightningBoltRenderState state, float[] reds, float[] greens, float[] blues) {
         List<Integer> palette = state.palette;
         if (palette.isEmpty()) {
@@ -129,17 +123,12 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
         return (color >> shift & 0xFF) / 255.0F;
     }
 
-    /**
-     * One channel of one seam, between the two palette entries the seam falls between.
-     */
     private static float mix(int from, int to, float fraction, int shift) {
         int start = from >> shift & 0xFF, end = to >> shift & 0xFF;
         return (start + (end - start) * fraction) / 255.0F;
     }
 
-    /**
-     * One side of a bolt segment. The lower end is the wider one, which is what tapers the strand.
-     */
+    // One side of a bolt segment. The lower end is the wider one, which is what tapers the strand.
     private static void quad(Matrix4fc pose, VertexConsumer buffer, float[] reds, float[] greens, float[] blues,
                              float x0, float z0, int height, float x1, float z1, float alpha,
                              float topWidth, float bottomWidth,

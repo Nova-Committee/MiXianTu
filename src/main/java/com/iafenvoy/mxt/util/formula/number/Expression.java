@@ -23,9 +23,7 @@ public final class Expression implements NumberProvider {
                     .optionalFieldOf("params", Map.of()).forGetter(Expression::params)
     ).apply(i, Expression::new));
 
-    /**
-     * Reports every problem of the expression as one error, so a load lists all broken formulas at once.
-     */
+    // Reports every problem of the expression as one error, so a load lists all broken formulas at once.
     public static final MapCodec<Expression> MAP_CODEC = RAW_CODEC.validate(Expression::validated);
 
     private final String source;
@@ -40,10 +38,8 @@ public final class Expression implements NumberProvider {
         this(source, Map.of());
     }
 
-    /**
-     * Records every problem instead of failing on the first, including syntax, which exp4j only
-     * reports on evaluation; a non-empty {@link #problems()} makes the codec a decode error.
-     */
+    // Records every problem instead of failing on the first, including syntax, which exp4j only reports on
+    // evaluation; a non-empty {@link #problems()} makes the codec a decode error.
     public Expression(@NotNull String source, @NotNull Map<String, NumberProvider> params) {
         this.source = source.trim();
         this.params = new LinkedHashMap<>(params);
@@ -70,16 +66,11 @@ public final class Expression implements NumberProvider {
         this.problems = List.copyOf(problems);
     }
 
-    /**
-     * Every problem found while building this expression; empty when the expression is usable.
-     */
     public List<String> problems() {
         return this.problems;
     }
 
-    /**
-     * Decodes the shorthand string form, keeping every problem in the error message.
-     */
+    // Keeps every problem in the error message.
     public static DataResult<Expression> decode(String source) {
         return validated(new Expression(source));
     }
@@ -90,10 +81,8 @@ public final class Expression implements NumberProvider {
                 + String.join("; ", expression.problems));
     }
 
-    /**
-     * exp4j builds structurally broken sources such as {@code 1 +} and only refuses them when they
-     * are evaluated, so this evaluates once with all variables set to 1.0 to catch them at load.
-     */
+    // exp4j builds structurally broken sources such as {@code 1 +} and only refuses them when they are
+    // evaluated, so this evaluates once with all variables set to 1.0 to catch them at load.
     private List<String> syntaxProblems() {
         try {
             net.objecthunter.exp4j.Expression expression = this.compiled.get().expression();
@@ -124,8 +113,8 @@ public final class Expression implements NumberProvider {
                     state.expression().setVariable(variable, override.evaluate(context));
                     continue;
                 }
-                // Precedence: the expression's own params, then an explicit value the context carries,
-                // and only then the variable registry, so 'level' cannot shadow an event payload.
+                // Precedence: the expression's own params, then an explicit value the context carries, and only
+                // then the variable registry, so 'level' cannot shadow an event payload.
                 double explicit = context.explicit(variable);
                 state.expression().setVariable(variable, Double.isNaN(explicit)
                         ? FormulaVariables.resolve(variable, context, state.bindings())
@@ -145,10 +134,8 @@ public final class Expression implements NumberProvider {
         return MAP_CODEC;
     }
 
-    /**
-     * The compiled expression of one thread with the bindings it resolved. A binding depends only on
-     * the variable registry, so a long lived formula resolves each name once and re-reads values after.
-     */
+    // The compiled expression of one thread, with the bindings it resolved. A binding depends only on the
+    // variable registry, so a long lived formula resolves each name once and re-reads values after.
     private record Compiled(net.objecthunter.exp4j.Expression expression, Map<String, Binding> bindings) {
     }
 }

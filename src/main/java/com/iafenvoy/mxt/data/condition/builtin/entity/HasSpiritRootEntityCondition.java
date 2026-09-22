@@ -17,11 +17,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * True when the entity holds a spirit root the field names, as an entry or as a tag.
- *
- * <p>The field is a list because roots are grouped with native tags: "any of the fire roots" is one tag, and a
- * data pack that adds a root to that tag does not have to be known here. A disabled root is not held as far as
- * this condition is concerned, which is the same rule every other runtime reader of a definition follows.</p>
+ * True when the entity holds a spirit root the field names, as an entry or as a tag; a root a pack disabled is
+ * not held as far as this condition is concerned.
  */
 public record HasSpiritRootEntityCondition(List<Either<Holder<SpiritRoot>, TagKey<SpiritRoot>>> spiritRoots) implements EntityCondition {
     public static final MapCodec<HasSpiritRootEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

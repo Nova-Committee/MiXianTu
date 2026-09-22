@@ -15,17 +15,10 @@ import net.minecraft.world.item.ItemUseAnimation;
 import java.util.List;
 
 /**
- * What the hold module needs to know about an item that is used by holding it down. A module with such items
- * implements this on its own binding record and registers a {@code HoldSource}; from then on the hold module
- * drives the entire gesture - starting it, timing it, the pose, the sound and keeping the item - without ever
- * reading that module's registries.
- * <p>
- * Extending {@link ItemMatcher} is what lets a source hand over matchers and holds in one object: a hold is
- * found by matching an item, the same way every other binding in this mod is.
- * <p>
- * The vocabulary every hold declaration shares lives here rather than in whichever module declared it first, so
- * a second module does not have to restate the whitelist or the defaults. Nothing here is about techniques: the
- * interface is named after the gesture, not after what the gesture is for.
+ * What the hold module needs about an item used by holding it down. A module implements this on its own binding
+ * record and registers a {@code HoldSource}; from then on the hold module drives the entire gesture without ever
+ * reading that module's registries. Extending {@link ItemMatcher} is what lets a source hand over matchers and
+ * holds in one object.
  */
 public interface HoldBinding extends ItemMatcher {
     int NO_HOLD = 0;
@@ -33,86 +26,42 @@ public interface HoldBinding extends ItemMatcher {
     Holder<SoundEvent> DEFAULT_HOLD_SOUND = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.BOOK_PAGE_TURN);
     List<ItemUseAnimation> ALLOWED_ANIMATIONS = List.of(ItemUseAnimation.BLOCK, ItemUseAnimation.BRUSH, ItemUseAnimation.BUNDLE, ItemUseAnimation.NONE, ItemUseAnimation.TOOT_HORN);
 
-    /**
-     * The ticks the use cycle lasts. A declaration whose length depends on the stack answers
-     * {@link #NO_HOLD} here and overrides {@link #requiresHold} to say outright that it does ask for a hold;
-     * its real length is the stack-level {@link #holdTicks(Provider, ItemStack)}.
-     */
+    // A declaration whose length depends on the stack answers NO_HOLD here and overrides requiresHold() to say
+    // outright that it does ask for a hold; its real length is the stack-level holdTicks(Provider, ItemStack).
     int holdTicks();
 
-    /**
-     * The ticks this stack's use cycle lasts, when the declaration's length depends on the stack rather than
-     * on the item - a charge that lasts as long as the item takes to fill, for instance. The registry view is
-     * the one the declaration was captured from, so both sides answer the same; a declaration that has no
-     * stack-level length simply answers its item-level one.
-     * <p>
-     * {@link #NO_HOLD} means "not this stack": nothing is armed for it, and a stack that already carries the
-     * component is left alone.
-     */
+    // NO_HOLD means "not this stack": nothing is armed for it, and a stack already carrying the component is
+    // left alone. Both sides answer off the registry view the declaration was captured from.
     default int holdTicks(Provider registries, ItemStack stack) {
         return this.holdTicks();
     }
 
-    /**
-     * The same question with the entity that is holding the stack in hand.
-     *
-     * <p>A hold whose answer depends on <em>who</em> holds it - one that only takes over the click for its own
-     * owner, say - has nowhere else to ask it: matching is a property of the item, and the stack says nothing
-     * about the reader. The holder is therefore passed down from the click and the use cycle, which are the
-     * two paths that already know it; a declaration that does not care keeps the default and never sees it.</p>
-     */
     default int holdTicks(LivingEntity holder, Provider registries, ItemStack stack) {
         return this.holdTicks(registries, stack);
     }
 
-    /**
-     * Whether this declaration drives this stack at all. A declaration that answers for every stack that
-     * matches it keeps the default; one that only takes some of them - everything that is chargeable, say -
-     * answers through {@link #holdTicks(Provider, ItemStack)}.
-     */
     default boolean claims(Provider registries, ItemStack stack) {
         return this.holdTicks(registries, stack) > NO_HOLD;
     }
 
-    /**
-     * Whether this declaration drives this stack for this holder, who may be refused where a stack alone cannot
-     * be: the entity-aware counterpart of {@link #claims(Provider, ItemStack)}, and the reason the holder is
-     * threaded through the hold module at all.
-     *
-     * <p>A refusal here is not an error and not a message: the click is simply not taken over, so the item
-     * answers it the way it would without this declaration. Both sides ask it and must agree, which is why an
-     * implementation reads only state the two sides share - synced components and synced registries - and
-     * leaves anything about the wider world (a full pool, a failed condition) to the tick and finish paths.</p>
-     */
+    // A refusal is not an error and not a message: the click is simply not taken over. Both sides ask it and must
+    // agree, so an implementation reads only state the two sides share (synced components and sync registries).
     default boolean claims(LivingEntity holder, Provider registries, ItemStack stack) {
         return this.claims(registries, stack);
     }
 
-    /**
-     * The pose the use cycle plays.
-     */
     ItemUseAnimation holdAnimation();
 
-    /**
-     * The sound the hold makes. The reader hears it from their own client's copy of the use component, and the
-     * players around them hear it from the server.
-     */
+    // The reader hears it from their own client's copy of the use component, the players around them from the
+    // server.
     Holder<SoundEvent> holdSound();
 
-    /**
-     * Whether this declaration asks for a hold at all. A declaration that does not is used on the click, which
-     * the hold module leaves alone.
-     */
     default boolean requiresHold() {
         return this.holdTicks() > NO_HOLD;
     }
 
-    /**
-     * The checks every hold declaration needs, so a module does not restate them: a pose outside the whitelist
-     * is refused, and so is a pose or a sound on a declaration that asks for no hold, because nothing would
-     * ever play it. The wording is deliberately generic - the calling module owns the field names a data pack
-     * author sees.
-     */
+    // A pose outside ALLOWED_ANIMATIONS is refused, and so is a pose or sound on a declaration that asks for no
+    // hold, because nothing would ever play it. The wording is generic: the calling module owns the field names.
     static DataResult<HoldBinding> validate(HoldBinding hold) {
         if (!ALLOWED_ANIMATIONS.contains(hold.holdAnimation()))
             return DataResult.error(() -> "hold animation " + hold.holdAnimation().getSerializedName()

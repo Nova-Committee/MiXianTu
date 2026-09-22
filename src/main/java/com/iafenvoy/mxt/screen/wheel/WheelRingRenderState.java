@@ -10,11 +10,9 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The ring itself: one sector per slot, as coloured quads. A GUI render state, not a fill, because a sector is
- * not a rectangle; every per-frame value arrives as a parameter. Each 30 degree sector is cut into
- * {@link #ARC_SEGMENTS} quads, since a single flat chord would read as a dodecagon rather than a wheel.
- *
- * @param selected the sector that grows, or anything out of range for "none"
+ * The ring itself: one sector per slot, as coloured quads. A GUI render state rather than a fill, because a
+ * sector is not a rectangle; {@code selected} is the sector that grows, or out of range for none. Each sector is
+ * cut into {@link #ARC_SEGMENTS} quads, since a single chord would read as a dodecagon rather than a wheel.
  */
 record WheelRingRenderState(RenderPipeline pipeline, TextureSetup textureSetup, Matrix3x2fc pose,
                             WheelGeometry.Ring ring, int[] colors, int selected,
@@ -54,7 +52,7 @@ record WheelRingRenderState(RenderPipeline pipeline, TextureSetup textureSetup, 
                 .setColor(color);
     }
 
-    /** The area the ring can touch: the widest radius plus the pop, since any sector may be selected. */
+    // The area the ring can touch: the widest radius plus the pop, since any sector may be selected.
     private static @Nullable ScreenRectangle boundsOf(WheelGeometry.Ring ring, Matrix3x2fc pose,
                                                      @Nullable ScreenRectangle scissorArea) {
         double reach = ring.outerRadius() + ring.grow();

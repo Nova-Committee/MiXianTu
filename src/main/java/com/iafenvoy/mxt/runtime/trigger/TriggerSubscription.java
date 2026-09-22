@@ -9,8 +9,8 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
- * Runtime-only subscription. It is deliberately not a Codec/persistent
- * object; owning modules reconstruct it from their persisted state.
+ * Runtime-only subscription, deliberately not a Codec: owning modules reconstruct it from their own persisted
+ * state.
  */
 public final class TriggerSubscription {
     public enum State {DISABLED, ARMED, CONSUMED}
@@ -75,6 +75,7 @@ public final class TriggerSubscription {
         }
     }
 
+    // A one-shot consumes itself here; the dispatcher unregisters it afterwards.
     void invoke(TriggerSignal signal) {
         this.listener.accept(signal);
         if (this.oneShot) this.state = State.CONSUMED;

@@ -7,12 +7,9 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * An action about to run for one entity, and the place it happens at when that is not the entity's own.
- * <p>
- * The place travels as extension data, the same way a formation carries itself, so a nested action inherits it
- * without every meta action having to pass it on. It exists because an activation is not always cast by the
- * entity it is about: a talisman standing on a display stand is filled, and fires, from the stand - the bearer
- * pays and answers for it, but a projectile it spawns leaves the stand.
+ * An action about to run for one entity, and the place it happens at when that is not the entity's own. An
+ * activation is not always cast by the entity it is about (a talisman on a display stand fires from the stand),
+ * so the place travels as extension data and a nested action inherits it.
  */
 public class EntityActionContext extends Context {
     private final Entity entity;
@@ -32,17 +29,12 @@ public class EntityActionContext extends Context {
         return this.entity;
     }
 
-    /**
-     * Where this action happens: the place it was given, or the acting entity's own position.
-     */
     public Vec3 position() {
         return this.origin().orElseGet(this.entity::position);
     }
 
-    /**
-     * Where a launched thing starts: the place it was given, or the acting entity's eyes - the height a
-     * projectile leaves an entity by, which an item's own place has no equivalent of.
-     */
+    // Eyes, not position: the height a projectile leaves an entity by, which an item's own place has no equivalent
+    // of.
     public Vec3 launchPosition() {
         return this.origin().orElseGet(this.entity::getEyePosition);
     }

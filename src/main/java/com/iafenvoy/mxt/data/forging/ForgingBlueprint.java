@@ -27,28 +27,20 @@ import java.util.Set;
 
 /**
  * The bounded meter, material requirement, allowed methods and finish rule for one forgeable result.
- * {@code input} is order-independent: the container only has to hold at least the declared amount of every
- * entry. {@code allowed_methods} declaring nothing, or an empty list, restricts nothing, while a tag that
- * resolves to no methods allows nothing.
+ * {@code input} is order-independent, and a tag that resolves to no methods allows nothing (an absent or empty
+ * {@code allowed_methods} restricts nothing).
  */
 public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMethod> allowedMethods, MeterBounds meter,
                                FinishPattern finishPattern, int maxSteps, List<QualityThreshold> qualityByExtraSteps,
                                Identifier result, EntityAction completeAction, EntityAction failAction,
                                FailureSettlement failureSettlement) {
-    /**
-     * Marker for "the blueprint defines no failure condition". The forge surface always has 15 input
-     * slots, so a session can never exceed this sentinel step count.
-     */
+    // Marker for "the blueprint defines no failure condition": no session can reach this step count, since the
+    // forge surface has 15 input slots.
     public static final int UNLIMITED_STEPS = 0;
-    /**
-     * Number of input slots on the forge surface. A blueprint can never require more entries.
-     */
+    // Number of input slots on the forge surface; a blueprint can never require more entries.
     public static final int MAX_INPUT_ENTRIES = 15;
 
-    /**
-     * Ids or one {@code #tag}, which is what {@link HolderSetCodec} reads. {@code alwaysUseList} is
-     * false, so a one-entry list may also be written as a bare string.
-     */
+    // Ids or one #tag. alwaysUseList is false, so a one-entry list may also be written as a bare string.
     public static final Codec<HolderSet<ForgingMethod>> METHODS_CODEC =
             HolderSetCodec.create(MxtResourceKeys.FORGING_METHOD, ForgingMethod.CODEC, false);
 
@@ -66,19 +58,13 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
             FailureSettlement.CODEC.codec().optionalFieldOf("failure_settlement", FailureSettlement.destroyInput()).forGetter(ForgingBlueprint::failureSettlement)
     ).apply(i, ForgingBlueprint::new)).validate(ForgingBlueprint::validate);
 
-    /**
-     * Not the same question as "is the set empty": a tag is a declaration whose members are decided
-     * elsewhere, so it counts even when it resolves to nothing, while an absent field or empty list is none.
-     */
+    // Not the same question as "is the set empty": a tag is a declaration whose members are decided elsewhere, so
+    // it counts even when it resolves to nothing.
     public boolean restrictsMethods() {
         return this.allowedMethods.unwrap().left().isPresent()
                 || !this.allowedMethods.unwrap().right().orElse(List.of()).isEmpty();
     }
 
-    /**
-     * The methods this blueprint accepts, in the order the datapack declared them, or every enabled
-     * registered method when it declares none.
-     */
     public List<Holder<ForgingMethod>> resolvedMethods(RegistryAccess registries) {
         if (this.restrictsMethods()) return this.allowedMethods.stream().toList();
         return MxtDatapackRegistries.holders(registries, MxtResourceKeys.FORGING_METHOD)
@@ -99,10 +85,8 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
         return DataResult.success(definition);
     }
 
-    /**
-     * Rejects empty, oversized or duplicated material requirements. Duplicates are rejected
-     * instead of merged so a datapack typo is reported at load time rather than silently fixed.
-     */
+    // Duplicates are rejected instead of merged, so a datapack typo is reported at load time rather than silently
+    // fixed.
     private static String inputError(List<ForgingMaterial> input) {
         if (input.isEmpty()) return "input must not be empty";
         if (input.size() > MAX_INPUT_ENTRIES)
@@ -115,12 +99,8 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
         return null;
     }
 
-    /**
-     * Resolves a stable plan for one started session; later datapack reloads do not mutate it. The deltas are
-     * this blueprint's allowed methods, and both the plan's keys and its finish-pattern check come from that
-     * one set, so a pattern naming a disallowed method is rejected here. {@link #UNLIMITED_STEPS} is normalised
-     * to {@link Integer#MAX_VALUE} so the plan keeps its positive, bounded contract.
-     */
+    // Resolved once per session so later datapack reloads do not mutate it. Candidate methods and the finish
+    // pattern are checked against the same allowed set, so a pattern naming a disallowed method is rejected here.
     public ForgingPlan plan(RegistryAccess registries) {
         Map<Identifier, Integer> deltas = new LinkedHashMap<>();
         for (Holder<ForgingMethod> method : this.resolvedMethods(registries))
@@ -129,9 +109,6 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
         return new ForgingPlan(this.meter.min(), this.meter.max(), this.meter.targetMin(), this.meter.targetMax(), this.finishPattern.steps().stream().map(HolderHelper::id).toList(), this.finishPattern.requiredSuffixSteps(), deltas, planMaxSteps);
     }
 
-    /**
-     * Whether the session may fail by exceeding {@link #maxSteps()}.
-     */
     public boolean hasStepLimit() {
         return this.maxSteps != UNLIMITED_STEPS;
     }
@@ -154,10 +131,7 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
         }
     }
 
-    /**
-     * Optional six-step suffix requirement. When {@code requiredSuffixSteps} is zero the pattern
-     * is unused, but the surface still renders the six result slots.
-     */
+    // A requiredSuffixSteps of zero leaves the pattern unused, but the surface still renders the six result slots.
     public record FinishPattern(List<Holder<ForgingMethod>> steps, int requiredSuffixSteps) {
         public static final MapCodec<FinishPattern> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 AutoIgnoreListCodec.create(ForgingMethod.CODEC).optionalFieldOf("steps", List.of()).forGetter(FinishPattern::steps),
@@ -190,11 +164,8 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
         }
     }
 
-    /**
-     * Failure handling is deliberately part of the blueprint snapshot. The ratios
-     * are independent rolls for the locked input and the optional failure product;
-     * this keeps multi-material forging inputs meaningful without inventing fractional stacks.
-     */
+    // The two ratios are independent rolls for the locked input and the optional failure product, which keeps
+    // multi-material inputs meaningful without inventing fractional stacks.
     public record FailureSettlement(Optional<Identifier> result, double inputReturnRatio, double materialLossRatio) {
         public static final MapCodec<FailureSettlement> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.optionalFieldOf("result").forGetter(FailureSettlement::result),

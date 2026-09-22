@@ -12,10 +12,8 @@ import net.minecraft.world.entity.Entity;
 import java.util.List;
 
 /**
- * Runtime ability operations exposed as {@code MxtAbilities}.
- * <p>
- * An ability grant is kept alive by its sources, the same way a curse is: granting adds one, revoking drops one,
- * and the ability only disappears once no source holds it.
+ * Runtime ability operations exposed as {@code MxtAbilities}. An ability grant is kept alive by its sources, the
+ * way a curse is: granting adds one, revoking drops one, and the ability only disappears once no source holds it.
  */
 public final class MxtKubeJsAbilityBindings {
     @Info("Uses a granted ability through the server-authoritative ability service.")
@@ -59,10 +57,8 @@ public final class MxtKubeJsAbilityBindings {
         return id;
     }
 
-    /**
-     * A source is an identifier now that abilities and curses share the ledger, so a script has to name itself the
-     * way every built-in source does.
-     */
+    // Sources are identifiers now that abilities and curses share the ledger, so a script names itself like any
+    // built-in source.
     private static Identifier sourceId(String raw) {
         Identifier id = raw == null ? null : Identifier.tryParse(raw);
         if (id == null) throw new IllegalArgumentException("Invalid ability source identifier: " + raw

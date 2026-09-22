@@ -13,7 +13,7 @@ import java.util.Optional;
 
 /**
  * Reads the {@code mxt:toggle} state of a named host: the stored {@code state}, or the declaration's
- * {@code default} while nothing was written. A host that does not declare that kind is simply false.
+ * {@code default} while nothing was written. A host that declares no such kind is false.
  */
 public record StorageToggleEntityCondition(Identifier family, Identifier id, boolean expected) implements EntityCondition {
     public static final MapCodec<StorageToggleEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

@@ -16,20 +16,10 @@ import net.minecraft.world.inventory.ChestMenu;
 
 /**
  * Gives the artifact an inventory of its own; the slot count is the whole declaration and the contents live in
- * the stack's storage component. {@link com.iafenvoy.mxt.data.artifact.Artifact} refuses a second entry of this
- * kind, so "how many slots has it" always has one answer.
- *
- * <p>It is also a {@link ToggableArtifactAbility}, which is what puts it on the wheel: opening the storage is
- * something a player has to press for, and the wheel is where the mod keeps everything of that kind. The press
- * opens a chest-shaped container over the artifact's own contents, exactly the way the reference implementation
- * does it: the screen is a vanilla container menu, the title is the artifact's name, and the contents are the
- * artifact's, not a copy of them.</p>
- *
- * <p>The capability has no state: nothing stays on when the container closes, so the wheel draws it as an
- * ordinary activation rather than as a switch.</p>
+ * the stack's storage component. Also a {@link ToggableArtifactAbility}, which is what puts it on the wheel;
+ * it has no state (nothing stays on when the container closes), so the wheel draws an ordinary activation.
  */
 public record StorageArtifactAbility(NumberProvider slots) implements ToggableArtifactAbility {
-    /** The name this capability is addressed by inside its artifact; see {@link #key()}. */
     public static final String KEY = "storage";
     public static final MapCodec<StorageArtifactAbility> CODEC =
             NumberProvider.CODEC.fieldOf("slots").xmap(StorageArtifactAbility::new, StorageArtifactAbility::slots);
@@ -49,10 +39,6 @@ public record StorageArtifactAbility(NumberProvider slots) implements ToggableAr
         return Component.translatable("wheel.mxt.artifact_skill.storage");
     }
 
-    /**
-     * Opens the artifact's storage for whoever pressed the cell. Refusals are the two ways it can be unavailable:
-     * the definition declares no slots at all, or the artifact will not let this holder reach them.
-     */
     @Override
     public Result activate(ArtifactToggleContext context) {
         if (!(context.holder() instanceof ServerPlayer player)) return Result.refused(Failure.UNAVAILABLE);

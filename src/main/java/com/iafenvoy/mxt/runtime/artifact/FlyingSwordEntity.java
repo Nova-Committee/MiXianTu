@@ -25,6 +25,7 @@ public final class FlyingSwordEntity extends Entity {
         this.setNoGravity(true);
     }
 
+    // Clamped to a usable range, so a pack formula cannot make the sword unmovable or uncontrollable.
     public void setFlightSpeed(double speed) {
         this.speed = Math.clamp(speed, 0.01D, 1.0D);
     }

@@ -16,9 +16,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Reads the {@code target} of the {@code mxt:target_lock} of a named host, and optionally requires that locked
- * entity to still be in the actor's level within {@code max_distance}. A host that does not declare that kind is
- * simply false.
+ * Reads the {@code target} of the {@code mxt:target_lock} of a named host, optionally requiring that entity to
+ * still be in the actor's level within {@code max_distance}; a host that declares no such kind is false.
  */
 public record StorageTargetEntityCondition(Identifier family, Identifier id, boolean locked,
                                            Optional<NumberProvider> maxDistance) implements EntityCondition {
@@ -46,9 +45,7 @@ public record StorageTargetEntityCondition(Identifier family, Identifier id, boo
         return Double.isFinite(distance) && distance >= 0.0D && ctx.entity().distanceTo(lockedEntity) <= distance;
     }
 
-    /**
-     * A stored uuid is data-pack content, so a malformed one simply names no entity instead of failing the test.
-     */
+    // A stored uuid is data-pack content, so a malformed one names no entity instead of failing the test.
     private static @Nullable UUID parse(@Nullable String value) {
         if (value == null) return null;
         try {

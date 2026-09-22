@@ -29,9 +29,7 @@ public final class WheelMenuScreen extends Screen {
     private static final int MENU_COLOR = 0xB010131D;
     private static final int EMPTY_COLOR = 0x6010131D;
     private static final int COOLDOWN_COLOR = 0x90_3A2A20;
-    /**
-     * The pointed sector: the HUD editor's gold, so "this is the one" means the same thing twice.
-     */
+    // The pointed sector: the HUD editor's gold, so "this is the one" means the same thing twice.
     private static final int SELECT_COLOR = 0xE0FFD24A;
     private static final int TITLE_BACKDROP = 0xB010131D;
     private static final int TITLE_COLOR = 0xFFFFFFFF;
@@ -40,9 +38,7 @@ public final class WheelMenuScreen extends Screen {
     private static final int LABEL_GAP = 6;
     private static final long OPEN_NANOS = 160_000_000L;
 
-    /**
-     * When this wheel opened, on a monotonic clock: a tick counter would visibly step at 20 Hz.
-     */
+    // A monotonic clock: a tick counter would visibly step at 20 Hz.
     private final long openedAt = System.nanoTime();
 
     public WheelMenuScreen() {
@@ -76,9 +72,7 @@ public final class WheelMenuScreen extends Screen {
         return pointed >= 0 && pointed < sectors.size() ? sectors.get(pointed) : null;
     }
 
-    /**
-     * One colour per sector: what it holds and whether it is usable. Decided only here.
-     */
+    // One colour per sector: what it holds and whether it is usable. Decided only here.
     private int[] sectorColors(List<@Nullable WheelMenuEntry> sectors, int pointed, @Nullable Player player) {
         int[] colors = new int[WheelGeometry.SECTORS];
         for (int sector = 0; sector < colors.length; sector++) {
@@ -90,17 +84,13 @@ public final class WheelMenuScreen extends Screen {
         return colors;
     }
 
-    /**
-     * Opening progress, eased out: most of the travel happens early.
-     */
+    // Opening progress, eased out: most of the travel happens early.
     private double growth() {
         double progress = Mth.clamp((double) (System.nanoTime() - this.openedAt) / OPEN_NANOS, 0.0D, 1.0D);
         return 1.0D - (1.0D - progress) * (1.0D - progress);
     }
 
-    /**
-     * Draws each sector's icon at the ring's middle, or its name when the entry has no icon.
-     */
+    // Each sector's icon at the ring's middle, or its name when the entry has no icon.
     private void extractSectorContents(GuiGraphicsExtractor graphics, WheelGeometry.Ring ring,
                                        List<@Nullable WheelMenuEntry> sectors) {
         // Measured on the fully open ring: a name that gained a character mid-growth would flicker.
@@ -126,9 +116,7 @@ public final class WheelMenuScreen extends Screen {
         return (int) Math.max(IconRenderer.ICON_SIZE, Math.round(arc) - LABEL_GAP);
     }
 
-    /**
-     * The pointed entry's name in the middle, with the line saying how to use it or how long it is down.
-     */
+    // The pointed entry's name in the middle, with a line saying how to use it or how long it is down.
     private void extractTitle(GuiGraphicsExtractor graphics, WheelGeometry.Ring ring,
                               @Nullable WheelMenuEntry entry, @Nullable Player player) {
         if (entry == null) return;
@@ -143,11 +131,8 @@ public final class WheelMenuScreen extends Screen {
         graphics.text(this.font, note, ring.centreX() - this.font.width(note) / 2, y + this.font.lineHeight + 1, NOTE_COLOR, true);
     }
 
-    /**
-     * Which page this ring is, written above it: every page looks the same on the ring, and the pages read from
-     * what the player carries come and go with it. The key names are the ones the player bound, so a rebind
-     * cannot turn the line into a lie.
-     */
+    // Which page this ring is, written above it: every page looks the same on the ring. The key names are the
+    // ones the player actually bound, so a rebind cannot turn the line into a lie.
     private void extractPage(GuiGraphicsExtractor graphics, WheelGeometry.Ring ring) {
         Component page = Component.translatable("wheel.mxt.page_hint",
                 WheelSelectionState.page() + 1, WheelSelectionState.pages().size(),
@@ -161,17 +146,12 @@ public final class WheelMenuScreen extends Screen {
         graphics.text(this.font, page, x, y, TITLE_COLOR, true);
     }
 
-    /**
-     * Names the key the player actually bound, so a rebind cannot turn the hint into a lie.
-     */
     private Component useHint() {
         return Component.translatable("wheel.mxt.use_hint",
                 MxtKeyMappings.WHEEL_USE.get().getTranslatedKeyMessage());
     }
 
-    /**
-     * Seconds left on the cooldown; the server synced the ending tick, so a countdown is possible.
-     */
+    // The server synced the ending tick, so a countdown is possible.
     private Component cooldownNote(WheelMenuEntry entry, @Nullable Player player) {
         return Component.translatable("wheel.mxt.cooldown", WheelDuration.seconds(entry.cooldownTicks(player)));
     }
@@ -183,9 +163,7 @@ public final class WheelMenuScreen extends Screen {
         if (!lines.isEmpty()) graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
     }
 
-    /**
-     * What the pointer is on, or {@code null} for an empty cell - a selection is never built from one.
-     */
+    // What the pointer is on, or null for an empty cell - a selection is never built from one.
     @Nullable
     WheelSelection selection(WheelSelection.Method method) {
         int sector = this.pointedSector();
@@ -195,9 +173,7 @@ public final class WheelMenuScreen extends Screen {
                 : new WheelSelection(WheelMenuContent.source(WheelSelectionState.pages(), number), number, entry, method);
     }
 
-    /**
-     * The left button asks for exactly what the use key asks for, and the wheel stays open either way.
-     */
+    // The left button asks for exactly what the use key asks for, and the wheel stays open either way.
     @Override
     public boolean mouseClicked(@NotNull MouseButtonEvent event, boolean doubleClick) {
         if (event.button() != 0) return false;
@@ -205,17 +181,13 @@ public final class WheelMenuScreen extends Screen {
         return true;
     }
 
-    /**
-     * A wheel must not pause the world in single player.
-     */
+    // A wheel must not pause the world in single player.
     @Override
     public boolean isPauseScreen() {
         return false;
     }
 
-    /**
-     * No background: the default one would blur the HUD extracted before this screen.
-     */
+    // No background: the default one would blur the HUD extracted before this screen.
     @Override
     public void extractBackground(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
     }

@@ -11,12 +11,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Client-side copy of the server-resolved aura at the local player's position. Fully resolved
- * actual concentration and environmental concentration are kept as separate snapshots.
- * <p>
- * Both snapshots are keyed by the aura itself, which is what the server resolved them as: the ids that travel
- * in the payload are aura ids and are decoded against the synced aura registry, so nothing here has to guess
- * which aura a value belonged to.
+ * Client-side copy of the server-resolved aura at the local player's position, with actual and environmental
+ * concentration kept as separate snapshots. Both are keyed by the aura the server resolved them as, decoded
+ * against the synced aura registry, so nothing here has to guess which aura a value belonged to.
  */
 public final class AuraClientState {
     private static final Identifier EMPTY = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");

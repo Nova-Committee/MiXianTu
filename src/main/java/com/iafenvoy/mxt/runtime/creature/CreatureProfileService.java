@@ -67,18 +67,8 @@ public final class CreatureProfileService {
         return RegistryCodecs.matches(definition.entityTypeTags(), BuiltInRegistries.ENTITY_TYPE, Registries.ENTITY_TYPE, type);
     }
 
-    /**
-     * Tests the profile side of contract eligibility: whether the profile applied to this creature declares the
-     * given contract kind through {@code contract_tags}. Every entry is read inside the {@code mxt:contract_type}
-     * registry namespace, so it names either the contract type's own id or one of the native datapack tags that
-     * type declares; that is what makes the field additive metadata instead of a second contract registry.
-     * <p>
-     * The profile comes from the same synchronised {@link MxtAttachments#CREATURE_SPIRIT} attachment this service
-     * writes, and tag membership is asked of the holder the caller already resolved. Neither step reaches for
-     * {@link MxtDatapackRegistries}' server-only accessors, because a caller may legitimately ask on a client:
-     * there the request must degrade to a plain "no match" instead of throwing, which also keeps the contract
-     * type's own {@code creature_condition} in charge whenever tag data is unavailable.
-     */
+    // contract_tags entries are read inside the mxt:contract_type namespace, so each names the type's own id or a
+    // native tag it declares. Client-safe: a client answers "no match" rather than throwing.
     public static boolean declaresContract(Entity creature, Holder<ContractType> type) {
         List<Identifier> declared = creature.getData(MxtAttachments.CREATURE_SPIRIT).profile()
                 .map(Holder::value)

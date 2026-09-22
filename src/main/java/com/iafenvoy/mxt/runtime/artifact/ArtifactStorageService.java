@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Default storage implementation for artifacts whose definition declares a positive slot count. The limit comes
- * from the definition, never from the payload, and only the owner may reach the contents, only on the server.
+ * Default storage for artifacts whose definition declares a positive slot count. The limit comes from the
+ * definition, never from the payload, and only the owner may reach the contents, only on the server.
  */
 public final class ArtifactStorageService implements ISpiritStorage {
     public static final ArtifactStorageService INSTANCE = new ArtifactStorageService();
@@ -43,10 +43,8 @@ public final class ArtifactStorageService implements ISpiritStorage {
         return true;
     }
 
-    /**
-     * The whole contents at once, which is what a screen writes back: one component update per change instead of
-     * one per slot, and the stored list stays at the capacity the definition declares.
-     */
+    // The whole contents at once, which is what a screen writes back: one component update per change instead of
+    // one per slot, and the stored list stays at the capacity the definition declares.
     public boolean replace(Provider access, ItemStack stack, List<ItemStack> contents, Player viewer) {
         if (!this.mayAccess(access, stack, viewer)) return false;
         int capacity = this.slots(access, stack, FormulaContexts.forEntity(viewer));

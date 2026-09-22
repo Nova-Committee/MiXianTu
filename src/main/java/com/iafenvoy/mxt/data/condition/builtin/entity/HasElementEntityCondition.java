@@ -18,20 +18,15 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * True when any element the entity's spirit roots name is one of the listed ones.
- *
- * <p>This is the coarse half of what {@code mxt:has_spirit_root} asks: a pack that means "a fire cultivator"
- * writes the element (or an element tag), and stays right when a later data pack adds another way to be one.
- * Roots and elements that a pack disabled are not part of the answer, exactly as everywhere else.</p>
+ * True when any element the entity's spirit roots name is one of the listed ones. An element a pack disabled is
+ * not part of the answer, exactly as everywhere else.
  */
 public record HasElementEntityCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements EntityCondition {
     public static final MapCodec<HasElementEntityCondition> CODEC = RecordCodecBuilder.<HasElementEntityCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(HasElementEntityCondition::elements)
     ).apply(i, HasElementEntityCondition::new)).validate(HasElementEntityCondition::validate);
 
-    /**
-     * An empty list can never match, so it is a condition that silently never passes: refused at load.
-     */
+    // An empty list can never match, so it is a condition that silently never passes: refused at load.
     private static DataResult<HasElementEntityCondition> validate(HasElementEntityCondition condition) {
         return condition.elements().isEmpty()
                 ? DataResult.error(() -> "mxt:has_element needs at least one element to ask about")

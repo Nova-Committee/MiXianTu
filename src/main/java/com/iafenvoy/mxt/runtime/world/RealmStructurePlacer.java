@@ -20,20 +20,16 @@ import net.minecraft.world.phys.Vec3;
 import java.util.Optional;
 
 /**
- * Furnishes a fresh instance from structure templates.
- *
- * <p>Templates are the vanilla datapack ones ({@code data/<namespace>/structure/<path>.nbt}), so a realm layout
- * ships inside the pack rather than in the world folder. Placement happens before anybody arrives, which is why
- * a landed position can already stand on a placed floor.
+ * Furnishes a fresh instance from structure templates. They are the vanilla datapack ones
+ * ({@code data/<namespace>/structure/<path>.nbt}), and placement happens before anybody arrives, which is why a
+ * landed position can already stand on a placed floor.
  */
 public final class RealmStructurePlacer {
     private RealmStructurePlacer() {
     }
 
-    /**
-     * Every template is resolved before the instance is created, so a typo rejects the entry instead of leaving
-     * a half-furnished realm behind.
-     */
+    // Resolved before the instance is created, so a typo rejects the entry instead of leaving a half-furnished
+    // realm behind.
     public static boolean resolvable(StructureTemplateManager manager, RealmInstance definition) {
         return definition.structures().stream().allMatch(placement -> manager.get(placement.nbt()).isPresent());
     }

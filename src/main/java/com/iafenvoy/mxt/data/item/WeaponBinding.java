@@ -23,17 +23,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Weapon behaviour attached directly to an already registered physical item.
- *
- * <p>{@code element} is what this weapon is made of, which is the reading
- * {@link com.iafenvoy.mxt.runtime.cultivation.ItemElements} takes: an item whose definitions declare no element
- * at all falls back to the element of the aura it stores or declares, and a weapon that is neither declares
- * nothing.</p>
- *
- * <p>{@code attachment_multiplier} is what this weapon is worth as a ward: while it is carried, every strike
- * that leaves an element on the carrier leaves this fraction of it, so a pack writes {@code 0.5} for "half of it
- * gets through" and {@code 0} for "none of it does". Several carried items multiply, and the default {@code 1.0}
- * means a pack that never writes the field is never affected.</p>
+ * Weapon behaviour attached directly to an already registered physical item. {@code element} is what the weapon is
+ * made of; an item whose definitions declare no element at all falls back to the element of the aura it stores or
+ * declares, and a weapon that is neither declares nothing. {@code attachment_multiplier} is what it is worth as a
+ * ward: while carried, every strike that leaves an element on the carrier leaves this fraction of it (0.5 = half
+ * gets through, 0 = none). Several carried items multiply, and the default 1.0 changes nothing.
  */
 public record WeaponBinding(List<Entry> entries, NumberProvider attackDamage, NumberProvider attackSpeed,
                             List<AttributeEntry> attributes, EntityAction useAction, BiEntityAction attackAction,

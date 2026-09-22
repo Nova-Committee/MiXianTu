@@ -39,9 +39,8 @@ public record ChequeComponent(long value, String issuer) implements TooltipProvi
     public void addToTooltip(@NonNull TooltipContext context, @NonNull Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
         if (this.value > 0L)
             consumer.accept(Component.translatable("item.mxt.cheque.value", this.value).withStyle(ChatFormatting.GOLD));
-        // Who wrote the cheque is part of what it is: a claim is only as good as the name on it, and the table
-        // records the issuer precisely so a reader can see whose promise this is. A blank issuer is one nobody
-        // signed, which is why nothing is shown rather than an empty name.
+        // The issuer is recorded so a reader can see whose promise this is; a blank one is a cheque nobody signed,
+        // which is why nothing is shown rather than an empty name.
         if (!this.issuer.isBlank())
             consumer.accept(Component.translatable("item.mxt.cheque.issuer", this.issuer).withStyle(ChatFormatting.GRAY));
     }

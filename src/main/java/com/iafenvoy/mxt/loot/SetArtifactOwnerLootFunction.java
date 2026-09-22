@@ -13,9 +13,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/**
- * Assigns a generated artifact to a selected entity without trusting a client-provided UUID.
- */
+// Owner is always the context entity: a client-supplied UUID would let loot be bound to anyone.
 public final class SetArtifactOwnerLootFunction extends LootItemConditionalFunction {
     public static final MapCodec<SetArtifactOwnerLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             LootItemCondition.DIRECT_CODEC.listOf().optionalFieldOf("conditions", List.of()).forGetter(function -> function.predicates),

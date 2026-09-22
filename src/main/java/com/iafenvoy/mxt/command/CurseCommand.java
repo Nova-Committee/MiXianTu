@@ -46,16 +46,11 @@ import static net.minecraft.commands.Commands.literal;
 /**
  * The {@code /curse} command; also reachable as {@code /mxt curse}. Reading the executing player's own curses needs
  * no permission, while changing anybody's - applying, removing or cleansing - keeps its operator requirement in
- * both positions.
- * <p>
- * The command is an administrator's mirror of the same transactions content uses: it goes through
- * {@link CurseService}, so a curse applied here obeys its own condition and stacking, a cure cleanses under the
- * same reason an antidote does, and a removal reports its reason like any other.
+ * both positions. It is an administrator's mirror of the transactions content uses, going through
+ * {@link CurseService}, so a curse applied here obeys its own condition and stacking.
  */
 public final class CurseCommand {
-    /**
-     * What the command records as the source of what it applies, in the same shape the other modules use.
-     */
+    // Recorded as the source of what the command applies, in the same shape the other modules use.
     private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "command");
 
     public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("curse")
@@ -98,9 +93,6 @@ public final class CurseCommand {
                 .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
     }
 
-    /**
-     * Prints one holder's curses: name, stacks, and either the time left or the fact that there is none.
-     */
     private static int list(CommandSourceStack source, @Nullable Entity target) {
         if (target == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
@@ -177,9 +169,6 @@ public final class CurseCommand {
         return removed;
     }
 
-    /**
-     * Removes every held curse carrying the requested tag: the console's mirror of an antidote.
-     */
     private static int cleanse(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         TagKey<Curse> tag = TagKey.create(MxtResourceKeys.CURSE, IdentifierArgument.getId(ctx, "tag"));
@@ -207,11 +196,8 @@ public final class CurseCommand {
         return cleansed;
     }
 
-    /**
-     * Resolves the definition the command is about: the raw registry entry, which even a disabled definition
-     * still has, or failing that an instance that is already held, which is the only trace a deleted definition
-     * leaves behind.
-     */
+    // The raw registry entry, which even a disabled definition still has, or failing that an instance already
+    // held - the only trace a deleted definition leaves behind.
     private static Optional<Holder<Curse>> resolve(Collection<? extends Entity> targets, Identifier id) {
         Optional<Holder<Curse>> registered = MxtDatapackRegistries.rawHolder(MxtResourceKeys.CURSE, id).map(holder -> holder);
         return registered.isPresent() ? registered : heldByName(targets, id);

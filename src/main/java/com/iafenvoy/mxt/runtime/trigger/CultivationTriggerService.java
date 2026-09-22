@@ -18,8 +18,8 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * Rebuilds cultivation trigger subscriptions from persisted cultivation state.
- * Only the waiting transition is persisted; subscriptions are runtime cache.
+ * Rebuilds cultivation trigger subscriptions from persisted cultivation state: only the waiting transition is
+ * saved, the subscriptions are runtime cache.
  */
 public final class CultivationTriggerService {
     private static final String MODULE = "cultivation";
@@ -41,22 +41,15 @@ public final class CultivationTriggerService {
     private CultivationTriggerService() {
     }
 
-    /**
-     * Forces class initialization so the rehydrator is registered before server startup.
-     */
+    // Forces class initialization so the rehydrator is registered before server startup.
     public static void initialize() {
     }
 
-    /**
-     * Idempotently reconstructs subscriptions for all chains currently
-     * waiting at their breakthrough threshold.
-     */
+    // Idempotent: the module is always cleared first, so stopping cultivation or changing the selected action
+    // cannot leave a stale breakthrough listener behind.
     public static void refresh(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
-        // Runtime subscriptions are only meaningful while cultivation is active.
-        // Always clear the module first so stopping cultivation (or changing the
-        // selected action) cannot leave a stale breakthrough listener behind.
         TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
         if (!cultivation.cultivating()) return;
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
@@ -70,9 +63,7 @@ public final class CultivationTriggerService {
         }
     }
 
-    /**
-     * Removes all cultivation subscriptions for an entity without inspecting datapack state.
-     */
+    // Removes all cultivation subscriptions for an entity without inspecting datapack state.
     public static void clear(LivingEntity entity) {
         if (!entity.level().isClientSide()) TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
     }

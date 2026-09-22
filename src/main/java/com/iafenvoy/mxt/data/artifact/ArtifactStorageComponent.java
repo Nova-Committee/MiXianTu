@@ -9,15 +9,10 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Persistent server-owned contents of a storage artifact. Slot limits come from its archetype, never from this
- * payload.
- *
- * <p>The list is kept at the capacity the definition declares, so the size a screen reads and the size the
- * artifact accepts are the same number. An empty stack is therefore a real value here - it is how a hole in the
- * middle of the contents is spelled - and the list codec has to be the optional one: {@code ItemStack.CODEC}
- * refuses an empty stack at both ends (count must be 1..99, item must not be air), and the stack it is part of is
- * what has to be written to disk and to the client. A non-optional codec here takes down the whole
- * {@code container_set_slot} packet the moment the artifact with a hole in its storage is synced.</p>
+ * Persistent server-owned contents of a storage artifact; slot limits come from its archetype, never from this
+ * payload. The list is kept at the declared capacity, so an empty stack is a real value here - it is how a hole in
+ * the middle of the contents is spelled - and the codec has to be {@code ItemStack.OPTIONAL_CODEC}: the plain one
+ * refuses an empty stack at both ends, and that takes down the whole {@code container_set_slot} packet.
  */
 public record ArtifactStorageComponent(List<ItemStack> contents) {
     public static final Codec<ArtifactStorageComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -41,10 +36,7 @@ public record ArtifactStorageComponent(List<ItemStack> contents) {
         return new ArtifactStorageComponent(values);
     }
 
-    /**
-     * The whole contents at once, cut or padded to {@code capacity}. What a screen writes back after a click: one
-     * component update instead of one per slot, and the size stays the capacity even when the last slots are empty.
-     */
+    // What a screen writes back after a click: one component update instead of one per slot, at the full capacity.
     public static ArtifactStorageComponent of(int capacity, List<ItemStack> contents) {
         if (capacity < 0) throw new IllegalArgumentException("Artifact storage capacity cannot be negative");
         ArrayList<ItemStack> values = new ArrayList<>(capacity);

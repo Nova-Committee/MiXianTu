@@ -28,20 +28,16 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * Applies all datapack-defined passive modifiers as removable transient vanilla attributes.
+ * Applies every datapack-defined passive modifier as a removable transient vanilla attribute.
  */
 @EventBusSubscriber
 public final class PassiveAttributeService {
     private static final String PREFIX = "passive/";
-    /**
-     * Every attribute this service has ever written to. Vanilla only lists the attributes it syncs to clients
-     * when asked for an entity's attributes, and an attribute that is not synced (attack damage, for one, which
-     * every client derives from the held item) is left out of that list, so a generated modifier on it would
-     * never be found again and would outlive the content that asked for it. This set is the missing half: a
-     * generated modifier can only ever live on an attribute some definition named, so those are the only extra
-     * ones a cleanup pass has to look at. It grows with content, never with entities, and only the server thread
-     * touches it.
-     */
+    // The missing half of the cleanup: vanilla lists only the attributes it syncs to clients, so a generated
+    // modifier on an unsynced one (attack damage, which every client derives from the held item) would never be
+    // found again and would outlive the content that asked for it. A generated modifier can only sit on an
+    // attribute some definition named, so those are the only extras a cleanup pass must look at. Grows with
+    // content, never with entities; server thread only.
     private static final Set<Holder<Attribute>> WRITTEN_ATTRIBUTES = new HashSet<>();
 
     private PassiveAttributeService() {
@@ -62,9 +58,7 @@ public final class PassiveAttributeService {
         reconcile(event.getEntity());
     }
 
-    /**
-     * Reconciles the full generated modifier set. Server thread only.
-     */
+    // Reconciles the full generated modifier set. Server thread only.
     public static void reconcile(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         List<Entry> entries = entries(entity);
@@ -73,11 +67,8 @@ public final class PassiveAttributeService {
         for (Entry entry : entries) apply(entity, entry, context);
     }
 
-    /**
-     * Updates generated attributes without rebuilding unchanged modifiers: dynamic entries are evaluated
-     * every tick, static ones are only added when missing. Also repairs attributes lost on player
-     * replacement.
-     */
+    // Unchanged modifiers are not rebuilt: a dynamic entry is re-evaluated every tick and a static one is only
+    // added when missing, which also repairs attributes lost on player replacement.
     public static void tick(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         List<Entry> entries = entries(entity);
@@ -88,8 +79,8 @@ public final class PassiveAttributeService {
             dynamic |= entry.definition().value().isPresent();
         }
         removeGenerated(entity, active);
-        // A static entry only needs its constant amount, so a tick whose entries are all static
-        // never builds a formula context.
+        // A static entry only needs its constant amount, so a tick whose entries are all static never builds a
+        // formula context.
         FormulaContext context = dynamic ? FormulaContexts.forEntity(entity) : null;
         for (Entry entry : entries) apply(entity, entry, context);
     }
@@ -129,11 +120,8 @@ public final class PassiveAttributeService {
         }
     }
 
-    /**
-     * Every attribute of this entity a generated modifier could be sitting on: the ones vanilla syncs, plus the
-     * ones content has written to before. An attribute the entity's type does not have is skipped rather than
-     * created, so asking costs a lookup and never grows the entity's attribute map.
-     */
+    // The syncable attributes, plus the ones content has written to before. An attribute the entity's type does
+    // not have is skipped rather than created, so asking costs a lookup and never grows its attribute map.
     private static List<AttributeInstance> modifierHolders(LivingEntity entity) {
         List<AttributeInstance> holders = new ArrayList<>(entity.getAttributes().getSyncableAttributes());
         for (Holder<Attribute> attribute : WRITTEN_ATTRIBUTES) {
@@ -174,9 +162,7 @@ public final class PassiveAttributeService {
         }
     }
 
-    /**
-     * The generated modifier id. It is computed while the entry is collected, not on every tick.
-     */
+    // Computed while the entry is collected, not on every tick.
     private static Identifier modifierId(String kind, Identifier source, int index, AttributeModifier definition) {
         String origin = source.getNamespace() + "/" + source.getPath();
         String original = definition.id().getNamespace() + "/" + definition.id().getPath();

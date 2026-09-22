@@ -6,9 +6,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
-/**
- * Fixed nine-slot input used by the spirit crafting table.
- */
 public record SpiritCraftingInput(List<ItemStack> stacks) implements RecipeInput {
     public SpiritCraftingInput {
         if (stacks.size() != 9) throw new IllegalArgumentException("Spirit crafting input must contain nine slots");
