@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -11,18 +12,32 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.List;
+
 /**
  * Opens and closes the wheel and spends what it holds: the wheel key only chooses, the use key spends the
- * pointed sector (or the remembered one while the wheel is down). An empty wheel does not open.
+ * pointed sector (or the remembered one while the wheel is down), and the twelve slot keys each arm and spend
+ * their own sector. An empty wheel does not open.
  *
  * <p>Both keys are polled raw ({@code InputConstants}/GLFW), because {@code setScreen} releases every mapping
- * and {@code grabMouse}'s {@code setAll()} would re-press the use key and double-fire; edges are once a tick.</p>
+ * and {@code grabMouse}'s {@code setAll()} would re-press the use key and double-fire; edges are once a tick.
+ * The slot keys are polled here for the same reason, even though they are registered in {@link MxtKeyMappings}
+ * with the rest: a {@code KeyMapping}'s own edge would fire a cast that nobody pressed.</p>
+ *
+ * <p>A key that was pressed and could do nothing answers on the action bar ({@code WheelMenuController#notice})
+ * in two cases - the wheel is empty, or nothing was ever selected. A sector whose entry is gone on purpose
+ * stays silent: the wheel grid already draws it as empty, slot keys included.</p>
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class WheelMenuController {
     private static @Nullable WheelMenuScreen open;
     private static boolean lastDown;
     private static boolean lastUseDown;
+    /**
+     * The last state of each slot key, indexed like {@link MxtKeyMappings#WHEEL_SLOTS} - that is, by sector.
+     * All twelve are unbound by default, so an unbound one simply never goes down.
+     */
+    private static final boolean[] slotDown = new boolean[MxtKeyMappings.WHEEL_SLOTS.size()];
 
     private WheelMenuController() {
     }
@@ -30,7 +45,8 @@ public final class WheelMenuController {
     static void usePointed(WheelSelection.Method method) {
         WheelMenuScreen screen = open;
         if (screen == null) return;
-        // Null for an empty sector: nothing is spent and the wheel stays up.
+        // Null for an empty sector: nothing is spent and the wheel stays up. Silent on purpose - the sector
+        // is drawn as empty right there, so a line about it would be answering a question nobody asked.
         WheelSelection selection = screen.selection(method);
         if (selection != null) selection.entry().onSelected(selection);
     }
@@ -41,7 +57,12 @@ public final class WheelMenuController {
     }
 
     private static void open(Minecraft minecraft) {
-        if (minecraft.screen != null || WheelMenuContent.isEmpty(minecraft.player)) return;
+        if (minecraft.screen != null) return;
+        // An empty wheel is not opened: there would be nothing to point at. Say so rather than do nothing.
+        if (WheelMenuContent.isEmpty(minecraft.player)) {
+            notice(Component.translatable("actionbar.mxt.wheel.empty"));
+            return;
+        }
         WheelMenuScreen screen = new WheelMenuScreen();
         open = screen;
         minecraft.setScreen(screen);
@@ -75,6 +96,8 @@ public final class WheelMenuController {
             lastUseDown = useDown;
             if (useDown) use(minecraft);
         }
+        // After it: a tick that presses both spends the sector that was armed, then the slot key's own one.
+        useSlotKeys(minecraft);
         boolean down = keyDown(minecraft, MxtKeyMappings.WHEEL);
         if (down == lastDown) return;
         lastDown = down;
@@ -87,16 +110,62 @@ public final class WheelMenuController {
         }
     }
 
+    /**
+     * The twelve slot keys: each arms its own sector and spends it in the same breath, so one key does what
+     * "point at that sector, then press the use key" does - a keyboard hotbar laid over the wheel.
+     */
+    private static void useSlotKeys(Minecraft minecraft) {
+        List<MxtKeyMappings.KeyMappingHolder> slots = MxtKeyMappings.WHEEL_SLOTS;
+        // Edges are sampled even while another screen owns the keys, so a key held through a screen change
+        // cannot turn into a press the moment it closes; only acting is gated. Raw polling is what keeps a
+        // slot key from double-firing on the false press `grabMouse`'s `setAll()` invents (see the class doc).
+        boolean live = minecraft.player != null && (minecraft.screen == null || open != null);
+        for (int sector = 0; sector < slots.size(); sector++) {
+            boolean down = keyDown(minecraft, slots.get(sector));
+            boolean pressed = down && !slotDown[sector];
+            slotDown[sector] = down;
+            if (pressed && live) useSlotKey(minecraft, sector);
+        }
+    }
+
+    /**
+     * Arms one sector and spends it; an empty one is silent, and a press is never sent for nothing.
+     */
+    private static void useSlotKey(Minecraft minecraft, int sector) {
+        WheelMenuEntry entry = WheelMenuContent.entry(minecraft.player, sector);
+        if (entry == null) return;
+        WheelSelectionState.select(sector);
+        entry.onSelected(new WheelSelection(sector, entry, WheelSelection.Method.KEY));
+    }
+
     /** The use key went down: spend the pointed sector if the wheel is up, the remembered one if it is not. */
     private static void use(Minecraft minecraft) {
         if (open != null) {
             usePointed(WheelSelection.Method.KEY);
             return;
         }
-        // Another screen owns the key: typing a "v" in chat must not cast anything.
+        // Another screen owns the key: typing a "v" in chat must not cast anything, nor complain about it.
         if (minecraft.screen != null) return;
         WheelSelection selection = remembered();
-        if (selection != null) selection.entry().onSelected(selection);
+        if (selection != null) {
+            selection.entry().onSelected(selection);
+            return;
+        }
+        // Only "nothing was ever picked" is worth an answer. A sector that was picked and no longer resolves
+        // to an entry (empty, deleted, un-granted) is a normal state, and the wheel grid already shows it.
+        if (WheelSelectionState.sector() < 0)
+            notice(Component.translatable("actionbar.mxt.wheel.no_selection",
+                    MxtKeyMappings.WHEEL.get().getTranslatedKeyMessage()));
+    }
+
+    /**
+     * One line on the action bar, for a key that was pressed and could do nothing. Client-side on purpose:
+     * this is feedback about the local player's own HUD, and the server never hears about a key that did
+     * nothing. A key pressed while another screen is open stays silent - that is typing, not a request.
+     */
+    private static void notice(Component message) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null) minecraft.gui.setOverlayMessage(message, false);
     }
 
     /**

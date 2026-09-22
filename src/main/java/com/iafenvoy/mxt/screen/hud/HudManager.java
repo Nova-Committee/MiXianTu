@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.overlay.hud;
+package com.iafenvoy.mxt.screen.hud;
 
 import com.iafenvoy.mxt.MiXianTu;
 import net.minecraft.client.DeltaTracker;

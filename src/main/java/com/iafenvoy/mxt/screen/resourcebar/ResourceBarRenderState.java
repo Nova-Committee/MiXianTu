@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;

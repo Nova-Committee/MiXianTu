@@ -5,7 +5,8 @@ import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
 import com.iafenvoy.mxt.screen.information.TechniquePanelScreen;
-import com.iafenvoy.mxt.screen.overlay.hud.HudManager;
+import com.iafenvoy.mxt.screen.hud.HudManager;
+import com.iafenvoy.mxt.screen.wheel.WheelGeometry;
 import com.iafenvoy.mxt.screen.wheel.content.WheelConfigurationScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
@@ -28,38 +29,18 @@ import java.util.function.Consumer;
 @EventBusSubscriber(Dist.CLIENT)
 public final class MxtKeyMappings {
     private static final Category CATEGORY = new Category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "general"));
+    private static final Category WHEEL_SLOT_CATEGORY = new Category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "wheel_slot"));
 
     public static final KeyMappingHolder SWAP_BACK = new KeyMappingHolder("key.mxt.swap_back", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder CULTIVATE = new KeyMappingHolder("key.mxt.cultivate", Type.KEYSYM, InputConstants.KEY_C, CATEGORY);
     public static final KeyMappingHolder INFORMATION_PANEL = new KeyMappingHolder("key.mxt.information_panel", Type.KEYSYM, InputConstants.KEY_Z, CATEGORY);
-    /**
-     * Left unbound on purpose: the technique panel is also reachable from the character information
-     * panel, so a default key would compete with other mods for a slot nobody asked for.
-     */
     public static final KeyMappingHolder TECHNIQUE_PANEL = new KeyMappingHolder("key.mxt.technique_panel", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
-    /**
-     * Bound by default, unlike the technique panel: placing HUD elements is done by looking at the HUD, so
-     * the key that opens the editor has to be reachable while playing. Right shift is what other client HUD
-     * editors use for the same job, which makes it the key a player is most likely to try first.
-     */
     public static final KeyMappingHolder HUD_LAYOUT = new KeyMappingHolder("key.mxt.hud_layout", Type.KEYSYM, InputConstants.KEY_RSHIFT, CATEGORY);
-    /**
-     * The wheel key, bound by default: choosing a sector is not something to go looking for a key for. It only
-     * chooses - spending is {@link #WHEEL_USE} - and it has no state callback because {@code WheelMenuController}
-     * polls the raw key (opening a screen releases every mapping); registering it still puts it in the controls
-     * screen.
-     */
     public static final KeyMappingHolder WHEEL = new KeyMappingHolder("key.mxt.wheel", Type.KEYSYM, InputConstants.KEY_R, CATEGORY);
-    /**
-     * The use key, bound by default: spends the sector the wheel key chose, with the wheel open or closed.
-     * Like {@link #WHEEL} it has no state callback, since the controller polls both keys raw.
-     */
     public static final KeyMappingHolder WHEEL_USE = new KeyMappingHolder("key.mxt.wheel_use", Type.KEYSYM, InputConstants.KEY_V, CATEGORY);
-    /**
-     * Unbound on purpose, like the technique panel: opening the editor is not a mid-fight action, and {@code
-     * /wheel} does the same. Opening it touches no server - it reads the synced attachment and registries.
-     */
     public static final KeyMappingHolder WHEEL_CONFIGURATION = new KeyMappingHolder("key.mxt.wheel_configuration", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
+
+    public static final List<KeyMappingHolder> WHEEL_SLOTS = new ArrayList<>(WheelGeometry.SECTORS);
 
     static {
         SWAP_BACK.onStateChange(pressed -> {
@@ -82,11 +63,17 @@ public final class MxtKeyMappings {
         WHEEL_CONFIGURATION.onStateChange(pressed -> {
             if (pressed && Minecraft.getInstance().screen == null) WheelConfigurationScreen.open();
         });
+
+        // The sector is the key's own sort order inside the category: KeyMapping#compareTo compares the order
+        // before the translated name, so the twelve are listed 1..12 in every language without padding them.
+        for (int sector = 0; sector < WheelGeometry.SECTORS; sector++)
+            WHEEL_SLOTS.add(new KeyMappingHolder("key.mxt.wheel_slot." + (sector + 1), Type.KEYSYM, InputConstants.UNKNOWN.getValue(), WHEEL_SLOT_CATEGORY, sector));
     }
 
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
+        event.registerCategory(WHEEL_SLOT_CATEGORY);
         KeyMappingHolder.HOLDERS.stream().map(KeyMappingHolder::get).forEach(event::register);
     }
 
@@ -103,6 +90,14 @@ public final class MxtKeyMappings {
 
         public KeyMappingHolder(String name, Type type, int value, Category category) {
             this(new KeyMapping(name, type, value, category));
+        }
+
+        /**
+         * Same, plus the position this key takes inside its category. Without one, a category is sorted by the
+         * translated name ({@code KeyMapping#compareTo}), which puts "Slot 10" before "Slot 2".
+         */
+        public KeyMappingHolder(String name, Type type, int value, Category category, int order) {
+            this(new KeyMapping(name, type, value, category, order));
         }
 
         public KeyMappingHolder(KeyMapping keyBinding) {

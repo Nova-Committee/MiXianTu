@@ -1,10 +1,10 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.*;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderer.Context;
-import com.iafenvoy.mxt.screen.overlay.resourcebar.renderer.*;
+import com.iafenvoy.mxt.screen.resourcebar.ResourceBarRenderer.Context;
+import com.iafenvoy.mxt.screen.resourcebar.renderer.*;
 import com.mojang.serialization.MapCodec;
 
 import java.util.HashMap;

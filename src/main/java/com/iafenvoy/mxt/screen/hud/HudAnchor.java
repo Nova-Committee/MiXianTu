@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.overlay.hud;
+package com.iafenvoy.mxt.screen.hud;
 
 /**
  * Which point of a HUD entry's rectangle its stored position refers to.

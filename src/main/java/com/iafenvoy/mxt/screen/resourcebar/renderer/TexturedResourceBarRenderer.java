@@ -1,7 +1,7 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar.renderer;
+package com.iafenvoy.mxt.screen.resourcebar.renderer;
 
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
-import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderer;
+import com.iafenvoy.mxt.screen.resourcebar.ResourceBarRenderer;
 import net.minecraft.client.renderer.RenderPipelines;
 
 public final class TexturedResourceBarRenderer extends ResourceBarRenderer<TexturedRenderData> {

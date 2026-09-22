@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.overlay.hud;
+package com.iafenvoy.mxt.screen.hud;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;

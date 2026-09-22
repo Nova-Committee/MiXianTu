@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtHudConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.render.animation.CultivationAnimationController;
-import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarOverlay;
+import com.iafenvoy.mxt.screen.resourcebar.ResourceBarOverlay;
 import com.iafenvoy.mxt.screen.wheel.WheelSelectionEntry;
 import com.iafenvoy.mxt.screen.wheel.content.WheelContent;
 import net.neoforged.api.distmarker.Dist;

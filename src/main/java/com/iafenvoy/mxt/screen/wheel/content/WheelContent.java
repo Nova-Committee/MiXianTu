@@ -36,7 +36,6 @@ import java.util.Optional;
  */
 public final class WheelContent implements WheelMenuProvider {
     public static final WheelContent INSTANCE = new WheelContent();
-    private static final int DEFAULT_PER_KIND = WheelLayout.SLOTS / 2;
 
     private WheelContent() {
     }
@@ -49,7 +48,7 @@ public final class WheelContent implements WheelMenuProvider {
     public List<WheelMenuEntry> entries(@Nullable Player player) {
         List<WheelMenuEntry> auras = auras(player);
         List<WheelMenuEntry> abilities = abilities(player);
-        WheelLayout layout = layoutFor(player, auras, abilities);
+        WheelLayout layout = layoutFor(player);
         List<WheelMenuEntry> sectors = new ArrayList<>(WheelLayout.SLOTS);
         for (int sector = 0; sector < WheelLayout.SLOTS; sector++)
             sectors.add(find(layout.slot(sector), auras, abilities));
@@ -79,11 +78,16 @@ public final class WheelContent implements WheelMenuProvider {
     }
 
     /**
-     * The twelve sectors as stored: the saved layout, or the derived fill for a never-saved player. Raw ids
-     * rather than resolved entries, so a sector whose id no longer resolves stays visible and clearable.
+     * The twelve sectors as stored: the player's own layout, or twelve empty ones when they have never saved
+     * a wheel. Raw ids rather than resolved entries, so a sector whose id no longer resolves stays visible
+     * and clearable.
+     *
+     * <p>Nothing is filled in for a new player on purpose: what goes on the wheel is a decision, and picking
+     * "the first six of each pool" for them put entries they never chose there - and kept moving them until
+     * the first save, because the pool is derived from what is available right now.
      */
     public static WheelLayout layoutFor(@Nullable Player player) {
-        return layoutFor(player, auras(player), abilities(player));
+        return layout(player).orElse(WheelLayout.EMPTY);
     }
 
     /** Sends the whole layout, then republishes the armed selection: it is stored as what a sector holds. */
@@ -92,30 +96,9 @@ public final class WheelContent implements WheelMenuProvider {
         WheelSelectionSync.republish();
     }
 
-    private static WheelLayout layoutFor(@Nullable Player player, List<WheelMenuEntry> auras,
-                                        List<WheelMenuEntry> abilities) {
-        return layout(player).orElseGet(() -> derived(auras, abilities));
-    }
-
     private static Optional<WheelLayout> layout(@Nullable Player player) {
         if (player == null) return Optional.empty();
         return player.getExistingData(MxtAttachments.WHEEL_LAYOUT).flatMap(WheelLayoutAttachment::layout);
-    }
-
-    /**
-     * The fill a never-configured wheel shows: first auras, then abilities. Re-derived from what is currently
-     * available until the first save, so a sector can move while resources change; saving makes it explicit.
-     */
-    private static WheelLayout derived(List<WheelMenuEntry> auras, List<WheelMenuEntry> abilities) {
-        List<WheelSlot> slots = new ArrayList<>(WheelLayout.SLOTS);
-        for (int sector = 0; sector < WheelLayout.SLOTS; sector++) {
-            boolean first = sector < DEFAULT_PER_KIND;
-            List<WheelMenuEntry> pool = first ? auras : abilities;
-            int index = first ? sector : sector - DEFAULT_PER_KIND;
-            WheelMenuEntry entry = index < pool.size() ? pool.get(index) : null;
-            slots.add(entry == null ? WheelSlot.EMPTY : WheelSlot.of(entry.kind(), entry.id()));
-        }
-        return new WheelLayout(slots);
     }
 
     /** The entry a sector names, or {@code null} when its id no longer resolves in that pool. */

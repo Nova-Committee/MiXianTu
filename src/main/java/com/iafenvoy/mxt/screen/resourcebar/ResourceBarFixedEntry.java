@@ -1,9 +1,9 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
-import com.iafenvoy.mxt.screen.overlay.hud.AbstractHudEntry;
-import com.iafenvoy.mxt.screen.overlay.hud.RenderBlock;
+import com.iafenvoy.mxt.screen.hud.AbstractHudEntry;
+import com.iafenvoy.mxt.screen.hud.RenderBlock;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;

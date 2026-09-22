@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.command;
 
-import com.iafenvoy.mxt.screen.overlay.hud.HudEntry;
-import com.iafenvoy.mxt.screen.overlay.hud.HudManager;
-import com.iafenvoy.mxt.screen.overlay.hud.ScreenBounds;
+import com.iafenvoy.mxt.screen.hud.HudEntry;
+import com.iafenvoy.mxt.screen.hud.HudManager;
+import com.iafenvoy.mxt.screen.hud.ScreenBounds;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;

@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -19,7 +19,7 @@ import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
-import com.iafenvoy.mxt.screen.overlay.hud.HudManager;
+import com.iafenvoy.mxt.screen.hud.HudManager;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;

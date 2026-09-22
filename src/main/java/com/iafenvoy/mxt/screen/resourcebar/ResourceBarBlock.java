@@ -1,24 +1,12 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.screen.overlay.hud.RenderBlock;
+import com.iafenvoy.mxt.screen.hud.RenderBlock;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
  * One resource bar offered to the layout.
- *
- * <p>It carries nothing but its own state and its slot in the column; where that lands on screen is the
- * layout's business. The slot is reported as {@link #left()} / {@link #top()} rather than being added to the
- * coordinates here, which is the same convention every other block follows: a block says how far into its
- * stack it sits, never where the stack is.</p>
- *
- * <h2>Height</h2>
- * <p>{@link #height()} is the room the bar takes in the stack, and that is the five pixels an Origins-style
- * bar's texture actually paints - not the eight its render data declares. The difference is not cosmetic:
- * the stacking that was already here advances by this number, so any overstatement shows up as a gap between
- * every pair of bars, which is exactly what the declared eight produced. The declared height is still there
- * for callers that want the render data's own size.</p>
  */
 public record ResourceBarBlock(ResourceBarRenderState state) implements RenderBlock {
     /**

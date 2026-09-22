@@ -1,7 +1,7 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar.renderer;
+package com.iafenvoy.mxt.screen.resourcebar.renderer;
 
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.SegmentedRenderData;
-import com.iafenvoy.mxt.screen.overlay.resourcebar.ResourceBarRenderer;
+import com.iafenvoy.mxt.screen.resourcebar.ResourceBarRenderer;
 
 public final class SegmentedResourceBarRenderer extends ResourceBarRenderer<SegmentedRenderData> {
 

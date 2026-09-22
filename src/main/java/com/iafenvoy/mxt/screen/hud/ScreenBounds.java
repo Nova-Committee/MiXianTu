@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.overlay.hud;
+package com.iafenvoy.mxt.screen.hud;
 
 /**
  * A rectangle of the screen in scaled pixels, as the HUD framework talks about positions.

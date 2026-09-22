@@ -1,11 +1,11 @@
-package com.iafenvoy.mxt.screen.overlay.resourcebar;
+package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
-import com.iafenvoy.mxt.screen.overlay.hud.AbstractHudEntry;
-import com.iafenvoy.mxt.screen.overlay.hud.HudAnchor;
-import com.iafenvoy.mxt.screen.overlay.hud.HudLayout;
-import com.iafenvoy.mxt.screen.overlay.hud.RenderBlock;
-import com.iafenvoy.mxt.screen.overlay.hud.ScreenBounds;
+import com.iafenvoy.mxt.screen.hud.AbstractHudEntry;
+import com.iafenvoy.mxt.screen.hud.HudAnchor;
+import com.iafenvoy.mxt.screen.hud.HudLayout;
+import com.iafenvoy.mxt.screen.hud.RenderBlock;
+import com.iafenvoy.mxt.screen.hud.ScreenBounds;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -59,11 +59,9 @@ public final class ResourceBarEntry extends AbstractHudEntry {
 
     /**
      * How far above the bottom of the screen the columns stand: the height of the hotbar plus the health bar
-     * and the armour row above it. Public because it is the line the bottom of the HUD stands on rather than a
-     * number about resource bars: the wheel's selection cell is placed on it too, in the gap between the two
-     * columns, so the three elements line up on one edge.
+     * and the armour row above it. Private again now that the wheel's grid no longer lines up with it.
      */
-    public static final int BOTTOM_MARGIN = 47;
+    private static final int BOTTOM_MARGIN = 47;
 
     private final Anchor side;
     private Bounds layout = new Bounds(EMPTY_WIDTH, EMPTY_HEIGHT);
