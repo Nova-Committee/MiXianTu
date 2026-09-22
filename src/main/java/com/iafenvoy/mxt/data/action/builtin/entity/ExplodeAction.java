@@ -59,8 +59,8 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
         // The blast's own damage type is what its element is read from, exactly like every other strike: a pack
         // that claims minecraft:explosion for an element gives every explosion of this kind that meaning.
         Set<Holder<Element>> elements = DamageElements.strike(level, Optional.of(source.typeHolder()), caster);
-        level.explode(entity, source, new ShapedCalculator(calculator, caster, ctx.formula(), elements),
-                ctx.position(), this.power, this.createFire, this.interaction);
+        level.explode(entity, source, new ShapedCalculator(calculator, caster, ctx.formula(), elements,
+                DamageCalculationService.bypasses(source)), ctx.position(), this.power, this.createFire, this.interaction);
     }
 
     @Override
@@ -72,19 +72,25 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
      * The blast's own rules with the damage pipeline layered on top: every other answer is the wrapped
      * calculator's, and only what one entity loses passes through layer one. Without this, a caster's
      * explosion would be the one hit in the mod that ignores their mastery and their roots.
+     *
+     * <p>A damage type the pack exempted ({@code mxt:no_bonus}) is the exception, and it is decided once for
+     * the whole blast: the base amount is handed on untouched, exactly as {@code deal} does for a strike, and
+     * the reduction layer reaches the same verdict from the same source.</p>
      */
     private static final class ShapedCalculator extends ExplosionDamageCalculator {
         private final ExplosionDamageCalculator base;
         private final Entity attacker;
         private final FormulaContext context;
         private final Set<Holder<Element>> elements;
+        private final boolean bypassed;
 
         private ShapedCalculator(ExplosionDamageCalculator base, Entity attacker, FormulaContext context,
-                                 Set<Holder<Element>> elements) {
+                                 Set<Holder<Element>> elements, boolean bypassed) {
             this.base = base;
             this.attacker = attacker;
             this.context = context;
             this.elements = elements;
+            this.bypassed = bypassed;
         }
 
         @Override
@@ -110,6 +116,7 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
         @Override
         public float getEntityDamageAmount(@NonNull Explosion explosion, @NonNull Entity entity, float exposure) {
             double amount = this.base.getEntityDamageAmount(explosion, entity, exposure);
+            if (this.bypassed) return (float) amount;
             return (float) DamageCalculationService.outgoing(this.attacker, entity, amount, this.context, this.elements);
         }
     }

@@ -44,19 +44,34 @@ import java.util.Set;
  * <p>{@code attachment_decay} and {@code damage_attachment} describe how the element builds up on a body
  * ({@code ElementReactionService}): the first is how much of it leaves per tick on its own, the second how much
  * a strike made of it leaves behind on the target. Both default to zero, so an element is by default a pure
- * relation and a pack opts into accumulation by writing one or both numbers.</p>
+ * relation and a pack opts into accumulation by writing one or both numbers. Only a strike the damage type
+ * <em>claims</em> leaves anything behind: a strike read off the attacker's spirit roots reduces but does not
+ * rub off, which is what the origin in {@code DamageElements} records.</p>
+ *
+ * <p>{@code damage_attachment} is the default for every claim this element writes; a {@link DamageTypeClaim}
+ * may carry a number of its own, which is how one element says that a lava bath builds up half as fast as a
+ * fireball. The claimed types therefore double as groups that can each carry their own number, without the
+ * element having to be split in two.</p>
+ *
+ * <p>{@code conflict_multiplier} is what this element is worth in the hand of somebody it conflicts with: when
+ * a striker's active spirit root lists this element in its {@code conflicting_elements}, everything that
+ * striker deals is multiplied by this number (default {@code 1.0}, so nothing happens unless a pack says so).
+ * The number lives on the element being wielded rather than on the root, because it is that element's own
+ * statement about being mis-wielded; it is applied once per wielding element no matter how many roots
+ * conflict with it.</p>
  */
 public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
-                      List<Either<Holder<DamageType>, TagKey<DamageType>>> damageTypes,
-                      double attachmentDecay, double damageAttachment, int color) {
+                      List<DamageTypeClaim> damageTypes,
+                      double attachmentDecay, double damageAttachment, int color, double conflictMultiplier) {
     public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ELEMENT);
     public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.<Element>create(i -> i.group(
             Relation.CODEC.listOf().optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
             Relation.CODEC.listOf().optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
-            RegistryCodecs.holderOrTagList(Registries.DAMAGE_TYPE).optionalFieldOf("damage_types", List.of()).forGetter(Element::damageTypes),
+            DamageTypeClaim.CODEC.listOf().optionalFieldOf("damage_types", List.of()).forGetter(Element::damageTypes),
             Codec.DOUBLE.optionalFieldOf("attachment_decay", 0.0D).forGetter(Element::attachmentDecay),
             Codec.DOUBLE.optionalFieldOf("damage_attachment", 0.0D).forGetter(Element::damageAttachment),
-            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("color", 0xFFFFFF).forGetter(Element::color)
+            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("color", 0xFFFFFF).forGetter(Element::color),
+            Codec.DOUBLE.optionalFieldOf("conflict_multiplier", 1.0D).forGetter(Element::conflictMultiplier)
     ).apply(i, Element::new)).validate(Element::validate);
 
     private static DataResult<Element> validate(Element element) {
@@ -64,6 +79,8 @@ public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
         String failure = overcome != null ? overcome : invalid("adapted_to", element.adaptedTo);
         if (failure == null && (!finite(element.attachmentDecay) || !finite(element.damageAttachment)))
             failure = "Element attachment numbers must be finite and non-negative";
+        if (failure == null && !finite(element.conflictMultiplier))
+            failure = "Element conflict_multiplier must be finite and non-negative: " + element.conflictMultiplier;
         if (failure != null) {
             String message = failure;
             return DataResult.error(() -> message);
@@ -109,10 +126,11 @@ public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
 
     /**
      * Whether this element claims the given damage type, tags included. The claim is what names the element of
-     * a strike; the relation multipliers are what that element is then worth.
+     * a strike; the relation multipliers are what that element is then worth, and the claim's own
+     * {@code damage_attachment} is how much of it that kind of hit leaves behind.
      */
     public boolean claims(Holder<DamageType> type) {
-        return RegistryCodecs.matches(this.damageTypes, type);
+        return this.damageTypes.stream().anyMatch(claim -> claim.matches(type));
     }
 
     /**

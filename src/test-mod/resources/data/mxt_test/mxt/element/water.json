@@ -16,5 +16,6 @@
     }
   ],
   "damage_types": ["minecraft:thorns", "minecraft:drown"],
+  "conflict_multiplier": 0.5,
   "color": "#3388ff"
 }

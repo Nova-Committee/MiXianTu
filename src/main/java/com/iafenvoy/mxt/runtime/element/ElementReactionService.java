@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -100,12 +101,45 @@ public final class ElementReactionService {
      * What a strike of these elements leaves behind on the target, as each element's own
      * {@code damage_attachment} says. An element that writes nothing builds up nothing, which keeps a pack's
      * elements pure relations until it asks for more.
+     *
+     * <p>This is the mechanical half of the rule: it attaches whatever it is handed. Which strikes are handed to
+     * it is the pipeline's decision - {@code DamageEventBridge} only does so for elements a damage type claimed,
+     * so an element read off the attacker's spirit roots reduces the hit without rubbing off.</p>
      */
     public static void applyFromStrike(LivingEntity target, Set<Holder<Element>> strike, FormulaContext context) {
-        for (Holder<Element> element : strike) {
-            double amount = element.value().damageAttachment();
-            if (amount > 0.0D) apply(target, element, amount, context);
-        }
+        applyFromStrike(target, strike, context, 1.0D);
+    }
+
+    /**
+     * {@link #applyFromStrike(LivingEntity, Set, FormulaContext)} with what the target lets through: every
+     * element's own {@code damage_attachment} is scaled by {@code multiplier} first, so a carrier whose gear
+     * resists elemental buildup simply receives less of it and needs more strikes before a reaction answers.
+     *
+     * <p>{@code 1.0} is "nothing resists", and a non-finite or negative multiplier contributes nothing rather
+     * than poisoning the attachment: the same rule the definitions themselves are validated under.</p>
+     */
+    public static void applyFromStrike(LivingEntity target, Set<Holder<Element>> strike, FormulaContext context,
+                                       double multiplier) {
+        Map<Holder<Element>, Double> amounts = new LinkedHashMap<>();
+        for (Holder<Element> element : strike) amounts.put(element, element.value().damageAttachment());
+        applyFromStrike(target, amounts, context, multiplier);
+    }
+
+    /**
+     * The same, for a caller that already knows what each element leaves. The pipeline takes this entry point,
+     * because a damage type's claim may carry a number of its own: a lava bath and a fireball can be the same
+     * element and still build up at different rates.
+     *
+     * <p>The amounts are read from the strike's own reading rather than from the element definitions, so
+     * "how much this kind of hit leaves" is answered once, where the hit was classified.</p>
+     */
+    public static void applyFromStrike(LivingEntity target, Map<Holder<Element>, Double> amounts,
+                                       FormulaContext context, double multiplier) {
+        if (!Double.isFinite(multiplier) || multiplier <= 0.0D) return;
+        amounts.forEach((element, amount) -> {
+            double scaled = amount * multiplier;
+            if (scaled > 0.0D) apply(target, element, scaled, context);
+        });
     }
 
     public static double amount(Entity entity, Holder<Element> element) {

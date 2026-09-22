@@ -49,8 +49,11 @@ public final class ArtifactUpkeepService {
     /**
      * The artifact stacks an entity actually carries: the two hands plus every equipped Curios stack. Live
      * stacks rather than copies, because a failure action is allowed to write to the artifact it belongs to.
+     *
+     * <p>Public because "what this entity carries" is one definition with more than one reader: the upkeep
+     * tick here, and the item-side factors the damage pipeline reads off a victim's gear.</p>
      */
-    private static List<ItemStack> carried(LivingEntity holder) {
+    public static List<ItemStack> carried(LivingEntity holder) {
         List<ItemStack> stacks = new ArrayList<>(4);
         stacks.add(holder.getMainHandItem());
         stacks.add(holder.getOffhandItem());

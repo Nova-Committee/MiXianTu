@@ -1,20 +1,36 @@
 package com.iafenvoy.mxt.runtime.damage;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.item.ItemBinding;
+import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,6 +75,13 @@ import java.util.Set;
  * elements a strike belongs to is read from its damage type by {@link DamageElements}, falling back to the
  * attacker's spirit roots - and both layers read that one answer, so a condition, a shape and a reduction can
  * never disagree about what a hit was made of.</p>
+ *
+ * <p>Two strikes are not scaled the same way as the rest. One is damage with no attacker: the mastery and the
+ * affinity are still the casting's own and still apply - a technique's backlash is worse for a stronger
+ * cultivator - but no second party is there to hold an element edge against, so the relation reads as one
+ * rather than as the striker's own roots measured against themselves; see the shaping layer below. The other
+ * is a damage type the pack listed in {@link #NO_BONUS}: that strike travels as the number it was handed, on
+ * both layers, and leaves no element behind.</p>
  */
 public final class DamageCalculationService {
     /**
@@ -73,8 +96,30 @@ public final class DamageCalculationService {
      * same name off the same context.
      */
     public static final String ELEMENT_MODIFIER = "element_modifier";
+    /**
+     * Damage types this pipeline passes straight through. A strike whose type is tagged here is neither shaped
+     * nor reduced and leaves no element behind: the number that was handed in is the number the target takes,
+     * and only vanilla's own mitigation (armour, enchantments, resistance, absorption) still applies.
+     *
+     * <p>The tag lives on the vanilla {@code damage_type} registry, so it covers every source alike - our own
+     * actions, another mod's sword and a vanilla hazard. The mod ships one entry, the void
+     * ({@code minecraft:out_of_world}), because falling out of the world is an execution by position: nobody
+     * is stronger for it and no body should be tougher against it. A pack may add its own types to the same
+     * tag, or replace the file outright.</p>
+     */
+    public static final TagKey<DamageType> NO_BONUS =
+            TagKey.create(Registries.DAMAGE_TYPE, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "no_bonus"));
 
     private DamageCalculationService() {
+    }
+
+    /**
+     * Whether this strike is exempt from every bonus and reduction this pipeline applies. Asked of the
+     * {@link DamageSource} because that is what a strike travels as: the type is readable on both sides, so one
+     * question answers for the shaping layer and the reduction layer alike.
+     */
+    public static boolean bypasses(DamageSource source) {
+        return source.is(NO_BONUS);
     }
 
     /**
@@ -85,16 +130,26 @@ public final class DamageCalculationService {
      * one the vanilla player/mob attack source is chosen, which is what makes a kill count as the attacker's.
      * The reduction layer is not applied here - it runs in the incoming event, which this call raises.</p>
      *
+     * <p>A strike whose type is in {@link #NO_BONUS} skips the shaping entirely and travels as the amount it
+     * was handed. The event that follows skips the reduction for the same reason, so the two halves agree
+     * without either having to know that the other exists; the elements are not even read, because a strike
+     * nobody scales has no element to leave behind either.</p>
+     *
      * @param attacker the entity credited with the hit, or null for damage that belongs to nobody
      * @param context  the formula context the hit was evaluated in, or null when there is none
      */
     public static double deal(@Nullable Entity attacker, Entity target, double amount,
                               Optional<Holder<DamageType>> damageType, @Nullable FormulaContext context) {
         if (!(target.level() instanceof ServerLevel level)) return 0.0D;
-        Set<Holder<Element>> elements = DamageElements.strike(level, damageType, attacker);
-        double shaped = outgoing(attacker, target, amount, context, elements);
+        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        DamageSource source = source(level, attacker, damageType);
+        if (bypasses(source)) {
+            target.hurtServer(level, source, (float) amount);
+            return amount;
+        }
+        double shaped = outgoing(attacker, target, amount, context, DamageElements.strike(level, damageType, attacker));
         if (shaped <= 0.0D) return 0.0D;
-        target.hurtServer(level, source(level, attacker, damageType), (float) shaped);
+        target.hurtServer(level, source, (float) shaped);
         return shaped;
     }
 
@@ -114,6 +169,11 @@ public final class DamageCalculationService {
      * caster's own physique does still speak for it, because that is a property of the body dealing the blow
      * rather than of the pair.</p>
      *
+     * <p>With no attacker at all there is still no second party, so the last two factors are one: the relations
+     * are not read even when a declared damage type gives the strike an element of its own. Nothing else
+     * changes - the mastery and the affinity stay, because they belong to the casting rather than to the
+     * pair.</p>
+     *
      * <p>The elements are passed in rather than derived here, because they are the one part of a strike that
      * depends on how it was declared: a claimed damage type names them, and only in its absence are they the
      * attacker's roots ({@link DamageElements#strike}). The four-argument overload is that fallback reading,
@@ -122,9 +182,99 @@ public final class DamageCalculationService {
     public static double outgoing(@Nullable Entity attacker, Entity target, double amount, @Nullable FormulaContext context,
                                   Set<Holder<Element>> elements) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        double pair = attacker == null ? 1.0D : physiqueMultiplier(attacker, true) * overcomeMultiplier(elements, target);
         double result = amount * masteryMultiplier(context) * elementMultiplier(context)
-                * physiqueMultiplier(attacker, true) * overcomeMultiplier(elements, target);
+                * selfConflictMultiplier(attacker) * pair;
         return Double.isFinite(result) && result > 0.0D ? result : 0.0D;
+    }
+
+    /**
+     * What an element is worth in the hand of somebody it conflicts with: one factor per element the striker is
+     * wielding, taken from that element's own {@code conflict_multiplier}, whenever one of the striker's active
+     * spirit roots lists it in {@code conflicting_elements}.
+     *
+     * <p>Only the striker's <em>main hand</em> is read, and only through {@link ItemElements}, so "what they are
+     * wielding" means the same thing here as it does anywhere else in the mod: a declaration on the weapon, the
+     * item or the artifact, or failing that the element of the aura the stack carries. An empty hand, an item
+     * that declares nothing, a striker with no roots and a root that lists nothing all read as {@code 1.0},
+     * which is the default of the field as well - a pack opts into this rule, and a pack that never writes it
+     * cannot be affected by it.</p>
+     *
+     * <p>The factor is applied once per wielding element however many roots conflict with it, because the number
+     * is that element's own statement about being mis-wielded rather than a property of the pair, and because a
+     * body with two conflicting roots would otherwise silently square it. It is also deliberately not conditional
+     * on the strike being made of that element: a cultivator fighting their own weapon is weakened whatever they
+     * channel through it, which is the whole point of the rule.</p>
+     *
+     * <p>Reading the hand costs a walk over the item-binding registries, so this is one lookup per strike rather
+     * than one per element compared.</p>
+     */
+    public static double selfConflictMultiplier(@Nullable Entity attacker) {
+        if (!(attacker instanceof LivingEntity holder)) return 1.0D;
+        ItemStack held = holder.getMainHandItem();
+        if (held.isEmpty()) return 1.0D;
+        Set<Holder<Element>> wielded = ItemElements.of(holder.level().registryAccess(), held);
+        if (wielded.isEmpty()) return 1.0D;
+        SpiritIdentityAttachment spirit = holder.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        if (spirit == null) return 1.0D;
+        List<Holder<SpiritRoot>> roots = spirit.activeSpiritRoots();
+        if (roots.isEmpty()) return 1.0D;
+        double result = 1.0D;
+        for (Holder<Element> element : wielded) {
+            if (Double.isFinite(result) && conflicts(holder.level().registryAccess(), roots, element))
+                result *= element.value().conflictMultiplier();
+        }
+        return Double.isFinite(result) ? result : 1.0D;
+    }
+
+    /**
+     * Whether any of these active roots declares a conflict with this element. The declaration is read exactly
+     * the way every other {@code conflicting_elements} reader reads it, so a disabled element matches nothing.
+     */
+    private static boolean conflicts(RegistryAccess access, List<Holder<SpiritRoot>> roots, Holder<Element> element) {
+        for (Holder<SpiritRoot> root : roots) {
+            SpiritRoot definition = MxtDatapackRegistries.get(access, MxtResourceKeys.SPIRIT_ROOT, root).orElse(null);
+            if (definition != null && Elements.matches(definition.conflictingElements(), element)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * What an entity lets through of the elemental attachment a strike leaves on it: every {@code
+     * attachment_multiplier} declared by the items it carries, multiplied together, or one when none of them
+     * declares anything.
+     *
+     * <p>"Carried" is the artifact system's own reading of the word - both hands and every equipped Curios slot
+     * ({@link ArtifactUpkeepService#carried}) - so a ward works the same way whether a pack puts it in a hand or
+     * in a charm slot. An item that declares nothing contributes nothing, and an entity carrying nothing is
+     * never affected: the default of the field is one as well, so a pack opts into this rule.</p>
+     *
+     * <p>This is deliberately the <em>only</em> place the number is applied, and it is applied to the buildup
+     * rather than to a reaction's effect: what a reaction then does is the reaction's own action, and a carrier
+     * that wants to soften that instead has a physique's {@code damage_taken_multiplier} for it. Resisting the
+     * buildup is the item-side answer to "抵消部分元素反应" - reactions simply answer later, or never.</p>
+     */
+    public static double attachmentMultiplier(LivingEntity target) {
+        List<ItemStack> carried = ArtifactUpkeepService.carried(target);
+        double result = 1.0D;
+        for (ItemStack stack : carried) {
+            if (stack.isEmpty()) continue;
+            result *= usable(ItemBindingService.weapon(target.level().registryAccess(), stack)
+                    .map(WeaponBinding::attachmentMultiplier).orElse(1.0D));
+            result *= usable(ItemBindingService.binding(target.level().registryAccess(), stack)
+                    .map(ItemBinding::attachmentMultiplier).orElse(1.0D));
+            result *= usable(ArtifactService.definition(target.level().registryAccess(), stack)
+                    .map(holder -> holder.value().attachmentMultiplier()).orElse(1.0D));
+        }
+        return Double.isFinite(result) ? result : 1.0D;
+    }
+
+    /**
+     * One declared multiplier, read as "no opinion" when it is not a usable number. The codecs refuse these
+     * already, so this only guards a value that arrived some other way.
+     */
+    private static double usable(double value) {
+        return Double.isFinite(value) && value >= 0.0D ? value : 1.0D;
     }
 
     /**
@@ -142,9 +292,13 @@ public final class DamageCalculationService {
      * roots has nothing to be adapted with, so both read as an unchanged amount. A target with a physique is
      * answered for by it all the same, because "what this body takes" is a property of the body and of nothing
      * about where the blow came from.
+     *
+     * <p>A source whose type is in {@link #NO_BONUS} has no answer to give: the caller asking this question
+     * holds a strike the pack exempted, so the amount is returned as it stands.</p>
      */
     public static double incoming(LivingEntity target, DamageSource source, double amount) {
-        return incoming(target, DamageElements.strike(source), amount);
+        if (bypasses(source)) return Double.isFinite(amount) && amount > 0.0D ? amount : 0.0D;
+        return incoming(target, DamageElements.reading(source).elements(), amount);
     }
 
     /**

@@ -10,8 +10,11 @@ import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -57,7 +60,8 @@ import java.util.Optional;
 public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spiritCapacity,
                        List<ArtifactAbility> abilities, boolean curiosEquipable, boolean requireOwner,
                        ItemAction claimAction, EntityCondition claimCondition,
-                       ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks) implements ItemMatcher {
+                       ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks,
+                       List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier) implements ItemMatcher {
     /** What a definition that does not say costs to claim: four points of health, two hearts. */
     public static final double DEFAULT_CLAIM_HEALTH = 4.0D;
     /** How long the gesture lasts when a definition does not say: one second. */
@@ -78,7 +82,9 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
             EntityCondition.optionalCodec("claim_condition").forGetter(Artifact::claimCondition),
             ItemAction.optionalCodec("pour_action").forGetter(Artifact::pourAction),
             ItemAction.optionalCodec("use_action").forGetter(Artifact::useAction),
-            NumberProvider.CODEC.optionalFieldOf("hold_ticks", new Constant(DEFAULT_HOLD_TICKS)).forGetter(Artifact::holdTicks)
+            NumberProvider.CODEC.optionalFieldOf("hold_ticks", new Constant(DEFAULT_HOLD_TICKS)).forGetter(Artifact::holdTicks),
+            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(Artifact::element),
+            MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier)
     ).apply(i, Artifact::new));
     /**
      * Unknown keys are dropped, so the keys this record used to carry are not read any more: a pack still

@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.damage;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.cultivation.DamageTypeClaim;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -23,6 +24,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,6 +48,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * type with no attacker therefore carries no element at all, which is the honest answer for a fall or a
  * cactus.</p>
  *
+ * <p>Which of those two answers a strike got is kept as an {@link Origin}, because the two are not
+ * interchangeable downstream: a claimed strike leaves its element on the target, while a body's own element
+ * only reduces what it deals. Reading both halves in one call is what stops a caller from pairing the elements
+ * of one answer with the origin of the other.</p>
+ *
  * <p>The index is rebuilt when the damage type registry instance changes, which a data pack reload does: the
  * element registry is reloaded in the same step, so keying on one of the two is enough to notice both. A
  * damage type claimed by several elements keeps all of them and says so once, because every claim then
@@ -55,7 +63,7 @@ public final class DamageElements {
     private static final int REPORT_LIMIT = 128;
     private static final Object LOCK = new Object();
     private static final Set<String> REPORTED = ConcurrentHashMap.newKeySet();
-    private static volatile Map<Registry<DamageType>, Map<Holder<DamageType>, List<Holder<Element>>>> indexes = Map.of();
+    private static volatile Map<Registry<DamageType>, Map<Holder<DamageType>, List<Claim>>> indexes = Map.of();
 
     private DamageElements() {
     }
@@ -80,14 +88,73 @@ public final class DamageElements {
     }
 
     /**
-     * The elements one strike belongs to: the damage type's claimants when it has any, and the attacker's
+     * The elements one strike belongs to, the damage type's claimants when it has any, and the attacker's
      * spirit-root elements when it does not. This is the single rule both layers of the damage pipeline and the
      * element damage condition read, so a condition can never disagree with the number the pipeline applied.
+     *
+     * <p>The origin is dropped here; callers that have to tell the two apart - the attachment step does - take
+     * {@link #reading(Level, Optional, Entity)} instead.</p>
      */
     public static Set<Holder<Element>> strike(Level level, Optional<Holder<DamageType>> type, @Nullable Entity attacker) {
-        Set<Holder<Element>> claimed = type.map(holder -> of(level.registryAccess(), holder)).orElse(Set.of());
-        if (!claimed.isEmpty()) return claimed;
-        return attacker == null ? Set.of() : Elements.of(attacker);
+        return reading(level, type, attacker).elements();
+    }
+
+    /**
+     * {@link #strike(Level, Optional, Entity)} with the origin and the amounts kept, for callers that treat the
+     * readings differently - the reduction step takes the elements, the buildup step also needs to know how much
+     * of each this kind of hit leaves.
+     */
+    public static Strike reading(Level level, Optional<Holder<DamageType>> type, @Nullable Entity attacker) {
+        RegistryAccess access = level.registryAccess();
+        List<Claim> claimed = type.map(holder -> claims(access.lookupOrThrow(MxtResourceKeys.ELEMENT),
+                access.lookupOrThrow(Registries.DAMAGE_TYPE), holder)).orElse(List.of());
+        return claimed.isEmpty() ? roots(attacker) : of(claimed);
+    }
+
+    /**
+     * {@link #strike(DamageSource)} with the origin and the amounts kept, which is what the reduction and the
+     * attachment steps of the incoming event read.
+     */
+    public static Strike reading(DamageSource source) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            RegistryAccess access = server.registryAccess();
+            List<Claim> claimed = claims(access.lookupOrThrow(MxtResourceKeys.ELEMENT),
+                    access.lookupOrThrow(Registries.DAMAGE_TYPE), source.typeHolder());
+            if (!claimed.isEmpty()) return of(claimed);
+        }
+        return roots(source.getEntity());
+    }
+
+    /**
+     * The fallback reading: nobody claimed the type, so the attacker's own roots answer. The amounts are the
+     * elements' own defaults, which only ever matter if a caller ignores the origin - the buildup step does not.
+     */
+    private static Strike roots(@Nullable Entity attacker) {
+        Set<Holder<Element>> elements = attacker == null ? Set.of() : Elements.of(attacker);
+        return new Strike(elements, amounts(elements), Origin.ROOTS);
+    }
+
+    /**
+     * What each of these elements would leave behind by its own declaration.
+     */
+    private static Map<Holder<Element>, Double> amounts(Set<Holder<Element>> elements) {
+        Map<Holder<Element>, Double> attachment = new LinkedHashMap<>();
+        for (Holder<Element> element : elements) attachment.put(element, element.value().damageAttachment());
+        return Map.copyOf(attachment);
+    }
+
+    /**
+     * The claimed reading: one entry per element, in the order the index lists them, with the amount its claim
+     * over this type carries. The first claim an element makes over a type is the one that speaks, which is the
+     * same reading the index itself keeps.
+     */
+    private static Strike of(List<Claim> claimed) {
+        Set<Holder<Element>> elements = new LinkedHashSet<>();
+        Map<Holder<Element>, Double> attachment = new LinkedHashMap<>();
+        for (Claim claim : claimed)
+            if (elements.add(claim.element())) attachment.put(claim.element(), claim.attachment());
+        return new Strike(Set.copyOf(elements), Map.copyOf(attachment), Origin.TYPE);
     }
 
     /**
@@ -96,10 +163,63 @@ public final class DamageElements {
      * claims no damage type still reads the mob's own elements.
      */
     public static Set<Holder<Element>> strike(DamageSource source) {
-        Set<Holder<Element>> claimed = of(source);
-        if (!claimed.isEmpty()) return claimed;
-        Entity attacker = source.getEntity();
-        return attacker == null ? Set.of() : Elements.of(attacker);
+        return reading(source).elements();
+    }
+
+    /**
+     * Where a strike's elements were read from, which decides whether they rub off.
+     *
+     * <p>Only two answers are observable from a {@link DamageSource}: the type was claimed, or nobody claimed it
+     * and the attacker's roots answered. A declared element resolves to a damage type before it travels, so a
+     * weapon's or an artefact's element arrives here as a claim, exactly like a claimed environmental type.</p>
+     */
+    public enum Origin {
+        /**
+         * A damage type names these elements, so the strike really is made of them: they reduce <em>and</em>
+         * they build up on the target.
+         */
+        TYPE(true),
+        /**
+         * Nobody claimed the type, so the attacker's spirit roots answered: a body's own element reduces what
+         * it deals but does not rub off on whoever it hits. This is what keeps "the fire in my blood" and "the
+         * fire in my blade" apart, and it is why an elemental reaction is only ever started by a strike that
+         * declared what it was.
+         */
+        ROOTS(false);
+
+        private final boolean attaches;
+
+        Origin(boolean attaches) {
+            this.attaches = attaches;
+        }
+
+        /**
+         * Whether a strike read from here leaves anything on the target.
+         */
+        public boolean attaches() {
+            return this.attaches;
+        }
+    }
+
+    /**
+     * One reading of a strike: what it is made of, where that came from, and how much of each element this kind
+     * of hit leaves behind. All three come from one registry lookup, so a caller cannot end up with the elements
+     * of one reading and the origin or the amounts of another.
+     *
+     * <p>{@code attachment} is populated for both origins and answers "what would this element leave"; only a
+     * {@link Origin#TYPE} reading is handed to the buildup, so a roots reading simply never gets asked. An
+     * element whose claim wrote its own number reports that number, and one that did not reports the element's
+     * own {@code damage_attachment}.</p>
+     */
+    public record Strike(Set<Holder<Element>> elements, Map<Holder<Element>, Double> attachment, Origin origin) {
+    }
+
+    /**
+     * One element's claim over one damage type, with the amount a strike of that type leaves behind already
+     * resolved against the element's own default. The index stores these rather than bare holders because the
+     * number belongs to the claim, not to the element.
+     */
+    public record Claim(Holder<Element> element, double attachment) {
     }
 
     /**
@@ -109,9 +229,9 @@ public final class DamageElements {
      */
     public static Optional<Holder<DamageType>> typeOf(RegistryAccess access, Holder<Element> element) {
         Registry<DamageType> types = access.lookupOrThrow(Registries.DAMAGE_TYPE);
-        for (Either<Holder<DamageType>, TagKey<DamageType>> entry : element.value().damageTypes()) {
-            if (entry.left().isPresent()) return entry.left();
-            TagKey<DamageType> tag = entry.right().orElseThrow();
+        for (DamageTypeClaim claim : element.value().damageTypes()) {
+            if (claim.type().left().isPresent()) return claim.type().left();
+            TagKey<DamageType> tag = claim.type().right().orElseThrow();
             Optional<Reference<DamageType>> tagged = types.listElements().filter(type -> type.is(tag)).findFirst();
             if (tagged.isPresent()) return Optional.of(tagged.get());
         }
@@ -181,25 +301,33 @@ public final class DamageElements {
         if (REPORTED.size() < REPORT_LIMIT && REPORTED.add(message)) MiXianTu.LOGGER.warn("{}", message);
     }
 
-    private static Set<Holder<Element>> of(Registry<Element> elements, Registry<DamageType> types, Holder<DamageType> type) {
-        List<Holder<Element>> claimed = index(elements, types).get(type);
-        return claimed == null ? Set.of() : Set.copyOf(claimed);
+    private static List<Claim> claims(Registry<Element> elements, Registry<DamageType> types, Holder<DamageType> type) {
+        List<Claim> claimed = index(elements, types).get(type);
+        return claimed == null ? List.of() : claimed;
     }
 
-    private static Map<Holder<DamageType>, List<Holder<Element>>> index(Registry<Element> elements, Registry<DamageType> types) {
-        Map<Holder<DamageType>, List<Holder<Element>>> cached = indexes.get(types);
+    private static Set<Holder<Element>> of(Registry<Element> elements, Registry<DamageType> types, Holder<DamageType> type) {
+        List<Claim> claimed = claims(elements, types, type);
+        if (claimed.isEmpty()) return Set.of();
+        Set<Holder<Element>> result = new LinkedHashSet<>();
+        for (Claim claim : claimed) result.add(claim.element());
+        return Set.copyOf(result);
+    }
+
+    private static Map<Holder<DamageType>, List<Claim>> index(Registry<Element> elements, Registry<DamageType> types) {
+        Map<Holder<DamageType>, List<Claim>> cached = indexes.get(types);
         if (cached != null) return cached;
         synchronized (LOCK) {
             cached = indexes.get(types);
             if (cached != null) return cached;
-            Map<Holder<DamageType>, List<Holder<Element>>> built = new HashMap<>();
+            Map<Holder<DamageType>, List<Claim>> built = new HashMap<>();
             for (Reference<Element> element : elements.listElements().toList()) {
                 if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element)) continue;
                 claimAll(built, types, element);
             }
-            Map<Holder<DamageType>, List<Holder<Element>>> frozen = new HashMap<>();
+            Map<Holder<DamageType>, List<Claim>> frozen = new HashMap<>();
             built.forEach((type, claimants) -> frozen.put(type, List.copyOf(claimants)));
-            Map<Registry<DamageType>, Map<Holder<DamageType>, List<Holder<Element>>>> updated =
+            Map<Registry<DamageType>, Map<Holder<DamageType>, List<Claim>>> updated =
                     indexes.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(indexes);
             updated.put(types, Map.copyOf(frozen));
             indexes = Map.copyOf(updated);
@@ -207,23 +335,27 @@ public final class DamageElements {
         }
     }
 
-    private static void claimAll(Map<Holder<DamageType>, List<Holder<Element>>> index, Registry<DamageType> types, Holder<Element> element) {
-        for (Either<Holder<DamageType>, TagKey<DamageType>> entry : element.value().damageTypes()) {
-            entry.left().ifPresentOrElse(
-                    type -> claim(index, type, element),
+    private static void claimAll(Map<Holder<DamageType>, List<Claim>> index, Registry<DamageType> types, Holder<Element> element) {
+        for (DamageTypeClaim claim : element.value().damageTypes()) {
+            // The claim's own number when it wrote one, the element's own default otherwise.
+            double attachment = claim.attachment(element.value().damageAttachment());
+            claim.type().left().ifPresentOrElse(
+                    type -> claim(index, type, element, attachment),
                     () -> {
-                        TagKey<DamageType> tag = entry.right().orElseThrow();
-                        types.listElements().filter(type -> type.is(tag)).forEach(type -> claim(index, type, element));
+                        TagKey<DamageType> tag = claim.type().right().orElseThrow();
+                        types.listElements().filter(type -> type.is(tag))
+                                .forEach(type -> claim(index, type, element, attachment));
                     });
         }
     }
 
-    private static void claim(Map<Holder<DamageType>, List<Holder<Element>>> index, Holder<DamageType> type, Holder<Element> element) {
-        List<Holder<Element>> claimants = index.computeIfAbsent(type, ignored -> new ArrayList<>());
-        if (claimants.contains(element)) return;
+    private static void claim(Map<Holder<DamageType>, List<Claim>> index, Holder<DamageType> type, Holder<Element> element,
+                              double attachment) {
+        List<Claim> claimants = index.computeIfAbsent(type, ignored -> new ArrayList<>());
+        for (Claim existing : claimants) if (existing.element().equals(element)) return;
         if (!claimants.isEmpty())
             MiXianTu.LOGGER.warn("Damage type {} is claimed by more than one element; every claim multiplies the element relation of such a strike",
                     HolderHelper.id(type));
-        claimants.add(element);
+        claimants.add(new Claim(element, attachment));
     }
 }

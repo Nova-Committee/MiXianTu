@@ -25,8 +25,10 @@ import java.util.Optional;
 
 /**
  * Applies generic damage to the acting entity, which is the "environment" reading of a hit: with no damage
- * type and no element it is credited to nobody, so it takes no element edge and no mastery bonus, and it stays
- * the right shape for recoil, backlash and hazard ticks.
+ * type and no element it is credited to nobody, so it reads no element relation and no attacker physique, and
+ * it stays the right shape for recoil, backlash and hazard ticks. The mastery and the affinity of the casting
+ * that dealt it still apply, because they belong to the casting rather than to the pair - a stronger technique
+ * has a heavier backlash.
  *
  * <p>An action can still land on somebody other than the caster - nested under a target action, a passenger
  * action or an equipped-item action the acting entity is not the caster - and there the caster is credited,

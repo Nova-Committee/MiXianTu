@@ -6,6 +6,7 @@
   "conditions": [
     {"type": "mxt:always_true"}
   ],
+  "element": ["mxt_test:fire"],
   "attributes": [],
   "use_action": {
     "type": "mxt:add_resource",

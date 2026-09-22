@@ -14,6 +14,14 @@ public final class MiscCodecs {
     public static final Codec<Integer> COLOR = color(true), COLOR_NO_ALPHA = color(false);
 
     /**
+     * A finite, non-negative number, for the multipliers a definition applies to something. Written as a codec
+     * rather than as a check at the point of use, so a negative sign or a {@code NaN} is refused while the pack
+     * loads instead of quietly scaling damage at runtime. {@code NaN} fails the upper bound because
+     * {@link Double#compareTo} orders it above everything.
+     */
+    public static final Codec<Double> NON_NEGATIVE = Codec.doubleRange(0.0D, Double.MAX_VALUE);
+
+    /**
      * A two element {@code [x, z]} pair. Realm borders use it for their center.
      */
     public static final Codec<Vec2> HORIZONTAL_PAIR = Codec.DOUBLE.listOf().comapFlatMap(

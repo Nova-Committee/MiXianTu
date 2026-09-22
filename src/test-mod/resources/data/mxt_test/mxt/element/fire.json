@@ -11,7 +11,11 @@
       "multiplier": 0.5
     }
   ],
-  "damage_types": ["minecraft:magic", "minecraft:in_fire", "minecraft:lava"],
+  "damage_types": [
+    "minecraft:magic",
+    "minecraft:in_fire",
+    { "damage_type": "minecraft:lava", "damage_attachment": 2.0 }
+  ],
   "attachment_decay": 0.5,
   "damage_attachment": 4.0,
   "color": "#ff5522"

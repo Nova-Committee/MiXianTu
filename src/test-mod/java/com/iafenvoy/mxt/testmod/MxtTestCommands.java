@@ -18,6 +18,7 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCon
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InRealmInstanceEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InRealmInstanceEntityCondition.Role;
+import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.Element;
@@ -57,6 +58,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
@@ -104,6 +106,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
@@ -302,6 +305,19 @@ public final class MxtTestCommands {
      * value reaches both the health of the target and the context a real cast dispatches with. A last leg
      * takes damage the pipeline never shaped - a plain vanilla mob attack - and asserts only the defender's
      * adaptation touched it, which is what makes the two layers two rather than one applied twice.</p>
+     *
+     * <p>Two legs pin the two strikes the pipeline declines to scale: damage with nobody credited reads no
+     * element relation but keeps the casting's own mastery, and a damage type in {@code mxt:no_bonus} travels
+     * untouched through both layers. The second one also asserts that the shipped default tag really does hold
+     * the void, because a misplaced tag file would otherwise change nothing anyone could see.</p>
+     *
+     * <p>Two more pin what the shaping layer was taught on 2026-09-22: a weapon the striker's own roots conflict
+     * with weakens everything they deal (the fixture prices the water sword at 0.5 for a fire body), and only an
+     * element the strike <em>declared</em> rubs off on the target - a fire read off the striker's roots reduces
+     * the hit and leaves nothing behind, which is the difference the {@code origin} leg measures as 4 versus 0.
+     * Two more again: what the victim <em>carries</em> decides how much of that element gets through (the ward
+     * artifact halves it), and a damage type's claim may price the buildup itself, so the same element read off
+     * {@code minecraft:magic} leaves 4 while {@code minecraft:lava} leaves the 2 its claim wrote.</p>
      */
     private static int probeDamage(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
@@ -318,9 +334,21 @@ public final class MxtTestCommands {
         LivingEntity bodyDefender = spawnProbe(level, origin.above(6), PROBE_WATER_ROOT);
         LivingEntity affinityAttacker = spawnProbe(level, origin.above(7), PROBE_FIRE_ROOT);
         LivingEntity affinityDefender = spawnProbe(level, origin.above(8), PROBE_WATER_ROOT);
+        LivingEntity unownedDefender = spawnProbe(level, origin.above(9), PROBE_WATER_ROOT);
+        LivingEntity taggedAttacker = spawnProbe(level, origin.above(10), PROBE_FIRE_ROOT);
+        LivingEntity taggedDefender = spawnProbe(level, origin.above(11), PROBE_WATER_ROOT);
+        LivingEntity conflictAttacker = spawnProbe(level, origin.above(12), PROBE_ANTI_WATER_ROOT);
+        LivingEntity conflictDefender = spawnProbe(level, origin.above(13), null);
+        LivingEntity claimedVictim = spawnProbe(level, origin.above(14), null);
+        LivingEntity rootVictim = spawnProbe(level, origin.above(15), null);
+        LivingEntity wardVictim = spawnProbe(level, origin.above(16), null);
+        LivingEntity lavaVictim = spawnProbe(level, origin.above(17), null);
         try {
             if (attacker == null || defender == null || masteryDefender == null || foreignDefender == null
-                    || bodyAttacker == null || bodyDefender == null || affinityAttacker == null || affinityDefender == null) {
+                    || bodyAttacker == null || bodyDefender == null || affinityAttacker == null || affinityDefender == null
+                    || unownedDefender == null || taggedAttacker == null || taggedDefender == null
+                    || conflictAttacker == null || conflictDefender == null || claimedVictim == null
+                    || rootVictim == null || wardVictim == null || lavaVictim == null) {
                 source.sendFailure(Component.literal("damage probe: could not create the probe entities"));
                 return 0;
             }
@@ -424,7 +452,116 @@ public final class MxtTestCommands {
                     + " reduced=" + affinityIncoming + " health_lost=" + affinityLost + " cast=" + castAffinity[0]
                     + (affinity ? " OK" : " MISMATCH")), false);
 
-            if (elements && mastery && foreign && physique && affinity) {
+            // Damage with nobody credited reads no element relation, even when its own declared damage type
+            // would lend it one: `minecraft:magic` is claimed by fire in the test package, so the relation
+            // exists here and must not be read. The casting's own factors are a different matter and stay,
+            // which is why the mastery is written as 2.0 - the leg then separates 8.0 (correct: 4 * 2, relation
+            // dropped) from 12.0 (the relation was read anyway) and from 4.0 (the mastery was dropped along
+            // with it), where a mastery of 1.0 could not have told those last two apart.
+            Holder<DamageType> magicDamage = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
+                    .getOrThrow(DamageTypes.MAGIC);
+            Set<Holder<Element>> declared = DamageElements.of(level.registryAccess(), magicDamage);
+            FormulaContext unownedContext = FormulaContext.of(attacker)
+                    .with(DamageCalculationService.DAMAGE_MULTIPLIER, 2.0D);
+            double unowned = DamageCalculationService.outgoing(null, unownedDefender, 4.0D, unownedContext, declared);
+            float unownedBefore = unownedDefender.getHealth();
+            DamageCalculationService.deal(null, unownedDefender, 4.0D, Optional.of(magicDamage), unownedContext);
+            double unownedLost = unownedBefore - unownedDefender.getHealth();
+            boolean unattributed = close(unowned, 8.0D) && close(unownedLost, 4.0D);
+            source.sendSuccess(() -> Component.literal("damage probe: unattributed outgoing=" + unowned
+                    + " health_lost=" + unownedLost + (unattributed ? " OK" : " MISMATCH")), false);
+
+            // A damage type the pack exempted travels as the number it was handed. Both bodies carry the same
+            // physique (dealt * 1.5, taken * 0.5) that the untagged legs above measure with, so the four
+            // readings are far apart: 6.0 means both layers stood aside, 9.0 means only the reduction did,
+            // 3.0 means only the shaping did, and 4.5 means neither did. The same line asserts that the void
+            // really is in the shipped default tag - a misplaced tag file would otherwise go unnoticed.
+            Holder<DamageType> voidDamage = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
+                    .getOrThrow(DamageTypes.FELL_OUT_OF_WORLD);
+            boolean tagged = DamageCalculationService.bypasses(level.damageSources().fellOutOfWorld())
+                    && !DamageCalculationService.bypasses(level.damageSources().magic());
+            boolean taggedBodies = grantProbePhysique(taggedAttacker, PROBE_PHYSIQUE)
+                    && grantProbePhysique(taggedDefender, PROBE_PHYSIQUE);
+            FormulaContext taggedContext = FormulaContext.of(taggedAttacker);
+            float taggedBefore = taggedDefender.getHealth();
+            double handed = DamageCalculationService.deal(taggedAttacker, taggedDefender, 6.0D,
+                    Optional.of(voidDamage), taggedContext);
+            double taggedLost = taggedBefore - taggedDefender.getHealth();
+            boolean exempt = tagged && taggedBodies && close(handed, 6.0D) && close(taggedLost, 6.0D);
+            source.sendSuccess(() -> Component.literal("damage probe: no_bonus tagged=" + tagged + " dealt=" + handed
+                    + " health_lost=" + taggedLost + (exempt ? " OK" : " MISMATCH")), false);
+
+            // A weapon the striker's own roots conflict with weakens everything they deal. The fixture root
+            // (`anti_water_root`) is a fire body that lists water in its `conflicting_elements`, the golden sword
+            // is declared water, and `mxt_test:water` prices that at 0.5 - so the same 4 reads as 2 in that hand
+            // and as 4 in an empty one. The victim has no roots and the striker's own element is fire against
+            // nothing, so no relation confuses the two numbers.
+            conflictAttacker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLDEN_SWORD));
+            FormulaContext conflictContext = FormulaContext.of(conflictAttacker);
+            double conflicting = DamageCalculationService.outgoing(conflictAttacker, conflictDefender, 4.0D, conflictContext);
+            conflictAttacker.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            double unarmed = DamageCalculationService.outgoing(conflictAttacker, conflictDefender, 4.0D, conflictContext);
+            conflictAttacker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLDEN_SWORD));
+            float conflictBefore = conflictDefender.getHealth();
+            DamageCalculationService.deal(conflictAttacker, conflictDefender, 4.0D, Optional.empty(), conflictContext);
+            double conflictLost = conflictBefore - conflictDefender.getHealth();
+            boolean selfConflict = close(conflicting, 2.0D) && close(unarmed, 4.0D) && close(conflictLost, 2.0D);
+            source.sendSuccess(() -> Component.literal("damage probe: self_conflict wielded=" + conflicting
+                    + " unarmed=" + unarmed + " health_lost=" + conflictLost
+                    + (selfConflict ? " OK" : " MISMATCH")), false);
+
+            // Only an element the strike declared rubs off. Both victims take a fire strike of 10 with no roots
+            // of their own, so neither has an element edge; the difference is where the fire came from: the first
+            // strike travels as `minecraft:magic`, which the test package has fire claim, so fire's own
+            // `damage_attachment` of 4 is left on the target - while the second declares nothing, reads fire off
+            // the striker's roots, and leaves nothing behind.
+            float claimedBefore = claimedVictim.getHealth();
+            Holder<Element> probeFire = require(MxtResourceKeys.ELEMENT, PROBE_FIRE_ELEMENT);
+            DamageCalculationService.deal(attacker, claimedVictim, 10.0D, Optional.of(magicDamage), FormulaContext.of(attacker));
+            double claimedLeft = ElementReactionService.amount(claimedVictim, probeFire);
+            double claimedLost = claimedBefore - claimedVictim.getHealth();
+            float rootBefore = rootVictim.getHealth();
+            DamageCalculationService.deal(attacker, rootVictim, 10.0D, Optional.empty(), FormulaContext.of(attacker));
+            double rootLeft = ElementReactionService.amount(rootVictim, probeFire);
+            double rootLost = rootBefore - rootVictim.getHealth();
+            boolean strikeOrigin = close(claimedLeft, 4.0D) && close(claimedLost, 10.0D)
+                    && close(rootLeft, 0.0D) && close(rootLost, 10.0D);
+            source.sendSuccess(() -> Component.literal("damage probe: origin claimed_left=" + claimedLeft
+                    + " root_left=" + rootLeft + " health_lost=" + claimedLost + "/" + rootLost
+                    + (strikeOrigin ? " OK" : " MISMATCH")), false);
+
+            // What the victim carries decides how much of that element gets through: the ward artifact prices
+            // itself at 0.5, so the same claimed fire strike that left 4 on a bare body leaves 2 on a body
+            // holding one - and the reduction is the item's, so the strike's damage is untouched.
+            wardVictim.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.PRISMARINE_SHARD));
+            double wardMultiplier = DamageCalculationService.attachmentMultiplier(wardVictim);
+            float wardBefore = wardVictim.getHealth();
+            DamageCalculationService.deal(attacker, wardVictim, 10.0D, Optional.of(magicDamage), FormulaContext.of(attacker));
+            double wardLeft = ElementReactionService.amount(wardVictim, probeFire);
+            double wardLost = wardBefore - wardVictim.getHealth();
+            boolean warded = close(DamageCalculationService.attachmentMultiplier(claimedVictim), 1.0D)
+                    && close(wardMultiplier, 0.5D) && close(wardLeft, 2.0D) && close(wardLost, 10.0D);
+            source.sendSuccess(() -> Component.literal("damage probe: attachment_ward multiplier=" + wardMultiplier
+                    + " left=" + wardLeft + " health_lost=" + wardLost
+                    + (warded ? " OK" : " MISMATCH")), false);
+
+            // A damage type's claim may price the buildup itself: the fixture element claims `minecraft:magic`
+            // plainly, so fire's own 4.0 answers, and `minecraft:lava` with a 2.0 of its own - so one element read
+            // off two different types leaves two different amounts. That is what makes the claimed types usable
+            // as groups: a lava bath builds up half as fast as a fireball without the element being split in two.
+            Holder<DamageType> lavaDamage = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
+                    .getOrThrow(DamageTypes.LAVA);
+            float lavaBefore = lavaVictim.getHealth();
+            DamageCalculationService.deal(attacker, lavaVictim, 10.0D, Optional.of(lavaDamage), FormulaContext.of(attacker));
+            double lavaLeft = ElementReactionService.amount(lavaVictim, probeFire);
+            double lavaLost = lavaBefore - lavaVictim.getHealth();
+            boolean claimAmount = close(lavaLeft, 2.0D) && close(lavaLost, 10.0D);
+            source.sendSuccess(() -> Component.literal("damage probe: claim amount lava_left=" + lavaLeft
+                    + " magic_left=" + claimedLeft + " health_lost=" + lavaLost
+                    + (claimAmount ? " OK" : " MISMATCH")), false);
+
+            if (elements && mastery && foreign && physique && affinity && unattributed && exempt && selfConflict
+                    && strikeOrigin && warded && claimAmount) {
                 source.sendSuccess(() -> Component.literal("damage probe: OK"), false);
                 return 1;
             }
@@ -439,6 +576,15 @@ public final class MxtTestCommands {
             if (bodyDefender != null) bodyDefender.discard();
             if (affinityAttacker != null) affinityAttacker.discard();
             if (affinityDefender != null) affinityDefender.discard();
+            if (unownedDefender != null) unownedDefender.discard();
+            if (taggedAttacker != null) taggedAttacker.discard();
+            if (taggedDefender != null) taggedDefender.discard();
+            if (conflictAttacker != null) conflictAttacker.discard();
+            if (conflictDefender != null) conflictDefender.discard();
+            if (claimedVictim != null) claimedVictim.discard();
+            if (rootVictim != null) rootVictim.discard();
+            if (wardVictim != null) wardVictim.discard();
+            if (lavaVictim != null) lavaVictim.discard();
         }
     }
 
@@ -1223,8 +1369,10 @@ public final class MxtTestCommands {
 
             // 9. The five-phase set the test package now ships: metal beats wood in the shaping layer and wood
             //    is soft against metal in the reduction layer, so the same 4 lands as 4 * 1.4 * 1.25 = 7, while
-            //    the opposite direction has neither edge and lands as 4. The strike also leaves the striker's
-            //    element behind, and a tag over the whole set answers for a member.
+            //    the opposite direction has neither edge and lands as 4. Neither strike declares a damage type,
+            //    so both read their element off the striker's roots - and since 2026-09-22 a roots reading
+            //    reduces without rubbing off, which is why `metal_left` is now zero where it used to be 3. The
+            //    damage probe's `origin` leg is where leaving an element behind is measured.
             double metalBefore = woodVictim.getHealth();
             DamageCalculationService.deal(metalCaster, woodVictim, 4.0D, Optional.empty(), FormulaContext.of(metalCaster));
             double metalOnWood = metalBefore - woodVictim.getHealth();
@@ -1232,7 +1380,7 @@ public final class MxtTestCommands {
             DamageCalculationService.deal(woodCaster, metalVictim, 4.0D, Optional.empty(), FormulaContext.of(woodCaster));
             double woodOnMetal = woodBefore - metalVictim.getHealth();
             double metalLeft = ElementReactionService.amount(woodVictim, metal);
-            boolean fivePhases = close(metalOnWood, 7.0D) && close(woodOnMetal, 4.0D) && close(metalLeft, 3.0D)
+            boolean fivePhases = close(metalOnWood, 7.0D) && close(woodOnMetal, 4.0D) && close(metalLeft, 0.0D)
                     && new HasElementEntityCondition(List.of(Either.right(fivePhasesTag())))
                     .test(metalCaster, FormulaContext.of(metalCaster));
             source.sendSuccess(() -> Component.literal("element probe: five phases metal_on_wood=" + metalOnWood
@@ -1266,8 +1414,30 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: unconsumed reaction fired=" + settleFired
                     + " left=" + settleLeft + (settle ? " OK" : " MISMATCH")), false);
 
+            // 12. What an item is made of. The sword's weapon binding declares fire; the jade's artifact declares
+            //     the whole #mxt_test:basic tag, which is fire and water; the spirit crystal declares nothing at
+            //     all, so it is read from the aura it carries - `mxt_test:spirit_power` names fire as its
+            //     `aura_type`; and a stick matches no definition and carries no aura, so it is made of nothing.
+            //     The condition is the same reading from a data pack's side.
+            Set<Holder<Element>> swordElements = ItemElements.of(level.registryAccess(),
+                    new ItemStack(Items.DIAMOND_SWORD));
+            Set<Holder<Element>> jadeElements = ItemElements.of(level.registryAccess(),
+                    new ItemStack(Items.AMETHYST_SHARD));
+            Set<Holder<Element>> crystalElements = ItemElements.of(level.registryAccess(),
+                    new ItemStack(MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.get()));
+            Set<Holder<Element>> plainElements = ItemElements.of(level.registryAccess(), new ItemStack(Items.STICK));
+            boolean itemElement = swordElements.equals(Set.of(fire)) && jadeElements.equals(Set.of(fire, water))
+                    && crystalElements.equals(Set.of(fire)) && plainElements.isEmpty()
+                    && new ItemElementCondition(List.of(Either.left(water)))
+                    .test(toggleProbe, new ItemStack(Items.AMETHYST_SHARD), FormulaContext.of(toggleProbe))
+                    && !new ItemElementCondition(List.of(Either.left(water)))
+                    .test(toggleProbe, new ItemStack(Items.DIAMOND_SWORD), FormulaContext.of(toggleProbe));
+            source.sendSuccess(() -> Component.literal("element probe: item element sword=" + elementIds(swordElements)
+                    + " jade=" + elementIds(jadeElements) + " crystal=" + elementIds(crystalElements)
+                    + " plain=" + plainElements.size() + (itemElement ? " OK" : " MISMATCH")), false);
+
             if (claimed && declared && reaction && disabled && hasElement && auraElement && attachment && toggle
-                    && loop && conflict && fivePhases && bloom && settle) {
+                    && loop && conflict && fivePhases && bloom && settle && itemElement) {
                 source.sendSuccess(() -> Component.literal("element probe: OK"), false);
                 return 1;
             }
@@ -1284,6 +1454,14 @@ public final class MxtTestCommands {
 
     private static TagKey<Element> elementTag() {
         return TagKey.create(MxtResourceKeys.ELEMENT, PROBE_ELEMENT_TAG);
+    }
+
+    /**
+     * The ids of one element set, sorted, for a probe line that has to show <em>which</em> elements an item was
+     * read as rather than only how many.
+     */
+    private static List<String> elementIds(Set<Holder<Element>> elements) {
+        return elements.stream().map(HolderHelper::id).map(Object::toString).sorted().toList();
     }
 
     private static TagKey<Element> fivePhasesTag() {

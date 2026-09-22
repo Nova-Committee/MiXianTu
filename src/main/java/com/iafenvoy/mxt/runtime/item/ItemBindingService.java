@@ -237,7 +237,12 @@ public final class ItemBindingService {
                 .map(Reference::value), stack);
     }
 
-    private static Optional<ItemBinding> binding(Provider access, ItemStack stack) {
+    /**
+     * The {@code item_binding} claiming this stack. Public because it is one of the readings
+     * {@link com.iafenvoy.mxt.runtime.cultivation.ItemElements} takes when it asks what an item is made of;
+     * {@link #resolve(Provider, ItemStack)} wraps it for callers that want several binding kinds at once.
+     */
+    public static Optional<ItemBinding> binding(Provider access, ItemStack stack) {
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_BINDING)
                 .map(Reference::value), stack);
     }
