@@ -8,10 +8,12 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
@@ -41,11 +43,14 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
+import com.iafenvoy.mxt.runtime.ability.AbilitySources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactCapability;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactToggleService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
@@ -74,6 +79,11 @@ import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
 import com.iafenvoy.mxt.runtime.world.RealmInstanceService;
 import com.iafenvoy.mxt.runtime.world.RealmRecord;
 import com.iafenvoy.mxt.runtime.world.RealmStructurePlacer;
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
+import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
+import com.iafenvoy.mxt.runtime.wheel.WheelSource;
+import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
@@ -87,6 +97,11 @@ import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.JsonOps;
+import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
+import io.netty.buffer.Unpooled;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.commands.CommandSourceStack;
@@ -115,6 +130,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -128,6 +144,7 @@ import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
@@ -191,6 +208,21 @@ public final class MxtTestCommands {
     private static final Identifier MISDECLARED_ARTIFACT = id("misdeclared_grant_probe");
     /** Wrong on purpose: it claims the item {@link #MISDECLARED_ARTIFACT} already claims. */
     private static final Identifier CLAIM_CONFLICT_ARTIFACT = id("claim_conflict_probe");
+    /** Wheel probe: an active ability, so a derived page may list it while it is granted. */
+    private static final Identifier PROBE_WHEEL_ABILITY = id("firebolt");
+    /** Wheel probe: declared {@code mxt:modifier}, so a derived page must leave it out even while granted. */
+    private static final Identifier PROBE_WHEEL_PASSIVE = id("artifact_guard");
+    /** Wheel probe: the fixture that declares {@code mxt:flight}, which is a togglable artifact capability. */
+    private static final Identifier PROBE_WHEEL_TOGGLE = id("bound_sword");
+    /** Wheel probe: a fixture artifact with no capability at all, so neither key of it is a wheel cell. */
+    private static final Identifier PROBE_WHEEL_PLAIN_ARTIFACT = id("ward_jade_talisman");
+    /** Wheel probe: more active abilities than one page holds, so the overflow is thirteen entries and up. */
+    private static final List<Identifier> PROBE_WHEEL_MANY = List.of(
+            id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence"),
+            id("curse_apply_probe"), id("curse_cleanse_probe"), id("curse_query_probe"),
+            id("curse_remaining_probe"), id("curse_replace_probe"), id("elemental_probe"),
+            id("pos_pulse"), id("pull_pulse"), id("qingxiao_firebolt"), id("sigil_pulse")
+    );
     private static final Identifier TEST_ABILITY_SOURCE = id("grant/test_kit");
     private static final List<Identifier> TEST_ACTIVE_ABILITIES = List.of(
             id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence"),
@@ -210,6 +242,7 @@ public final class MxtTestCommands {
                 .then(literal("verify").executes(context -> verify(context.getSource())))
                 .then(literal("damage").executes(context -> probeDamage(context.getSource())))
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
+                .then(literal("wheel").executes(context -> probeWheel(context.getSource())))
                 .then(literal("identity").executes(context -> probeIdentity(context.getSource())))
                 .then(literal("artifact").executes(context -> probeArtifact(context.getSource())))
                 .then(literal("artifacts").executes(context -> probeArtifactRoster(context.getSource())))
@@ -1454,6 +1487,240 @@ public final class MxtTestCommands {
 
     private static TagKey<Element> elementTag() {
         return TagKey.create(MxtResourceKeys.ELEMENT, PROBE_ELEMENT_TAG);
+    }
+
+    /**
+     * Drives the wheel's pages: which pages exist and in what order, that a derived page is a live reading of the
+     * ability grants and the artifact switches rather than a stored list, and that the first page is stored
+     * instead.
+     *
+     * <p>Everything here runs against a disposable probe entity holding the two attachments the pages read, so a
+     * mismatch is a number. The dispatch behind an ability trigger is deliberately not driven - firing a real
+     * ability to watch it land would be a different probe - but the check every trigger passes through is; the one
+     * dispatch that is driven is the artifact switch, because mounting a flying sword is observable and the call
+     * is the very one the server makes for it.</p>
+     */
+    private static int probeWheel(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        BlockPos origin = source.getPlayer() != null
+                ? source.getPlayer().blockPosition()
+                : level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO);
+        LivingEntity probe = spawnProbe(level, origin.above(), null);
+        try {
+            if (probe == null) {
+                source.sendFailure(Component.literal("wheel probe: could not create the probe entity"));
+                return 0;
+            }
+            // 1. The pages: four of them, the configured one first, walked in enum order and wrapping at both
+            //    ends so neither switch key can dead-end. Page numbers are 1-based, which is what the player sees.
+            boolean pages = WheelSource.PAGES.size() == 4
+                    && WheelSource.PAGES.getFirst() == WheelSource.CONFIGURED
+                    && WheelSource.CONFIGURED.step(1) == WheelSource.MAIN_HAND
+                    && WheelSource.CONFIGURED.step(-1) == WheelSource.CURIOS
+                    && WheelSource.CURIOS.step(1) == WheelSource.CONFIGURED
+                    && WheelSource.MAIN_HAND.page() == 2 && WheelSource.CURIOS.page() == 4;
+            source.sendSuccess(() -> Component.literal("wheel probe: pages=" + WheelSource.PAGES.size()
+                    + " first=" + WheelSource.PAGES.getFirst().getSerializedName()
+                    + " wrap=" + WheelSource.CONFIGURED.step(-1).getSerializedName()
+                    + " last_page=" + WheelSource.CURIOS.page() + (pages ? " OK" : " MISMATCH")), false);
+
+            // 2. A derived page reads the grant ledger: the active ability is on the page named by the item that
+            //    granted it, the passive one is not (the wheel can only fire active abilities), and no other page
+            //    claims it - not the other hand, not the artifacts, not the configured page.
+            probe.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
+            AbilityAttachment abilities = probe.getData(MxtAttachments.ABILITY_HOLDER);
+            Holder<Ability> active = require(MxtResourceKeys.ABILITY, PROBE_WHEEL_ABILITY);
+            Holder<Ability> passive = require(MxtResourceKeys.ABILITY, PROBE_WHEEL_PASSIVE);
+            Identifier mainHand = AbilitySources.equipment(EquipmentSlot.MAINHAND, probe.getMainHandItem());
+            abilities.grant(active, mainHand);
+            abilities.grant(passive, mainHand);
+            boolean derived = WheelSources.abilities(probe, WheelSource.MAIN_HAND).equals(List.of(active))
+                    && offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_ABILITY)
+                    && !offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_PASSIVE)
+                    && !offers(probe, WheelSource.OFF_HAND, PROBE_WHEEL_ABILITY)
+                    && !offers(probe, WheelSource.CURIOS, PROBE_WHEEL_ABILITY)
+                    && !offers(probe, WheelSource.CONFIGURED, PROBE_WHEEL_ABILITY);
+            source.sendSuccess(() -> Component.literal("wheel probe: derived main_hand="
+                    + WheelSources.abilities(probe, WheelSource.MAIN_HAND).size()
+                    + " off_hand=" + WheelSources.abilities(probe, WheelSource.OFF_HAND).size()
+                    + " curios=" + WheelSources.abilities(probe, WheelSource.CURIOS).size()
+                    + " configured=" + WheelSources.abilities(probe, WheelSource.CONFIGURED).size()
+                    + (derived ? " OK" : " MISMATCH")), false);
+
+            // 3. Nothing about a derived page is stored, so releasing the grant empties it in the same breath -
+            //    which is what makes an item's page follow the item rather than a save.
+            abilities.revoke(active, mainHand);
+            abilities.revoke(passive, mainHand);
+            boolean follows = WheelSources.abilities(probe, WheelSource.MAIN_HAND).isEmpty()
+                    && !offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_ABILITY);
+            source.sendSuccess(() -> Component.literal("wheel probe: follows revoked="
+                    + WheelSources.abilities(probe, WheelSource.MAIN_HAND).size()
+                    + (follows ? " OK" : " MISMATCH")), false);
+
+            // 4. The first page is stored instead: the very same ability is on it once the saved layout holds it,
+            //    with no grant anywhere - and the entry is only offered under the kind the sector stores, which is
+            //    what stops "page 1 holds it" from meaning "any id of that name is fine".
+            WheelLayoutAttachment layout = probe.getData(MxtAttachments.WHEEL_LAYOUT);
+            layout.setLayout(WheelLayout.EMPTY.with(3, WheelSlot.of(WheelEntryKind.ABILITY, PROBE_WHEEL_ABILITY)));
+            boolean configured = offers(probe, WheelSource.CONFIGURED, PROBE_WHEEL_ABILITY)
+                    && !WheelSources.offers(probe, WheelSource.CONFIGURED, WheelEntryKind.AURA, PROBE_WHEEL_ABILITY)
+                    && !offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_ABILITY);
+            source.sendSuccess(() -> Component.literal("wheel probe: configured stored="
+                    + offers(probe, WheelSource.CONFIGURED, PROBE_WHEEL_ABILITY)
+                    + " granted=" + WheelSources.abilities(probe, WheelSource.MAIN_HAND).size()
+                    + (configured ? " OK" : " MISMATCH")), false);
+
+            // 5. A source is not cut to one page: more entries than a page holds are all still offered, because
+            //    what does not fit on one page takes another - which is the client's numbering to lay out, and
+            //    the server only ever asks whether one id is in the list.
+            for (Identifier ability : PROBE_WHEEL_MANY)
+                abilities.grant(require(MxtResourceKeys.ABILITY, ability), mainHand);
+            int overflowSize = WheelSources.abilities(probe, WheelSource.MAIN_HAND).size();
+            boolean overflow = overflowSize == PROBE_WHEEL_MANY.size()
+                    && offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_MANY.getLast());
+            source.sendSuccess(() -> Component.literal("wheel probe: overflow entries=" + overflowSize
+                    + " page=" + WheelLayout.SLOTS + (overflow ? " OK" : " MISMATCH")), false);
+
+            // 6. Every capability that needs a key is a cell of its own kind: the sword's definition declares both
+            //    mxt:flight and mxt:storage, so the page named by the hand it is in holds two cells, each addressed
+            //    as `<artifact>/<capability>`. No other page claims them, the kind refuses an artifact that
+            //    declares no capability at all, and it refuses a bare artifact id too - a capability is the pair.
+            probe.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
+            List<ArtifactToggleService.Toggle> toggles = WheelSources.toggles(probe, WheelSource.MAIN_HAND);
+            Identifier flightCell = capability(PROBE_WHEEL_TOGGLE, FlightArtifactAbility.KEY);
+            Identifier storageCell = capability(PROBE_WHEEL_TOGGLE, StorageArtifactAbility.KEY);
+            boolean knownKind = WheelEntryKind.ARTIFACT.exists(level.registryAccess(), flightCell)
+                    && WheelEntryKind.ARTIFACT.exists(level.registryAccess(), storageCell)
+                    && !WheelEntryKind.ARTIFACT.exists(level.registryAccess(), PROBE_WHEEL_TOGGLE)
+                    && !WheelEntryKind.ARTIFACT.exists(level.registryAccess(), capability(PROBE_WHEEL_PLAIN_ARTIFACT, FlightArtifactAbility.KEY))
+                    && !WheelEntryKind.ARTIFACT.exists(level.registryAccess(), capability(PROBE_WHEEL_PLAIN_ARTIFACT, StorageArtifactAbility.KEY));
+            boolean listed = toggles.size() == 2
+                    && toggles.getFirst().id().equals(flightCell) && toggles.get(1).id().equals(storageCell)
+                    && toggles.getFirst().state().equals(Optional.of(false)) && toggles.get(1).state().isEmpty()
+                    && WheelSources.offers(probe, WheelSource.MAIN_HAND, WheelEntryKind.ARTIFACT, storageCell)
+                    && !WheelSources.offers(probe, WheelSource.OFF_HAND, WheelEntryKind.ARTIFACT, storageCell)
+                    && !WheelSources.offers(probe, WheelSource.CURIOS, WheelEntryKind.ARTIFACT, storageCell)
+                    && knownKind;
+            source.sendSuccess(() -> Component.literal("wheel probe: capabilities=" + toggles.size()
+                    + " on=" + (toggles.isEmpty() ? "none" : toggles.getFirst().state())
+                    + " storage_state=" + (toggles.size() < 2 ? "none" : toggles.get(1).state())
+                    + " kind=" + knownKind + (listed ? " OK" : " MISMATCH")), false);
+
+            // 7. The switch behind the flight cell really moves: pressed through the service the trigger uses the
+            //    player mounts a flying sword and lands again. A probe entity cannot stand in for it, because
+            //    flight belongs to a player's own connection and abilities.
+            ServerPlayer pilot = source.getPlayer();
+            boolean flipped = pilot != null && flipsFlightSwitch(pilot, flightCell);
+            source.sendSuccess(() -> Component.literal("wheel probe: flight flipped=" + flipped
+                    + " pilot=" + (pilot != null) + (flipped ? " OK" : " MISMATCH")), false);
+
+            // 8. The storage cell opens the artifact's own container: a chest menu as tall as the definition
+            //    declares, over the artifact's contents. Also a player's, for the same reason as the flight leg.
+            boolean opened = pilot != null && opensStorage(pilot, storageCell);
+            source.sendSuccess(() -> Component.literal("wheel probe: storage opened=" + opened
+                    + " pilot=" + (pilot != null) + (opened ? " OK" : " MISMATCH")), false);
+
+            // 9. What a slot sync actually encodes: the component has to survive the network codec with a hole in
+            //    it. An empty stack is a real value in there - it is how "this slot is empty" is spelled - and
+            //    ItemStack.CODEC refuses one, which is the shape the storage window's crash had: the packet that
+            //    carries the artifact's own slot failed to encode, so the screen never saw the change. A probe can
+            //    only see this by running the codec, since nothing about opening the window goes wrong.
+            ArtifactStorageComponent holed = ArtifactStorageComponent.of(ArtifactService.STORAGE_COLUMNS,
+                    List.of(ItemStack.EMPTY, new ItemStack(Items.STONE, 3)));
+            boolean storageCodec = roundTripsStorage(holed, level.registryAccess());
+            source.sendSuccess(() -> Component.literal("wheel probe: storage sync contents=" + holed.contents().size()
+                    + " stored=" + holed.get(1).getCount() + (storageCodec ? " OK" : " MISMATCH")), false);
+
+            if (pages && derived && follows && configured && overflow && listed && flipped && opened && storageCodec) {
+                source.sendSuccess(() -> Component.literal("wheel probe: OK"), false);
+                return 1;
+            }
+            source.sendFailure(Component.literal("wheel probe: MISMATCH"));
+            return 0;
+        } finally {
+            if (probe != null) probe.discard();
+        }
+    }
+
+    /** The wheel id of one capability of one artifact: the artifact's id with the capability's key appended. */
+    private static Identifier capability(Identifier artifact, String key) {
+        return new ArtifactCapability(artifact, key).id();
+    }
+
+    /**
+     * Presses the fixture artifact's flight cell - the same {@code activate} call the wheel's trigger makes - and
+     * reports whether the player really mounted a flying sword and landed again. The main hand is taken over and
+     * restored, since a cell is read off the stacks the page names.
+     */
+    private static boolean flipsFlightSwitch(ServerPlayer player, Identifier cell) {
+        ItemStack previous = player.getMainHandItem().copy();
+        try {
+            player.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_SWORD));
+            ArtifactToggleService.Toggle toggle = ArtifactToggleService
+                    .find(WheelSources.toggles(player, WheelSource.MAIN_HAND), cell).orElse(null);
+            if (toggle == null) return false;
+            boolean mounted = toggle.activate().changed()
+                    && player.getData(MxtAttachments.FLIGHT).active()
+                    && player.getVehicle() instanceof FlyingSwordEntity;
+            boolean landed = toggle.state().orElse(false) && toggle.activate().changed()
+                    && !player.getData(MxtAttachments.FLIGHT).active()
+                    && !(player.getVehicle() instanceof FlyingSwordEntity);
+            return mounted && landed;
+        } finally {
+            player.setItemSlot(EquipmentSlot.MAINHAND, previous);
+        }
+    }
+
+    /**
+     * Presses the fixture artifact's storage cell and reports whether a chest menu of the declared size really
+     * opened over the artifact's contents. The window is closed again before the caller gets control back.
+     */
+    private static boolean opensStorage(ServerPlayer player, Identifier cell) {
+        ItemStack previous = player.getMainHandItem().copy();
+        try {
+            player.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_SWORD));
+            ArtifactToggleService.Toggle toggle = ArtifactToggleService
+                    .find(WheelSources.toggles(player, WheelSource.MAIN_HAND), cell).orElse(null);
+            if (toggle == null) return false;
+            boolean activated = toggle.activate().changed();
+            // The fixture declares nine slots, which is one row: the menu is a chest, so the rows are the number
+            // the declaration rounds up to.
+            boolean opened = player.containerMenu instanceof ChestMenu menu
+                    && menu.getRowCount() == 1
+                    && menu.getContainer().getContainerSize() == ArtifactService.STORAGE_COLUMNS;
+            player.closeContainer();
+            return activated && opened;
+        } finally {
+            player.setItemSlot(EquipmentSlot.MAINHAND, previous);
+        }
+    }
+
+    /** One page's answer to "would a trigger for this ability from this page be honoured". */
+    private static boolean offers(LivingEntity probe, WheelSource source, Identifier ability) {
+        return WheelSources.offers(probe, source, WheelEntryKind.ABILITY, ability);
+    }
+
+    /**
+     * Sends one storage component through the registered network codec and reads it back - the very codec the
+     * server uses when it hands a container slot to a client - and reports whether the contents came back whole.
+     * This is the only way a probe reaches that failure: it happens while encoding a packet, not while opening the
+     * window, so the window looks healthy right up to the moment the stack is synced.
+     */
+    private static boolean roundTripsStorage(ArtifactStorageComponent component, RegistryAccess registries) {
+        DataComponentType<ArtifactStorageComponent> type = MxtDataComponents.ARTIFACT_STORAGE.get();
+        // The connection type only tells NeoForge what the other end is; NEOFORGE is what this server's own
+        // client is, which is who the codec under test would be encoding for.
+        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries, ConnectionType.NEOFORGE);
+        try {
+            type.streamCodec().encode(buffer, component);
+            ArtifactStorageComponent decoded = type.streamCodec().decode(buffer);
+            return decoded.contents().size() == component.contents().size()
+                    && decoded.get(0).isEmpty()
+                    && decoded.get(1).is(Items.STONE)
+                    && decoded.get(1).getCount() == 3;
+        } catch (RuntimeException error) {
+            return false;
+        }
     }
 
     /**

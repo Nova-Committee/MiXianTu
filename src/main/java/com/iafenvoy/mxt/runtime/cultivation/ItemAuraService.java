@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
+import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.attachment.FloatHoldingItemAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -11,7 +12,6 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.spirit.ItemAuraAccess;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;

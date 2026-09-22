@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
+import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -19,7 +20,6 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.Failure;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
-import com.iafenvoy.mxt.runtime.spirit.UseItemAuraAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;

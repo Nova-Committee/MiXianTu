@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.ToggableArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -27,9 +28,11 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The rules of one artifact, shared by every item {@code items} opts into them.
@@ -40,7 +43,9 @@ import java.util.Optional;
  * wants one label over several definitions says it with an item tag. What it does is a list of
  * {@link ArtifactAbility} entries, one entry per kind (granting skills, flight,
  * storage, upkeep) rather than a group of fields on this record; flight, storage and upkeep are meaningful once
- * each, so a second one is refused below. Aura amounts live in the shared {@code mxt:spirit_storage} component
+ * each, so a second one is refused below. An entry that is a {@link ToggableArtifactAbility} needs a key to fire,
+ * so it becomes a cell on the wheel - and several of them fit, one per key, which is what lets one sword offer
+ * both flight and storage. Aura amounts live in the shared {@code mxt:spirit_storage} component
  * and only the per-aura ceiling is declared here; the feeding bonus that raises it stays in
  * {@link com.iafenvoy.mxt.runtime.artifact.ArtifactService}. Whether flight, storage and upkeep insist on an
  * owner is {@code require_owner} (or the entry's own {@code owner_only}): off, an artifact is open to anyone
@@ -102,6 +107,12 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
             throw new IllegalArgumentException("An artifact can declare at most one mxt:storage ability");
         if (abilities.stream().filter(UpkeepArtifactAbility.class::isInstance).count() > 1L)
             throw new IllegalArgumentException("An artifact can declare at most one mxt:upkeep ability");
+        // The wheel addresses a capability by this artifact's id and the capability's own key together, so one
+        // key is one cell: two entries claiming the same key would be two cells a layout cannot tell apart.
+        Set<String> keys = new HashSet<>();
+        for (ArtifactAbility ability : abilities)
+            if (ability instanceof ToggableArtifactAbility togglable && !keys.add(togglable.key()))
+                throw new IllegalArgumentException("An artifact can declare one " + togglable.key() + " ability");
     }
 
     @Override
@@ -131,6 +142,15 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
 
     public Optional<UpkeepArtifactAbility> upkeep() {
         return this.findAbility(UpkeepArtifactAbility.class);
+    }
+
+    /**
+     * The capabilities that need a key and therefore become wheel cells, in the order the entries write them. One
+     * per key (see the constructor), so "this artifact plus a key" names exactly one of them.
+     */
+    public List<ToggableArtifactAbility> toggables() {
+        return this.abilities.stream().filter(ToggableArtifactAbility.class::isInstance)
+                .map(ToggableArtifactAbility.class::cast).toList();
     }
 
     private <T extends ArtifactAbility> Optional<T> findAbility(Class<T> type) {

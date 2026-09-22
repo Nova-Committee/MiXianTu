@@ -14,7 +14,6 @@ import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
-import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
@@ -41,13 +40,13 @@ public final class ServerNetworkHandler {
     public static final Logger MXT_DEBUG = LogUtils.getLogger();
 
     /**
-     * One wheel sector was chosen. The payload carries what was chosen and nothing else: the kind says which
-     * registry the id belongs to, and whether the player may use it is decided here and by the pipeline behind
-     * it, never by the screen that sent this.
+     * One wheel entry was chosen. The payload carries what was chosen, off which page, and nothing else: the page
+     * and the kind say where the id has to resolve, and whether the player may use it is decided here and by the
+     * pipeline behind it, never by the screen that sent this.
      */
     static void onWheelAction(WheelActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        WheelService.trigger(player, payload.kind(), payload.id());
+        WheelService.trigger(player, payload.source(), payload.kind(), payload.id());
     }
 
     /**
@@ -61,18 +60,18 @@ public final class ServerNetworkHandler {
     }
 
     /**
-     * The player armed something else, or nothing. The id is re-resolved like a layout's, and a selection this
-     * server cannot resolve is stored as "nothing armed" - logged, since "my wheel forgot my skill" is
-     * otherwise a report with nothing in the log to explain it.
+     * The player armed another cell, or nothing. What travels is the cell's number, so there is nothing to
+     * resolve against the registries; a number outside the numbering is stored as "nothing armed" - logged,
+     * since only a client bug can produce one.
      */
     static void onWheelSelection(WheelSelectionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        WheelSlot submitted = payload.selection().orElse(null);
-        Optional<WheelSlot> selection = WheelService.sanitizeSelection(player, submitted);
-        if (submitted != null && selection.isEmpty())
-            MiXianTu.LOGGER.warn("Discarding the wheel selection {} sent by {}: no such definition on this server",
+        Integer submitted = payload.armed().orElse(null);
+        Optional<Integer> armed = WheelService.sanitizeArmed(submitted);
+        if (submitted != null && armed.isEmpty())
+            MiXianTu.LOGGER.warn("Discarding the wheel cell {} sent by {}: not a cell number",
                     submitted, player.getGameProfile().name());
-        player.getData(MxtAttachments.WHEEL_LAYOUT).setSelection(selection);
+        player.getData(MxtAttachments.WHEEL_LAYOUT).setArmed(armed);
     }
 
     static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.ability;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
@@ -37,7 +36,6 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -195,7 +193,7 @@ public final class AbilityEventBridge {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
         AbilityAttachment holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        Identifier source = equipmentSource(event.getSlot(), event.getTo());
+        Identifier source = AbilitySources.equipment(event.getSlot(), event.getTo());
         itemAbilities(entity, event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                 .flatMap(Optional::stream)
                 .forEach(ability -> holder.revoke(ability, source));
@@ -228,13 +226,7 @@ public final class AbilityEventBridge {
                     .map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
                     .flatMap(Optional::stream)
                     .forEach(current::add);
-        Identifier source = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "curios_equipment");
-        return holder.reconcileSource(source, current);
-    }
-
-    private static Identifier equipmentSource(EquipmentSlot slot, ItemStack stack) {
-        Identifier item = stack.isEmpty() ? Identifier.fromNamespaceAndPath("minecraft", "air") : BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "equipment/" + slot.getName() + "/" + item.getNamespace() + "/" + item.getPath());
+        return holder.reconcileSource(AbilitySources.CURIOS, current);
     }
 
     /**

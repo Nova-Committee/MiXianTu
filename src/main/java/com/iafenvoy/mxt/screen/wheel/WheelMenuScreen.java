@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.wheel;
 
+import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.render.IconRenderer;
@@ -52,8 +53,9 @@ public final class WheelMenuScreen extends Screen {
     public void extractRenderState(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         Player player = Minecraft.getInstance().player;
-        // Read once per frame so the ring, the icons and the middle text cannot disagree.
-        List<@Nullable WheelMenuEntry> sectors = WheelMenuContent.entries(player);
+        // This tick's page, read once so the ring, the icons and the middle text cannot disagree.
+        List<@Nullable WheelMenuEntry> sectors =
+                WheelMenuContent.sectors(WheelSelectionState.pages(), WheelSelectionState.page());
         int pointed = this.pointedSector();
         WheelGeometry.Ring ring = WheelGeometry.ring(this.width, this.height, this.growth());
         // The pose is copied - the extractor's stack keeps changing, so a live reference would drift.
@@ -62,6 +64,7 @@ public final class WheelMenuScreen extends Screen {
                 pointedEntry(sectors, pointed) == null ? -1 : pointed, graphics.peekScissorStack()));
         this.extractSectorContents(graphics, ring, sectors);
         this.extractTitle(graphics, ring, sectors.get(pointed), player);
+        this.extractPage(graphics, ring);
         this.extractTooltip(graphics, mouseX, mouseY, sectors.get(pointed), player);
     }
 
@@ -141,6 +144,24 @@ public final class WheelMenuScreen extends Screen {
     }
 
     /**
+     * Which page this ring is, written above it: every page looks the same on the ring, and the pages read from
+     * what the player carries come and go with it. The key names are the ones the player bound, so a rebind
+     * cannot turn the line into a lie.
+     */
+    private void extractPage(GuiGraphicsExtractor graphics, WheelGeometry.Ring ring) {
+        Component page = Component.translatable("wheel.mxt.page_hint",
+                WheelSelectionState.page() + 1, WheelSelectionState.pages().size(),
+                WheelSelectionState.pageSource().displayName(),
+                MxtKeyMappings.WHEEL_PREVIOUS.get().getTranslatedKeyMessage(),
+                MxtKeyMappings.WHEEL_NEXT.get().getTranslatedKeyMessage());
+        int width = this.font.width(page);
+        int x = ring.centreX() - width / 2;
+        int y = Math.max(0, ring.centreY() - (int) Math.round(ring.outerRadius()) - TITLE_PADDING - this.font.lineHeight);
+        graphics.fill(x - TITLE_PADDING, y - TITLE_PADDING, x + width + TITLE_PADDING, y + this.font.lineHeight + TITLE_PADDING, TITLE_BACKDROP);
+        graphics.text(this.font, page, x, y, TITLE_COLOR, true);
+    }
+
+    /**
      * Names the key the player actually bound, so a rebind cannot turn the hint into a lie.
      */
     private Component useHint() {
@@ -163,13 +184,15 @@ public final class WheelMenuScreen extends Screen {
     }
 
     /**
-     * What the pointer is on, or {@code null} for an empty sector - a selection is never built from one.
+     * What the pointer is on, or {@code null} for an empty cell - a selection is never built from one.
      */
     @Nullable
     WheelSelection selection(WheelSelection.Method method) {
-        int slot = this.pointedSector();
-        WheelMenuEntry entry = WheelMenuContent.entry(Minecraft.getInstance().player, slot);
-        return entry == null ? null : new WheelSelection(slot, entry, method);
+        int sector = this.pointedSector();
+        int number = WheelSelectionState.numberAt(sector);
+        WheelMenuEntry entry = WheelMenuContent.entry(WheelSelectionState.pages(), number);
+        return entry == null ? null
+                : new WheelSelection(WheelMenuContent.source(WheelSelectionState.pages(), number), number, entry, method);
     }
 
     /**

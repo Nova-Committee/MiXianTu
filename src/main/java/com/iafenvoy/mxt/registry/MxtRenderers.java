@@ -19,6 +19,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 
@@ -54,6 +55,9 @@ public final class MxtRenderers {
         event.register(MxtMenus.PLAYER_TRADE.get(), PlayerTradeScreen::new);
         event.register(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SpiritCraftingScreen::new);
         event.register(MxtMenus.FORGING_TABLE.get(), ForgingScreen::new);
+        // An artifact's storage is a chest: the vanilla screen already draws a container of any row count, so the
+        // window needs nothing of its own.
+        event.register(MxtMenus.ARTIFACT_STORAGE.get(), ContainerScreen::new);
     }
 
     /**

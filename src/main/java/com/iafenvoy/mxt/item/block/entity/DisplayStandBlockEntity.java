@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.item.block.entity;
 
+import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.api.ItemAuraAccess;
+import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
-import com.iafenvoy.mxt.runtime.spirit.AuraAccess;
-import com.iafenvoy.mxt.runtime.spirit.ItemAuraAccess;
-import com.iafenvoy.mxt.runtime.spirit.UseItemAuraAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;

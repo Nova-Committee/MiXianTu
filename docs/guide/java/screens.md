@@ -54,17 +54,25 @@ MyBar bar = HudManager.register(new MyBar());
 
 **已接入的元素**：资源条一共四个元素，全部登记进框架、由 `HudRenderer` 画——两列可拖的（`resource_bars.left` / `resource_bars.right`，键 `Anchor.LEFT` / `Anchor.RIGHT`）加两条不可拖的固定行（`resource_bars.target` / `resource_bars.boss`，`ResourceBarFixedEntry`，`moveable() == false`、位置每帧现算、永不入档）。资源条自己的那个 `mxt:resource_bars` GUI 层**已经删除**，`ResourceBarOverlay` 只剩纯工具方法。这四条可以当范例：`ResourceBarOverlay.column(anchor)`／`row(target, layout)` 只回答"哪些条、什么顺序"，条目用 `ResourceBarEntry.blocksWithGaps(...)` 把每条包成块并在条之间插 `spacer`，尺寸交给基类夹取。**位置在数据包那边没有字段**——`anchor` 只决定落进哪一列，列摆在哪是玩家自己的设置在客户端配置里。
 
-第五个元素是轮盘的「轮盘格」（`screen/wheel/WheelSelectionEntry`，键 `wheel.selection`）：它**不走 `RenderBlock`**，`renderBlocks()` 返回空、自己用 `render()` 画**一块 3 行 4 列的 12 格**（格子号 = 扇区号按读序，每格 22px：图标或名字开头、底边类型色、不可用时压暗，**选中的那一格换成金色边框**），所以它也是"整块自己画"那条口子的第一个范例；默认位置是**窗口左边、竖直居中**（`defaultX() = 4`、`defaultY() = (窗口高 - 块高) / 2`），块的尺寸固定 94×70，不随内容伸缩（它同时是命中矩形和占位框）。12 格的内容读 `WheelSelectionState.sectors()`——每客户端刻解析一次的整表快照。它由 `MiXianTuClient#init` 与资源条一起登记，理由同 §"登记时机"——不然从主菜单打开编辑器就看不到它。它对应的玩法（`R` 选、`V` 用）见 [`wheel.md`](./wheel.md)。
+第五个元素是轮盘的「轮盘格」（`screen/wheel/WheelSelectionEntry`，键 `wheel.selection`）：它**不走 `RenderBlock`**，`renderBlocks()` 返回空、自己用 `render()` 画**永远 4 列、行数随页数向下长的格子**（每格 22px，一页 12 格 = 三行；块宽固定 94、高按内容算，格子号 = 编号读序，**编号此刻代表的那一格换成金色边框**），所以它也是"整块自己画"那条口子的第一个范例，还是**尺寸随内容变**的第一个范例（`layoutWidth` / `layoutHeight` 每帧算，`refreshPlacement` 里 `setSize` 回报，长出去会被夹回窗口）；默认位置是**窗口左边、竖直居中**（`defaultX() = 4`、`defaultY() = (窗口高 - 块高) / 2`），块的尺寸同时是命中矩形和占位框。格子内容读 `WheelSelectionState.pages()`——每客户端刻解析一次的整张轮盘快照，所以它画的是**每一页**，而**块的上方不写任何字**（哪一页由轮盘自己说）。它由 `MiXianTuClient#init` 与资源条一起登记，理由同 §"登记时机"——不然从主菜单打开编辑器就看不到它。它对应的玩法（`R` 选、`V` 用、小键盘左右切页）见 [`wheel.md`](./wheel.md)。
 
 ## 轮盘选择系统 `screen.wheel`
 
-按键（`key.mxt.wheel`，**默认 R**）按住，屏幕上出现一个 **12 扇**的轮盘：指针**朝哪个方向**就选中哪一扇，选中的扇区变金色并向外扩一点，**这一扇的名字写在轮盘正中间**。它现在是技能与灵气**唯一的触发入口**：原来"技能与灵气各有一条快捷栏、各有一个配置界面"的两套东西已经删除，`LAlt` 那个按键也一并取消（`V` 虽然重新被占用，但含义换成了"用掉轮盘当前选中的那一扇"，见下）。
+按键（`key.mxt.wheel`，**默认 R**）按住，屏幕上出现一个 **12 扇**的轮盘：指针**朝哪个方向**就选中哪一扇，选中的扇区变金色并向外扩一点，**这一扇的名字写在轮盘正中间**。它现在是技能、灵气与法器技能**唯一的触发入口**：原来"技能与灵气各有一条快捷栏、各有一个配置界面"的两套东西已经删除，`LAlt` 那个按键也一并取消（`V` 虽然重新被占用，但含义换成了"用掉轮盘当前选中的那一扇"，见下）。
 
-**选择与使用分成两个键**：`R` 只负责选（松开或再按一次**只关闭、不触发**），`key.mxt.wheel_use`（默认 `V`）负责用——轮盘开着时用掉指针那一扇且**不关轮盘**，关着时用掉**上一次选中的那一扇**（客户端 `WheelSelectionState`，`LoggingIn` 清空后由服务端记住的 `selection` 填回来，见 [`wheel.md`](./wheel.md)），鼠标左键等同于它。两个键都由 `WheelMenuController` **裸轮询**（`InputConstants`/GLFW），因为任何 `Screen` 一打开原版就 `KeyMapping.releaseAll()`，而且"按着 `V` 松开 `R`"会让 `grabMouse()` 里的 `KeyMapping.setAll()` 补出一次假按下、多触发一次。可拖动的 HUD 元素「轮盘格」（`wheel.selection`）就是这张网格：12 格对应 12 个扇区，金色边框那一格是"现在按 `V` 会放什么"（轮盘开着时它跟着指针走）。
+**轮盘由"主盘 + 从盘"组成，用一套连续编号串起来**（2026-09-22 新增并按玩家口径重做，见 `research/31_多轮盘与轮盘来源设计.md` §10）：主盘是玩家自己摆的 12 格（编号 `0..11`），从盘（主手物品 / 副手物品 / 法器）按随身装备自动生成、**不存储**（内容是这些装备此刻授予的主动技能，加上它们作为法器声明的**技能**：飞行开关与储物，见 `research/32_法器开关与轮盘接线设计.md`），格子从 `12` 起接着排；**一页 12 格**，一个来源占 `ceil(条目数 / 12)` 页（一条都没有就一页都不占），内容多了就**再开一页**而不是丢掉。切换是两把键（`key.mxt.wheel_previous` / `key.mxt.wheel_next`，默认小键盘 `4` / `6`，两头环绕），`R` **打开始终回到主盘（第一页）**。**页只是视图，编号才是选择**：轮盘画当前页、HUD 轮盘格画整张轮盘、槽位键作用于当前页，关着轮盘时的 `V` 用编号此刻代表的那一格（**编号越界时自动落到最后一个有东西的格子，且编号本身不改写**，所以物品拿回来就恢复原选择）。
 
-框架（几何、扇环渲染、开合状态机、选择语义）在 `screen.wheel`，内容（技能与灵气怎样变成条目、12 格内容从哪来）在 `screen.wheel/content`，编辑界面是 `WheelConfigurationScreen`；接法与数据流见 [客户端轮盘](wheel)。三条界面语义值得记住：`isPauseScreen()` 返回 `false`（单人游戏里不暂停）；`extractBackground(...)` **留空**（默认背景会把这之前提取的整层 HUD 糊掉，`HudEditScreen` 当初也是为同一个模糊问题覆写 `isInGameUi()`）；**按住轮盘时角色会停下**（原版对任何 `Screen` 都 `KeyMapping.releaseAll()`，松开时 `grabMouse()` 会把物理按键状态同步回来，不用重新按）。
+**选择与使用分成两个键**：`R` 只负责选（松开或再按一次**只关闭、不触发**），`key.mxt.wheel_use`（默认 `V`）负责用——轮盘开着时用掉指针那一格且**不关轮盘**，关着时用掉**编号此刻代表的那一格**（客户端 `WheelSelectionState` 里是 `page` + `number` 两个值，`LoggingIn` 清空后由服务端记住的 `armed`（一个数字）填回来，见 [`wheel.md`](./wheel.md)），鼠标左键等同于它。这把键与两把切页键都由 `WheelMenuController` **裸轮询**（`InputConstants`/GLFW），因为任何 `Screen` 一打开原版就 `KeyMapping.releaseAll()`，而且"按着 `V` 松开 `R`"会让 `grabMouse()` 里的 `KeyMapping.setAll()` 补出一次假按下、多触发一次。可拖动的 HUD 元素「轮盘格」（`wheel.selection`）画的正是整张轮盘的格子：**金色边框那一格就是"现在按 `V` 会放什么"**（轮盘开着时它跟着指针走）。
+
+框架（几何、扇环渲染、开合状态机、选择语义）在 `screen.wheel`，内容（技能、灵气与法器技能怎样变成条目、每个来源贡献什么）在 `screen.wheel/content`，编辑界面是 `WheelConfigurationScreen`；接法与数据流见 [客户端轮盘](wheel)。三条界面语义值得记住：`isPauseScreen()` 返回 `false`（单人游戏里不暂停）；`extractBackground(...)` **留空**（默认背景会把这之前提取的整层 HUD 糊掉，`HudEditScreen` 当初也是为同一个模糊问题覆写 `isInGameUi()`）；**按住轮盘时角色会停下**（原版对任何 `Screen` 都 `KeyMapping.releaseAll()`，松开时 `grabMouse()` 会把物理按键状态同步回来，不用重新按）。
 
 框架里两条不肯让步的约定：**判扇区只看方向、不看距离**（指针还在内圈里也算数，所以中间那块空地能一直显示"当前指着的扇区叫什么"），以及**指针方向 → 扇区号的换算只有 `WheelGeometry` 一处**（`sectorStart` / `sectorCentre` / `sectorAt` 由同一组常量推出，`sectorAt(sectorCentre(k)) == k` 恒成立；MineMenu 把这段抄了三处、其中一处约定还和另外两处不同）。
+
+## 法器储物窗口 `MxtMenus.ARTIFACT_STORAGE`
+
+轮盘上「储物」那一格按下去打开的就是它（2026-09-22 新增，见 `research/32_法器开关与轮盘接线设计.md`）：**没有自己的菜单类，也没有自己的界面类**——它就是原版箱子那一套，注册的是 `ChestMenu`，客户端注册的是 `ContainerScreen`（`generic_54.png` 那张贴图本来就支持 1..6 行），所以 176 宽、行数由 `getRowCount()` 决定，标题由开窗包带过去（`screen.mxt.artifact_storage` = 「储物 · 法器名」）。行数走 `IMenuTypeExtension`，由服务端在开窗时写进附加数据：`capacity / 9`，客户端据此重建一个同样大小的 `SimpleContainer` 镜像，格子内容照常走菜单同步。
+
+内容那一侧是 `runtime/artifact/ArtifactStorageContainer`（扩展 `SimpleContainer`）：开窗时从法器的 `mxt:artifact_storage` 组件读进来，之后**每一次改动都在 `setChanged()` 里整份写回**（`ArtifactStorageService#replace`，一次组件更新而不是每格一次）。它**故意不持有那个物品堆**：法器的位置是会变的，往一个没人拿着的栈里写就是物品消失的经典成因——所以每次读写都按"这件法器还在不在玩家身上"重新解析（`ArtifactService#carried` 扫双手、背包与 Curios），`stillValid` 一旦为假，服务端每刻的菜单检查就会把窗口关掉。储物格数由定义决定：**按 9 向上取整、最多 6 行（54 格）**，容量与窗口永远是同一个数。
 
 
 ## 物品选择界面 `ItemPickerScreen`

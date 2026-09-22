@@ -17,4 +17,6 @@ title: Java 公开 API
 | `NumberProvider` | 常量、表达式、注册表类型分派和有限值处理。 |
 | `DefinitionText` | 把数据包定义翻成名字：手里有 `Holder` / `ResourceKey` 时直接 `name(holder)`，类别默认取注册表自己的 path（`mxt:aura` 里的 `mxt:fire` 查 `aura.mxt.fire`）；少数不按注册表 path 翻译的在它内部的 `CATEGORIES` 里登记一次（如 `mxt:item_quality` → `quality`），所以同一个定义在提示框和物品选择器里不会有两种叫法。 |
 
+要**实现**的契约接口（`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`、`WheelMenuEntry`）都在 `com.iafenvoy.mxt.api` 下，见[特殊公开接口](interfaces)；上表列的是调用入口，仍留在各自的模块包里。`ToggableArtifactAbility` 不在此列，它留在 `data/artifact/ability`（见同页说明）。
+
 除非接口明确标记为客户端 API，不要在渲染线程调用服务端生命周期注册表查询。

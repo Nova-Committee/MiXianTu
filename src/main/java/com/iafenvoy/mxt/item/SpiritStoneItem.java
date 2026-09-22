@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.item;
 
+import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
-import com.iafenvoy.mxt.runtime.spirit.AuraAccess;
-import com.iafenvoy.mxt.runtime.spirit.UseItemAuraAccess;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.Holder;

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.command;
 
+import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
@@ -8,7 +9,6 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.spirit.ItemAuraAccess;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.mojang.brigadier.arguments.IntegerArgumentType;

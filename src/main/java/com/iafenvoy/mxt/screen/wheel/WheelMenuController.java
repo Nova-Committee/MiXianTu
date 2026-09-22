@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.screen.wheel;
 
+import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
+import com.iafenvoy.mxt.runtime.wheel.WheelSource;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -15,26 +17,33 @@ import org.lwjgl.glfw.GLFW;
 import java.util.List;
 
 /**
- * Opens and closes the wheel and spends what it holds: the wheel key only chooses, the use key spends the
- * pointed sector (or the remembered one while the wheel is down), and the twelve slot keys each arm and spend
- * their own sector. An empty wheel does not open.
+ * Opens and closes the wheel and spends what it holds: the wheel key only chooses, the use key spends the pointed
+ * cell (or the remembered one while the wheel is down), the twelve slot keys each arm and spend their cell of the
+ * page that is up, and the two switch keys move between pages. A wheel with nothing on it anywhere does not open,
+ * and opening always lands on the first page.
  *
- * <p>Both keys are polled raw ({@code InputConstants}/GLFW), because {@code setScreen} releases every mapping
+ * <p>The page is followed by everything that draws the ring, while the <em>chosen cell</em> is a number that
+ * survives its page going away - see {@link WheelSelectionState}. The switch keys therefore work with the wheel
+ * up or down; when they are pressed with another screen open they stay silent, like every other key here.</p>
+ *
+ * <p>All keys are polled raw ({@code InputConstants}/GLFW), because {@code setScreen} releases every mapping
  * and {@code grabMouse}'s {@code setAll()} would re-press the use key and double-fire; edges are once a tick.
- * The slot keys are polled here for the same reason, even though they are registered in {@link MxtKeyMappings}
- * with the rest: a {@code KeyMapping}'s own edge would fire a cast that nobody pressed.</p>
+ * The slot and switch keys are polled here for the same reason, even though they are registered in
+ * {@link MxtKeyMappings} with the rest: a {@code KeyMapping}'s own edge would fire a cast that nobody pressed.</p>
  *
  * <p>A key that was pressed and could do nothing answers on the action bar ({@code WheelMenuController#notice})
- * in two cases - the wheel is empty, or nothing was ever selected. A sector whose entry is gone on purpose
- * stays silent: the wheel grid already draws it as empty, slot keys included.</p>
+ * in two cases - the wheel is empty on every page, or nothing was ever chosen. A cell whose entry is gone on
+ * purpose stays silent: the wheel grid already draws it as empty, slot keys included.</p>
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class WheelMenuController {
     private static @Nullable WheelMenuScreen open;
     private static boolean lastDown;
     private static boolean lastUseDown;
+    private static boolean lastPreviousDown;
+    private static boolean lastNextDown;
     /**
-     * The last state of each slot key, indexed like {@link MxtKeyMappings#WHEEL_SLOTS} - that is, by sector.
+     * The last state of each slot key, indexed like {@link MxtKeyMappings#WHEEL_SLOTS} - that is, by cell.
      * All twelve are unbound by default, so an unbound one simply never goes down.
      */
     private static final boolean[] slotDown = new boolean[MxtKeyMappings.WHEEL_SLOTS.size()];
@@ -45,8 +54,8 @@ public final class WheelMenuController {
     static void usePointed(WheelSelection.Method method) {
         WheelMenuScreen screen = open;
         if (screen == null) return;
-        // Null for an empty sector: nothing is spent and the wheel stays up. Silent on purpose - the sector
-        // is drawn as empty right there, so a line about it would be answering a question nobody asked.
+        // Null for an empty cell: nothing is spent and the wheel stays up. Silent on purpose - the cell is
+        // drawn as empty right there, so a line about it would be answering a question nobody asked.
         WheelSelection selection = screen.selection(method);
         if (selection != null) selection.entry().onSelected(selection);
     }
@@ -58,14 +67,19 @@ public final class WheelMenuController {
 
     private static void open(Minecraft minecraft) {
         if (minecraft.screen != null) return;
-        // An empty wheel is not opened: there would be nothing to point at. Say so rather than do nothing.
-        if (WheelMenuContent.isEmpty(minecraft.player)) {
-            notice(Component.translatable("actionbar.mxt.wheel.empty"));
+        // Whatever was up while the wheel was down, opening lands on the first page: that is the one the player
+        // arranged, and the ones read from their gear are one keypress away.
+        WheelSelectionState.firstPage();
+        WheelSelectionState.refresh(minecraft.player);
+        // A wheel with nothing anywhere is not opened: there would be nothing to point at. Say so rather than
+        // do nothing. The test spans every page, because the first page being empty must not hide the rest.
+        if (WheelMenuContent.hasAnyEntry(WheelSelectionState.pages())) {
+            WheelMenuScreen screen = new WheelMenuScreen();
+            open = screen;
+            minecraft.setScreen(screen);
             return;
         }
-        WheelMenuScreen screen = new WheelMenuScreen();
-        open = screen;
-        minecraft.setScreen(screen);
+        notice(Component.translatable("actionbar.mxt.wheel.empty"));
     }
 
     private static void close() {
@@ -86,17 +100,20 @@ public final class WheelMenuController {
             return;
         }
         // Recorded before this tick's edges: letting go must keep whatever the pointer was last on.
-        if (open != null) WheelSelectionState.select(open.pointedSector());
+        if (open != null) WheelSelectionState.selectSector(open.pointedSector());
         // Before this tick's edges act on it, and before the HUD cell draws it.
         WheelSelectionState.refresh(minecraft.player);
 
-        // The use key first, so a tick that presses one key and releases the other spends what was aimed at.
+        // The page first, so a tick that switches and spends does the whole thing on the page it switched to.
+        usePageKeys(minecraft);
+
+        // The use key next, so a tick that presses one key and releases the other spends what was aimed at.
         boolean useDown = keyDown(minecraft, MxtKeyMappings.WHEEL_USE);
         if (useDown != lastUseDown) {
             lastUseDown = useDown;
             if (useDown) use(minecraft);
         }
-        // After it: a tick that presses both spends the sector that was armed, then the slot key's own one.
+        // After it: a tick that presses both spends the cell that was armed, then the slot key's own one.
         useSlotKeys(minecraft);
         boolean down = keyDown(minecraft, MxtKeyMappings.WHEEL);
         if (down == lastDown) return;
@@ -111,8 +128,34 @@ public final class WheelMenuController {
     }
 
     /**
-     * The twelve slot keys: each arms its own sector and spends it in the same breath, so one key does what
-     * "point at that sector, then press the use key" does - a keyboard hotbar laid over the wheel.
+     * The two switch keys: one page back, one page forward, wrapping at both ends. The page is only what the
+     * ring draws and what the slot keys address - the chosen cell is not moved by it, so switching cannot drop
+     * what the use key would spend.
+     */
+    private static void usePageKeys(Minecraft minecraft) {
+        // Sampled even while another screen owns the keys, so a key held through a screen change cannot turn
+        // into a press the moment it closes; only acting is gated, exactly as for the slot keys below.
+        boolean live = minecraft.player != null && (minecraft.screen == null || open != null);
+        boolean previous = keyDown(minecraft, MxtKeyMappings.WHEEL_PREVIOUS);
+        boolean next = keyDown(minecraft, MxtKeyMappings.WHEEL_NEXT);
+        boolean back = previous && !lastPreviousDown;
+        boolean forward = next && !lastNextDown;
+        lastPreviousDown = previous;
+        lastNextDown = next;
+        // Both at once is a tie, and neither decides nothing; only one of them moves the page.
+        if (!live || back == forward) return;
+        WheelSelectionState.stepPage(back ? -1 : 1);
+        // Re-resolved right away: the HUD grid draws this tick, and the ring would otherwise show the old page.
+        WheelSelectionState.refresh(minecraft.player);
+        notice(Component.translatable("actionbar.mxt.wheel.page",
+                WheelSelectionState.page() + 1, WheelSelectionState.pages().size(),
+                WheelSelectionState.pageSource().displayName()));
+    }
+
+    /**
+     * The twelve slot keys: each arms its own cell of the page that is up and spends it in the same breath, so
+     * one key does what "point at that cell, then press the use key" does - a keyboard hotbar laid over the
+     * wheel, and the way a key can reach a cell that is not on the page currently drawn.
      */
     private static void useSlotKeys(Minecraft minecraft) {
         List<MxtKeyMappings.KeyMappingHolder> slots = MxtKeyMappings.WHEEL_SLOTS;
@@ -129,16 +172,20 @@ public final class WheelMenuController {
     }
 
     /**
-     * Arms one sector and spends it; an empty one is silent, and a press is never sent for nothing.
+     * Arms one cell of the page that is up and spends it; an empty one is silent, and a press is never sent for
+     * nothing.
      */
     private static void useSlotKey(Minecraft minecraft, int sector) {
-        WheelMenuEntry entry = WheelMenuContent.entry(minecraft.player, sector);
+        int number = WheelSelectionState.numberAt(sector);
+        // Read before it is chosen, so the entry and the source that trigger is sent with are the same cell.
+        WheelMenuEntry entry = WheelSelectionState.entry(number);
         if (entry == null) return;
-        WheelSelectionState.select(sector);
-        entry.onSelected(new WheelSelection(sector, entry, WheelSelection.Method.KEY));
+        WheelSource source = WheelMenuContent.source(WheelSelectionState.pages(), number);
+        WheelSelectionState.selectSector(sector);
+        entry.onSelected(new WheelSelection(source, number, entry, WheelSelection.Method.KEY));
     }
 
-    /** The use key went down: spend the pointed sector if the wheel is up, the remembered one if it is not. */
+    /** The use key went down: spend the pointed cell if the wheel is up, the remembered one if it is not. */
     private static void use(Minecraft minecraft) {
         if (open != null) {
             usePointed(WheelSelection.Method.KEY);
@@ -151,17 +198,18 @@ public final class WheelMenuController {
             selection.entry().onSelected(selection);
             return;
         }
-        // Only "nothing was ever picked" is worth an answer. A sector that was picked and no longer resolves
-        // to an entry (empty, deleted, un-granted) is a normal state, and the wheel grid already shows it.
-        if (WheelSelectionState.sector() < 0)
+        // Only "nothing was ever picked" is worth an answer. A cell that was picked and no longer holds
+        // anything (empty, deleted, un-granted) is a normal state, and the wheel grid already shows it.
+        if (WheelSelectionState.number() < 0)
             notice(Component.translatable("actionbar.mxt.wheel.no_selection",
                     MxtKeyMappings.WHEEL.get().getTranslatedKeyMessage()));
     }
 
     /**
-     * One line on the action bar, for a key that was pressed and could do nothing. Client-side on purpose:
-     * this is feedback about the local player's own HUD, and the server never hears about a key that did
-     * nothing. A key pressed while another screen is open stays silent - that is typing, not a request.
+     * One line on the action bar, for a key that was pressed and could do nothing - or, for a switch, which page
+     * it moved to. Client-side on purpose: this is feedback about the local player's own HUD, and the server never
+     * hears about a key that did nothing. A key pressed while another screen is open stays silent - that is
+     * typing, not a request.
      */
     private static void notice(Component message) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -169,13 +217,15 @@ public final class WheelMenuController {
     }
 
     /**
-     * The remembered sector as a selection, or {@code null} when there is nothing to spend. Read from the
-     * selection this tick resolved, so the use key and the HUD cell that announces it agree by construction.
+     * The remembered cell as a selection, or {@code null} when there is nothing to spend. Read from what this
+     * tick resolved, so the use key and the HUD cell that announces it agree by construction - including the
+     * fallback that applies when the chosen number points past the pages that exist.
      */
     private static @Nullable WheelSelection remembered() {
         WheelMenuEntry entry = WheelSelectionState.selected();
-        return entry == null ? null
-                : new WheelSelection(WheelSelectionState.sector(), entry, WheelSelection.Method.KEY);
+        if (entry == null) return null;
+        return new WheelSelection(WheelSelectionState.selectedSource(), WheelSelectionState.effective(),
+                entry, WheelSelection.Method.KEY);
     }
 
     /** A bound key's state straight from the input device; an unbound key is never down. */

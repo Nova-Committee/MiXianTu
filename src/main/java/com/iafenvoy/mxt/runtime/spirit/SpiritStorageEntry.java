@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
+import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.item.ItemStack;

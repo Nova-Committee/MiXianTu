@@ -2,6 +2,8 @@
 title: 特殊公开接口
 ---
 
+本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`ToggableArtifactAbility` 留在 `data/artifact/ability`——它不算对外 API**（它是本体登记法器技能类型的形状，`mxt:flight` / `mxt:storage` 两个固有类型实现它）。哪些东西**不**进 `api`、服务类的静态代理为什么还没做，见 `research/34_对外API包设计.md`。
+
 ### `AuraAccess`
 
 展示架、容器等方块实体实现的**灵气存取**接口：按整单位交换某一种灵气（`insert`/`extract` 一次只处理一种，返回操作后**没能移动**的数量；`simulate=true` 只模拟，不修改状态），容量由 `getCapacity(entity)` 给出。
@@ -36,4 +38,8 @@ title: 特殊公开接口
 
 ### `WheelMenuEntry`
 
-轮盘条目的纯客户端接口：`kind()`（技能 / 灵气）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`。轮盘上的 12 扇由 `WheelMenuProvider`（唯一实现 `WheelContent`）给出，条目本身不知道自己落在哪一扇。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
+轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 法器技能）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider`（唯一实现 `WheelContent`）给出——它的入参是 `(player, source)`，`source` 是 `WheelSource`（主盘 / 主手物品 / 副手物品 / 法器），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
+
+### `ToggableArtifactAbility`
+
+法器能力条目里的**法器技能**（2026-09-22 新增，见 `research/32_法器开关与轮盘接线设计.md`）：它继承 `ArtifactAbility`，判据是一句话——**凡是要按键才发动的都算技能、都进轮盘**。接口把四件事交给实现自己回答：`key()`（同一件法器内唯一的名字，轮盘条目身份 = 法器 id + key）、`displayName()`（这一格叫什么）、`state(ctx)`（有没有开关状态、现在是哪一边；**空 = 一次性**，如储物）、`activate(ctx)`（按下了；只有服务端调，返回 `Result(changed, failure)`，`Failure{NOT_CARRIED, NOT_OWNED, ALREADY_SET, UNAVAILABLE}` 会被轮盘翻译成动作栏那一句）。**状态归实现自己管**（飞行读 `FlightAttachment`，储物没有状态），轮盘不认识"这件事是什么"，只认识这四件事，所以加一个新法器技能不需要动轮盘。今天两个实现是 `mxt:flight`（开关）与 `mxt:storage`（一次性——打开这件法器的储物箱，容器菜单与窗口都复用原版箱子那一套，见 `docs/guide/java/screens.md`）。字段与玩家侧表现见 `docs/数据包格式.md` 的 `artifact` 一节。

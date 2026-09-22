@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.item.block.entity;
 
+import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
-import com.iafenvoy.mxt.runtime.spirit.AuraAccess;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;

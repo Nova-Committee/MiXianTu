@@ -43,6 +43,18 @@ public final class ArtifactStorageService implements ISpiritStorage {
         return true;
     }
 
+    /**
+     * The whole contents at once, which is what a screen writes back: one component update per change instead of
+     * one per slot, and the stored list stays at the capacity the definition declares.
+     */
+    public boolean replace(Provider access, ItemStack stack, List<ItemStack> contents, Player viewer) {
+        if (!this.mayAccess(access, stack, viewer)) return false;
+        int capacity = this.slots(access, stack, FormulaContexts.forEntity(viewer));
+        if (capacity <= 0) return false;
+        stack.set(MxtDataComponents.ARTIFACT_STORAGE, ArtifactStorageComponent.of(capacity, contents));
+        return true;
+    }
+
     public boolean mayAccess(Provider access, ItemStack stack, Player viewer) {
         if (viewer.level().isClientSide() || this.slots(access, stack, FormulaContexts.forEntity(viewer)) <= 0)
             return false;

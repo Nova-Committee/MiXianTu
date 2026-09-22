@@ -1,11 +1,12 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
+import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
-import com.iafenvoy.mxt.screen.wheel.WheelMenuEntry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -20,9 +21,12 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * The wheel editor: two pools (auras left, abilities right, each scrollable) over the wheel's twelve sectors,
- * which share one row so either kind fits any sector. It edits a draft and sends the whole layout on close,
- * {@code Escape} included, so the two sides cannot disagree about a sector.
+ * The wheel editor: two pools (auras left, everything else right, each scrollable) over the twelve sectors of the
+ * first page, which share one row so any kind fits any sector. It edits a draft and sends the whole layout on
+ * close, {@code Escape} included, so the two sides cannot disagree about a sector.
+ *
+ * <p>Only the first page is edited here. The pages behind it are read from what the player carries - the item in
+ * each hand and the equipped artifacts - so there is nothing about them to arrange; a header line says so.</p>
  */
 public final class WheelConfigurationScreen extends Screen {
     private static final int SLOT_SIZE = 22;
@@ -62,7 +66,11 @@ public final class WheelConfigurationScreen extends Screen {
     private static final int ABILITY_POOL = 1;
 
     private final List<WheelMenuEntry> auras;
-    private final List<WheelMenuEntry> abilities;
+    /**
+     * The right-hand pool: the skills the player holds and the artifact capabilities they carry, which is what
+     * {@link WheelContent#pool} answers with. Both go in one grid because a sector holds either.
+     */
+    private final List<WheelMenuEntry> options;
     private final double[] scroll = new double[2];
     private final int[] poolLeft = new int[2];
     private WheelLayout draft;
@@ -80,7 +88,7 @@ public final class WheelConfigurationScreen extends Screen {
     private WheelConfigurationScreen(Player player) {
         super(Component.translatable("screen.mxt.wheel_configuration"));
         this.auras = WheelContent.auras(player);
-        this.abilities = WheelContent.abilities(player);
+        this.options = WheelContent.pool(player);
         this.draft = WheelContent.layoutFor(player);
     }
 
@@ -126,6 +134,13 @@ public final class WheelConfigurationScreen extends Screen {
         Component save = Component.translatable("wheel.mxt.config.save");
         graphics.text(this.font, save, this.panelLeft + this.panelWidth - 10 - this.font.width(save),
                 this.panelTop + 10, HINT_COLOR, false);
+        // The second header line: this screen edits the first page only, and a player who goes looking for the
+        // pages that follow is owed the reason they are not here.
+        Component derived = Component.translatable("wheel.mxt.config.derived",
+                MxtKeyMappings.WHEEL_PREVIOUS.get().getTranslatedKeyMessage(),
+                MxtKeyMappings.WHEEL_NEXT.get().getTranslatedKeyMessage());
+        graphics.text(this.font, derived, this.panelLeft + this.panelWidth - 10 - this.font.width(derived),
+                this.panelTop + 20, HINT_COLOR, false);
         graphics.text(this.font, Component.translatable("wheel.mxt.pool.aura"),
                 this.poolLeft[AURA_POOL], this.panelTop + HEADER_HEIGHT, TITLE_COLOR, false);
         graphics.text(this.font, Component.translatable("wheel.mxt.pool.ability"),
@@ -296,7 +311,7 @@ public final class WheelConfigurationScreen extends Screen {
     }
 
     private List<WheelMenuEntry> pool(int pool) {
-        return pool == ABILITY_POOL ? this.abilities : this.auras;
+        return pool == ABILITY_POOL ? this.options : this.auras;
     }
 
     private @Nullable WheelMenuEntry selectedEntry() {

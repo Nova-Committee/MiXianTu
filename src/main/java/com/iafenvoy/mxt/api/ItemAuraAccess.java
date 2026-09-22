@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.spirit;
+package com.iafenvoy.mxt.api;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;

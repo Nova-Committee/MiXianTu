@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
+import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;

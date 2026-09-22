@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
+import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
-import com.iafenvoy.mxt.screen.wheel.WheelMenuEntry;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -83,6 +83,6 @@ public record AbilityWheelEntry(Identifier id, Ability definition) implements Wh
 
     @Override
     public void onSelected(WheelSelection selection) {
-        WheelTrigger.send(this);
+        WheelTrigger.send(this, selection.source());
     }
 }

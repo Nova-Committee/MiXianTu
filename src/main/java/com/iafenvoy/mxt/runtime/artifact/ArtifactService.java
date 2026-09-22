@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
+import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
@@ -31,6 +33,7 @@ import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -53,8 +56,15 @@ public final class ArtifactService {
     private static final double NOURISHMENT_CAPACITY_BONUS = 0.5D;
     /** A stored value above one says nothing the ceiling does not, so it is clamped wherever it is read. */
     private static final double MAX_NOURISHMENT = 1.0D;
-    /** A layout limit rather than a balance one: a larger number is a pack mistake, not a bigger inventory. */
-    private static final int MAX_STORAGE_SLOTS = 256;
+    /** A chest's own grid: nine to a row, and six rows is as tall as the container background goes. */
+    public static final int STORAGE_COLUMNS = 9;
+    public static final int MAX_STORAGE_ROWS = 6;
+    /**
+     * The most slots one artifact can have. A layout limit rather than a balance one: storage is drawn as a chest,
+     * so a definition asking for more than six rows could never be shown, and the frame refuses to hold what it
+     * cannot open.
+     */
+    public static final int MAX_STORAGE_SLOTS = STORAGE_COLUMNS * MAX_STORAGE_ROWS;
 
     private ArtifactService() {
     }
@@ -227,14 +237,48 @@ public final class ArtifactService {
         return definition(access, stack).flatMap(holder -> holder.value().flight());
     }
 
+    /**
+     * How many slots this artifact's storage has: what its definition declares, rounded up to a whole row and cut
+     * at the six rows a chest-shaped screen can draw.
+     *
+     * <p>The rounding is what lets one number serve as both the capacity and the screen's size - a declaration of
+     * ten slots would otherwise show eighteen cells of which eight silently refuse to hold anything. A definition
+     * that declares more than {@link #MAX_STORAGE_SLOTS} is cut to it rather than keeping slots nothing can open.</p>
+     */
     public static int storageSlots(Provider access, ItemStack stack, FormulaContext context) {
-        return definition(access, stack).flatMap(holder -> holder.value().storage())
-                .map(storage -> (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, MAX_STORAGE_SLOTS))
+        int declared = definition(access, stack).flatMap(holder -> holder.value().storage())
+                .map(storage -> (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, (double) Integer.MAX_VALUE))
                 .orElse(0);
+        if (declared <= 0) return 0;
+        int rows = Math.clamp((declared + STORAGE_COLUMNS - 1) / STORAGE_COLUMNS, 0, MAX_STORAGE_ROWS);
+        return rows * STORAGE_COLUMNS;
     }
 
     public static boolean curiosEquipable(Provider access, ItemStack stack) {
         return definition(access, stack).map(holder -> holder.value().curiosEquipable()).orElse(false);
+    }
+
+    /**
+     * The stack on this player that one definition claims right now, wherever they keep it: both hands, the rest
+     * of the inventory, and the Curios slots.
+     *
+     * <p>Deliberately wider than what a wheel page reads. A page answers "what does the item in this slot offer",
+     * and follows that slot; a screen that is already open has to keep working while the artifact is moved around
+     * the inventory, and has to stop the moment the artifact leaves the player - because what it writes into would
+     * otherwise be a stack nobody carries, which is how items disappear.</p>
+     */
+    public static Optional<ItemStack> carried(Provider access, Player player, Identifier artifactId) {
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
+            if (holds(access, player.getInventory().getItem(slot), artifactId))
+                return Optional.of(player.getInventory().getItem(slot));
+        for (ItemStack stack : CuriosIntegration.equippedLive(player))
+            if (holds(access, stack, artifactId)) return Optional.of(stack);
+        return Optional.empty();
+    }
+
+    private static boolean holds(Provider access, ItemStack stack, Identifier artifactId) {
+        if (stack == null || stack.isEmpty()) return false;
+        return definition(access, stack).map(holder -> HolderHelper.id(holder).equals(artifactId)).orElse(false);
     }
 
     /**

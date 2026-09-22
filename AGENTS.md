@@ -27,7 +27,7 @@
 3. **不要自行 `git commit` / `git push`。** 也不要 `git checkout --`、`git stash`、`git reset` 别人的改动。
 4. **默认不启动游戏/测试服务端。** 代码改动的最低验证是编译（第 2 节）；要实机验证（`runTestClient` / `runTestServer`）**先问**，跑完把结果贴出来。
 5. **文档同步三处**：本仓库 `docs/`（字段与教程）+ 本仓库 `docs/模块实现审计.md`（完成度）+ **文档站仓库**（中英各一份）。只改一处等于制造 bug。
-6. **设计先留档。** `research/` 是**设计稿存储处**：新模块、改版、重构方案（哪怕最后不做）、以及"推翻了以前哪个设计"都要在那里落一份档，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前下一个是 `25_`），审计放 `research/audit/`。规矩见 [`research/README.md`](research/README.md)。**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明。**
+6. **设计先留档。** `research/` 是**设计稿存储处**：新模块、改版、重构方案（哪怕最后不做）、以及"推翻了以前哪个设计"都要在那里落一份档，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前编号看 [`research/README.md`](research/README.md) 的目录，别在这里抄死），审计放 `research/audit/`。规矩见 [`research/README.md`](research/README.md)。**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明。**
 7. **不把研究设计写成"已完成"。** 「制作中 / 完成」只能由代码事实支撑；做不到的部分要明说。
 8. **不在文档里写死模组版本号。** 版本以 `gradle.properties` / 你装的那份 Jar 为准。平台与依赖版本（Minecraft / NeoForge / Curios / KubeJS）可以写。
 9. **内容不进本体。** 具体世界观数值、五行、丹方、灵根表这类内容属于数据包 / 测试包 / 内容模组；本体只提供框架与规则。
@@ -53,6 +53,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 
 | 要改什么 | 去哪 |
 | --- | --- |
+| 对外 Java API（别的模组实现或调用的契约） | `src/main/java/com/iafenvoy/mxt/api/`——**只放接口**（外加 `package-info`）；实现留在各自模块，服务类暂不设代理，口径见 `research/34_对外API包设计.md` |
 | 数据包定义（字段 / Codec / 加载期校验） | `src/main/java/com/iafenvoy/mxt/data/<模块>/` |
 | 动态注册表声明 | `registry/MxtDatapackRegistries.java` + `registry/MxtResourceKeys.java`（34 张表，原版 datapack registry） |
 | 固有分派类型（条件 / 行为 / 触发器 …） | `data/condition/builtin/`、`data/action/builtin/`、`registry/Mxt*Conditions.java`、`registry/Mxt*Actions.java` |
@@ -75,6 +76,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 - **`RecordCodecBuilder` 不认识未知字段，会静默丢掉**：一份写着 `element` 的体质会被当成"没有元素"照常跑。这是刻意的口径（`util/codec/DefinitionCodecs` 的点名拒绝已于 2026-09-21 按用户要求删除）：**改字段名 / 删字段时老文件不会报错，只是那个键不再生效**，所以字段变动必须同步 `docs/数据包格式.md`、测试包与文档站，别指望加载期替你发现。空表 / 空列表仍然用 `.validate(...)` 拒绝（否则会静默变成恒真或恒假）；字段**值**的校验（有限性、非负、区间）同样走 `.validate(...)`。
 - **链式 `.validate(...)` 会打断类型推断**：尾部接了 `.validate` 之后要写显式见证 `RecordCodecBuilder.<X>create(...)` / `RecordCodecBuilder.<X>mapCodec(...)`（参见 `Element`、`Physique`）。
 - **集合 Codec 是容错的**：`CollectionCodecs` / `AutoIgnoreMapCodec` / `AutoIgnoreListCodec` 会把坏条目打一条日志后**丢弃**。所以"定义写错"往往表现为"这一项不存在"，排查时先看日志里的 `Ignoring invalid list element`。
+- **列表里的空堆要用 `ItemStack.OPTIONAL_CODEC`**：`ItemStack.CODEC` / `STREAM_CODEC` 都拒绝空堆（`count` 必须 1..99、物品不能是 `minecraft:air`），而**组件与附件是要落盘、要同步给客户端的**——只要列表里出现一个空堆，整包就编码失败（`clientbound/minecraft:container_set_slot` 报 `Failed to encode`，2026-09-22 的储物窗口就是这么炸的：它用空堆表示"这一格是空的"）。所以凡是用空堆占位的列表一律 `ItemStack.OPTIONAL_CODEC.listOf()`（方块实体的库存 NBT 一直是这么写的）；单个可选堆用 `.optionalFieldOf(name, ItemStack.EMPTY)` 能兜住，因为值等于默认值时字段会被整个省掉。列表里根本不会出现空堆时（例如 `copyStacks` 已经过滤），`ItemStack.CODEC` 没问题。
 - **只读查询用 `getExistingData(...)`**，不要为了问一句"它有没有灵根"就创建一份空附件（会跟着进存档）；只有真正要写的地方才 `getData(...)`。
 - **缓存按注册表实例开键**（见 `DamageElements`、`ElementReactionService`、`FormulaNames`）：`/reload` 不会重建 datapack registry，世界加载才会换实例，缓存键天然正确；上限参考 `MAX_CACHED_REGISTRIES` + `LOCK` 双检。
 - **重入守卫用 `ThreadLocal<Set<...>>` + try/finally**（见 `CurseService.IN_TRANSACTION`、`ElementReactionService.IN_CHAIN`、`TriggerDispatcher.DISPATCHING`）：链式触发很容易写成无限递归。
@@ -88,7 +90,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 ## 5. 测试与探针
 
 - 本仓库**没有 JUnit**。验证靠：编译 →（获准时）实机跑 `/mxt_test`。
-- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `identity` / `artifact` / `artifacts` / `realm [keep|reopen]` / `rift` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
+- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `wheel` / `identity` / `artifact` / `artifacts` / `realm [keep|reopen]` / `rift` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
 - **夹具里那些数字是断言的一部分**：例如测试包的火/水克制与适应倍率决定了 `10 × 1.5 × 0.5 = 7.5`。给测试包加内容时，先确认不会改变既有腿的算式（新内容用新文件承载，或让默认倍率为 1）。
 - 探针**只编译不等于跑过**：报告里必须写明"未实跑"，并给出跑一次该看什么输出。
 
@@ -102,6 +104,8 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | 模块完成度变化 | `docs/模块实现审计.md` + README 两张表 + 文档站仓库的功能表（中英） |
 | 推翻 / 关闭了研究里的设计 | `research/audit/*.md` 标注"已于 <日期> 关闭 / 修正"，并写清新行为 |
 | 改了数据包语义（比如某倍率改由管线消费） | 文档站仓库的技术说明、公式变量页与相关教程（中英），**教程里的旧写法必须改掉**，否则包会重复相乘 |
+
+**README 的「模块完成情况 / Module Status」表每行就是一句模块介绍，有长度上限**：**中文不超过 100 个汉字，英文不超过 250 个字母，两边都把空格与标点算进去**（按去掉表格对齐空格后的正文量）。改完成度、加模块、动 README 里那张表时顺手量一下：超了就删细节，细节属于 `docs/` 与文档站，README 只留一句能读懂的话。
 
 文档站仓库怎么构建、怎么校验、正文用什么骨架，看它自己的 `AGENTS.md`；本仓库只负责把该改的内容改到。
 

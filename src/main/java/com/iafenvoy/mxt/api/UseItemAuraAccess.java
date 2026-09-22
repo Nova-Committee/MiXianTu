@@ -1,5 +1,7 @@
-package com.iafenvoy.mxt.runtime.spirit;
+package com.iafenvoy.mxt.api;
 
+import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
+import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -9,7 +11,8 @@ import java.util.Optional;
 
 /**
  * An {@link ItemAuraAccess} item that is filled by hand: holding it down pours the holder's own aura into it,
- * one whole unit a tick - the gesture {@link SpiritChargeService} drives and {@link SpiritChargeHold} declares.
+ * one whole unit a tick - the gesture {@link com.iafenvoy.mxt.runtime.spirit.SpiritChargeService} drives and
+ * {@link com.iafenvoy.mxt.runtime.spirit.SpiritChargeHold} declares.
  * <p>
  * Implementing it means "this can be poured into", not "this is special": the spirit stone implements it and
  * answers {@link #pour} with the shared {@code item_aura} reading, while a store sized by the stack itself
@@ -31,8 +34,8 @@ public interface UseItemAuraAccess extends ItemAuraAccess {
     }
 
     /**
-     * Whether a tick of pouring is worth paying for right now. {@link SpiritChargeService} asks this before it
-     * moves anything, so an item that would refuse what a tick buys says so here rather than in
+     * Whether a tick of pouring is worth paying for right now. {@link com.iafenvoy.mxt.runtime.spirit.SpiritChargeService}
+     * asks this before it moves anything, so an item that would refuse what a tick buys says so here rather than in
      * {@link #onCharged}, where the payment has already been made.
      * <p>
      * The default is yes, which is right for a store that only takes. An item that fires itself once full
@@ -55,4 +58,3 @@ public interface UseItemAuraAccess extends ItemAuraAccess {
     default void onCharged(SpiritSource source, ItemStack stack) {
     }
 }
-

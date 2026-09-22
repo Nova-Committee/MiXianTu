@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.item;
 
+import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.runtime.spirit.AuraAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
-import com.iafenvoy.mxt.runtime.spirit.UseItemAuraAccess;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;

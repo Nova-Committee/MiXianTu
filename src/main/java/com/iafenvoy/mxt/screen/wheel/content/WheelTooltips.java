@@ -3,11 +3,10 @@ package com.iafenvoy.mxt.screen.wheel.content;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.ResourceCost;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -41,15 +40,22 @@ final class WheelTooltips {
 
     /**
      * Only {@link ResourceCost} is spelled out; other cost types become "something else", never a guess.
+     *
+     * <p>Each cost is evaluated in the context of the resource it charges, which is the context the server
+     * charges it in: a cost written as {@code "8 + level"} reads the realm rank of <em>that</em> resource, and a
+     * plain entity context has no realm to read - which is why this line used to print {@code 8} and log a
+     * formula warning every frame the wheel was open.</p>
      */
     static Component costs(List<Cost> costs, Player player) {
-        FormulaContext context = FormulaContext.of(player);
+        FormulaContext base = FormulaContext.of(player);
         List<Component> parts = new ArrayList<>(costs.size());
         boolean other = false;
         for (Cost cost : costs) {
-            if (cost instanceof ResourceCost(Holder<Resource> resource, NumberProvider amount)) {
+            if (cost instanceof ResourceCost resourceCost) {
+                FormulaContext context = ResourceService.formulaContext(player, resourceCost.id(),
+                        resourceCost.resource().value(), base);
                 parts.add(Component.translatable("wheel.mxt.tooltip.cost_part",
-                        DefinitionText.name(resource), number(amount.evaluate(context))));
+                        DefinitionText.name(resourceCost.resource()), number(resourceCost.amount().evaluate(context))));
             } else {
                 other = true;
             }

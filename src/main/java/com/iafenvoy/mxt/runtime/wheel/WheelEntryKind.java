@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.wheel;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactCapability;
 import com.iafenvoy.mxt.util.codec.MiscStreamCodecs;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
@@ -24,7 +25,13 @@ public enum WheelEntryKind implements StringRepresentable {
     /** An entry of the {@code mxt:ability} registry. */
     ABILITY,
     /** An entry of the {@code mxt:aura} registry. */
-    AURA;
+    AURA,
+    /**
+     * An entry of the {@code mxt:artifact} registry that declares a {@code ToggableArtifactAbility}: the cell is
+     * something the player presses for - a switch or a one-shot - named by the artifact's own id with the
+     * capability's key appended.
+     */
+    ARTIFACT;
 
     public static final Codec<WheelEntryKind> CODEC = StringRepresentable.fromEnum(WheelEntryKind::values);
     public static final StreamCodec<ByteBuf, WheelEntryKind> STREAM_CODEC = MiscStreamCodecs.enumCodec(WheelEntryKind.class);
@@ -44,6 +51,14 @@ public enum WheelEntryKind implements StringRepresentable {
         return switch (this) {
             case ABILITY -> MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).isPresent();
             case AURA -> MxtDatapackRegistries.holder(access, MxtResourceKeys.AURA, id).isPresent();
+            // A capability is named by the artifact and its own key together (`ns:path/key`), and only counts when
+            // that artifact really declares a capability under that key - so a stored cell always names something
+            // the wheel could draw and press.
+            case ARTIFACT -> ArtifactCapability.parse(id).map(capability ->
+                    MxtDatapackRegistries.holder(access, MxtResourceKeys.ARTIFACT, capability.artifact())
+                            .map(artifact -> artifact.value().toggables().stream()
+                                    .anyMatch(ability -> ability.key().equals(capability.key())))
+                            .orElse(false)).orElse(false);
             case EMPTY -> false;
         };
     }

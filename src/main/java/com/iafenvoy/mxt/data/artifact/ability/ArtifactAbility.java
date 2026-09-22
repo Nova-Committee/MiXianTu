@@ -13,8 +13,7 @@ import java.util.function.Function;
  * one. The skills themselves stay ordinary {@code ability} definitions.</p>
  */
 public interface ArtifactAbility {
-    Codec<ArtifactAbility> CODEC = MxtRegistries.ARTIFACT_ABILITY_TYPE.byNameCodec()
-            .dispatch("type", ArtifactAbility::codec, Function.identity());
+    Codec<ArtifactAbility> CODEC = MxtRegistries.ARTIFACT_ABILITY_TYPE.byNameCodec().dispatch("type", ArtifactAbility::codec, Function.identity());
 
     MapCodec<? extends ArtifactAbility> codec();
 }

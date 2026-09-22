@@ -1,7 +1,8 @@
-package com.iafenvoy.mxt.screen.wheel;
+package com.iafenvoy.mxt.api;
 
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -11,8 +12,8 @@ import java.util.Optional;
 
 /**
  * One thing the wheel can choose: its name, its icon and what choosing it does. Its sector comes from the
- * player's saved layout ({@link WheelMenuProvider}), never from the entry; the kind is part of the contract
- * because one ring mixes abilities and auras.
+ * player's saved layout ({@link com.iafenvoy.mxt.screen.wheel.WheelMenuProvider}), never from the entry; the
+ * kind is part of the contract because one ring mixes abilities and auras.
  */
 public interface WheelMenuEntry {
     /** Which registry {@link #id()} belongs to. */

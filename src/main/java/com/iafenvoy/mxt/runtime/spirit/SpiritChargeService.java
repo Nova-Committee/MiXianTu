@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
+import com.iafenvoy.mxt.api.ItemAuraAccess;
+import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.ItemAura;

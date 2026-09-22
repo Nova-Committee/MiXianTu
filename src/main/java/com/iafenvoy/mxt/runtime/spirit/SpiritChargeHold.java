@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
+import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService.Charge;
 import net.minecraft.core.Holder;
