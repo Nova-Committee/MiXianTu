@@ -4,7 +4,8 @@
 
 ## 目标
 
-历史版本中 AbilityTrigger 同时承担事件类型标识和数据包配置职责，运行时主要依靠字符串事件名分派。本文件定义并记录当前已实现的、可扩展且支持多个上下文参数、多个监听者及阶段性受理的通用 Trigger 系统。
+历史版本中 AbilityTrigger 同时承担事件类型标识和数据包配置职责，运行时主要依靠字符串事件名分派。本文件定义并记录当前已实现的、可扩展且支持多个上下文参数、多个监听者及阶段性受理的通用
+Trigger 系统。
 
 核心原则：
 
@@ -209,11 +210,11 @@ TriggerSubscription 不建议直接写入实体或世界存档：
         -> Rehydrator
         -> create TriggerSubscription
 
-| 重建器                          | 扫描内容                   |
-|------------------------------|------------------------|
-| Ability 模块重建器            | 当前实体已授予的 Ability 及其来源（由 `TriggerRehydrators` 统一调用）。 |
-| CultivationTriggerRehydrator | 当前资源、境界目标和等待中的突破状态。    |
-| ExternalTriggerRehydrator    | 其他模块保存的解锁或等待状态。        |
+| 重建器                          | 扫描内容                                                |
+|------------------------------|-----------------------------------------------------|
+| Ability 模块重建器                | 当前实体已授予的 Ability 及其来源（由 `TriggerRehydrators` 统一调用）。 |
+| CultivationTriggerRehydrator | 当前资源、境界目标和等待中的突破状态。                                 |
+| ExternalTriggerRehydrator    | 其他模块保存的解锁或等待状态。                                     |
 
 ### 存档加载流程
 
@@ -295,14 +296,21 @@ quest_completed。需要跨重启的扩展应保存自己的业务状态，并�
         TriggerRehydrators.java
         TriggerLifecycleEvents.java
 
-`TriggerSignals` 集中保存本模组内置信号的稳定 `Identifier`，事件桥不得再用散落的字符串拼接信号 ID。外部模块可以直接传入带命名空间的自定义 ID。
+`TriggerSignals` 集中保存本模组内置信号的稳定 `Identifier`，事件桥不得再用散落的字符串拼接信号 ID。外部模块可以直接传入带命名空间的自定义
+ID。
 
-> **2026-09-23 实际落地与上面这棵树有出入**（把固有类型收进 `builtin/`）：信号型触发器是 `Trigger` 内嵌的 `Builtin` 记录，由 `MxtTriggers` 按信号名注册，原计划里「一个信号一个 `XxxTrigger` 类」没有单独存在；`data/trigger/builtin/` 里只有 `JsTrigger`、`VanillaTrigger` 与它的两个辅助类（`VanillaTriggerMatchers`、`VanillaTriggerSupport`），`TriggerContext` / `TriggerPayload` / `TriggerRule` / `TriggerSignal` / `TriggerSignals` 留在 `data/trigger/` 根包。`runtime/trigger/` 与这里列的一致（另多出 `TriggerPublishing`、`TriggerRuleService`、`VanillaTriggerBridge`、`VanillaTriggerPollBridge`、`CultivationTriggerService`）。
+> **2026-09-23 实际落地与上面这棵树有出入**（把固有类型收进 `builtin/`）：信号型触发器是 `Trigger` 内嵌的 `Builtin` 记录，由
+`MxtTriggers` 按信号名注册，原计划里「一个信号一个 `XxxTrigger` 类」没有单独存在；`data/trigger/builtin/` 里只有
+`JsTrigger`、`VanillaTrigger` 与它的两个辅助类（`VanillaTriggerMatchers`、`VanillaTriggerSupport`），`TriggerContext` /
+`TriggerPayload` / `TriggerRule` / `TriggerSignal` / `TriggerSignals` 留在 `data/trigger/` 根包。`runtime/trigger/`
+> 与这里列的一致（另多出 `TriggerPublishing`、`TriggerRuleService`、`VanillaTriggerBridge`、`VanillaTriggerPollBridge`、
+`CultivationTriggerService`）。
 
 ## 当前项目的迁移建议
 
 1. `AbilityEventBridge` 通过 `TriggerSignal` 发布事件，技能订阅由新的 Dispatcher 处理。
-2. `AbilityTriggeredEvent` 直接使用 `Holder<Ability>` 保存技能定义，并使用 `Identifier signalType` 与 `TriggerContext`，避免同时传递重复的技能 ID 和 definition。
+2. `AbilityTriggeredEvent` 直接使用 `Holder<Ability>` 保存技能定义，并使用 `Identifier signalType` 与 `TriggerContext`
+   ，避免同时传递重复的技能 ID 和 definition。
 3. `TriggeredAbilityType` 和 `CultivateConditions` 均使用 `triggers` 数组。
 4. Ability 和 Cultivation 分别实现 `TriggerRehydrator`，由统一生命周期模块负责重建。
 5. 后续可引入类型安全的 `ContextKey<T>`，并扩展 KubeJS 自定义信号发布 API。
@@ -322,10 +330,12 @@ quest_completed。需要跨重启的扩展应保存自己的业务状态，并�
 
 ### 持久化字段约束
 
-需要跨重启的模块只保存以下类型的信息：稳定的资源/能力/境界 ID、当前阶段或等待状态、必要的时间戳和业务参数。禁止保存以下运行时对象：`TriggerSubscription`、listener/gate lambda、Dispatcher 索引、实体引用、注册表 Holder 的缓存实例。
+需要跨重启的模块只保存以下类型的信息：稳定的资源/能力/境界 ID、当前阶段或等待状态、必要的时间戳和业务参数。禁止保存以下运行时对象：
+`TriggerSubscription`、listener/gate lambda、Dispatcher 索引、实体引用、注册表 Holder 的缓存实例。
 
 ### 重建器约定
 
-每个模块提供一个幂等的 `rehydrate`（或等价入口）：先按模块清理旧订阅，再从附件和当前数据包注册表扫描并注册。遇到不存在或无法验证的 ID 时记录日志并丢弃该订阅；不得让单个失效订阅阻止存档加载。重建入口必须可重复调用，以支持数据包热重载和实体延迟加载。
+每个模块提供一个幂等的 `rehydrate`（或等价入口）：先按模块清理旧订阅，再从附件和当前数据包注册表扫描并注册。遇到不存在或无法验证的
+ID 时记录日志并丢弃该订阅；不得让单个失效订阅阻止存档加载。重建入口必须可重复调用，以支持数据包热重载和实体延迟加载。
 
 后续新增模块时应遵循同一约定；若模块的等待状态需要迁移，应在业务附件中增加版本号和迁移逻辑，而不是尝试反序列化旧的订阅对象。

@@ -6,7 +6,7 @@
 
 > 变更记录
 > - 新增本文件。按用户要求「按整理的内容表格对照基座，看基座还欠缺什么；具体内容不归基座，基座只管通用逻辑」。
->   本文件只记**通用能力**的缺口：某个具体丹药、具体阵法、具体数值不给基座记一笔。
+    > 本文件只记**通用能力**的缺口：某个具体丹药、具体阵法、具体数值不给基座记一笔。
 
 ## 0. 判据与读法
 
@@ -28,12 +28,12 @@
 统一 `Ability`、灵气与资源、附件与同步、事件与 KubeJS 回调、25 个固有类型注册表都跑得起来，
 而且对象之间是**引用而非硬编码**。按内容表逐类对照之后，欠缺集中在三处：
 
-| 类别 | 条目数 | 性质 | 典型 |
-| --- | ---: | --- | --- |
-| **A 已建未接线** | 24 | 定义、Codec、字段都在，就是没有消费者 | 炼丹工作台（接口零实现）、`spirit_herb` 的 5 个字段、四个能力组件、`RuntimeDimensionService` |
-| **B 根本没有的通用设施** | 15 | 换任何内容包都需要，基座里不存在对应概念 | 工序台、图鉴目录、物品右键路径、伤害管线、生成表 |
-| **C 文档与代码不一致** | 16 | 文档宣称「完成 / 已接入」，代码里没有 | `docs/模块实现审计.md` 的炼丹行 |
-| **D 已确认的实现缺陷** | 4 | 不是缺设施，是现有代码错了 | 灵材台灵气每 tick 被清、锻打输入槽 15 vs 12、`blank_talisman` 三套名字、品质三修正从不求值 |
+| 类别              | 条目数 | 性质                    | 典型                                                                  |
+|-----------------|----:|-----------------------|---------------------------------------------------------------------|
+| **A 已建未接线**     |  24 | 定义、Codec、字段都在，就是没有消费者 | 炼丹工作台（接口零实现）、`spirit_herb` 的 5 个字段、四个能力组件、`RuntimeDimensionService` |
+| **B 根本没有的通用设施** |  15 | 换任何内容包都需要，基座里不存在对应概念  | 工序台、图鉴目录、物品右键路径、伤害管线、生成表                                            |
+| **C 文档与代码不一致**  |  16 | 文档宣称「完成 / 已接入」，代码里没有  | `docs/模块实现审计.md` 的炼丹行                                               |
+| **D 已确认的实现缺陷**  |   4 | 不是缺设施，是现有代码错了         | 灵材台灵气每 tick 被清、锻打输入槽 15 vs 12、`blank_talisman` 三套名字、品质三修正从不求值       |
 
 > 另有一份同日的**子代理深度报告** `research/audit/生产系统审计.md`（608 行），只覆盖生产/制作五个系统，
 > 结论与本文件一致并更细。本文件对其中**负载最重的 6 条**（两个缺陷 + 品质修正 + `blank_talisman` 命名 +
@@ -50,25 +50,25 @@
 `变种汇总.csv` 的 19 条轴逐条对照。**轴本身不是基座的事**（哪几个物品该合并是内容决策），
 但「收敛之后用什么承载」是基座的事。
 
-| 轴 | 族/行 | 收敛后的形态 | 基座现状 | 判定 |
-| --- | ---: | --- | --- | --- |
-| `年份档` | 44 / 105 | 1 物品 + 年份值 | `spirit_herb` 有 `age` 字段，但**零消费者**（`SpiritHerb.java:18,23`，全仓无 `.age()` 调用） | **A** |
-| `生长阶段` | 33 / 145 | 1 方块 + `age` blockstate + 按龄掉落 | 无任何作物/生长机制；`growth_rate`、`drop_chance` 同样零消费者 | **A + B** |
-| `外观` | 23 / 66 | `item_model` / 实体 variant | 原版+资源包已覆盖，基座不需要概念 | ✅ 不用做 |
-| `图鉴分页` | 22 / 198 | 1 通用 Screen + (条目, 页码) | **没有图鉴系统**。`InformationPanelScreen` 只显示玩家自身状态；`InformationManager.java:26-40` 是 Java `static` 注册，不吃数据包 | **B（最大）** |
-| `等阶` | 21 / 84 | 1 注册项 + 等级值 | 无通用"同族第 N 阶"。`SpiritStoneVein.Grade`（`runtime/world/SpiritStoneVein.java:34-51`）是**硬编码 6 级枚举**、只认 `mxt:spirit_stone_ore`，且只被 `/mxt aura vein` 诊断读（`command/AuraCommand.java:88-93`） | **B** |
-| `品阶` | 14 / 43 | 1 注册项 + 等级值 | `item_quality` 已存在，可承担（`data/quality/ItemQuality.java`）。但三个修正只有 `value/forging/alchemy`，**没有"效果强度"** | 部分 ✅ |
-| `效果等级` | 13 / 47 | 1 `MobEffect` + `amplifier` | 基座**不注册任何自定义 `MobEffect`**；`mxt:apply_effect` 只能引用原版（`data/action/builtin/entity/ApplyEffectAction.java:20,37`）。四个状态类能力组件零消费者（§5） | **B** |
-| `品相` | 6 / 17 | 1 物品 + 强度组件 | 同「等阶」；`item_quality` 可勉强承担但语义是"品质"不是"强度档" | **B（轻）** |
-| `等级` | 6 / 37 | 1 方块 + 等级值 | `AlchemyRecipe.minimum_furnace_tier` 存在，但 `furnaceTier()` 是**接口方法**（`runtime/alchemy/AlchemyWorkstation.java:28`），等级由 Java 决定而非数据；且无实现者 | **A + B** |
-| `结果状态` | 5 / 12 | 方块态 / 物品状态组件 | 方块态原版已覆盖；物品状态无通用"状态组件" | **B（轻）** |
-| `命令参数` | 3 / 20 | 1 条命令 + 整型参数 | 命令框架齐（`command/CommandManager.java`，每类一条 `LiteralArgumentBuilder`） | ✅ |
-| `部件` | 2 / 4 | 1 方块 + `part` blockstate | 原版 blockstate | ✅ |
-| `结构变体` | 2 / 4 | 同一结构集 | 见 §4.8（只有一处矿石 worldgen） | 见 §4.8 |
-| `功能模式` | 1 / 4 | 1 方块 + `mode` | 基座做法是 2 个方块 + `StationMenu.Mode` 四态（`registry/MxtMenus.java:18-21`），已是"一类方块+模式" | ✅ |
-| `门派` | 1 / 6 | 1 物品 + 门派组件 | 基座不再提供 `sect`（数据包注册表与运行时已整体删除）；`TokenComponent` 可带 `kind/value`（`data/item/TokenComponent.java:25`），内容包可据此自建门派标识 | **B（轻）** |
-| `群系变体` | 1 / 2 | 群系 | 原版；`AuraZone.biomes` 可按群系 Holder 或标签（`data/aura/AuraZone.java:36`） | ✅ |
-| `同族变种` / `(存疑)` / `效果编号(存疑)` | 11 族 / 29 行 | —— | 轴未定，属内容决策 | 待人工 |
+| 轴                            |         族/行 | 收敛后的形态                         | 基座现状                                                                                                                                                                                | 判定        |
+|------------------------------|------------:|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `年份档`                        |    44 / 105 | 1 物品 + 年份值                     | `spirit_herb` 有 `age` 字段，但**零消费者**（`SpiritHerb.java:18,23`，全仓无 `.age()` 调用）                                                                                                         | **A**     |
+| `生长阶段`                       |    33 / 145 | 1 方块 + `age` blockstate + 按龄掉落 | 无任何作物/生长机制；`growth_rate`、`drop_chance` 同样零消费者                                                                                                                                       | **A + B** |
+| `外观`                         |     23 / 66 | `item_model` / 实体 variant      | 原版+资源包已覆盖，基座不需要概念                                                                                                                                                                   | ✅ 不用做     |
+| `图鉴分页`                       |    22 / 198 | 1 通用 Screen + (条目, 页码)         | **没有图鉴系统**。`InformationPanelScreen` 只显示玩家自身状态；`InformationManager.java:26-40` 是 Java `static` 注册，不吃数据包                                                                              | **B（最大）** |
+| `等阶`                         |     21 / 84 | 1 注册项 + 等级值                    | 无通用"同族第 N 阶"。`SpiritStoneVein.Grade`（`runtime/world/SpiritStoneVein.java:34-51`）是**硬编码 6 级枚举**、只认 `mxt:spirit_stone_ore`，且只被 `/mxt aura vein` 诊断读（`command/AuraCommand.java:88-93`） | **B**     |
+| `品阶`                         |     14 / 41 | 1 注册项 + 等级值                    | `item_quality` 已存在，可承担（`data/quality/ItemQuality.java`）。但三个修正只有 `value/forging/alchemy`，**没有"效果强度"**                                                                                | 部分 ✅      |
+| `效果等级`                       |     13 / 47 | 1 `MobEffect` + `amplifier`    | 基座**不注册任何自定义 `MobEffect`**；`mxt:apply_effect` 只能引用原版（`data/action/builtin/entity/ApplyEffectAction.java:20,37`）。四个状态类能力组件零消费者（§5）                                                   | **B**     |
+| `品相`                         |      6 / 17 | 1 物品 + 强度组件                    | 同「等阶」；`item_quality` 可勉强承担但语义是"品质"不是"强度档"                                                                                                                                           | **B（轻）**  |
+| `等级`                         |      6 / 37 | 1 方块 + 等级值                     | `AlchemyRecipe.minimum_furnace_tier` 存在，但 `furnaceTier()` 是**接口方法**（`runtime/alchemy/AlchemyWorkstation.java:28`），等级由 Java 决定而非数据；且无实现者                                             | **A + B** |
+| `结果状态`                       |      5 / 12 | 方块态 / 物品状态组件                   | 方块态原版已覆盖；物品状态无通用"状态组件"                                                                                                                                                              | **B（轻）**  |
+| `命令参数`                       |      3 / 20 | 1 条命令 + 整型参数                   | 命令框架齐（`command/CommandManager.java`，每类一条 `LiteralArgumentBuilder`）                                                                                                                  | ✅         |
+| `部件`                         |       2 / 4 | 1 方块 + `part` blockstate       | 原版 blockstate                                                                                                                                                                       | ✅         |
+| `结构变体`                       |       2 / 4 | 同一结构集                          | 见 §4.8（只有一处矿石 worldgen）                                                                                                                                                             | 见 §4.8    |
+| `功能模式`                       |       1 / 4 | 1 方块 + `mode`                  | 基座做法是 2 个方块 + `StationMenu.Mode` 四态（`registry/MxtMenus.java:18-21`），已是"一类方块+模式"                                                                                                     | ✅         |
+| `门派`                         |       1 / 6 | 1 物品 + 门派组件                    | 基座不再提供 `sect`（数据包注册表与运行时已整体删除）；`TokenComponent` 可带 `kind/value`（`data/item/TokenComponent.java:25`），内容包可据此自建门派标识                                                                    | **B（轻）**  |
+| `群系变体`                       |       1 / 2 | 群系                             | 原版；`AuraZone.biomes` 可按群系 Holder 或标签（`data/aura/AuraZone.java:36`）                                                                                                                  | ✅         |
+| `同族变种` / `(存疑)` / `效果编号(存疑)` | 11 族 / 29 行 | ——                             | 轴未定，属内容决策                                                                                                                                                                           | 待人工       |
 
 **小结**：19 轴里 **5 轴已经能表达**（命令参数、部件、功能模式、群系变体、外观），
 **5 轴卡在同一处**——基座没有「一个物品/方块带上一个通用档位值」这个概念。
@@ -84,32 +84,32 @@
 基座自己的物品只有 38 件（`registry/MxtItems.java:27-63`），其余由 KubeJS 注册——
 这条边界是对的，`research/12` 也写明了。缺的不是"物品"，是**物品的行为承载方式**：
 
-| 内容需要什么 | 基座现状 | 判定 |
-| --- | --- | --- |
-| 右键使用 → 条件 + 消耗 + 动作（46 张符箓、各种右键道具） | `ItemBinding.actions` **只在 `LivingEntityUseItemEvent.Finish` 分发**（`runtime/item/ItemBindingService.java:79-82, 223-230`），即物品必须先带 `minecraft:consumable` 才会走到。唯一右键入口是 `weapon_binding.use_action`（`ItemBindingService.java:72-76, 208-218`），但它会同时套上武器攻击属性与品质组门槛 | **B** |
-| 使用门槛失败时不消耗、并说明原因 | `ItemQualityService` 以 `HIGHEST` 取消 `RightClickItem`/`RightClickBlock`/`Attack`/`UseItemStart`/`UseItemTick` 并发具名原因（`runtime/item/ItemQualityService.java:44-87, 118-125`）——**这半条已经有了**，缺的是把它接到通用 `item_binding` 上 | 部分 ✅ |
-| 消耗耐久而不消耗本体（符笔、法宝） | `mxt:damage_item`（`data/action/builtin/item/DamageItemAction.java`）、`DurabilityCondition`、`RelativeDurabilityCondition` 都有 | ✅ |
-| 配方产物带组件（品质/变体/状态） | `SpiritRecipe.result` 是 `ItemStackTemplate`（`recipe/SpiritRecipe.java:21`）✅；但 `AlchemyRecipe.success_outputs` 是 `List<Identifier>`（`data/alchemy/AlchemyRecipe.java:23,34`）→ **炼丹产物不能带组件** | **A** |
-| 通用的"变体 / 档位 / 年份 / 外观"值 | `MxtDataComponents` 21 个组件（`registry/MxtDataComponents.java:29-49`）里**没有**任何一个通用档位值 | **B** |
-| 按 `ItemMatcher` 匹配的一串描述行（内容侧 501 行硬编码 tooltip） | 已有 7 个 tooltip 追加器，但全是 Java 实现、按子系统写死；`item_binding` **没有 `description` 字段** | **B** |
+| 内容需要什么                                         | 基座现状                                                                                                                                                                                                                                                           | 判定    |
+|------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
+| 右键使用 → 条件 + 消耗 + 动作（46 张符箓、各种右键道具）             | `ItemBinding.actions` **只在 `LivingEntityUseItemEvent.Finish` 分发**（`runtime/item/ItemBindingService.java:79-82, 223-230`），即物品必须先带 `minecraft:consumable` 才会走到。唯一右键入口是 `weapon_binding.use_action`（`ItemBindingService.java:72-76, 208-218`），但它会同时套上武器攻击属性与品质组门槛 | **B** |
+| 使用门槛失败时不消耗、并说明原因                               | `ItemQualityService` 以 `HIGHEST` 取消 `RightClickItem`/`RightClickBlock`/`Attack`/`UseItemStart`/`UseItemTick` 并发具名原因（`runtime/item/ItemQualityService.java:44-87, 118-125`）——**这半条已经有了**，缺的是把它接到通用 `item_binding` 上                                             | 部分 ✅  |
+| 消耗耐久而不消耗本体（符笔、法宝）                              | `mxt:damage_item`（`data/action/builtin/item/DamageItemAction.java`）、`DurabilityCondition`、`RelativeDurabilityCondition` 都有                                                                                                                                     | ✅     |
+| 配方产物带组件（品质/变体/状态）                              | `SpiritRecipe.result` 是 `ItemStackTemplate`（`recipe/SpiritRecipe.java:21`）✅；但 `AlchemyRecipe.success_outputs` 是 `List<Identifier>`（`data/alchemy/AlchemyRecipe.java:23,34`）→ **炼丹产物不能带组件**                                                                     | **A** |
+| 通用的"变体 / 档位 / 年份 / 外观"值                        | `MxtDataComponents` 21 个组件（`registry/MxtDataComponents.java:29-49`）里**没有**任何一个通用档位值                                                                                                                                                                            | **B** |
+| 按 `ItemMatcher` 匹配的一串描述行（内容侧 501 行硬编码 tooltip） | 已有 7 个 tooltip 追加器，但全是 Java 实现、按子系统写死；`item_binding` **没有 `description` 字段**                                                                                                                                                                                   | **B** |
 
 ### 3.2 方块 419 行
 
-| 内容需要什么 | 基座现状 | 判定 |
-| --- | --- | --- |
-| 可交互方块开界面 | 6 个方块各自 `useWithoutItem` + `openMenu`（`item/block/*.java`），共 9 个 `MenuType`（`registry/MxtMenus.java:16-24`） | ✅（模式可复用） |
-| 带等级的方块（9 级丹炉 / 9 级炼器鼎 / 坊市模式） | 无通用"方块等级"概念；基座做法是给每个等级注册一个方块，或做成独立方块 | **B（轻）** |
-| 作物方块（33 族 / 145 行生长阶段） | 无 | **B** |
-| 部件/结果状态 blockstate | 原版 blockstate | ✅ |
-| 方块被灵气灌注（展示架已实现） | `DisplayStandBlockEntity.add` + `AuraItemAccess.onCharged`（见 `research/audit/spirit.md` §3.2） | ✅ |
+| 内容需要什么                        | 基座现状                                                                                                        | 判定       |
+|-------------------------------|-------------------------------------------------------------------------------------------------------------|----------|
+| 可交互方块开界面                      | 6 个方块各自 `useWithoutItem` + `openMenu`（`item/block/*.java`），共 9 个 `MenuType`（`registry/MxtMenus.java:16-24`） | ✅（模式可复用） |
+| 带等级的方块（9 级丹炉 / 9 级炼器鼎 / 坊市模式） | 无通用"方块等级"概念；基座做法是给每个等级注册一个方块，或做成独立方块                                                                        | **B（轻）** |
+| 作物方块（33 族 / 145 行生长阶段）        | 无                                                                                                           | **B**    |
+| 部件/结果状态 blockstate            | 原版 blockstate                                                                                               | ✅        |
+| 方块被灵气灌注（展示架已实现）               | `DisplayStandBlockEntity.add` + `AuraItemAccess.onCharged`（见 `research/audit/spirit.md` §3.2）               | ✅        |
 
 ### 3.3 GUI 248 行
 
-| 分组 | 行数 | 基座现状 |
-| --- | ---: | --- |
-| 图鉴类（功法图鉴 61 + 法宝图鉴 37 + 器路/丹方/物品描述等） | ~198 | **无**。基座只有 9 个按功能写死的容器界面 |
-| 工位类（炼丹 33 + 炼器 27 + 符阵 33） | ~93（与图鉴有重叠） | 只有锻造台、灵材合成台两个工位界面 |
-| 状态/面板类 | ~20 | `TechniquePanelScreen`（功法列表）、`InformationPanelScreen`（人物信息）、`HotbarConfigurationScreen` ✅ |
+| 分组                                   |          行数 | 基座现状                                                                                      |
+|--------------------------------------|------------:|-------------------------------------------------------------------------------------------|
+| 图鉴类（功法图鉴 61 + 法宝图鉴 37 + 器路/丹方/物品描述等） |        ~198 | **无**。基座只有 9 个按功能写死的容器界面                                                                  |
+| 工位类（炼丹 33 + 炼器 27 + 符阵 33）           | ~93（与图鉴有重叠） | 只有锻造台、灵材合成台两个工位界面                                                                         |
+| 状态/面板类                               |         ~20 | `TechniquePanelScreen`（功法列表）、`InformationPanelScreen`（人物信息）、`HotbarConfigurationScreen` ✅ |
 
 基座对"目录"的现状被自己一句话说清：`ItemQualityService.java:35` 把 `item_quality` 叫 `catalogue`，
 但它只是一个可排序标签集合，**没有界面**。
@@ -139,15 +139,15 @@
 
 **基座现状**：
 
-| 零件 | 现状 | 证据 |
-| --- | --- | --- |
-| 配方模型 | `AlchemyRecipe` 有 `inputs` / `target_temperature` / `temperature_tolerance` / `minimum_furnace_tier` / `duration` / `minimum_aura` / `success_outputs` / `failure_outputs` / 四个成败 Action（`aura_kinds` 已于 2026-09-17 删除） | `data/alchemy/AlchemyRecipe.java:20-25` |
-| 会话与结算 | `AlchemySession` + `AlchemyWorkstationState` + `AlchemyWorkstationService`（材料锁定、计时、结算、扣灵气） | `runtime/alchemy/*` |
-| 工作台契约 | `AlchemyWorkstation` 接口：`alchemyState()` / `furnaceTier()` / `temperature()` / `setChanged()` | `runtime/alchemy/AlchemyWorkstation.java:25-32` |
-| **方块** | **无**。全仓 `implements AlchemyWorkstation` **零命中** | grep 结果 |
-| **方块实体** | 5 个，全是交易站/展示架/灵材台/锻造台 | `registry/MxtBlockEntities.java:17-21` |
-| **菜单 / 界面** | 9 个 `MenuType` 里没有炼丹 | `registry/MxtMenus.java:16-24` |
-| **默认数据 / 资源** | `src/main/resources` 里没有丹炉的方块态、模型、贴图、配方 | 资源树 |
+| 零件            | 现状                                                                                                                                                                                                                      | 证据                                              |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------|
+| 配方模型          | `AlchemyRecipe` 有 `inputs` / `target_temperature` / `temperature_tolerance` / `minimum_furnace_tier` / `duration` / `minimum_aura` / `success_outputs` / `failure_outputs` / 四个成败 Action（`aura_kinds` 已于 2026-09-17 删除） | `data/alchemy/AlchemyRecipe.java:20-25`         |
+| 会话与结算         | `AlchemySession` + `AlchemyWorkstationState` + `AlchemyWorkstationService`（材料锁定、计时、结算、扣灵气）                                                                                                                              | `runtime/alchemy/*`                             |
+| 工作台契约         | `AlchemyWorkstation` 接口：`alchemyState()` / `furnaceTier()` / `temperature()` / `setChanged()`                                                                                                                           | `runtime/alchemy/AlchemyWorkstation.java:25-32` |
+| **方块**        | **无**。全仓 `implements AlchemyWorkstation` **零命中**                                                                                                                                                                        | grep 结果                                         |
+| **方块实体**      | 5 个，全是交易站/展示架/灵材台/锻造台                                                                                                                                                                                                   | `registry/MxtBlockEntities.java:17-21`          |
+| **菜单 / 界面**   | 9 个 `MenuType` 里没有炼丹                                                                                                                                                                                                    | `registry/MxtMenus.java:16-24`                  |
+| **默认数据 / 资源** | `src/main/resources` 里没有丹炉的方块态、模型、贴图、配方                                                                                                                                                                                 | 资源树                                             |
 
 **一条很说明问题的旁证**：基座**自己一次都没有跑过这四套系统**。
 全仓（含 `run/kubejs`）**没有任何** `mxt:alchemy` / `mxt:spirit_shaped` / `mxt:spirit_shapeless` /
@@ -254,36 +254,39 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 **基座现状**：
 
-| 可能承担的东西 | 现状 |
-| --- | --- |
-| 自定义 `MobEffect` | **基座注册 0 个**；`ApplyEffectAction` 收原版 `MobEffect` |
-| `curse` | 有 `duration_ticks` / `tick_interval` / `max_stacks` / `StackingMode` / 施加·周期·到期·解毒 Action（`data/curse/Curse.java`）——**形态上最接近"限时命名状态"**，但语义被限定为负面、可解毒，且没有图标、不改属性 |
-| 四个能力组件 | `toggle` / `timer` / `resource` / `target_lock` **注册了但零消费者**（见 §5） |
+| 可能承担的东西         | 现状                                                                                                                                                              |
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 自定义 `MobEffect` | **基座注册 0 个**；`ApplyEffectAction` 收原版 `MobEffect`                                                                                                                |
+| `curse`         | 有 `duration_ticks` / `tick_interval` / `max_stacks` / `StackingMode` / 施加·周期·到期·解毒 Action（`data/curse/Curse.java`）——**形态上最接近"限时命名状态"**，但语义被限定为负面、可解毒，且没有图标、不改属性 |
+| 四个能力组件          | `toggle` / `timer` / `resource` / `target_lock` **注册了但零消费者**（见 §5）                                                                                              |
 
 **缺什么**：一个中立的"限时命名状态"（名字 + 图标 + 层数 + 起止条件 + 属性修正 + 可被条件读取）。
 现在只能用 `curse` 冒充，或退回原版效果。
 
 **最小补法**：两条路，需拍板 —— ① 把 `curse` 的中立字段补齐（`icon`、`AttributeEntry[]`），
-语义从"诅咒"泛化成"状态"（`cleanse_tags` 已于 2026-09-19 删除，解毒改由解毒剂 + `mxt:curse` 标签管理）；② 新增 `mxt:status` 注册表。
+语义从"诅咒"泛化成"状态"（`cleanse_tags` 已于 2026-09-19 删除，解毒改由解毒剂 + `mxt:curse` 标签管理）；② 新增 `mxt:status`
+注册表。
 路 ① 改动小但要动既有语义，路 ② 干净但多一张表。
 
 ### 4.4 灵植与作物（`年份档` + `生长阶段` = 77 族 / 250 行）
 
 **基座现状**：`SpiritHerb` 有 7 个字段，**只有 2 个有消费者**：
 
-| 字段 | 消费者 |
-| --- | --- |
-| `items` | `SpiritHerbService.find` → `ItemQualityService.find`（`runtime/item/ItemQualityService.java:254,261`）✅ |
-| `quality` | 同上 ✅ |
-| `age` | **无** |
-| `element_tags` | `mxt:herb_tag` 的 `element`（2026-09-19 接线：任何接受 `ItemMatcher` 的地方都能问"任意火属性灵草"）✅ |
-| `material_tags` | `mxt:herb_tag` 的 `material`（同上）✅ |
-| `growth_rate` | **无**（等种植/生长系统） |
-| `drop_chance` | **无**（等种植/生长系统） |
+| 字段              | 消费者                                                                                                   |
+|-----------------|-------------------------------------------------------------------------------------------------------|
+| `items`         | `SpiritHerbService.find` → `ItemQualityService.find`（`runtime/item/ItemQualityService.java:254,261`）✅ |
+| `quality`       | 同上 ✅                                                                                                  |
+| `age`           | **无**                                                                                                 |
+| `element_tags`  | `mxt:herb_tag` 的 `element`（2026-09-19 接线：任何接受 `ItemMatcher` 的地方都能问"任意火属性灵草"）✅                         |
+| `material_tags` | `mxt:herb_tag` 的 `material`（同上）✅                                                                      |
+| `growth_rate`   | **无**（等种植/生长系统）                                                                                       |
+| `drop_chance`   | **无**（等种植/生长系统）                                                                                       |
 
 （`SpiritHerb.java:14-17` 的类注释明确说它**不为数据包条目注册物品**——这条边界是对的。）
 
-同时 `AuraZone.Rules` 的三个灵气—灵植联动字段：`alchemy_env_bonus` **已于 2026-09-19 接上**（该区域内的丹药配方视为满足 `minimum_aura`，见 `runtime/alchemy/AlchemyWorkstationService.java`），`spirit_plant_bonus` 与 `natural_spawn_herb` 仍**零消费者**（`data/aura/AuraZone.java:140-149`；`docs/灵气环境数据包.md:95` 自己也写了"尚未接入消费者"）。
+同时 `AuraZone.Rules` 的三个灵气—灵植联动字段：`alchemy_env_bonus` **已于 2026-09-19 接上**（该区域内的丹药配方视为满足
+`minimum_aura`，见 `runtime/alchemy/AlchemyWorkstationService.java`），`spirit_plant_bonus` 与 `natural_spawn_herb` 仍*
+*零消费者**（`data/aura/AuraZone.java:140-149`；`docs/灵气环境数据包.md:95` 自己也写了"尚未接入消费者"）。
 对照之下同一 `Rules` 里的另两个**已经接了**：`cultivate_suppress`（`AuraResult.java:38-39`、
 `CultivationActionService.java:302`）、`tribulation_modify`（`TribulationService.java:25-26,85`）。
 
@@ -301,6 +304,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 **每玩家怪物上限**（记分板 `SumLimit`）、生成计时器、**诱妖草**这类加成物品、清除机制。
 
 **基座现状**：
+
 - `CreatureProfile` 的 9 个字段里**没有任何生成相关字段**
   （`realm_stages` / `intelligence` / `condition` / `inner_core` / `loot_table` / `contract_tags` /
   `entity_type_tags` / `preferred_aura_elements` / `minimum_aura`，`data/creature/CreatureProfile.java:28-33`）。
@@ -322,6 +326,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 ### 4.6 图鉴与描述（~198 行 GUI + 501 行 tooltip）
 
 **基座现状**：
+
 - **没有目录/图鉴**。`InformationManager.java:26-40` 是一张 Java `static` 注册表，
   只收"玩家自身状态"的读取器（`Side.BASIC` / `Side.CULTIVATION`），**不接受数据包条目**。
 - 已有可复用零件：`IconReference`（`data/IconReference.java`，贴图或 `ItemStackTemplate`）、
@@ -331,6 +336,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 **缺什么**：一张 `mxt:catalog_entry` 之类的注册表（`icon` + `title` + `description` + `category` + `page` + `condition`）
 加一个通用分页 Screen。这是**单条收益最大**的缺口：198 行 GUI 里 61 个功法图鉴 + 37 个法宝图鉴
+
 + 丹方/器路/物品描述全部是它的实例。
 
 **最小补法（Java）**：一个注册表 + 一个 Screen（`IconReference` 与 `DescribedEntry` 已经现成），
@@ -339,12 +345,15 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 ### 4.7 储物（`12-储物袋` + 法宝储物）
 
 **基座现状**：`ArtifactStorageComponent`（`List<ItemStack>`）、`ArtifactStorageService`、
-`ISpiritStorage`、`ItemArchetype` 的储物能力 **都在，但**（`ItemArchetype` 已于 2026-09-21 改名为 `Artifact`，本文其余处保留当时的名字与行号）：
+`ISpiritStorage`、`ItemArchetype` 的储物能力 **都在，但**（`ItemArchetype` 已于 2026-09-21 改名为 `Artifact`
+，本文其余处保留当时的名字与行号）：
 
 - **没有任何物品使用它**。`MxtItems.SPIRIT_STONE_BAG` 是空壳 `Item::new`（`registry/MxtItems.java:42`）。
 - **没有任何菜单/界面**。`MxtMenus` 9 个里没有储物。
-- `ArtifactStateComponent.nourishment` **已于 2026-09-19 接上**：灌能时按"真正收下 ÷ 本次有效容量"上涨（`0..1`、只升不降），并作为容量加成参与法器上限（`runtime/artifact/ArtifactService.java`）。
-- **2026-09-21**：槽位声明从 `ItemArchetype.storage_slots` 挪进 `abilities` 里的 `mxt:storage` 条目，`ISpiritStorage` 三处签名改为带 `HolderLookup.Provider`（定义要在客户端也读得到）。界面仍然没有。
+- `ArtifactStateComponent.nourishment` **已于 2026-09-19 接上**：灌能时按"真正收下 ÷ 本次有效容量"上涨（`0..1`
+  、只升不降），并作为容量加成参与法器上限（`runtime/artifact/ArtifactService.java`）。
+- **2026-09-21**：槽位声明从 `ItemArchetype.storage_slots` 挪进 `abilities` 里的 `mxt:storage` 条目，`ISpiritStorage`
+  三处签名改为带 `HolderLookup.Provider`（定义要在客户端也读得到）。界面仍然没有。
 
 **缺什么**：一个通用储物容器物品 + 界面（槽数来自 `mxt:storage` 条目，即数据驱动）。
 **最小补法**：新增一个 `SpiritStorageItem` + `MenuType`，复用 `ArtifactStorageService`（容量计算已写好）。
@@ -353,18 +362,19 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 **基座现状**（本节逐项已对着代码核过）：
 
-| 项 | 现状 |
-| --- | --- |
-| 世界生成 | **只有一处，且只服务基座自己硬编码的矿石**：`data/mxt/neoforge/biome_modifier/add_spirit_stone_ore.json`（`add_features`）+ `worldgen/configured_feature/spirit_stone_ore.json` + `worldgen/placed_feature/spirit_stone_ore.json`，方块硬编码在 `MxtBlocks.java:28`。Java 侧**零世界生成代码**（`BiomeModifier`/`StructureSet`/`TemplatePool`/`ProcessorList`/`DimensionType`/`StructureType`/`StructurePiece` 在 main 中 0 命中） |
-| 结构 | **只有"只读匹配"，没有生成**。`FormationStructureValidator.java:30-83` 读 `level.getStructureManager().get(template)` 逐格比对；`Formation.java:46,49,81-88` 强制 `structure_template` 与 `structure` 恰好二选一。全仓**没有任何 `.nbt` 文件**，没有 `data/*/structure` 目录 |
-| 战利品 | 完备。原版 loot table 全可用 + 基座 6 个条件类型（`MxtLootConditions.java:15-20`）与 4 个函数类型（`MxtLootFunctions.java:18-21`）+ KubeJS 注册口 |
-| 群系 | 不注册，只消费。`AuraZone.biomes` 支持 Holder 或 `#tag`（`AuraZone.java:36,46`；`AuraService.java:158-168`；`RegistryCodecs.java:26-35`）。条件侧有 `BiomeTagBlockCondition` |
-| 维度 | 定义走原版；灵气侧 `AuraZone.dimensions` 用 `LevelStem` key/tag。`RealmInstanceService.destination()` = `server.getLevel(...)`（`:134-136`），**只查已加载维度**；维度缺失即 `MISSING_DIMENSION`（`:41-42`）；入口坐标硬编码 `0.5, getHeight(MOTION_BLOCKING_NO_LEAVES,0,0), 0.5`（`:50-53`） |
-| 维度装载器 | `RuntimeDimensionService.java:31-81` 装/卸都写好了，但**全仓零调用者**（无命令、无 KubeJS、无内部调用） |
-| 区域灵气 | `AuraZone` 的粒度是"整维度 / 整群系 + 噪声"；**有界区域只能运行时经 KubeJS 写入** level 附件（`MxtKubeJsApi.java:147-151`、`AuraWorldAttachment.java:19-74`），**无数据包格式、无命令** |
-| 灵脉 | `SpiritStoneVein` 是**纯测量器**：方块硬编码（`:22,28`）、阈值硬编码 6 级（`:34-51`），唯一消费者是 `/mxt aura vein`。它**不生成任何东西** |
+| 项     | 现状                                                                                                                                                                                                                                                                                                                                                                                     |
+|-------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 世界生成  | **只有一处，且只服务基座自己硬编码的矿石**：`data/mxt/neoforge/biome_modifier/add_spirit_stone_ore.json`（`add_features`）+ `worldgen/configured_feature/spirit_stone_ore.json` + `worldgen/placed_feature/spirit_stone_ore.json`，方块硬编码在 `MxtBlocks.java:28`。Java 侧**零世界生成代码**（`BiomeModifier`/`StructureSet`/`TemplatePool`/`ProcessorList`/`DimensionType`/`StructureType`/`StructurePiece` 在 main 中 0 命中） |
+| 结构    | **只有"只读匹配"，没有生成**。`FormationStructureValidator.java:30-83` 读 `level.getStructureManager().get(template)` 逐格比对；`Formation.java:46,49,81-88` 强制 `structure_template` 与 `structure` 恰好二选一。全仓**没有任何 `.nbt` 文件**，没有 `data/*/structure` 目录                                                                                                                                                   |
+| 战利品   | 完备。原版 loot table 全可用 + 基座 6 个条件类型（`MxtLootConditions.java:15-20`）与 4 个函数类型（`MxtLootFunctions.java:18-21`）+ KubeJS 注册口                                                                                                                                                                                                                                                                  |
+| 群系    | 不注册，只消费。`AuraZone.biomes` 支持 Holder 或 `#tag`（`AuraZone.java:36,46`；`AuraService.java:158-168`；`RegistryCodecs.java:26-35`）。条件侧有 `BiomeTagBlockCondition`                                                                                                                                                                                                                               |
+| 维度    | 定义走原版；灵气侧 `AuraZone.dimensions` 用 `LevelStem` key/tag。`RealmInstanceService.destination()` = `server.getLevel(...)`（`:134-136`），**只查已加载维度**；维度缺失即 `MISSING_DIMENSION`（`:41-42`）；入口坐标硬编码 `0.5, getHeight(MOTION_BLOCKING_NO_LEAVES,0,0), 0.5`（`:50-53`）                                                                                                                                 |
+| 维度装载器 | `RuntimeDimensionService.java:31-81` 装/卸都写好了，但**全仓零调用者**（无命令、无 KubeJS、无内部调用）                                                                                                                                                                                                                                                                                                           |
+| 区域灵气  | `AuraZone` 的粒度是"整维度 / 整群系 + 噪声"；**有界区域只能运行时经 KubeJS 写入** level 附件（`MxtKubeJsApi.java:147-151`、`AuraWorldAttachment.java:19-74`），**无数据包格式、无命令**                                                                                                                                                                                                                                         |
+| 灵脉    | `SpiritStoneVein` 是**纯测量器**：方块硬编码（`:22,28`）、阈值硬编码 6 级（`:34-51`），唯一消费者是 `/mxt aura vein`。它**不生成任何东西**                                                                                                                                                                                                                                                                                   |
 
 **缺什么**：
+
 1. **世界生成扩展点的文档与示例是零**。`docs/` 全库 grep
    `add_features|biome_modifier|configured_feature|placed_feature|add_spawns|structure_set|template_pool|dimension_type`
    **0 命中**——基座自己在用这条路做矿石，却从没告诉内容包这条路。
@@ -375,6 +385,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
    `realm_instance` 没有入口坐标字段。
 
 **最小补法**：
+
 - 1 是 **文档 + JSON 骨架，0 行 Java**；
 - 2 在 `AuraZone.CORE_CODEC`（`AuraZone.java:42-52`）加可选 `areas` 并在 `AuraService.staticZone`（`:152-174`）匹配，
   或新增 `mxt:aura_region` 注册表（`MxtResourceKeys.java:114` 后 + `MxtDatapackRegistries.java:85-90` 各一行）；
@@ -399,6 +410,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 四个"累加经验 → 过阈值 → 升级 → 解锁/加成"的阶梯。这些**不是功法**。
 
 **基座现状**：
+
 - `skill_stage` 的**数据结构本身是通用的**：链身份 `skill` 是自由 `Identifier`，
   `ServerCache.rebuildSkillChains`（`runtime/ServerCache.java:204-256`）只沿 `next_stage` 推 rank，不认识功法。
 - 但**全部消费者都绑在功法上**：`Technique.default_stage` / `mastery_resource` / `configuration`
@@ -409,17 +421,17 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
   所以**独立技能没有状态、没有晋升器**：数据包今天能定义一条画符等级链（不会被缓存拒绝），
   但玩家**永远停在入口级**。
 - 另外四件事也缺：
-  - `skill_stage` 的**比较条件**不存在（`MxtEntityConditions` 里没有；境界侧有
-    `mxt:realm` 的 EXACT/AT_LEAST/AT_MOST 与 `mxt:has_realm` 可照抄，`RealmEntityCondition.java:24-29,57-66`）。
-  - **公式变量**里没有阶段 rank（`MxtFormulaVariables.RealmVariable:146-166` 只在有 `ResourceSubject` 时给境界）。
-  - **通用"累加 → 阈值 → 升级"原语**不存在。现成的是**三套 bespoke**：
-    境界（`CultivationService.addProgress:165-207` + `threshold:283-297` + `commit:116-144`）、
-    功法熟练度（`TechniqueMasteryService.promote:56-75`）、丹药毒性（`PillService.java:20-27`）。
-  - **没有"写等级"的动作**：`MxtEntityActions` 里没有 set-skill-stage 一类动作，
-    `CultivationService.setRealm:271-281` 只作用于境界且只被 `/mxt` 管理命令调用（`MxtCommand.java:277-280`）。
-    后果很具体：**「画符经验 ≥ 300 → 画符 1 级」今天无法纯数据包实现**——
-    `mxt:trigger`(tick) + `mxt:resource_compare` + `mxt:add_resource` 三个零件都够，
-    唯独缺最后那一下"把等级写上去"。
+    - `skill_stage` 的**比较条件**不存在（`MxtEntityConditions` 里没有；境界侧有
+      `mxt:realm` 的 EXACT/AT_LEAST/AT_MOST 与 `mxt:has_realm` 可照抄，`RealmEntityCondition.java:24-29,57-66`）。
+    - **公式变量**里没有阶段 rank（`MxtFormulaVariables.RealmVariable:146-166` 只在有 `ResourceSubject` 时给境界）。
+    - **通用"累加 → 阈值 → 升级"原语**不存在。现成的是**三套 bespoke**：
+      境界（`CultivationService.addProgress:165-207` + `threshold:283-297` + `commit:116-144`）、
+      功法熟练度（`TechniqueMasteryService.promote:56-75`）、丹药毒性（`PillService.java:20-27`）。
+    - **没有"写等级"的动作**：`MxtEntityActions` 里没有 set-skill-stage 一类动作，
+      `CultivationService.setRealm:271-281` 只作用于境界且只被 `/mxt` 管理命令调用（`MxtCommand.java:277-280`）。
+      后果很具体：**「画符经验 ≥ 300 → 画符 1 级」今天无法纯数据包实现**——
+      `mxt:trigger`(tick) + `mxt:resource_compare` + `mxt:add_resource` 三个零件都够，
+      唯独缺最后那一下"把等级写上去"。
 
 **最小补法（Java）**：
 ① `SpiritIdentityAttachment` 的状态键从 `Holder<Technique>` 泛化成 `Identifier skill`
@@ -486,60 +498,61 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 每一条都是「定义 + Codec + 字段在，消费者不在」。修法基本都是接线，不是新设施。
 
-| # | 位置 | 现状 | 证据 |
-| --: | --- | --- | --- |
-| 1 | `AlchemyWorkstation` | 接口**零实现**；无丹炉方块/方块实体/菜单/界面 | `runtime/alchemy/AlchemyWorkstation.java:25`；`MxtBlocks` 14 个方块、`MxtBlockEntities` 5 个、`MxtMenus` 9 个均无 |
-| 2 | `MxtRecipeTypes.REFINING` | 只被 `RefiningRecipe` 自身引用 → 无消费者；且 `ItemArchetype` 已是数据包注册表，这条配方路径是重复的。**2026-09-21 复核：仍然没有消费者**（`archetype` 字段仍是内联的） | `recipe/RefiningRecipe.java:56`（全仓唯一命中） |
-| 3 | `MxtRecipeTypes.FORMATION` | 同上；`Formation` 已是数据包注册表 | `recipe/FormationRecipe.java:53` |
-| 4 | `SpiritHerb` 的 `age`/`growth_rate`/`drop_chance`/`element_tags`/`material_tags` | 5 个字段零消费者（只有 `items`/`quality` 有）；**`element_tags`/`material_tags` 已于 2026-09-19 由新条目 `mxt:herb_tag` 消费**，`age`/`growth_rate`/`drop_chance` 仍等灵植生长系统 | `data/alchemy/SpiritHerb.java:18-25`；`runtime/alchemy/HerbTagEntry.java` |
-| 5 | `AuraZone.Rules` 的 `spirit_plant_bonus`/`alchemy_env_bonus`/`natural_spawn_herb` | 零消费者（同 `Rules` 的另两个已接）；**`alchemy_env_bonus` 已于 2026-09-19 接上**（该区域内的丹药配方视为满足 `minimum_aura`），另外两个仍等灵植生长系统 | `data/aura/AuraZone.java:140-149`；`runtime/alchemy/AlchemyWorkstationService.java` |
-| 6 | `ItemArchetype.item_type` | **2026-09-21 复核：仍无按值分流的判断**。重设计后它成为必填且非空、并明确为"器型标识"，但代码里没有任何 `switch`/`if` 读它的值；它是给数据包与内容方认族的标签，不是分发键 | `data/artifact/ItemArchetype.java` |
-| 7 | `ItemArchetype.spirit_capacity` | **已于 2026-09-21 重做**：从单个 `NumberProvider` 变成 `灵气 → 上限` 的 map，上限按灵气分别计算，非有限/非正按 0；存量改用共用组件 `mxt:spirit_storage` | `runtime/artifact/ArtifactService.java`（`capacity`/`addEnergy`） |
-| 8 | `ArtifactStorageComponent` / `ArtifactStorageService` / `ISpiritStorage` | **2026-09-21：槽位来源改接**（定义里的 `mxt:storage` 条目，`ISpiritStorage` 三处签名带上 `Provider`）；**2026-09-22：界面已接上**——`mxt:storage` 现在是一个 `ToggableArtifactAbility`（轮盘上「储物」那一格），按下打开复用原版箱子菜单的窗口（`MxtMenus.ARTIFACT_STORAGE` + `ContainerScreen`），容器是 `ArtifactStorageContainer`（改动整份写回组件、法器离身即关窗）；格数改成按 9 向上取整、最多 54，见 `research/32_法器开关与轮盘接线设计.md` §7 | `runtime/artifact/ArtifactStorageService.java`（原结论里的"仍无物品与菜单使用"已不成立） |
-| 9 | `ArtifactStateComponent.nourishment` | **已于 2026-09-19 接上、2026-09-21 复核仍成立**：灌能时按"真正收下 ÷ 本次该灵气的有效上限"上涨（夹在 `0..1`、只升不降），同时作为容量加成 `× (1 + 0.5 × nourishment)`。同轮该组件删掉了 `spirit_energy` 与 `archetype` 两个字段 | `runtime/artifact/ArtifactService.java` |
-| 10 | `data_storage_type`：`toggle`/`timer`/`resource`/`target_lock` | **已于 2026-09-19 关闭**：四者各有一个 `mxt:storage_toggle`/`storage_timer`/`storage_resource`/`storage_target` 实体条件读取（`mxt:charges`/`mxt:cooldown` 另补了 `storage_charges`/`storage_cooldown`，六种类型全部可读） | `registry/MxtEntityConditions.java`；`data/condition/builtin/entity/Storage*EntityCondition.java` |
-| 11 | `ChargesDataStorage.recharge_ticks` | **已于 2026-09-19 关闭**：`AbilityEventBridge` 每 tick 按"距上次写入 ≥ recharge_ticks"回充一次，最多一步、不脏化附件 | `runtime/ability/AbilityStorage.java`；`runtime/ability/AbilityEventBridge.java` |
-| 12 | `SkillStage.damage_multiplier` | **已于 2026-09-20 关闭**：施放能力时 `AbilityService` 把"授予该能力、且施法者当前所在的那一级"的倍率写进公式上下文（`damage_multiplier`），`DamageCalculationService` 第一层读它；TODO 与类注释里的推后说明一并删除 | `runtime/cultivation/SkillStageService.java`；`runtime/ability/AbilityService.java` |
-| 13 | `CreatureProfile.realm_stages` | 零消费者 | `data/creature/CreatureProfile.java:28`；`technique.md` §8.2 |
-| 14 | `Technique.grade` | **已于 2026-09-19 接上**：功法面板的行悬浮提示显示"品阶：<原文>"（存在 `mxt.technique_grade.<grade>` 时用翻译） | `screen/information/TechniquePanelScreen.java` |
-| 15 | `SpiritRoot.rarity` / `Physique.rarity` | **已于 2026-09-21 关闭**：信息面板的灵根行与体质行在悬浮提示里显示稀有度（`DefinitionText.rarity`，存在 `mxt.rarity.<rarity>` 时用翻译、否则原文，与功法 `grade` 同一套读法），`/mxt identity root\|physique list` 也打印它；`Physique` 另加了两个与元素无关的伤害倍率（`damage_dealt_multiplier`/`damage_taken_multiplier`），由伤害管线两层读取 | `DefinitionText`；`screen/information/InformationManager`；`runtime/damage/DamageCalculationService` |
-| 16 | `TriggerContext.damageSource()` | **零读取点**——`mxt:hurt` 把 `DamageSource` 放进去了，但条件/公式都拿不到 | `data/trigger/TriggerContext.java:58`（全仓唯一命中） |
-| 17 | `CultivationAffinity.multiplier` 的 `roots` / `techniques` 两个 `Function` 参数 | **已于 2026-09-21 关闭**：两个参数与同样没人用的 `Provider access` 一起删除，倍率改为从 `SpiritIdentityAttachment` 自己持有的灵根与功法读（顺便把两个重载里重复的尾巴抽成 `combine`）；`abilityMultiplier` 的 `roots` 参数同样删除 | `runtime/cultivation/CultivationAffinity.java`；`runtime/cultivation/CultivationActionService.java`；`runtime/ability/AbilityService.java` |
-| 18 | `RuntimeDimensionService` | 类可用但**全仓零调用者**（无命令、无 KubeJS、无内部调用） | `runtime/world/RuntimeDimensionService.java:31-81` |
-| 19 | `SpiritStoneVein` | 纯诊断读取器，无玩法消费者；方块与等级阈值写死 | `runtime/world/SpiritStoneVein.java:22,28,34-51`；唯一调用 `command/AuraCommand.java:90` |
-| 20 | `ResourceLedger` | 与附件账本并行的**第二套账本**，`src/main` 无生产调用点 | `runtime/resource/ResourceLedger.java`（全 67 行，仅自用） |
-| 21 | `MxtItems` 里的空壳物品：`talisman_brush` / `talisman_ink` / `cinnabar` / `blank_talisman` / `recall_talisman` / `realm_reward_box` | 全部 `Item::new`，无行为 | `registry/MxtItems.java:47,51,53,59-61` |
-| 22 | `ItemQuality.Modifier.modifier`（三个修正各一个） | **已于 2026-09-19 关闭**：`value_multiplier` 进入货币单位面值（取整，Tooltip 同步显示结算值）、`forging_modifier` 进入锻造品质档（`额外步数 ÷ modifier`，取锁定材料中最低一档）、`alchemy_modifier` 进入炼丹时长（`声明时长 ÷ modifier`，取开炉原料中最低一档） | `runtime/economy/CurrencyValueService.java`；`runtime/forging/ForgingService.java`；`runtime/alchemy/AlchemySession.java` |
-| 23 | `TalismanComponent.appended()` | 铭刻的写入缝：`src/main` **零调用者**（唯一调用在 test-mod `MxtTestMod.java:5070`） | `data/item/TalismanComponent.java:44-48` |
-| 24 | `IdentificationComponent` | 只有读（`item/IdentificationMirrorItem.java:29-33`），**没有写入方** | `data/item/IdentificationComponent.java` |
+|  # | 位置                                                                                                                           | 现状                                                                                                                                                                                                                                                                                                                                     | 证据                                                                                                                                       |
+|---:|------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+|  1 | `AlchemyWorkstation`                                                                                                         | 接口**零实现**；无丹炉方块/方块实体/菜单/界面                                                                                                                                                                                                                                                                                                             | `runtime/alchemy/AlchemyWorkstation.java:25`；`MxtBlocks` 14 个方块、`MxtBlockEntities` 5 个、`MxtMenus` 9 个均无                                  |
+|  2 | `MxtRecipeTypes.REFINING`                                                                                                    | 只被 `RefiningRecipe` 自身引用 → 无消费者；且 `ItemArchetype` 已是数据包注册表，这条配方路径是重复的。**2026-09-21 复核：仍然没有消费者**（`archetype` 字段仍是内联的）                                                                                                                                                                                                                   | `recipe/RefiningRecipe.java:56`（全仓唯一命中）                                                                                                  |
+|  3 | `MxtRecipeTypes.FORMATION`                                                                                                   | 同上；`Formation` 已是数据包注册表                                                                                                                                                                                                                                                                                                                | `recipe/FormationRecipe.java:53`                                                                                                         |
+|  4 | `SpiritHerb` 的 `age`/`growth_rate`/`drop_chance`/`element_tags`/`material_tags`                                              | 5 个字段零消费者（只有 `items`/`quality` 有）；**`element_tags`/`material_tags` 已于 2026-09-19 由新条目 `mxt:herb_tag` 消费**，`age`/`growth_rate`/`drop_chance` 仍等灵植生长系统                                                                                                                                                                                   | `data/alchemy/SpiritHerb.java:18-25`；`runtime/alchemy/HerbTagEntry.java`                                                                 |
+|  5 | `AuraZone.Rules` 的 `spirit_plant_bonus`/`alchemy_env_bonus`/`natural_spawn_herb`                                             | 零消费者（同 `Rules` 的另两个已接）；**`alchemy_env_bonus` 已于 2026-09-19 接上**（该区域内的丹药配方视为满足 `minimum_aura`），另外两个仍等灵植生长系统                                                                                                                                                                                                                             | `data/aura/AuraZone.java:140-149`；`runtime/alchemy/AlchemyWorkstationService.java`                                                       |
+|  6 | `ItemArchetype.item_type`                                                                                                    | **2026-09-21 复核：仍无按值分流的判断**。重设计后它成为必填且非空、并明确为"器型标识"，但代码里没有任何 `switch`/`if` 读它的值；它是给数据包与内容方认族的标签，不是分发键                                                                                                                                                                                                                                  | `data/artifact/ItemArchetype.java`                                                                                                       |
+|  7 | `ItemArchetype.spirit_capacity`                                                                                              | **已于 2026-09-21 重做**：从单个 `NumberProvider` 变成 `灵气 → 上限` 的 map，上限按灵气分别计算，非有限/非正按 0；存量改用共用组件 `mxt:spirit_storage`                                                                                                                                                                                                                         | `runtime/artifact/ArtifactService.java`（`capacity`/`addEnergy`）                                                                          |
+|  8 | `ArtifactStorageComponent` / `ArtifactStorageService` / `ISpiritStorage`                                                     | **2026-09-21：槽位来源改接**（定义里的 `mxt:storage` 条目，`ISpiritStorage` 三处签名带上 `Provider`）；**2026-09-22：界面已接上**——`mxt:storage` 现在是一个 `ToggableArtifactAbility`（轮盘上「储物」那一格），按下打开复用原版箱子菜单的窗口（`MxtMenus.ARTIFACT_STORAGE` + `ContainerScreen`），容器是 `ArtifactStorageContainer`（改动整份写回组件、法器离身即关窗）；格数改成按 9 向上取整、最多 54，见 `research/32_法器开关与轮盘接线设计.md` §7 | `runtime/artifact/ArtifactStorageService.java`（原结论里的"仍无物品与菜单使用"已不成立）                                                                     |
+|  9 | `ArtifactStateComponent.nourishment`                                                                                         | **已于 2026-09-19 接上、2026-09-21 复核仍成立**：灌能时按"真正收下 ÷ 本次该灵气的有效上限"上涨（夹在 `0..1`、只升不降），同时作为容量加成 `× (1 + 0.5 × nourishment)`。同轮该组件删掉了 `spirit_energy` 与 `archetype` 两个字段                                                                                                                                                                       | `runtime/artifact/ArtifactService.java`                                                                                                  |
+| 10 | `data_storage_type`：`toggle`/`timer`/`resource`/`target_lock`                                                                | **已于 2026-09-19 关闭**：四者各有一个 `mxt:storage_toggle`/`storage_timer`/`storage_resource`/`storage_target` 实体条件读取（`mxt:charges`/`mxt:cooldown` 另补了 `storage_charges`/`storage_cooldown`，六种类型全部可读）                                                                                                                                            | `registry/MxtEntityConditions.java`；`data/condition/builtin/entity/Storage*EntityCondition.java`                                         |
+| 11 | `ChargesDataStorage.recharge_ticks`                                                                                          | **已于 2026-09-19 关闭**：`AbilityEventBridge` 每 tick 按"距上次写入 ≥ recharge_ticks"回充一次，最多一步、不脏化附件                                                                                                                                                                                                                                              | `runtime/ability/AbilityStorage.java`；`runtime/ability/AbilityEventBridge.java`                                                          |
+| 12 | `SkillStage.damage_multiplier`                                                                                               | **已于 2026-09-20 关闭**：施放能力时 `AbilityService` 把"授予该能力、且施法者当前所在的那一级"的倍率写进公式上下文（`damage_multiplier`），`DamageCalculationService` 第一层读它；TODO 与类注释里的推后说明一并删除                                                                                                                                                                                  | `runtime/cultivation/SkillStageService.java`；`runtime/ability/AbilityService.java`                                                       |
+| 13 | `CreatureProfile.realm_stages`                                                                                               | 零消费者                                                                                                                                                                                                                                                                                                                                   | `data/creature/CreatureProfile.java:28`；`technique.md` §8.2                                                                              |
+| 14 | `Technique.grade`                                                                                                            | **已于 2026-09-19 接上**：功法面板的行悬浮提示显示"品阶：<原文>"（存在 `mxt.technique_grade.<grade>` 时用翻译）                                                                                                                                                                                                                                                      | `screen/information/TechniquePanelScreen.java`                                                                                           |
+| 15 | `SpiritRoot.rarity` / `Physique.rarity`                                                                                      | **已于 2026-09-21 关闭**：信息面板的灵根行与体质行在悬浮提示里显示稀有度（`DefinitionText.rarity`，存在 `mxt.rarity.<rarity>` 时用翻译、否则原文，与功法 `grade` 同一套读法），`/mxt identity root\|physique list` 也打印它；`Physique` 另加了两个与元素无关的伤害倍率（`damage_dealt_multiplier`/`damage_taken_multiplier`），由伤害管线两层读取                                                                          | `DefinitionText`；`screen/information/InformationManager`；`runtime/damage/DamageCalculationService`                                       |
+| 16 | `TriggerContext.damageSource()`                                                                                              | **零读取点**——`mxt:hurt` 把 `DamageSource` 放进去了，但条件/公式都拿不到                                                                                                                                                                                                                                                                                  | `data/trigger/TriggerContext.java:58`（全仓唯一命中）                                                                                            |
+| 17 | `CultivationAffinity.multiplier` 的 `roots` / `techniques` 两个 `Function` 参数                                                   | **已于 2026-09-21 关闭**：两个参数与同样没人用的 `Provider access` 一起删除，倍率改为从 `SpiritIdentityAttachment` 自己持有的灵根与功法读（顺便把两个重载里重复的尾巴抽成 `combine`）；`abilityMultiplier` 的 `roots` 参数同样删除                                                                                                                                                                   | `runtime/cultivation/CultivationAffinity.java`；`runtime/cultivation/CultivationActionService.java`；`runtime/ability/AbilityService.java` |
+| 18 | `RuntimeDimensionService`                                                                                                    | 类可用但**全仓零调用者**（无命令、无 KubeJS、无内部调用）                                                                                                                                                                                                                                                                                                     | `runtime/world/RuntimeDimensionService.java:31-81`                                                                                       |
+| 19 | `SpiritStoneVein`                                                                                                            | 纯诊断读取器，无玩法消费者；方块与等级阈值写死                                                                                                                                                                                                                                                                                                                | `runtime/world/SpiritStoneVein.java:22,28,34-51`；唯一调用 `command/AuraCommand.java:90`                                                      |
+| 20 | `ResourceLedger`                                                                                                             | 与附件账本并行的**第二套账本**，`src/main` 无生产调用点                                                                                                                                                                                                                                                                                                    | `runtime/resource/ResourceLedger.java`（全 67 行，仅自用）                                                                                       |
+| 21 | `MxtItems` 里的空壳物品：`talisman_brush` / `talisman_ink` / `cinnabar` / `blank_talisman` / `recall_talisman` / `realm_reward_box` | 全部 `Item::new`，无行为                                                                                                                                                                                                                                                                                                                     | `registry/MxtItems.java:47,51,53,59-61`                                                                                                  |
+| 22 | `ItemQuality.Modifier.modifier`（三个修正各一个）                                                                                     | **已于 2026-09-19 关闭**：`value_multiplier` 进入货币单位面值（取整，Tooltip 同步显示结算值）、`forging_modifier` 进入锻造品质档（`额外步数 ÷ modifier`，取锁定材料中最低一档）、`alchemy_modifier` 进入炼丹时长（`声明时长 ÷ modifier`，取开炉原料中最低一档）                                                                                                                                                  | `runtime/economy/CurrencyValueService.java`；`runtime/forging/ForgingService.java`；`runtime/alchemy/AlchemySession.java`                  |
+| 23 | `TalismanComponent.appended()`                                                                                               | 铭刻的写入缝：`src/main` **零调用者**（唯一调用在 test-mod `MxtTestMod.java:5070`）                                                                                                                                                                                                                                                                      | `data/item/TalismanComponent.java:44-48`                                                                                                 |
+| 24 | `IdentificationComponent`                                                                                                    | 只有读（`item/IdentificationMirrorItem.java:29-33`），**没有写入方**                                                                                                                                                                                                                                                                              | `data/item/IdentificationComponent.java`                                                                                                 |
 
 另有一条曾经**文档承诺但代码没有**的 API：`research/04_数据包与KubeJS边界.md` 的设计稿里写过的
 `Mxt.registries().registerJson("ability", "example:fire_ball", …)` 在 `compat/kubejs/MxtKubeJsApi.java`
-里**不存在**（该 API 只有 `ability/curse/useAbility/…/addAuraBox/removeAuraArea` 等运行时方法）——该文档的 API 一节现已按实际形状改写并注明这一点。
+里**不存在**（该 API 只有 `ability/curse/useAbility/…/addAuraBox/removeAuraArea` 等运行时方法）——该文档的 API
+一节现已按实际形状改写并注明这一点。
 即 **KubeJS 不能注入数据包定义**，只能扩展固有类型；数据定义一律走数据包。
 
 ---
 
 ## 6. 文档与代码不一致（C 类）
 
-| # | 位置 | 文档说 | 代码是 |
-| --: | --- | --- | --- |
-| 1 | `docs/模块实现审计.md:104` | 炼丹「完成」——「原料、温度、炉阶、时长、灵气环境、产物和成败行为由炼丹工作台处理」 | **没有炼丹工作台**（§4.1、§5#1） |
-| 2 | `docs/getting-started.md:51` | 「阵法、锻造、炼丹」一栏写「完成」 | 炼丹未接线 |
-| 3 | `docs/模块实现审计.md:26` | 「`ItemStackTemplate` 用于返还物、**配方产物**和聊天悬浮物品」 | `AlchemyRecipe` 产物仍是 `List<Identifier>` |
-| 4 | `docs/模块实现审计.md:94`、`docs/数据包格式.md:1267` | 维度装载器提供"备用的 LevelStem 装载/卸载能力" | 类可用但**零调用者**，是死代码 |
-| 5 | `docs/灵气环境数据包.md:84,89,102,104` | 引用 `base_aura` 与 `block_aura.aura_per_block` | **两个字段都不存在**。实际是 `aura.<resource>.amount`（`AuraZone.java:43` + `AuraService.java:495-498`）；`BlockAura` 只有 `blocks`/`aura`（`BlockAura.java:18-21`；`aura_kinds` 已于 2026-09-17 删除）。`docs/数据包格式.md:1124-1134` 写的是对的 |
-| 6 | `docs/数据包格式.md:1162` | `structure_template` 标"**必填**" | 同表 `:1163` 又说二选一；代码里两者都是 `optionalFieldOf` + `validate` 强制**恰好一个**（`Formation.java:46,49,81-88`） |
-| 7 | `docs/数据包格式.md:1261` | `realm_instance.dimension`「缺省时由入口逻辑决定」 | 缺省 → `destination()` 返回 empty → 进入立即 `MISSING_DIMENSION`（`RealmInstanceService.java:41-42,134-136`） |
-| 8 | `docs/数据包格式.md:338` | 把 `alchemy_recipe` 列进数据包注册表路径表（`mxt/alchemy_recipe`） | 它是配方类型，路径应为 `data/<ns>/recipe/`，`"type": "mxt:alchemy"` |
-| 9 | `docs/` 全库 | **没有任何**世界生成/结构/群系/维度定义的说明（grep `add_features\|biome_modifier\|configured_feature\|placed_feature\|add_spawns\|structure_set\|template_pool\|dimension_type` **0 命中**） | 基座自己正用 `neoforge:add_features` 做矿石生成，只是没写 |
-| 10 | `research/audit/technique.md` §9-7 / §12.5 | 功法面板图标是 TODO，等 `technique` 加 `icon` | **已过期**：`icon` 字段已存在（`Technique.java:32,41`）且面板已在渲染；文件内 `//TODO` 0 命中。另：T6「暂无遗忘入口」也已过期（`/mxt technique drop\|repair` 已存在，`TechniqueCommand.java:57-60,159-182`）；该文件行号普遍漂移；§8.2 引用的 `data/Title.java` **不存在** |
-| 11 | `research/00_策划整理与范围.md:19-23` | 「明确不在本期：预置的…具体内容」 | `MxtItems` 已预置 38 件具体物品（四档灵石、令牌、符纸…），`data/mxt/mxt/` 已有 17 个默认定义，`data/mxt/worldgen/` 有基座自己的矿石 |
-| 12 | `runtime/cultivation/TechniqueCommand.java:184-187` 类注释 | `rebuild` 重建「granted abilities, **passive attributes and resource ceilings**」 | `rebuild`（`:188-190`）只调 `CultivationGrantService.recalculate`；被动属性靠每 tick 的 `PassiveAttributeService.tick`（`AbilityEventBridge.java:120`），资源上限来自 `resource` 定义（`ResourceService.resolveBounds:101-105`） |
-| 13 | `docs/通用物品.md:23` | 物品 id 写作 `mxt:blank_talisman_paper` | **不存在这个物品**：id 是 `mxt:blank_talisman`（`MxtItems.java:47`），只有模型文件与语言键叫 `..._paper`。见 §4.12-D3 |
-| 14 | `docs/guide/datapack/overview.md:54-60` | 注册表索引列 **32** 条 | 代码当时是 **34** 条（`MxtResourceKeys.java:86-119`），表里漏了 `tool_binding` 与 `blueprint_binding`；该表已补齐，现为 **33** 条（`sect` 注册表已删除） |
-| 15 | `docs/getting-started.md:48` vs `:51` | 同一文件里 `:48` 写「灵植、炼丹和自然生成规则仍缺少完整消费者」，`:51` 又写「阵法、锻造、炼丹」完成 | **文件内自相矛盾**；`:48` 是对的 |
-| 16 | `docs/guide/play/interaction.md:7` | 灵材台"输入**保留**…**取出结果时**扣除灵气" | 代码是**每 tick 自动**推进：9 格各 `shrink(1)`、产物直接进结果槽、灵气在 tick 内扣（`SpiritCraftingTableBlockEntity.java:96-99`） |
+|  # | 位置                                                      | 文档说                                                                                                                                                                    | 代码是                                                                                                                                                                                                             |
+|---:|---------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|  1 | `docs/模块实现审计.md:104`                                    | 炼丹「完成」——「原料、温度、炉阶、时长、灵气环境、产物和成败行为由炼丹工作台处理」                                                                                                                             | **没有炼丹工作台**（§4.1、§5#1）                                                                                                                                                                                          |
+|  2 | `docs/getting-started.md:51`                            | 「阵法、锻造、炼丹」一栏写「完成」                                                                                                                                                      | 炼丹未接线                                                                                                                                                                                                           |
+|  3 | `docs/模块实现审计.md:26`                                     | 「`ItemStackTemplate` 用于返还物、**配方产物**和聊天悬浮物品」                                                                                                                            | `AlchemyRecipe` 产物仍是 `List<Identifier>`                                                                                                                                                                         |
+|  4 | `docs/模块实现审计.md:94`、`docs/数据包格式.md:1267`                | 维度装载器提供"备用的 LevelStem 装载/卸载能力"                                                                                                                                         | 类可用但**零调用者**，是死代码                                                                                                                                                                                               |
+|  5 | `docs/灵气环境数据包.md:84,89,102,104`                         | 引用 `base_aura` 与 `block_aura.aura_per_block`                                                                                                                           | **两个字段都不存在**。实际是 `aura.<resource>.amount`（`AuraZone.java:43` + `AuraService.java:495-498`）；`BlockAura` 只有 `blocks`/`aura`（`BlockAura.java:18-21`；`aura_kinds` 已于 2026-09-17 删除）。`docs/数据包格式.md:1124-1134` 写的是对的 |
+|  6 | `docs/数据包格式.md:1162`                                    | `structure_template` 标"**必填**"                                                                                                                                         | 同表 `:1163` 又说二选一；代码里两者都是 `optionalFieldOf` + `validate` 强制**恰好一个**（`Formation.java:46,49,81-88`）                                                                                                                |
+|  7 | `docs/数据包格式.md:1261`                                    | `realm_instance.dimension`「缺省时由入口逻辑决定」                                                                                                                                 | 缺省 → `destination()` 返回 empty → 进入立即 `MISSING_DIMENSION`（`RealmInstanceService.java:41-42,134-136`）                                                                                                             |
+|  8 | `docs/数据包格式.md:338`                                     | 把 `alchemy_recipe` 列进数据包注册表路径表（`mxt/alchemy_recipe`）                                                                                                                   | 它是配方类型，路径应为 `data/<ns>/recipe/`，`"type": "mxt:alchemy"`                                                                                                                                                         |
+|  9 | `docs/` 全库                                              | **没有任何**世界生成/结构/群系/维度定义的说明（grep `add_features\|biome_modifier\|configured_feature\|placed_feature\|add_spawns\|structure_set\|template_pool\|dimension_type` **0 命中**） | 基座自己正用 `neoforge:add_features` 做矿石生成，只是没写                                                                                                                                                                       |
+| 10 | `research/audit/technique.md` §9-7 / §12.5              | 功法面板图标是 TODO，等 `technique` 加 `icon`                                                                                                                                    | **已过期**：`icon` 字段已存在（`Technique.java:32,41`）且面板已在渲染；文件内 `//TODO` 0 命中。另：T6「暂无遗忘入口」也已过期（`/mxt technique drop\|repair` 已存在，`TechniqueCommand.java:57-60,159-182`）；该文件行号普遍漂移；§8.2 引用的 `data/Title.java` **不存在**    |
+| 11 | `research/00_策划整理与范围.md:19-23`                          | 「明确不在本期：预置的…具体内容」                                                                                                                                                      | `MxtItems` 已预置 38 件具体物品（四档灵石、令牌、符纸…），`data/mxt/mxt/` 已有 17 个默认定义，`data/mxt/worldgen/` 有基座自己的矿石                                                                                                                  |
+| 12 | `runtime/cultivation/TechniqueCommand.java:184-187` 类注释 | `rebuild` 重建「granted abilities, **passive attributes and resource ceilings**」                                                                                          | `rebuild`（`:188-190`）只调 `CultivationGrantService.recalculate`；被动属性靠每 tick 的 `PassiveAttributeService.tick`（`AbilityEventBridge.java:120`），资源上限来自 `resource` 定义（`ResourceService.resolveBounds:101-105`）         |
+| 13 | `docs/通用物品.md:23`                                       | 物品 id 写作 `mxt:blank_talisman_paper`                                                                                                                                    | **不存在这个物品**：id 是 `mxt:blank_talisman`（`MxtItems.java:47`），只有模型文件与语言键叫 `..._paper`。见 §4.12-D3                                                                                                                    |
+| 14 | `docs/guide/datapack/overview.md:54-60`                 | 注册表索引列 **32** 条                                                                                                                                                        | 代码当时是 **34** 条（`MxtResourceKeys.java:86-119`），表里漏了 `tool_binding` 与 `blueprint_binding`；该表已补齐，现为 **33** 条（`sect` 注册表已删除）                                                                                        |
+| 15 | `docs/getting-started.md:48` vs `:51`                   | 同一文件里 `:48` 写「灵植、炼丹和自然生成规则仍缺少完整消费者」，`:51` 又写「阵法、锻造、炼丹」完成                                                                                                               | **文件内自相矛盾**；`:48` 是对的                                                                                                                                                                                           |
+| 16 | `docs/guide/play/interaction.md:7`                      | 灵材台"输入**保留**…**取出结果时**扣除灵气"                                                                                                                                            | 代码是**每 tick 自动**推进：9 格各 `shrink(1)`、产物直接进结果槽、灵气在 tick 内扣（`SpiritCraftingTableBlockEntity.java:96-99`）                                                                                                           |
 
 > 注：`docs/数据包格式.md:764,768`（`damage_multiplier` 无消费者）、`:808`（入口级不写条目）、
 > `docs/灵气环境数据包.md:93,95`（aura_kinds 已接、三个 rules 字段无消费者）**均与代码一致**——
@@ -551,25 +564,25 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 按「解锁的内容量 ÷ 改动量」排：
 
-| 优先级 | 事项 | 改动量 | 解锁 |
-| :--: | --- | --- | --- |
-| **P0** | **炼丹/炼器通用工位**（§4.1）：实现 `AlchemyWorkstation` 的方块+BE+菜单+界面；`furnaceTier` 数据化 | 中 | 9 级丹炉 + 9 级鼎 + 28 丹方 + 192 药材方块 |
-| **P0** | **通用档位/变体组件**（§4.9） | 小 | 82 族 / 235 行（年份、等阶、品相、结果状态、等级） |
-| **P0** | **世界生成文档 + JSON 骨架**（§4.8-1） | 极小（0 行 Java） | 33 条结构 / 8 群系 / 2 维度 / 全部矿脉 |
-| **P0** | **修 D1 / D2 / D3**（§4.12）：灵材台灵气被清、锻打槽 15 vs 12、`blank_talisman` 三套名字 | 极小 | 三个静默失效：灵材台永远灌不满、13~15 材料的蓝图永久死、符纸显示原始键名 |
-| **P1** | **目录/图鉴系统**（§4.6） | 中 | 22 族 / 198 行 GUI + 501 行描述 |
-| **P1** | **通用物品右键路径**（§3.1）：`item_binding` 补 `use_action` + `costs` + 右键分发 | 小 | 46 张符箓与全部右键道具 |
-| **P1** | **通用等级/熟练度链**（§4.10）：状态键泛化 + 独立晋升服务 + `mxt:skill_stage` 条件 | 小～中 | 画符/炼丹/炼器等级 + 功法层数 |
-| **P1** | **灵植生命周期**（§4.4）+ `SpiritHerb` / `AuraZone.Rules` 死字段接线 | 中 | 77 族 / 250 行 |
-| **P1** | **清理 A 类 2/3/6/7/9/11/14/15/17/18/20/22/23/24**（死路径、死字段、无写入方的缝） | 极小 | 减维护面；多为直接删或一行接线 |
-| ~~**P2**~~ | **统一伤害管线**（§4.2）——**已于 2026-09-20 完成**：`DamageCalculationService` 两层（发伤害处的出力层 + `LivingIncomingDamageEvent` 的减免层），`mxt:damage` / `mxt:damage_target` / 阵法攻击 / `mxt:explode` 全部收拢，元素克制/适应倍率写进 `element` 定义，`SkillStage.damage_multiplier` 接上 | 已完成 | 内容整套攻防数值 + `damage_multiplier`（仍缺：伤害类型→元素的映射、灵宝侧攻防数值） |
-| **P2** | **数据驱动区域灵气**（§4.8-2） | 小～中 | 富灵气区、灵脉、生成三者的统一区域概念 |
-| **P2** | **生成表 / 灵气驱动生成**（§4.5、§4.8-3） | 中 | 151 个实体 / 9 张刷新表 / `natural_spawn_herb` |
-| **P2** | **状态注册表**（§4.3） | 中 | 107 个效果 |
-| **P3** | **储物物品+界面**（§4.7） | 小 | 储物袋全系 |
-| **P3** | **秘境驱动维度装载 + 入口坐标**（§4.8-4） | 小（约 5 行 + 1 字段） | 2 个维度 |
-| **P3** | **资源条件支持完整比较运算符**（§4.11） | 极小 | 全部阈值判定 |
-| **P3** | 符文 / 淬炼 / 修理台等炼器支线 | 小～中 | 炼器系统余下 5 个子系统 |
+|    优先级     | 事项                                                                                                                                                                                                                                          | 改动量             | 解锁                                                    |
+|:----------:|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------|-------------------------------------------------------|
+|   **P0**   | **炼丹/炼器通用工位**（§4.1）：实现 `AlchemyWorkstation` 的方块+BE+菜单+界面；`furnaceTier` 数据化                                                                                                                                                                  | 中               | 9 级丹炉 + 9 级鼎 + 28 丹方 + 192 药材方块                       |
+|   **P0**   | **通用档位/变体组件**（§4.9）                                                                                                                                                                                                                         | 小               | 82 族 / 235 行（年份、等阶、品相、结果状态、等级）                        |
+|   **P0**   | **世界生成文档 + JSON 骨架**（§4.8-1）                                                                                                                                                                                                                | 极小（0 行 Java）    | 33 条结构 / 8 群系 / 2 维度 / 全部矿脉                           |
+|   **P0**   | **修 D1 / D2 / D3**（§4.12）：灵材台灵气被清、锻打槽 15 vs 12、`blank_talisman` 三套名字                                                                                                                                                                        | 极小              | 三个静默失效：灵材台永远灌不满、13~15 材料的蓝图永久死、符纸显示原始键名               |
+|   **P1**   | **目录/图鉴系统**（§4.6）                                                                                                                                                                                                                           | 中               | 22 族 / 198 行 GUI + 501 行描述                            |
+|   **P1**   | **通用物品右键路径**（§3.1）：`item_binding` 补 `use_action` + `costs` + 右键分发                                                                                                                                                                           | 小               | 46 张符箓与全部右键道具                                         |
+|   **P1**   | **通用等级/熟练度链**（§4.10）：状态键泛化 + 独立晋升服务 + `mxt:skill_stage` 条件                                                                                                                                                                                  | 小～中             | 画符/炼丹/炼器等级 + 功法层数                                     |
+|   **P1**   | **灵植生命周期**（§4.4）+ `SpiritHerb` / `AuraZone.Rules` 死字段接线                                                                                                                                                                                     | 中               | 77 族 / 250 行                                          |
+|   **P1**   | **清理 A 类 2/3/6/7/9/11/14/15/17/18/20/22/23/24**（死路径、死字段、无写入方的缝）                                                                                                                                                                             | 极小              | 减维护面；多为直接删或一行接线                                       |
+| ~~**P2**~~ | **统一伤害管线**（§4.2）——**已于 2026-09-20 完成**：`DamageCalculationService` 两层（发伤害处的出力层 + `LivingIncomingDamageEvent` 的减免层），`mxt:damage` / `mxt:damage_target` / 阵法攻击 / `mxt:explode` 全部收拢，元素克制/适应倍率写进 `element` 定义，`SkillStage.damage_multiplier` 接上 | 已完成             | 内容整套攻防数值 + `damage_multiplier`（仍缺：伤害类型→元素的映射、灵宝侧攻防数值） |
+|   **P2**   | **数据驱动区域灵气**（§4.8-2）                                                                                                                                                                                                                        | 小～中             | 富灵气区、灵脉、生成三者的统一区域概念                                   |
+|   **P2**   | **生成表 / 灵气驱动生成**（§4.5、§4.8-3）                                                                                                                                                                                                               | 中               | 151 个实体 / 9 张刷新表 / `natural_spawn_herb`               |
+|   **P2**   | **状态注册表**（§4.3）                                                                                                                                                                                                                             | 中               | 107 个效果                                               |
+|   **P3**   | **储物物品+界面**（§4.7）                                                                                                                                                                                                                           | 小               | 储物袋全系                                                 |
+|   **P3**   | **秘境驱动维度装载 + 入口坐标**（§4.8-4）                                                                                                                                                                                                                 | 小（约 5 行 + 1 字段） | 2 个维度                                                 |
+|   **P3**   | **资源条件支持完整比较运算符**（§4.11）                                                                                                                                                                                                                    | 极小              | 全部阈值判定                                                |
+|   **P3**   | 符文 / 淬炼 / 修理台等炼器支线                                                                                                                                                                                                                          | 小～中             | 炼器系统余下 5 个子系统                                         |
 
 ---
 
@@ -592,30 +605,30 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 ## 附：本文件引用的工作区位置
 
-| 位置 | 内容 |
-| --- | --- |
-| `registry/MxtResourceKeys.java:86-120` | 33 个数据包注册表的唯一清单 |
-| `runtime/alchemy/AlchemyWorkstation.java` | 零实现的炼丹工作台契约 |
-| `data/alchemy/AlchemyRecipe.java` / `SpiritHerb.java` | 炼丹配方 / 灵植定义 |
-| `recipe/SpiritRecipe.java` | 唯一把产物写成 `ItemStackTemplate` 的配方 |
-| `runtime/item/ItemBindingService.java:73-82, 223-230` | `item_binding` 只在 `Finish` 分发 |
-| `runtime/item/ItemQualityService.java:44-87, 100-174` | 物品门槛与具名拒绝原因（可复用的半边） |
-| `data/action/builtin/entity/DamageAction.java` vs `data/formation/AttackFormationAction.java` | generic 伤害 / 唯一带类型与归属的伤害 |
-| `data/trigger/TriggerContext.java:58` | 零读取点的 `damageSource()` |
-| `data/condition/builtin/entity/ResourceCompareEntityCondition.java` | 只能 `>=` 的资源条件 |
-| `data/ability/component/*` + `registry/MxtAbilityComponents.java:17-20` | 四个无消费者的能力组件 |
-| `data/cultivation/SkillStage.java:22` | `damage_multiplier` 的 TODO |
-| `runtime/cultivation/{SkillStageService,TechniqueMasteryService}.java` + `attachment/SpiritIdentityAttachment.java:29,35` | 通用链 + 专用于功法的消费者 |
-| `data/curse/Curse.java:21-38` | 最接近"限时命名状态"的定义 |
-| `data/aura/AuraZone.java:36, 140-149` + `runtime/world/AuraWorldAttachment.java:19-74` | 群系/维度挂载、三个死规则字段、只能 KubeJS 写入的区域 |
-| `data/creature/CreatureProfile.java:28-33` + `runtime/creature/CreatureProfileService.java:28-68` | 生物档案字段表（无生成字段）与"只给已生成 Mob 套档" |
-| `data/artifact/ItemArchetype.java` / `ArtifactStateComponent.java` | 法器原型与状态（**2026-09-21 重设计**：`items` 认领物品 + `abilities` 固有分派列表 + 灵气 map 上限；`item_type` 仍无按值分流的判断） |
-| `runtime/world/RuntimeDimensionService.java:31-81` / `RealmInstanceService.java:41-53,134-136` | 零调用者的维度装载器 / 秘境进入路径 |
-| `runtime/world/SpiritStoneVein.java:22,28,34-51` | 硬编码 6 级灵脉枚举 |
-| `runtime/formation/FormationStructureValidator.java:30-83` + `data/Formation.java:46,49,81-88` | 只有只读结构匹配 |
-| `data/mxt/{worldgen,neoforge/biome_modifier}/*` | 基座唯一的世界生成设施（自己的矿石） |
-| `screen/information/InformationManager.java:26-40` | Java 静态注册的信息面板（非数据驱动） |
-| `registry/{MxtBlocks,MxtBlockEntities,MxtMenus}.java` | 基座自己的 14 方块 / 5 方块实体 / 9 菜单 |
-| `MxtItems.java:27-63` | 基座自己的 38 件物品（含 6 件空壳） |
-| `docs/模块实现审计.md` / `docs/数据包格式.md` / `docs/灵气环境数据包.md` / `research/04_数据包与KubeJS边界.md` / `research/audit/technique.md` | C 类不一致的来源 |
-| `research/audit/生产系统审计.md` | 同日的子代理深度报告（608 行，只覆盖生产/制作五个系统）；本文件 §4.12 与 §5#22-24 的复核结果来自它，负载最重的 6 条已独立复验 |
+| 位置                                                                                                                        | 内容                                                                                              |
+|---------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| `registry/MxtResourceKeys.java:86-120`                                                                                    | 33 个数据包注册表的唯一清单                                                                                 |
+| `runtime/alchemy/AlchemyWorkstation.java`                                                                                 | 零实现的炼丹工作台契约                                                                                     |
+| `data/alchemy/AlchemyRecipe.java` / `SpiritHerb.java`                                                                     | 炼丹配方 / 灵植定义                                                                                     |
+| `recipe/SpiritRecipe.java`                                                                                                | 唯一把产物写成 `ItemStackTemplate` 的配方                                                                 |
+| `runtime/item/ItemBindingService.java:73-82, 223-230`                                                                     | `item_binding` 只在 `Finish` 分发                                                                   |
+| `runtime/item/ItemQualityService.java:44-87, 100-174`                                                                     | 物品门槛与具名拒绝原因（可复用的半边）                                                                             |
+| `data/action/builtin/entity/DamageAction.java` vs `data/formation/AttackFormationAction.java`                             | generic 伤害 / 唯一带类型与归属的伤害                                                                        |
+| `data/trigger/TriggerContext.java:58`                                                                                     | 零读取点的 `damageSource()`                                                                          |
+| `data/condition/builtin/entity/ResourceCompareEntityCondition.java`                                                       | 只能 `>=` 的资源条件                                                                                   |
+| `data/ability/component/*` + `registry/MxtAbilityComponents.java:17-20`                                                   | 四个无消费者的能力组件                                                                                     |
+| `data/cultivation/SkillStage.java:22`                                                                                     | `damage_multiplier` 的 TODO                                                                      |
+| `runtime/cultivation/{SkillStageService,TechniqueMasteryService}.java` + `attachment/SpiritIdentityAttachment.java:29,35` | 通用链 + 专用于功法的消费者                                                                                 |
+| `data/curse/Curse.java:21-38`                                                                                             | 最接近"限时命名状态"的定义                                                                                  |
+| `data/aura/AuraZone.java:36, 140-149` + `runtime/world/AuraWorldAttachment.java:19-74`                                    | 群系/维度挂载、三个死规则字段、只能 KubeJS 写入的区域                                                                 |
+| `data/creature/CreatureProfile.java:28-33` + `runtime/creature/CreatureProfileService.java:28-68`                         | 生物档案字段表（无生成字段）与"只给已生成 Mob 套档"                                                                   |
+| `data/artifact/ItemArchetype.java` / `ArtifactStateComponent.java`                                                        | 法器原型与状态（**2026-09-21 重设计**：`items` 认领物品 + `abilities` 固有分派列表 + 灵气 map 上限；`item_type` 仍无按值分流的判断） |
+| `runtime/world/RuntimeDimensionService.java:31-81` / `RealmInstanceService.java:41-53,134-136`                            | 零调用者的维度装载器 / 秘境进入路径                                                                             |
+| `runtime/world/SpiritStoneVein.java:22,28,34-51`                                                                          | 硬编码 6 级灵脉枚举                                                                                     |
+| `runtime/formation/FormationStructureValidator.java:30-83` + `data/Formation.java:46,49,81-88`                            | 只有只读结构匹配                                                                                        |
+| `data/mxt/{worldgen,neoforge/biome_modifier}/*`                                                                           | 基座唯一的世界生成设施（自己的矿石）                                                                              |
+| `screen/information/InformationManager.java:26-40`                                                                        | Java 静态注册的信息面板（非数据驱动）                                                                           |
+| `registry/{MxtBlocks,MxtBlockEntities,MxtMenus}.java`                                                                     | 基座自己的 14 方块 / 5 方块实体 / 9 菜单                                                                     |
+| `MxtItems.java:27-63`                                                                                                     | 基座自己的 38 件物品（含 6 件空壳）                                                                           |
+| `docs/模块实现审计.md` / `docs/数据包格式.md` / `docs/灵气环境数据包.md` / `research/04_数据包与KubeJS边界.md` / `research/audit/technique.md`    | C 类不一致的来源                                                                                       |
+| `research/audit/生产系统审计.md`                                                                                                | 同日的子代理深度报告（608 行，只覆盖生产/制作五个系统）；本文件 §4.12 与 §5#22-24 的复核结果来自它，负载最重的 6 条已独立复验                     |
