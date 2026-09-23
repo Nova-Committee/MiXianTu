@@ -5,9 +5,11 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Entry;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Progress;
@@ -23,7 +25,6 @@ import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.Holder;
-import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
@@ -31,6 +32,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A scrollable list of the player's learned techniques, one row each: it is a view over synchronized state, so
@@ -47,6 +49,7 @@ public final class TechniquePanelScreen extends Screen {
     private static final int ROW_HEIGHT = 34;
     private static final int ICON_SIZE = 24;
     private static final int ICON_GAP = 9;
+    private static final int NAME_GAP = 4;
     private static final int LABEL_OFFSET = 4;
     private static final int BAR_HEIGHT = 7;
     private static final int BAR_OFFSET = 19;
@@ -201,12 +204,24 @@ public final class TechniquePanelScreen extends Screen {
                         IconRenderer.render(graphics, icon, iconX, iconY, ICON_SIZE));
 
                 int textX = rowX + ICON_SIZE + ICON_GAP;
-                Component value = this.valueText(font);
+                Component value = this.valueText();
                 int valueWidth = font.width(value);
                 int valueX = Math.max(textX, rowRight - valueWidth);
-                Component level = this.levelText(font, valueX - 4 - textX);
-                graphics.text(font, level, textX, rowTop + LABEL_OFFSET,
-                        this.row.hasStage() ? TEXT_COLOR : UNKNOWN_COLOR, false);
+                int room = Math.max(0, valueX - NAME_GAP - textX);
+                Component level = this.levelText();
+                int levelWidth = font.width(level);
+                // The name gives way first: a long one is cut with an ellipsis, while the level keeps its own width,
+                // because a name that ate the level would hide the one thing the row is for.
+                Component name = this.nameText(font, Math.max(0, room - levelWidth - NAME_GAP));
+                int nameWidth = font.width(name);
+                if (nameWidth + NAME_GAP + levelWidth > room) {
+                    level = Component.literal(abbreviate(font, level.getString(), Math.max(0, room - nameWidth - NAME_GAP)));
+                    levelWidth = font.width(level);
+                }
+                graphics.text(font, name, textX, rowTop + LABEL_OFFSET, TEXT_COLOR, false);
+                if (levelWidth > 0)
+                    graphics.text(font, level, textX + nameWidth + NAME_GAP, rowTop + LABEL_OFFSET,
+                            this.row.hasStage() ? TEXT_COLOR : UNKNOWN_COLOR, false);
                 graphics.text(font, value, valueX, rowTop + LABEL_OFFSET, TEXT_COLOR, false);
 
                 int barWidth = Math.max(1, rowRight - textX);
@@ -225,19 +240,26 @@ public final class TechniquePanelScreen extends Screen {
                 if (hovered) graphics.setComponentTooltipForNextFrame(font, this.tooltip(), mouseX, mouseY);
             }
 
-            // The level's own display name when the pack provides one, its rank otherwise; measured because the
-            // level and the progress value share one line.
-            private Component levelText(Font font, int width) {
+            // The technique's own name, in its tier's colour, cut to whatever the line has left for it.
+            private Component nameText(Font font, int width) {
+                Component name = DefinitionText.name(this.row.technique(), "technique");
+                Optional<Holder<ItemQuality>> quality = this.row.technique().value().quality();
+                if (quality.isPresent()) name = ItemQualityService.coloredName(quality.orElseThrow(), name);
+                return Component.literal(abbreviate(font, name.getString(), width)).withStyle(name.getStyle());
+            }
+
+            // The level's own display name when the pack provides one, its rank otherwise; the name and the level
+            // share one line, so both are measured before either is drawn.
+            private Component levelText() {
                 if (!this.row.hasStage()) return Component.translatable("screen.mxt.technique_panel.level_unknown");
                 Component name = DefinitionText.name(this.row.stage(), "skill_stage");
                 Component label = DefinitionText.resolved(name)
                         ? name : Component.literal(Integer.toString(this.row.rank() + 1));
-                Component text = Component.translatable("screen.mxt.technique_panel.level", label,
+                return Component.translatable("screen.mxt.technique_panel.level", label,
                         this.row.rank() + 1, this.row.total());
-                return Component.literal(abbreviate(font, text.getString(), width));
             }
 
-            private Component valueText(Font font) {
+            private Component valueText() {
                 if (!this.row.hasStage() || !this.row.hasMastery())
                     return Component.translatable("screen.mxt.technique_panel.value_unknown");
                 if (!this.row.hasNextLevel()) return Component.translatable("screen.mxt.technique_panel.value_max");
@@ -251,14 +273,22 @@ public final class TechniquePanelScreen extends Screen {
                 return mastery == null ? BAR_FALLBACK_COLOR : 0xFF000000 | mastery.value().particleColor();
             }
 
-            // A row has no room for the level id or the grade, so both are spelled out here.
+            // A row has no room for the level id or the tier, so both are spelled out here.
             private List<Component> tooltip() {
-                MutableComponent line = DefinitionText.name(this.row.technique(), "technique").copy();
+                MutableComponent line = this.nameText(Minecraft.getInstance().font, Integer.MAX_VALUE).copy();
                 if (this.row.hasStage())
                     line.append(" ").append(Component.literal(HolderHelper.id(this.row.stage()).toString())
                             .withStyle(ChatFormatting.DARK_GRAY));
                 return List.of(line, Component.translatable("screen.mxt.technique_panel.grade",
-                        gradeText(this.row.technique().value().grade())).withStyle(ChatFormatting.GRAY));
+                        this.gradeText()).withStyle(ChatFormatting.GRAY));
+            }
+
+            // The tier's own name and colour. A technique that declares no tier says so, instead of printing a
+            // free-form grade word no language file can be asked for.
+            private Component gradeText() {
+                Optional<Holder<ItemQuality>> quality = this.row.technique().value().quality();
+                return quality.isEmpty() ? Component.translatable("screen.mxt.technique_panel.grade_none")
+                        : ItemQualityService.coloredName(quality.orElseThrow(), DefinitionText.name(quality.orElseThrow()));
             }
 
             @Override
@@ -273,13 +303,8 @@ public final class TechniquePanelScreen extends Screen {
                 ? Long.toString(Math.round(value)) : String.format("%.1f", value);
     }
 
-    // A grade is free-form text a data pack chooses: shown exactly as written unless the language file names
-    // that value, which is how a pack translates its own grades without this code knowing them.
-    private static Component gradeText(String grade) {
-        String key = "mxt.technique_grade." + grade;
-        return Language.getInstance().has(key) ? Component.translatable(key) : Component.literal(grade);
-    }
-
+    // A grade is no longer free-form text: the tier a technique declares is a `quality` entry, so its name and
+    // colour come from that definition and nothing has to guess at a translation key.
     private static String abbreviate(Font font, String text, int width) {
         if (font.width(text) <= width) return text;
         String suffix = "...";

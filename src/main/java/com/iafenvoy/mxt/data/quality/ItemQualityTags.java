@@ -5,23 +5,13 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 
 /**
- * Tag conventions used by the item-quality registry.
+ * Tag conventions used by the item-quality registry. Ladders are entries of their own now, so the only tag left
+ * here is the display-order one.
  */
 public final class ItemQualityTags {
-    private static final String GROUP_PREFIX = "group/";
     public static final TagKey<ItemQuality> TOOLTIP_ORDER = create(Identifier.fromNamespaceAndPath("mxt", "tooltip_order"));
 
     private ItemQualityTags() {
-    }
-
-    // mxt_test:forged maps to mxt_test:group/forged; an already-prefixed path is accepted as it is.
-    public static TagKey<ItemQuality> group(Identifier id) {
-        Identifier tagId = id.withPath(path -> path.startsWith(GROUP_PREFIX) ? path : GROUP_PREFIX + path);
-        return create(tagId);
-    }
-
-    public static boolean isGroup(TagKey<ItemQuality> tag) {
-        return tag.registry().equals(MxtResourceKeys.ITEM_QUALITY) && tag.location().getPath().startsWith(GROUP_PREFIX);
     }
 
     private static TagKey<ItemQuality> create(Identifier id) {

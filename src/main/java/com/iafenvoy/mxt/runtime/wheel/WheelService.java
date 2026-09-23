@@ -86,26 +86,31 @@ public final class WheelService {
     // switch, a container and a cast are told apart; anything else keeps the plain cast path.
     private static boolean press(ServerPlayer player, WheelSource source, Identifier id) {
         Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
-        if (ability == null) return false;
+        if (ability == null) {
+            // The same race WheelSources#offers exists for, one step later: registered when the source was read
+            // and gone by the time the press arrived, which is rare enough to be worth saying rather than dropping.
+            MiXianTu.LOGGER.info("Dropping the wheel press {} on {} from {}: the ability is no longer registered",
+                    id, source.getSerializedName(), player.getGameProfile().name());
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
+            return false;
+        }
         if (!AbilityActivationService.togglable(ability)) return use(player, ability);
         ItemStack carrier = WheelSources.carrier(player, source, id).orElse(null);
         Togglable.Result result = AbilityActivationService.activate(player, ability, carrier);
         if (result.failure() == null) return true;
-        String name = result.failure().name().toLowerCase(Locale.ROOT);
-        MiXianTu.LOGGER.info("Refusing the wheel press {} on {} for {}: {}",
-                id, source.getSerializedName(), player.getGameProfile().name(), name);
-        player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.use_failed",
-                Component.translatable("actionbar.mxt.artifact_skill." + name)), true);
-        return false;
+        return refuse(player, id, result.failure(), result.failedResource(), "press", "actionbar.mxt.wheel.use_failed");
     }
 
+    // The fallback for an entry whose ability is not pressable at all, which a saved layout can name even though
+    // the pool it was picked from only offers pressable ones.
     private static boolean use(ServerPlayer player, Holder<Ability> ability) {
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         AbilityService.UseResult result = AbilityService.use(ability, player, abilities, resources,
                 player.level().getGameTime(), FormulaContext.of(player));
-        if (result.failure() != null) notifyRefusal(player, HolderHelper.id(ability), result);
-        return true;
+        if (result.failure() == null) return true;
+        return refuse(player, HolderHelper.id(ability), AbilityActivationService.failureOf(result.failure()),
+                result.failedResource(), "cast", "actionbar.mxt.wheel.cast_failed");
     }
 
     // A burst the player cannot pay for is refused the same way an ability is.
@@ -117,16 +122,18 @@ public final class WheelService {
         return false;
     }
 
-    // From the wheel there is nothing else to read, and "the key did nothing" is otherwise the whole of what the
-    // player can report.
-    private static void notifyRefusal(ServerPlayer player, Identifier id, AbilityService.UseResult result) {
-        String name = result.failure().name().toLowerCase(Locale.ROOT);
-        MiXianTu.LOGGER.info("Refusing the wheel cast {} for {}: {}{}", id, player.getGameProfile().name(), name,
-                result.failedResource() == null ? "" : " (" + result.failedResource() + ")");
-        Component reason = result.failure() == AbilityService.Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
+    // Both paths report the same way, because the client cannot tell a press from a cast: the reason comes out of
+    // one table, the log keeps both the reason and the entry, and the action bar shows the reason to the player.
+    private static boolean refuse(ServerPlayer player, Identifier id, Togglable.Failure failure,
+                                  @Nullable Identifier failedResource, String verb, String messageKey) {
+        String name = failure.name().toLowerCase(Locale.ROOT);
+        MiXianTu.LOGGER.info("Refusing the wheel {} {} for {}: {}{}", verb, id, player.getGameProfile().name(), name,
+                failedResource == null ? "" : " (" + failedResource + ")");
+        Component reason = failure == Togglable.Failure.INSUFFICIENT_RESOURCE && failedResource != null
                 ? Component.translatable("actionbar.mxt.ability.failure.insufficient_resource_named",
-                DefinitionText.name(result.failedResource(), "resource"))
+                DefinitionText.name(failedResource, "resource"))
                 : Component.translatable("actionbar.mxt.ability.failure." + name);
-        player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.cast_failed", reason), true);
+        player.sendSystemMessage(Component.translatable(messageKey, reason), true);
+        return false;
     }
 }

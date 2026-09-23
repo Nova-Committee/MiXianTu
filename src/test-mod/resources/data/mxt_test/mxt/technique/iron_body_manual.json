@@ -1,5 +1,5 @@
 {
-  "grade": "earth",
+  "quality": "mxt_test:excellent",
   "icon": { "id": "minecraft:written_book" },
   "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "exclusive_tags": ["mxt_test:technique/iron_body"],

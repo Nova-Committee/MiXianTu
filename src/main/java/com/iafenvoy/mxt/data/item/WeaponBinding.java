@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -31,7 +31,7 @@ import java.util.Optional;
  */
 public record WeaponBinding(List<Entry> entries, NumberProvider attackDamage, NumberProvider attackSpeed,
                             List<AttributeEntry> attributes, EntityAction useAction, BiEntityAction attackAction,
-                            EntityAction tickAction, Optional<TagKey<ItemQuality>> qualityGroup,
+                            EntityAction tickAction, Optional<Holder<QualityChain>> qualityChain,
                             List<DescribedEntry<EntityCondition>> conditions,
                             List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier) implements ItemMatcher {
     public static final Codec<WeaponBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -42,7 +42,7 @@ public record WeaponBinding(List<Entry> entries, NumberProvider attackDamage, Nu
             EntityAction.optionalCodec("use_action").forGetter(WeaponBinding::useAction),
             BiEntityAction.optionalCodec("attack_action").forGetter(WeaponBinding::attackAction),
             EntityAction.optionalCodec("tick_action").forGetter(WeaponBinding::tickAction),
-            TagKey.hashedCodec(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality_group").forGetter(WeaponBinding::qualityGroup),
+            QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(WeaponBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(WeaponBinding::conditions),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(WeaponBinding::element),
             MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(WeaponBinding::attachmentMultiplier)    ).apply(i, WeaponBinding::new));

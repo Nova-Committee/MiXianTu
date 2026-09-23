@@ -483,8 +483,10 @@ public final class MxtTestCommands {
         String poorDescription = require(MxtResourceKeys.ITEM_QUALITY, POOR_QUALITY).value().description().getString();
         if (!poorDescription.equals("quality.mxt.mxt_test.poor.description"))
             return "the omitted description reads " + poorDescription;
+        // The fixture writes this one as its own key, so on a server without language files the field reads back as
+        // that key; that a written field beats the generated one is asserted on the element fixture's literal below.
         String excellentName = require(MxtResourceKeys.ITEM_QUALITY, EXCELLENT_QUALITY).value().name().getString();
-        if (!excellentName.equals("Excellent")) return "the written component name reads " + excellentName;
+        if (!excellentName.equals("quality.mxt.mxt_test.excellent")) return "the written name reads " + excellentName;
         String normalDescription = require(MxtResourceKeys.ITEM_QUALITY, NORMAL_QUALITY).value().description().getString();
         if (!normalDescription.equals("quality.mxt.mxt_test.normal.description"))
             return "the written description reads " + normalDescription;

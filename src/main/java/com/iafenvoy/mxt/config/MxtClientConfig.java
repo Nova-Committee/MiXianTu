@@ -24,6 +24,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public final Techniques techniques = new Techniques();
     public final Rifts rifts = new Rifts();
     public final Wheel wheel = new Wheel();
+    public final Tooltips tooltips = new Tooltips();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt/mxt-client.json");
@@ -123,5 +124,20 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
     public enum WheelMode {
         HOLD, TOGGLE
+    }
+
+    /**
+     * Item tooltip switches. The name line is the one line no appender can reach, so whether a quality is
+     * allowed to tint it is a player's choice rather than part of what the quality draws.
+     */
+    public static final class Tooltips extends AutoInitConfigCategoryBase {
+        public final BooleanEntry tintItemName = BooleanEntry.builder("config.mxt.client.tooltips.tint_item_name", true)
+                .key("tint_item_name")
+                .tooltip("config.mxt.client.tooltips.tint_item_name.tooltip")
+                .build();
+
+        private Tooltips() {
+            super("tooltips", "config.mxt.client.tooltips");
+        }
     }
 }

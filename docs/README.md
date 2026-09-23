@@ -16,10 +16,11 @@
 ## 目录里有什么
 
 - [`数据包格式.md`](数据包格式.md)：所有数据包注册表与配方类型的字段总表，**字段级唯一权威**。
-- [`模块实现审计.md`](模块实现审计.md)：每个模块做到哪一步、还缺什么（完成度以代码为准）。
 - [`getting-started.md`](getting-started.md)、`guide/**`：安装、游玩、数据包、KubeJS、Java 的分篇指南。
 - [`ai/SKILL.md`](ai/SKILL.md)、[`ai/FORMAT.md`](ai/FORMAT.md)：给 AI 协作与本目录写作用的速查和格式规范；根目录的 [`SKILL.md`](SKILL.md)、[`FORMAT.md`](FORMAT.md) 是它们的短入口。
 - [`kubejs物品示例.md`](kubejs物品示例.md)、[`物品灵气数据包.md`](物品灵气数据包.md)：被 `数据包格式.md` 引用的两个专题页。
+
+每个模块做到哪一步、还缺什么**不在这个目录里**：看仓库根两份 README 的「模块完成情况 / Module Status」表（**完成度以代码为准**）。
 
 ## 迁移前的散篇已删除（2026-09-21）
 

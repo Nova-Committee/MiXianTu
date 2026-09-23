@@ -15,7 +15,7 @@ title: Java 公开 API
 | `CurrencyValueService` | 计算物品货币价值并处理不可用原因。 |
 | `ItemMatcher` | 数据定义的物品匹配语法：`ItemMatcher.Entry` 有 `item`、`tag`、`wildcard`、`regex`、`spirit_storage` 五种，支持单项简写（物品 id 或标签）与混合数组；`find`/`findAll` 按 `priority` 升序取第一个/全部。 |
 | `NumberProvider` | 常量、表达式、注册表类型分派和有限值处理。 |
-| `DefinitionText` | 把数据包定义翻成名字：手里有 `Holder` / `ResourceKey` 时直接 `name(holder)`，类别默认取注册表自己的 path（`mxt:aura` 里的 `mxt:fire` 查 `aura.mxt.mxt.fire`，多出的那一段 `mxt` 是注册表命名空间）；少数不按注册表 path 翻译的在它内部的 `CATEGORIES` 里登记一次（如 `mxt:item_quality` → `quality`），所以同一个定义在提示框和物品选择器里不会有两种叫法。定义自带 `name` / `description` 字段时（18 张注册表，`item_quality` 是其中之一），`name(...)` 直接读字段，字段省略时由 `ContextNameCodec` 在加载期按 id 填上同一个键，见[数据包格式](../../数据包格式.md)的对应小节。 |
+| `DefinitionText` | 把数据包定义翻成名字：手里有 `Holder` / `ResourceKey` 时直接 `name(holder)`，类别就是注册表自己的 path（`mxt:aura` 里的 `mxt:fire` 查 `aura.mxt.mxt.fire`，多出的那一段 `mxt` 是注册表命名空间），所以同一个定义在提示框和物品选择器里不会有两种叫法。定义自带 `name` / `description` 字段时（19 张注册表，`quality` 与 `quality_chain` 是其中两个），`name(...)` 直接读字段，字段省略时由 `ContextNameCodec` 在加载期按 id 填上同一个键，见[数据包格式](../../数据包格式.md)的对应小节。 |
 | `TooltipText` | 提示框的数值与一行的拼法：`number` / `signed` 按同一套小数规则格式化，`join(parts)`（或 `appendJoined`）用可翻译的 `tooltip.mxt.separator` 把多个片段拼成**一行**。**别在别处再拼一套分隔符、也别硬编码「、」或「, 」**——列表标点要跟着语言走，这里就是那唯一一处。 |
 
 要**实现**的契约接口（`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`、`WheelMenuEntry`）都在 `com.iafenvoy.mxt.api` 下，见[特殊公开接口](interfaces)；上表列的是调用入口，仍留在各自的模块包里。`Toggable`（2026-09-23 由 `ToggableArtifactAbility` 升级而来）也不在此列，它留在 `data/ability`（见同页说明）。

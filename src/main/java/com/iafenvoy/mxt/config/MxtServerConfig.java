@@ -162,6 +162,8 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry lightning = BooleanEntry.builder("config.mxt.server.commands.lightning", true).key("lightning").tooltip("config.mxt.server.commands.lightning.tooltip").build();
         public final BooleanEntry physique = BooleanEntry.builder("config.mxt.server.commands.physique", true).key("physique").tooltip("config.mxt.server.commands.physique.tooltip").build();
         public final BooleanEntry picker = BooleanEntry.builder("config.mxt.server.commands.picker", true).key("picker").tooltip("config.mxt.server.commands.picker.tooltip").build();
+        public final BooleanEntry quality = BooleanEntry.builder("config.mxt.server.commands.quality", true).key("quality").tooltip("config.mxt.server.commands.quality.tooltip").build();
+        public final BooleanEntry realm = BooleanEntry.builder("config.mxt.server.commands.realm", true).key("realm").tooltip("config.mxt.server.commands.realm.tooltip").build();
         public final BooleanEntry spirit_root = BooleanEntry.builder("config.mxt.server.commands.spirit_root", true).key("spirit_root").tooltip("config.mxt.server.commands.spirit_root.tooltip").build();
         public final BooleanEntry talisman = BooleanEntry.builder("config.mxt.server.commands.talisman", true).key("talisman").tooltip("config.mxt.server.commands.talisman.tooltip").build();
         public final BooleanEntry technique = BooleanEntry.builder("config.mxt.server.commands.technique", true).key("technique").tooltip("config.mxt.server.commands.technique.tooltip").build();

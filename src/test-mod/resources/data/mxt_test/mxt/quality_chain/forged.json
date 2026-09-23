@@ -1,0 +1,14 @@
+{
+  "tiers": ["mxt_test:poor", "mxt_test:normal", "mxt_test:excellent"],
+  "default": "mxt_test:poor",
+  "upgrades": [
+    {
+      "costs": [{ "id": "mxt_test:qi", "amount": 5 }],
+      "condition": { "type": "mxt:always_true" }
+    },
+    {
+      "costs": [{ "id": "mxt_test:qi", "amount": 10 }],
+      "condition": { "type": "mxt:always_true" }
+    }
+  ]
+}

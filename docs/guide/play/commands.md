@@ -4,7 +4,7 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限；纯查询的入口（例如 `/mxt curse list`、`/ability list`、`/mxt trigger list`）不需要权限，只是不填目标时要用到自己，因此仍需由玩家执行。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 14 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`lightning`、`physique`、`picker`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 16 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`lightning`、`physique`、`picker`、`quality`、`realm`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
 
 **客户端命令有两条**：`/hud`（查看与复位可拖动 HUD 元素）与 `/wheel`（打开轮盘配置界面）。它们注册在客户端自己的命令表里（不进 `/mxt` 树，也不发往服务端），只在聊天栏里手打有效、不需要任何权限，详见文末的[客户端命令](#客户端命令hud--wheel)。
 
@@ -13,6 +13,12 @@ title: 命令
 | `/mxt registries list` | 列出动态注册表及条目数量。 |
 | `/mxt registries validate` | 校验数据包定义，并把本次构建**发现的全部问题一次列出**：每条都带出错的文件路径；没有问题时报告注册表与条目数量。 |
 | `/picker [<category>]`（= `/mxt picker`） | 打开物品选择器，列出所选数据包注册表定义对应的物品；`category` 是注册表 ID（如 `mxt:aura`、`mxt:artifact`、`mxt:item_binding`），不填列出全部已注册分类。需要 gamemaster 权限，且只在创造模式下可用。 |
+| `/quality`（= `/mxt quality`） | 查看自己**主手**物品的品质：解析出来的那一档（覆盖组件 → 锻造结果 → 定义默认 → 链条默认 → 灵植声明）。不需要权限。 |
+| `/quality get [<target>]`（= `/mxt quality get …`） | 同上，看别人的（需要 gamemaster 权限）。 |
+| `/quality set <targets> <quality>`（= `/mxt quality set …`） | 把品质**覆盖组件**写到目标主手的物品上（需要 gamemaster 权限）。它盖过定义默认档，`/quality clear` 摘掉；这一档能不能用仍由它自己的 `condition` 与所属链条决定。 |
+| `/quality clear <targets>`（= `/mxt quality clear …`） | 摘掉主手物品上的覆盖组件，让它回到定义默认档（需要 gamemaster 权限）。本来就没有覆盖时逐个目标报失败。 |
+| `/quality upgrade <targets>`（= `/mxt quality upgrade …`） | 把主手物品在它所属的链条上**往上推一档**（需要 gamemaster 权限）：代价就是链条那一步自己声明的 `costs`（`plan` → `commit` 整组原子，付不出就一点不动），并先过它的 `condition`。没声明代价的那一步不能升；已经在顶端、不属于任何链条、或同一档属于多条链时都会逐个目标报出原因。 |
+| `/quality chain <quality>`（= `/mxt quality chain …`） | 打印这一档所在的**整条品质链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。同一档可能同时在多条链上，那就每条链各一行；一条都没有时报"没有品质链包含它"，这一档自己被 `#mxt:disabled` 停用时同样按"没有这个定义"拒绝。 |
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
 | `/mxt resource <id>` | 查询资源值。 |
 | `/mxt resource <id> set <value>` | 设置资源值。 |
@@ -29,7 +35,8 @@ title: 命令
 | `/ability grant <targets> <ability>`（= `/mxt ability grant …`） | 以命令自己的来源 `mxt:command` 授予技能（需要 gamemaster 权限）。逐个目标报告成功或失败，失败发生在该目标已由这一来源持有时。 |
 | `/ability revoke <targets> <ability>`（= `/mxt ability revoke …`） | 只撤销 `mxt:command` 这一份来源（需要 gamemaster 权限）；还有别的来源持有就什么都不发生，该目标记为失败。逐个目标报告结果。 |
 | `/mxt breakthrough <resource>` | 尝试突破指定资源对应的境界。 |
-| `/mxt realm set <realm>` | 设置线性境界。 |
+| `/realm set <realm>`（= `/mxt realm set …`） | 把自己的境界直接设成链上的某一档（需要 gamemaster 权限）；不在当前有效修炼链上的档会被拒绝。 |
+| `/realm chain <realm>`（= `/mxt realm chain …`） | 打印这一档所在的**整条境界链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。抬头是这条链的身份，也就是该链所属的 `mxt:aura` 条目 ID。 |
 | `/mxt secret_realm list` | 列出当前所有秘境实例：维度键、序号、定义、在场人数与上限、主人、地形是否已布置、维度当前是否加载。 |
 | `/mxt secret_realm info <dimension>` | 查看某一份实例的同一行信息。 |
 | `/mxt secret_realm enter <definition>` | 以自己为进入者开一份或加入一份秘境实例（需要 gamemaster 权限）。这是无需令牌就能进秘境的管理入口，走的是与令牌完全相同的那条流程（条件、人数、实例上限、生成）。 |
@@ -101,6 +108,12 @@ title: 命令
 少数参数**故意**仍然用 `IdentifierArgument`，它们的用途就是点名一个**当前数据包已经不提供**的引用：`/technique drop <id>`、`/spirit_root remove|enable|disable <targets> <id>`、`/physique remove|enable|disable <targets> <id>`、`/curse remove`、`/ability revoke`。换成 `ResourceArgument` 会在解析阶段就被拒绝。要注意**"已经删掉的定义"实际上到不了这几条**：灵根/体质在附件里存的是 `Holder`，解码时条目已被删除的那一条会被容错 Codec 丢掉，所以真正需要它们救的是**被 `mxt:disabled` 停用**的条目——它仍然被身体持有，这三条都按身体持有的引用去找（不是查注册表），因此照样摘得掉、关得掉。它们的 Tab 补全来自当前注册表里**还生效**的条目。
 
 维度 ID（`/mxt secret_realm info|destroy`、`/mxt rift target|place|bind`）与触发器信号（`/mxt trigger …`）同样不是注册表条目，也留在 `IdentifierArgument`；`/picker <category>` 收的是**注册表自己的 ID**（如 `mxt:aura`）而不是某个条目，所以也留在它那里。
+
+### 境界链（`/realm`）
+
+**境界（`mxt:realm_stage`）和秘境（`mxt:secret_realm`）是两套东西**：前者是一条数值修炼链上的一档，后者是一份按需生成的实例维度。`/realm` 只管前者，秘境实例那几条在下面的 `/mxt secret_realm` 里。
+
+境界链属于**灵气定义**（[aura](../../数据包格式) 的 `first_realm` 是链的入口），链上每一档用 `next_realm` 指向下一档，所以一条链是单向的、每份定义一条。`/realm chain <realm>` 不看谁持有哪一档，纯粹回答"这一档前面是谁、后面是谁"——数据包写错 `next_realm` 时这是最快的核对方式。它看的是**当前生效**的阶段：某一档被 `#mxt:disabled` 停用就从链上断开（服务端重建境界索引时同样会拒绝这样的链），被停用的那一档本身会报"没有可用的境界链包含它"。
 
 ### 秘境实例（`/mxt secret_realm`）
 

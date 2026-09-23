@@ -38,7 +38,8 @@ public record StorageAbilityType(NumberProvider slots) implements AbilityType, T
         if (carrier == null || carrier.isEmpty()) return Result.refused(Failure.NO_CARRIER);
         Provider access = player.level().registryAccess();
         int capacity = ArtifactService.storageSlots(carrier, context.ability(), context.formula());
-        if (capacity <= 0) return Result.refused(Failure.UNAVAILABLE);
+        // No slots is the slots formula's own answer, not a state the press cannot describe.
+        if (capacity <= 0) return Result.refused(Failure.INVALID_FORMULA);
         if (!ArtifactStorageService.INSTANCE.mayAccess(access, carrier, player))
             return Result.refused(Failure.NOT_OWNED);
         Component title = Component.translatable("screen.mxt.artifact_storage", context.ability().value().name());

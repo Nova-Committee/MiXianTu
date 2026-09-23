@@ -2,9 +2,7 @@ package com.iafenvoy.mxt.util;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.NamedDefinition;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -12,30 +10,17 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
  * Localized names for datapack definitions, keyed {@code <category>.<registry namespace>.<id namespace>.<id path>}
  * off the registry the definition lives in, so {@code mxt:fire} in {@code mxt:aura} reads as
- * {@code aura.mxt.mxt.fire}. An untranslated key renders as the key itself; {@link #CATEGORIES} lists registries
- * translated under a different path. A definition implementing {@link NamedDefinition} carries its texts itself,
- * so the pack-written name is what gets shown.
+ * {@code aura.mxt.mxt.fire}; the category is always the registry's own path. An untranslated key renders as the
+ * key itself. A definition implementing {@link NamedDefinition} carries its texts itself, so the pack-written name
+ * is what gets shown.
  */
 public final class DefinitionText {
-    private static final Map<Identifier, String> CATEGORIES = new LinkedHashMap<>();
-
-    static {
-        category(MxtResourceKeys.ITEM_QUALITY, "quality");
-    }
-
-    public static void category(ResourceKey<? extends Registry<?>> registry, String category) {
-        CATEGORIES.put(registry.identifier(), category);
-    }
-
     // The category a registry's keys are built with, for code that has to build a key by hand.
     public static String category(Identifier registry) {
-        return CATEGORIES.getOrDefault(registry, registry.getPath());
+        return registry.getPath();
     }
 
     public static String key(ResourceKey<?> key) {
@@ -88,10 +73,7 @@ public final class DefinitionText {
                 || Language.getInstance().has(contents.getKey());
     }
 
-    /**
-     * A free-form pack value, shown verbatim unless the language file translates {@code mxt.rarity.<value>};
-     * the same reading a technique's {@code grade} gets.
-     */
+    /** A free-form pack value, shown verbatim unless the language file translates {@code mxt.rarity.<value>}. */
     public static MutableComponent rarity(String rarity) {
         String key = "mxt.rarity." + rarity;
         return Language.getInstance().has(key) ? Component.translatable(key) : Component.literal(rarity);

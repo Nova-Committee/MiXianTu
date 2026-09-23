@@ -2,13 +2,17 @@ package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.IconReference;
+import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.network.payload.ForgingActionC2SPayload;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.render.IconRenderer;
+import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.util.TooltipText;
 import net.minecraft.ChatFormatting;
@@ -97,6 +101,8 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final int ACTION_SECOND_ROW_Y = 120;
     // Where a vanilla button draws its label; the step count stands in for one.
     private static final int ACTION_TEXT_INSET = 4;
+    // Under the step readout in the same action column: what the piece came out as, once there is a piece.
+    private static final int QUALITY_READOUT_Y = ACTION_SECOND_ROW_Y + ACTION_H + 1;
 
     // Scroll offset as a fraction of the list, as the stonecutter keeps it: the first visible cell is derived.
     private float blueprintOffs;
@@ -275,6 +281,15 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
         // screen says so.
         if (blueprint.hasStepLimit())
             lines.add(Component.translatable("tooltip.mxt.forging.step_limit", blueprint.maxSteps()).withStyle(ChatFormatting.GRAY));
+        // The whole ladder, in the order the settlement reads it, so the strike count is worth something before a
+        // run is committed to. Each row is named in its own tier's colour.
+        lines.add(Component.translatable("tooltip.mxt.forging.quality_tiers").withStyle(ChatFormatting.GOLD));
+        for (ForgingBlueprint.QualityThreshold tier : blueprint.qualityByExtraSteps()) {
+            Component name = ItemQualityService.coloredName(tier.quality(), tier.quality().value().name());
+            lines.add(tier.maxExtraSteps() == Integer.MAX_VALUE
+                    ? Component.translatable("tooltip.mxt.forging.quality_tier.unbounded", name)
+                    : Component.translatable("tooltip.mxt.forging.quality_tier", name, tier.maxExtraSteps()));
+        }
         graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
     }
 
@@ -358,6 +373,13 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
         graphics.text(this.font, Component.translatable("screen.mxt.forging.meter.value", this.menu.meterValue()), ForgingMenu.INVENTORY_X, READOUT_Y, TEXT, false);
         Component steps = Component.translatable("screen.mxt.forging.steps", this.menu.steps());
         graphics.text(this.font, steps, ACTION_RIGHT_X + (ACTION_W - this.font.width(steps)) / 2, ACTION_SECOND_ROW_Y + ACTION_TEXT_INSET, TEXT, false);
+        // What the piece came out as is the server's own answer and only exists once the result is in the output
+        // slot, so nothing here predicts it: the line appears with the finished piece and goes with it.
+        ForgingResultComponent result = this.menu.getSlot(ForgingSurface.OUTPUT_SLOT).getItem().get(MxtDataComponents.FORGING_RESULT);
+        if (result == null) return;
+        Component quality = Component.translatable("screen.mxt.forging.quality",
+                ItemQualityService.coloredName(result.quality(), result.quality().value().name()));
+        graphics.text(this.font, quality, ACTION_RIGHT_X + (ACTION_W - this.font.width(quality)) / 2, QUALITY_READOUT_Y, TEXT, false);
     }
 
     private void meter(GuiGraphicsExtractor graphics, Identifier pickedBlueprint, Integer predictedDelta) {

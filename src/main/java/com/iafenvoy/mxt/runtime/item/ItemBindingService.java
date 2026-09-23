@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.item.ItemBinding;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
-import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
@@ -23,7 +23,6 @@ import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -166,12 +165,12 @@ public final class ItemBindingService {
         return new ResolvedBindings(binding(access, stack), weapon(access, stack), pill(access, stack), technique(access, stack));
     }
 
-    public static Optional<TagKey<ItemQuality>> qualityGroup(ItemStack stack) {
-        return resolve(stack).qualityGroup();
+    public static Optional<Holder<QualityChain>> qualityChain(ItemStack stack) {
+        return resolve(stack).qualityChain();
     }
 
-    public static Optional<TagKey<ItemQuality>> qualityGroup(Provider access, ItemStack stack) {
-        return resolve(access, stack).qualityGroup();
+    public static Optional<Holder<QualityChain>> qualityChain(Provider access, ItemStack stack) {
+        return resolve(access, stack).qualityChain();
     }
 
     public static boolean conditionsMet(LivingEntity entity, ItemStack stack, FormulaContext context) {
@@ -324,11 +323,11 @@ public final class ItemBindingService {
     // Immutable resolution snapshot, so one operation does not repeat the matcher scans.
     public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon,
                                    Optional<PillBinding> pill, Optional<TechniqueBinding> technique) {
-        public Optional<TagKey<ItemQuality>> qualityGroup() {
-            return this.weapon.flatMap(WeaponBinding::qualityGroup)
-                    .or(() -> this.pill.flatMap(PillBinding::qualityGroup))
-                    .or(() -> this.technique.flatMap(TechniqueBinding::qualityGroup))
-                    .or(() -> this.item.flatMap(ItemBinding::qualityGroup));
+        public Optional<Holder<QualityChain>> qualityChain() {
+            return this.weapon.flatMap(WeaponBinding::qualityChain)
+                    .or(() -> this.pill.flatMap(PillBinding::qualityChain))
+                    .or(() -> this.technique.flatMap(TechniqueBinding::qualityChain))
+                    .or(() -> this.item.flatMap(ItemBinding::qualityChain));
         }
 
         public boolean conditionsMet(LivingEntity entity, FormulaContext context) {

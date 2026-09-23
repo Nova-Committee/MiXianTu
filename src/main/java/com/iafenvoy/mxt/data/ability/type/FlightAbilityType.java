@@ -59,9 +59,13 @@ public record FlightAbilityType(NumberProvider speed, FlightDisplay display) imp
         if (carrier == null || carrier.isEmpty()) return Result.refused(Failure.NO_CARRIER);
         FlightService.Result mounted = FlightService.mount(player, carrier, context.ability(), context.formula());
         if (mounted.failure() == null) return Result.activated();
+        // Each reason a take-off can give is reported as itself: NOT_FLYABLE cannot happen here (the type was just
+        // read) and the rest are dismount-time states.
         return Result.refused(switch (mounted.failure()) {
             case NOT_OWNED -> Failure.NOT_OWNED;
             case ALREADY_ACTIVE -> Failure.ALREADY_SET;
+            case INVALID_FORMULA -> Failure.INVALID_FORMULA;
+            case CANNOT_MOUNT -> Failure.CANNOT_MOUNT;
             default -> Failure.UNAVAILABLE;
         });
     }

@@ -7,7 +7,7 @@
 **不写稿**——结论留在代码注释（硬约束）与 `docs/`、[`AGENTS.md`](../AGENTS.md)（约定）里即可。没有留档的大改过一个版本就查不回来了。
 
 **先看下面的[目录](#目录)。** 它按主题列出每份稿的一句话主旨与当前状态：**"这篇还能不能信"
-看状态列；完成度永远以代码与 [`docs/模块实现审计.md`](../docs/模块实现审计.md) 为准，不以研究稿为准。**
+看状态列；完成度永远以代码为准（两份 README 的「模块完成情况」表是汇总），不以研究稿为准。**
 
 ## 目录
 
@@ -49,6 +49,7 @@
 | `37_名字与描述自动填充设计.md` | 定义文本字段的自动填充：`ContextNameCodec` / `ContextNameListCodec`（原 `NameMapCodec`，2026-09-23 拆成两个）+ `RegistryOps` 携带当前条目 id（`RegistryLoadTask$PendingRegistration` 两处注入），`item_quality` 的 `display_name`→`name` 与新增 `description`、`Modifier.description` 改为可选、`minor_stages` 改成组件数组或整数；"两套名字键"已被 `38` 作废                                                   | 已落地（2026-09-23；§3、§6 由 `38` 修订）                      |
 | `38_定义文本字段全量应用.md`  | 把这套字段应用到 18 张注册表，并把 id 派生键统一成生成键那一条四段式（`<类别>.mxt.<命名空间>.<路径>`，破坏性迁移）；`api/NamedDefinition` 让显示路径直接读字段；`RecordCodecBuilder.group` 的 16 组件上限用 `MiscCodecs.pair` 绕开                                                                                                                                                                                  | 已落地（2026-09-23）                                      |
 | `39_全局消耗定义设计.md`    | **使用消耗**（技能 / 突破 / 修炼 / 阵法 / 锻造 / 法器维护 / 飞行 / 灵气合成，共 11 个字段）的三套形状收编成一个元素形状（`mxt:resource` / `mxt:aura` / `mxt:item` / `mxt:js` + 简写）：付款者是 `LivingEntity`（不是 `Player`）＋支付通道、`charge` 一个方法 + `CostTransaction` 的 `plan`/`commit`、整组原子（草稿优先、回退兜底）；文首 §0 标明**货币（`currency` 的 `cost`、`value_multiplier`）与本稿无关**，§13 是落地记录（含第二轮把两处灵气 map 并进 `Cost` 的结果） | 已落地（2026-09-23；只编译，探针未实跑）                            |
+| `46_品质链条与升级设计.md` | 品质系统整合：链条要有载体（新注册表 `mxt:quality_chain`：`tiers` 顺序 + `default` + 每步 `upgrades{costs,condition}`）、升级服务复用 `CostTransaction` 原子付款、入口给命令与 KubeJS，并把 4 张绑定表的 `quality_group` 标签**合并成链引用**；附带收尾零调用的 `tooltip_order`/`ordered()` 与 `technique.grade` 的并入选项 | **已落地**（2026-09-23；§7 记了六项拍板结果与两处补充；`compileJava`/`compileTestModJava`/`processTestModResources` 通过；**探针未实跑、升级界面与跳档未做**） |
 
 ### C. 玩法模块
 

@@ -30,7 +30,8 @@ public final class AbilityActivationService {
         ToggleContext context = new ToggleContext(holder, carrier, ability);
         if (!togglable.gated(context)) return togglable.activate(context);
         AbilityService.GateResult gate = AbilityService.gate(context);
-        return gate.approved() ? togglable.activate(context) : Togglable.Result.refused(failureOf(gate.failure()));
+        return gate.approved() ? togglable.activate(context)
+                : Togglable.Result.refused(failureOf(gate.failure()), gate.failedResource());
     }
 
     // Read-only, and safe on either side: the state an implementation reports is part of its declaration.
@@ -52,16 +53,25 @@ public final class AbilityActivationService {
         AbilityService.UseResult result = AbilityService.use(context.ability(), holder, abilities, resources,
                 holder.level().getGameTime(), context.formula());
         if (result.committed() || result.casting()) return Togglable.Result.activated();
-        return Togglable.Result.refused(failureOf(result.failure()));
+        return Togglable.Result.refused(failureOf(result.failure()), result.failedResource());
     }
 
+    // A press keeps the cast pipeline's own names instead of collapsing them into "unavailable", because the
+    // report the player reads is keyed by these: only a reason a press can never produce has nowhere else to go.
     public static Togglable.Failure failureOf(@Nullable AbilityService.Failure failure) {
         if (failure == null) return Togglable.Failure.UNAVAILABLE;
         return switch (failure) {
-            case COOLDOWN -> Togglable.Failure.ON_COOLDOWN;
-            case INSUFFICIENT_RESOURCE, INSUFFICIENT_COST -> Togglable.Failure.INSUFFICIENT_COST;
-            case NOT_GRANTED -> Togglable.Failure.NOT_CARRIED;
-            default -> Togglable.Failure.UNAVAILABLE;
+            case NOT_GRANTED -> Togglable.Failure.NOT_GRANTED;
+            case COOLDOWN -> Togglable.Failure.COOLDOWN;
+            case INSUFFICIENT_RESOURCE -> Togglable.Failure.INSUFFICIENT_RESOURCE;
+            case INSUFFICIENT_COST -> Togglable.Failure.INSUFFICIENT_COST;
+            case INVALID_FORMULA -> Togglable.Failure.INVALID_FORMULA;
+            case CONDITION_FAILED -> Togglable.Failure.CONDITION_FAILED;
+            case NO_CHARGES -> Togglable.Failure.NO_CHARGES;
+            case CANCELLED -> Togglable.Failure.CANCELLED;
+            case PERMISSION_DENIED -> Togglable.Failure.PERMISSION_DENIED;
+            case ELEMENT_AFFINITY -> Togglable.Failure.ELEMENT_AFFINITY;
+            case DISABLED, SERVER_ONLY, CARRIED_NOT_INSTANT -> Togglable.Failure.UNAVAILABLE;
         };
     }
 }

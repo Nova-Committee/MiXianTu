@@ -27,9 +27,11 @@ title: 客户端轮盘
 | 方法 | 谁问、问什么 |
 | --- | --- |
 | `Optional<Boolean> state(ctx)` | 有没有"开着/关着"这回事，现在是哪一边；**空 = 一次性**（施放与储物都是空的）。两侧都问：客户端画状态，服务端据此决定做什么。 |
-| `Result activate(ctx)` | 按下了。只有服务端调，返回「做了没有 + 为什么没做」（`Failure`：不在身上 / 不认你 / 状态已经是这样 / 现在用不了 / **没有承载物** / **代价不足** / **还在冷却**）。 |
+| `Result activate(ctx)` | 按下了。只有服务端调，返回 `Result(changed, failure, failedResource)`——「做了没有 + 为什么没做 + 缺的是哪门资源」（`Failure` 的取值见下）。 |
 
-（2026-09-23 起接口只有这两件必答的事**加上**一个有默认实现的 `gated`：早先的 `key()` 与 `displayName()` 是"内联技能"那套身份的遗留，内联取消后一并删除——这一格的名字用技能自己的 `name`。）
+（2026-09-23 起接口只有这两件必答的事**加上**一个有默认实现的 `gated`：早先的 `key()` 与 `displayName()` 是"内联技能"那套身份的遗留，内联取消后一并删除——这一格的名字用技能自己的 `name`。同日 `Result` 多了第三个分量、`Failure` 也不再是自己那一套小枚举。）
+
+**`Togglable.Failure` 的 15 个取值与 `AbilityService.Failure` 同名同义**（`NOT_OWNED` / `ALREADY_SET` / `UNAVAILABLE` / `NO_CARRIER` / `CANNOT_MOUNT` 是按压独有的五个：所有权、状态已经是这样、说不清、没有承载物、骑不上去；其余十个两边共有）。`AbilityActivationService.failureOf(...)` 只做名字搬运，**不再把管线区分得出来的原因折叠成 `UNAVAILABLE`**——2026-09-23 之前它只映射冷却 / 代价 / 未持有三种，`CONDITION_FAILED`、`ELEMENT_AFFINITY`、`NO_CHARGES`、`INVALID_FORMULA` 全被压成「现在用不了」，玩家和日志都查不出所以然。今天轮盘的动作栏文案只有一份表 `actionbar.mxt.ability.failure.*`，日志里的原因也是真的；`UNAVAILABLE` 是兜底：拿不到服务端玩家、按下的东西根本不是 `Toggable`、飞行 `startRiding` 失败。`INVALID_FORMULA` 兼管"实现自己的数算不出来"——储物 `slots` 公式算出 ≤ 0 报的就是它。
 
 付费与冷却走一处：`gated(ctx)` 默认 `true` 时，`AbilityActivationService` 先过一遍共用闸门（条件 + 冷却 + 技能自己的 `costs`，整组全有或全无），过了才调 `activate`；**开关往"关"的那一下 `gated` 返回 false**（落地不该收费），`mxt:active` / `mxt:channelled` 也返回 false——它们的施放事务自己付款，重复收一次就错了。因此：
 
@@ -85,7 +87,7 @@ public interface WheelMenuEntry {
 - 轮盘中间那一行在可用时写「按 `V` 使用」（键名取实际绑定），不可用时写「冷却中 4.3s」——剩余时间按 tick 读（附件里存的是冷却结束的那一 tick），由 `WheelDuration.seconds` 统一写成**永远一位小数**的秒数，与 tooltip 里的「冷却 / 施法」同一种写法。**环的上方另有一行页号**「轮盘 2/3：主手物品（两把切换键的实际绑定）」，键名同样取实际绑定；环本身画哪一页都长一个样，没有这一行就分不出自己站在哪。
 - HUD 上有一个可拖动元素「**轮盘格**」（`screen/wheel/WheelSelectionEntry`，布局键 `wheel.selection`）：**永远是 4 列，行数随内容的格子数向下长**——它是**整张轮盘的一览**，不是当前页。**只有主盘画空格子**：那 12 个空框是玩家自己摆的布局，空着就是要看得见；从盘的页只画它真正贡献的那几格，所以 3 个技能的页就是 3 格，不是 3 格 + 9 个空框（因此页边界不再一定等于行边界）。**块的上方不写任何字**：它是拿来看的，哪一页由轮盘自己说。每格画图标或名字开头、底边一条类型色；**冷却中的格子按原版物品那样压一层白幕**（盖住图标的剩余比例、随时间从上往下退，剩余取条目的 `cooldownTicks`、全长取 `cooldownLength`），其它原因不可用时压一层暗色；**编号此刻代表的那一格换成金色边框的贴图**（`slot_22_selected.png`，与配置界面选中的候选格、轮盘上指针所在格子的金色是同一套语汇）。它整块自绘（`renderBlocks()` 返回空、走 `render()`），默认位置是**窗口左边、竖直居中**；尺寸每帧按内容算（`layoutWidth` / `layoutHeight` 是动态的，`refreshPlacement` 里 `setSize` 回报给框架，长出去会被夹回窗口）。它在 `MiXianTuClient#init` 与资源条一起登记，关着也能按 `V` 这件事靠它才不盲目。
 
-**按了没反应时会被告诉原因。** 轮盘这条路上有两处会拒绝请求，而客户端从画面上分不出来，所以两处都会说话：服务端重读来源后发现**这一项已经不在那个来源上**时，日志记一条 info、动作栏报「轮盘上的这一项已经失效了」；技能管线拒绝这次施放时（灵根不符、资源不足、冷却、条件不满足……），`AbilityService` 返回的 `UseResult` 不再被丢掉——日志记一条 info（含 `Failure` 名与缺的那个资源），动作栏报「施放失败：<原因>」（`actionbar.mxt.ability.failure.*` 一份原因一份文案，缺资源的还会点名是哪一门）。灵气发射失败同理报「灵气没能发射出去」，开关 / 储物按不动时报「使用失败：<原因>」（`actionbar.mxt.artifact_skill.*`：不在身上 / 不认你 / 状态已经是这样 / 现在用不了 / 没有承载物 / 代价不足 / 还在冷却）。这一条是照 `CultivationModeService#notifyFailure` 的口径做的：**拒绝要说出来，不能只有"按了没反应"**。
+**按了没反应时会被告诉原因。** 轮盘这条路上有三处会拒绝请求，而客户端从画面上分不出来，所以三处都会说话：服务端重读来源后发现**这一项已经不在那个来源上**时（`WheelSources#offers` 之后那一步解析不出技能也走这一句），日志记一条 info、动作栏报「轮盘上的这一项已经失效了」；技能管线拒绝这次施放时（灵根不符、资源不足、冷却、条件不满足、次数用完、没有权限……），`AbilityService` 返回的结果不再被丢掉——`AbilityActivationService.failureOf` 把原因**原样**带成 `Togglable.Failure`（不再折叠），日志记一条 info（含原因名与缺的那个资源），动作栏按同一份文案表报出来：按压走「使用失败：<原因>」（`actionbar.mxt.wheel.use_failed`）、非按压技能的施放走「施放失败：<原因>」（`actionbar.mxt.wheel.cast_failed`），两条后面接的都是 `actionbar.mxt.ability.failure.*`，缺资源的还会点名是哪一门。灵气发射失败同理报「灵气没能发射出去」。这一条是照 `CultivationModeService#notifyFailure` 的口径做的：**拒绝要说出来，不能只有"按了没反应"**，而且说出来的必须是**真的那一条**。
 
 **加一种新条目**：实现 `WheelMenuEntry`，再让 provider 把它放进某个来源即可——轮盘的几何、分页、渲染、开合与选择语义都不用动，工具提示自己拼（`WheelTooltips` 里有共用的数值、消耗与元素写法）。**加一类新东西**（既不是技能也不是灵气）才需要动 `WheelEntryKind`、`WheelService.trigger` 的 switch 与配置界面的分池。**加一个来源**是加一个 `WheelSource` 常量、一行 `grantSources(...)` 映射（以及一条显示名语言键）：来源 id 走 `AbilitySources`，读取、分页与校验都不用改。**加法器技能**只做两件事：写一个新的 `mxt:ability_type` 条目并让它实现 `Toggable`；如果它需要物品，就在 `activate` 里对 `ctx.carrier()` 判空并返回 `NO_CARRIER`——轮盘、配置池、触发与文案都会自己接纳它，唯一要记住的是"轮盘格子的身份就是这条技能自己的注册表 id"。
 

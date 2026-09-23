@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
@@ -76,8 +77,9 @@ public final class ItemBindingTooltipAppender {
 
     private static void appendSpiritRoot(Consumer<Component> builder, TooltipFlag flag, GrantSpiritRootAction action) {
         builder.accept(Component.translatable("tooltip.mxt.item.spirit_root").withStyle(ChatFormatting.AQUA));
+        // An advanced line always spells out the entry id, never the display text the line above already stands for.
         if (flag.isAdvanced())
-            builder.accept(DefinitionText.name(action.spiritRoot(), "spirit_root").withStyle(ChatFormatting.DARK_GRAY));
+            builder.accept(Component.literal("   " + HolderHelper.id(action.spiritRoot())).withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon) {

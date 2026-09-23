@@ -14,6 +14,8 @@ import com.iafenvoy.mxt.command.server.LightningCommand;
 import com.iafenvoy.mxt.command.server.MxtCommand;
 import com.iafenvoy.mxt.command.server.PhysiqueCommand;
 import com.iafenvoy.mxt.command.server.PickerCommand;
+import com.iafenvoy.mxt.command.server.QualityCommand;
+import com.iafenvoy.mxt.command.server.RealmCommand;
 import com.iafenvoy.mxt.command.server.SpiritRootCommand;
 import com.iafenvoy.mxt.command.server.TalismanCommand;
 import com.iafenvoy.mxt.command.server.TechniqueCommand;
@@ -51,6 +53,8 @@ public final class ServerCommandManager {
         builder.put(_ -> LightningCommand.build(), config.lightning);
         builder.put(PhysiqueCommand::build, config.physique);
         builder.put(_ -> PickerCommand.build(), config.picker);
+        builder.put(QualityCommand::build, config.quality);
+        builder.put(RealmCommand::build, config.realm);
         builder.put(SpiritRootCommand::build, config.spirit_root);
         builder.put(TalismanCommand::build, config.talisman);
         builder.put(_ -> TechniqueCommand.build(), config.technique);

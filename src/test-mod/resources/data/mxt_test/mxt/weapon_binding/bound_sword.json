@@ -2,7 +2,7 @@
   "items": ["minecraft:diamond_sword", "minecraft:netherite_sword"],
   "attack_damage": 6,
   "attack_speed": -2.4,
-  "quality_group": "#mxt_test:group/forged",
+  "quality_chain": "mxt_test:forged",
   "conditions": [
     {"type": "mxt:always_true"}
   ],

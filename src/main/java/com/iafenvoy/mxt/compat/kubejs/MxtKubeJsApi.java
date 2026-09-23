@@ -15,6 +15,8 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -34,6 +36,10 @@ import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityChainService;
+import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -45,6 +51,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -448,6 +455,64 @@ public final class MxtKubeJsApi {
             return new Result(false, null, Map.of());
         CostTransaction.PayResult payment = CostTransaction.pay(costs, CostContext.of(payer, context, CostOrigin.SCRIPT));
         return new Result(payment.paid(), payment.paid() ? null : payment.failedResource(), payment.resources());
+    }
+
+    /**
+     * The tier that stack resolves to right now: an override component, a settlement, or a definition's own default.
+     */
+    public static @Nullable Identifier itemQuality(Entity entity, ItemStack stack) {
+        if (entity.level().isClientSide()) return null;
+        return ItemQualityService.find(entity.level().registryAccess(), stack).map(HolderHelper::id).orElse(null);
+    }
+
+    /**
+     * The ladder that stack's tier belongs to: the one its binding declares, otherwise the only ladder holding it.
+     */
+    public static @Nullable Identifier itemQualityChain(Entity entity, ItemStack stack) {
+        if (entity.level().isClientSide()) return null;
+        Provider access = entity.level().registryAccess();
+        return ItemQualityService.find(access, stack).flatMap(quality -> {
+            Optional<Holder<QualityChain>> declared = ItemBindingService.qualityChain(access, stack);
+            return declared.isPresent() ? declared : QualityChainService.soleChain(access, quality);
+        }).map(HolderHelper::id).orElse(null);
+    }
+
+    /**
+     * The tier one step up from the stack's own, or null at the top of the ladder or without one.
+     */
+    public static @Nullable Identifier nextItemQuality(Entity entity, ItemStack stack) {
+        if (entity.level().isClientSide()) return null;
+        return QualityUpgradeService.nextTier(entity.level().registryAccess(), stack).map(HolderHelper::id).orElse(null);
+    }
+
+    /**
+     * Writes a tier onto the stack as an override, which is what makes an item's tier the script's decision rather
+     * than its definition's.
+     */
+    public static boolean setItemQuality(Entity entity, ItemStack stack, Identifier quality) {
+        if (entity.level().isClientSide()) return false;
+        Holder<ItemQuality> holder = MxtDatapackRegistries
+                .holder(entity.level().registryAccess(), MxtResourceKeys.ITEM_QUALITY, quality).orElse(null);
+        if (holder == null) return false;
+        ItemQualityService.set(stack, holder);
+        return true;
+    }
+
+    /**
+     * Takes the override off the stack, so it falls back to its definition's default; false when there was none.
+     */
+    public static boolean clearItemQuality(Entity entity, ItemStack stack) {
+        if (entity.level().isClientSide()) return false;
+        if (!ItemQualityService.hasOverride(stack)) return false;
+        ItemQualityService.clear(stack);
+        return true;
+    }
+
+    /**
+     * Moves the stack one step up its ladder, paying that step's costs; the result says why nothing happened.
+     */
+    public static QualityUpgradeService.Result upgradeItemQuality(LivingEntity entity, ItemStack stack) {
+        return QualityUpgradeService.upgrade(entity, stack);
     }
 
     public static AuraResult aura(Level level, BlockPos position) {

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -30,9 +31,10 @@ import java.util.Optional;
  * A learnable technique grants named abilities and cultivation modifiers, unconditionally
  * ({@code granted_abilities}) or by mastery ({@code configuration}), whose levels come from a shared
  * {@link SkillStage} chain. {@code default_stage} is the chain entry point and is mandatory as soon as any level
- * is configured; {@code mastery_resource} names the stored value that measures mastery.
+ * is configured; {@code mastery_resource} names the stored value that measures mastery. {@code quality} is the
+ * technique's own tier: what the panel shows as its 品阶 and the tier its carrier item starts on.
  */
-public record Technique(Component name, Component description, String grade, Optional<IconReference> icon,
+public record Technique(Component name, Component description, Optional<Holder<ItemQuality>> quality, Optional<IconReference> icon,
                         EntityCondition learnCondition,
                         List<Identifier> exclusiveTags,
                         NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,
@@ -45,7 +47,7 @@ public record Technique(Component name, Component description, String grade, Opt
     public static final Codec<Technique> DIRECT_CODEC = RecordCodecBuilder.<Technique>create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(Technique::name),
             ContextNameCodec.description(CATEGORY).forGetter(Technique::description),
-            Codec.STRING.optionalFieldOf("grade", "common").forGetter(Technique::grade),
+            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Technique::quality),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(Technique::icon),
             EntityCondition.optionalCodec("learn_condition").forGetter(Technique::learnCondition),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Technique::exclusiveTags),

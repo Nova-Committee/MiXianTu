@@ -33,7 +33,7 @@ public interface AlchemyWorkstation {
 
     default StartResult startAlchemy(Level level, Identifier recipeId, FormulaContext context) {
         StartResult result = find(level, recipeId)
-                .map(holder -> AlchemyWorkstationService.start(this.alchemyState(), holder, this.furnaceTier(), context))
+                .map(holder -> AlchemyWorkstationService.start(level.registryAccess(), this.alchemyState(), holder, this.furnaceTier(), context))
                 .orElse(StartResult.rejected(Failure.DISABLED));
         if (result.started()) this.setChanged();
         return result;
@@ -43,7 +43,7 @@ public interface AlchemyWorkstation {
         if (!(level instanceof ServerLevel serverLevel)) return StartResult.rejected(Failure.DISABLED);
         return serverLevel.getServer().getRecipeManager().getRecipeFor(MxtRecipeTypes.ALCHEMY.get(),
                         new AlchemyRecipeInput(this.alchemyState().inputs()), level)
-                .map(holder -> AlchemyWorkstationService.start(this.alchemyState(), holder, this.furnaceTier(), context))
+                .map(holder -> AlchemyWorkstationService.start(level.registryAccess(), this.alchemyState(), holder, this.furnaceTier(), context))
                 .map(result -> {
                     if (result.started()) this.setChanged();
                     return result;

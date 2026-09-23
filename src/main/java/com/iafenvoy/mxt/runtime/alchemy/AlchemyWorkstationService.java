@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,21 +36,21 @@ public final class AlchemyWorkstationService {
     private AlchemyWorkstationService() {
     }
 
-    public static StartResult start(AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
+    public static StartResult start(Provider access, AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,
                                     int furnaceTier, FormulaContext context) {
         if (state.active()) return StartResult.rejected(Failure.INPUTS);
-        StartResult result = AlchemySession.start(holder, furnaceTier, itemIds(state.inputs()), context, inputModifier(state.inputs(), context));
+        StartResult result = AlchemySession.start(holder, furnaceTier, itemIds(state.inputs()), context, inputModifier(access, state.inputs(), context));
         if (result.started()) state.lock(result.session());
         return result;
     }
 
     // The lowest modifier among the ingredients present when the batch starts, because a brew is only as good as
     // its worst ingredient; read here because lock() releases the stacks as soon as the session is stored.
-    static double inputModifier(List<ItemStack> inputs, FormulaContext context) {
+    static double inputModifier(Provider access, List<ItemStack> inputs, FormulaContext context) {
         double modifier = ItemQualityService.DEFAULT_MODIFIER;
         boolean graded = false;
         for (ItemStack stack : inputs) {
-            Optional<Holder<ItemQuality>> quality = ItemQualityService.find(stack);
+            Optional<Holder<ItemQuality>> quality = ItemQualityService.find(access, stack);
             if (quality.isEmpty()) continue;
             double value = ItemQualityService.modifier(quality.orElseThrow(), ItemQuality::alchemyModifier, context);
             modifier = graded ? Math.min(modifier, value) : value;
@@ -70,7 +71,7 @@ public final class AlchemyWorkstationService {
             return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
         });
         if (!auraMet) return StartResult.rejected(Failure.ENVIRONMENT);
-        return start(state, holder, furnaceTier, context);
+        return start(level.registryAccess(), state, holder, furnaceTier, context);
     }
 
     public static TickResult tick(AlchemyWorkstationState state, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder,

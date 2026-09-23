@@ -8,13 +8,13 @@
 | 代码与数据层面的约定、术语边界 | [`docs/ai/SKILL.md`](docs/ai/SKILL.md) |
 | 文档怎么写、怎么维护 | [`docs/ai/FORMAT.md`](docs/ai/FORMAT.md) |
 | 字段级数据格式（唯一权威） | [`docs/数据包格式.md`](docs/数据包格式.md) |
-| 每个模块做到哪一步、还缺什么 | [`docs/模块实现审计.md`](docs/模块实现审计.md) |
+| 每个模块做到哪一步、还缺什么 | [`README-zh.md`](README-zh.md) 的**模块完成情况**表（完成度以代码为准） |
 | 设计意图与历史决策 | `research/`——**大改的设计稿与历史决策**（日常小改不写稿），规矩见 [`research/README.md`](research/README.md) |
 | 玩家文档站 | **另一个仓库**：[`IAFEnvoy/mxt-docs`](https://github.com/IAFEnvoy/mxt-docs)——本仓库不含它，怎么在那边干活看它自己的 `AGENTS.md` |
 
 ## 0. 五分钟上手
 
-1. 读 [`README-zh.md`](README-zh.md) 与 `docs/模块实现审计.md` 的对应行——**完成度以代码为准，不以研究文档为准**。
+1. 读 [`README-zh.md`](README-zh.md) 的**模块完成情况**表（状态列 + 介绍列）——**完成度以代码为准，不以研究文档为准**。
 2. 看 `git status`：工作树里通常有别人（或上一轮 AI）未提交的改动，**不要回滚、不要顺手格式化**。
 3. 找到要改的模块（见第 3 节的代码地图），先读它的类注释（注释只留结论与硬约束）与 `research/` 里的对应设计稿——"为什么这么写"多数在那里。
 4. 改完跑第 2 节的编译。
@@ -26,7 +26,7 @@
 2. **术语固定。** 载体与定义一律写「符箓」（`talisman`），配套「符纸」「符笔」「符墨」；**「符篆」是误用**，不得出现在文案、注释或文档里。灵气工作台的配方族叫**灵气合成**（`mxt:spirit_shaped` / `mxt:spirit_shapeless`），方块叫**灵气工作台**（`spirit_crafting_table`）。灵根（`spirit_root`）与体质（`physique`）是两套东西；功法（`technique`）与技能（`ability`）与技能水平（`skill_stage`）是三层；`resource` 是**数值**系统、`aura` 是**灵气身份**（详见 `docs/ai/SKILL.md`）。
 3. **不要自行 `git commit` / `git push`。** 也不要 `git checkout --`、`git stash`、`git reset` 别人的改动。
 4. **默认不启动游戏/测试服务端。** 代码改动的最低验证是编译（第 2 节）；要实机验证（`runTestClient` / `runTestServer`）**先问**，跑完把结果贴出来。
-5. **文档同步三处**：本仓库 `docs/`（字段与教程）+ 本仓库 `docs/模块实现审计.md`（完成度）+ **文档站仓库**（中英各一份）。只改一处等于制造 bug。
+5. **文档同步三处**：本仓库 `docs/`（字段与教程）+ 两份 README 的「模块完成情况」表（完成度）+ **文档站仓库**（中英各一份）。只改一处等于制造 bug。
 6. **大改才留档。** `research/` 是**设计稿存储处**，不是改动日志：**只有大改**（新模块、换形状的改版、跨模块重构）**或用户明确要求先设计**时才写稿，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前编号看 [`research/README.md`](research/README.md) 的目录，别在这里抄死），审计放 `research/audit/`。日常小改、修 bug、改名、拆包、加字段、文档同步**不写稿**——结论写进代码注释（硬约束）与 `docs/`、本文件（约定）里就够。反过来，真要写的稿子**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明**。规矩见 [`research/README.md`](research/README.md)。
 7. **不把研究设计写成"已完成"。** 「制作中 / 完成」只能由代码事实支撑；做不到的部分要明说。
 8. **不在文档里写死模组版本号。** 版本以 `gradle.properties` / 你装的那份 Jar 为准。平台与依赖版本（Minecraft / NeoForge / Curios / KubeJS）可以写。
@@ -55,7 +55,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | --- | --- |
 | 对外 Java API（别的模组实现或调用的契约） | `src/main/java/com/iafenvoy/mxt/api/`——**只放接口**（外加 `package-info`）；实现留在各自模块，服务类暂不设代理（推迟项） |
 | 数据包定义（字段 / Codec / 加载期校验） | `src/main/java/com/iafenvoy/mxt/data/<模块>/` |
-| 动态注册表声明 | `registry/MxtDatapackRegistries.java` + `registry/MxtResourceKeys.java`（34 张表，原版 datapack registry） |
+| 动态注册表声明 | `registry/MxtDatapackRegistries.java` + `registry/MxtResourceKeys.java`（35 张表，原版 datapack registry） |
 | 固有分派类型（条件 / 行为 / 触发器 …） | `data/condition/builtin/`、`data/action/builtin/`、`registry/Mxt*Conditions.java`、`registry/Mxt*Actions.java` |
 | 原版配方类型 | `registry/MxtRecipeTypes.java`（`mxt:alchemy`、`mxt:spirit_shaped`、`mxt:spirit_shapeless`、`mxt:formation`、`mxt:refining`） |
 | 运行时服务（结算、事务、调度） | `runtime/<模块>/` |
@@ -87,7 +87,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 - **缓存按注册表实例开键**（见 `DamageElements`、`ElementReactionService`、`FormulaNames`）：`/reload` 不会重建 datapack registry，世界加载才会换实例，缓存键天然正确；上限参考 `MAX_CACHED_REGISTRIES` + `LOCK` 双检。
 - **重入守卫用 `ThreadLocal<Set<...>>` + try/finally**（见 `CurseService.IN_TRANSACTION`、`ElementReactionService.IN_CHAIN`、`TriggerDispatcher.DISPATCHING`）：链式触发很容易写成无限递归。
 - **失败用结果记录，不用异常**：`Result(changed, failure)` + `Failure` 枚举（`CultivationIdentityService`、`CultivationToggleService`、`AbilityService.UseResult` …）。客户端调用一律返回 `false` / `0` / `failure = SERVER_ONLY`，不写日志。
-- **显示名走 `DefinitionText.name(holder, category)`**；自由文本（`rarity`、功法 `grade`）先查 `mxt.rarity.<值>` / `mxt.technique_grade.<值>`，有翻译用翻译、否则显示原文。**18 张注册表的定义自带 `name` / `description` 两个可选字段**（`api/NamedDefinition`，走 `util/codec/ContextNameCodec`；一组文本用 `util/codec/ContextNameListCodec`，目前只有子境界名）：省略时按解码时的条目 id 生成**和上面同一个键** `<类别>.<注册表命名空间>.<定义命名空间>.<路径>`（注册表命名空间就是 `mxt`），`DefinitionText.name(...)` 认得出这个接口、直接读字段——别在别处再拼一套名字键，也别再造第二套键。
+- **显示名走 `DefinitionText.name(holder, category)`**；自由文本（如 `spirit_root` / `physique` 的 `rarity`）先查 `mxt.rarity.<值>`，有翻译用翻译、否则显示原文（功法过去的自由文本 `grade` 已于 2026-09-23 换成 `quality` 引用，见 `docs/数据包格式.md` 的 `technique`）。**19 张注册表的定义自带 `name` / `description` 两个可选字段**（`api/NamedDefinition`，走 `util/codec/ContextNameCodec`；一组文本用 `util/codec/ContextNameListCodec`，目前只有子境界名）：省略时按解码时的条目 id 生成**和上面同一个键** `<类别>.<注册表命名空间>.<定义命名空间>.<路径>`（注册表命名空间就是 `mxt`），`DefinitionText.name(...)` 认得出这个接口、直接读字段——别在别处再拼一套名字键，也别再造第二套键。
 - **`RecordCodecBuilder.group` 最多 16 个组件**：加上 `name` / `description` 后超出的记录（`RealmStage` 18 个、`SecretRealm` 17 个、`Ability` **19** 个——2026-09-23 合并新增 `hidden` 与 `item_action` 后用了三组 `pair`）用 `MiscCodecs.pair(a, b)` 把两个字段并成一组，JSON 键不变。`ContextNameCodec` 与 `DefinitionText` 共用 `DefinitionText.key(...)` / `defaultText(...)` 两个出口，两边永远同形。
 - **消耗只有一套形状**：所有"使用消耗"字段都是 `Cost[]`（`mxt:resource` / `mxt:aura` / `mxt:item` / `mxt:js` + `{id, amount}` 简写，见 `docs/数据包格式.md` 的「`Cost`」）。一个 `Cost` 只描述"要扣什么"（`charge`，只读），校验与扣除都由 `CostTransaction` 用同一份计划完成（`plan` → `commit`，中途拒付会还原已写入的部分）；**别在别处再写一套扣费逻辑，也别为某个字段另造一种代价格式**。付款者是 `LivingEntity` + 通道（`CostContext`）：`mxt:item` / `mxt:js` 需要玩家，缺通道就是拒付而不是报错；阵法维护这类"主人可能不在线"的字段直接点名一个资源账户。消耗数组解码失败**不许静默丢弃**（旧的 `AutoIgnoreListCodec` 容错口径不适用于它）。**货币不是消耗**：`currency` 的 `exchanges[].cost` 与 `value_multiplier` 是价格/价值，永远不进 `Cost`。
 - **能力只有一套形状**（2026-09-23 合并，同日取消内联）：技能就是一个 `mxt:ability` 注册表条目，**定义只写一处**，别处（法器 `abilities`、功法 `granted_abilities`、灵根/体质、符箓…）只用**它自己的 id 或 `#技能标签`** 引用，身份统一为**它自己的注册表 holder**（`Holder<Ability>`；要 id 就用 `HolderHelper.id(holder)`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））；**别再造"内联技能"或第二张能力分派表**。`mxt:flight` / `mxt:storage` / `mxt:upkeep` 就是普通的 `mxt:ability_type`（法器专用的 `mxt:artifact_ability_type` 已删除），需要展开标签时用 `RegistryCodecs.resolve(values, Provider, key)`（客户端与服务端同一条路径）。凡是"需要按键才发动"的实现 `data/ability/Toggable`（只有 `state` / `gated` / `activate` 三个方法，别再加"宿主内的名字"），服务端只经 `runtime/ability/AbilityActivationService` 受理（轮盘、命令、KubeJS 都走它），**别在别处再写一套"按下某个开关"的分派**；冷却与消耗由 `AbilityService` 的同一条闸门负责，`cooldown` 字段自己会写 `mxt:cooldown` 状态，不需要内容再声明一遍。
@@ -109,14 +109,14 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 
 | 改了什么 | 必须同步 |
 | --- | --- |
-| 新增 / 改名 / 删除数据包字段 | 本仓库 `docs/数据包格式.md` → `docs/模块实现审计.md` 对应行 → 文档站仓库的对应页（中英各一份）→ 测试包示例 → README(`.md` / `-zh.md`) 的完成度表 |
+| 新增 / 改名 / 删除数据包字段 | 本仓库 `docs/数据包格式.md` → 文档站仓库的对应页（中英各一份）→ 测试包示例（README 与文档站首页的**介绍列**只在模块范围变化时才改） |
 | 公开 API / KubeJS 全局对象 | 本仓库 `docs/guide/kubejs/api.md` → 文档站仓库的 KubeJS 页（中英） |
 | 新命令 / 新配置项 | 本仓库 `docs/guide/play/commands.md` → 文档站仓库的命令页与功能页（中英）+ 两份 lang（含 `config.mxt.server.*.tooltip`） |
-| 模块完成度变化 | `docs/模块实现审计.md` + README 两张表 + 文档站仓库的功能表（中英） |
+| 模块完成度变化 | README 两张表与文档站两页的**状态列**（**四处**保持一致，完成度以代码为准） |
 | 推翻 / 关闭了研究里的设计 | `research/audit/*.md` 标注"已于 <日期> 关闭 / 修正"，并写清新行为 |
 | 改了数据包语义（比如某倍率改由管线消费） | 文档站仓库的技术说明、公式变量页与相关教程（中英），**教程里的旧写法必须改掉**，否则包会重复相乘 |
 
-**README 的「模块完成情况 / Module Status」表每行就是一句模块介绍，有长度上限**：**中文不超过 100 个汉字，英文不超过 250 个字母，两边都把空格与标点算进去**（按去掉表格对齐空格后的正文量）。改完成度、加模块、动 README 里那张表时顺手量一下：超了就删细节，细节属于 `docs/` 与文档站，README 只留一句能读懂的话。
+**README 的「模块完成情况 / Module Status」表两列各管一件事，别互相串**：**状态列**只放 ✅ / 🚧 / 🔲（图例写在表上方），表示这个模块做到哪一步（**完成度以代码为准**，README 中英两张表与文档站中英两页保持一致）；**介绍列只讲这个模块提供什么**——不写完成情况：不出现「已完成 / 制作中 / 计划中」、✅ / 🚧 / 🔲，也不写"XX 已就绪""XX 还没做""只有数据结构或资源"这类进度句，并且写成**能做什么**的能力口径，而不是"现在跑到哪"。介绍列每行一句，有长度上限：**中文不超过 100 个汉字，英文不超过 250 个字母**，两边都把空格与标点算进去（按去掉表格对齐空格后的正文量）；加模块或改模块范围时顺手量一下：超了就删细节，细节属于 `docs/` 与文档站。
 
 文档站仓库怎么构建、怎么校验、正文用什么骨架，看它自己的 `AGENTS.md`；本仓库只负责把该改的内容改到。
 

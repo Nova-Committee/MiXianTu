@@ -14,6 +14,8 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
+import java.util.Optional;
+
 /**
  * Shared item quality definition, including common economic, forging and alchemy modifiers. Ordering and groups
  * belong to native registry tags rather than this definition, so datapacks can reorganise them without rewriting
@@ -21,8 +23,11 @@ import net.minecraft.resources.RegistryFixedCodec;
  *
  * <p>{@code name} and {@code description} may be omitted, in which case they are the entry's own translation
  * keys; each modifier's own {@code description} is shown only when the pack writes one.
+ *
+ * <p>{@code color} is optional and is the pack's own answer to "what colour is this tier": every place that names
+ * a quality tints with it, and a quality without one is drawn exactly as it always was.
  */
-public record ItemQuality(Component name, Component description, Modifier valueMultiplier,
+public record ItemQuality(Component name, Component description, Optional<Integer> color, Modifier valueMultiplier,
                           Modifier forgingModifier, Modifier alchemyModifier,
                           EntityCondition condition) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ITEM_QUALITY.identifier());
@@ -30,6 +35,7 @@ public record ItemQuality(Component name, Component description, Modifier valueM
     public static final Codec<ItemQuality> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(ItemQuality::name),
             ContextNameCodec.description(CATEGORY).forGetter(ItemQuality::description),
+            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("color").forGetter(ItemQuality::color),
             Modifier.CODEC.optionalFieldOf("value_multiplier", Modifier.DEFAULT).forGetter(ItemQuality::valueMultiplier),
             Modifier.CODEC.optionalFieldOf("forging_modifier", Modifier.DEFAULT).forGetter(ItemQuality::forgingModifier),
             Modifier.CODEC.optionalFieldOf("alchemy_modifier", Modifier.DEFAULT).forGetter(ItemQuality::alchemyModifier),

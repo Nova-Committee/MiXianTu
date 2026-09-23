@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
@@ -99,9 +98,6 @@ public final class MxtCommand {
                         .then(argument("aura", ResourceArgument.resource(context, MxtResourceKeys.AURA))
                                 .executes(ctx -> attemptBreakthrough(ctx.getSource(), aura(ctx)))))
                 .then(literal("secret_realm").requires(ServerCommandManager::mayChange)
-                        .then(literal("set").then(argument("realm", ResourceArgument.resource(context, MxtResourceKeys.REALM_STAGE))
-                                .executes(ctx -> setRealm(ctx.getSource(), realm(ctx))))))
-                .then(literal("secret_realm").requires(ServerCommandManager::mayChange)
                         .then(literal("list").executes(ctx -> listSecretRealms(ctx.getSource())))
                         .then(literal("info").then(argument("dimension", IdentifierArgument.id())
                                 .executes(ctx -> secretRealmInfo(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))))
@@ -169,10 +165,6 @@ public final class MxtCommand {
 
     private static Reference<Aura> aura(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         return ResourceArgument.getResource(ctx, "aura", MxtResourceKeys.AURA);
-    }
-
-    private static Reference<RealmStage> realm(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        return ResourceArgument.getResource(ctx, "realm", MxtResourceKeys.REALM_STAGE);
     }
 
     private static Reference<SecretRealm> secretRealm(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -364,17 +356,6 @@ public final class MxtCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(aura, "aura")), true);
-        return 1;
-    }
-
-    private static int setRealm(CommandSourceStack source, Reference<RealmStage> realm) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) return 0;
-        if (!CultivationService.setRealm(player.getData(MxtAttachments.CULTIVATION), HolderHelper.id(realm))) {
-            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.name(realm, "realm_stage")));
-            return 0;
-        }
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", DefinitionText.name(realm, "realm_stage")), true);
         return 1;
     }
 

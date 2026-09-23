@@ -177,7 +177,7 @@
 |------------------------------------------------|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | `technique`                                    | `Holder<technique>` **必填**                                       | 这份声明描述哪条功法；声明按它匹配，一条功法用一条即可                                                                                               |
 | `carrier_item`                                 | 可选物品 id                                                          | 本体替这条功法**生成**的载体物品（创造模式物品栏 + `/picker mxt:technique`）；不写＝`mxt:cultivation_jade_slip`                                      |
-| `quality_group`                                | 可选 `#tag`                                                        | 参与 `ResolvedBindings.qualityGroup()`，优先级 weapon → pill → technique → item（`runtime/item/ItemBindingService.java:317-321`） |
+| `quality_group`                                | 可选 `#tag`                                                        | 参与 `ResolvedBindings.qualityGroup()`，优先级 weapon → pill → technique → item（`runtime/item/ItemBindingService.java:317-321`）。**已于 2026-09-23 被 `quality_chain`（`Holder<quality_chain>`）取代**，标签口径删除，见 `research/46` |
 | `conditions`                                   | `DescribedEntry<EntityCondition>[]` `[]`                         | 全部满足才允许学习；tooltip 逐条渲染 ✔/✖（`data/item/ItemBindingTooltipAppender.java:61, 65-75`）                                         |
 | `learn_time` / `hold_animation` / `hold_sound` | Integer `0` / 白名单动作 `block` / 音效 `minecraft:item.book.page_turn` | 长按阅读的时长、姿势与音效（`learn_time = 0` 即右键学会，此时另两项不许写非默认值）                                                                        |
 
@@ -186,7 +186,7 @@
 
 测试数据示例：`src/test-mod/resources/data/mxt_test/mxt/technique_binding/qingxiao_breathing_manual.json` 描述
 `mxt_test:qingxiao_breathing_manual` 怎么读（`learn_time: 40`、`quality_group: "#mxt_test:group/forged"` 与一条
-`mxt:always_true` 条件），不写 `carrier_item`，因此本体替它生成的载体就是玉简；另外两条（`azure_water_manual` /
+`mxt:always_true` 条件；**2026-09-23 起该字段写作 `quality_chain: "mxt_test:forged"`，`group/forged` 标签文件已删除**），不写 `carrier_item`，因此本体替它生成的载体就是玉简；另外两条（`azure_water_manual` /
 `iron_body_manual`）各自用 `carrier_item` 指向测试包自己的手册物品。
 
 ## 4. 运行时流程（唯一的正式学习入口）
@@ -361,6 +361,10 @@
 - `item_quality`（`data/quality/ItemQuality.java`）：注册表 + `tooltip_order` 原生标签排序 + 质量组标签 +
   `value_multiplier`/`forging_modifier`/`alchemy_modifier` + `condition`（排序见 `data/quality/ItemQualityTags.java`、
   `runtime/item/ItemQualityService.ordered`）。可当"品阶标签 + 数值修正 + 展示名"用，但**没有**升级/阈值/进阶语义。
+  **2026-09-23 修正**：排序与分组的那一段已作废——链条搬进注册表 `mxt:quality_chain`（升序 `tiers` + `default` +
+  每步 `upgrades`），`group/<name>` 标签与 `ItemQualityTags.group`/`groups`/`inGroup`/`groupDefault` 删除，
+  `tooltip_order` 与 `ordered()` 保留但零调用；升级语义由 `runtime/item/QualityUpgradeService` 提供（一次一档、
+  代价走 `CostTransaction`）。见 `research/46`。
 - `Technique.grade` 现状是自由字符串，无约束、无排序、无引用。
 
 ### 8.4 阶段序列（不是等级链）
@@ -452,7 +456,7 @@
 | 0  | 未匹配 `technique_binding`                      | `TechniqueItemService.use`         | —— 不接管右键，返回 `false`，物品走原版行为 |
 | 1  | `bindings.conditionsMet`（四类绑定的 `conditions`） | `ItemQualityService.check`         | `BINDING_CONDITIONS`        |
 | 2  | 解析出的 `item_quality` 自身 `condition`           | `ItemQualityService.check`         | `QUALITY_CONDITIONS`        |
-| 3  | `quality_group` 成员资格（品质缺失或不属于该组）             | `ItemQualityService.check`         | `QUALITY_GROUP`             |
+| 3  | `quality_group` 成员资格（品质缺失或不属于该组）             | `ItemQualityService.check`         | `QUALITY_GROUP`（**2026-09-23 起为 `QUALITY_CHAIN`**，判据改成"在不在所属链条的 `tiers` 上"）             |
 | 4  | `technique.learn_condition`                  | `TechniqueService.learn(entity,…)` | `CONDITIONS`                |
 | 5  | `#mxt:disabled` 标签                           | `TechniqueService.learn(spirit,…)` | `DISABLED`                  |
 | 6  | 已学会                                          | 同上                                 | `ALREADY_LEARNED`           |
@@ -474,7 +478,7 @@
 | 键                                                                                                            | 形状                                                                             |
 |--------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 | `actionbar.mxt.item.cannot_use`                                                                              | `"This item cannot be used right now: %s"`，参数是下一条                              |
-| `actionbar.mxt.item.cannot_use.binding_conditions` / `.quality_conditions` / `.quality_group`                | 三条门槛原因                                                                         |
+| `actionbar.mxt.item.cannot_use.binding_conditions` / `.quality_conditions` / `.quality_group`                | 三条门槛原因（**2026-09-23 起第三条的键是 `.quality_chain`**）                                         |
 | `actionbar.mxt.technique.failed`                                                                             | `"Cannot learn %s: %s"`，参数为功法名（`DefinitionText.name(holder, "technique")`）与下一条 |
 | `actionbar.mxt.technique.failure.disabled` / `.already_learned` / `.conflict` / `.conditions` / `.cancelled` | 五条事务原因                                                                         |
 

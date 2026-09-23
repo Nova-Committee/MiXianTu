@@ -119,6 +119,7 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         registry.add("MxtElements", new MxtKubeJsElementBindings());
         registry.add("MxtSpiritRoots", new MxtKubeJsSpiritRootBindings());
         registry.add("MxtPhysiques", new MxtKubeJsPhysiqueBindings());
+        registry.add("MxtQuality", new MxtKubeJsQualityBindings());
         registry.add("MxtSouls", new MxtKubeJsSoulBindings());
         registry.add("MxtTriggers", new MxtKubeJsTriggerBindings());
         registry.add("MxtLoot", new MxtKubeJsLootBindings());

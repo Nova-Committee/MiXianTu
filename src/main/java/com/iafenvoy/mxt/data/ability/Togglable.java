@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.ability;
 
+import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
@@ -26,26 +27,40 @@ public interface Togglable {
     // One call per press, server side only, which is why a refusal is a value rather than an exception.
     Result activate(ToggleContext context);
 
-    record Result(boolean changed, @Nullable Failure failure) {
+    record Result(boolean changed, @Nullable Failure failure, @Nullable Identifier failedResource) {
         public static Result activated() {
-            return new Result(true, null);
+            return new Result(true, null, null);
         }
 
         public static Result refused(Failure failure) {
-            return new Result(false, failure);
+            return new Result(false, failure, null);
+        }
+
+        // The payer ran out of one named resource, which is what lets the report say which one.
+        public static Result refused(Failure failure, @Nullable Identifier failedResource) {
+            return new Result(false, failure, failedResource);
         }
     }
 
+    // Named after AbilityService.Failure wherever the two mean the same thing: a press and a cast are reported
+    // through one table of messages, so a reason the cast pipeline already tells apart must not be flattened here.
     enum Failure {
-        // For the wheel this is normally a race between the page it read and the trigger, which the server drops
-        // as a stale entry before an implementation is ever asked.
-        NOT_CARRIED,
         NOT_OWNED,
         ALREADY_SET,
+        // The last resort, for a press no other reason describes.
         UNAVAILABLE,
-        // The ability needs an item to act on and none of its holders is carrying one.
+        // The ability acts on an item and nothing the press offers is carrying one.
         NO_CARRIER,
+        CANNOT_MOUNT,
+        NOT_GRANTED,
+        COOLDOWN,
+        INSUFFICIENT_RESOURCE,
         INSUFFICIENT_COST,
-        ON_COOLDOWN
+        INVALID_FORMULA,
+        CONDITION_FAILED,
+        NO_CHARGES,
+        CANCELLED,
+        PERMISSION_DENIED,
+        ELEMENT_AFFINITY
     }
 }

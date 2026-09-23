@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
@@ -82,9 +83,11 @@ public final class ItemPickerManager {
         registerSingle(MxtResourceKeys.AURA, holder -> described(new ItemStack(MxtItems.SPIRIT_STONE.get()), holder));
         registerSingle(MxtResourceKeys.BLOCK_AURA, holder -> described(new ItemStack(MxtItems.SPIRIT_STONE.get()), holder));
 
-        // A quality carries its name in the data pack rather than in a language file, so that name wins.
+        // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
+        // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
         registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(
-                new ItemStack(MxtItems.IDENTIFICATION_MIRROR.get()), holder, holder.value().name()));
+                new ItemStack(MxtItems.IDENTIFICATION_MIRROR.get()), holder,
+                ItemQualityService.coloredName(holder, holder.value().name())));
     }
 
     // Wildcard key is unwidened here because that is the shape the picker passes around; nothing reads the entry type back out.

@@ -29,7 +29,7 @@ data/<namespace>/mxt/<registry>/<path>.json
 data/mxt/tags/mxt/<registry>/disabled.json
 ```
 
-被列入 `mxt:disabled` 的条目不会参与运行时查询——**元素也不例外**：被停用的元素不再参与克制/适应、不再作为灵根的元素、不再染色、不再匹配任何元素字段。标签值顺序不作为玩法顺序；品质顺序由品质读取接口根据原版标签顺序处理。
+被列入 `mxt:disabled` 的条目不会参与运行时查询——**元素也不例外**：被停用的元素不再参与克制/适应、不再作为灵根的元素、不再染色、不再匹配任何元素字段。标签值顺序不作为玩法顺序；**品质的顺序由 `quality_chain` 自己声明**（链条的 `tiers` 数组，2026-09-23 起不再依赖标签顺序）。
 
 > 灵根与体质另有一个**开关**（`spirit_identity` 附件里的 `disabled_spirit_roots` / `disabled_physiques`）：关闭是"仍然持有但不生效"，与这里的停用标签不是一回事。操作用脚本的 `MxtSpiritRoots.setEnabled` / `MxtPhysiques.setEnabled`，或管理员命令 `/mxt spirit_root enable|disable`、`/mxt physique enable|disable`；本模组不为它提供玩家界面。
 
@@ -58,7 +58,7 @@ data/mxt/tags/mxt/<registry>/disabled.json
 | 资源与修炼 | `resource`、`aura`、`element`、`realm_stage`、`spirit_root`、`physique`、`technique`、`skill_stage`、`cultivate_action` |
 | 技能与规则 | `ability`、`curse`、`formation`、`tribulation`、`trigger`、`talisman` |
 | 灵气与世界 | `aura_zone`、`block_aura`、`item_aura`、`secret_realm` |
-| 物品与品质 | `item_binding`、`weapon_binding`、`pill_binding`、`technique_binding`、`tool_binding`、`blueprint_binding`、`artifact`、`item_quality` |
+| 物品与品质 | `item_binding`、`weapon_binding`、`pill_binding`、`technique_binding`、`tool_binding`、`blueprint_binding`、`artifact`、`quality`、`quality_chain` |
 | 经济与内容 | `currency`、`spirit_herb`、`forging_method`、`forging_blueprint`、`creature_profile`、`contract_type` |
 
 ## 模块页面

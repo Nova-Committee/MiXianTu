@@ -25,6 +25,7 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
@@ -92,6 +93,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
         register(event, MxtResourceKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
         register(event, MxtResourceKeys.ITEM_QUALITY, ItemQuality.DIRECT_CODEC);
+        register(event, MxtResourceKeys.QUALITY_CHAIN, QualityChain.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
         register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
     }
