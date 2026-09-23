@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostTransaction;
@@ -18,6 +20,7 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
@@ -46,8 +49,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -74,11 +79,22 @@ public final class MxtKubeJsApi {
     public static UseResult useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
         if (actor.level().isClientSide())
             return new UseResult(false, false, AbilityService.Failure.SERVER_ONLY, null, Map.of());
-        Holder<Ability> ability = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).orElse(null);
+        Holder<Ability> ability = Abilities.resolve(actor.level().registryAccess(), id).orElse(null);
         if (ability == null)
             return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
-        return AbilityService.use(ability, ability.value(), actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
+        return AbilityService.use(ability, actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
                 actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
+    }
+
+    /**
+     * Presses a named ability, whatever kind it is: a cast, a switch or something that opens a window. The
+     * carrier is the stack the script names, and an ability that acts on an item refuses without one.
+     */
+    public static Togglable.Result activateAbility(@NotNull LivingEntity holder, Identifier id, @Nullable ItemStack carrier) {
+        Holder<Ability> ability = Abilities.resolve(holder.level().registryAccess(), id).orElse(null);
+        if (ability == null || holder.level().isClientSide())
+            return Togglable.Result.refused(Togglable.Failure.UNAVAILABLE);
+        return AbilityActivationService.activate(holder, ability, carrier);
     }
 
     /**
@@ -87,9 +103,9 @@ public final class MxtKubeJsApi {
      */
     public static boolean grantAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
+        if (Abilities.resolve(entity.level().registryAccess(), id).isEmpty()) return false;
         AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        return MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)
-                .map(ability -> changed(entity, attachment.grant(ability, source))).orElse(false);
+        return changed(entity, attachment.grant(id, source));
     }
 
     /**
@@ -98,31 +114,31 @@ public final class MxtKubeJsApi {
      */
     public static boolean revokeAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
+        if (findAbility(entity, id).isEmpty()) return false;
         AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        return findAbilityHolder(entity, id)
-                .map(ability -> changed(entity, attachment.revoke(ability, source))).orElse(false);
+        return changed(entity, attachment.revoke(id, source));
     }
 
     /**
      * Read from the attachment, not the registry: a definition that was disabled or deleted still answers.
      */
     public static boolean hasAbility(@NotNull Entity entity, Identifier id) {
-        return findAbilityHolder(entity, id).isPresent();
+        return findAbility(entity, id).isPresent();
     }
 
     /**
      * Every ability the entity holds, sorted; read from the attachment, as {@link #hasAbility}.
      */
     public static List<String> abilities(@NotNull Entity entity) {
-        return abilityKeys(entity).map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+        return abilityKeys(entity).map(Identifier::toString).sorted().toList();
     }
 
     /**
      * Which sources keep that ability granted, empty when it is not held.
      */
     public static List<String> abilitySources(@NotNull Entity entity, Identifier id) {
-        return findAbilityHolder(entity, id)
-                .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).sources().of(ability).stream()
+        return findAbility(entity, id)
+                .map(held -> entity.getData(MxtAttachments.ABILITY_HOLDER).sources().of(held).stream()
                         .map(Identifier::toString).sorted().toList())
                 .orElseGet(List::of);
     }
@@ -135,13 +151,13 @@ public final class MxtKubeJsApi {
     }
 
     // The ledger is the only source of truth a lookup uses; a client script reads nothing.
-    private static Stream<Holder<Ability>> abilityKeys(Entity entity) {
+    private static Stream<Identifier> abilityKeys(Entity entity) {
         if (entity.level().isClientSide()) return Stream.empty();
         return entity.getData(MxtAttachments.ABILITY_HOLDER).sources().keys().stream();
     }
 
-    private static Optional<Holder<Ability>> findAbilityHolder(Entity entity, Identifier id) {
-        return abilityKeys(entity).filter(ability -> HolderHelper.id(ability).equals(id)).findFirst();
+    private static Optional<Identifier> findAbility(Entity entity, Identifier id) {
+        return abilityKeys(entity).filter(held -> held.equals(id)).findFirst();
     }
 
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {

@@ -2,13 +2,13 @@ package com.iafenvoy.mxt.network;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
+import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
@@ -19,8 +19,8 @@ import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -90,14 +90,14 @@ public final class ServerNetworkHandler {
 
     static void onFlightToggle(FlightToggleC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        if (!payload.enabled()) {
-            if (player.getData(MxtAttachments.FLIGHT).archetype().map(HolderHelper::id).filter(payload.archetype()::equals).isPresent()) {
-                FlightService.dismount(player, Failure.STOPPED);
-            }
-            return;
-        }
-        MxtDatapackRegistries.holder(MxtResourceKeys.ARTIFACT, payload.archetype()).ifPresent(archetype ->
-                FlightService.mount(player, player.getMainHandItem(), archetype, FormulaContext.of(player)));
+        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), payload.ability()).orElse(null);
+        if (ability == null) return;
+        // A request names the state it wants; a press is the same thing with the state read first, so a request
+        // that already holds is a no-op rather than a take-off followed by a landing.
+        boolean on = AbilityActivationService.state(player, ability).orElse(false);
+        if (on == payload.enabled()) return;
+        AbilityActivationService.activate(player, ability, ArtifactService.carried(
+                player.level().registryAccess(), player, HolderHelper.id(ability)).orElse(player.getMainHandItem()));
     }
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {

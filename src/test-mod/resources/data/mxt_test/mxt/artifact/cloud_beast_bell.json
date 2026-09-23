@@ -2,8 +2,8 @@
   "items": "minecraft:bell",
   "spirit_capacity": { "mxt_test:qi": "30 * 2" },
   "abilities": [
-    { "type": "mxt:storage", "slots": "16 + 2" },
-    { "type": "mxt:active", "abilities": "mxt_test:firebolt" }
+    "mxt_test:bell_storage",
+    "mxt_test:firebolt"
   ],
   "curios_equipable": true
 }

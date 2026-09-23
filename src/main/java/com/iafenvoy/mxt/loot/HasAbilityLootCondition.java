@@ -11,6 +11,7 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
+import com.iafenvoy.mxt.util.HolderHelper;
 
 public record HasAbilityLootCondition(EntityTarget target,
                                       Identifier ability) implements LootItemCondition {
@@ -28,6 +29,6 @@ public record HasAbilityLootCondition(EntityTarget target,
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
         return entity != null && MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, this.ability)
-                .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability)).orElse(false);
+                .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(ability))).orElse(false);
     }
 }

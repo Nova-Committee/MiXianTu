@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -55,6 +56,12 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
         SpiritBurstCooldownAttachment cooldowns = player.getExistingData(MxtAttachments.SPIRIT_BURST_COOLDOWNS).orElse(null);
         if (cooldowns == null) return 0L;
         return Math.max(0L, cooldowns.cooldowns().getOrDefault(this.aura, 0L) - player.level().getGameTime());
+    }
+
+    // Every burst of one aura waits the same interval, so the length is the constant the server fires on.
+    @Override
+    public long cooldownLength(Player player) {
+        return SpiritBurstService.FIRE_INTERVAL_TICKS;
     }
 
     @Override

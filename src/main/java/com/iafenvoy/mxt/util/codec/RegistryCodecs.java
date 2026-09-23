@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.util.codec;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
@@ -38,13 +40,11 @@ public final class RegistryCodecs {
         return values.stream().anyMatch(value -> value.map(entry -> entry.value() == candidate.value(), candidate::is));
     }
 
-    public static <T> boolean matches(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry,
-                                      ResourceKey<Registry<T>> key, Identifier candidate) {
+    public static <T> boolean matches(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry, ResourceKey<Registry<T>> key, Identifier candidate) {
         return registry.get(ResourceKey.create(key, candidate)).map(holder -> matches(values, holder)).orElse(false);
     }
 
-    public static <T> boolean matchesKey(Collection<Either<ResourceKey<T>, TagKey<T>>> values, Registry<T> registry,
-                                         Identifier candidate) {
+    public static <T> boolean matchesKey(Collection<Either<ResourceKey<T>, TagKey<T>>> values, Registry<T> registry, Identifier candidate) {
         return values.stream().anyMatch(value -> value.map(key -> key.identifier().equals(candidate),
                 tag -> registry.listElements().anyMatch(holder -> holder.is(tag) && holder.unwrapKey()
                         .map(key -> key.identifier().equals(candidate)).orElse(false))));
@@ -57,8 +57,14 @@ public final class RegistryCodecs {
     }
 
     public static <T> Stream<Holder<T>> resolve(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry) {
-        return values.stream().flatMap(value -> value.map(Stream::of,
-                tag -> registry.listElements().filter(holder -> holder.is(tag))));
+        return values.stream().flatMap(value -> value.map(Stream::of, tag -> registry.listElements().filter(holder -> holder.is(tag))));
+    }
+
+    // The same expansion through a lookup both sides hold, for callers that only have a Provider: the client reads
+    // the synced registries, so a tooltip expands a tag exactly the way the server grants it.
+    public static <T> Stream<Holder<T>> resolve(Collection<Either<Holder<T>, TagKey<T>>> values, Provider access, ResourceKey<? extends Registry<T>> key) {
+        RegistryLookup<T> lookup = access.lookupOrThrow(key);
+        return values.stream().flatMap(value -> value.map(Stream::of, tag -> lookup.listElements().filter(holder -> holder.is(tag))));
     }
 
     public static <T> List<Holder<T>> listAll(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry) {

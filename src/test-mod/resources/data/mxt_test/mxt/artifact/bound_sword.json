@@ -5,10 +5,10 @@
     "mxt_test:water_power": 50
   },
   "abilities": [
-    { "type": "mxt:passive", "abilities": "mxt_test:artifact_guard" },
-    { "type": "mxt:active", "abilities": "mxt_test:firebolt" },
-    { "type": "mxt:flight", "speed": 0.1, "costs": [{ "id": "mxt_test:qi", "amount": 1 }] },
-    { "type": "mxt:storage", "slots": 9 }
+    "mxt_test:artifact_guard",
+    "mxt_test:firebolt",
+    "mxt_test:bound_flight",
+    "mxt_test:bound_storage"
   ],
   "curios_equipable": true
 }

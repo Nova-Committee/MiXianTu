@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -25,7 +26,7 @@ public record GrantAbilityAction(Holder<Ability> ability, Identifier source) imp
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
-        if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(this.ability, this.source)
+        if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(HolderHelper.id(this.ability), this.source)
                 && entity instanceof LivingEntity living)
             AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }

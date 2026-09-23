@@ -15,6 +15,9 @@ import java.util.Optional;
 /**
  * Reads how much of the {@code mxt:cooldown} of a named host is left, anchored at the tick the value was written -
  * the same anchor the runtime reads. Nothing written means nothing is running: ready, with no time left.
+ *
+ * <p>A host does not have to declare {@code mxt:cooldown} for this to answer: every payment writes the value and
+ * its length, so a pack that states a cooldown once in the ability's own field can read it back here.
  */
 public record StorageCooldownEntityCondition(Identifier family, Identifier id, Optional<NumberRange> remaining,
                                              Optional<Boolean> ready) implements EntityCondition {
@@ -29,8 +32,7 @@ public record StorageCooldownEntityCondition(Identifier family, Identifier id, O
     public boolean test(@NonNull EntityConditionContext ctx) {
         StorageConditionReading reading = StorageConditionReading.of(ctx.entity(), this.family, this.id).orElse(null);
         if (reading == null) return false;
-        CooldownDataStorage declaration = reading.declared(CooldownDataStorage.class).orElse(null);
-        if (declaration == null) return false;
+        CooldownDataStorage declaration = reading.declared(CooldownDataStorage.class).orElse(CooldownDataStorage.INSTANCE);
         Optional<CooldownDataStorage> stored = reading.stored(CooldownDataStorage.class);
         double left = 0.0D;
         if (stored.isPresent()) {

@@ -19,4 +19,9 @@ public final class MxtAbilityTypes {
     public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<CompositeAbilityType>> COMPOSITE = REGISTRY.register("composite", () -> CompositeAbilityType.CODEC);
     public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<WordAbilityType>> WORD = REGISTRY.register("word", () -> WordAbilityType.CODEC);
     public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<EmptyAbilityType>> EMPTY = REGISTRY.register("empty", () -> EmptyAbilityType.CODEC);
+    // What used to be the artifact ability table: the same three capabilities, now ordinary ability types, so any
+    // source that can grant an ability can grant flight, storage or a periodic price.
+    public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<FlightAbilityType>> FLIGHT = REGISTRY.register("flight", () -> FlightAbilityType.CODEC);
+    public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<StorageAbilityType>> STORAGE = REGISTRY.register("storage", () -> StorageAbilityType.CODEC);
+    public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<UpkeepAbilityType>> UPKEEP = REGISTRY.register("upkeep", () -> UpkeepAbilityType.CODEC);
 }

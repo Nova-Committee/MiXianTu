@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
@@ -25,6 +26,7 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -41,6 +43,11 @@ import java.util.Optional;
  * datapack key {@code components} for compatibility even though the values are now held by the ability
  * attachment. {@code element_affinity_mode} says how a cultivator of several matching roots is read: the average
  * of them (the default, and the reading every ability has always had) or the best.
+ *
+ * <p>Every ability is a registry entry, named by its own id: its registry holder is what the grant ledger, the
+ * cooldowns and the wheel hand around. {@code hidden} keeps an entry out of the wheel and the HUD without
+ * stopping it, and {@code item_action} reaches the host stack, which is what a carried ability's failure
+ * compensation acts on.
  */
 public record Ability(Component name, Component description, AbilityType type, List<Cost> costs,
                       NumberProvider castTime, NumberProvider cooldown,
@@ -49,20 +56,25 @@ public record Ability(Component name, Component description, AbilityType type, L
                       DamageCondition damageCondition, EntityCondition condition, EntityAction entityAction,
                       TargetSelector targetSelector, BiEntityCondition targetCondition, BiEntityAction biEntityAction,
                       List<Either<Holder<Element>, TagKey<Element>>> elementAffinity,
-                      AffinityMode elementAffinityMode) implements DataStorageDeclaration, NamedDefinition {
+                      AffinityMode elementAffinityMode, boolean hidden, ItemAction itemAction)
+        implements DataStorageDeclaration, NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ABILITY.identifier());
     public static final Codec<Holder<Ability>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ABILITY);
-    public static final Codec<Ability> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+    // Nineteen fields in sixteen slots: three pairs keep the group within RecordCodecBuilder's limit, and the
+    // JSON keys are unchanged by it.
+    public static final MapCodec<Ability> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(Ability::name),
             ContextNameCodec.description(CATEGORY).forGetter(Ability::description),
             AbilityType.CODEC.forGetter(Ability::type),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Ability::costs),
-            // Seventeen components; one pair keeps the group at sixteen.
             MiscCodecs.pair(
                     NumberProvider.CODEC.optionalFieldOf("cast_time", new Constant(0.0D)),
                     NumberProvider.CODEC.optionalFieldOf("cooldown", new Constant(0.0D)))
                     .forGetter(ability -> Pair.of(ability.castTime(), ability.cooldown())),
-            IconReference.CODEC.optionalFieldOf("icon").forGetter(Ability::icon),
+            MiscCodecs.pair(
+                    IconReference.CODEC.optionalFieldOf("icon"),
+                    Codec.BOOL.optionalFieldOf("hidden", false))
+                    .forGetter(ability -> Pair.of(ability.icon(), ability.hidden())),
             DataStorage.CODEC.listOf().optionalFieldOf("components", List.of()).forGetter(Ability::storages),
             AttributeEntry.CODEC.listOf().optionalFieldOf("modifiers", List.of()).forGetter(Ability::modifiers),
             DamageCondition.optionalCodec("damage_condition").forGetter(Ability::damageCondition),
@@ -71,13 +83,17 @@ public record Ability(Component name, Component description, AbilityType type, L
             TargetSelector.CODEC.optionalFieldOf("target_selector", SelfTargetSelector.INSTANCE).forGetter(Ability::targetSelector),
             BiEntityCondition.optionalCodec("target_condition").forGetter(Ability::targetCondition),
             BiEntityAction.optionalCodec("bi_entity_action").forGetter(Ability::biEntityAction),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_affinity", List.of()).forGetter(Ability::elementAffinity),
-            AffinityMode.CODEC.optionalFieldOf("element_affinity_mode", AffinityMode.AVERAGE).forGetter(Ability::elementAffinityMode)
-    ).apply(i, (name, description, type, costs, timings, icon, storages, modifiers, damageCondition, condition,
-                entityAction, targetSelector, targetCondition, biEntityAction, elementAffinity, elementAffinityMode) ->
-            new Ability(name, description, type, costs, timings.getFirst(), timings.getSecond(), icon, storages,
-                    modifiers, damageCondition, condition, entityAction, targetSelector, targetCondition,
-                    biEntityAction, elementAffinity, elementAffinityMode)));
+            MiscCodecs.pair(
+                    RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_affinity", List.of()),
+                    AffinityMode.CODEC.optionalFieldOf("element_affinity_mode", AffinityMode.AVERAGE))
+                    .forGetter(ability -> Pair.of(ability.elementAffinity(), ability.elementAffinityMode())),
+            ItemAction.optionalCodec("item_action").forGetter(Ability::itemAction)
+    ).apply(i, (name, description, type, costs, timings, iconHidden, storages, modifiers, damageCondition,
+                condition, entityAction, targetSelector, targetCondition, biEntityAction, affinity, itemAction) ->
+            new Ability(name, description, type, costs, timings.getFirst(), timings.getSecond(), iconHidden.getFirst(),
+                    storages, modifiers, damageCondition, condition, entityAction, targetSelector, targetCondition,
+                    biEntityAction, affinity.getFirst(), affinity.getSecond(), iconHidden.getSecond(), itemAction)));
+    public static final Codec<Ability> DIRECT_CODEC = MAP_CODEC.codec();
 
     // How the element_ability_modifier of several matching roots becomes the one element_modifier a cast exposes.
     public enum AffinityMode {

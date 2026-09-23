@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
 import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -119,12 +120,8 @@ public final class AbilityEventBridge {
         }
         tickAuras(entity, abilities, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
-        Holder<Ability> ability = abilities.channelledAbility().orElse(null);
-        if (ability != null) {
-            Ability definition = ability.value();
-            AbilityService.tickChannel(ability, definition, entity, abilities, resourceHolder,
-                    entity.level().getGameTime(), FormulaContext.of(entity));
-        }
+        abilities.channelledAbility().ifPresent(channelled -> Abilities.resolve(entity.level().registryAccess(), channelled).ifPresent(ability ->
+                AbilityService.tickChannel(ability, entity, abilities, resourceHolder, entity.level().getGameTime(), FormulaContext.of(entity))));
     }
 
     @SubscribeEvent
@@ -190,11 +187,8 @@ public final class AbilityEventBridge {
         if (entity.level().isClientSide()) return;
         AbilityAttachment holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = AbilitySources.equipment(event.getSlot(), event.getTo());
-        itemAbilities(entity, event.getFrom()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
-                .flatMap(Optional::stream)
-                .forEach(ability -> holder.revoke(ability, source));
-        itemAbilities(entity, event.getTo()).stream().map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
-                .flatMap(Optional::stream).forEach(ability -> holder.grant(ability, source));
+        itemAbilities(entity, event.getFrom()).forEach(ability -> holder.revoke(ability, source));
+        itemAbilities(entity, event.getTo()).forEach(ability -> holder.grant(ability, source));
         rebuildTriggerSubscriptions(entity);
         FormulaContext context = FormulaContext.of(entity, Map.of("equipment_slot", (double) event.getSlot().ordinal()));
         dispatch(TriggerSignals.EQUIP, entity, context,
@@ -211,12 +205,9 @@ public final class AbilityEventBridge {
 
     // Curios gear counts in the same source-counted ability model.
     private static boolean syncCuriosAbilities(LivingEntity entity, AbilityAttachment holder) {
-        Set<Holder<Ability>> current = new LinkedHashSet<>();
+        Set<Identifier> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
-            itemAbilities(entity, stack).stream()
-                    .map(ability -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, ability))
-                    .flatMap(Optional::stream)
-                    .forEach(current::add);
+            current.addAll(itemAbilities(entity, stack));
         return holder.reconcileSource(AbilitySources.CURIOS, current);
     }
 
@@ -246,26 +237,30 @@ public final class AbilityEventBridge {
     // Only an ability that declares mxt:charges is looked at, and AbilityStorage.recharge writes only when a step
     // is actually due, so an entity holding no such ability costs one scan of its grants per tick.
     private static void rechargeCharges(LivingEntity actor, AbilityAttachment abilities, long gameTime) {
-        for (Holder<Ability> ability : abilities.sources().keys()) {
-            ChargesDataStorage declaration = ability.value().storages().stream()
-                    .filter(ChargesDataStorage.class::isInstance)
-                    .map(ChargesDataStorage.class::cast)
-                    .findFirst().orElse(null);
+        for (Identifier id : abilities.sources().keys()) {
+            ChargesDataStorage declaration = Abilities.resolve(actor.level().registryAccess(), id)
+                    .flatMap(ability -> ability.value().storages().stream()
+                            .filter(ChargesDataStorage.class::isInstance)
+                            .map(ChargesDataStorage.class::cast)
+                            .findFirst())
+                    .orElse(null);
             if (declaration == null) continue;
-            AbilityStorage.recharge(abilities, ability, declaration, gameTime, FormulaContext.of(actor));
+            AbilityStorage.recharge(abilities, id, declaration, gameTime, FormulaContext.of(actor));
         }
     }
 
     private static boolean tickAuras(LivingEntity actor, AbilityAttachment abilities, long gameTime) {
         boolean changed = false;
-        for (Holder<Ability> ability : abilities.sources().keys()) {
+        for (Identifier id : abilities.sources().keys()) {
+            Holder<Ability> ability = Abilities.resolve(actor.level().registryAccess(), id).orElse(null);
+            if (ability == null) continue;
             Ability definition = ability.value();
             if (!(definition.type() instanceof AuraAbilityType(
                     NumberProvider interval1,
                     NumberProvider radius1
             )) || !definition.condition().test(actor, FormulaContext.of(actor)))
                 continue;
-            long dueAt = Math.round(AbilityStorage.get(abilities, ability, AuraPulse.class).map(AuraPulse::nextTick).orElse((double) gameTime));
+            long dueAt = Math.round(AbilityStorage.get(abilities, id, AuraPulse.class).map(AuraPulse::nextTick).orElse((double) gameTime));
             if (gameTime < dueAt) continue;
             FormulaContext actorContext = FormulaContext.of(actor);
             double interval = interval1.evaluate(actorContext);
@@ -280,7 +275,7 @@ public final class AbilityEventBridge {
                     AbilityService.executeTargetAction(definition, actor, target, targetContext);
                 }
             }
-            AbilityStorage.set(abilities, ability,
+            AbilityStorage.set(abilities, id,
                     new AuraPulse(Math.addExact(gameTime, Math.max(1L, Math.round(interval)))), gameTime);
             changed = true;
         }
@@ -290,9 +285,10 @@ public final class AbilityEventBridge {
     private static boolean finishDueCasts(LivingEntity actor, AbilityAttachment abilities,
                                           ResourceHolderAttachment resources, long gameTime) {
         boolean changed = false;
-        for (Holder<Ability> ability : abilities.sources().keys()) {
-            if (!AbilityStorage.castDue(abilities, ability, gameTime)) continue;
-            AbilityService.finishCast(ability, ability.value(), actor, abilities, resources, gameTime, FormulaContext.of(actor));
+        for (Identifier id : abilities.sources().keys()) {
+            if (!AbilityStorage.castDue(abilities, id, gameTime)) continue;
+            Abilities.resolve(actor.level().registryAccess(), id).ifPresent(ability ->
+                    AbilityService.finishCast(ability, actor, abilities, resources, gameTime, FormulaContext.of(actor)));
             changed = true;
         }
         return changed;
@@ -318,8 +314,9 @@ public final class AbilityEventBridge {
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         TriggerDispatcher.clearModule(entity.getUUID(), "ability");
-        for (Holder<Ability> ability : abilities.sources().keys()) {
-            Identifier abilityId = HolderHelper.id(ability);
+        for (Identifier abilityId : abilities.sources().keys()) {
+            Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), abilityId).orElse(null);
+            if (ability == null) continue;
             Ability definition = ability.value();
             int triggerIndex = 0;
             for (Trigger trigger : definition.triggers()) {
@@ -341,7 +338,7 @@ public final class AbilityEventBridge {
                             try {
                                 if (NeoForge.EVENT_BUS.post(new Pre(entity, ability, signal.type(), signal.context())).isCanceled())
                                     return;
-                                UseResult result = AbilityService.use(ability, definition, entity, abilities, resources, signal.gameTime(), formula);
+                                UseResult result = AbilityService.use(ability, entity, abilities, resources, signal.gameTime(), formula);
                                 if (result.committed())
                                     NeoForge.EVENT_BUS.post(new Post(entity, ability, signal.type(), signal.context()));
                             } finally {

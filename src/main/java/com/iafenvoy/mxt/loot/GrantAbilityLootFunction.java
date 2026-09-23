@@ -18,6 +18,7 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import com.iafenvoy.mxt.util.HolderHelper;
 
 public final class GrantAbilityLootFunction extends LootItemConditionalFunction {
     public static final MapCodec<GrantAbilityLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(
@@ -46,7 +47,7 @@ public final class GrantAbilityLootFunction extends LootItemConditionalFunction 
         Entity entity = this.target.get(context);
         if (entity != null) MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, this.ability)
                 .ifPresent(ability -> {
-                    if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, this.source)
+                    if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(HolderHelper.id(ability), this.source)
                             && entity instanceof LivingEntity living)
                         AbilityEventBridge.rebuildTriggerSubscriptions(living);
                 });

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.render;
 
-import com.iafenvoy.mxt.data.artifact.ability.FlightDisplay;
+import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 

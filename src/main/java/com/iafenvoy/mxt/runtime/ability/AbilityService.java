@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.ToggleContext;
 import com.iafenvoy.mxt.data.ability.type.ChannelledAbilityType;
 import com.iafenvoy.mxt.data.ability.type.CompositeAbilityType;
 import com.iafenvoy.mxt.data.ability.type.WordAbilityType;
@@ -48,7 +49,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -57,17 +57,22 @@ import java.util.*;
  * Server-side ability cost and cooldown transaction: actions are committed only after this service approves
  * them, as one server-thread operation. World actions are deliberately never rolled back, which is why every
  * child of a composite is validated first and paid before any of them runs.
+ *
+ * <p>Everything here takes the ability as its registry holder: however it was granted - a book, a command, a
+ * script or a carried artifact - it takes the same path, and the holder's id is what the grant ledger, the
+ * cooldowns and the stored state are keyed by.
  */
 public final class AbilityService {
     private AbilityService() {
     }
 
-    private static PrepareResult prepare(@NotNull Holder<Ability> ability, Ability definition, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
+    private static PrepareResult prepare(Holder<Ability> ability, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                          FormulaContext context, LivingEntity payer, boolean requiresGrant, @Nullable ItemCostDraft itemDraft) {
-        if (requiresGrant && !abilities.has(ability)) return PrepareResult.rejected(Failure.NOT_GRANTED, null);
-        if (abilities.isOnCooldown(ability, gameTime)) return PrepareResult.rejected(Failure.COOLDOWN, null);
+        Ability definition = ability.value();
+        if (requiresGrant && !abilities.has(HolderHelper.id(ability))) return PrepareResult.rejected(Failure.NOT_GRANTED, null);
+        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime)) return PrepareResult.rejected(Failure.COOLDOWN, null);
         double castTime = definition.castTime().evaluate(context);
-        double cooldown = kind(definition, CooldownDataStorage.class).map(kind -> kind.ticks().evaluate(context)).orElseGet(() -> definition.cooldown().evaluate(context));
+        double cooldown = cooldownOf(ability, abilities, context);
         if (!Double.isFinite(castTime) || castTime < 0.0D || !Double.isFinite(cooldown) || cooldown < 0.0D) {
             return PrepareResult.rejected(Failure.INVALID_FORMULA, null);
         }
@@ -83,7 +88,7 @@ public final class AbilityService {
         double chargeBefore = Double.NaN;
         if (charges.isPresent()) {
             double maximum = charges.get().maximum().evaluate(context);
-            double available = AbilityStorage.get(abilities, ability, ChargesDataStorage.class).flatMap(ChargesDataStorage::remaining).orElse(maximum);
+            double available = AbilityStorage.get(abilities, HolderHelper.id(ability), ChargesDataStorage.class).flatMap(ChargesDataStorage::remaining).orElse(maximum);
             if (!Double.isFinite(maximum) || maximum < 1.0D || !Double.isFinite(available) || available < 1.0D) {
                 return PrepareResult.rejected(Failure.NO_CHARGES, null);
             }
@@ -98,15 +103,11 @@ public final class AbilityService {
     }
 
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime, LivingEntity payer) {
-        if (abilities.isOnCooldown(use.ability(), gameTime)) return CommitResult.rejected(Failure.COOLDOWN, null);
+        if (abilities.isOnCooldown(HolderHelper.id(use.ability()), gameTime)) return CommitResult.rejected(Failure.COOLDOWN, null);
         CostTransaction.PayResult payment = CostTransaction.commit(use.costPlan(),
                 CostContext.of(payer, CostOrigin.ABILITY), resources);
         if (!payment.paid()) return CommitResult.rejected(costFailure(payment.failure()), payment.failedResource());
-        abilities.setCooldownUntil(use.ability(), Math.addExact(gameTime, use.cooldownTicks));
-        AbilityStorage.set(abilities, use.ability(), AbilityStorage.cooldown(abilities, use.ability(), use.cooldownTicks()), gameTime);
-        if (use.consumeCharge) {
-            AbilityStorage.set(abilities, use.ability(), AbilityStorage.charges(abilities, use.ability(), Math.max(0.0D, use.chargeBefore - 1.0D)), gameTime);
-        }
+        applyAbilityState(use, abilities, gameTime);
         return CommitResult.committed(payment.resources());
     }
 
@@ -116,27 +117,28 @@ public final class AbilityService {
         return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INSUFFICIENT_COST;
     }
 
-    public static UseResult use(Holder<Ability> ability, Ability definition, @NotNull Entity actor,
+    public static UseResult use(Holder<Ability> ability, Entity actor,
                                 AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                 FormulaContext context) {
-        return use(ability, definition, actor, abilities, resources, gameTime, context, true, null);
+        return use(ability, actor, abilities, resources, gameTime, context, true, null);
     }
 
     // For an ability the actor does not hold but an item of theirs carries: the filled item is its own
     // permission, and everything else is the ordinary path. origin is where it happens when that is not where
     // the actor is (a talisman on a display stand fires from the stand); null means the actor's own position.
-    public static UseResult useCarried(Holder<Ability> ability, Ability definition, @NotNull Entity actor,
+    public static UseResult useCarried(Holder<Ability> ability, Entity actor,
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context, @Nullable Vec3 origin) {
-        return use(ability, definition, actor, abilities, resources, gameTime, context, false, origin);
+        return use(ability, actor, abilities, resources, gameTime, context, false, origin);
     }
 
-    private static UseResult use(Holder<Ability> ability, Ability definition, @NotNull Entity actor,
+    private static UseResult use(Holder<Ability> ability, Entity actor,
                                  AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                  FormulaContext context, boolean requiresGrant, @Nullable Vec3 origin) {
+        Ability definition = ability.value();
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
-            context = withAbilityScaling(living, ability, definition, context);
+            context = withAbilityScaling(living, ability, context);
             if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
@@ -154,36 +156,37 @@ public final class AbilityService {
         }
         if (!validateWord(definition, actor, context)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
         if (definition.type() instanceof CompositeAbilityType) {
-            return useComposite(ability, definition, actor, abilities, resources, gameTime, context, requiresGrant, origin);
+            return useComposite(ability, actor, abilities, resources, gameTime, context, requiresGrant, origin);
         }
-        PrepareResult prepared = prepare(ability, definition, abilities, resources, gameTime, context,
+        PrepareResult prepared = prepare(ability, abilities, resources, gameTime, context,
                 actor instanceof LivingEntity living ? living : null, requiresGrant, null);
         if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         if (prepared.use().castTimeTicks() > 0L) {
-            AbilityStorage.set(abilities, ability, new CastDeadline(Math.addExact(gameTime, prepared.use().castTimeTicks())), gameTime);
+            AbilityStorage.set(abilities, HolderHelper.id(ability), new CastDeadline(Math.addExact(gameTime, prepared.use().castTimeTicks())), gameTime);
             return UseResult.castingResult();
         }
         return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context, origin);
     }
 
-    public static UseResult finishCast(Holder<Ability> ability, Ability definition, Entity actor,
+    public static UseResult finishCast(Holder<Ability> ability, Entity actor,
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context) {
+        Ability definition = ability.value();
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
-            context = withAbilityScaling(living, ability, definition, context);
+            context = withAbilityScaling(living, ability, context);
             if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
-        if (!AbilityStorage.castDue(abilities, ability, gameTime)) {
+        if (!AbilityStorage.castDue(abilities, HolderHelper.id(ability), gameTime)) {
             return UseResult.castingResult();
         }
-        AbilityStorage.clearCast(abilities, ability, gameTime);
+        AbilityStorage.clearCast(abilities, HolderHelper.id(ability), gameTime);
         if (!definition.condition().test(actor, context)) return UseResult.rejected(Failure.CONDITION_FAILED, null);
         if (!validateWord(definition, actor, context)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
         // Already started by something that could start one, so the grant it was approved under is not asked for
         // a second time.
-        PrepareResult prepared = prepare(ability, definition, abilities, resources, gameTime, context,
+        PrepareResult prepared = prepare(ability, abilities, resources, gameTime, context,
                 actor instanceof LivingEntity living ? living : null, false, null);
         if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context, null);
@@ -201,8 +204,8 @@ public final class AbilityService {
                 actor instanceof LivingEntity living ? living : null);
         if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelledAbilityType) {
-            abilities.setChannelledAbility(preparedUse.ability());
-            AbilityStorage.set(abilities, preparedUse.ability(),
+            abilities.setChannelledAbility(HolderHelper.id(preparedUse.ability()));
+            AbilityStorage.set(abilities, HolderHelper.id(preparedUse.ability()),
                     new ChannelPulse(Math.addExact(gameTime, preparedUse.channelIntervalTicks())), gameTime);
         }
         // A channel owns the ability until released, so it never runs the one-shot entity action; its
@@ -215,26 +218,64 @@ public final class AbilityService {
         return UseResult.committed(committed.amounts());
     }
 
+    // What one press costs when the press is not a cast: the condition, the cooldown and the entry's own costs,
+    // paid once, in the same transaction a cast uses. A type that acts on a press calls this first unless it has
+    // a reason of its own not to (see Toggable#gated).
+    public static GateResult gate(ToggleContext context) {
+        Holder<Ability> ability = context.ability();
+        LivingEntity holder = context.holder();
+        AbilityAttachment abilities = holder.getData(MxtAttachments.ABILITY_HOLDER);
+        ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
+        long gameTime = holder.level().getGameTime();
+        FormulaContext formula = context.formula();
+        Ability definition = ability.value();
+        if (!abilities.has(HolderHelper.id(ability))) return GateResult.rejected(Failure.NOT_GRANTED, null);
+        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime)) return GateResult.rejected(Failure.COOLDOWN, null);
+        if (!definition.condition().test(holder, formula)) return GateResult.rejected(Failure.CONDITION_FAILED, null);
+        double cooldown = cooldownOf(ability, abilities, formula);
+        if (!Double.isFinite(cooldown) || cooldown < 0.0D) return GateResult.rejected(Failure.INVALID_FORMULA, null);
+        Player player = holder instanceof Player value ? value : null;
+        CostTransaction.Planning plan = CostTransaction.plan(definition.costs(),
+                CostContext.of(holder, formula, CostOrigin.ABILITY), resources, player == null ? null : new ItemCostDraft(player));
+        if (!plan.ok()) return GateResult.rejected(costFailure(plan.failure()), null);
+        CostTransaction.PayResult payment = CostTransaction.commit(plan, CostContext.of(holder, CostOrigin.ABILITY), resources);
+        if (!payment.paid()) return GateResult.rejected(costFailure(payment.failure()), payment.failedResource());
+        if (cooldown > 0.0D) {
+            abilities.setCooldownUntil(HolderHelper.id(ability), Math.addExact(gameTime, Math.round(cooldown)));
+            AbilityStorage.set(abilities, HolderHelper.id(ability), AbilityStorage.cooldown(abilities, HolderHelper.id(ability), cooldown), gameTime);
+        }
+        return GateResult.ok();
+    }
+
+    // A declared mxt:cooldown overrides the field, which is how a pack states a length once; the stored value is
+    // written by every payment either way, so a condition can ask about a cooldown the pack never declared.
+    private static double cooldownOf(Holder<Ability> ability, AbilityAttachment abilities, FormulaContext context) {
+        return kind(ability.value(), CooldownDataStorage.class)
+                .map(storage -> storage.ticks().evaluate(context))
+                .orElseGet(() -> ability.value().cooldown().evaluate(context));
+    }
+
     // Server entity tick bridge only.
-    public static ChannelResult tickChannel(Holder<Ability> ability, Ability definition, Entity actor,
+    public static ChannelResult tickChannel(Holder<Ability> ability, Entity actor,
                                             AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                             FormulaContext context) {
+        Ability definition = ability.value();
         if (actor instanceof LivingEntity living) {
-            context = withAbilityScaling(living, ability, definition, FormulaContexts.forEntity(living, context));
+            context = withAbilityScaling(living, ability, FormulaContexts.forEntity(living, context));
             if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D) {
                 stopChannel(abilities);
                 return ChannelResult.stopped(Failure.ELEMENT_AFFINITY);
             }
         }
-        if (abilities.channelledAbility().filter(ability::equals).isEmpty()) return ChannelResult.inactive();
-        if (!abilities.has(ability) || !(definition.type() instanceof ChannelledAbilityType(
+        if (abilities.channelledAbility().filter(HolderHelper.id(ability)::equals).isEmpty()) return ChannelResult.inactive();
+        if (!abilities.has(HolderHelper.id(ability)) || !(definition.type() instanceof ChannelledAbilityType(
                 NumberProvider tickInterval,
                 List<Cost> upkeepCosts
         ))) {
             stopChannel(abilities);
             return ChannelResult.stopped(Failure.NOT_GRANTED);
         }
-        long nextTick = Math.round(AbilityStorage.get(abilities, ability, ChannelPulse.class).map(ChannelPulse::nextTick).orElse((double) gameTime));
+        long nextTick = Math.round(AbilityStorage.get(abilities, HolderHelper.id(ability), ChannelPulse.class).map(ChannelPulse::nextTick).orElse((double) gameTime));
         if (gameTime < nextTick) return ChannelResult.waiting(nextTick);
         if (!definition.condition().test(actor, context)) {
             stopChannel(abilities);
@@ -268,7 +309,7 @@ public final class AbilityService {
         NeoForge.EVENT_BUS.post(new Post(resources, payment.resources()));
         long intervalTicks = Math.max(1L, Math.round(interval));
         long followingTick = Math.addExact(gameTime, intervalTicks);
-        AbilityStorage.set(abilities, ability, new ChannelPulse(followingTick), gameTime);
+        AbilityStorage.set(abilities, HolderHelper.id(ability), new ChannelPulse(followingTick), gameTime);
         return ChannelResult.pulsed(followingTick, payment.resources());
     }
 
@@ -280,8 +321,8 @@ public final class AbilityService {
 
     // Clears a pending cast without touching resources, cooldowns or unrelated stored state.
     public static boolean cancelCast(Holder<Ability> ability, AbilityAttachment abilities, long gameTime) {
-        if (!AbilityStorage.hasCast(abilities, ability)) return false;
-        AbilityStorage.clearCast(abilities, ability, gameTime);
+        if (!AbilityStorage.hasCast(abilities, HolderHelper.id(ability))) return false;
+        AbilityStorage.clearCast(abilities, HolderHelper.id(ability), gameTime);
         return true;
     }
 
@@ -329,17 +370,16 @@ public final class AbilityService {
 
     // Every required child is validated against detached drafts and all costs are committed before any action
     // runs, because world actions are deliberately never rolled back.
-    private static UseResult useComposite(Holder<Ability> composite, Ability compositeDefinition, Entity actor,
+    private static UseResult useComposite(Holder<Ability> composite, Entity actor,
                                           AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                           FormulaContext context, boolean requiresGrant, @Nullable Vec3 origin) {
-        if (!(compositeDefinition.type() instanceof CompositeAbilityType(
+        if (!(composite.value().type() instanceof CompositeAbilityType(
                 List<Holder<Ability>> abilities1, boolean allRequired
         )))
             return UseResult.rejected(Failure.INVALID_FORMULA, null);
         if (!allRequired) {
             if (abilities1.isEmpty()) return UseResult.rejected(Failure.NOT_GRANTED, null);
-            Holder<Ability> child = abilities1.getFirst();
-            return use(child, child.value(), actor, abilities, resources, gameTime, context, requiresGrant, origin);
+            return use(abilities1.getFirst(), actor, abilities, resources, gameTime, context, requiresGrant, origin);
         }
 
         LivingEntity payer = actor instanceof LivingEntity value ? value : null;
@@ -353,7 +393,7 @@ public final class AbilityService {
             Ability child = childHolder.value();
             FormulaContext childContext = context;
             if (actor instanceof LivingEntity living) {
-                childContext = withAbilityScaling(living, childHolder, child, FormulaContexts.forEntity(living, context));
+                childContext = withAbilityScaling(living, childHolder, FormulaContexts.forEntity(living, context));
                 if (!child.elementAffinity().isEmpty() && childContext.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                     return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
             }
@@ -361,7 +401,7 @@ public final class AbilityService {
                 return UseResult.rejected(Failure.CANCELLED, null);
             if (!child.condition().test(actor, childContext)) return UseResult.rejected(Failure.CONDITION_FAILED, null);
             if (!validateWord(child, actor, childContext)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
-            PrepareResult prepared = prepare(childHolder, child, abilityDraft, resourceDraft, gameTime, childContext,
+            PrepareResult prepared = prepare(childHolder, abilityDraft, resourceDraft, gameTime, childContext,
                     actor instanceof LivingEntity living ? living : null, requiresGrant, itemDraft);
             if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
             if (prepared.use().castTimeTicks() > 0L)
@@ -377,7 +417,7 @@ public final class AbilityService {
                 return UseResult.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
             applyAbilityState(prepared.use(), abilityDraft, gameTime);
             prepared.use().costPlan().resources().forEach((id, amount) -> paid.merge(id, amount, Double::sum));
-            steps.add(new CompositeStep(childHolder, child, prepared.use(), childContext));
+            steps.add(new CompositeStep(childHolder, prepared.use(), childContext));
         }
         for (CompositeStep step : steps) {
             CommitResult committed = commit(step.use(), abilities, resources, gameTime, payer);
@@ -387,12 +427,12 @@ public final class AbilityService {
             }
         }
         for (CompositeStep step : steps) {
-            if (step.definition().type() instanceof ChannelledAbilityType) {
-                abilities.setChannelledAbility(step.use().ability());
-                AbilityStorage.set(abilities, step.use().ability(),
+            if (step.ability().value().type() instanceof ChannelledAbilityType) {
+                abilities.setChannelledAbility(HolderHelper.id(step.use().ability()));
+                AbilityStorage.set(abilities, HolderHelper.id(step.use().ability()),
                         new ChannelPulse(Math.addExact(gameTime, step.use().channelIntervalTicks())), gameTime);
             } else {
-                executeEffects(step.definition(), actor, step.context(), origin);
+                executeEffects(step.ability().value(), actor, step.context(), origin);
             }
             NeoForge.EVENT_BUS.post(new Post(resources, step.use().costPlan().resources()));
             NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, step.ability(), step.context(), step.use().costPlan().resources()));
@@ -403,23 +443,23 @@ public final class AbilityService {
     }
 
     private static void applyAbilityState(PreparedUse use, AbilityAttachment abilities, long gameTime) {
-        abilities.setCooldownUntil(use.ability(), Math.addExact(gameTime, use.cooldownTicks()));
-        AbilityStorage.set(abilities, use.ability(), AbilityStorage.cooldown(abilities, use.ability(), use.cooldownTicks()), gameTime);
+        abilities.setCooldownUntil(HolderHelper.id(use.ability()), Math.addExact(gameTime, use.cooldownTicks()));
+        AbilityStorage.set(abilities, HolderHelper.id(use.ability()), AbilityStorage.cooldown(abilities, HolderHelper.id(use.ability()), use.cooldownTicks()), gameTime);
         if (use.consumeCharge())
-            AbilityStorage.set(abilities, use.ability(), AbilityStorage.charges(abilities, use.ability(), Math.max(0.0D, use.chargeBefore() - 1.0D)), gameTime);
+            AbilityStorage.set(abilities, HolderHelper.id(use.ability()), AbilityStorage.charges(abilities, HolderHelper.id(use.ability()), Math.max(0.0D, use.chargeBefore() - 1.0D)), gameTime);
     }
 
     // Put on the context here, where the ability being cast is still known, because a damage action only ever
     // sees a formula context: the damage pipeline reads both names on the attacker's side of a hit.
-    private static FormulaContext withAbilityScaling(LivingEntity actor, Holder<Ability> ability, Ability definition,
-                                                     FormulaContext context) {
+    private static FormulaContext withAbilityScaling(LivingEntity actor, Holder<Ability> ability, FormulaContext context) {
+        Ability definition = ability.value();
         FormulaContext scaled = context;
         if (!definition.elementAffinity().isEmpty()) {
             double modifier = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY),
                     definition.elementAffinity(), context, definition.elementAffinityMode());
             scaled = scaled.with(DamageCalculationService.ELEMENT_MODIFIER, modifier);
         }
-        return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, SkillStageService.damageMultiplier(actor, ability));
+        return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, SkillStageService.damageMultiplier(actor, HolderHelper.id(ability)));
     }
 
     private static <T extends DataStorage> Optional<T> kind(Ability definition, Class<T> type) {
@@ -454,7 +494,7 @@ public final class AbilityService {
         }
     }
 
-    private record CompositeStep(Holder<Ability> ability, Ability definition, PreparedUse use, FormulaContext context) {
+    private record CompositeStep(Holder<Ability> ability, PreparedUse use, FormulaContext context) {
     }
 
     public enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY, CARRIED_NOT_INSTANT}
@@ -475,6 +515,16 @@ public final class AbilityService {
 
         public boolean approved() {
             return this.use != null;
+        }
+    }
+
+    public record GateResult(boolean approved, Failure failure, Identifier failedResource) {
+        private static GateResult ok() {
+            return new GateResult(true, null, null);
+        }
+
+        private static GateResult rejected(Failure failure, Identifier resource) {
+            return new GateResult(false, failure, resource);
         }
     }
 

@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.data.artifact.ability;
+package com.iafenvoy.mxt.data.ability.type;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

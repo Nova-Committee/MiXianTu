@@ -86,7 +86,7 @@ public final class CultivationService {
         if (progress < minimum) return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
         boolean configuredConditions = transition.conditions().test(entity, context);
         boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
-                .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
+                .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(ability)));
         BreakthroughResult result = commit(entity, spirit, resources, transition, resourceContext,
                 () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
         if (result.advanced()) {

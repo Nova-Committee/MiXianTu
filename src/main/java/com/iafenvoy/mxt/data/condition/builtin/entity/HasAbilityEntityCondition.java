@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
@@ -17,7 +18,7 @@ public record HasAbilityEntityCondition(Holder<Ability> ability) implements Enti
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
-        return entity.getData(MxtAttachments.ABILITY_HOLDER).has(this.ability);
+        return entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(this.ability));
     }
 
     @Override

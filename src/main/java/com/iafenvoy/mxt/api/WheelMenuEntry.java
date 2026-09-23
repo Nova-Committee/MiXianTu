@@ -45,6 +45,15 @@ public interface WheelMenuEntry {
         return 0L;
     }
 
+    /**
+     * The whole length of the cooldown {@link #cooldownTicks} counts down, in ticks, or {@code 0} when the entry
+     * does not know it. A display draws the remaining fraction of that length the way vanilla draws an item's
+     * cooldown, so an entry that cannot answer still says "on cooldown" - it just cannot say how far along.
+     */
+    default long cooldownLength(Player player) {
+        return 0L;
+    }
+
     /** Whether choosing it would do anything. Only dims the sector - the trigger is still sent. */
     default boolean usable(Player player) {
         return this.cooldownTicks(player) <= 0L;

@@ -162,7 +162,7 @@ public final class TalismanService {
         int fired = 0;
         Failure failure = null;
         for (Holder<Ability> ability : abilities) {
-            UseResult result = AbilityService.useCarried(ability, ability.value(), holder, holderAbilities, resources, gameTime, context, source.position());
+            UseResult result = AbilityService.useCarried(ability, holder, holderAbilities, resources, gameTime, context, source.position());
             if (result.committed()) {
                 fired++;
                 NeoForge.EVENT_BUS.post(new Post(holder, ability, context, result.amounts()));

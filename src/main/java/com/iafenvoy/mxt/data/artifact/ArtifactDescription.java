@@ -1,7 +1,10 @@
 package com.iafenvoy.mxt.data.artifact;
 
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.artifact.ability.*;
+import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
+import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
+import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
@@ -51,7 +54,7 @@ public final class ArtifactDescription {
         if (advanced) lines.add(indented(HolderHelper.id(holder)));
         appendOwnership(lines, artifact, ArtifactService.state(stack), advanced);
         appendAuras(lines, registries, stack, artifact, formula);
-        appendAbilities(lines, registries, stack, artifact, formula);
+        appendAbilities(lines, registries, stack, formula);
         appendHold(lines, registries, stack, artifact, player, formula);
         // Nothing is said about Curios here: the slots an item fits are Curios' own tooltip, and repeating them
         // would only be a second list to keep in step with the first.
@@ -114,22 +117,37 @@ public final class ArtifactDescription {
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
     }
 
-    // Order is the definition's. An entry that only marks a slot contributes no line, which is what makes it a
-    // placeholder; a grant is the one entry that expands into a line per granted ability.
-    private static void appendAbilities(List<Component> lines, Provider registries, ItemStack stack, Artifact artifact,
+    // Order is the definition's. Every entry is either named or described by numbers: the three item-side types
+    // say what they do with their own line, and everything else is named after the ability it references.
+    private static void appendAbilities(List<Component> lines, Provider registries, ItemStack stack,
                                         FormulaContext formula) {
-        for (ArtifactAbility ability : artifact.abilities()) {
-            if (ability instanceof GrantArtifactAbility grant) appendGrant(lines, registries, grant);
-            else if (ability instanceof FlightArtifactAbility flight) appendFlight(lines, flight, formula);
-            else if (ability instanceof StorageArtifactAbility) appendStorage(lines, registries, stack, formula);
-            else if (ability instanceof UpkeepArtifactAbility upkeep) appendUpkeep(lines, upkeep, formula);
+        for (Holder<Ability> entry : ArtifactService.abilities(registries, stack)) {
+            Ability ability = entry.value();
+            if (ability.hidden()) continue;
+            if (ability.type() instanceof FlightAbilityType flight) {
+                appendFlight(lines, flight, ability.costs(), formula);
+                continue;
+            }
+            if (ability.type() instanceof StorageAbilityType) {
+                appendStorage(lines, stack, entry, formula);
+                continue;
+            }
+            if (ability.type() instanceof UpkeepAbilityType upkeep) {
+                appendUpkeep(lines, upkeep, ability.costs(), formula);
+                continue;
+            }
+            boolean pressable = ability.type() instanceof Togglable;
+            lines.add(Component.translatable(pressable ? "tooltip.mxt.artifact.active" : "tooltip.mxt.artifact.passive",
+                            ability.name())
+                    .withStyle(pressable ? ChatFormatting.AQUA : ChatFormatting.BLUE));
         }
     }
 
-    private static void appendUpkeep(List<Component> lines, UpkeepArtifactAbility upkeep, FormulaContext formula) {
-        if (upkeep.costs().isEmpty()) return;
+    private static void appendUpkeep(List<Component> lines, UpkeepAbilityType upkeep, List<Cost> costs,
+                                     FormulaContext formula) {
+        if (costs.isEmpty()) return;
         lines.add(Component.translatable("tooltip.mxt.artifact.upkeep",
-                        TooltipText.number(upkeep.interval().evaluate(formula)), costs(upkeep.costs(), formula))
+                        TooltipText.number(upkeep.interval().evaluate(formula)), costs(costs, formula))
                 .withStyle(ChatFormatting.DARK_AQUA));
     }
 
@@ -158,27 +176,22 @@ public final class ArtifactDescription {
         return TooltipText.join(parts);
     }
 
-    private static void appendGrant(List<Component> lines, Provider registries, GrantArtifactAbility grant) {
-        boolean active = grant.intent() == GrantArtifactAbility.Intent.ACTIVE;
-        for (Holder<Ability> granted : ArtifactService.resolveAbilities(registries, grant.abilities()))
-            lines.add(Component.translatable(active ? "tooltip.mxt.artifact.active" : "tooltip.mxt.artifact.passive",
-                    DefinitionText.name(granted, "ability")).withStyle(active ? ChatFormatting.AQUA : ChatFormatting.BLUE));
-    }
-
-    private static void appendFlight(List<Component> lines, FlightArtifactAbility flight, FormulaContext formula) {
+    private static void appendFlight(List<Component> lines, FlightAbilityType flight, List<Cost> costs,
+                                     FormulaContext formula) {
         double speed = flight.speed().evaluate(formula);
-        if (flight.costs().isEmpty()) {
+        if (costs.isEmpty()) {
             lines.add(Component.translatable("tooltip.mxt.artifact.flight", TooltipText.number(speed))
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
             return;
         }
         lines.add(Component.translatable("tooltip.mxt.artifact.flight_costs",
-                        TooltipText.number(speed), costs(flight.costs(), formula))
+                        TooltipText.number(speed), costs(costs, formula))
                 .withStyle(ChatFormatting.LIGHT_PURPLE));
     }
 
-    private static void appendStorage(List<Component> lines, Provider registries, ItemStack stack, FormulaContext formula) {
-        int slots = ArtifactService.storageSlots(registries, stack, formula);
+    private static void appendStorage(List<Component> lines, ItemStack stack, Holder<Ability> ability,
+                                      FormulaContext formula) {
+        int slots = ArtifactService.storageSlots(stack, ability, formula);
         // A slot count that evaluates to nothing declares no inventory, so there is nothing to announce.
         if (slots <= 0) return;
         ArtifactStorageComponent contents = stack.get(MxtDataComponents.ARTIFACT_STORAGE);

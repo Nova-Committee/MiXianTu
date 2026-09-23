@@ -1,0 +1,7 @@
+{
+  "type": "mxt:upkeep",
+  "costs": [{ "id": "mxt_test:water_power", "amount": 2 }],
+  "interval": 5,
+  "on_fail": { "type": "mxt:damage_item", "amount": 1 },
+  "owner_only": true
+}

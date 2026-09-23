@@ -1,0 +1,5 @@
+{
+  "type": "mxt:flight",
+  "speed": 0.12,
+  "costs": [{ "id": "mxt_test:qi", "amount": 2 }]
+}

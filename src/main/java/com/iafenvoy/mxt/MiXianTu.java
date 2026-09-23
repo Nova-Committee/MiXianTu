@@ -36,7 +36,6 @@ public final class MiXianTu {
         MxtTriggers.REGISTRY.register(bus);
         MxtAbilityTypes.REGISTRY.register(bus);
         MxtAbilityTargetSelectors.REGISTRY.register(bus);
-        MxtArtifactAbilityTypes.REGISTRY.register(bus);
         MxtCosts.REGISTRY.register(bus);
         MxtAttachments.REGISTRY.register(bus);
         MxtAuraMaximums.REGISTRY.register(bus);

@@ -3,21 +3,22 @@ package com.iafenvoy.mxt.runtime.wheel;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.artifact.ability.ToggableArtifactAbility;
+import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactToggleService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -29,6 +30,9 @@ import java.util.Optional;
  * The server's half of the wheel: what a submitted layout may contain, and what choosing a page's entry does.
  * Nothing from the client is trusted - the page a request names is re-read here, and the pipeline behind the entry
  * re-checks grant, cost and cooldown.
+ *
+ * <p>A press is one call into {@link AbilityActivationService}, so the wheel, the command and the script bridge
+ * cannot drift apart; the wheel only adds the carrier the page it was asked about names.
  */
 public final class WheelService {
     // Cells are twelve to a page and pages only exist while what they read exists, so this is far past any real
@@ -60,9 +64,8 @@ public final class WheelService {
             return false;
         }
         return switch (kind) {
-            case ABILITY -> use(player, id);
+            case ABILITY -> press(player, source, id);
             case AURA -> burst(player, id);
-            case ARTIFACT -> activate(player, source, id);
             case EMPTY -> false;
         };
     }
@@ -79,14 +82,29 @@ public final class WheelService {
         return slot.kind().exists(access, slot.id()) ? new WheelSlot(slot.kind(), slot.id()) : WheelSlot.EMPTY;
     }
 
-    private static boolean use(ServerPlayer player, Identifier id) {
-        Holder<Ability> ability = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).orElse(null);
+    // One press. An ability that says it can be pressed goes through the shared entry point, which is where a
+    // switch, a container and a cast are told apart; anything else keeps the plain cast path.
+    private static boolean press(ServerPlayer player, WheelSource source, Identifier id) {
+        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
         if (ability == null) return false;
+        if (!AbilityActivationService.togglable(ability)) return use(player, ability);
+        ItemStack carrier = WheelSources.carrier(player, source, id).orElse(null);
+        Togglable.Result result = AbilityActivationService.activate(player, ability, carrier);
+        if (result.failure() == null) return true;
+        String name = result.failure().name().toLowerCase(Locale.ROOT);
+        MiXianTu.LOGGER.info("Refusing the wheel press {} on {} for {}: {}",
+                id, source.getSerializedName(), player.getGameProfile().name(), name);
+        player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.use_failed",
+                Component.translatable("actionbar.mxt.artifact_skill." + name)), true);
+        return false;
+    }
+
+    private static boolean use(ServerPlayer player, Holder<Ability> ability) {
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        AbilityService.UseResult result = AbilityService.use(ability, ability.value(), player, abilities, resources,
+        AbilityService.UseResult result = AbilityService.use(ability, player, abilities, resources,
                 player.level().getGameTime(), FormulaContext.of(player));
-        if (result.failure() != null) notifyRefusal(player, id, result);
+        if (result.failure() != null) notifyRefusal(player, HolderHelper.id(ability), result);
         return true;
     }
 
@@ -96,28 +114,6 @@ public final class WheelService {
         MiXianTu.LOGGER.info("Refusing the wheel burst {} for {}: the burst did not go off",
                 id, player.getGameProfile().name());
         player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.burst_failed"), true);
-        return false;
-    }
-
-    // Re-read from the page that claims it, which is what makes "the sword in my hand right now" the only thing a
-    // cell can fire. The request names the cell and never what should happen - the side that owns the state reads
-    // it and decides - so a client that guessed a switch's direction wrong cannot ask for an impossible state.
-    private static boolean activate(ServerPlayer player, WheelSource source, Identifier id) {
-        ArtifactToggleService.Toggle toggle = ArtifactToggleService.find(WheelSources.toggles(player, source), id)
-                .orElse(null);
-        if (toggle == null) {
-            MiXianTu.LOGGER.info("Dropping the wheel press {} from {} sent by {}: that source no longer declares it",
-                    id, source.getSerializedName(), player.getGameProfile().name());
-            player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
-            return false;
-        }
-        ToggableArtifactAbility.Result result = toggle.activate();
-        if (result.failure() == null) return true;
-        String name = result.failure().name().toLowerCase(Locale.ROOT);
-        MiXianTu.LOGGER.info("Refusing the wheel press {} on {} for {}: {}",
-                id, source.getSerializedName(), player.getGameProfile().name(), name);
-        player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.use_failed",
-                Component.translatable("actionbar.mxt.artifact_skill." + name)), true);
         return false;
     }
 

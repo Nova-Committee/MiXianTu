@@ -9,8 +9,11 @@ import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
-import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
+import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.data.ability.AbilityType;
+import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
+import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
+import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
@@ -22,15 +25,13 @@ import com.iafenvoy.mxt.runtime.energy.ArtifactSpiritEnergy;
 import com.iafenvoy.mxt.runtime.energy.ISpiritEnergy;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -143,9 +144,15 @@ public final class ArtifactService {
                 .orElse(false);
     }
 
-    /** The periodic price this stack charges whoever carries it, if its definition declares one. */
-    public static Optional<UpkeepArtifactAbility> upkeep(Provider access, ItemStack stack) {
-        return definition(access, stack).flatMap(holder -> holder.value().upkeep());
+    /** The periodic price this stack charges whoever carries it, with the id that price is stored under. */
+    public static Optional<Upkeep> upkeep(Provider access, ItemStack stack) {
+        return abilities(access, stack).stream()
+                .filter(ref -> ref.value().type() instanceof UpkeepAbilityType)
+                .findFirst()
+                .map(ref -> new Upkeep(ref, (UpkeepAbilityType) ref.value().type()));
+    }
+
+    public record Upkeep(Holder<Ability> ability, UpkeepAbilityType type) {
     }
 
     // What makes a pour worth starting - the question a hold answers before it takes a click over.
@@ -158,43 +165,50 @@ public final class ArtifactService {
     }
 
     // The definition's grants plus whatever the component was written with, so an artifact, a scripted stack and
-    // a plain stack all reach the ability runtime the same way.
+    // a plain stack all reach the ability runtime the same way. Every entry is addressed by the id the runtime
+    // keys its grant, its cooldowns and its state by, and a tag stands for the abilities it lists.
     public static List<Holder<Ability>> abilities(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return List.of();
         LinkedHashSet<Holder<Ability>> granted = new LinkedHashSet<>();
-        definition(access, stack).ifPresent(holder -> granted.addAll(resolveAbilities(access, holder.value().grantedAbilities())));
+        definition(access, stack).ifPresent(holder -> granted.addAll(RegistryCodecs.resolve(holder.value().abilities(), access, MxtResourceKeys.ABILITY).toList()));
         ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesComponent(List.of()));
-        component.abilities().forEach(id -> MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).ifPresent(granted::add));
+        component.abilities().forEach(id -> Abilities.resolve(access, id).ifPresent(granted::add));
         return List.copyOf(granted);
-    }
-
-    // The runtime reading and the tooltip both come through here, so a stack cannot grant one set of abilities
-    // while its tooltip describes another.
-    public static List<Holder<Ability>> resolveAbilities(Provider access,
-                                                        Collection<Either<Holder<Ability>, TagKey<Ability>>> values) {
-        RegistryLookup<Ability> abilities = access.lookupOrThrow(MxtResourceKeys.ABILITY);
-        List<Holder<Ability>> resolved = new ArrayList<>();
-        for (Either<Holder<Ability>, TagKey<Ability>> value : values)
-            value.ifLeft(resolved::add)
-                    .ifRight(tag -> abilities.listElements().filter(holder -> holder.is(tag)).forEach(resolved::add));
-        return List.copyOf(resolved);
     }
 
     public static List<Identifier> abilityIds(Provider access, ItemStack stack) {
         return abilities(access, stack).stream().map(HolderHelper::id).toList();
     }
 
-    public static Optional<FlightArtifactAbility> flight(Provider access, ItemStack stack) {
-        return definition(access, stack).flatMap(holder -> holder.value().flight());
+    // How this stack's mount is drawn; empty for a stack whose definition declares no flight at all.
+    public static Optional<FlightAbilityType> flight(Provider access, ItemStack stack) {
+        return first(access, stack, FlightAbilityType.class);
     }
 
     // Rounded up to a whole row and cut at the six rows a chest-shaped screen can draw, which is what lets one
     // number serve as both the capacity and the screen's size: a declaration of ten slots would otherwise show
     // eighteen cells of which eight silently refuse to hold anything.
     public static int storageSlots(Provider access, ItemStack stack, FormulaContext context) {
-        int declared = definition(access, stack).flatMap(holder -> holder.value().storage())
-                .map(storage -> (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, Integer.MAX_VALUE))
-                .orElse(0);
+        return first(access, stack, StorageAbilityType.class).map(storage -> slotsOf(storage, context)).orElse(0);
+    }
+
+    // The first declared ability of a kind: a definition may name several, so "the storage" is a question about
+    // the type rather than about a dedicated field. A tag contributes its members in registry order.
+    private static <T extends AbilityType> Optional<T> first(Provider access, ItemStack stack, Class<T> kind) {
+        return abilities(access, stack).stream()
+                .map(ref -> ref.value().type())
+                .filter(kind::isInstance)
+                .map(kind::cast)
+                .findFirst();
+    }
+
+    // The entry's own slot count, for a caller that already knows which ability it is holding.
+    public static int storageSlots(ItemStack stack, Holder<Ability> ability, FormulaContext context) {
+        return ability.value().type() instanceof StorageAbilityType storage ? slotsOf(storage, context) : 0;
+    }
+
+    private static int slotsOf(StorageAbilityType storage, FormulaContext context) {
+        int declared = (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, Integer.MAX_VALUE);
         if (declared <= 0) return 0;
         int rows = Math.clamp((declared + STORAGE_COLUMNS - 1) / STORAGE_COLUMNS, 0, MAX_STORAGE_ROWS);
         return rows * STORAGE_COLUMNS;
@@ -208,18 +222,20 @@ public final class ArtifactService {
     // wider than what a wheel page reads - an open screen has to keep working while the artifact is moved around
     // the inventory, and has to stop the moment it leaves the player, because what it writes into would otherwise
     // be a stack nobody carries, which is how items disappear.
-    public static Optional<ItemStack> carried(Provider access, Player player, Identifier artifactId) {
+    public static Optional<ItemStack> carried(Provider access, Player player, Identifier abilityId) {
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
-            if (holds(access, player.getInventory().getItem(slot), artifactId))
+            if (holds(access, player.getInventory().getItem(slot), abilityId))
                 return Optional.of(player.getInventory().getItem(slot));
         for (ItemStack stack : CuriosIntegration.equippedLive(player))
-            if (holds(access, stack, artifactId)) return Optional.of(stack);
+            if (holds(access, stack, abilityId)) return Optional.of(stack);
         return Optional.empty();
     }
 
-    private static boolean holds(Provider access, ItemStack stack, Identifier artifactId) {
+    // Whether this stack offers that ability; the same reading the grant ledger uses, so an item and its
+    // abilities cannot disagree about what it holds.
+    private static boolean holds(Provider access, ItemStack stack, Identifier abilityId) {
         if (stack == null || stack.isEmpty()) return false;
-        return definition(access, stack).map(holder -> HolderHelper.id(holder).equals(artifactId)).orElse(false);
+        return abilities(access, stack).stream().anyMatch(ref -> HolderHelper.id(ref).equals(abilityId));
     }
 
     // What the definition declares plus the bonus earned by being fed. A stack claiming no definition, or one

@@ -1,16 +1,15 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
+import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.network.payload.WheelLayoutC2SPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactToggleService;
+import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
@@ -20,19 +19,22 @@ import com.iafenvoy.mxt.screen.wheel.WheelMenuProvider;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * The cells a player's wheel page holds: abilities, auras and artifact capabilities normalised into one
- * {@link WheelMenuEntry} list, resolved fresh from the synced attachment and registries so the drawn wheel and
- * the triggered entry can never disagree. Every other source reads what the equipment grants right now.
+ * The cells a player's wheel page holds: pressable abilities and auras normalised into one {@link WheelMenuEntry}
+ * list, resolved fresh from the synced attachment and registries so the drawn wheel and the triggered entry can
+ * never disagree. Every other source reads what the equipment grants right now.
  */
 public final class WheelContent implements WheelMenuProvider {
     public static final WheelContent INSTANCE = new WheelContent();
@@ -67,38 +69,36 @@ public final class WheelContent implements WheelMenuProvider {
                 .toList();
     }
 
-    public static List<WheelMenuEntry> abilities(@Nullable Player player) {
-        if (player == null) return List.of();
-        // Read-only: asking what a player could put on their wheel must not create an ability attachment.
-        AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
-        if (holder == null) return List.of();
-        return holder.sources().keys().stream()
-                .filter(ability -> ability.value().type() instanceof ActiveAbilityType)
-                .sorted(Comparator.comparing(ability -> HolderHelper.id(ability).toString()))
-                .<WheelMenuEntry>map(ability -> new AbilityWheelEntry(HolderHelper.id(ability), ability.value()))
-                .toList();
-    }
-
-    // Abilities first, then artifact capabilities; each half keeps its own id order, so the pool does not
-    // reshuffle between two openings.
+    // Everything the player could put on the wheel right now, whoever granted it: the pool a player drags cells
+    // from, which reads the grant ledger rather than the equipment so a pinned cell keeps working wherever the
+    // thing that grants it happens to be.
     public static List<WheelMenuEntry> pool(@Nullable Player player) {
         if (player == null) return List.of();
-        List<WheelMenuEntry> options = new ArrayList<>(abilities(player));
-        // The configured page may hold anything the player carries, so this is the same reading its own page does.
-        for (ArtifactToggleService.Toggle toggle : WheelSources.toggles(player, WheelSource.CONFIGURED))
-            options.add(new ArtifactWheelEntry(toggle));
+        List<WheelMenuEntry> options = new ArrayList<>();
+        // One pass over what the player carries, rather than a lookup per ability: resolving a definition walks
+        // the artifact registry, and this list is rebuilt every client tick.
+        Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, WheelSource.CONFIGURED);
+        for (Holder<Ability> ability : WheelSources.abilities(player))
+            options.add(entry(player, ability, carriers.get(HolderHelper.id(ability))));
         return List.copyOf(options);
     }
 
-    // One derived page: what the named equipment grants and declares right now, never stored, so the page
-    // follows the gear; a source with more entries than a page gets more pages rather than being cut.
+    // One derived page: what the named equipment grants and declares right now, never stored, so the page follows
+    // the gear; a source with more entries than a page gets more pages rather than being cut.
     private static List<WheelMenuEntry> derived(Player player, WheelSource source) {
         List<WheelMenuEntry> entries = new ArrayList<>();
+        Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, source);
         for (Holder<Ability> ability : WheelSources.abilities(player, source))
-            entries.add(new AbilityWheelEntry(HolderHelper.id(ability), ability.value()));
-        for (ArtifactToggleService.Toggle toggle : WheelSources.toggles(player, source))
-            entries.add(new ArtifactWheelEntry(toggle));
+            entries.add(entry(player, ability, carriers.get(HolderHelper.id(ability))));
         return List.copyOf(entries);
+    }
+
+    // The state is asked here rather than read off the definition, because a switch answers from wherever it keeps
+    // its state and the entry only carries the answer.
+    private static AbilityWheelEntry entry(Player player, Holder<Ability> ability, @Nullable ItemStack carrier) {
+        Optional<Boolean> state = ability.value().type() instanceof Togglable
+                ? AbilityActivationService.state(player, ability) : Optional.empty();
+        return new AbilityWheelEntry(ability, carrier, state);
     }
 
     // Raw ids rather than resolved entries, so a cell whose id no longer resolves stays visible and clearable.

@@ -12,12 +12,12 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
+import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
 import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
-import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.FlightDisplay;
-import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
@@ -53,17 +53,16 @@ import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilitySources;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactCapability;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactToggleService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Result.State;
@@ -226,7 +225,13 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_TECHNIQUE_STAGE = id("sword_art_2");
     private static final Identifier PROBE_ABILITY = id("artifact_guard");
     private static final Identifier SWORD_FOCUS = id("sword_focus");
+    // The flight and storage entries the fixture artifacts name; both are ordinary mxt:ability entries.
+    private static final Identifier PROBE_BOUND_FLIGHT = id("bound_flight");
+    private static final Identifier PROBE_BOUND_STORAGE = id("bound_storage");
+    // An id of the right shape that nothing registers, so the kind check has a negative that is not an artifact.
+    private static final Identifier PROBE_ABSENT_ABILITY = id("absent_storage");
     // Wrong on purpose: grants an active ability as mxt:passive.
+    // The fixture kept its name from when the check existed; it is now only the other half of the claim conflict.
     private static final Identifier MISDECLARED_ARTIFACT = id("misdeclared_grant_probe");
     // Wrong on purpose: claims the item MISDECLARED_ARTIFACT already claims.
     private static final Identifier CLAIM_CONFLICT_ARTIFACT = id("claim_conflict_probe");
@@ -234,10 +239,8 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_WHEEL_ABILITY = id("firebolt");
     // Declared mxt:modifier, so a derived page must leave it out even while granted.
     private static final Identifier PROBE_WHEEL_PASSIVE = id("artifact_guard");
-    // Declares mxt:flight, which is a togglable artifact capability.
+    // The fixture artifact whose hand page names a flight and a storage ability, and whose own id is no ability.
     private static final Identifier PROBE_WHEEL_TOGGLE = id("bound_sword");
-    // A fixture artifact with no capability at all, so neither of its keys is a wheel cell.
-    private static final Identifier PROBE_WHEEL_PLAIN_ARTIFACT = id("ward_jade_talisman");
     // More active abilities than one page holds; the overflow leg expects thirteen entries and up.
     private static final List<Identifier> PROBE_WHEEL_MANY = List.of(
             id("firebolt"), id("awaken_divine_sense"), id("expend_test"), id("infuse_true_essence"),
@@ -603,9 +606,9 @@ public final class MxtTestCommands {
             Holder<Technique> technique = require(MxtResourceKeys.TECHNIQUE, PROBE_TECHNIQUE);
             Holder<Ability> ability = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
             spirit.addLearnedTechnique(technique);
-            double entry = SkillStageService.damageMultiplier(attacker, ability);
+            double entry = SkillStageService.damageMultiplier(attacker, HolderHelper.id(ability));
             spirit.setTechniqueStage(technique, require(MxtResourceKeys.SKILL_STAGE, PROBE_TECHNIQUE_STAGE));
-            double advanced = SkillStageService.damageMultiplier(attacker, ability);
+            double advanced = SkillStageService.damageMultiplier(attacker, HolderHelper.id(ability));
             float masteryBefore = masteryDefender.getHealth();
             DamageCalculationService.deal(attacker, masteryDefender, 4.0D, Optional.empty(),
                     context.with(DamageCalculationService.DAMAGE_MULTIPLIER, advanced));
@@ -617,7 +620,7 @@ public final class MxtTestCommands {
                     dispatched[0] = event.context().explicit(DamageCalculationService.DAMAGE_MULTIPLIER);
             NeoForge.EVENT_BUS.addListener(listener);
             try {
-                AbilityService.useCarried(ability, ability.value(), attacker,
+                AbilityService.useCarried(ability, attacker,
                         attacker.getData(MxtAttachments.ABILITY_HOLDER), attacker.getData(MxtAttachments.RESOURCE_HOLDER),
                         level.getGameTime(), context, null);
             } finally {
@@ -695,7 +698,7 @@ public final class MxtTestCommands {
             NeoForge.EVENT_BUS.addListener(affinityListener);
             try {
                 Holder<Ability> affinityAbility = require(MxtResourceKeys.ABILITY, PROBE_AFFINITY_ABILITY);
-                AbilityService.useCarried(affinityAbility, affinityAbility.value(), affinityAttacker,
+                AbilityService.useCarried(affinityAbility, affinityAttacker,
                         affinityAttacker.getData(MxtAttachments.ABILITY_HOLDER), affinityAttacker.getData(MxtAttachments.RESOURCE_HOLDER),
                         level.getGameTime(), FormulaContext.of(affinityAttacker), null);
             } finally {
@@ -963,7 +966,9 @@ public final class MxtTestCommands {
 
         Artifact definition = ArtifactService.definition(access, stack).map(Reference::value).orElse(null);
         boolean declared = definition != null
-                && definition.curiosEquipable() && definition.flight().isPresent() && definition.storage().isPresent();
+                && definition.curiosEquipable()
+                && ArtifactService.flight(access, stack).isPresent()
+                && ArtifactService.storageSlots(access, stack, context) > 0;
         if (!declared) {
             source.sendFailure(Component.literal("artifact probe: the fixture definition does not claim a diamond sword"));
             return 0;
@@ -1001,20 +1006,18 @@ public final class MxtTestCommands {
         source.sendSuccess(() -> Component.literal("artifact probe: ownership unowned=" + unowned + " bound=" + bound
                 + " foreign_refused=" + foreignRefused), false);
 
-        Holder<Ability> passive = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
-        Holder<Ability> active = require(MxtResourceKeys.ABILITY, PROBE_AFFINITY_ABILITY);
         List<Identifier> declaredAbilities = ArtifactService.abilityIds(access, stack);
         boolean grantsBoth = declaredAbilities.contains(PROBE_ABILITY) && declaredAbilities.contains(PROBE_AFFINITY_ABILITY);
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        boolean hadPassive = holder.has(passive);
-        boolean hadActive = holder.has(active);
+        boolean hadPassive = holder.has(PROBE_ABILITY);
+        boolean hadActive = holder.has(PROBE_AFFINITY_ABILITY);
         ItemStack previous = player.getMainHandItem().copy();
         player.setItemSlot(EquipmentSlot.MAINHAND, stack);
         holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        boolean equipped = holder.has(passive) && holder.has(active);
+        boolean equipped = holder.has(PROBE_ABILITY) && holder.has(PROBE_AFFINITY_ABILITY);
         player.setItemSlot(EquipmentSlot.MAINHAND, previous);
         holder = player.getData(MxtAttachments.ABILITY_HOLDER);
-        boolean released = holder.has(passive) == hadPassive && holder.has(active) == hadActive;
+        boolean released = holder.has(PROBE_ABILITY) == hadPassive && holder.has(PROBE_AFFINITY_ABILITY) == hadActive;
         boolean abilities = grantsBoth && equipped && released;
         source.sendSuccess(() -> Component.literal("artifact probe: abilities declared=" + grantsBoth
                 + " equipped=" + equipped + " released=" + released), false);
@@ -1026,8 +1029,9 @@ public final class MxtTestCommands {
         source.sendSuccess(() -> Component.literal("artifact probe: storage=" + storage), false);
 
         player.setItemSlot(EquipmentSlot.MAINHAND, stack);
-        Optional<Reference<Artifact>> resolved = ArtifactService.definition(access, stack);
-        FlightService.Result mounted = resolved.map(holderFound -> FlightService.mount(player, stack, holderFound, context)).orElse(null);
+        // The flight ability is a registry entry the definition names, so it is read by its own id.
+        Holder<Ability> flightAbility = Abilities.resolve(access, PROBE_BOUND_FLIGHT).orElse(null);
+        FlightService.Result mounted = flightAbility == null ? null : FlightService.mount(player, stack, flightAbility, context);
         boolean flew = mounted != null && mounted.state() == State.MOUNTED
                 && player.getData(MxtAttachments.FLIGHT).active() && player.getVehicle() instanceof FlyingSwordEntity;
         FlightService.dismount(player, FlightService.Failure.STOPPED);
@@ -1060,13 +1064,11 @@ public final class MxtTestCommands {
 
     // The artifact fixture roster: one row per item, every question asked through the service the game itself
     // uses. The rows cover item matching by id, by list and by item tag, per-aura ceilings (one a formula),
-    // storage slots from a formula, an mxt:empty placeholder beside a grant mixing an id with an ability tag,
-    // the charm gate, the require_owner gate, a refine action that charges on the way in, and the flight
-    // entry's own numbers.
-    // Two fixtures are wrong on purpose, because the checks they trip live in ServerCache and are observable no
-    // other way: misdeclared_grant_probe grants an active ability as mxt:passive, and claim_conflict_probe
-    // claims an item the first one also claims - and registry order decides which the claim problem names, so
-    // that assertion accepts either.
+    // storage slots from a formula, abilities named by id and by ability tag, the charm gate, the require_owner
+    // gate, a refine action that charges on the way in, and the flight entry's own numbers.
+    // One fixture is wrong on purpose, because the check it trips lives in ServerCache and is observable no other
+    // way: claim_conflict_probe claims an item misdeclared_grant_probe also claims - and registry order decides
+    // which the claim problem names, so that assertion accepts either.
     private static int probeArtifactRoster(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
@@ -1091,7 +1093,7 @@ public final class MxtTestCommands {
             boolean matches = holder != null && HolderHelper.id(holder).equals(id(row.definition()))
                     && row.curiosEquipable() == ArtifactService.curiosEquipable(access, stack)
                     && row.requireOwner() == definition.requireOwner()
-                    && row.flight() == definition.flight().isPresent()
+                    && row.flight() == ArtifactService.flight(access, stack).isPresent()
                     && ArtifactService.storageSlots(access, stack, context) == row.slots()
                     && ArtifactService.capacity(access, stack, qi, 0.0D, context) == row.qi()
                     && ArtifactService.capacity(access, stack, waterPower, 0.0D, context) == row.waterPower()
@@ -1101,9 +1103,13 @@ public final class MxtTestCommands {
         }
 
         ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
-        FlightArtifactAbility flight = ArtifactService.flight(access, flightStack).orElse(null);
+        FlightAbilityType flight = ArtifactService.flight(access, flightStack).orElse(null);
+        List<Cost> flightCosts = flightStack.isEmpty() ? List.of()
+                : ArtifactService.abilities(access, flightStack).stream()
+                .filter(ref -> ref.value().type() instanceof FlightAbilityType)
+                .findFirst().map(ref -> ref.value().costs()).orElse(List.of());
         boolean flightEntry = flight != null && close(flight.speed().evaluate(context), 0.12D)
-                && flight.costs().size() == 1 && flight.costs().getFirst() instanceof ResourceCost cost
+                && flightCosts.size() == 1 && flightCosts.getFirst() instanceof ResourceCost cost
                 && cost.id().equals(QI)
                 && close(cost.amount().evaluate(context), 2.0D)
                 && flight.display().equals(FlightDisplay.DEFAULT);
@@ -1121,10 +1127,12 @@ public final class MxtTestCommands {
         ok &= check(source, "artifact roster flight display reads 4/16 as 0.25", displayRead);
 
         ItemStack wardStack = new ItemStack(Items.PRISMARINE_SHARD);
+        // Two written entries - one id and one ability tag - reaching the two ids the definition grants: the tag
+        // is expanded against the same registry the grant itself resolves in.
         boolean grants = ArtifactService.definition(access, wardStack)
                 .map(holder -> holder.value().abilities().size()).orElse(0) == 2
                 && ArtifactService.abilityIds(access, wardStack).equals(List.of(PROBE_ABILITY, SWORD_FOCUS));
-        ok &= check(source, "artifact roster grants=id+tag beside an mxt:empty placeholder", grants);
+        ok &= check(source, "artifact roster grants=id+tag expands to 2 ids", grants);
 
         // The refine action charges 40 of a 200 ceiling, so that feeding raises the ceiling to floor(200 * 1.1).
         ItemStack jadeStack = new ItemStack(Items.AMETHYST_SHARD);
@@ -1389,13 +1397,11 @@ public final class MxtTestCommands {
 
         List<String> problems = ServerCache.get().map(cache -> cache.problems().stream()
                 .filter(problem -> problem.contains("/mxt/artifact/")).toList()).orElse(List.of());
-        boolean misdeclared = problems.stream().anyMatch(problem ->
-                problem.contains(MISDECLARED_ARTIFACT.getPath()) && problem.contains("as mxt:passive")
-                        && problem.contains("own type is active"));
+        // The merge deleted the "granted as mxt:passive but the ability itself is active" check: there is no second
+        // intent left to disagree with. What remains is the claim conflict between the two echo-shard fixtures.
         boolean claimed = problems.stream().anyMatch(problem -> problem.contains("already claims")
                 && (problem.contains(MISDECLARED_ARTIFACT.getPath()) || problem.contains(CLAIM_CONFLICT_ARTIFACT.getPath())));
-        ok &= check(source, "artifact roster validator problems=" + problems,
-                problems.size() == 2 && misdeclared && claimed);
+        ok &= check(source, "artifact roster validator problems=" + problems, problems.size() == 1 && claimed);
 
         if (ok) {
             source.sendSuccess(() -> Component.literal("artifact roster: OK"), false);
@@ -1723,9 +1729,10 @@ public final class MxtTestCommands {
             Holder<Ability> active = require(MxtResourceKeys.ABILITY, PROBE_WHEEL_ABILITY);
             Holder<Ability> passive = require(MxtResourceKeys.ABILITY, PROBE_WHEEL_PASSIVE);
             Identifier mainHand = AbilitySources.equipment(EquipmentSlot.MAINHAND, probe.getMainHandItem());
-            abilities.grant(active, mainHand);
-            abilities.grant(passive, mainHand);
-            boolean derived = WheelSources.abilities(probe, WheelSource.MAIN_HAND).equals(List.of(active))
+            abilities.grant(PROBE_WHEEL_ABILITY, mainHand);
+            abilities.grant(PROBE_WHEEL_PASSIVE, mainHand);
+            boolean derived = WheelSources.abilities(probe, WheelSource.MAIN_HAND).stream()
+                    .anyMatch(ref -> HolderHelper.id(ref).equals(PROBE_WHEEL_ABILITY))
                     && offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_ABILITY)
                     && !offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_PASSIVE)
                     && !offers(probe, WheelSource.OFF_HAND, PROBE_WHEEL_ABILITY)
@@ -1740,8 +1747,8 @@ public final class MxtTestCommands {
 
             // 3. Nothing about a derived page is stored, so releasing the grant empties it in the same breath -
             //    which is what makes an item's page follow the item rather than a save.
-            abilities.revoke(active, mainHand);
-            abilities.revoke(passive, mainHand);
+            abilities.revoke(PROBE_WHEEL_ABILITY, mainHand);
+            abilities.revoke(PROBE_WHEEL_PASSIVE, mainHand);
             boolean follows = WheelSources.abilities(probe, WheelSource.MAIN_HAND).isEmpty()
                     && !offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_ABILITY);
             source.sendSuccess(() -> Component.literal("wheel probe: follows revoked="
@@ -1765,36 +1772,33 @@ public final class MxtTestCommands {
             //    what does not fit takes another page - the client's numbering to lay out, while the server only
             //    ever asks whether one id is in the list.
             for (Identifier ability : PROBE_WHEEL_MANY)
-                abilities.grant(require(MxtResourceKeys.ABILITY, ability), mainHand);
+                abilities.grant(ability, mainHand);
             int overflowSize = WheelSources.abilities(probe, WheelSource.MAIN_HAND).size();
             boolean overflow = overflowSize == PROBE_WHEEL_MANY.size()
                     && offers(probe, WheelSource.MAIN_HAND, PROBE_WHEEL_MANY.getLast());
             source.sendSuccess(() -> Component.literal("wheel probe: overflow entries=" + overflowSize
                     + " page=" + WheelLayout.SLOTS + (overflow ? " OK" : " MISMATCH")), false);
 
-            // 6. Every capability that needs a key is a cell of its own kind: the sword's definition declares both
-            //    mxt:flight and mxt:storage, so the page named by the hand it is in holds two cells, each
-            //    addressed as `<artifact>/<capability>`. No other page claims them, the kind refuses an artifact
-            //    declaring no capability at all, and it refuses a bare artifact id too - a capability is the pair.
+            // 6. An artifact's abilities are ordinary registry entries: the sword names flight and storage, so the
+            //    page named by the hand it is in holds both cells under their own ids. The merged kind accepts
+            //    them and still refuses the bare artifact id and an id nothing registers.
             probe.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIAMOND_SWORD));
-            List<ArtifactToggleService.Toggle> toggles = WheelSources.toggles(probe, WheelSource.MAIN_HAND);
-            Identifier flightCell = capability(PROBE_WHEEL_TOGGLE, FlightArtifactAbility.KEY);
-            Identifier storageCell = capability(PROBE_WHEEL_TOGGLE, StorageArtifactAbility.KEY);
-            boolean knownKind = WheelEntryKind.ARTIFACT.exists(level.registryAccess(), flightCell)
-                    && WheelEntryKind.ARTIFACT.exists(level.registryAccess(), storageCell)
-                    && !WheelEntryKind.ARTIFACT.exists(level.registryAccess(), PROBE_WHEEL_TOGGLE)
-                    && !WheelEntryKind.ARTIFACT.exists(level.registryAccess(), capability(PROBE_WHEEL_PLAIN_ARTIFACT, FlightArtifactAbility.KEY))
-                    && !WheelEntryKind.ARTIFACT.exists(level.registryAccess(), capability(PROBE_WHEEL_PLAIN_ARTIFACT, StorageArtifactAbility.KEY));
-            boolean listed = toggles.size() == 2
-                    && toggles.getFirst().id().equals(flightCell) && toggles.get(1).id().equals(storageCell)
-                    && toggles.getFirst().state().equals(Optional.of(false)) && toggles.get(1).state().isEmpty()
-                    && WheelSources.offers(probe, WheelSource.MAIN_HAND, WheelEntryKind.ARTIFACT, storageCell)
-                    && !WheelSources.offers(probe, WheelSource.OFF_HAND, WheelEntryKind.ARTIFACT, storageCell)
-                    && !WheelSources.offers(probe, WheelSource.CURIOS, WheelEntryKind.ARTIFACT, storageCell)
+            Identifier flightCell = PROBE_BOUND_FLIGHT;
+            Identifier storageCell = PROBE_BOUND_STORAGE;
+            abilities.grant(flightCell, mainHand);
+            abilities.grant(storageCell, mainHand);
+            List<Holder<Ability>> pageCells = WheelSources.abilities(probe, WheelSource.MAIN_HAND);
+            boolean knownKind = WheelEntryKind.ABILITY.exists(level.registryAccess(), flightCell)
+                    && WheelEntryKind.ABILITY.exists(level.registryAccess(), storageCell)
+                    && !WheelEntryKind.ABILITY.exists(level.registryAccess(), PROBE_WHEEL_TOGGLE)
+                    && !WheelEntryKind.ABILITY.exists(level.registryAccess(), PROBE_ABSENT_ABILITY);
+            boolean listed = pageCells.stream().anyMatch(ref -> HolderHelper.id(ref).equals(flightCell))
+                    && pageCells.stream().anyMatch(ref -> HolderHelper.id(ref).equals(storageCell))
+                    && WheelSources.offers(probe, WheelSource.MAIN_HAND, WheelEntryKind.ABILITY, storageCell)
+                    && !WheelSources.offers(probe, WheelSource.OFF_HAND, WheelEntryKind.ABILITY, storageCell)
+                    && !WheelSources.offers(probe, WheelSource.CURIOS, WheelEntryKind.ABILITY, storageCell)
                     && knownKind;
-            source.sendSuccess(() -> Component.literal("wheel probe: capabilities=" + toggles.size()
-                    + " on=" + (toggles.isEmpty() ? "none" : toggles.getFirst().state())
-                    + " storage_state=" + (toggles.size() < 2 ? "none" : toggles.get(1).state())
+            source.sendSuccess(() -> Component.literal("wheel probe: named cells=" + pageCells.size()
                     + " kind=" + knownKind + (listed ? " OK" : " MISMATCH")), false);
 
             // 7. The switch behind the flight cell really moves: pressed through the service the trigger uses, the
@@ -1822,8 +1826,17 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("wheel probe: storage sync contents=" + holed.contents().size()
                     + " stored=" + holed.get(1).getCount() + (storageCodec ? " OK" : " MISMATCH")), false);
 
-            if (pages && derived && follows && configured && overflow && listed && flipped && opened && storageCodec) {
-                source.sendSuccess(() -> Component.literal("wheel probe: OK"), false);
+            // 10. Two abilities one definition names cool down separately: the ledger keys them by their own ids,
+            //     so paying one leaves the other ready. That is what "each instance has its own cooldown" means.
+            long now = level.getGameTime();
+            abilities.setCooldownUntil(flightCell, now + 200L);
+            boolean independent = abilities.isOnCooldown(flightCell, now) && !abilities.isOnCooldown(storageCell, now);
+            abilities.setCooldownUntil(flightCell, now - 1L);
+            source.sendSuccess(() -> Component.literal("wheel probe: per-ability cooldowns independent=" + independent
+                    + (independent ? " OK" : " MISMATCH")), false);
+
+            if (pages && derived && follows && configured && overflow && listed && flipped && opened && storageCodec
+                    && independent) {                source.sendSuccess(() -> Component.literal("wheel probe: OK"), false);
                 return 1;
             }
             source.sendFailure(Component.literal("wheel probe: MISMATCH"));
@@ -1833,25 +1846,21 @@ public final class MxtTestCommands {
         }
     }
 
-    // The wheel id of one capability of one artifact: the artifact's id with the capability's key appended.
-    private static Identifier capability(Identifier artifact, String key) {
-        return new ArtifactCapability(artifact, key).id();
-    }
-
-    // Presses the fixture artifact's flight cell - the same activate call the wheel's trigger makes - and reports
-    // whether the player really mounted a flying sword and landed again. The main hand is taken over and
-    // restored, since a cell is read off the stacks the page names.
+    // Presses the fixture artifact's flight cell - the same press the wheel's trigger makes - and reports whether
+    // the player really mounted a flying sword and landed again. The main hand is taken over and restored, since a
+    // cell is read off the stacks the page names.
     private static boolean flipsFlightSwitch(ServerPlayer player, Identifier cell) {
         ItemStack previous = player.getMainHandItem().copy();
         try {
             player.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_SWORD));
-            ArtifactToggleService.Toggle toggle = ArtifactToggleService
-                    .find(WheelSources.toggles(player, WheelSource.MAIN_HAND), cell).orElse(null);
-            if (toggle == null) return false;
-            boolean mounted = toggle.activate().changed()
+            Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), cell).orElse(null);
+            if (ability == null) return false;
+            ItemStack carrier = player.getMainHandItem();
+            boolean mounted = AbilityActivationService.activate(player, ability, carrier).changed()
                     && player.getData(MxtAttachments.FLIGHT).active()
                     && player.getVehicle() instanceof FlyingSwordEntity;
-            boolean landed = toggle.state().orElse(false) && toggle.activate().changed()
+            boolean landed = AbilityActivationService.state(player, ability).orElse(false)
+                    && AbilityActivationService.activate(player, ability, carrier).changed()
                     && !player.getData(MxtAttachments.FLIGHT).active()
                     && !(player.getVehicle() instanceof FlyingSwordEntity);
             return mounted && landed;
@@ -1866,10 +1875,9 @@ public final class MxtTestCommands {
         ItemStack previous = player.getMainHandItem().copy();
         try {
             player.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_SWORD));
-            ArtifactToggleService.Toggle toggle = ArtifactToggleService
-                    .find(WheelSources.toggles(player, WheelSource.MAIN_HAND), cell).orElse(null);
-            if (toggle == null) return false;
-            boolean activated = toggle.activate().changed();
+            Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), cell).orElse(null);
+            if (ability == null) return false;
+            boolean activated = AbilityActivationService.activate(player, ability, player.getMainHandItem()).changed();
             // The fixture declares nine slots, which is one row: the menu is a chest, so the rows are the number
             // the declaration rounds up to.
             boolean opened = player.containerMenu instanceof ChestMenu menu
@@ -2447,8 +2455,7 @@ public final class MxtTestCommands {
         TechniqueService.learn(player, spirit, technique.holder(), context);
         spirit.addLearnedTechnique(technique.holder());
         CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
-        TEST_ACTIVE_ABILITIES.forEach(id -> MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id)
-                .ifPresent(ability -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, TEST_ABILITY_SOURCE)));
+        TEST_ACTIVE_ABILITIES.forEach(id -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(id, TEST_ABILITY_SOURCE));
         // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt where
         // the ability sources actually change.
         AbilityEventBridge.rebuildTriggerSubscriptions(player);

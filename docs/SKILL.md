@@ -15,6 +15,7 @@ MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.99` 的服务端权威修仙�
 ## 代码约定
 
 - 动态定义使用 NeoForge 原版数据包注册表；固有行为使用 `MapCodec` 注册表和 `type` 分派。
+- **数据包 JSON 鼓励按类别分文件夹**（`data/<命名空间>/mxt/<注册表名>/<分类>/<名字>.json`）：目录会进入定义 ID（`example:sword/slash`），所以分类要在写内容之前定好；标签那棵树不必逐层对应，层级也不参与加载与校验。规则见 `docs/数据包格式.md` 的「文件位置」。
 - Definition 的 `CODEC` 是 Holder Codec，`DIRECT_CODEC` 是直接对象 Codec。
 - 数据包对象和 Codec 集合视为不可变；不做无意义的 Mutable 转换或 `copyOf`。
 - 跨表引用优先 Holder；可选引用用 optional Codec，列表/Map 用容错集合 Codec。
@@ -27,6 +28,6 @@ MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.99` 的服务端权威修仙�
 
 ## 公开接口重点
 
-`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`AbilityService` 执行技能（`useCarried` 是"由物品代持能力"的入口），`DamageCalculationService` 是模组自己发伤害的唯一出口（第一层出力在发伤害处，第二层减免在 `LivingIncomingDamageEvent`，元素克制/适应倍率住在 `element` 定义里），`MxtDatapackRegistries` 查询动态表，`AuraAccess`/`ItemAuraAccess` 处理灵气存取（键是 `Holder<Aura>`），`UseItemAuraAccess` 是物品"按住右键被灌注"的接口（`pour` 自定义容量、`canPourInto` 在付灵气前否掉一 tick、`onCharged` 汇报已写入），`SpiritChargeService` 把持有者灵气灌注进可充能物品，`TalismanService` 在符箓载体灌满时发动铭刻的能力并烧掉一张，`HoldService` 驱动"按住使用"手势，`Cost` 处理行为消耗，`WheelMenuEntry` 是纯客户端轮盘条目契约（技能、灵气与法器技能各一个实现）。
+`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`AbilityService` 执行技能（`useCarried` 是"由物品代持能力"的入口），`AbilityActivationService` 是"按一下"的唯一入口（轮盘、命令与脚本都走它，`Toggable` 在那里分派），`DamageCalculationService` 是模组自己发伤害的唯一出口（第一层出力在发伤害处，第二层减免在 `LivingIncomingDamageEvent`，元素克制/适应倍率住在 `element` 定义里），`MxtDatapackRegistries` 查询动态表，`AuraAccess`/`ItemAuraAccess` 处理灵气存取（键是 `Holder<Aura>`），`UseItemAuraAccess` 是物品"按住右键被灌注"的接口（`pour` 自定义容量、`canPourInto` 在付灵气前否掉一 tick、`onCharged` 汇报已写入），`SpiritChargeService` 把持有者灵气灌注进可充能物品，`TalismanService` 在符箓载体灌满时发动铭刻的能力并烧掉一张，`HoldService` 驱动"按住使用"手势，`Cost` 处理行为消耗，`WheelMenuEntry` 是纯客户端轮盘条目契约（技能与灵气各一个实现，法器技能已并入技能）。
 
 完整规则见 [`docs/ai/SKILL.md`](ai/SKILL.md)。

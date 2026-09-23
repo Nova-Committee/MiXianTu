@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.command;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -90,7 +91,7 @@ public final class AbilityCommand {
             source.sendSuccess(() -> Component.translatable("command.mxt.ability.list.empty"), false);
             return 1;
         }
-        for (Holder<Ability> ability : abilities.sources().keys()) {
+        for (Identifier ability : abilities.sources().keys()) {
             Component name = DefinitionText.name(ability, "ability");
             Component from = Component.literal(abilities.sources().of(ability).stream()
                     .map(Identifier::toString).sorted().reduce((a, b) -> a + ", " + b).orElse("-"));
@@ -103,22 +104,21 @@ public final class AbilityCommand {
         CommandSourceStack source = ctx.getSource();
         Identifier id = IdentifierArgument.getId(ctx, "ability");
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
-        Holder<Ability> ability = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).orElse(null);
-        if (ability == null) {
+        if (Abilities.resolve(source.getServer().registryAccess(), id).isEmpty()) {
             source.sendFailure(Component.translatable("command.mxt.ability.unknown", id.toString()));
             return 0;
         }
         int granted = 0;
         for (Entity target : targets) {
             AbilityAttachment abilities = target.getData(MxtAttachments.ABILITY_HOLDER);
-            if (abilities.grant(ability, SOURCE)) {
+            if (abilities.grant(id, SOURCE)) {
                 granted++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.granted",
-                        DefinitionText.name(ability, "ability"), target.getDisplayName()), true);
+                        DefinitionText.name(id, "ability"), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.grant_failed",
-                        target.getDisplayName(), DefinitionText.name(ability, "ability")));
+                        target.getDisplayName(), DefinitionText.name(id, "ability")));
             }
         }
         return granted;
@@ -130,21 +130,16 @@ public final class AbilityCommand {
         CommandSourceStack source = ctx.getSource();
         Identifier id = IdentifierArgument.getId(ctx, "ability");
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
-        Holder<Ability> ability = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).orElse(null);
-        if (ability == null) {
-            source.sendFailure(Component.translatable("command.mxt.ability.unknown", id.toString()));
-            return 0;
-        }
         int revoked = 0;
         for (Entity target : targets) {
-            if (target.getData(MxtAttachments.ABILITY_HOLDER).revoke(ability, SOURCE)) {
+            if (target.getData(MxtAttachments.ABILITY_HOLDER).revoke(id, SOURCE)) {
                 revoked++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.revoked",
-                        DefinitionText.name(ability, "ability"), target.getDisplayName()), true);
+                        DefinitionText.name(id, "ability"), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.revoke_failed",
-                        target.getDisplayName(), DefinitionText.name(ability, "ability")));
+                        target.getDisplayName(), DefinitionText.name(id, "ability")));
             }
         }
         return revoked;
@@ -157,10 +152,15 @@ public final class AbilityCommand {
 
     private static int castAbility(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        UseResult result = MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, id).map(ability -> AbilityService.use(ability, ability.value(), player,
-                player.getData(MxtAttachments.ABILITY_HOLDER), player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player))).orElse(null);
-        if (result == null || !result.committed()) {
-            source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result == null ? "unknown_definition" : result.failure().name()));
+        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
+        if (ability == null) {
+            source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", "unknown_definition"));
+            return 0;
+        }
+        UseResult result = AbilityService.use(ability, player, player.getData(MxtAttachments.ABILITY_HOLDER),
+                player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player));
+        if (!result.committed()) {
+            source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().name()));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.name(id, "ability")), true);

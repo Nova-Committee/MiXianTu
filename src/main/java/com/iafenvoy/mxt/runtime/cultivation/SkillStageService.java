@@ -74,14 +74,14 @@ public final class SkillStageService {
     // Asked per ability rather than per holder, because a chain speaks for the abilities it unlocks: the
     // multiplier of a body-refining manual belongs to what that manual grants, not to every hit the holder
     // lands. Several techniques can grant the same ability and the best is taken - the hit is one hit.
-    public static double damageMultiplier(LivingEntity holder, Holder<Ability> ability) {
+    public static double damageMultiplier(LivingEntity holder, Identifier ability) {
         SpiritIdentityAttachment spirit = holder.getData(MxtAttachments.SPIRIT_IDENTITY);
         double best = 1.0D;
         for (Holder<Technique> technique : spirit.learnedTechniques()) {
             Holder<SkillStage> current = currentStage(spirit, technique).orElse(null);
             if (current == null) continue;
             boolean grants = unlockedAbilities(technique.value(), current).stream()
-                    .anyMatch(unlocked -> unlocked.value() == ability.value());
+                    .anyMatch(unlocked -> HolderHelper.id(unlocked).equals(ability));
             if (!grants) continue;
             double multiplier = current.value().damageMultiplier();
             if (Double.isFinite(multiplier) && multiplier > best) best = multiplier;

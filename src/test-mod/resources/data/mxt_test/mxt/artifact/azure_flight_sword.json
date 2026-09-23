@@ -2,7 +2,7 @@
   "items": "minecraft:iron_sword",
   "spirit_capacity": { "mxt_test:qi": 60 },
   "abilities": [
-    { "type": "mxt:flight", "speed": 0.12, "costs": [{ "id": "mxt_test:qi", "amount": 2 }] }
+    "mxt_test:azure_flight"
   ],
   "require_owner": true
 }

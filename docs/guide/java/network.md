@@ -6,7 +6,7 @@ title: 网络协议与服务端权威
 
 | Payload | 用途 |
 | --- | --- |
-| `WheelActionC2SPayload` | 轮盘选中一项：`(source, kind, id)`——**哪个来源**、哪一类、哪个 id（由客户端在按下的那一刻从**当时那一格**解析出来）。技能、灵气与法器技能**共用这一条通道**，服务端按 `kind` 分派（技能走 `AbilityService.use`，灵气走 `SpiritBurstService.fireOnce`，法器技能走 `ArtifactToggleService`——**请求只说"按了这一格"**，该开该关该打开哪个界面由服务端问实现），并在分派前先用 `source` 把那个来源重读一遍（主盘读存档布局、从盘的技能读现在的授予账、从盘的法器技能读那一页的装备栈），这项不在那里就整个请求作废。**格子编号不在这条路上**：它只用于存储。 |
+| `WheelActionC2SPayload` | 轮盘选中一项：`(source, kind, id)`——**哪个来源**、哪一类、哪个 id（由客户端在按下的那一刻从**当时那一格**解析出来）。技能与灵气**共用这一条通道**，服务端按 `kind` 分派（技能走 `runtime/ability/AbilityActivationService.activate`——`mxt:active` 在那里转成一次施放，`mxt:flight` / `mxt:storage` 在那里起剑 / 开箱；灵气走 `SpiritBurstService.fireOnce`——**请求只说"按了这一格"**，该开该关该打开哪个界面由服务端读一遍状态再决定），并在分派前先用 `source` 把那个来源重读一遍（主盘读存档布局、从盘的技能读现在的授予账、从盘的法器技能则要求那一页的装备此刻仍然提供这条技能），这项不在那里就整个请求作废。**格子编号不在这条路上**：它只用于存储。 |
 | `BackSlotSwapC2SPayload` | 交换主手和背部槽位。 |
 | `ForgingActionC2SPayload` | 锻造开始、敲击、完成和取消。 |
 | `ChequeActionC2SPayload` | 支票桌存入/取出。 |

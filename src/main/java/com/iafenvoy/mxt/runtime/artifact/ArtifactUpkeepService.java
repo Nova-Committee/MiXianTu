@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.compat.CuriosIntegration;
-import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
+import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostTransaction;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
@@ -54,28 +55,30 @@ public final class ArtifactUpkeepService {
     }
 
     // Public so a probe can drive one settlement without a server tick. An artifact whose entry asks for nobody in
-    // particular, whose definition declares no costs, that is not yet the holder's when the entry asks for an
-    // owner, or whose clock is between intervals, is left exactly as it is.
+    // particular, whose costs are empty, that is not yet the holder's when the entry asks for an owner, or whose
+    // clock is between intervals, is left exactly as it is.
     public static boolean upkeep(LivingEntity holder, ItemStack stack, long gameTime) {
-        UpkeepArtifactAbility upkeep = ArtifactService.upkeep(holder.level().registryAccess(), stack).orElse(null);
-        if (upkeep == null || upkeep.costs().isEmpty()) return false;
-        if (upkeep.ownerOnly() && !ArtifactService.isOwner(stack, holder.getUUID())) return false;
+        ArtifactService.Upkeep upkeep = ArtifactService.upkeep(holder.level().registryAccess(), stack).orElse(null);
+        if (upkeep == null) return false;
+        List<Cost> costs = upkeep.ability().value().costs();
+        if (costs.isEmpty()) return false;
+        if (upkeep.type().ownerOnly() && !ArtifactService.isOwner(stack, holder.getUUID())) return false;
         FormulaContext context = FormulaContext.of(holder);
-        long interval = interval(upkeep, context);
+        long interval = interval(upkeep.type(), context);
         if (gameTime % interval != 0L) return false;
-        CostTransaction.PayResult payment = CostTransaction.pay(upkeep.costs(),
+        CostTransaction.PayResult payment = CostTransaction.pay(costs,
                 CostContext.of(holder, context, CostOrigin.ARTIFACT_UPKEEP));
         if (payment.paid()) return true;
-        upkeep.onFail().execute(holder, stack, context);
+        upkeep.type().onFail().execute(holder, stack, context);
         return false;
     }
 
     // A declaration that evaluates to nothing usable falls back to the entry's own default rather than to "every
     // tick", so a broken formula cannot turn a gentle price into a drain.
-    private static long interval(UpkeepArtifactAbility upkeep, FormulaContext context) {
+    private static long interval(UpkeepAbilityType upkeep, FormulaContext context) {
         double value = upkeep.interval().evaluate(context);
         if (!Double.isFinite(value) || value < (double) MIN_INTERVAL || value > (double) Long.MAX_VALUE)
-            return (long) UpkeepArtifactAbility.DEFAULT_INTERVAL;
+            return (long) UpkeepAbilityType.DEFAULT_INTERVAL;
         return Math.max(MIN_INTERVAL, Math.round(value));
     }
 }

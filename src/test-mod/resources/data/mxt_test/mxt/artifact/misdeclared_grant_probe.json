@@ -1,6 +1,4 @@
 {
   "items": "minecraft:echo_shard",
-  "abilities": [
-    { "type": "mxt:passive", "abilities": "mxt_test:firebolt" }
-  ]
+  "abilities": ["mxt_test:firebolt"]
 }

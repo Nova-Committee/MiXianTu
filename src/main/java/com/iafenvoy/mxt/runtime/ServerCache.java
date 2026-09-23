@@ -1,13 +1,8 @@
 package com.iafenvoy.mxt.runtime;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
-import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility.Intent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
@@ -16,17 +11,13 @@ import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.mojang.datafixers.util.Either;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -163,33 +154,13 @@ public final class ServerCache {
      * claiming the same item (the winner would be decided by registry order).
      */
     private void rebuildArtifacts(List<String> problems) {
-        Registry<Ability> abilities = this.server.registryAccess().lookupOrThrow(MxtResourceKeys.ABILITY);
         Map<Item, Identifier> claimed = new LinkedHashMap<>();
         for (Reference<Artifact> holder : MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.ARTIFACT).toList()) {
             Artifact definition = holder.value();
-            this.checkGrantedAbilityKinds(holder, definition, abilities, problems);
             Identifier previous = this.claimItems(holder, definition, claimed);
             if (previous != null)
                 problems.add(problem(MxtResourceKeys.ARTIFACT, holder.key().identifier(),
                         "claims an item that " + previous + " already claims as its artifact"));
-        }
-    }
-
-    private void checkGrantedAbilityKinds(Reference<Artifact> holder, Artifact definition,
-                                          Registry<Ability> abilities, List<String> problems) {
-        for (ArtifactAbility ability : definition.abilities()) {
-            if (!(ability instanceof GrantArtifactAbility(
-                    GrantArtifactAbility.Intent intent,
-                    List<Either<Holder<Ability>, TagKey<Ability>>> abilities1
-            ))) continue;
-            boolean wantsActive = intent == Intent.ACTIVE;
-            for (Holder<Ability> granted : RegistryCodecs.listAll(abilities1, abilities)) {
-                boolean isActive = granted.value().type() instanceof ActiveAbilityType;
-                if (wantsActive == isActive) continue;
-                problems.add(problem(MxtResourceKeys.ARTIFACT, holder.key().identifier(),
-                        "grants " + HolderHelper.id(granted) + " as mxt:" + (wantsActive ? "active" : "passive")
-                                + ", but that ability's own type is " + (isActive ? "active" : "not active")));
-            }
         }
     }
 

@@ -14,7 +14,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.Artifact;
-import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
 import com.iafenvoy.mxt.data.aura.*;
 import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -61,7 +60,6 @@ public final class MxtResourceKeys {
     // Builtin registries
     public static final ResourceKey<Registry<MapCodec<? extends AbilityType>>> ABILITY_TYPE = create("ability_type");
     public static final ResourceKey<Registry<MapCodec<? extends TargetSelector>>> ABILITY_TARGET_SELECTOR_TYPE = create("ability_target_selector_type");
-    public static final ResourceKey<Registry<MapCodec<? extends ArtifactAbility>>> ARTIFACT_ABILITY_TYPE = create("artifact_ability_type");
     public static final ResourceKey<Registry<MapCodec<? extends Cost>>> COST_TYPE = create("cost_type");
     public static final ResourceKey<Registry<MapCodec<? extends CurseType>>> CURSE_TYPE = create("curse_type");
     public static final ResourceKey<Registry<MapCodec<? extends DataStorage>>> DATA_STORAGE_TYPE = create("data_storage_type");

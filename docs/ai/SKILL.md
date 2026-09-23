@@ -19,6 +19,7 @@ MiXianTu 是 NeoForge `26.1.2` / Minecraft `26.1.2` 的服务端权威修仙框�
 ## 代码约定
 
 - 动态注册表使用原版 NeoForge datapack registry。
+- **数据包 JSON 鼓励按类别建子文件夹**：`data/<命名空间>/mxt/<注册表名>/<分类>/<名字>.json`。目录会成为定义 ID 的一部分（`example:sword/slash`）以及默认 `name` / `description` 键的一部分，所以分类要在写内容之前定好、之后别随便挪；`tags/mxt/<注册表名>/...` 是另一棵树，不必逐层对应；层级只影响可读性，不参与加载与校验。完整说明见 `docs/数据包格式.md` 的「文件位置」。
 - 跨表引用优先使用 Holder；可选和列表使用容错 Codec。
 - Definition 的 `CODEC` 是 Holder Codec，`DIRECT_CODEC` 是直接对象 Codec。
 - 所有数据包对象视为不可变；不要对 Codec 结果调用不必要的 `copyOf` 或 Mutable 转换。
