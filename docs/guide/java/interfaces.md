@@ -2,7 +2,7 @@
 title: 特殊公开接口
 ---
 
-本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`ToggableArtifactAbility` 留在 `data/artifact/ability`——它不算对外 API**（它是本体登记法器技能类型的形状，`mxt:flight` / `mxt:storage` 两个固有类型实现它）。哪些东西**不**进 `api`、服务类的静态代理为什么还没做，见 `research/34_对外API包设计.md`。
+本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`ToggableArtifactAbility` 留在 `data/artifact/ability`——它不算对外 API**（它是本体登记法器技能类型的形状，`mxt:flight` / `mxt:storage` 两个固有类型实现它）。哪些东西**不**进 `api` 见 `AGENTS.md` §3：只有"别的模组会实现或调用"的契约才进去，服务类的静态代理是明确的推迟项。
 
 ### `AuraAccess`
 

@@ -60,6 +60,12 @@ public interface ItemMatcher {
 
         boolean matches(ItemStack stack);
 
+        // Whether matching is decided by the item alone. A caller that caches per item may only cache these; the
+        // ones reading stack data have to be asked about every stack.
+        default boolean itemLevel() {
+            return true;
+        }
+
         MapCodec<? extends Entry> codec();
     }
 }

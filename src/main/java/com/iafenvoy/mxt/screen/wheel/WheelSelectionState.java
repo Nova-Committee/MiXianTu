@@ -83,19 +83,31 @@ public final class WheelSelectionState {
         effective = WheelMenuContent.effective(pages, number);
     }
 
-    // A cell the page does not have is not a cell at all - the empty tail of a gear page has no frame to point
-    // at - so aiming there leaves the choice where it was; an existing but empty cell is still remembered.
+    // A cell the page does not have is not a cell at all, and an existing cell that holds nothing is not a choice
+    // either: aiming at either leaves the choice where it was, so one is always armed. Whether the *pointer* has a
+    // target is another question, and the screen asks it of the cell the pointer is on.
     public static void selectSector(int sector) {
         if (sector < 0 || sector >= WheelGeometry.SECTORS)
             throw new IllegalArgumentException("Sector out of range: " + sector);
         int number = numberAt(sector);
-        if (!WheelMenuContent.exists(pages, number)) return;
+        if (entry(number) == null) return;
         select(number);
     }
 
-    public static void stepPage(int delta) {
+    // A session that has never chosen anything opens on the first cell that holds something, so the wheel is never
+    // up with nothing armed. A wheel that holds nothing at all has nothing to offer and stays unarmed.
+    public static void selectDefault() {
+        if (number >= 0) return;
+        int first = WheelMenuContent.firstHeld(pages);
+        if (first >= 0) select(first);
+    }
+
+    // One page turn, wrapping or parking at either end as the caller asks; the chosen number is never touched, so
+    // a page that comes back finds the same choice.
+    public static void stepPage(int delta, boolean wrap) {
         if (pages.isEmpty()) return;
-        page = Math.floorMod(page + delta, pages.size());
+        int next = page + delta;
+        page = wrap ? Math.floorMod(next, pages.size()) : Mth.clamp(next, 0, pages.size() - 1);
     }
 
     public static void firstPage() {

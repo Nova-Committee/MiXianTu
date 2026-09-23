@@ -16,15 +16,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Lets the artifact carry its holder: the speed the flying mount moves at, and what a tick of riding costs. Also
- * a {@link ToggableArtifactAbility}, so mounting and dismounting is a wheel switch; the state it reports is the
- * mount up <em>now</em>, read from the same attachment the flight controller writes.
+ * Lets the artifact carry its holder: the speed the flying mount moves at, what a tick of riding costs, and how the
+ * mount is drawn. Also a {@link ToggableArtifactAbility}, so mounting and dismounting is a wheel switch; the state it
+ * reports is the mount up <em>now</em>, read from the same attachment the flight controller writes.
  */
-public record FlightArtifactAbility(NumberProvider speed, List<ResourceCost> costs) implements ToggableArtifactAbility {
+public record FlightArtifactAbility(NumberProvider speed, List<ResourceCost> costs,
+                                    FlightDisplay display) implements ToggableArtifactAbility {
     public static final String KEY = "flight";
     public static final MapCodec<FlightArtifactAbility> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("speed").forGetter(FlightArtifactAbility::speed),
-            ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(FlightArtifactAbility::costs)
+            ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(FlightArtifactAbility::costs),
+            FlightDisplay.CODEC.optionalFieldOf("display", FlightDisplay.DEFAULT).forGetter(FlightArtifactAbility::display)
     ).apply(i, FlightArtifactAbility::new));
 
     @Override

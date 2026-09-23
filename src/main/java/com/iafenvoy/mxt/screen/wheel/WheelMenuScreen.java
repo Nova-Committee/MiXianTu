@@ -181,6 +181,17 @@ public final class WheelMenuScreen extends Screen {
         return true;
     }
 
+    // Scrolling up goes back a page, down goes forward, exactly as the two page keys do; the notice is theirs too,
+    // so a player who never touches the keys still learns which wheel they landed on.
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (WheelMenuController.scrollTurnsPages() && scrollY != 0.0D) {
+            WheelMenuController.stepPage(scrollY > 0.0D ? -1 : 1);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
     // A wheel must not pause the world in single player.
     @Override
     public boolean isPauseScreen() {

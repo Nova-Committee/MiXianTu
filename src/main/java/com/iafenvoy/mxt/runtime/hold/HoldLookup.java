@@ -11,16 +11,17 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Which items are used by holding them down, and what each one's hold looks like. The question is asked from paths
- * that run every tick, so vanilla's answers are cached per item. The declarations come from every registered
- * {@link HoldSource}, and this class knows none of them.
+ * that run while a gesture is live, so declarations answering from the item's identity are cached per item; one
+ * that reads the stack - a manual, whose technique is its own component - is asked about every stack. The
+ * declarations come from every registered {@link HoldSource}, and this class knows none of them.
  *
  * <p>The cache is captured on {@link TagsUpdatedEvent} and {@link ServerStartedEvent} rather than by walking every
  * registered item up front, because building an {@code ItemStack} during a pack load reads unbound component maps
@@ -28,9 +29,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 @EventBusSubscriber
 public final class HoldLookup {
-    // Keyed by item, because a declaration tests the item's identity and never the stack.
-    private static final Map<Item, Optional<HoldBinding>> RESOLVED = new ConcurrentHashMap<>();
+    // Keyed by item, and only ever holding the declarations that match on the item's identity.
+    private static final Map<Item, List<HoldBinding>> ITEM_MATCHED = new ConcurrentHashMap<>();
     private static final List<HoldSource> SOURCES = new CopyOnWriteArrayList<>();
+    // Sorted by priority, then by the order the sources registered in, which is who drives a stack two of them claim.
     private static volatile List<HoldBinding> holds = List.of();
 
     private HoldLookup() {
@@ -54,18 +56,24 @@ public final class HoldLookup {
     // Only declarations that ask for a hold are captured, so any answer means the item is used by holding it.
     public static @Nullable HoldBinding hold(ItemStack stack) {
         if (stack.isEmpty() || holds.isEmpty()) return null;
-        Optional<HoldBinding> cached = RESOLVED.get(stack.getItem());
-        if (cached != null) return cached.orElse(null);
-        Optional<HoldBinding> found = ItemMatcher.find(holds.stream(), stack);
-        RESOLVED.put(stack.getItem(), found);
-        return found.orElse(null);
+        List<HoldBinding> byItem = ITEM_MATCHED.computeIfAbsent(stack.getItem(), item -> holds.stream()
+                .filter(hold -> hold.entries().stream().anyMatch(entry -> entry.itemLevel() && entry.matches(stack)))
+                .toList());
+        for (HoldBinding hold : holds)
+            if (byItem.contains(hold) || matchesStack(hold, stack)) return hold;
+        return null;
+    }
+
+    private static boolean matchesStack(HoldBinding hold, ItemStack stack) {
+        return hold.entries().stream().anyMatch(entry -> !entry.itemLevel() && entry.matches(stack));
     }
 
     // Public so the server audit can drive it directly.
     public static void rebuild(Provider access) {
         holds = SOURCES.stream().flatMap(source -> source.holds(access).stream())
                 .filter(HoldBinding::requiresHold)
+                .sorted(Comparator.comparingInt(ItemMatcher::priority))
                 .toList();
-        RESOLVED.clear();
+        ITEM_MATCHED.clear();
     }
 }

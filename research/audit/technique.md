@@ -38,19 +38,21 @@
 > - 2026-09-17：**删掉 `HoldPoseDiagnostic`**（用户："`HoldPoseDiagnostic` 去掉，不要再污染日志"）。它原来是客户端 `@EventBusSubscriber`，每 tick 检查一次 `isUsingItem`，在状态变化时打 INFO/WARN（`[mxt] hold pose started` / `resumed` / `ended after the full hold` / `lost with N of the hold left`）。§22 的 `LivingEntityMixin` 删除后，它唯一的用途就只剩报"服务端掉帧时姿势提前收掉"——那是一段一两 tick、正常服务器上看不出来的尾巴，却要在每位玩家的客户端日志里常驻一套状态机。类整体删除（无其他引用；`HoldLookup` 的其余调用者不受影响），§24 那条"从 `render/` 迁入该模块"的迁移记录以及 §0 里的 `HoldPoseDiagnostic` 条目一并留档；`docs/数据包格式.md` 里"客户端日志会有 `hold pose lost`"那句同步改成"诊断器已删除，只能靠观感判断"。代价：这段姿势/判定偏差从此没有日志可对照，判断只能靠肉眼与实测。
 > - 2026-09-17：**长按契约加上栈级时长与"是否归我驱动"**（详细记录见 `research/audit/spirit.md`）。有了第二个使用者：实现 `AuraItemAccess` 的物品按住右键把持有者自身灵气灌进物品（`item_aura` 的 `consume_speed`/`release_speed` 反向使用，姿势长度 = 充满时间）。为此 `HoldBinding` 增加栈级 `holdTicks(Provider, ItemStack)`（默认回落物品级 `holdTicks()`）与 `claims(Provider, ItemStack)`（默认 `> NO_HOLD`，即"这一堆不归我驱动"用 `NO_HOLD` 表达），`HoldService` 的武装/摘除/保活/音效四处改为按栈问它，`arm`/`armQuietly`/`keepArmed`/`playHoldSound` 带上 `Provider`（§2 第 7 条：客户端拿不到服务端注册表，只能用它自己那份）。功法侧一行未改。同时补上一个反方向的同类坑：`arm` 会覆盖物品自带的 `minecraft:consumable`（食物等），现在用 `ours(...)` 识别"是不是自己写的组件"——不是自己的不写、`Start` 也不摘。
 
+> - 2026-09-22：**功法载体改为物品组件（用户点名；设计稿 `research/34_功法载体物品组件设计.md`）**。起因：创造模式拿出来的 `mxt:cultivation_jade_slip` 显示「功法：青霄吐纳诀 / 品质：粗劣」——旧口径把"哪件物品是哪本手册"写在物品 id 上（`technique_binding.items`），于是那个通用玉简的任何一叠都会成为某条功法的手册。现在载体是数据组件 **`mxt:technique`**（值 = 功法定义 id，落盘 + 同步）：**带它的那一叠才是手册**，同一物品不带组件就什么都不做、tooltip 也不显示功法。`items` 字段删除，改为可选 **`carrier_item`**（单个物品 id，不写＝`mxt:cultivation_jade_slip`），其余字段（`quality_group` / `conditions` / `learn_time` / `hold_animation` / `hold_sound`）不变；声明改为**按功法 id 匹配**，没有声明的功法按 `TechniqueBinding.defaults(...)` 读（即刻学会、默认姿势与音效、无品质组、无条件）。本体遍历 `mxt:technique` 注册表**为每条功法生成一份载体**：创造模式物品栏（`MxtCreativeTabs`，用 `ItemDisplayParameters.holders()`）与物品选择器的 `/picker mxt:technique` 分类各一处，生成用的物品取 `carrier_item`。长按侧新增按堆匹配的 `runtime/cultivation/TechniqueEntry`（`{"type": "mxt:technique"}`，`ItemMatcher.Entry.itemLevel()` 返回 `false`）与 `TechniqueHold`（单例，注册进 `HoldLookup`）；`HoldBinding` 增补按堆的 `holdAnimation(Provider, ItemStack)` / `holdSound(Provider, ItemStack)`（与既有 `holdTicks(Provider, ItemStack)` 对称，`HoldService` 的武装、摘除、保活、音效四处改为传堆）；`HoldLookup` 的缓存从"按物品缓存最终答案"改成"按物品缓存**物品级**匹配 + 堆级匹配每次问堆"（判据是 `Entry.itemLevel()`），优先级排序挪到 `rebuild` 里做一次。测试包三条定义去掉 `items`，两条自建手册（`azure_water_manual` / `iron_body_manual`）写 `carrier_item` 指向自己的物品，青霄那条改名成 `qingxiao_breathing_manual.json` 且不写载体（＝玉简）。`/mxt_test verify` 新增一条腿：空玉简解析不出功法、生成出来的载体解析到对应声明（青霄 `learn_time = 40`、水系手册 `brush` 姿势）、`HoldLookup.hold` 对两者分别给出 `TechniqueHold` 与 `null`。**只编译，未实机。**
+
 ## 0. 边界澄清（避免概念混淆）
 
 - **功法 = `technique`**：玩家学会后常驻生效的修炼法门。
 - **手法 = `forging_method`**：锻造单步效果，与功法无关（`ForgingBlueprint.allowed_methods`、`ToolBinding` 那一套）。
 - **修炼行为 = `cultivate_action`**：与功法**无关联**。`CultivationModeService.resolveAction`（`runtime/cultivation/CultivationModeService.java:71-77`）只按 `default` 标记 / 玩家已选 / 注册表第一个来解析，不读 `learnedTechniques`。
-- 功法自身只有两个数据驱动注册表：`technique`（定义）与 `technique_binding`（载体绑定）。掌握程度由第三张表 `skill_stage` 表达——它按自由 `skill` 标识分链，可被多个功法共用（§8）。
+- 功法自身只有两个数据驱动注册表：`technique`（定义）与 `technique_binding`（一条功法**怎么被读**：长按时长、姿势、音效、品质组与条件，外加本体替它生成的载体物品），载体本身是堆上的 `mxt:technique` 组件。掌握程度由第三张表 `skill_stage` 表达——它按自由 `skill` 标识分链，可被多个功法共用（§8）。
 
 ## 1. 注册表清单
 
 | 注册表 | JSON 位置 | Codec | 注册点 | 备注 |
 | --- | --- | --- | --- | --- |
 | `mxt:technique` | `data/<ns>/mxt/technique/<id>.json` | `Technique.DIRECT_CODEC`（`data/cultivation/Technique.java:26-34`） | `registry/MxtDatapackRegistries.java:69` | 同一 codec 兼作同步 codec（`MxtDatapackRegistries.java:91-94`），客户端可读，故 tooltip 能用 `context.registries()` 解析 |
-| `mxt:technique_binding` | `data/<ns>/mxt/technique_binding/<id>.json` | `TechniqueBinding.CODEC`（`data/item/TechniqueBinding.java:23-28`） | `registry/MxtDatapackRegistries.java:84` | 走 `ItemMatcher`，载体是**现有物品**，不创建书籍/玉简 |
+| `mxt:technique_binding` | `data/<ns>/mxt/technique_binding/<id>.json` | `TechniqueBinding.CODEC`（`data/item/TechniqueBinding.java:28-43`） | `registry/MxtDatapackRegistries.java:84` | **按 `technique` 匹配**（不再走 `ItemMatcher`）；`carrier_item` 决定本体替它生成的载体物品，手册本体是堆上的 `mxt:technique` 组件 |
 | `mxt:skill_stage` | `data/<ns>/mxt/skill_stage/<id>.json` | `SkillStage.DIRECT_CODEC`（`data/cultivation/SkillStage.java:36-41`） | `registry/MxtDatapackRegistries.java:70` | 技能水平链的单级：`skill`（链身份，自由 `Identifier`）+ `next_stage` + `mastery`（到达所需熟练度，默认 `0`）+ `damage_multiplier`；解析期校验倍率有限非负，缓存重建时校验链顺序与 `mastery` 非递减 |
 
 两者都支持 `#mxt:disabled` 标签禁用：`MxtDatapackRegistries.java:52,100-109,152-174`；功法侧入口检查在 `TechniqueService.java:29-30`。
@@ -73,18 +75,21 @@
 
 | 字段 | 类型 / 默认 | 功能 |
 | --- | --- | --- |
-| `items` | `ItemMatcher.Entry[]`（单值 / `#tag` / 混合数组 / `mxt:item|tag|wildcard|regex`） | 哪些现有物品是功法载体 |
-| `technique` | `Holder<technique>` **必填** | 右键该物品尝试学习的功法 |
+| `technique` | `Holder<technique>` **必填** | 这份声明描述哪条功法；声明按它匹配，一条功法用一条即可 |
+| `carrier_item` | 可选物品 id | 本体替这条功法**生成**的载体物品（创造模式物品栏 + `/picker mxt:technique`）；不写＝`mxt:cultivation_jade_slip` |
 | `quality_group` | 可选 `#tag` | 参与 `ResolvedBindings.qualityGroup()`，优先级 weapon → pill → technique → item（`runtime/item/ItemBindingService.java:317-321`） |
 | `conditions` | `DescribedEntry<EntityCondition>[]` `[]` | 全部满足才允许学习；tooltip 逐条渲染 ✔/✖（`data/item/ItemBindingTooltipAppender.java:61, 65-75`） |
+| `learn_time` / `hold_animation` / `hold_sound` | Integer `0` / 白名单动作 `block` / 音效 `minecraft:item.book.page_turn` | 长按阅读的时长、姿势与音效（`learn_time = 0` 即右键学会，此时另两项不许写非默认值） |
 
-测试数据示例：`src/test-mod/resources/data/mxt_test/mxt/technique_binding/qingxiao_breathing_jade_slip.json` 把 `mxt:cultivation_jade_slip` 绑到 `mxt_test:qingxiao_breathing_manual`，带 `quality_group: "#mxt_test:group/forged"` 与一条 `mxt:always_true` 条件。
+谁是不是手册由**堆**决定：`mxt:technique` 组件带着哪条功法，那一叠就是那条功法的手册；没有组件的同一物品什么都不是（`ItemBindingService.technique` 从组件出发，再按功法找上面这张表）。
+
+测试数据示例：`src/test-mod/resources/data/mxt_test/mxt/technique_binding/qingxiao_breathing_manual.json` 描述 `mxt_test:qingxiao_breathing_manual` 怎么读（`learn_time: 40`、`quality_group: "#mxt_test:group/forged"` 与一条 `mxt:always_true` 条件），不写 `carrier_item`，因此本体替它生成的载体就是玉简；另外两条（`azure_water_manual` / `iron_body_manual`）各自用 `carrier_item` 指向测试包自己的手册物品。
 
 ## 4. 运行时流程（唯一的正式学习入口）
 
 入口：右键物品 → `TechniqueItemService.onItemUse`（`RightClickItem`，`EventPriority.HIGH`），仅服务端执行（`runtime/cultivation/TechniqueItemService.java:27-45`）：
 
-1. `ItemBindingService.technique(stack)` 匹配 binding；无匹配 → 不接管（返回 `false`，物品原行为继续）。
+1. `ItemBindingService.technique(stack)` 读堆上的 `mxt:technique` 组件，再按那条功法找声明（`technique_binding`）；两者都没有 → 不接管（返回 `false`，物品原行为继续）。
 2. `ItemQualityService.canUse(entity, stack)` 检查品质组与 `conditions`（`runtime/item/ItemQualityService.java:109-116`）；不满足 → **返回 `true`，即吞掉这次右键**，防止绕过判定。
 3. `TechniqueService.learn(entity, spirit, holder, context)`（`TechniqueService.java:28-57`）按序判定：
    - `#mxt:disabled` → `DISABLED`
@@ -101,7 +106,7 @@
 
 - 物品 tooltip：只显示功法名，`tooltip.mxt.item.technique`（`ItemBindingTooltipAppender.java:120-123`）；不显示 `grade`、倍率或授予能力。
 - 信息面板：`info.mxt.techniques` 一行，`InformationManager.java:39`（`lineWithDefinitions(..., "technique")`）。
-- 载体物品：`registry/MxtItems.java:46` `CULTIVATION_JADE_SLIP`（`item.mxt.cultivation_jade_slip`）；它只是普通物品，经 `technique_binding` 右键学习，**与槽位无关**。
+- 载体物品：`registry/MxtItems.java:46` `CULTIVATION_JADE_SLIP`（`item.mxt.cultivation_jade_slip`）只是**默认载体物品**——本体按功法生成的那份载体用它，内容包可以用 `carrier_item` 换成自己的物品；真正的"这是手册"标记是堆上的 `mxt:technique` 组件，**与槽位无关**。2026-09-22 之前那种"物品 id 即手册"的口径已删除。
 - ~~Curios 功法槽~~ **已于 2026-09-12 整体删除**：`data/mxt/curios/slots/technique.json`、`data/curios/tags/item/technique.json`、`data/mxt/tags/item/technique_equipable.json`、`assets/mxt/textures/slot/empty_technique_slot.png` 四个文件删除，`data/mxt/curios/entities/entities.json` 去掉 `technique` 项，`curios.identifier.technique` lang（中英）移除，并同步修了 4 处文档（`docs/curios槽位.md`、`docs/guide/play/interaction.md`、`docs/模块实现审计.md:123`、既有英文文档仓库 `docs` 的 `.../player-guide/curios-slots.md`）。现在只注册 `back_weapon`、`belt_item` 两个物理槽位。
 - **删除后的必做步骤（易漏）**：改完 `src/main/resources` 必须跑 `.\gradlew.bat processResources`（改 `src/test-mod/resources` 则是 `processTestModResources`）。dev 运行读的是 `build/resources/**`，不同步的话被删掉的槽位文件仍会继续加载——本次删除功法槽时 `build/resources/main` 里就残留了 `data/mxt/curios/slots/technique.json`，已重跑任务并逐文件哈希比对确认同步。
 
@@ -234,7 +239,7 @@
 - 注册：`src/main/java/com/iafenvoy/mxt/registry/{MxtResourceKeys,MxtDatapackRegistries,MxtItems}.java`
 - 展示：`src/main/java/com/iafenvoy/mxt/data/item/ItemBindingTooltipAppender.java`、`src/main/java/com/iafenvoy/mxt/screen/information/InformationManager.java`
 - 等级链参考（§8）：`data/cultivation/RealmStage.java`、`runtime/cultivation/CultivationService.java`、`attachment/CultivationAttachment.java`、`data/quality/ItemQuality.java`、`data/forging/ForgingBlueprint.java`、`data/Tribulation.java`
-- 测试夹具：`src/test-mod/resources/data/mxt_test/mxt/technique/{qingxiao_breathing_manual,sword_manual,body_manual}.json`、`.../mxt/technique_binding/qingxiao_breathing_jade_slip.json`、`.../mxt/skill_stage/{sword_art_1,sword_art_2}.json`、`.../mxt/resource/sword_mastery.json`、`.../mxt/trigger/sword_mastery_from_break.json`
+- 测试夹具：`src/test-mod/resources/data/mxt_test/mxt/technique/{qingxiao_breathing_manual,sword_manual,body_manual}.json`、`.../mxt/technique_binding/{qingxiao_breathing_manual,azure_water_manual,iron_body_manual}.json`、`.../mxt/skill_stage/{sword_art_1,sword_art_2}.json`、`.../mxt/resource/sword_mastery.json`、`.../mxt/trigger/sword_mastery_from_break.json`
 - 相关文档：`docs/数据包格式.md`（`skill_stage` 段 + `technique` 字段）、`docs/guide/datapack/overview.md:56`、`docs/模块实现审计.md:74-75`、`docs/item-bindings.md:10-16, 65-78`、`docs/guide/datapack/cultivation.md:5`、`docs/curios槽位.md`、既有英文文档仓库 `docs` 的 `docs/mod/mxt/datapack/json/{technique,skill_stage,index}.md`、`...\datapack\overview.md`、`...\player-guide\curios-slots.md`
 
 ## 11. 拒绝路径与反馈（2026-09-13 落地，T2）

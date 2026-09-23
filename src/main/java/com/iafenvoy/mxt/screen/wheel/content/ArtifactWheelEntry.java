@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactToggleService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
@@ -15,7 +14,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * One artifact capability as a wheel entry: something the player presses for, either a switch that stays on or a

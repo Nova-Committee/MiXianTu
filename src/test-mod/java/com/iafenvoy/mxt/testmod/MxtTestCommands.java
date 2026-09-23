@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.FlightDisplay;
 import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
@@ -66,10 +67,12 @@ import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
@@ -93,6 +96,7 @@ import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
@@ -133,6 +137,7 @@ import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -411,6 +416,30 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("damage probe: mastery entry=" + entry
                     + " advanced=" + advanced + " health_lost=" + masteryLost + " dispatched=" + dispatched[0]
                     + (mastery ? " OK" : " MISMATCH")), false);
+
+            // What makes a manual is the stack's own component: a jade slip out of the creative menu teaches
+            // nothing, while the carrier the mod generates for a technique teaches exactly that technique - using
+            // the item the declaration names when it names one.
+            ItemStack blankSlip = new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get());
+            Holder<Technique> declaredTechnique = require(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
+            ItemStack generated = ItemBindingService.techniqueCarrier(level.registryAccess(), declaredTechnique);
+            Holder<Technique> customTechnique = require(MxtResourceKeys.TECHNIQUE, id("azure_water_manual"));
+            ItemStack customCarrier = ItemBindingService.techniqueCarrier(level.registryAccess(), customTechnique);
+            boolean blankless = ItemBindingService.technique(level.registryAccess(), blankSlip).isEmpty();
+            boolean carrier = generated.is(MxtItems.CULTIVATION_JADE_SLIP.get())
+                    && customCarrier.is(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get())
+                    && blankless
+                    && ItemBindingService.technique(level.registryAccess(), generated)
+                    .filter(binding -> HolderHelper.id(binding.technique()).equals(TECHNIQUE) && binding.learnTime() == 40)
+                    .isPresent()
+                    && ItemBindingService.technique(level.registryAccess(), customCarrier)
+                    .filter(binding -> binding.holdAnimation() == ItemUseAnimation.BRUSH)
+                    .isPresent()
+                    && HoldLookup.hold(generated) instanceof TechniqueHold
+                    && HoldLookup.hold(blankSlip) == null;
+            source.sendSuccess(() -> Component.literal("technique probe: blank_teaches=" + !blankless
+                    + " generated=" + generated.getItem() + " custom=" + customCarrier.getItem()
+                    + (carrier ? " OK" : " MISMATCH")), false);
 
             // A source the pipeline never saw must still be reduced: this is a plain vanilla mob attack, so only
             // the defender's adaptation may touch it - 4 x 0.5 = 2 - never the attacker's edge.
@@ -699,6 +728,12 @@ public final class MxtTestCommands {
         return object;
     }
 
+    private static JsonArray numbers(double... values) {
+        JsonArray array = new JsonArray();
+        for (double value : values) array.add(value);
+        return array;
+    }
+
     // Drives the artifact module: a definition claims a real item, the stack is bound to its owner, aura is
     // poured into one of the two kinds it names, its abilities follow the equipment slot, its inventory answers
     // only its owner, its flight entry carries the holder, and it fits the four charm slots.
@@ -857,8 +892,20 @@ public final class MxtTestCommands {
         FlightArtifactAbility flight = ArtifactService.flight(access, flightStack).orElse(null);
         boolean flightEntry = flight != null && close(flight.speed().evaluate(context), 0.12D)
                 && flight.costs().size() == 1 && flight.costs().getFirst().id().equals(QI)
-                && close(flight.costs().getFirst().amount().evaluate(context), 2.0D);
-        ok &= check(source, "artifact roster flight entry speed=0.12 costs=2 qi", flightEntry);
+                && close(flight.costs().getFirst().amount().evaluate(context), 2.0D)
+                && flight.display().equals(FlightDisplay.DEFAULT);
+        ok &= check(source, "artifact roster flight entry speed=0.12 costs=2 qi display=default", flightEntry);
+
+        // A written display is read the way a vanilla model's is: translation in sixteenths of a block, rotation in
+        // degrees, scale as a multiplier.
+        JsonObject written = new JsonObject();
+        written.add("translation", numbers(0.0D, 4.0D, 0.0D));
+        written.add("rotation", numbers(90.0D, 0.0D, -45.0D));
+        written.add("scale", numbers(2.0D, 0.0D, 2.0D));
+        boolean displayRead = FlightDisplay.CODEC.parse(JsonOps.INSTANCE, written).result()
+                .filter(display -> close(display.translation().y(), 0.25D) && close(display.scale().y(), 0.0D))
+                .isPresent();
+        ok &= check(source, "artifact roster flight display reads 4/16 as 0.25", displayRead);
 
         ItemStack wardStack = new ItemStack(Items.PRISMARINE_SHARD);
         boolean grants = ArtifactService.definition(access, wardStack)

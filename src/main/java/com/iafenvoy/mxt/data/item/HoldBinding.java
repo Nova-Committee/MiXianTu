@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.mojang.datafixers.util.Unit;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -52,9 +53,19 @@ public interface HoldBinding extends ItemMatcher {
 
     ItemUseAnimation holdAnimation();
 
+    // The pose may come from the stack the same way the length does, for a declaration whose reading is described
+    // per definition rather than per hold.
+    default ItemUseAnimation holdAnimation(Provider registries, ItemStack stack) {
+        return this.holdAnimation();
+    }
+
     // The reader hears it from their own client's copy of the use component, the players around them from the
     // server.
     Holder<SoundEvent> holdSound();
+
+    default Holder<SoundEvent> holdSound(Provider registries, ItemStack stack) {
+        return this.holdSound();
+    }
 
     default boolean requiresHold() {
         return this.holdTicks() > NO_HOLD;
@@ -63,17 +74,23 @@ public interface HoldBinding extends ItemMatcher {
     // A pose outside ALLOWED_ANIMATIONS is refused, and so is a pose or sound on a declaration that asks for no
     // hold, because nothing would ever play it. The wording is generic: the calling module owns the field names.
     static DataResult<HoldBinding> validate(HoldBinding hold) {
-        if (!ALLOWED_ANIMATIONS.contains(hold.holdAnimation()))
-            return DataResult.error(() -> "hold animation " + hold.holdAnimation().getSerializedName()
+        return validate(hold.holdAnimation(), hold.holdSound(), hold.requiresHold()).map(ignored -> hold);
+    }
+
+    // The same rules for a definition that describes a hold without being one - the gesture itself is driven by a
+    // hold that reads the stack - so they exist in exactly one place.
+    static DataResult<Unit> validate(ItemUseAnimation animation, Holder<SoundEvent> sound, boolean requiresHold) {
+        if (!ALLOWED_ANIMATIONS.contains(animation))
+            return DataResult.error(() -> "hold animation " + animation.getSerializedName()
                     + " is not usable here, allowed values are " + ALLOWED_ANIMATIONS.stream()
                     .map(ItemUseAnimation::getSerializedName).toList());
-        if (hold.requiresHold()) return DataResult.success(hold);
-        if (hold.holdAnimation() != DEFAULT_HOLD_ANIMATION)
-            return DataResult.error(() -> "a hold animation on a declaration that asks for no hold would never be played: " + hold.holdAnimation().getSerializedName());
+        if (requiresHold) return DataResult.success(Unit.INSTANCE);
+        if (animation != DEFAULT_HOLD_ANIMATION)
+            return DataResult.error(() -> "a hold animation on a declaration that asks for no hold would never be played: " + animation.getSerializedName());
         // Compared by id rather than by holder: a file that writes the default sound out in full is asking for
         // nothing, exactly as writing the default animation is, and it must not be rejected for spelling it.
-        if (!HolderHelper.id(hold.holdSound()).equals(HolderHelper.id(DEFAULT_HOLD_SOUND)))
-            return DataResult.error(() -> "a hold sound on a declaration that asks for no hold would never be played: " + HolderHelper.id(hold.holdSound()));
-        return DataResult.success(hold);
+        if (!HolderHelper.id(sound).equals(HolderHelper.id(DEFAULT_HOLD_SOUND)))
+            return DataResult.error(() -> "a hold sound on a declaration that asks for no hold would never be played: " + HolderHelper.id(sound));
+        return DataResult.success(Unit.INSTANCE);
     }
 }

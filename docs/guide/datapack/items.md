@@ -2,7 +2,7 @@
 title: 物品绑定、品质与经济
 ---
 
-绑定表只匹配现有物品，不负责创建物品。`weapon_binding`、`pill_binding` 和 `technique_binding` 的字段互不混用；武器拥有伤害、攻击速度、属性和攻击/使用/Tick 行为。
+绑定表只匹配现有物品，不负责创建物品；`technique_binding` 是例外——它按**功法**匹配，手册的载体是堆上的 `mxt:technique` 组件（见[数据包格式](../../数据包格式.md)的该节，`carrier_item` 只决定本体替它生成哪件物品）。`weapon_binding`、`pill_binding` 的字段互不混用；武器拥有伤害、攻击速度、属性和攻击/使用/Tick 行为。
 
 ```json
 {

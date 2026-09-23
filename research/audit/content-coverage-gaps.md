@@ -90,7 +90,7 @@
 | 使用门槛失败时不消耗、并说明原因 | `ItemQualityService` 以 `HIGHEST` 取消 `RightClickItem`/`RightClickBlock`/`Attack`/`UseItemStart`/`UseItemTick` 并发具名原因（`runtime/item/ItemQualityService.java:44-87, 118-125`）——**这半条已经有了**，缺的是把它接到通用 `item_binding` 上 | 部分 ✅ |
 | 消耗耐久而不消耗本体（符笔、法宝） | `mxt:damage_item`（`data/action/builtin/item/DamageItemAction.java`）、`DurabilityCondition`、`RelativeDurabilityCondition` 都有 | ✅ |
 | 配方产物带组件（品质/变体/状态） | `SpiritRecipe.result` 是 `ItemStackTemplate`（`recipe/SpiritRecipe.java:21`）✅；但 `AlchemyRecipe.success_outputs` 是 `List<Identifier>`（`data/alchemy/AlchemyRecipe.java:23,34`）→ **炼丹产物不能带组件** | **A** |
-| 通用的"变体 / 档位 / 年份 / 外观"值 | `MxtDataComponents` 20 个组件（`registry/MxtDataComponents.java:28-47`）里**没有**任何一个通用档位值 | **B** |
+| 通用的"变体 / 档位 / 年份 / 外观"值 | `MxtDataComponents` 21 个组件（`registry/MxtDataComponents.java:29-49`）里**没有**任何一个通用档位值 | **B** |
 | 按 `ItemMatcher` 匹配的一串描述行（内容侧 501 行硬编码 tooltip） | 已有 7 个 tooltip 追加器，但全是 Java 实现、按子系统写死；`item_binding` **没有 `description` 字段** | **B** |
 
 ### 3.2 方块 419 行
@@ -384,7 +384,7 @@ element / item_aura / resource 六类。也就是说"炼丹完成"这句话从�
 
 ### 4.9 通用档位/变体值（一次解锁 5 条轴 / 82 族 / 235 行）
 
-`MxtDataComponents` 的 20 个组件里没有任何一个能表达"这是同一族的第 N 档"。
+`MxtDataComponents` 的 21 个组件里没有任何一个能表达"这是同一族的第 N 档"。
 内容侧需要它的是：`年份档`（44/105）、`等阶`（21/84）、`品相`（6/17）、
 `结果状态`（5/12）、`等级`（6/37）。
 

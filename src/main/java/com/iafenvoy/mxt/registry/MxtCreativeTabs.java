@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -25,5 +27,10 @@ public final class MxtCreativeTabs {
                     empty.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
                     output.accept(empty);
                 });
+                // One carrier per technique: what makes a manual is the stack's own component, so a technique
+                // nobody declared an item for still has to be obtainable.
+                HolderLookup.Provider registries = parameters.holders();
+                registries.lookupOrThrow(MxtResourceKeys.TECHNIQUE).listElements()
+                        .forEach(technique -> output.accept(ItemBindingService.techniqueCarrier(registries, technique)));
             }).build());
 }

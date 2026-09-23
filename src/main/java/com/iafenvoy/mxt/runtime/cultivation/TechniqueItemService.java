@@ -3,11 +3,8 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.Technique;
-import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
@@ -19,7 +16,6 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -35,6 +31,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import org.slf4j.Logger;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -80,11 +77,7 @@ public final class TechniqueItemService {
     // The whole wiring between the two modules, done once at construction: the hold module drives the gesture
     // and never learns what a technique is, and this module never touches the use cycle.
     public static void initialize() {
-        HoldLookup.register(registries -> MxtDatapackRegistries.holders(registries, MxtResourceKeys.TECHNIQUE_BINDING)
-                .map(Reference::value)
-                .filter(HoldBinding::requiresHold)
-                .map(HoldBinding.class::cast)
-                .toList());
+        HoldLookup.register(registries -> List.of(TechniqueHold.INSTANCE));
     }
 
     // A binding that asks for a hold answers false, so the click falls through to the hold module, which arms
@@ -100,13 +93,13 @@ public final class TechniqueItemService {
     public static void onUseTick(Tick event) {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
-        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueBinding binding)) return;
+        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueHold)) return;
         // Recorded for every entity, not just players: the audit drives a hold on a pig.
         int remaining = event.getDuration();
         HOLD_TIMING.merge(entity.getUUID(), HoldTiming.started(remaining),
                 (existing, added) -> existing.ticked(remaining));
         if (!(entity instanceof ServerPlayer player)) return;
-        int percent = HoldService.displayPercent(binding.learnTime(), remaining);
+        int percent = HoldService.displayPercent(learnTime(event.getItem()), remaining);
         if (LAST_PROGRESS.getOrDefault(player.getUUID(), -1) == percent) return;
         LAST_PROGRESS.put(player.getUUID(), percent);
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.holding", bar(percent), percent)
@@ -149,14 +142,19 @@ public final class TechniqueItemService {
         if (entity.level().isClientSide()) return;
         LAST_PROGRESS.remove(entity.getUUID());
         reportTiming(entity, "released early");
-        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueBinding binding)) return;
+        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueHold)) return;
         // The bar is left where it stopped otherwise, and an overlay message lingers for seconds after its
         // last update, so a cancelled read would keep showing a half-filled bar as if it were still going.
         if (entity instanceof ServerPlayer player) player.sendSystemMessage(Component.empty(), true);
-        // The binding's own duration rather than the stack's: the component that carried it was taken off when
-        // the read started, so asking the stack here would report a total of zero.
+        // The declaration's own duration rather than the stack's use state: the component carrying the cycle was
+        // taken off when the read started, so asking the stack here would report a total of zero.
         record(entity, "Released early with " + entity.getUseItemRemainingTicks() + " of "
-                + binding.learnTime() + " ticks left");
+                + learnTime(event.getItem()) + " ticks left");
+    }
+
+    // How long a read of this stack lasts, which the progress bar and the diagnostic both report.
+    private static int learnTime(ItemStack stack) {
+        return ItemBindingService.technique(stack).map(TechniqueBinding::learnTime).orElse(0);
     }
 
     // Wider than a player because {@link #record} keys any entity that reads, and the audit drives a hold on

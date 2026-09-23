@@ -53,7 +53,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 
 | 要改什么 | 去哪 |
 | --- | --- |
-| 对外 Java API（别的模组实现或调用的契约） | `src/main/java/com/iafenvoy/mxt/api/`——**只放接口**（外加 `package-info`）；实现留在各自模块，服务类暂不设代理，口径见 `research/34_对外API包设计.md` |
+| 对外 Java API（别的模组实现或调用的契约） | `src/main/java/com/iafenvoy/mxt/api/`——**只放接口**（外加 `package-info`）；实现留在各自模块，服务类暂不设代理（推迟项） |
 | 数据包定义（字段 / Codec / 加载期校验） | `src/main/java/com/iafenvoy/mxt/data/<模块>/` |
 | 动态注册表声明 | `registry/MxtDatapackRegistries.java` + `registry/MxtResourceKeys.java`（34 张表，原版 datapack registry） |
 | 固有分派类型（条件 / 行为 / 触发器 …） | `data/condition/builtin/`、`data/action/builtin/`、`registry/Mxt*Conditions.java`、`registry/Mxt*Actions.java` |

@@ -3,12 +3,15 @@ package com.iafenvoy.mxt.runtime.item;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.ItemBinding;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.PillService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -49,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Resolves datapack gameplay bindings for items already registered by Minecraft, a mod or KubeJS. No logical
@@ -127,14 +131,35 @@ public final class ItemBindingService {
                 .map(Reference::value), stack);
     }
 
+    // What a stack teaches is the stack's own component; the declaration only says how reading one feels, and a
+    // technique with no declaration is still read, with the defaults.
     public static Optional<TechniqueBinding> technique(ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.TECHNIQUE_BINDING)
-                .map(Reference::value), stack);
+        return technique(MxtDatapackRegistries.holders(MxtResourceKeys.TECHNIQUE_BINDING), stack);
     }
 
     public static Optional<TechniqueBinding> technique(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING)
-                .map(Reference::value), stack);
+        return technique(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING), stack);
+    }
+
+    // The carrier the mod offers for a technique: the item its declaration names, or the jade slip.
+    public static ItemStack techniqueCarrier(Provider access, Holder<Technique> technique) {
+        ItemStack stack = new ItemStack(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING)
+                .map(Reference::value)
+                .filter(binding -> HolderHelper.id(binding.technique()).equals(HolderHelper.id(technique)))
+                .findFirst()
+                .flatMap(TechniqueBinding::carrierItem)
+                .orElse(MxtItems.CULTIVATION_JADE_SLIP.get()));
+        stack.set(MxtDataComponents.TECHNIQUE.get(), technique);
+        return stack;
+    }
+
+    private static Optional<TechniqueBinding> technique(Stream<Reference<TechniqueBinding>> declarations, ItemStack stack) {
+        Holder<Technique> technique = stack.get(MxtDataComponents.TECHNIQUE.get());
+        if (technique == null) return Optional.empty();
+        return declarations.map(Reference::value)
+                .filter(binding -> HolderHelper.id(binding.technique()).equals(HolderHelper.id(technique)))
+                .findFirst()
+                .or(() -> Optional.of(TechniqueBinding.defaults(technique)));
     }
 
     public static ResolvedBindings resolve(ItemStack stack) {

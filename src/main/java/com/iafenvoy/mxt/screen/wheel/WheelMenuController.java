@@ -56,6 +56,9 @@ public final class WheelMenuController {
         // A wheel with nothing anywhere is not opened - there would be nothing to point at - and says so instead.
         // The test spans every page, because an empty first page must not hide the rest.
         if (WheelMenuContent.hasAnyEntry(WheelSelectionState.pages())) {
+            // Never open with nothing armed: a player who has not chosen anything lands on the first cell that
+            // holds something, which is the cell the HUD grid then frames.
+            WheelSelectionState.selectDefault();
             WheelMenuScreen screen = new WheelMenuScreen();
             open = screen;
             minecraft.setScreen(screen);
@@ -123,12 +126,24 @@ public final class WheelMenuController {
         lastNextDown = next;
         // Both at once is a tie, and neither decides nothing; only one of them moves the page.
         if (!live || back == forward) return;
-        WheelSelectionState.stepPage(back ? -1 : 1);
+        stepPage(back ? -1 : 1);
+    }
+
+    // One place for a page turn: the two keys and the scroll wheel share it, so they cannot drift in what they
+    // announce. Asked from the screen as well, hence the fresh read of the client.
+    static void stepPage(int step) {
+        Minecraft minecraft = Minecraft.getInstance();
+        WheelSelectionState.stepPage(step, MxtClientConfig.INSTANCE.wheel.wrapPages.getValue());
         // Re-resolved right away: the HUD grid draws this tick, and the ring would otherwise show the old page.
         WheelSelectionState.refresh(minecraft.player);
         notice(Component.translatable("actionbar.mxt.wheel.page",
                 WheelSelectionState.page() + 1, WheelSelectionState.pages().size(),
                 WheelSelectionState.pageSource().displayName()));
+    }
+
+    // The wheel is the one screen where the player is already holding the mouse, so scrolling turns its pages.
+    static boolean scrollTurnsPages() {
+        return MxtClientConfig.INSTANCE.wheel.scrollSwitch.getValue();
     }
 
     // Each slot key arms its own cell of the page that is up and spends it in the same breath, so one key does
@@ -170,11 +185,9 @@ public final class WheelMenuController {
             selection.entry().onSelected(selection);
             return;
         }
-        // Only "nothing was ever picked" is worth an answer: a cell that was picked and no longer holds anything
-        // (empty, deleted, un-granted) is a normal state, and the wheel grid already draws it as empty.
-        if (WheelSelectionState.number() < 0)
-            notice(Component.translatable("actionbar.mxt.wheel.no_selection",
-                    MxtKeyMappings.WHEEL.get().getTranslatedKeyMessage()));
+        // Only an empty wheel has no target: a choice whose cell no longer holds anything has already fallen back
+        // to the first cell that does, so "nothing has been chosen yet" is not a state the wheel can be in.
+        notice(Component.translatable("actionbar.mxt.wheel.empty"));
     }
 
     // Client-side on purpose: feedback about the local player's own HUD - the server never hears about a key that

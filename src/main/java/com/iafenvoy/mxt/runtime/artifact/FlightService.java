@@ -41,6 +41,9 @@ public final class FlightService {
         FlyingSwordEntity sword = new FlyingSwordEntity(MxtEntityTypes.FLYING_SWORD.get(), player.level());
         sword.setPos(player.getX(), player.getY(), player.getZ());
         sword.setFlightSpeed(speed);
+        // The vehicle is drawn as the artifact that summoned it, so the mount's look is the item's own model. The
+        // copy matters: the vehicle keeps what it is handed, and the main-hand stack is mutated elsewhere.
+        sword.setVisual(artifact.copy());
         player.level().addFreshEntity(sword);
         if (!player.startRiding(sword, true, true)) {
             sword.discard();

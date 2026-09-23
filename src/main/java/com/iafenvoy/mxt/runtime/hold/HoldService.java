@@ -62,7 +62,7 @@ public final class HoldService {
         if (!hold.claims(entity, registries, stack)) return;
         // An item that declares its own use keeps it. Nothing is armed here, which also means nothing is taken
         // off it later: the hold module only ever takes back the component it wrote itself.
-        if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, hold)) return;
+        if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, registries, hold)) return;
         // The reader's copy is the one that makes the sound, so it carries the declaration's own; the server's
         // copy only has to answer "how long" and "which pose" before it is taken off again, so it stays quiet.
         if (entity.level().isClientSide()) arm(registries, entity, stack, hold);
@@ -77,7 +77,7 @@ public final class HoldService {
         if (event.getEntity().level().isClientSide()) return;
         ItemStack stack = event.getItem();
         HoldBinding hold = HoldLookup.hold(stack);
-        if (hold == null || !ours(stack, hold)) return;
+        if (hold == null || !ours(stack, event.getEntity().level().registryAccess(), hold)) return;
         stack.remove(DataComponents.CONSUMABLE);
     }
 
@@ -108,7 +108,7 @@ public final class HoldService {
     // subclass. This is the reader's copy, so it carries the declaration's own sound - the reader's client is the
     // one place that can be relied on to hear it.
     public static void arm(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold) {
-        arm(registries, holder, stack, hold, hold.holdSound());
+        arm(registries, holder, stack, hold, hold.holdSound(registries, stack));
     }
 
     // The server's copy only has to answer the duration and the pose; the sound for everyone else is played by the
@@ -120,25 +120,25 @@ public final class HoldService {
     private static void arm(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold, Holder<SoundEvent> sound) {
         // The same refusal the click path makes, so the one writer in this class cannot take an item's own use
         // away from it.
-        if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, hold)) return;
-        stack.set(DataComponents.CONSUMABLE, consumable(hold, sound, hold.holdTicks(holder, registries, stack)));
+        if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, registries, hold)) return;
+        stack.set(DataComponents.CONSUMABLE, consumable(hold, registries, stack, sound, hold.holdTicks(holder, registries, stack)));
     }
 
-    private static Consumable consumable(HoldBinding hold, Holder<SoundEvent> sound, int ticks) {
+    private static Consumable consumable(HoldBinding hold, Provider registries, ItemStack stack, Holder<SoundEvent> sound, int ticks) {
         // The particle flag is off because the component's own emitter also throws item particles, which none of
         // the poses want.
-        return new Consumable(consumeSeconds(ticks), hold.holdAnimation(), sound, false, List.of());
+        return new Consumable(consumeSeconds(ticks), hold.holdAnimation(registries, stack), sound, false, List.of());
     }
 
     // An item's own component - food, a potion - is not ours, and is left exactly as found: reading it is what
     // distinguishes the two, since nothing on the stack records who wrote it. The duration is deliberately not
     // compared: a declaration may size the component from the stack, whose count can change mid-read.
-    private static boolean ours(ItemStack stack, HoldBinding hold) {
+    private static boolean ours(ItemStack stack, Provider registries, HoldBinding hold) {
         Consumable component = stack.get(DataComponents.CONSUMABLE);
         if (component == null) return false;
         return !component.hasConsumeParticles() && component.onConsumeEffects().isEmpty()
-                && component.animation() == hold.holdAnimation()
-                && (component.sound().value() == SILENT_SOUND.value() || component.sound().value() == hold.holdSound().value());
+                && component.animation() == hold.holdAnimation(registries, stack)
+                && (component.sound().value() == SILENT_SOUND.value() || component.sound().value() == hold.holdSound(registries, stack).value());
     }
 
     // The component counts in seconds and truncates back to ticks, so a plain division lands a tick short on some
@@ -160,9 +160,10 @@ public final class HoldService {
     // copy never has one, so vanilla's own predicate is asked and the play is made here. The reader is left out on
     // purpose: their client plays the same sound off their own copy. Returns whether it played.
     public static boolean playHoldSound(LivingEntity entity, HoldBinding hold, ItemStack stack, int remaining) {
-        Holder<SoundEvent> sound = hold.holdSound();
-        int ticks = hold.holdTicks(entity, entity.level().registryAccess(), stack);
-        Consumable emitter = consumable(hold, sound, ticks);
+        Provider registries = entity.level().registryAccess();
+        Holder<SoundEvent> sound = hold.holdSound(registries, stack);
+        int ticks = hold.holdTicks(entity, registries, stack);
+        Consumable emitter = consumable(hold, registries, stack, sound, ticks);
         if (!emitter.shouldEmitParticlesAndSounds(remaining)) return false;
         entity.level().playSound(entity instanceof Player reader ? reader : null,
                 entity.getX(), entity.getY(), entity.getZ(), sound.value(), entity.getSoundSource(),

@@ -78,12 +78,14 @@ public final class WheelMenuContent {
         return false;
     }
 
-    // A number that addresses nothing - its page is gone, or the page holds fewer cells than it used to -
-    // resolves to the last cell that does hold something, so a stored place keeps working; the number stays.
+    // The cell a stored number stands for now. Nothing chosen yet, or a cell that no longer holds anything, falls
+    // back to the first cell that does - an empty wheel is the only case that answers NONE, which is the check
+    // every caller has to keep - while a number whose page is gone keeps the older rule of landing on the last
+    // cell that holds something.
     public static int effective(List<WheelPage> pages, int number) {
-        if (number < 0) return NONE;
+        if (number < 0) return firstHeld(pages);
         if (!exists(pages, number)) return lastHeld(pages);
-        return entry(pages, number) == null ? NONE : number;
+        return entry(pages, number) == null ? firstHeld(pages) : number;
     }
 
     // Whether the number addresses a cell that exists, which is not the same as one that holds anything.
@@ -97,6 +99,17 @@ public final class WheelMenuContent {
         for (int page = pages.size() - 1; page >= 0; page--) {
             WheelPage current = pages.get(page);
             for (int sector = Math.min(current.shown(), current.sectors().size()) - 1; sector >= 0; sector--)
+                if (current.sectors().get(sector) != null) return page * SECTORS + sector;
+        }
+        return NONE;
+    }
+
+    // The first cell that holds anything, which is what a wheel with nothing chosen falls back to. Empty when the
+    // wheel holds nothing at all - the one case with no target to fall back to.
+    public static int firstHeld(List<WheelPage> pages) {
+        for (int page = 0; page < pages.size(); page++) {
+            WheelPage current = pages.get(page);
+            for (int sector = 0; sector < Math.min(current.shown(), current.sectors().size()); sector++)
                 if (current.sectors().get(sector) != null) return page * SECTORS + sector;
         }
         return NONE;

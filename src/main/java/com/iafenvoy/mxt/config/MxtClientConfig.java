@@ -104,6 +104,17 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
                 .tooltip("config.mxt.client.wheel.mode.tooltip")
                 .nameProvider(value -> Component.translatable("config.mxt.client.wheel.mode." + value.name().toLowerCase()))
                 .build();
+        // On by default: every page looks the same on the ring, and the wheel is the one screen where the mouse is
+        // already in hand.
+        public final BooleanEntry scrollSwitch = BooleanEntry.builder("config.mxt.client.wheel.scroll_switch", true)
+                .key("scroll_switch")
+                .tooltip("config.mxt.client.wheel.scroll_switch.tooltip")
+                .build();
+        // Wrapping is what the wheel has always done, so it stays the default; off parks the page at either end.
+        public final BooleanEntry wrapPages = BooleanEntry.builder("config.mxt.client.wheel.wrap_pages", true)
+                .key("wrap_pages")
+                .tooltip("config.mxt.client.wheel.wrap_pages.tooltip")
+                .build();
 
         private Wheel() {
             super("wheel", "config.mxt.client.wheel");

@@ -11,11 +11,11 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.RealmTokenComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
-import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
@@ -43,6 +43,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -65,7 +66,6 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.ITEM_BINDING, ItemBinding::entries);
         registerMatcher(MxtResourceKeys.WEAPON_BINDING, WeaponBinding::entries);
         registerMatcher(MxtResourceKeys.PILL_BINDING, PillBinding::entries);
-        registerMatcher(MxtResourceKeys.TECHNIQUE_BINDING, TechniqueBinding::entries);
         registerMatcher(MxtResourceKeys.ARTIFACT, Artifact::entries);
 
         // Definitions carried by a dedicated item: written onto the stack, and the definition's own name wins.
@@ -85,6 +85,9 @@ public final class ItemPickerManager {
                 componentStack(new ItemStack(MxtItems.TALISMAN.get()), MxtDataComponents.TALISMAN,
                         new TalismanComponent(List.of(holder), TriggerMode.FIRE)),
                 holder));
+        // A technique has no item of its own: the row is the carrier the mod generates for it, which is the item
+        // the declaration names or the jade slip.
+        registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
 
         // Auras have no item of their own, so one stand-in item carries whatever the definition is called.
         registerSingle(MxtResourceKeys.AURA, holder -> described(new ItemStack(MxtItems.SPIRIT_STONE.get()), holder));
@@ -138,10 +141,20 @@ public final class ItemPickerManager {
     }
 
     public static <T> void registerSingle(ResourceKey<Registry<T>> key, Function<Holder<T>, PickerItem> provider) {
-        register(key, holder -> List.of(provider.apply(holder)));
+        register(key, (holder, access) -> List.of(provider.apply(holder)));
+    }
+
+    // The provider is what a row needs when it has to resolve a second registry - a technique's carrier item is
+    // named by its declaration, and only the registries know which item that is.
+    public static <T> void registerSingle(ResourceKey<Registry<T>> key, BiFunction<Holder<T>, Provider, PickerItem> provider) {
+        register(key, (holder, access) -> List.of(provider.apply(holder, access)));
     }
 
     public static <T> void register(ResourceKey<Registry<T>> key, Function<Holder<T>, List<PickerItem>> provider) {
+        PROVIDERS.add(new ItemProvider<>(key, (holder, access) -> provider.apply(holder)));
+    }
+
+    public static <T> void register(ResourceKey<Registry<T>> key, BiFunction<Holder<T>, Provider, List<PickerItem>> provider) {
         PROVIDERS.add(new ItemProvider<>(key, provider));
     }
 
@@ -191,11 +204,11 @@ public final class ItemPickerManager {
         return null;
     }
 
-    public record ItemProvider<T>(ResourceKey<Registry<T>> key, Function<Holder<T>, List<PickerItem>> items) {
+    public record ItemProvider<T>(ResourceKey<Registry<T>> key, BiFunction<Holder<T>, Provider, List<PickerItem>> items) {
         private List<PickerItem> collectItems(Provider provider) {
             List<PickerItem> collected = new ArrayList<>();
             provider.lookup(this.key).stream().flatMap(HolderLookup::listElements).forEach(holder -> {
-                for (PickerItem item : this.items.apply(holder)) {
+                for (PickerItem item : this.items.apply(holder, provider)) {
                     if (item == null || item.stack().isEmpty()) continue;
                     collected.add(item);
                 }

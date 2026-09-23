@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.render.DisplayStandBlockEntityRenderer;
+import com.iafenvoy.mxt.render.FlyingSwordRenderer;
 import com.iafenvoy.mxt.render.RiftBlockEntityRenderer;
 import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
@@ -27,7 +28,7 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 public final class MxtRenderers {
     @SubscribeEvent
     public static void registerRenderers(RegisterRenderers event) {
-        event.registerEntityRenderer(MxtEntityTypes.FLYING_SWORD.get(), NoopRenderer::new);
+        event.registerEntityRenderer(MxtEntityTypes.FLYING_SWORD.get(), FlyingSwordRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SPIRIT_BURST.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.COLORED_LIGHTNING.get(), ColoredLightningBoltRenderer::new);

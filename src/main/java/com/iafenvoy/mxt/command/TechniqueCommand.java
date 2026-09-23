@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -97,7 +98,7 @@ public final class TechniqueCommand {
                 cooldown ? "YES" : "no"), false);
 
         // What the hold module resolves on this side: empty here means no hold can start whatever the pack says.
-        boolean recognised = HoldLookup.hold(stack) instanceof TechniqueBinding;
+        boolean recognised = HoldLookup.hold(stack) instanceof TechniqueHold;
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.hold",
                 recognised ? "YES" : "no"), false);
 
