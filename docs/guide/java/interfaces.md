@@ -34,7 +34,7 @@ title: 特殊公开接口
 
 ### `Cost`
 
-技能、阵法和其他行为的消耗抽象，提供面向 `Player` 的检查和实际消耗方法。新增 Cost 类型应使用固有注册表分派，而不是在 JSON 中写 Java 类名。
+技能、阵法和其他行为的消耗抽象。一个 `Cost` 只回答"这一项要扣什么"（`charge(CostContext)`，求值加通道检查，只读），实际校验与扣除由 `CostTransaction` 用同一份计划完成：`plan` 逐项求值与查通道，`commit` 按通道写入，中途任何一项拒付就把已经写下的还原。所有消耗字段都是它的数组（格式见 [`Cost`](../../数据包格式.md#cost)）。新增 Cost 类型应使用固有注册表分派（`mxt:cost_type`），而不是在 JSON 中写 Java 类名；付款者与通道由调用点提供（`CostContext`），数据包只写"要什么"。包内分工：`data/cost` 根放契约与交易器（`Cost`、`Charge`、`Costs`、`CostTransaction`、`ItemCostDraft`），四种固有类型在 `data/cost/builtin/`（对应注册在 `registry/MxtCosts` 的 `mxt:resource` / `mxt:aura` / `mxt:item` / `mxt:js`），付款上下文与它的枚举在 `data/cost/context/`（`CostContext`、`CostChannel`、`CostFailure`、`CostOrigin`）。
 
 ### `WheelMenuEntry`
 

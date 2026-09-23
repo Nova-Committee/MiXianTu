@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;

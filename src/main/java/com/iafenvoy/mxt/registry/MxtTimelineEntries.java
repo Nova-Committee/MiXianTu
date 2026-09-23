@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.timeline.ActionEntry;
-import com.iafenvoy.mxt.data.timeline.IdleEntry;
 import com.iafenvoy.mxt.data.timeline.TimelineEntry;
-import com.iafenvoy.mxt.data.timeline.WaitForEntry;
+import com.iafenvoy.mxt.data.timeline.builtin.ActionEntry;
+import com.iafenvoy.mxt.data.timeline.builtin.IdleEntry;
+import com.iafenvoy.mxt.data.timeline.builtin.WaitForEntry;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

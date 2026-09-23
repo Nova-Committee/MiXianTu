@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction;
-import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction.Shape;
+import com.iafenvoy.mxt.data.formation.builtin.RangeDisplayFormationAction;
+import com.iafenvoy.mxt.data.formation.builtin.RangeDisplayFormationAction.Shape;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;

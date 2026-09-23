@@ -3,9 +3,11 @@ package com.iafenvoy.mxt.runtime.artifact;
 import com.iafenvoy.mxt.attachment.FlightAttachment;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -77,14 +79,9 @@ public final class FlightService {
         if (!Double.isFinite(speed) || speed <= 0.0D) return dismount(player, Failure.INVALID_FORMULA);
         sword.setFlightSpeed(speed);
         if (sword.horizontalCollision || sword.verticalCollision) return dismount(player, Failure.COLLISION);
-        ResourceTransactions.Result payment;
-        try {
-            payment = ResourceTransactions.tryConsume(player, player.getData(MxtAttachments.RESOURCE_HOLDER),
-                    ResourceTransactions.evaluate(player, flight.costs(), context));
-        } catch (IllegalArgumentException exception) {
-            return dismount(player, Failure.INVALID_FORMULA);
-        }
-        if (!flight.costs().isEmpty() && !payment.committed())
+        CostTransaction.PayResult payment = CostTransaction.pay(flight.costs(),
+                CostContext.of(player, context, CostOrigin.ARTIFACT_FLIGHT));
+        if (!flight.costs().isEmpty() && !payment.paid())
             return dismount(player, Failure.INSUFFICIENT_RESOURCE);
         return Result.flying();
     }

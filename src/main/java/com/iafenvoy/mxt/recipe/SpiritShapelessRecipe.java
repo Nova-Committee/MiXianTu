@@ -1,13 +1,10 @@
 package com.iafenvoy.mxt.recipe;
 
-import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -22,15 +19,14 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 // Completion also consumes stored aura; matching is a backtracking search, not per-slot equality.
 public record SpiritShapelessRecipe(List<Ingredient> ingredients, ItemStackTemplate result,
-                                    Map<Holder<Aura>, NumberProvider> aura) implements SpiritRecipe {
+                                    List<Cost> aura) implements SpiritRecipe {
     public static final MapCodec<SpiritShapelessRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ingredient.CODEC.listOf(1, 9).fieldOf("ingredients").forGetter(SpiritShapelessRecipe::ingredients),
             ItemStackTemplate.CODEC.fieldOf("result").forGetter(SpiritShapelessRecipe::result),
-            CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).fieldOf("aura").forGetter(SpiritShapelessRecipe::aura)
+            AURA_CODEC.fieldOf("aura").forGetter(SpiritShapelessRecipe::aura)
     ).apply(i, SpiritShapelessRecipe::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, SpiritShapelessRecipe> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 

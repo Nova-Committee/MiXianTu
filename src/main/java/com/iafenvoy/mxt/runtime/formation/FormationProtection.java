@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig.ClaimLinkage;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
-import com.iafenvoy.mxt.data.formation.ProtectionFormationAction;
+import com.iafenvoy.mxt.data.formation.builtin.ProtectionFormationAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;

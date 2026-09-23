@@ -45,6 +45,7 @@
 | `36_子境界设计.md` | `realm_stage` 的 `minor_stages`：子境界名列表只喂信息面板显示与公式变量 `minor_stage`，按本境界 `breakthrough_exp` 均分；含"凡人读 `NaN`"与"超阈值停在最后一重"两个口径取舍 | 已落地（2026-09-23；同日改成"组件数组或整数"，见文首修订与 `37`） |
 | `37_名字与描述自动填充设计.md` | 定义文本字段的自动填充：`ContextNameCodec` / `ContextNameListCodec`（原 `NameMapCodec`，2026-09-23 拆成两个）+ `RegistryOps` 携带当前条目 id（`RegistryLoadTask$PendingRegistration` 两处注入），`item_quality` 的 `display_name`→`name` 与新增 `description`、`Modifier.description` 改为可选、`minor_stages` 改成组件数组或整数；"两套名字键"已被 `38` 作废 | 已落地（2026-09-23；§3、§6 由 `38` 修订） |
 | `38_定义文本字段全量应用.md` | 把这套字段应用到 18 张注册表，并把 id 派生键统一成生成键那一条四段式（`<类别>.mxt.<命名空间>.<路径>`，破坏性迁移）；`api/NamedDefinition` 让显示路径直接读字段；`RecordCodecBuilder.group` 的 16 组件上限用 `MiscCodecs.pair` 绕开 | 已落地（2026-09-23） |
+| `39_全局消耗定义设计.md` | **使用消耗**（技能 / 突破 / 修炼 / 阵法 / 锻造 / 法器维护 / 飞行 / 灵气合成，共 11 个字段）的三套形状收编成一个元素形状（`mxt:resource` / `mxt:aura` / `mxt:item` / `mxt:js` + 简写）：付款者是 `LivingEntity`（不是 `Player`）＋支付通道、`charge` 一个方法 + `CostTransaction` 的 `plan`/`commit`、整组原子（草稿优先、回退兜底）；文首 §0 标明**货币（`currency` 的 `cost`、`value_multiplier`）与本稿无关**，§13 是落地记录（含第二轮把两处灵气 map 并进 `Cost` 的结果） | 已落地（2026-09-23；只编译，探针未实跑） |
 
 ### C. 玩法模块
 
@@ -127,7 +128,7 @@
 
 | 内容 | 位置 | 命名 |
 | --- | --- | --- |
-| 设计稿 / 方案 / 改版 | 本目录根下 | `NN_<主题>设计.md`，`NN` 取当前最大编号加一（现到 `37_名字与描述自动填充设计.md`，下一个是 `38_`） |
+| 设计稿 / 方案 / 改版 | 本目录根下 | `NN_<主题>设计.md`，`NN` 取当前最大编号加一（现到 `39_全局消耗定义设计.md`，下一个是 `40_`） |
 | 实现说明（已经落地的机制怎么跑） | 本目录根下 | `<模块>实现.md`（如 `裂缝渲染实现.md`；`方块灵气实现.md` 沿用这个名字，内容是提案留档） |
 | 审计与差距清单 | `audit/` | 按模块或主题命名（`content-coverage-gaps.md`、`technique.md`…） |
 | 测试设定参考 | `测试设定参考/` | 场景矩阵、常见设定与来源记录 |

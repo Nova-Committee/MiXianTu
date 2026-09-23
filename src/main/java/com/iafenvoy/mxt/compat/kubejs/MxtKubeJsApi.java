@@ -4,12 +4,15 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -18,17 +21,16 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -424,16 +426,11 @@ public final class MxtKubeJsApi {
     /**
      * The same all-or-nothing resource transaction abilities and other server systems use.
      */
-    public static Result tryConsumeResources(Entity entity, List<ResourceCost> costs, FormulaContext context) {
-        if (entity == null || entity.level().isClientSide())
+    public static Result tryConsumeResources(Entity entity, List<Cost> costs, FormulaContext context) {
+        if (!(entity instanceof LivingEntity payer) || entity.level().isClientSide())
             return new Result(false, null, Map.of());
-        try {
-            return ResourceTransactions.tryConsume(entity instanceof LivingEntity living ? living : null,
-                    entity.getData(MxtAttachments.RESOURCE_HOLDER),
-                    ResourceTransactions.evaluate(costs, context));
-        } catch (IllegalArgumentException exception) {
-            return new Result(false, null, Map.of());
-        }
+        CostTransaction.PayResult payment = CostTransaction.pay(costs, CostContext.of(payer, context, CostOrigin.SCRIPT));
+        return new Result(payment.paid(), payment.paid() ? null : payment.failedResource(), payment.resources());
     }
 
     public static AuraResult aura(Level level, BlockPos position) {

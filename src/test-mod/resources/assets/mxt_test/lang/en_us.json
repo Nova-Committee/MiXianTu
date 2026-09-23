@@ -124,6 +124,8 @@
   "command.mxt_test.verify.minor_stage_failed": "Minor-stage check failed: %s",
   "command.mxt_test.verify.names_ok": "Generated names and descriptions match the entry ids.",
   "command.mxt_test.verify.names_failed": "Generated name check failed: %s",
+  "command.mxt_test.verify.cost_ok": "Unified costs: a resource and an aura in one array add up, an unpayable entry takes nothing, and a missing channel or a bad number is reported as itself.",
+  "command.mxt_test.verify.cost_failed": "Cost check failed: %s",
   "command.mxt_test.guide.1": "Qingxiao Trial: 1. Run /mxt_test kit to receive the identity, resources, and tools.",
   "command.mxt_test.guide.2": "2. Hold a Qingxiao Spirit Crystal and run /mxt_test cultivate. Then use /mxt breakthrough mxt_test:qi to test advancement.",
   "command.mxt_test.guide.3": "3. Use the formation plate on a gold block, bind a wolf with the contract scroll, and enter the End trial using the realm token.",

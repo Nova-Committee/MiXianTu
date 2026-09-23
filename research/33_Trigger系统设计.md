@@ -297,6 +297,8 @@ quest_completed。需要跨重启的扩展应保存自己的业务状态，并�
 
 `TriggerSignals` 集中保存本模组内置信号的稳定 `Identifier`，事件桥不得再用散落的字符串拼接信号 ID。外部模块可以直接传入带命名空间的自定义 ID。
 
+> **2026-09-23 实际落地与上面这棵树有出入**（把固有类型收进 `builtin/`）：信号型触发器是 `Trigger` 内嵌的 `Builtin` 记录，由 `MxtTriggers` 按信号名注册，原计划里「一个信号一个 `XxxTrigger` 类」没有单独存在；`data/trigger/builtin/` 里只有 `JsTrigger`、`VanillaTrigger` 与它的两个辅助类（`VanillaTriggerMatchers`、`VanillaTriggerSupport`），`TriggerContext` / `TriggerPayload` / `TriggerRule` / `TriggerSignal` / `TriggerSignals` 留在 `data/trigger/` 根包。`runtime/trigger/` 与这里列的一致（另多出 `TriggerPublishing`、`TriggerRuleService`、`VanillaTriggerBridge`、`VanillaTriggerPollBridge`、`CultivationTriggerService`）。
+
 ## 当前项目的迁移建议
 
 1. `AbilityEventBridge` 通过 `TriggerSignal` 发布事件，技能订阅由新的 Dispatcher 处理。

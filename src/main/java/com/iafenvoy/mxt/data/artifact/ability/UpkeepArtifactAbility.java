@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.artifact.ability;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -16,11 +16,11 @@ import java.util.List;
  * price falls on every tick whose game time is a multiple of it and no per-stack counter is needed. Nothing is
  * consumed partially: a tick either pays every price or pays none and runs {@code on_fail} (default no-op).
  */
-public record UpkeepArtifactAbility(List<ResourceCost> costs, NumberProvider interval, ItemAction onFail,
+public record UpkeepArtifactAbility(List<Cost> costs, NumberProvider interval, ItemAction onFail,
                                     boolean ownerOnly) implements ArtifactAbility {
     public static final double DEFAULT_INTERVAL = 20.0D;
     public static final MapCodec<UpkeepArtifactAbility> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(UpkeepArtifactAbility::costs),
+            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(UpkeepArtifactAbility::costs),
             NumberProvider.CODEC.optionalFieldOf("interval", new Constant(DEFAULT_INTERVAL)).forGetter(UpkeepArtifactAbility::interval),
             ItemAction.optionalCodec("on_fail").forGetter(UpkeepArtifactAbility::onFail),
             Codec.BOOL.optionalFieldOf("owner_only", true).forGetter(UpkeepArtifactAbility::ownerOnly)

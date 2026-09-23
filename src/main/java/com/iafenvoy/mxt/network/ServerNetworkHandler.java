@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.network;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
+import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -11,7 +12,6 @@ import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
-import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;

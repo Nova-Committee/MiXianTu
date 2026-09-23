@@ -1,13 +1,9 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.attachment.SecretRealmTravelAttachment;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
-import com.iafenvoy.mxt.event.SecretRealmEvent.Create;
-import com.iafenvoy.mxt.event.SecretRealmEvent.Destroy;
-import com.iafenvoy.mxt.event.SecretRealmEvent.EnterPost;
-import com.iafenvoy.mxt.event.SecretRealmEvent.EnterPre;
-import com.iafenvoy.mxt.event.SecretRealmEvent.Exit;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
+import com.iafenvoy.mxt.event.SecretRealmEvent.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -27,11 +23,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Authoritative secret realm membership and cross-dimension travel.

@@ -35,16 +35,14 @@ public final class MxtJsCostCallbacks {
         }
     }
 
-    public static void consume(String id, Player player, JsonObject params) {
+    public static boolean consume(String id, Player player, JsonObject params) {
         TriConsumer<Player, JsonObject, FormulaContext> callback = CONSUME.get(id);
-        if (callback == null) {
-            unknown(id);
-            return;
-        }
+        if (callback == null) return unknown(id);
         try {
             callback.accept(player, params, FormulaContext.of(player));
+            return true;
         } catch (Exception exception) {
-            failed(id, exception);
+            return failed(id, exception);
         }
     }
 

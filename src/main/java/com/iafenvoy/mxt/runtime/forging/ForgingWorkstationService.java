@@ -1,11 +1,9 @@
 package com.iafenvoy.mxt.runtime.forging;
 
-import com.iafenvoy.mxt.data.forging.BlueprintBinding;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.forging.*;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint.FailureSettlement;
-import com.iafenvoy.mxt.data.forging.ForgingMaterial;
-import com.iafenvoy.mxt.data.forging.ForgingMethod;
-import com.iafenvoy.mxt.data.forging.ToolBinding;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -13,8 +11,6 @@ import com.iafenvoy.mxt.runtime.forging.ForgingService.Failure;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.FinishResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -27,12 +23,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Authoritative forge-table transaction boundary - material matching, tool/blueprint gating, the shared

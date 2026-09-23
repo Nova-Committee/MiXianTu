@@ -1,15 +1,10 @@
 package com.iafenvoy.mxt.data.artifact;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
-import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.ToggableArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.artifact.ability.*;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
@@ -22,7 +17,6 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -32,11 +26,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * The rules of one artifact, shared by every item {@code items} opts into them. There is no field naming a

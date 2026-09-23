@@ -1,18 +1,15 @@
 package com.iafenvoy.mxt.runtime.resource;
 
-import com.iafenvoy.mxt.data.resource.ResourceCost;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * Server-authoritative mutable resource balances with atomic multi-cost payment.
+ * Server-authoritative mutable resource balances with atomic multi-cost payment. Amounts arrive evaluated, so a
+ * caller that holds a costs array plans it with {@code CostTransaction} and hands the result here.
  */
 public final class ResourceLedger {
     private final Map<Identifier, Double> balances = new LinkedHashMap<>();
@@ -30,15 +27,14 @@ public final class ResourceLedger {
         this.set(id, this.get(id) + value);
     }
 
-    public synchronized TransactionResult tryConsume(List<ResourceCost> costs, FormulaContext context) {
-        Evaluation evaluated = ResourceTransactions.evaluate(costs, context);
-        for (Entry<Identifier, Double> entry : evaluated.amounts().entrySet()) {
+    public synchronized TransactionResult tryConsume(Map<Identifier, Double> amounts) {
+        for (Entry<Identifier, Double> entry : amounts.entrySet()) {
             if (this.get(entry.getKey()) < entry.getValue()) {
-                return TransactionResult.rejected(entry.getKey(), evaluated.amounts());
+                return TransactionResult.rejected(entry.getKey(), amounts);
             }
         }
-        evaluated.amounts().forEach((id, amount) -> this.balances.put(id, this.get(id) - amount));
-        return TransactionResult.committed(evaluated.amounts());
+        amounts.forEach((id, amount) -> this.balances.put(id, this.get(id) - amount));
+        return TransactionResult.committed(amounts);
     }
 
     public synchronized Map<Identifier, Double> snapshot() {

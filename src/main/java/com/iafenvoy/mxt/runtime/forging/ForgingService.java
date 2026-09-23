@@ -3,17 +3,17 @@ package com.iafenvoy.mxt.runtime.forging;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
@@ -60,18 +60,15 @@ public final class ForgingService {
         StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
         Failure refusal = postEvent(event);
         if (refusal != null) return StrikeResult.rejected(refusal, null);
-        Evaluation costs;
-        try {
-            costs = ResourceTransactions.evaluate(event.costs(), context);
-        } catch (IllegalArgumentException exception) {
-            return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
-        }
-        Result payment = ResourceTransactions.tryConsume(resources, costs);
-        if (!payment.committed()) return StrikeResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
+        CostTransaction.Planning plan = CostTransaction.plan(event.costs(), costContext, resources, null);
+        if (!plan.ok()) return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
+        CostTransaction.PayResult payment = CostTransaction.commit(plan, costContext, resources);
+        if (!payment.paid()) return StrikeResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         if (!session.strike(methodId))
             throw new IllegalStateException("Forging session changed after its strike precheck");
         notifyListeners(new StrikePost(player, surface.pos(), new ForgingSessionView(session)));
-        return StrikeResult.struck(session.value(), session.steps(), payment.amounts());
+        return StrikeResult.struck(session.value(), session.steps(), payment.resources());
     }
 
     public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session) {

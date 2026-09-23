@@ -1,18 +1,14 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Flat;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Stem;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Template;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
-import net.minecraft.core.Holder;
+import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.HolderGetter;
-import net.minecraft.core.HolderSet;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -34,11 +30,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**

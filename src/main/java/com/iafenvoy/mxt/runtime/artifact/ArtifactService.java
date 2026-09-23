@@ -5,10 +5,10 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
+import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
-import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -36,13 +36,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Ownership, aura and resolution for artifact ItemStacks. Everything reads the registries the caller hands in

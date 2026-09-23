@@ -1,12 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.EmptyArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
+import com.iafenvoy.mxt.data.artifact.ability.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

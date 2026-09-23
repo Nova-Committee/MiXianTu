@@ -1,6 +1,10 @@
 package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
@@ -9,7 +13,6 @@ import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.server.level.ServerLevel;
@@ -27,6 +30,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import org.jspecify.annotations.NonNull;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -181,10 +185,13 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         return new RecipeMatch(recipe, this.costs(recipe.aura()));
     }
 
-    private Map<Holder<Aura>, Integer> costs(Map<Holder<Aura>, NumberProvider> aura) {
+    private Map<Holder<Aura>, Integer> costs(List<Cost> aura) {
+        Map<Holder<Aura>, Double> amounts = Costs.auras(aura,
+                CostContext.of(this.player, FormulaContext.of(this.player), CostOrigin.RECIPE));
+        if (amounts == null) return Map.of();
         Map<Holder<Aura>, Integer> costs = new LinkedHashMap<>();
-        for (Entry<Holder<Aura>, NumberProvider> entry : aura.entrySet()) {
-            double value = entry.getValue().evaluate(FormulaContext.of(this.player));
+        for (Entry<Holder<Aura>, Double> entry : amounts.entrySet()) {
+            double value = entry.getValue();
             if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
             costs.put(entry.getKey(), (int) Math.ceil(value));
         }

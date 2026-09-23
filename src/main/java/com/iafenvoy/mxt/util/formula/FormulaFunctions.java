@@ -3,7 +3,10 @@ package com.iafenvoy.mxt.util.formula;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import net.objecthunter.exp4j.function.Function;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**

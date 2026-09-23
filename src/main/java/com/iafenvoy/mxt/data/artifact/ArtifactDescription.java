@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.data.artifact;
 
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.GrantArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
-import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.artifact.ability.*;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
+import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -132,17 +133,29 @@ public final class ArtifactDescription {
                 .withStyle(ChatFormatting.DARK_AQUA));
     }
 
-    // Joined by a translatable separator: list punctuation differs per language, and this is the only place that
-    // has to know how.
-    private static MutableComponent costs(List<ResourceCost> costs, FormulaContext formula) {
-        MutableComponent result = Component.empty();
-        for (int index = 0; index < costs.size(); index++) {
-            if (index > 0) result.append(Component.translatable("tooltip.mxt.separator"));
-            ResourceCost cost = costs.get(index);
-            result.append(Component.translatable("tooltip.mxt.artifact.resource_cost",
-                    TooltipText.number(cost.amount().evaluate(formula)), DefinitionText.name(cost.resource(), "resource")));
+    // Tooltips have no payer to ask, so the price is read straight off the entry: only the two resource-shaped
+    // channels can be spelled out as a number, anything else is named as "other".
+    private static MutableComponent costs(List<Cost> costs, FormulaContext formula) {
+        List<Component> parts = new ArrayList<>(costs.size() + 1);
+        boolean other = false;
+        for (Cost cost : costs) {
+            if (cost instanceof ResourceCost(
+                    Holder<Resource> resource,
+                    NumberProvider amount1
+            ))
+                parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost",
+                        TooltipText.number(amount1.evaluate(formula)),
+                        DefinitionText.name(resource, "resource")));
+            else if (cost instanceof AuraCost(
+                    Holder<Aura> aura, NumberProvider amount
+            ))
+                parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost",
+                        TooltipText.number(amount.evaluate(formula)),
+                        DefinitionText.name(aura, "aura")));
+            else other = true;
         }
-        return result;
+        if (other) parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost_other"));
+        return TooltipText.join(parts);
     }
 
     private static void appendGrant(List<Component> lines, Provider registries, GrantArtifactAbility grant) {

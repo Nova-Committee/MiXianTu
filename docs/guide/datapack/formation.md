@@ -9,8 +9,8 @@ title: 阵法、锻造与炼丹
 | `structure_template`     | Identifier                      | 见下          | 结构模板；controller 即模板原点          |
 | `structure`              | `List<RequiredBlock>`           | 见下          | 内联结构；controller 即偏移原点          |
 | `radius`                 | NumberProvider                  | **必填**      | 球形作用半径                        |
-| `activation_costs`       | `List<ResourceCost>`            | `[]`        | 激活消耗                          |
-| `maintenance_costs`      | `List<ResourceCost>`            | `[]`        | 每 20 tick 的维持消耗；**阵法内方块供的灵气先抵扣**，缺口由阵主支付，付不出即拆除（可被拦截，见下） |
+| `activation_costs`       | `List<Cost>`                    | `[]`        | 激活消耗，从激活者账上扣；条目见 [`Cost`](../../数据包格式.md#cost) |
+| `maintenance_costs`      | `List<Cost>`                    | `[]`        | 每 20 tick 的维持消耗；**阵法内方块供的灵气先抵扣**，缺口由阵主支付，付不出即拆除（可被拦截，见下）。只有数值与灵气条目付得出来 |
 | `storage`                | `Storage`                       | 无（不启用）      | 阵法自己的**存量**：存下自家地脉供应的盈余，付账顺序变成 地脉 → 存量 → 阵主。**通用字段，任何阵法都能写**；不写就是不启用，见「存量」 |
 | `actions`                | `List<Formation Action>`        | `[]`        | **这座阵法做什么**：功能模块列表，见「阵法功能」     |
 | `spare_friends`          | boolean                         | `false`     | **敌我识别开关**：逐实体行为是给覆盖范围内所有人，还是先过一道敌我判断（好友与认不出身份的都不受影响）。它只决定"全部 / 识别"，**不代表这座阵法是攻击型**——那是 `actions` 的事，见「敌我判断」 |

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;

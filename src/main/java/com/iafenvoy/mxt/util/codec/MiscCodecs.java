@@ -41,8 +41,8 @@ public final class MiscCodecs {
      */
     public static <A, B> MapCodec<Pair<A, B>> pair(MapCodec<A> first, MapCodec<B> second) {
         return RecordCodecBuilder.mapCodec(i -> i.group(
-                first.<Pair<A, B>>forGetter(Pair::getFirst),
-                second.<Pair<A, B>>forGetter(Pair::getSecond)
+                first.forGetter(Pair::getFirst),
+                second.forGetter(Pair::getSecond)
         ).apply(i, Pair::of));
     }
 

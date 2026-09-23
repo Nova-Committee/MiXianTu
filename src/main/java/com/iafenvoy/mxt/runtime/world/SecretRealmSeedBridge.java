@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.mixin.LevelResourceAccessor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -41,13 +40,13 @@ public final class SecretRealmSeedBridge {
      * The world-relative folder of a dimension, the layout vanilla uses for level data.
      */
     public static LevelResource folder(Identifier dimension) {
-        return LevelResourceAccessor.mxt$newInstance("dimensions/%s/%s".formatted(dimension.getNamespace(), dimension.getPath()));
+        return new LevelResource("dimensions/%s/%s".formatted(dimension.getNamespace(), dimension.getPath()));
     }
 
     /**
      * The world-relative folder every dimension lives in, used to find instance folders nothing claims.
      */
     public static LevelResource root() {
-        return LevelResourceAccessor.mxt$newInstance("dimensions");
+        return new LevelResource("dimensions");
     }
 }

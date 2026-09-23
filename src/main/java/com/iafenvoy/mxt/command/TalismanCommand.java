@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -141,12 +142,7 @@ public final class TalismanCommand {
     }
 
     private static Component inscriptions(List<Holder<Talisman>> inscribed) {
-        Component line = Component.empty();
-        for (int index = 0; index < inscribed.size(); index++) {
-            if (index > 0) line = line.copy().append(Component.literal(", "));
-            line = line.copy().append(DefinitionText.name(inscribed.get(index), "talisman"));
-        }
-        return line;
+        return TooltipText.join(inscribed.stream().map(holder -> DefinitionText.name(holder, "talisman")).toList());
     }
 
     // The capacity comes from the inscriptions themselves, so the carrier is filled to exactly what its

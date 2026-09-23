@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.compat.jei;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -14,8 +16,6 @@ import net.minecraft.network.chat.MutableComponent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * Small, bounded text helpers used by both spirit recipe categories.
@@ -27,14 +27,15 @@ final class SpiritJeiText {
     private SpiritJeiText() {
     }
 
-    static List<Component> auraLines(Map<Holder<Aura>, NumberProvider> aura, Font font, int maxWidth) {
+    static List<Component> auraLines(List<Cost> aura, Font font, int maxWidth) {
         List<Component> lines = new ArrayList<>();
         if (aura.isEmpty()) {
             lines.add(Component.translatable("jei.mxt.aura_cost_none"));
             return lines;
         }
         boolean first = true;
-        for (Entry<Holder<Aura>, NumberProvider> entry : aura.entrySet()) {
+        for (Cost cost : aura) {
+            if (!(cost instanceof AuraCost entry)) continue;
             lines.add(auraLine(entry, first, font, maxWidth));
             first = false;
             if (lines.size() == 3) break;
@@ -42,11 +43,11 @@ final class SpiritJeiText {
         return lines;
     }
 
-    private static MutableComponent auraLine(Entry<Holder<Aura>, NumberProvider> entry, boolean first, Font font, int maxWidth) {
-        String value = providerName(entry.getValue());
-        String name = resourceName(entry.getKey());
+    private static MutableComponent auraLine(AuraCost entry, boolean first, Font font, int maxWidth) {
+        String value = providerName(entry.amount());
+        String name = resourceName(entry.aura());
         MutableComponent line = first ? Component.translatable("jei.mxt.aura_cost_label") : Component.empty();
-        int color = entry.getKey().value().auraType().filter(Elements::enabled)
+        int color = entry.aura().value().auraType().filter(Elements::enabled)
                 .map(type -> type.value().color()).orElse(0xFFFFFF);
         line.append(Component.literal(name).withColor(readableTextColor(color, PANEL_BACKGROUND)));
         line.append(Component.literal(" x" + value));

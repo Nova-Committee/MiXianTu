@@ -624,6 +624,7 @@
   "tooltip.mxt.artifact.owned": "已认主：%s",
   "tooltip.mxt.artifact.passive": "被动 · %s",
   "tooltip.mxt.artifact.resource_cost": "%s %s",
+  "tooltip.mxt.artifact.resource_cost_other": "其它代价",
   "tooltip.mxt.artifact.storage": "储物 · %s / %s 格",
   "tooltip.mxt.artifact.unowned": "未认主 · 需认主后才能飞行与储物",
   "tooltip.mxt.artifact.upkeep": "维持 · 每 %s 刻消耗 %s",

@@ -14,7 +14,9 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability. The state a

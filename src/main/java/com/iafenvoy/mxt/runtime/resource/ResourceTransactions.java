@@ -4,56 +4,23 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * Evaluates a costs array once, then performs all-or-nothing resource accounting.
+ * Performs all-or-nothing resource accounting for amounts a caller has already planned. Evaluating a costs array
+ * is {@code CostTransaction}'s job; this is only the write, and it validates every entry before touching any.
  */
 public final class ResourceTransactions {
     private ResourceTransactions() {
-    }
-
-    public static Evaluation evaluate(List<ResourceCost> costs, FormulaContext context) {
-        LinkedHashMap<Identifier, Double> amounts = new LinkedHashMap<>();
-        for (ResourceCost cost : costs) {
-            double amount = cost.evaluate(context);
-            if (!Double.isFinite(amount) || amount <= 0.0D) {
-                throw new IllegalArgumentException("Resource cost must be finite and positive for " + cost.id());
-            }
-            if (amounts.put(cost.id(), amount) != null) {
-                throw new IllegalArgumentException("Duplicate resource cost " + cost.id());
-            }
-        }
-        return new Evaluation(amounts);
-    }
-
-    // Each cost is evaluated with the formula context of the resource it spends, so a skill cost can refer to
-    // that resource's realm rank and absorbed aura.
-    public static Evaluation evaluate(LivingEntity payer, List<ResourceCost> costs, FormulaContext context) {
-        LinkedHashMap<Identifier, Double> amounts = new LinkedHashMap<>();
-        for (ResourceCost cost : costs) {
-            Identifier id = cost.id();
-            double amount = cost.evaluate(ResourceService.formulaContext(payer, id, cost.resource().value(), context));
-            if (!Double.isFinite(amount) || amount <= 0.0D) {
-                throw new IllegalArgumentException("Resource cost must be finite and positive for " + id);
-            }
-            if (amounts.put(id, amount) != null) {
-                throw new IllegalArgumentException("Duplicate resource cost " + id);
-            }
-        }
-        return new Evaluation(amounts);
     }
 
     public static Result tryConsume(ResourceHolderAttachment holder, Evaluation evaluation) {

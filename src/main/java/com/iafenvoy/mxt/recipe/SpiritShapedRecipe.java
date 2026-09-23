@@ -1,14 +1,11 @@
 package com.iafenvoy.mxt.recipe;
 
-import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -25,12 +22,12 @@ import java.util.Map;
 
 // Completion also consumes stored aura; matches scan the 3x3 grid for the pattern at any offset.
 public record SpiritShapedRecipe(List<String> pattern, Map<String, Ingredient> key, ItemStackTemplate result,
-                                 Map<Holder<Aura>, NumberProvider> aura) implements SpiritRecipe {
+                                 List<Cost> aura) implements SpiritRecipe {
     public static final MapCodec<SpiritShapedRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.listOf(1, 3).fieldOf("pattern").forGetter(SpiritShapedRecipe::pattern),
             Codec.unboundedMap(Codec.STRING, Ingredient.CODEC).fieldOf("key").forGetter(SpiritShapedRecipe::key),
             ItemStackTemplate.CODEC.fieldOf("result").forGetter(SpiritShapedRecipe::result),
-            CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).fieldOf("aura").forGetter(SpiritShapedRecipe::aura)
+            AURA_CODEC.fieldOf("aura").forGetter(SpiritShapedRecipe::aura)
     ).apply(i, SpiritShapedRecipe::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, SpiritShapedRecipe> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 

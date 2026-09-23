@@ -124,6 +124,8 @@
   "command.mxt_test.verify.minor_stage_failed": "子境界校验失败：%s",
   "command.mxt_test.verify.names_ok": "自动生成的名字与描述跟条目的 id 一致。",
   "command.mxt_test.verify.names_failed": "名字自动生成校验失败：%s",
+  "command.mxt_test.verify.cost_ok": "统一消耗：同一数组内的资源与灵气相加扣除，付不起时一项都不动，缺通道与坏数字各自报错。",
+  "command.mxt_test.verify.cost_failed": "消耗校验失败：%s",
   "command.mxt_test.guide.1": "青霄试炼：1. 执行 /mxt_test kit 领取身份、资源与道具。",
   "command.mxt_test.guide.2": "2. 主手持有青霄灵晶，执行 /mxt_test cultivate；随后可用 /mxt breakthrough mxt_test:qi 尝试突破。",
   "command.mxt_test.guide.3": "3. 金块上使用阵盘激活聚灵阵；契约卷轴可绑定狼，秘境令牌可进入末地试炼。",

@@ -1,19 +1,9 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.storage.AuraPulse;
-import com.iafenvoy.mxt.data.storage.CastDeadline;
-import com.iafenvoy.mxt.data.storage.ChannelPulse;
-import com.iafenvoy.mxt.data.storage.ChargesDataStorage;
-import com.iafenvoy.mxt.data.storage.CooldownDataStorage;
 import com.iafenvoy.mxt.data.storage.DataStorage;
-import com.iafenvoy.mxt.data.storage.EmptyDataStorage;
-import com.iafenvoy.mxt.data.storage.EntryBegan;
-import com.iafenvoy.mxt.data.storage.IdleCountdown;
-import com.iafenvoy.mxt.data.storage.ResourceDataStorage;
-import com.iafenvoy.mxt.data.storage.TargetLockDataStorage;
-import com.iafenvoy.mxt.data.storage.TimerDataStorage;
-import com.iafenvoy.mxt.data.storage.ToggleDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.*;
+import com.iafenvoy.mxt.data.storage.runtime.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

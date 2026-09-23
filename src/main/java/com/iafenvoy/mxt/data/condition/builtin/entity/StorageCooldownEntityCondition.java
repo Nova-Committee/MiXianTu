@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.data.storage.CooldownDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.util.formula.NumberRange;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;

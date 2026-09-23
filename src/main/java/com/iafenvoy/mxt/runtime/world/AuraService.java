@@ -1,15 +1,15 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.*;
 import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
-import com.iafenvoy.mxt.data.formation.BuffFormationAction;
+import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;

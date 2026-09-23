@@ -4,6 +4,9 @@ import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -11,7 +14,6 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,7 +21,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.*;
-import java.util.Map.Entry;
 
 /**
  * Pre-reserves one shared chunk aura pool for every player due to cultivate this tick, before any of them is
@@ -158,13 +159,7 @@ public final class AuraDistributionService {
     }
 
     private static Map<Holder<Aura>, Double> evaluateCosts(CultivateAction action, FormulaContext context) {
-        Map<Holder<Aura>, Double> result = new LinkedHashMap<>();
-        for (Entry<Holder<Aura>, NumberProvider> entry : action.auraCosts().entrySet()) {
-            double value = entry.getValue().evaluate(context);
-            if (!Double.isFinite(value) || value < 0.0D) return null;
-            if (value > 0.0D) result.put(entry.getKey(), value);
-        }
-        return result;
+        return Costs.auras(action.auraCosts(), CostContext.of(null, context, CostOrigin.CULTIVATION));
     }
 
     private record Claim(ServerPlayer player, Map<Holder<Aura>, Double> requested, double weight, AuraResult aura) {

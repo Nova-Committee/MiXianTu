@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
@@ -11,12 +11,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Persisted roots, physiques, learned techniques and their mastery levels. A technique's level is stored only once

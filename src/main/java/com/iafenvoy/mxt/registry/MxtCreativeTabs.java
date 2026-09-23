@@ -2,8 +2,6 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -16,9 +14,8 @@ public final class MxtCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> REGISTRY = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MiXianTu.MOD_ID);
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
-            .title(Component.translatable("itemGroup.mxt.main"))
-            .icon(() -> new ItemStack(MxtItems.SPIRIT_STONE_BAG.get()))
-            .displayItems((parameters, output) -> {
+            .title(Component.translatable("itemGroup.mxt.main")).icon(() -> new ItemStack(MxtItems.SPIRIT_STONE_BAG.get()))
+            .displayItems((params, output) -> {
                 MxtItems.registeredItems().forEach(item -> output.accept(item.get()));
                 MxtItems.spiritStones().forEach(item -> {
                     ItemStack empty = new ItemStack(item.get());
@@ -27,10 +24,5 @@ public final class MxtCreativeTabs {
                     empty.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
                     output.accept(empty);
                 });
-                // One carrier per technique: what makes a manual is the stack's own component, so a technique
-                // nobody declared an item for still has to be obtainable.
-                HolderLookup.Provider registries = parameters.holders();
-                registries.lookupOrThrow(MxtResourceKeys.TECHNIQUE).listElements()
-                        .forEach(technique -> output.accept(ItemBindingService.techniqueCarrier(registries, technique)));
             }).build());
 }

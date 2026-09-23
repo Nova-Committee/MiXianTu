@@ -2,9 +2,9 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.runtime.forging.ForgingSessionView;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -87,7 +87,7 @@ public abstract class ForgingEvent extends Event {
         private final Holder<ForgingMethod> method;
         private final ResourceHolderAttachment resources;
         private final FormulaContext context;
-        private List<ResourceCost> costs;
+        private List<Cost> costs;
 
         public StrikePre(ServerPlayer player, BlockPos pos, ForgingSessionView session, Holder<ForgingMethod> method,
                          ResourceHolderAttachment resources, FormulaContext context) {
@@ -115,11 +115,11 @@ public abstract class ForgingEvent extends Event {
             return this.context;
         }
 
-        public List<ResourceCost> costs() {
+        public List<Cost> costs() {
             return this.costs;
         }
 
-        public void setCosts(List<ResourceCost> costs) {
+        public void setCosts(List<Cost> costs) {
             this.costs = new LinkedList<>(costs);
         }
     }

@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.render.lightning.ColoredLightningBoltRenderer;
 import com.iafenvoy.mxt.render.particle.RiftParticle.Provider;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle;
 import com.iafenvoy.mxt.screen.gui.*;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
@@ -20,7 +21,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderers;
-import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 

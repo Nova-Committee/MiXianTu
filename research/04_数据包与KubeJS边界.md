@@ -20,7 +20,7 @@ MxtAbilities.use(entity, 'example:fire_ball')
 MxtCurses.apply(entity, 'example:heart_demon', 1, 'quest:trial')
 MxtCurses.remove(entity, 'example:heart_demon')
 
-// 资源扣除：MxtResources.consume 是原子事务，条目是 ResourceCost（id + amount）
+// 资源扣除：MxtResources.consume 是原子事务，条目就是数据包里的 Cost（2026-09-23 起统一成同一形状，见 39）
 const result = MxtResources.consume(entity, [
   { id: 'example:spirit_power', amount: 20 }
 ])

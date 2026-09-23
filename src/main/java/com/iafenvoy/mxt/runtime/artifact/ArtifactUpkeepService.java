@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.artifact.ability.UpkeepArtifactAbility;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -63,17 +63,9 @@ public final class ArtifactUpkeepService {
         FormulaContext context = FormulaContext.of(holder);
         long interval = interval(upkeep, context);
         if (gameTime % interval != 0L) return false;
-        ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
-        ResourceTransactions.Result payment;
-        try {
-            payment = ResourceTransactions.tryConsume(holder, resources,
-                    ResourceTransactions.evaluate(holder, upkeep.costs(), context));
-        } catch (IllegalArgumentException | IllegalStateException exception) {
-            // A price that cannot be a price is a pack mistake; it is reported where the definition is read, and
-            // a tick that cannot be charged must not silently read as one that was.
-            return false;
-        }
-        if (payment.committed()) return true;
+        CostTransaction.PayResult payment = CostTransaction.pay(upkeep.costs(),
+                CostContext.of(holder, context, CostOrigin.ARTIFACT_UPKEEP));
+        if (payment.paid()) return true;
         upkeep.onFail().execute(holder, stack, context);
         return false;
     }

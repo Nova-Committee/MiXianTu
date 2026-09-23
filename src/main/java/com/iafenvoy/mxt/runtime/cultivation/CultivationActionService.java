@@ -8,6 +8,10 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraGain;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -22,11 +26,9 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
-import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
@@ -123,15 +125,23 @@ public final class CultivationActionService {
         if (gameTime < spirit.nextCultivateTick()) {
             return Result.waitingResult();
         }
-        Map<Holder<Aura>, Double> auraCosts = evaluateAuraCosts(definition, context);
-        if (auraCosts == null) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+        // The aura a cycle burns comes out of the ground at the cultivator, so the pool is the one channel this
+        // plan uses; the shared-pool allocation below scales the amounts before they are committed.
+        CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigin.CULTIVATION);
+        // Whatever size is available is not asked here: this tick's share is decided below, and the commit is
+        // what checks the pool against the amount actually spent.
+        CostTransaction.Planning auraPlan = CostTransaction.planDeferred(definition.auraCosts(), auraContext);
+        if (!auraPlan.ok()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+        Map<Holder<Aura>, Double> auraCosts = auraPlan.auras();
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
-        Evaluation costs;
+        CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
+        CostTransaction.Planning costPlan = CostTransaction.plan(definition.costs(), costContext);
+        if (!costPlan.ok()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+        Evaluation costs = Evaluation.of(costPlan.resources());
         Map<Holder<Aura>, Double> gains;
         try {
-            costs = ResourceTransactions.evaluate(entity, definition.costs(), context);
             gains = evaluateGains(definition.auraGains(), context);
         } catch (IllegalArgumentException | IllegalStateException error) {
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
@@ -143,6 +153,9 @@ public final class CultivationActionService {
             if (allocationFactor <= 0.0D && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue())
                 return stop(entity, spirit, action, definition, gameTime, Failure.INSUFFICIENT_AURA);
         }
+        // The prepass bounds what this tick may take from the shared pool; the plan is what actually pays it.
+        double share = allocationFactor;
+        auraPlan.auras().replaceAll((element, amount) -> amount * share);
         double speed = aura.cultivationSpeed() * allocationFactor;
         gains.replaceAll((id, amount) -> amount * speed);
         if (!Double.isFinite(speed) || speed < 0.0D)
@@ -151,14 +164,14 @@ public final class CultivationActionService {
         if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
         if (!canApplyGains(entity, copyOf(resources), gains, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
-        if (!auraCosts.isEmpty() && !AuraService.consume(entity.level(), entity.blockPosition(), scaleAuraCosts(auraCosts, allocationFactor)))
+        if (!auraPlan.auras().isEmpty() && !CostTransaction.commit(auraPlan, auraContext).paid())
             return Result.rejected(Failure.INSUFFICIENT_AURA, null);
-        ResourceTransactions.Result payment = ResourceTransactions.tryConsume(resources, costs);
-        if (!payment.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        CostTransaction.PayResult payment = CostTransaction.commit(costPlan, costContext, resources);
+        if (!payment.paid()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         applyGains(entity, resources, gains, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
         definition.tickAction().execute(entity, context);
-        return Result.progressed(recovery.cultivation(), payment.amounts());
+        return Result.progressed(recovery.cultivation(), payment.resources());
     }
 
     private static Result tick(CultivationAttachment spirit, ResourceHolderAttachment resources, AuraChunkAttachment aura, Identifier actionId,
@@ -179,10 +192,12 @@ public final class CultivationActionService {
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(gain) || gain < 0.0D)
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
-        Evaluation costs;
+        CostContext costContext = CostContext.account(resources, null, context, CostOrigin.CULTIVATION);
+        CostTransaction.Planning costPlan = CostTransaction.plan(definition.costs(), costContext, resources, null);
+        if (!costPlan.ok()) return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
+        Evaluation costs = Evaluation.of(costPlan.resources());
         Map<Holder<Aura>, Double> gains;
         try {
-            costs = ResourceTransactions.evaluate(definition.costs(), context);
             gains = evaluateGains(definition.auraGains(), context);
         } catch (IllegalArgumentException | IllegalStateException error) {
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
@@ -192,14 +207,14 @@ public final class CultivationActionService {
         if (!canApplyGains(copyOf(resources), gains, context) || !canConvertAbsorption(spirit, resources, gain, context))
             return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
         if (!hasAura(aura, auraCosts)) return Result.rejected(Failure.INSUFFICIENT_AURA, null);
-        ResourceTransactions.Result payment = ResourceTransactions.tryConsume(resources, costs);
-        if (!payment.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        CostTransaction.PayResult payment = CostTransaction.commit(costPlan, costContext, resources);
+        if (!payment.paid()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         aura.consume(auraCosts);
         restoreAbsorption(spirit, resources, gain, context);
         convertAll(spirit, resources, context);
         applyGains(resources, gains, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
-        return Result.progressed(gain, payment.amounts());
+        return Result.progressed(gain, payment.resources());
     }
 
     public static Result stop(CultivationAttachment spirit, Identifier actionId, CultivateAction definition, long gameTime) {
@@ -244,24 +259,12 @@ public final class CultivationActionService {
 
     private static Map<Holder<Aura>, Double> evaluateAuraCosts(CultivateAction definition,
                                                                FormulaContext context) {
-        Map<Holder<Aura>, Double> values = new LinkedHashMap<>();
-        for (Entry<Holder<Aura>, NumberProvider> entry : definition.auraCosts().entrySet()) {
-            double value = entry.getValue().evaluate(context);
-            if (!Double.isFinite(value) || value < 0.0D) return null;
-            if (value > 0.0D) values.put(entry.getKey(), value);
-        }
-        return values;
+        // Paid by hand here: this path holds the chunk store instead of a level, so it only needs the amounts.
+        return Costs.auras(definition.auraCosts(), CostContext.of(null, context, CostOrigin.CULTIVATION));
     }
 
     private static boolean hasAura(AuraChunkAttachment aura, Map<Holder<Aura>, Double> costs) {
         return costs.entrySet().stream().allMatch(entry -> aura.auras().getOrDefault(entry.getKey(), AuraPool.empty()).amount() >= entry.getValue());
-    }
-
-    private static Map<Holder<Aura>, Double> scaleAuraCosts(Map<Holder<Aura>, Double> values,
-                                                            double multiplier) {
-        Map<Holder<Aura>, Double> result = new LinkedHashMap<>();
-        values.forEach((element, amount) -> result.put(element, amount * multiplier));
-        return result;
     }
 
     // Realm chains are regenerated by cultivation itself, so each value's overflow can be committed to that

@@ -1,9 +1,12 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.Formation.Storage;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
@@ -12,6 +15,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -31,8 +35,11 @@ public final class FormationService {
     public static ActivateResult activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
         double radius = definition.radius().evaluate(context);
         if (!Double.isFinite(radius) || radius <= 0.0D) return ActivateResult.rejected(Failure.INVALID_FORMULA, null);
-        Result payment = ResourceTransactions.tryConsume(resources, ResourceTransactions.evaluate(definition.activationCosts(), context));
-        if (!payment.committed())
+        // The activating player's own account is named directly: activation is driven from a controller block, so
+        // there is no entity here to take a channel from, only an account to charge.
+        CostTransaction.PayResult payment = CostTransaction.pay(definition.activationCosts(),
+                CostContext.account(resources, null, context, CostOrigin.FORMATION_ACTIVATION));
+        if (!payment.paid())
             return ActivateResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         return ActivateResult.activated(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
     }
@@ -48,14 +55,17 @@ public final class FormationService {
         Map<Holder<Aura>, Double> capacity = definition.storage()
                 .map(storage -> MaintainRule.capacities(storage, context))
                 .orElse(Map.of());
-        PaymentPlan plan = MaintainRule.plan(definition, context, supplied, instance.stored(), capacity);
+        // A formation pays from its own stores first and then from an account that may have no owner behind it,
+        // so the account is named directly rather than reached through a payer.
+        CostContext costContext = CostContext.account(resources, null, context, CostOrigin.FORMATION_MAINTENANCE);
+        PaymentPlan plan = MaintainRule.plan(definition, costContext, supplied, instance.stored(), capacity);
+        if (plan == null) return MaintainResult.unpaid(null);
         Result payment = ResourceTransactions.tryConsume(resources, Evaluation.of(plan.fromOwner()));
         if (!payment.committed()) return MaintainResult.unpaid(payment.failedResource());
         plan.applyTo(instance);
         instance.maintained();
         return MaintainResult.paid();
     }
-
     // What is left for the payer once the formation's own blocks have supplied what they supply and its stock
     // has covered what that left.
     public static final class MaintainRule {
@@ -76,22 +86,27 @@ public final class FormationService {
 
         // The plain reading of "what does the payer owe": cost per resource id with the supplied aura
         // subtracted, run through the same code path upkeep uses with an empty bank.
-        public static Map<Identifier, Double> remaining(Formation definition, FormulaContext context,
+        public static Map<Identifier, Double> remaining(Formation definition, CostContext context,
                                                         Map<Holder<Aura>, Double> supplied) {
-            // The plain reading of "what does the payer owe": the cost minus the ground's contribution, run
-            // through the same code path upkeep uses, with an empty bank.
-            return plan(definition, context, supplied, Map.of(), Map.of()).fromOwner();
+            PaymentPlan plan = plan(definition, context, supplied, Map.of(), Map.of());
+            return plan == null ? Map.of() : plan.fromOwner();
         }
 
         // The three-way split of one period's bill: what the stock pays, what the stock gains, and what is left
         // to the payer. A pure function of its arguments, because it is the only part of upkeep where a wrong
         // answer is invisible in play. The bill is per value - what a pool is charged in - while the supply, the
         // stock and its capacity are per aura; the two are reconciled by the only thing that connects them, the
-        // value an aura names (Aura#resource()), so nothing here reads a registry.
-        public static PaymentPlan plan(Formation definition, FormulaContext context,
-                                       Map<Holder<Aura>, Double> supplied,
-                                       Map<Holder<Aura>, Double> stored, Map<Holder<Aura>, Double> capacity) {
-            Map<Identifier, Double> cost = ResourceTransactions.evaluate(definition.maintenanceCosts(), context).amounts();
+        // value an aura names (Aura#resource()), so nothing here reads a registry. Null means the bill itself
+        // cannot be settled (a formula that evaluates to nothing, or a channel a formation does not have).
+        public static @Nullable PaymentPlan plan(Formation definition, CostContext context,
+                                                 Map<Holder<Aura>, Double> supplied,
+                                                 Map<Holder<Aura>, Double> stored, Map<Holder<Aura>, Double> capacity) {
+            // Whatever the bill names is charged in the value it is measured in: a formation's stores and its
+            // ground supply are mapped onto auras by that same value, below.
+            CostTransaction.Planning bill = CostTransaction.plan(definition.maintenanceCosts(),
+                    context.withAuraTarget(CostContext.AuraTarget.VALUE));
+            if (!bill.ok()) return null;
+            Map<Identifier, Double> cost = bill.resources();
             Map<Identifier, Holder<Aura>> byValue = new LinkedHashMap<>();
             for (Holder<Aura> aura : supplied.keySet())
                 byValue.putIfAbsent(HolderHelper.id(aura.value().resource()), aura);

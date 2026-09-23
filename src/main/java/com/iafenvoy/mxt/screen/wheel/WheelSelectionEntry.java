@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.screen.wheel;
 
-import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.screen.hud.AbstractHudEntry;
 import com.iafenvoy.mxt.screen.hud.HudLayout;

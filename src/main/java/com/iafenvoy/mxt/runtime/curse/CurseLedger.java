@@ -5,7 +5,10 @@ import com.iafenvoy.mxt.data.curse.Curse.StackingMode;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalLong;
 
 /**
  * Applies stacking and expiry rules without letting consumers mutate curse state directly.

@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.forging;
 
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -24,12 +24,12 @@ import java.util.Optional;
  * A single datapack-defined forging operation. {@code sound} is played at the table when the method is used, for
  * everyone in range, and defaults to the noise the table stands in for.
  */
-public record ForgingMethod(int valueDelta, List<ResourceCost> costs, EntityCondition condition,
+public record ForgingMethod(int valueDelta, List<Cost> costs, EntityCondition condition,
                             Optional<IconReference> icon, int cooldown, SoundEvent sound) {
     public static final Codec<Holder<ForgingMethod>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORGING_METHOD);
     public static final Codec<ForgingMethod> DIRECT_CODEC = RecordCodecBuilder.<ForgingMethod>create(i -> i.group(
             Codec.INT.fieldOf("value_delta").forGetter(ForgingMethod::valueDelta),
-            ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(ForgingMethod::costs),
+            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(ForgingMethod::costs),
             EntityCondition.optionalCodec("condition").forGetter(ForgingMethod::condition),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(ForgingMethod::icon),
             Codec.intRange(0, 72_000).optionalFieldOf("cooldown", 0).forGetter(ForgingMethod::cooldown),

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.artifact.ability;
 
 import com.iafenvoy.mxt.attachment.FlightAttachment;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -20,12 +20,12 @@ import java.util.Optional;
  * mount is drawn. Also a {@link ToggableArtifactAbility}, so mounting and dismounting is a wheel switch; the state it
  * reports is the mount up <em>now</em>, read from the same attachment the flight controller writes.
  */
-public record FlightArtifactAbility(NumberProvider speed, List<ResourceCost> costs,
+public record FlightArtifactAbility(NumberProvider speed, List<Cost> costs,
                                     FlightDisplay display) implements ToggableArtifactAbility {
     public static final String KEY = "flight";
     public static final MapCodec<FlightArtifactAbility> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("speed").forGetter(FlightArtifactAbility::speed),
-            ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(FlightArtifactAbility::costs),
+            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(FlightArtifactAbility::costs),
             FlightDisplay.CODEC.optionalFieldOf("display", FlightDisplay.DEFAULT).forGetter(FlightArtifactAbility::display)
     ).apply(i, FlightArtifactAbility::new));
 

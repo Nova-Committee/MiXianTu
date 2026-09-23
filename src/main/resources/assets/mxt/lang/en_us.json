@@ -625,6 +625,7 @@
   "tooltip.mxt.artifact.owned": "Bound to %s",
   "tooltip.mxt.artifact.passive": "Passive · %s",
   "tooltip.mxt.artifact.resource_cost": "%s %s",
+  "tooltip.mxt.artifact.resource_cost_other": "other costs",
   "tooltip.mxt.artifact.storage": "Storage · %s / %s slots",
   "tooltip.mxt.artifact.unowned": "Unbound · bind it before flight and storage",
   "tooltip.mxt.artifact.upkeep": "Upkeep · every %s ticks: %s",

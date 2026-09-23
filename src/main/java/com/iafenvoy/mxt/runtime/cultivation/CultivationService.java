@@ -3,6 +3,10 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostFailure;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -15,9 +19,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -86,7 +87,7 @@ public final class CultivationService {
         boolean configuredConditions = transition.conditions().test(entity, context);
         boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
                 .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
-        BreakthroughResult result = commit(spirit, resources, transition, resourceContext,
+        BreakthroughResult result = commit(entity, spirit, resources, transition, resourceContext,
                 () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
         if (result.advanced()) {
             if (entity instanceof ServerPlayer player) MxtCriteriaTriggers.BREAKTHROUGH.get().trigger(player, targetId);
@@ -105,7 +106,7 @@ public final class CultivationService {
         return result;
     }
 
-    private static BreakthroughResult commit(CultivationAttachment spirit, ResourceHolderAttachment resources, @NotNull Transition transition,
+    private static BreakthroughResult commit(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, @NotNull Transition transition,
                                              FormulaContext context, BooleanSupplier conditionsMet, @NotNull IEventBus eventBus) {
         Holder<RealmStage> targetHolder = transition.target();
         RealmStage target = targetHolder.value();
@@ -118,21 +119,26 @@ public final class CultivationService {
         if (progress < minimum)
             return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
         if (!conditionsMet.getAsBoolean()) return BreakthroughResult.rejected(Failure.CONDITIONS, null);
-        Evaluation costs;
-        try {
-            costs = ResourceTransactions.evaluate(target.breakthroughCosts(), context);
-        } catch (IllegalArgumentException exception) {
-            return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
-        }
-        Pre event = new Pre(spirit, resources, targetHolder, context, minimum, costs.amounts());
+        CostContext costContext = CostContext.of(entity, context, CostOrigin.BREAKTHROUGH);
+        CostTransaction.Planning plan = CostTransaction.plan(target.breakthroughCosts(), costContext, resources, null);
+        if (!plan.ok()) return BreakthroughResult.rejected(failure(plan.failure()), null);
+        Pre event = new Pre(spirit, resources, targetHolder, context, minimum, plan.resources());
         if (eventBus.post(event).isCanceled()) return BreakthroughResult.rejected(Failure.CANCELLED, null);
-        Result payment = ResourceTransactions.tryConsume(resources, new Evaluation(event.costs()));
-        if (!payment.committed())
-            return BreakthroughResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        plan.resources().clear();
+        plan.resources().putAll(event.costs());
+        CostTransaction.PayResult payment = CostTransaction.commit(plan, costContext, resources);
+        if (!payment.paid())
+            return BreakthroughResult.rejected(failure(payment.failure()), payment.failedResource());
         spirit.setRealmStage(targetHolder);
         spirit.setCultivationProgress(aura, 0.0D);
-        eventBus.post(new Post(spirit, resources, targetHolder, context, minimum, payment.amounts()));
-        return BreakthroughResult.committed(payment.amounts());
+        eventBus.post(new Post(spirit, resources, targetHolder, context, minimum, payment.resources()));
+        return BreakthroughResult.committed(payment.resources());
+    }
+
+    // Everything that is not "this resource ran out" reads the same way to the caller: the stage cannot be paid
+    // for as written.
+    private static Failure failure(CostFailure failure) {
+        return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INVALID_FORMULA;
     }
 
     // Resolves the pending transition of one cultivation chain, keyed by the profile itself.

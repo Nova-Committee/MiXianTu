@@ -2,10 +2,10 @@ package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.storage.CastDeadline;
-import com.iafenvoy.mxt.data.storage.ChargesDataStorage;
-import com.iafenvoy.mxt.data.storage.CooldownDataStorage;
 import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
+import com.iafenvoy.mxt.data.storage.runtime.CastDeadline;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;

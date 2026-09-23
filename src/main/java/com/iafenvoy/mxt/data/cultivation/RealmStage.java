@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -41,7 +41,7 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
                          NumberProvider breakthroughExp, NumberProvider maxExperience, List<Component> minorStages,
                          CultivateConditions breakthrough,
                          boolean autoBreakthrough,
-                         List<AttributeEntry> passiveModifiers, List<ResourceCost> breakthroughCosts,
+                         List<AttributeEntry> passiveModifiers, List<Cost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          Optional<Holder<Tribulation>> tribulation, Optional<ParticleEffect> breakthroughParticle,
                          EntityAction successAction, EntityAction failAction) implements NamedDefinition {
@@ -55,7 +55,7 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
     }
 
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
-    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.<RealmStage>create(i -> i.group(
+    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(RealmStage::name),
             ContextNameCodec.description(CATEGORY).forGetter(RealmStage::description),
             Aura.CODEC.fieldOf("aura").forGetter(RealmStage::aura),
@@ -68,7 +68,7 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
             CultivateConditions.CODEC.optionalFieldOf("breakthrough", CultivateConditions.EMPTY).forGetter(RealmStage::breakthrough),
             Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
             AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(RealmStage::passiveModifiers),
-            ResourceCost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
+            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
             // Eighteen components; two pairs keep the group at sixteen.
             MiscCodecs.pair(

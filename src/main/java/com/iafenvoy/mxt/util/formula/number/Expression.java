@@ -1,12 +1,8 @@
 package com.iafenvoy.mxt.util.formula.number;
 
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
-import com.iafenvoy.mxt.util.formula.FormulaFunctions;
-import com.iafenvoy.mxt.util.formula.FormulaVariables;
+import com.iafenvoy.mxt.util.formula.*;
 import com.iafenvoy.mxt.util.formula.FormulaVariables.Binding;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;

@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.compat.jade;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.SpiritStorageTooltipAppender;
-import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService.Charge;
 import com.iafenvoy.mxt.item.block.entity.DisplayStandBlockEntity;
+import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService.Charge;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.client.Minecraft;

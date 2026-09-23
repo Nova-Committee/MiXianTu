@@ -1,12 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.formation.AttackFormationAction;
-import com.iafenvoy.mxt.data.formation.BuffFormationAction;
-import com.iafenvoy.mxt.data.formation.EmptyFormationAction;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
-import com.iafenvoy.mxt.data.formation.ProtectionFormationAction;
-import com.iafenvoy.mxt.data.formation.RangeDisplayFormationAction;
+import com.iafenvoy.mxt.data.formation.builtin.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

@@ -14,7 +14,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtConditions` | 注册 `mxt:js` Condition 回调，或测试内置 Condition。 |
 | `MxtValues` | 注册/计算 NumberProvider 与 ResourceValueProvider。 |
 | `MxtCosts` | 预检或支付一个完整的 `Cost`。 |
-| `MxtResources` | 原子支付多个资源 Cost。 |
+| `MxtResources` | 原子支付一整个代价数组（全有或全无）。 |
 | `MxtAbilities` | 施放已授予实体的技能。 |
 | `MxtCultivation` | 增加修为、尝试境界突破。 |
 | `MxtCurses` | 施加（可带时长）、显式移除与查询诅咒。 |
@@ -213,7 +213,7 @@ MxtCosts.register('example:quest_token',
 {"type": "mxt:js", "id": "example:quest_token", "params": {"count": 3}}
 ```
 
-脚本 Cost 需要玩家：只要 `costs` 里存在非 `resource` 费用，整个技能就要求付款者是玩家。`Cost` 只用玩家做检查，因此回调拿到的 `context` 由该玩家构建，不含事件载荷——`context.value('level')` 可用，`context.value('damage')` 不可用。
+脚本 Cost 需要玩家：`mxt:js` 与 `mxt:item` 都要玩家付款者，缺了就是付不起。`Cost` 只用玩家做检查，因此回调拿到的 `context` 由该玩家构建，不含事件载荷——`context.value('level')` 可用，`context.value('damage')` 不可用。
 
 支持完整 Cost 注册表分派。当前内置类型：
 
@@ -224,19 +224,22 @@ MxtCosts.register('example:quest_token',
 // 消耗资源。兼容简写（`Cost` 的简写与 `MxtResources.consume` 都用 `id` 字段）。
 { id: 'mxt:spirit_power', amount: 10 }
 
+// 消耗某一种灵气。付款者身上按它计量的那个数值扣。
+{ type: 'mxt:aura', aura: 'mxt_test:qi', amount: 2 }
+
 // 消耗物品。items 接受物品 ID、物品 tag，或 ItemMatcher 对象。
 { type: 'mxt:item', items: ['minecraft:emerald', '#c:mystic_gems'], amount: 2 }
 ```
 
-单个 `Cost` 是安全入口；多项资源请使用下方的 `MxtResources.consume`，它具有原子事务语义。不要把多个 `MxtCosts.consume` 当成一个原子支付。
+单个 `Cost` 是安全入口（一次只支付一项）；一组代价请使用下方的 `MxtResources.consume`，它一次支付整个数组、全有或全无。不要把多个 `MxtCosts.consume` 当成一个原子支付。
 
 ### `MxtResources`
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `consume(entity, costs)` | `Entity`、`ResourceCost[]` | `ResourceTransactions.Result` | 原子支付一组资源；任一项不足时整组不扣除。 |
+| `consume(entity, costs)` | `Entity`、`Cost[]` | `MxtKubeJsApi.Result` | 原子支付一整个代价数组；任一项付不出时整组一项都不扣。付款者必须是生物。 |
 
-`costs` 的每个元素遵循 `ResourceCost` 格式，字段名是 `id`（`ResourceCost.CODEC` 的 `fieldOf("id")`），与 `Cost` 的简写一致；这里**不是**带 `type` 的 Cost 数组，所以没有 `resource` 字段。写错的元素**不会报错**：列表 Codec（`AutoIgnoreListCodec`）解码失败时只打一条 WARN 并**丢掉那一项**，于是这一项等于没写、整笔仍然提交成功。字段名请照着下面的例子抄。
+`costs` 的每个元素就是数据包里的 [`Cost`](../../数据包格式.md#cost)（五种写法全接受，简写 `{"id": ..., "amount": ...}` 照旧）。与技能字段不同的是：这里没有别的通道可借，所以 `mxt:item` 与 `mxt:js` 都需要 `entity` 是玩家，否则整笔拒付。写错的元素**不再被静默丢掉**：解码失败会让整次调用抛错。
 
 ```js
 const result = MxtResources.consume(player, [

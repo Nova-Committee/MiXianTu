@@ -1,21 +1,25 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
-import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.aura.AuraRequirement;
-import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
-import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
+import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
+import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
 import com.iafenvoy.mxt.data.artifact.ability.FlightArtifactAbility;
 import com.iafenvoy.mxt.data.artifact.ability.FlightDisplay;
 import com.iafenvoy.mxt.data.artifact.ability.StorageArtifactAbility;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
@@ -24,39 +28,45 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityConditi
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
+import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostFailure;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
-import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
-import com.iafenvoy.mxt.runtime.artifact.FlightService.Result.State;
-import com.iafenvoy.mxt.runtime.rift.RiftColors;
-import com.iafenvoy.mxt.runtime.rift.RiftConnections;
-import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
-import com.iafenvoy.mxt.runtime.rift.RiftMesh;
-import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
+import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
+import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
+import com.iafenvoy.mxt.recipe.SpiritRecipe;
+import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilitySources;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactCapability;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactToggleService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
+import com.iafenvoy.mxt.runtime.artifact.FlightService.Result.State;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
@@ -69,57 +79,57 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.world.AuraResult;
-import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
-import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
-import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
-import com.iafenvoy.mxt.runtime.world.SecretRealmService;
-import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
-import com.iafenvoy.mxt.runtime.world.SecretRealmStructurePlacer;
+import com.iafenvoy.mxt.runtime.rift.RiftColors;
+import com.iafenvoy.mxt.runtime.rift.RiftConnections;
+import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
+import com.iafenvoy.mxt.runtime.rift.RiftMesh;
+import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
 import com.iafenvoy.mxt.runtime.wheel.WheelSource;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
+import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
+import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
+import com.iafenvoy.mxt.runtime.world.SecretRealmService;
+import com.iafenvoy.mxt.runtime.world.SecretRealmStructurePlacer;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
-import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.JsonOps;
-import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
 import io.netty.buffer.Unpooled;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.component.DataComponentType;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
@@ -156,6 +166,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
+import static net.minecraft.commands.Commands.literal;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
 import top.theillusivec4.curios.api.SlotContext;
@@ -170,8 +181,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-
-import static net.minecraft.commands.Commands.literal;
 
 /** Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario. */
 public final class MxtTestCommands {
@@ -291,7 +300,95 @@ public final class MxtTestCommands {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.names_ok"), false);
+        String costFailure = verifyCostPayment(player);
+        if (costFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.cost_failed", costFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.cost_ok"), false);
         return 1;
+    }
+
+    // One costs shape for every channel: the same array can name a resource and an aura, both are charged in the
+    // value they are measured in, a channel the context does not offer is a refusal rather than a half payment,
+    // and nothing at all is taken when any single entry cannot be paid. The account is charged without a payer,
+    // which is how a formation pays its upkeep while its owner is offline, and then through the player's own
+    // attachment, which is the ordinary entity path.
+    private static String verifyCostPayment(ServerPlayer player) {
+        RegistryAccess registries = player.level().registryAccess();
+        Holder<Resource> probe = require(MxtResourceKeys.RESOURCE, id("trigger_probe"));
+        Holder<Resource> qi = require(MxtResourceKeys.RESOURCE, id("qi"));
+        ResourceHolderAttachment account = new ResourceHolderAttachment();
+        account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
+        CostContext context = CostContext.account(account, null, FormulaContext.EMPTY, CostOrigin.SCRIPT);
+
+        CostTransaction.PayResult plain = CostTransaction.pay(decodeCosts(registries,
+                "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 3}]"), context);
+        if (!plain.paid()) return "a plain resource cost was refused: " + plain.failure();
+        if (!close(account.get(probe), 97.0D))
+            return "a 3-point cost left " + account.get(probe) + " instead of 97";
+
+        // Two entries that reach the same value by different routes add up: the aura is charged as the resource
+        // it is measured in, which is the only answer that does not depend on the order they were written in.
+        account.set(qi, 10.0D, 0.0D, 100.0D, -1L, "probe");
+        CostTransaction.PayResult merged = CostTransaction.pay(decodeCosts(registries,
+                        "[{\"id\": \"mxt_test:qi\", \"amount\": 1}, {\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3}]"),
+                context);
+        if (!merged.paid()) return "a resource entry plus the aura it names was refused: " + merged.failure();
+        if (!close(account.get(qi), 6.0D))
+            return "1 + 3 of the same value left " + account.get(qi) + " instead of 6";
+
+        double before = account.get(probe);
+        CostTransaction.PayResult refused = CostTransaction.pay(decodeCosts(registries,
+                        "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 1}, {\"id\": \"mxt_test:soul_power\", \"amount\": 9999}]"),
+                context);
+        if (refused.paid()) return "an array whose second entry is unpayable was paid anyway";
+        if (!close(account.get(probe), before))
+            return "a refused payment still took " + (before - account.get(probe)) + " off the first entry";
+
+        CostTransaction.PayResult item = CostTransaction.pay(decodeCosts(registries,
+                        "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), context);
+        if (item.paid() || item.failure() != CostFailure.NO_CHANNEL)
+            return "an item cost without a player channel read as " + item.failure();
+
+        CostTransaction.PayResult invalid = CostTransaction.pay(decodeCosts(registries,
+                "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 0}]"), context);
+        if (invalid.paid() || invalid.failure() != CostFailure.INVALID_AMOUNT)
+            return "a zero amount read as " + invalid.failure();
+
+        ResourceHolderAttachment personal = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        double previous = personal.get(probe);
+        personal.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
+        CostTransaction.PayResult onPlayer = CostTransaction.pay(decodeCosts(registries,
+                        "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 2}]"),
+                CostContext.of(player, FormulaContext.of(player), CostOrigin.SCRIPT));
+        double left = personal.get(probe);
+        personal.set(probe, previous, 0.0D, 10_000.0D, -1L, "probe");
+        if (!onPlayer.paid()) return "a payer-paid resource cost was refused: " + onPlayer.failure();
+        if (!close(left, 8.0D)) return "a payer-paid 2-point cost left " + left + " instead of 8";
+
+        // The two aura-only fields read the old map and the new list, and refuse anything that is not an aura:
+        // a resource entry there could never be paid by the pool or the store the field charges.
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);
+        List<Cost> mapped = SpiritRecipe.AURA_CODEC.parse(ops, JsonParser.parseString("{\"mxt_test:qi\": 2}"))
+                .getOrThrow(error -> new IllegalArgumentException("The aura map form no longer decodes: " + error));
+        if (mapped.size() != 1 || !(mapped.getFirst() instanceof AuraCost mappedCost)
+                || !close(mappedCost.amount().evaluate(FormulaContext.EMPTY), 2.0D))
+            return "the aura map form decoded as " + mapped;
+        if (SpiritRecipe.AURA_CODEC.parse(ops, JsonParser.parseString("[{\"id\": \"mxt_test:qi\", \"amount\": 1}]")).error().isEmpty())
+            return "a non-aura entry loaded into an aura-only cost field";
+
+        Holder<Aura> qiAura = require(MxtResourceKeys.AURA, id("qi"));
+        Map<Holder<Aura>, Double> auraAmounts = Costs.auras(List.of(new AuraCost(qiAura, new Constant(2.0D))), context);
+        if (auraAmounts == null || !close(auraAmounts.getOrDefault(qiAura, 0.0D), 2.0D))
+            return "an aura entry evaluated to " + auraAmounts;
+        return null;
+    }
+
+    private static List<Cost> decodeCosts(RegistryAccess registries, String json) {
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);
+        return Cost.LIST_CODEC.parse(ops, JsonParser.parseString(json))
+                .getOrThrow(error -> new IllegalArgumentException("Invalid cost fixture: " + error));
     }
 
     // The documented rule: highest priority wins inside a tier, the registry ID breaks ties, and a dimension
@@ -1006,8 +1103,9 @@ public final class MxtTestCommands {
         ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
         FlightArtifactAbility flight = ArtifactService.flight(access, flightStack).orElse(null);
         boolean flightEntry = flight != null && close(flight.speed().evaluate(context), 0.12D)
-                && flight.costs().size() == 1 && flight.costs().getFirst().id().equals(QI)
-                && close(flight.costs().getFirst().amount().evaluate(context), 2.0D)
+                && flight.costs().size() == 1 && flight.costs().getFirst() instanceof ResourceCost cost
+                && cost.id().equals(QI)
+                && close(cost.amount().evaluate(context), 2.0D)
                 && flight.display().equals(FlightDisplay.DEFAULT);
         ok &= check(source, "artifact roster flight entry speed=0.12 costs=2 qi display=default", flightEntry);
 

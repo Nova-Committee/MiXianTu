@@ -1,12 +1,7 @@
 package com.iafenvoy.mxt.util.codec;
 
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.DynamicOps;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.MapLike;
-import com.mojang.serialization.RecordBuilder;
+import com.mojang.serialization.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 

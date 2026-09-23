@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

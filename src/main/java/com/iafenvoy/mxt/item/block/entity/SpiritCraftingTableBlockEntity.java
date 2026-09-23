@@ -2,13 +2,17 @@ package com.iafenvoy.mxt.item.block.entity;
 
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
@@ -93,7 +97,10 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         int max = Math.min(stored.isEmpty() ? produced.getMaxStackSize() : stored.getMaxStackSize(), this.result.getMaxStackSize(produced));
         if (!this.hasAura(costs) || (!stored.isEmpty() && (!ItemStack.isSameItemSameComponents(stored, produced)
                 || stored.getCount() + produced.getCount() > max))) return;
-        if (!this.consumeAura(costs)) return;
+        // Paid through the shared transaction, so a recipe's aura price behaves like every other cost.
+        CostContext bankContext = CostContext.bank(this, null, FormulaContext.of(this.level), CostOrigin.RECIPE);
+        CostTransaction.Planning plan = CostTransaction.plan(recipe.aura(), bankContext);
+        if (!plan.ok() || !CostTransaction.commit(plan, bankContext).paid()) return;
         for (int index = 0; index < this.grid.getContainerSize(); index++) this.grid.getItem(index).shrink(1);
         if (stored.isEmpty()) this.result.setItem(0, produced);
         else stored.grow(produced.getCount());
@@ -101,10 +108,13 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         this.result.setChanged();
     }
 
-    private Map<Holder<Aura>, Integer> costs(Map<Holder<Aura>, NumberProvider> aura) {
+    private Map<Holder<Aura>, Integer> costs(List<Cost> aura) {
+        Map<Holder<Aura>, Double> amounts = Costs.auras(aura,
+                CostContext.account(null, null, FormulaContext.of(this.level), CostOrigin.RECIPE));
+        if (amounts == null) return Map.of();
         Map<Holder<Aura>, Integer> costs = new LinkedHashMap<>();
-        for (Entry<Holder<Aura>, NumberProvider> entry : aura.entrySet()) {
-            double value = entry.getValue().evaluate(FormulaContext.of(this.level));
+        for (Entry<Holder<Aura>, Double> entry : amounts.entrySet()) {
+            double value = entry.getValue();
             if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
             costs.put(entry.getKey(), (int) Math.ceil(value));
         }
@@ -146,18 +156,6 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
 
     public boolean hasAura(Map<Holder<Aura>, Integer> costs) {
         return costs.entrySet().stream().allMatch(entry -> entry.getValue() >= 0 && this.aura(entry.getKey()) >= entry.getValue());
-    }
-
-    // One craft's costs are deducted together; any remaining active-recipe buffer stays for the next craft.
-    public boolean consumeAura(Map<Holder<Aura>, Integer> costs) {
-        if (!this.hasAura(costs)) return false;
-        costs.forEach((aura, amount) -> {
-            int remaining = this.aura(aura) - amount;
-            if (remaining == 0) this.aura.remove(aura);
-            else this.aura.put(aura, remaining);
-        });
-        this.markChangedAndSync();
-        return true;
     }
 
     @Override

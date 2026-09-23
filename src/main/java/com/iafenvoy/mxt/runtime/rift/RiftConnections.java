@@ -4,12 +4,7 @@ import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Connectivity of a rift. A rift looks at the 3x3x3 blocks around itself and links to every rift it finds there,

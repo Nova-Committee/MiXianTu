@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.runtime.formation;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
@@ -27,13 +27,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Low-frequency lifecycle dispatcher; it never scans unloaded chunks.

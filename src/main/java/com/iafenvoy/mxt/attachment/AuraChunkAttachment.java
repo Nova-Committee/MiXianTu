@@ -108,12 +108,18 @@ public final class AuraChunkAttachment {
 
     // All-or-nothing: every pool is checked before any is spent.
     public boolean consume(Map<Holder<Aura>, Double> costs) {
+        if (!this.canConsume(costs)) return false;
+        costs.forEach((aura, cost) -> this.auras.computeIfPresent(aura, (ignored, pool) -> pool.change(-cost)));
+        return true;
+    }
+
+    /** Read-only availability test; {@link #consume} asks it again before spending anything. */
+    public boolean canConsume(Map<Holder<Aura>, Double> costs) {
         for (Entry<Holder<Aura>, Double> entry : costs.entrySet()) {
             double cost = entry.getValue();
             AuraPool pool = this.auras.get(entry.getKey());
             if (!Double.isFinite(cost) || cost < 0.0D || pool == null || pool.amount() < cost) return false;
         }
-        costs.forEach((aura, cost) -> this.auras.computeIfPresent(aura, (ignored, pool) -> pool.change(-cost)));
         return true;
     }
 

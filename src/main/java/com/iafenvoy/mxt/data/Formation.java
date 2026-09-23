@@ -4,8 +4,8 @@ import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
-import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
@@ -38,8 +38,8 @@ import java.util.function.Function;
  */
 public record Formation(Component name, Component description, Optional<Identifier> structureTemplate,
                         List<RequiredBlock> structure,
-                        NumberProvider radius, List<ResourceCost> activationCosts,
-                        List<ResourceCost> maintenanceCosts, Optional<Storage> storage,
+                        NumberProvider radius, List<Cost> activationCosts,
+                        List<Cost> maintenanceCosts, Optional<Storage> storage,
                         List<FormationActionType> actions,
                         boolean spareFriends, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
@@ -55,8 +55,8 @@ public record Formation(Component name, Component description, Optional<Identifi
             // the structure easier to satisfy, and a formation standing on half its flags is worse.
             RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
             NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
-            ResourceCost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
-            ResourceCost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
+            Cost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
+            Cost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
             // A framework field rather than a module: what an array keeps is a question about its own upkeep,
             // and absent is the answer most arrays give, so this is one field rather than a module.
             Storage.CODEC.optionalFieldOf("storage").forGetter(Formation::storage),
