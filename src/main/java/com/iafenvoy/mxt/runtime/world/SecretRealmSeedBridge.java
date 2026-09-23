@@ -13,11 +13,11 @@ import java.util.OptionalLong;
  * datapack registry is built, so a runtime dimension would normally reuse the world seed; the instance's own
  * seed is published here for the narrow window in which {@code ServerLevel} is constructed.
  */
-public final class RealmSeedBridge {
+public final class SecretRealmSeedBridge {
     private static ResourceKey<Level> constructing;
     private static long seed;
 
-    private RealmSeedBridge() {
+    private SecretRealmSeedBridge() {
     }
 
     public static void begin(ResourceKey<Level> dimension, long value) {
@@ -31,7 +31,7 @@ public final class RealmSeedBridge {
     }
 
     /**
-     * The seed of the level currently being constructed, or empty when the level is not a realm instance.
+     * The seed of the level currently being constructed, or empty when the level is not a secret realm.
      */
     public static OptionalLong pending() {
         return constructing == null ? OptionalLong.empty() : OptionalLong.of(seed);

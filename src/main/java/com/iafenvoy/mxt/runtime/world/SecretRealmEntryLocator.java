@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.data.realm.RealmInstance;
-import com.iafenvoy.mxt.data.realm.RealmInstance.Border;
-import com.iafenvoy.mxt.data.realm.RealmInstance.EntryPoint;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm.Border;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm.EntryPoint;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -18,16 +18,16 @@ import org.jetbrains.annotations.Nullable;
  * picked becomes the instance anchor, so later visitors reach the same place, and arrivals in the same visit
  * are spread around it.
  */
-public final class RealmEntryLocator {
+public final class SecretRealmEntryLocator {
     private static final double DEFAULT_RADIUS = 64.0D;
 
-    private RealmEntryLocator() {
+    private SecretRealmEntryLocator() {
     }
 
-    // The height is a first guess from the terrain as it is before the realm is furnished; finish() corrects it
+    // The height is a first guess from the terrain as it is before the secret realm is furnished; finish() corrects it
     // once structures are in place.
-    public static Landing plan(ServerLevel level, RealmRecord record) {
-        RealmInstance definition = record.instance();
+    public static Landing plan(ServerLevel level, SecretRealmRecord record) {
+        SecretRealm definition = record.instance();
         RandomSource random = RandomSource.create(record.seed());
         EntryPoint point = definition.pickEntry(random);
         Vec3 position = point != null && point.pos().isPresent()
@@ -43,7 +43,7 @@ public final class RealmEntryLocator {
         return new Vec3(landing.position().x, surface(level, landing.position().x, landing.position().z), landing.position().z);
     }
 
-    public static Arrival arrival(ServerLevel level, RealmRecord record, int slot, float fallbackYaw, float fallbackPitch) {
+    public static Arrival arrival(ServerLevel level, SecretRealmRecord record, int slot, float fallbackYaw, float fallbackPitch) {
         Vec3 anchor = record.anchor().orElseGet(() -> new Vec3(0.5D, 0.0D, 0.5D));
         RandomSource random = RandomSource.create(record.seed());
         EntryPoint point = record.instance().pickEntry(random);
@@ -60,7 +60,7 @@ public final class RealmEntryLocator {
         return new Arrival(position, yaw, pitch);
     }
 
-    private static Vec3 randomPoint(ServerLevel level, RealmInstance definition, @Nullable EntryPoint point, RandomSource random) {
+    private static Vec3 randomPoint(ServerLevel level, SecretRealm definition, @Nullable EntryPoint point, RandomSource random) {
         Border border = definition.effectiveBorder();
         Vec2 center = point == null ? null : point.randomCenter().orElse(null);
         double centerX = center == null ? border.center().x : center.x;
@@ -74,7 +74,7 @@ public final class RealmEntryLocator {
         return new Vec3(x, surface(level, x, z), z);
     }
 
-    // The height of the first blocking block; the world floor for a realm with no floor at all.
+    // The height of the first blocking block; the world floor for a secret realm with no floor at all.
     public static double surface(ServerLevel level, double x, double z) {
         BlockPos column = new BlockPos(Mth.floor(x), level.getMinY(), Mth.floor(z));
         return level.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ());

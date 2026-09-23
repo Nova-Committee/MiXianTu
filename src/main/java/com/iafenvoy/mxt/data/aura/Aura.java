@@ -1,18 +1,22 @@
 package com.iafenvoy.mxt.data.aura;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.RegistryFixedCodec;
@@ -27,13 +31,17 @@ import java.util.Optional;
  * a plain counter or an aura. The ambient aura of the world ({@code mxt:aura_zone}, {@code mxt:block_aura}) is a
  * separate thing that happens to share the word.
  */
-public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> firstRealm,
+public record Aura(Component name, Component description, Holder<Resource> resource,
+                   Optional<Holder<RealmStage>> firstRealm,
                    NumberProvider startExp, CultivateConditions startCultivateConditions,
                    ResourceConversion cultivationToResource, ResourceConversion resourceToCultivation,
                    NumberProvider regen, Optional<Holder<Element>> auraType, NumberProvider burstAmount,
-                   EntityCondition useCondition, boolean showCultivationInfo) {
+                   EntityCondition useCondition, boolean showCultivationInfo) implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.AURA.identifier());
     public static final Codec<Holder<Aura>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.AURA);
     public static final Codec<Aura> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(Aura::name),
+            ContextNameCodec.description(CATEGORY).forGetter(Aura::description),
             Resource.CODEC.fieldOf("resource").forGetter(Aura::resource),
             RealmStage.CODEC.optionalFieldOf("first_realm").forGetter(Aura::firstRealm),
             NumberProvider.CODEC.optionalFieldOf("start_exp", new Constant(0.0D)).forGetter(Aura::startExp),

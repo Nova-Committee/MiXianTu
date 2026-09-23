@@ -1,4 +1,6 @@
 {
+  "name": {"text": "Metal probe"},
+  "description": {"text": "The fixture's metal element."},
   "overcomes": [
     {
       "elements": ["mxt_test:wood"],

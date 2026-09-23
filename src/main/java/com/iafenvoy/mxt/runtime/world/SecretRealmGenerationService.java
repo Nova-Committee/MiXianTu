@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.realm.RealmGeneration;
-import com.iafenvoy.mxt.data.realm.RealmGeneration.Existing;
-import com.iafenvoy.mxt.data.realm.RealmGeneration.Flat;
-import com.iafenvoy.mxt.data.realm.RealmGeneration.Stem;
-import com.iafenvoy.mxt.data.realm.RealmGeneration.Template;
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Flat;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Stem;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Template;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderGetter;
@@ -42,19 +42,19 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * Creates, opens and discards realm instance dimensions.
+ * Creates, opens and discards secret realm dimensions.
  * <p>
- * Dimensions are named {@code <definition namespace>:realm/<definition path>/<index>}, index always included,
+ * Dimensions are named {@code <definition namespace>:secret_realm/<definition path>/<index>}, index always included,
  * because a dimension's folder follows its identifier - keeping every instance's terrain in its own directory -
  * and an aura zone can name that identifier to cover the dimension.
  */
-public final class RealmGenerationService {
-    public static final String DIMENSION_PREFIX = "realm";
-    private static final String TEMPLATE_ROOT = "mxt_realm";
+public final class SecretRealmGenerationService {
+    public static final String DIMENSION_PREFIX = "secret_realm";
+    private static final String TEMPLATE_ROOT = "mxt_secret_realm";
     private static final String[] DATA_FOLDERS = {"region", "entities", "poi"};
     private static final String TEMPLATE_NAME = "[A-Za-z0-9_-]+";
 
-    private RealmGenerationService() {
+    private SecretRealmGenerationService() {
     }
 
     public static ResourceKey<Level> dimensionKey(Identifier definition, int index) {
@@ -62,44 +62,44 @@ public final class RealmGenerationService {
         return ResourceKey.create(Registries.DIMENSION, Identifier.fromNamespaceAndPath(definition.getNamespace(), path));
     }
 
-    // An existing realm has no dimension of its own, so the one it names is the instance's identity as well -
+    // An existing secret realm has no dimension of its own, so the one it names is the instance's identity as well -
     // which is also what keeps it from being unloaded or deleted when it empties.
-    public static ResourceKey<Level> dimensionKey(Identifier definition, RealmGeneration generation, int index) {
+    public static ResourceKey<Level> dimensionKey(Identifier definition, SecretRealmGeneration generation, int index) {
         if (generation instanceof Existing(ResourceKey<Level> dimension)) return dimension;
         return dimensionKey(definition, index);
     }
 
-    public static Optional<ServerLevel> open(MinecraftServer server, RealmRecord record) {
-        RealmInstance definition = record.instance();
+    public static Optional<ServerLevel> open(MinecraftServer server, SecretRealmRecord record) {
+        SecretRealm definition = record.instance();
         if (definition.generation() instanceof Existing(ResourceKey<Level> dimension)) {
             ServerLevel level = server.getLevel(dimension);
             if (level == null) return Optional.empty();
-            RealmBorderService.apply(level, definition, false);
+            SecretRealmBorderService.apply(level, definition, false);
             return Optional.of(level);
         }
         ServerLevel loaded = server.getLevel(record.dimension());
         if (loaded != null) {
-            RealmBorderService.apply(loaded, definition, true);
+            SecretRealmBorderService.apply(loaded, definition, true);
             return Optional.of(loaded);
         }
         if (definition.generation() instanceof Template template && !record.prepared()
                 && !copyTemplate(server, record.dimension(), template.template())) return Optional.empty();
         LevelStem stem = buildStem(server, definition.generation());
         if (stem == null) return Optional.empty();
-        RealmSeedBridge.begin(record.dimension(), record.seed());
+        SecretRealmSeedBridge.begin(record.dimension(), record.seed());
         try {
             Optional<ServerLevel> level = RuntimeDimensionService.load(server, record.dimension(), stem);
-            level.ifPresent(value -> RealmBorderService.apply(value, definition, true));
+            level.ifPresent(value -> SecretRealmBorderService.apply(value, definition, true));
             return level;
         } finally {
-            RealmSeedBridge.end();
+            SecretRealmSeedBridge.end();
         }
     }
 
     // Every registry read happens here rather than in the codec: datapack registries load in parallel, and the
     // stem and dimension type layers are not available to a codec at all. Null when unresolved.
     @Nullable
-    public static LevelStem buildStem(MinecraftServer server, RealmGeneration generation) {
+    public static LevelStem buildStem(MinecraftServer server, SecretRealmGeneration generation) {
         RegistryAccess registries = server.registryAccess();
         try {
             return switch (generation) {
@@ -114,16 +114,16 @@ public final class RealmGenerationService {
                     yield new LevelStem(dimensionType(registries, flat.dimensionType()),
                             new FlatLevelSource(flatSettings(registries, preset.layers(), preset.biome(), flat.structures())));
                 }
-                case RealmGeneration.Void empty -> new LevelStem(dimensionType(registries, empty.dimensionType()),
+                case SecretRealmGeneration.Void empty -> new LevelStem(dimensionType(registries, empty.dimensionType()),
                         new FlatLevelSource(flatSettings(registries, List.of(), empty.biome().or(() -> Optional.of(Biomes.THE_VOID)), empty.structures())));
             };
         } catch (Exception exception) {
-            MiXianTu.LOGGER.error("Invalid realm generation parameters {}", generation, exception);
+            MiXianTu.LOGGER.error("Invalid secret realm generation parameters {}", generation, exception);
             return null;
         }
     }
 
-    // A dimension a data pack declared through the level stem registry is never touched: the realm/ folder
+    // A dimension a data pack declared through the level stem registry is never touched: the secret_realm/ folder
     // convention must not be able to delete a real dimension that happens to sit under it.
     public static void clearData(MinecraftServer server, ResourceKey<Level> dimension) {
         if (declared(server, dimension)) return;
@@ -133,12 +133,12 @@ public final class RealmGenerationService {
     // The whole folder goes rather than only the chunk directories, because a dimension also stores its level data
     // and attachments under data/: reusing the key must not resurrect the previous occupant's aura areas.
     private static void discard(MinecraftServer server, Identifier dimension) {
-        Path folder = server.getWorldPath(RealmSeedBridge.folder(dimension));
+        Path folder = server.getWorldPath(SecretRealmSeedBridge.folder(dimension));
         if (!Files.isDirectory(folder)) return;
         try {
             FileUtils.deleteDirectory(folder.toFile());
         } catch (IOException exception) {
-            MiXianTu.LOGGER.warn("Failed to remove realm instance folder {}, clearing its data instead", folder, exception);
+            MiXianTu.LOGGER.warn("Failed to remove secret realm folder {}, clearing its data instead", folder, exception);
             for (String name : DATA_FOLDERS) clearDirectory(folder.resolve(name));
         }
     }
@@ -148,21 +148,21 @@ public final class RealmGenerationService {
                 .get(ResourceKey.create(Registries.LEVEL_STEM, dimension.identifier())).isPresent();
     }
 
-    // What a realm destroyed by a crash, or by a definition that has since been deleted, leaves behind.
+    // What a secret realm destroyed by a crash, or by a definition that has since been deleted, leaves behind.
     public static void clearOrphans(MinecraftServer server, Set<ResourceKey<Level>> claimed) {
-        Path root = server.getWorldPath(RealmSeedBridge.root());
+        Path root = server.getWorldPath(SecretRealmSeedBridge.root());
         if (!Files.isDirectory(root)) return;
         List<Path> candidates = new ArrayList<>();
         try (Stream<Path> namespaces = Files.list(root)) {
             for (Path namespace : namespaces.toList()) {
-                Path realmRoot = namespace.resolve(DIMENSION_PREFIX);
-                if (!Files.isDirectory(realmRoot)) continue;
-                try (Stream<Path> walked = Files.walk(realmRoot)) {
-                    walked.filter(Files::isDirectory).filter(RealmGenerationService::holdsData).forEach(candidates::add);
+                Path secretRealmRoot = namespace.resolve(DIMENSION_PREFIX);
+                if (!Files.isDirectory(secretRealmRoot)) continue;
+                try (Stream<Path> walked = Files.walk(secretRealmRoot)) {
+                    walked.filter(Files::isDirectory).filter(SecretRealmGenerationService::holdsData).forEach(candidates::add);
                 }
             }
         } catch (IOException exception) {
-            MiXianTu.LOGGER.warn("Failed to scan realm instance folders", exception);
+            MiXianTu.LOGGER.warn("Failed to scan secret realm folders", exception);
             return;
         }
         for (Path candidate : candidates) {
@@ -171,23 +171,23 @@ public final class RealmGenerationService {
             ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, id);
             if (claimed.contains(dimension) || declared(server, dimension)) continue;
             discard(server, id);
-            MiXianTu.LOGGER.info("Removed leftover realm instance data {}", id);
+            MiXianTu.LOGGER.info("Removed leftover secret realm data {}", id);
         }
     }
 
     private static boolean copyTemplate(MinecraftServer server, ResourceKey<Level> target, String template) {
         if (!template.matches(TEMPLATE_NAME)) {
-            MiXianTu.LOGGER.error("Invalid realm template name {}", template);
+            MiXianTu.LOGGER.error("Invalid secret realm template name {}", template);
             return false;
         }
         Path source = server.getServerDirectory().resolve(TEMPLATE_ROOT).resolve(template)
                 .resolve(dimensionDataFolder(target.identifier()));
         if (!Files.isDirectory(source)) {
-            MiXianTu.LOGGER.error("Missing realm template {}", source);
+            MiXianTu.LOGGER.error("Missing secret realm template {}", source);
             return false;
         }
         clearData(server, target);
-        Path destination = server.getWorldPath(RealmSeedBridge.folder(target.identifier()));
+        Path destination = server.getWorldPath(SecretRealmSeedBridge.folder(target.identifier()));
         try {
             for (String name : DATA_FOLDERS) {
                 Path from = source.resolve(name);
@@ -195,7 +195,7 @@ public final class RealmGenerationService {
             }
             return true;
         } catch (IOException exception) {
-            MiXianTu.LOGGER.error("Failed to copy realm template {}", source, exception);
+            MiXianTu.LOGGER.error("Failed to copy secret realm template {}", source, exception);
             return false;
         }
     }
@@ -267,7 +267,7 @@ public final class RealmGenerationService {
                 .orElse(null);
     }
 
-    // Instance folders live under realm/, so any folder there holding level data or chunk data is one. It is
+    // Instance folders live under secret_realm/, so any folder there holding level data or chunk data is one. It is
     // checked rather than assumed from the depth, because a definition path with slashes nests deeper.
     private static boolean holdsData(Path path) {
         if (Files.isRegularFile(path.resolve("level.dat"))) return true;
@@ -287,7 +287,7 @@ public final class RealmGenerationService {
         try {
             FileUtils.cleanDirectory(path.toFile());
         } catch (IOException exception) {
-            MiXianTu.LOGGER.warn("Failed to clear realm instance folder {}", path, exception);
+            MiXianTu.LOGGER.warn("Failed to clear secret realm folder {}", path, exception);
         }
     }
 

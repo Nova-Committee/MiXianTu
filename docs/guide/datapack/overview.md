@@ -57,7 +57,7 @@ data/mxt/tags/mxt/<registry>/disabled.json
 | --- | --- |
 | 资源与修炼 | `resource`、`aura`、`element`、`realm_stage`、`spirit_root`、`physique`、`technique`、`skill_stage`、`cultivate_action` |
 | 技能与规则 | `ability`、`curse`、`formation`、`tribulation`、`trigger`、`talisman` |
-| 灵气与世界 | `aura_zone`、`block_aura`、`item_aura`、`realm_instance` |
+| 灵气与世界 | `aura_zone`、`block_aura`、`item_aura`、`secret_realm` |
 | 物品与品质 | `item_binding`、`weapon_binding`、`pill_binding`、`technique_binding`、`tool_binding`、`blueprint_binding`、`artifact`、`item_quality` |
 | 经济与内容 | `currency`、`spirit_herb`、`forging_method`、`forging_blueprint`、`creature_profile`、`contract_type` |
 

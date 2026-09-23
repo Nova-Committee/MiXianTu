@@ -14,7 +14,7 @@ import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationCont
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.item.RiftAnchorItem;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
@@ -35,10 +35,10 @@ import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
-import com.iafenvoy.mxt.runtime.world.RealmInstanceService;
-import com.iafenvoy.mxt.runtime.world.RealmInstanceService.Result;
-import com.iafenvoy.mxt.runtime.world.RealmRecord;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
+import com.iafenvoy.mxt.runtime.world.SecretRealmService;
+import com.iafenvoy.mxt.runtime.world.SecretRealmService.Result;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -117,20 +117,20 @@ public final class MxtCommand {
                         .then(argument("aura", IdentifierArgument.id())
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.AURA))
                                 .executes(ctx -> attemptBreakthrough(ctx.getSource(), IdentifierArgument.getId(ctx, "aura")))))
-                .then(literal("realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .then(literal("secret_realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(literal("set").then(argument("realm", IdentifierArgument.id())
                                 .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_STAGE))
                                 .executes(ctx -> setRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "realm"))))))
-                .then(literal("realm_instance").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(literal("list").executes(ctx -> listRealmInstances(ctx.getSource())))
+                .then(literal("secret_realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                        .then(literal("list").executes(ctx -> listSecretRealms(ctx.getSource())))
                         .then(literal("info").then(argument("dimension", IdentifierArgument.id())
-                                .executes(ctx -> realmInstanceInfo(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))))
+                                .executes(ctx -> secretRealmInfo(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))))
                         .then(literal("enter").then(argument("definition", IdentifierArgument.id())
-                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_INSTANCE))
-                                .executes(ctx -> enterRealmInstance(ctx.getSource(), IdentifierArgument.getId(ctx, "definition")))))
-                        .then(literal("exit").executes(ctx -> exitRealmInstance(ctx.getSource())))
+                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.SECRET_REALM))
+                                .executes(ctx -> enterSecretRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "definition")))))
+                        .then(literal("exit").executes(ctx -> exitSecretRealm(ctx.getSource())))
                         .then(literal("destroy").then(argument("dimension", IdentifierArgument.id())
-                                .executes(ctx -> destroyRealmInstance(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"))))))
+                                .executes(ctx -> destroySecretRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"))))))
                 .then(literal("rift").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(literal("info").then(argument("pos", BlockPosArgument.blockPos())
                                 .executes(ctx -> riftInfo(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))))
@@ -402,76 +402,76 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int listRealmInstances(CommandSourceStack source) {
-        List<RealmRecord> records = RealmInstanceRegistry.all();
+    private static int listSecretRealms(CommandSourceStack source) {
+        List<SecretRealmRecord> records = SecretRealmRegistry.all();
         if (records.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.list.empty"), false);
+            source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.list.empty"), false);
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.list", records.size()), false);
-        for (RealmRecord record : records)
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.list", records.size()), false);
+        for (SecretRealmRecord record : records)
             source.sendSuccess(() -> Component.literal(describe(record, source.getServer())), false);
         return records.size();
     }
 
-    private static int realmInstanceInfo(CommandSourceStack source, Identifier dimension) {
-        RealmRecord record = RealmInstanceRegistry.at(ResourceKey.create(Registries.DIMENSION, dimension)).orElse(null);
+    private static int secretRealmInfo(CommandSourceStack source, Identifier dimension) {
+        SecretRealmRecord record = SecretRealmRegistry.at(ResourceKey.create(Registries.DIMENSION, dimension)).orElse(null);
         if (record == null) {
-            source.sendFailure(Component.translatable("command.mxt.realm_instance.unknown", dimension.toString()));
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", dimension.toString()));
             return 0;
         }
         source.sendSuccess(() -> Component.literal(describe(record, source.getServer())), false);
         return 1;
     }
 
-    private static int enterRealmInstance(CommandSourceStack source, Identifier definition) {
+    private static int enterSecretRealm(CommandSourceStack source, Identifier definition) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        Holder<RealmInstance> holder = MxtDatapackRegistries.holder(MxtResourceKeys.REALM_INSTANCE, definition).orElse(null);
+        Holder<SecretRealm> holder = MxtDatapackRegistries.holder(MxtResourceKeys.SECRET_REALM, definition).orElse(null);
         if (holder == null) {
-            source.sendFailure(Component.translatable("command.mxt.realm_instance.unknown", definition.toString()));
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", definition.toString()));
             return 0;
         }
-        Result result = RealmInstanceService.enter(player, holder);
+        Result result = SecretRealmService.enter(player, holder);
         if (!result.changed()) {
-            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.realm_instance.enter_failed",
+            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.enter_failed",
                     result.failure().name())));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.entered", DefinitionText.name(holder, "realm_instance")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.name(holder, "secret_realm")), true);
         return 1;
     }
 
-    private static int exitRealmInstance(CommandSourceStack source) {
+    private static int exitSecretRealm(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        Result result = RealmInstanceService.exit(player);
+        Result result = SecretRealmService.exit(player);
         if (!result.changed()) {
-            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.realm_instance.exit_failed",
+            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.exit_failed",
                     result.failure() == null ? "unknown" : result.failure().name())));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.exited"), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.exited"), true);
         return 1;
     }
 
-    private static int destroyRealmInstance(CommandSourceStack source, Identifier dimension) {
-        RealmRecord record = RealmInstanceRegistry.at(ResourceKey.create(Registries.DIMENSION, dimension)).orElse(null);
+    private static int destroySecretRealm(CommandSourceStack source, Identifier dimension) {
+        SecretRealmRecord record = SecretRealmRegistry.at(ResourceKey.create(Registries.DIMENSION, dimension)).orElse(null);
         if (record == null) {
-            source.sendFailure(Component.translatable("command.mxt.realm_instance.unknown", dimension.toString()));
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", dimension.toString()));
             return 0;
         }
-        if (!RealmInstanceService.destroy(source.getServer(), record)) {
-            source.sendFailure(Component.translatable("command.mxt.realm_instance.destroy_failed", dimension.toString()));
+        if (!SecretRealmService.destroy(source.getServer(), record)) {
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.destroy_failed", dimension.toString()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm_instance.destroyed", dimension.toString()), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.destroyed", dimension.toString()), true);
         return 1;
     }
 
@@ -570,7 +570,7 @@ public final class MxtCommand {
         return "%d %d %d".formatted(pos.getX(), pos.getY(), pos.getZ());
     }
 
-    private static String describe(RealmRecord record, MinecraftServer server) {
+    private static String describe(SecretRealmRecord record, MinecraftServer server) {
         return "%s #%d %s members=%d limit=%s owner=%s prepared=%s loaded=%s".formatted(
                 record.dimension().identifier(), record.index(),
                 record.definition().unwrapKey().map(key -> key.identifier().toString()).orElse("?"),

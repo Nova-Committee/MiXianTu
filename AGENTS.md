@@ -65,6 +65,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | 命令 | `command/`（一个节点一个类，`ROOT` 常量）+ `command/CommandManager.java` + `config/MxtServerConfig.Commands` + 两份 lang |
 | KubeJS 桥接 | `compat/kubejs/MxtKubeJsApi.java`（受校验的操作）+ `compat/kubejs/binding/`（一个全局对象一个类）+ `MxtKubeJsPlugin.registerBindings` |
 | 界面 / HUD / 信息面板 | `screen/` |
+| 原版注入（mixin / 访问器） | `mixin/`（登记在 `src/main/resources/mxt.mixins.json` 的 `mixins` 段；访问器接口与实现分开时放 `accessor/`，见 `accessor/ResourceLoadingOps.java` 与 `mixin/codec/`）——**注入只在运行时生效，编译不代表注入成功**，`defaultRequire: 1` 会让失败的注入直接崩在启动 |
 | 测试探针与夹具 | `src/test-mod/java/com/iafenvoy/mxt/testmod/`、`src/test-mod/resources/data/mxt_test/` |
 | 设计稿 / 审计 / 测试设定 | `research/`——**新设计必须留档在这里**，命名与分工见 [`research/README.md`](research/README.md) |
 | 模组文档（仓库内，作者向） | `docs/`（Docusaurus 风格：front matter + `_category_.json`）——**不是**玩家文档站，两者用途对照见 [`docs/README.md`](docs/README.md) |
@@ -86,7 +87,8 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 - **缓存按注册表实例开键**（见 `DamageElements`、`ElementReactionService`、`FormulaNames`）：`/reload` 不会重建 datapack registry，世界加载才会换实例，缓存键天然正确；上限参考 `MAX_CACHED_REGISTRIES` + `LOCK` 双检。
 - **重入守卫用 `ThreadLocal<Set<...>>` + try/finally**（见 `CurseService.IN_TRANSACTION`、`ElementReactionService.IN_CHAIN`、`TriggerDispatcher.DISPATCHING`）：链式触发很容易写成无限递归。
 - **失败用结果记录，不用异常**：`Result(changed, failure)` + `Failure` 枚举（`CultivationIdentityService`、`CultivationToggleService`、`AbilityService.UseResult` …）。客户端调用一律返回 `false` / `0` / `failure = SERVER_ONLY`，不写日志。
-- **显示名走 `DefinitionText.name(holder, category)`**；自由文本（`rarity`、功法 `grade`）先查 `mxt.rarity.<值>` / `mxt.technique_grade.<值>`，有翻译用翻译、否则显示原文。
+- **显示名走 `DefinitionText.name(holder, category)`**；自由文本（`rarity`、功法 `grade`）先查 `mxt.rarity.<值>` / `mxt.technique_grade.<值>`，有翻译用翻译、否则显示原文。**18 张注册表的定义自带 `name` / `description` 两个可选字段**（`api/NamedDefinition`，走 `util/codec/ContextNameCodec`；一组文本用 `util/codec/ContextNameListCodec`，目前只有子境界名）：省略时按解码时的条目 id 生成**和上面同一个键** `<类别>.<注册表命名空间>.<定义命名空间>.<路径>`（注册表命名空间就是 `mxt`），`DefinitionText.name(...)` 认得出这个接口、直接读字段——别在别处再拼一套名字键，也别再造第二套键。
+- **`RecordCodecBuilder.group` 最多 16 个组件**：加上 `name` / `description` 后超出的记录（`RealmStage` 18 个、`Ability` 与 `SecretRealm` 各 17 个）用 `MiscCodecs.pair(a, b)` 把两个字段并成一组，JSON 键不变。`ContextNameCodec` 与 `DefinitionText` 共用 `DefinitionText.key(...)` / `defaultText(...)` 两个出口，两边永远同形。
 - **服务端权威**：扣费、校验、修炼、突破、实体行为只在服务端；客户端只渲染与发请求。
 - **数据包对象视为不可变**，别做多余的 `copyOf` / Mutable 转换；颜色用 `MiscCodecs.COLOR`；数值加载期校验有限性，运行期遇到 NaN/Infinity 记一次警告并按 0（或 1，视语义）处理。
 - **元素相关规则只有一份实现**：`mxt:disabled` 的语义、灵根"持有 vs 生效"、这一击是什么元素、伤害管线的每个因子（`damage_multiplier`、`element_modifier`、攻击方 `overcomes`、受击方 `adapted_to`、体质的 `damage_dealt_multiplier` / `damage_taken_multiplier`）都已经有公共入口（`Elements`、`DamageElements`、`DamageCalculationService`），新代码接进去，不要在别处再算一套。
@@ -95,7 +97,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 ## 5. 测试与探针
 
 - 本仓库**没有 JUnit**。验证靠：编译 →（获准时）实机跑 `/mxt_test`。
-- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `wheel` / `identity` / `artifact` / `artifacts` / `realm [keep|reopen]` / `rift` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
+- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `wheel` / `identity` / `artifact` / `artifacts` / `secret_realm [keep|reopen]` / `rift` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
 - **夹具里那些数字是断言的一部分**：例如测试包的火/水克制与适应倍率决定了 `10 × 1.5 × 0.5 = 7.5`。给测试包加内容时，先确认不会改变既有腿的算式（新内容用新文件承载，或让默认倍率为 1）。
 - 探针**只编译不等于跑过**：报告里必须写明"未实跑"，并给出跑一次该看什么输出。
 

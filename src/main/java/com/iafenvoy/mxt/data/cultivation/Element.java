@@ -1,7 +1,10 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
@@ -9,6 +12,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageType;
@@ -24,11 +28,15 @@ import java.util.Set;
  * and {@code adapted_to} on the defending one; every matching relation multiplies, so a value below 1 weakens.
  * All numbers are validated finite and non-negative at load.
  */
-public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
+public record Element(Component name, Component description, List<Relation> overcomes, List<Relation> adaptedTo,
                       List<DamageTypeClaim> damageTypes,
-                      double attachmentDecay, double damageAttachment, int color, double conflictMultiplier) {
+                      double attachmentDecay, double damageAttachment, int color, double conflictMultiplier)
+        implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ELEMENT.identifier());
     public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ELEMENT);
     public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.<Element>create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(Element::name),
+            ContextNameCodec.description(CATEGORY).forGetter(Element::description),
             Relation.CODEC.listOf().optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),
             Relation.CODEC.listOf().optionalFieldOf("adapted_to", List.of()).forGetter(Element::adaptedTo),
             DamageTypeClaim.CODEC.listOf().optionalFieldOf("damage_types", List.of()).forGetter(Element::damageTypes),

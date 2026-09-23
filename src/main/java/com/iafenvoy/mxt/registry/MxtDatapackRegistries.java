@@ -22,7 +22,7 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.mojang.serialization.Codec;
@@ -79,7 +79,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
         register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.CODEC);
         register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.CODEC);
-        register(event, MxtResourceKeys.REALM_INSTANCE, RealmInstance.CODEC);
+        register(event, MxtResourceKeys.SECRET_REALM, SecretRealm.CODEC);
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);
         register(event, MxtResourceKeys.ITEM_BINDING, ItemBinding.CODEC);
         register(event, MxtResourceKeys.WEAPON_BINDING, WeaponBinding.CODEC);

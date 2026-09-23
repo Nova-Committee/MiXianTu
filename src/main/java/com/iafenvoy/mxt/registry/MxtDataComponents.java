@@ -40,7 +40,7 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ContractScrollComponent>> CONTRACT_SCROLL = register("contract_scroll", ContractScrollComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<SpiritBeastComponent>> SPIRIT_BEAST = register("spirit_beast", SpiritBeastComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<FormationPlateComponent>> FORMATION_PLATE = register("formation_plate", FormationPlateComponent.CODEC);
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<RealmTokenComponent>> REALM_TOKEN = register("realm_token", RealmTokenComponent.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<SecretRealmTokenComponent>> SECRET_REALM_TOKEN = register("secret_realm_token", SecretRealmTokenComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceContainerComponent>> RESOURCE_CONTAINER = register("resource_container", ResourceContainerComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TokenComponent>> TOKEN = register("token", TokenComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<IdentificationComponent>> IDENTIFICATION = register("identification", IdentificationComponent.CODEC);

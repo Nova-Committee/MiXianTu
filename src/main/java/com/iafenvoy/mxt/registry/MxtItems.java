@@ -50,10 +50,10 @@ public final class MxtItems {
     public static final DeferredItem<ContractScrollItem> CONTRACT_SCROLL = register("contract_scroll", properties -> new ContractScrollItem(properties.component(MxtDataComponents.CONTRACT_SCROLL, ContractScrollComponent.EMPTY)));
     public static final DeferredItem<Item> RECALL_TALISMAN = register("recall_talisman", Item::new);
     public static final DeferredItem<BeastTamingBellItem> BEAST_TAMING_BELL = register("beast_taming_bell", BeastTamingBellItem::new);
-    public static final DeferredItem<Item> REALM_REWARD_BOX = register("realm_reward_box", Item::new);
+    public static final DeferredItem<Item> SECRET_REALM_REWARD_BOX = register("secret_realm_reward_box", Item::new);
     public static final DeferredItem<SpiritBeastBagItem> SPIRIT_BEAST_BAG = register("spirit_beast_bag", properties -> new SpiritBeastBagItem(properties.stacksTo(1).component(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY)));
     public static final DeferredItem<FormationPlateItem> FORMATION_PLATE = register("formation_plate", properties -> new FormationPlateItem(properties.stacksTo(1).component(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY)));
-    public static final DeferredItem<RealmTokenItem> REALM_TOKEN = register("realm_token", properties -> new RealmTokenItem(properties.stacksTo(1).component(MxtDataComponents.REALM_TOKEN, RealmTokenComponent.EMPTY)));
+    public static final DeferredItem<SecretRealmTokenItem> SECRET_REALM_TOKEN = register("secret_realm_token", properties -> new SecretRealmTokenItem(properties.stacksTo(1).component(MxtDataComponents.SECRET_REALM_TOKEN, SecretRealmTokenComponent.EMPTY)));
     public static final DeferredItem<RiftAnchorItem> RIFT_ANCHOR = register("rift_anchor", properties -> new RiftAnchorItem(properties.stacksTo(1).component(MxtDataComponents.RIFT, RiftComponent.EMPTY)));
     public static final DeferredItem<SpiritVesselItem> SPIRIT_VESSEL = register("spirit_vessel", properties -> new SpiritVesselItem(properties.stacksTo(1).component(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY)));
     public static final DeferredItem<IdentificationMirrorItem> IDENTIFICATION_MIRROR = register("identification_mirror", properties -> new IdentificationMirrorItem(properties.stacksTo(1)));

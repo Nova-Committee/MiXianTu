@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.ItemBinding;
 import com.iafenvoy.mxt.data.item.PillBinding;
-import com.iafenvoy.mxt.data.item.RealmTokenComponent;
+import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
@@ -73,9 +73,9 @@ public final class ItemPickerManager {
                 componentStack(new ItemStack(MxtItems.CONTRACT_SCROLL.get()), MxtDataComponents.CONTRACT_SCROLL,
                         new ContractScrollComponent(Optional.of(holder))),
                 holder));
-        registerSingle(MxtResourceKeys.REALM_INSTANCE, holder -> described(
-                componentStack(new ItemStack(MxtItems.REALM_TOKEN.get()), MxtDataComponents.REALM_TOKEN,
-                        new RealmTokenComponent(Optional.of(holder))),
+        registerSingle(MxtResourceKeys.SECRET_REALM, holder -> described(
+                componentStack(new ItemStack(MxtItems.SECRET_REALM_TOKEN.get()), MxtDataComponents.SECRET_REALM_TOKEN,
+                        new SecretRealmTokenComponent(Optional.of(holder))),
                 holder));
         registerSingle(MxtResourceKeys.FORMATION, holder -> described(
                 componentStack(new ItemStack(MxtItems.FORMATION_PLATE.get()), MxtDataComponents.FORMATION_PLATE,
@@ -95,7 +95,7 @@ public final class ItemPickerManager {
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins.
         registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(
-                new ItemStack(MxtItems.IDENTIFICATION_MIRROR.get()), holder, holder.value().displayName()));
+                new ItemStack(MxtItems.IDENTIFICATION_MIRROR.get()), holder, holder.value().name()));
     }
 
     // Wildcard key is unwidened here because that is the shape the picker passes around; nothing reads the entry type back out.

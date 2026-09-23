@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
@@ -19,19 +20,21 @@ import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.InRealmInstanceEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.InRealmInstanceEntityCondition.Role;
+import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
-import com.iafenvoy.mxt.data.item.RealmTokenComponent;
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Result.State;
@@ -78,10 +81,10 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
-import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
-import com.iafenvoy.mxt.runtime.world.RealmInstanceService;
-import com.iafenvoy.mxt.runtime.world.RealmRecord;
-import com.iafenvoy.mxt.runtime.world.RealmStructurePlacer;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
+import com.iafenvoy.mxt.runtime.world.SecretRealmService;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
+import com.iafenvoy.mxt.runtime.world.SecretRealmStructurePlacer;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
@@ -97,6 +100,7 @@ import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
@@ -119,6 +123,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -172,6 +177,11 @@ import static net.minecraft.commands.Commands.literal;
 public final class MxtTestCommands {
     private static final Identifier QI = id("qi");
     private static final Identifier QI_REFINING = id("qi_refining");
+    private static final Identifier FOUNDATION = id("foundation");
+    private static final Identifier CORE_FORMING = id("core_forming");
+    private static final Identifier POOR_QUALITY = id("poor");
+    private static final Identifier NORMAL_QUALITY = id("normal");
+    private static final Identifier EXCELLENT_QUALITY = id("excellent");
     private static final Identifier SPIRIT_POWER = id("spirit_power");
     private static final Identifier SPIRIT_POWER_REFINING = id("spirit_power_refining");
     private static final Identifier WATER_POWER = id("water_power");
@@ -182,7 +192,7 @@ public final class MxtTestCommands {
     private static final Identifier TECHNIQUE = id("qingxiao_breathing_manual");
     private static final Identifier CULTIVATE = id("qingxiao_meditation");
     private static final Identifier FORMATION = id("spirit_gathering");
-    private static final Identifier REALM = id("trial_realm");
+    private static final Identifier TRIAL_REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
     private static final Identifier PROBE_FIRE_ROOT = id("fire_root");
     private static final Identifier PROBE_WATER_ROOT = id("water_root");
@@ -249,16 +259,17 @@ public final class MxtTestCommands {
                 .then(literal("identity").executes(context -> probeIdentity(context.getSource())))
                 .then(literal("artifact").executes(context -> probeArtifact(context.getSource())))
                 .then(literal("artifacts").executes(context -> probeArtifactRoster(context.getSource())))
-                .then(literal("realm")
-                        .executes(context -> probeRealm(context.getSource()))
-                        .then(literal("keep").executes(context -> keepRealm(context.getSource())))
-                        .then(literal("reopen").executes(context -> reopenRealm(context.getSource()))))
+                .then(literal("secret_realm")
+                        .executes(context -> probeSecretRealm(context.getSource()))
+                        .then(literal("keep").executes(context -> keepSecretRealm(context.getSource())))
+                        .then(literal("reopen").executes(context -> reopenSecretRealm(context.getSource()))))
                 .then(literal("rift").executes(context -> probeRift(context.getSource())))
                 .then(literal("info").executes(context -> showInformation(context.getSource())))
                 .then(literal("guide").executes(context -> showGuide(context.getSource()))));
     }
 
-    // Re-checks the one behaviour with no other observable entry point: aura zone priority selection.
+    // Re-checks the behaviours with no other observable entry point: aura zone priority selection, and the
+    // minor-stage cut, which nothing else reports as a number.
     private static int verify(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
@@ -268,6 +279,18 @@ public final class MxtTestCommands {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.aura_ok"), false);
+        String minorStageFailure = verifyMinorStages(player);
+        if (minorStageFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.minor_stage_failed", minorStageFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.minor_stage_ok"), false);
+        String namesFailure = verifyGeneratedNames(player);
+        if (namesFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.names_failed", namesFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.names_ok"), false);
         return 1;
     }
 
@@ -320,6 +343,98 @@ public final class MxtTestCommands {
     private static boolean declaresDimension(AuraZone zone, Identifier level) {
         return zone.dimensions().stream().anyMatch(value -> value.left()
                 .map(key -> key.identifier().equals(level)).orElse(false));
+    }
+
+    // The qi_refining fixture declares nine minor stages on a 100 requirement, so one segment is 100/9 and the
+    // index is the segment the progress falls into; progress banked past the requirement stays on the ninth. The
+    // last legs prove minor_stage is registered as a formula variable rather than merely computed in here.
+    private static String verifyMinorStages(ServerPlayer player) {
+        Holder<RealmStage> qiRefining = require(MxtResourceKeys.REALM_STAGE, QI_REFINING);
+        double[][] cuts = {{0.0D, 0.0D}, {11.0D, 0.0D}, {12.0D, 1.0D}, {50.0D, 4.0D},
+                {99.0D, 8.0D}, {100.0D, 8.0D}, {150.0D, 8.0D}};
+        for (double[] cut : cuts) {
+            double index = CultivationService.minorStage(qiRefining.value(), cut[0], FormulaContext.EMPTY);
+            if (!close(index, cut[1]))
+                return "progress " + cut[0] + " reads as minor stage " + index + " instead of " + cut[1];
+        }
+        double undefined = CultivationService.minorStage(require(MxtResourceKeys.REALM_STAGE, FOUNDATION).value(),
+                50.0D, FormulaContext.EMPTY);
+        if (!Double.isNaN(undefined))
+            return "a stage without minor_stages reads as " + undefined + " instead of NaN";
+        CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
+        if (!CultivationService.setRealm(spirit, QI_REFINING)) return "the realm cache could not resolve " + QI_REFINING;
+        spirit.setCultivationProgress(requireProfile(QI), 80.0D);
+        FormulaContext context = ResourceService.formulaContext(player, require(MxtResourceKeys.RESOURCE, QI), FormulaContext.of(player));
+        double read = context.value("minor_stage");
+        if (!close(read, 7.0D)) return "the minor_stage variable reads " + read + " at 80/100 instead of 7";
+        spirit.setRealmStages(Map.of());
+        double mortal = context.value("minor_stage");
+        if (!Double.isNaN(mortal)) return "a mortal reads minor_stage as " + mortal + " instead of NaN";
+        spirit.setRealmStage(qiRefining);
+        spirit.setCultivationProgress(requireProfile(QI), 80.0D);
+        return null;
+    }
+
+    // The generated text of a definition comes from the id it was decoded as, which only the loader knows: an
+    // omitted name reads back as its own key, a counted minor_stages names every stage after that key, and a
+    // written component wins over both. The expected strings are the fixture files' own words, read on a server
+    // where no language file is loaded, so a translation key stays a key. The display path is asserted next to
+    // the field, because a definition that carries its own text must be shown with it.
+    private static String verifyGeneratedNames(ServerPlayer player) {
+        Holder<RealmStage> qiRefining = require(MxtResourceKeys.REALM_STAGE, QI_REFINING);
+        if (qiRefining.value().minorStages().size() != 9)
+            return "the counted qi_refining reads " + qiRefining.value().minorStages().size() + " minor stages instead of 9";
+        String counted = qiRefining.value().minorStages().getFirst().getString();
+        if (!counted.equals("realm_stage.mxt.mxt_test.qi_refining.minor_stage.0"))
+            return "the counted first minor stage reads " + counted;
+        String last = qiRefining.value().minorStages().getLast().getString();
+        if (!last.equals("realm_stage.mxt.mxt_test.qi_refining.minor_stage.8"))
+            return "the counted last minor stage reads " + last;
+        List<Component> written = require(MxtResourceKeys.REALM_STAGE, CORE_FORMING).value().minorStages();
+        if (written.size() != 3 || !written.getFirst().getString().equals("realm_stage.mxt.mxt_test.core_forming.minor_stage.early"))
+            return "the written minor stages read " + written;
+        String poorName = require(MxtResourceKeys.ITEM_QUALITY, POOR_QUALITY).value().name().getString();
+        if (!poorName.equals("quality.mxt.mxt_test.poor")) return "the omitted name reads " + poorName;
+        String poorDescription = require(MxtResourceKeys.ITEM_QUALITY, POOR_QUALITY).value().description().getString();
+        if (!poorDescription.equals("quality.mxt.mxt_test.poor.description"))
+            return "the omitted description reads " + poorDescription;
+        String excellentName = require(MxtResourceKeys.ITEM_QUALITY, EXCELLENT_QUALITY).value().name().getString();
+        if (!excellentName.equals("Excellent")) return "the written component name reads " + excellentName;
+        String normalDescription = require(MxtResourceKeys.ITEM_QUALITY, NORMAL_QUALITY).value().description().getString();
+        if (!normalDescription.equals("quality.mxt.mxt_test.normal.description"))
+            return "the written description reads " + normalDescription;
+        // The same pair on two of the definitions that gained the fields in this round: an aura writes neither,
+        // an element writes both.
+        Holder<Aura> qi = require(MxtResourceKeys.AURA, QI);
+        if (!qi.value().name().getString().equals("aura.mxt.mxt_test.qi"))
+            return "the omitted aura name reads " + qi.value().name().getString();
+        if (!qi.value().description().getString().equals("aura.mxt.mxt_test.qi.description"))
+            return "the omitted aura description reads " + qi.value().description().getString();
+        Holder<Element> metal = require(MxtResourceKeys.ELEMENT, PROBE_METAL_ELEMENT);
+        if (!metal.value().name().getString().equals("Metal probe"))
+            return "the written element name reads " + metal.value().name().getString();
+        if (!metal.value().description().getString().equals("The fixture's metal element."))
+            return "the written element description reads " + metal.value().description().getString();
+        if (!DefinitionText.name(qi).getString().equals(qi.value().name().getString())
+                || !DefinitionText.name(metal, "element").getString().equals(metal.value().name().getString()))
+            return "the display path does not read the definition's own text";
+        // The loader is the only thing that puts the id on the ops, so decoding a definition here proves the
+        // accessor is really mixed into RegistryOps; the fixtures above prove the loader itself sets it.
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, player.level().registryAccess());
+        if (!(ops instanceof ResourceLoadingOps loading)) return "the RegistryOps accessor is not applied";
+        ItemQuality decoded;
+        loading.mxt$setKey(ResourceKey.create(MxtResourceKeys.ITEM_QUALITY, id("probe_quality")));
+        try {
+            decoded = ItemQuality.DIRECT_CODEC.parse(ops, new JsonObject()).getOrThrow();
+        } catch (RuntimeException exception) {
+            return "decoding a definition that writes neither text field failed: " + exception.getMessage();
+        } finally {
+            loading.mxt$setKey(null);
+        }
+        if (!decoded.name().getString().equals("quality.mxt.mxt_test.probe_quality"))
+            return "the decoded name reads " + decoded.name().getString();
+        return decoded.description().getString().equals("quality.mxt.mxt_test.probe_quality.description") ? null
+                : "the decoded description reads " + decoded.description().getString();
     }
 
     // Drives both damage pipeline layers against throwaway probes whose element edges are fixture-known: fire
@@ -1712,17 +1827,17 @@ public final class MxtTestCommands {
         return Math.abs(actual - expected) < 1.0E-3D;
     }
 
-    // Exercises the realm instance machine end to end without a player. An instance is a dimension, so every leg
+    // Exercises the secret realm machine end to end without a player. An instance is a dimension, so every leg
     // drives the registry and the generation service directly and then inspects the world that came out: its
     // border, its placed structure, its landing spot, the instance cap and the claim rules.
-    private static int probeRealm(CommandSourceStack source) {
+    private static int probeSecretRealm(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
         ServerLevel overworld = server.overworld();
-        Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
-        Holder<RealmInstance> mirror = require(MxtResourceKeys.REALM_INSTANCE, id("mirror_realm"));
-        Holder<RealmInstance> existing = require(MxtResourceKeys.REALM_INSTANCE, id("existing_realm"));
-        Holder<RealmInstance> absentStructure = require(MxtResourceKeys.REALM_INSTANCE, id("missing_structure_realm"));
-        Holder<RealmInstance> absentTemplate = require(MxtResourceKeys.REALM_INSTANCE, id("template_realm"));
+        Holder<SecretRealm> trial = require(MxtResourceKeys.SECRET_REALM, TRIAL_REALM);
+        Holder<SecretRealm> mirror = require(MxtResourceKeys.SECRET_REALM, id("mirror_realm"));
+        Holder<SecretRealm> existing = require(MxtResourceKeys.SECRET_REALM, id("existing_realm"));
+        Holder<SecretRealm> absentStructure = require(MxtResourceKeys.SECRET_REALM, id("missing_structure_realm"));
+        Holder<SecretRealm> absentTemplate = require(MxtResourceKeys.SECRET_REALM, id("template_realm"));
         boolean ok = true;
         List<ResourceKey<Level>> opened = new ArrayList<>();
         List<LivingEntity> probes = new ArrayList<>();
@@ -1741,148 +1856,148 @@ public final class MxtTestCommands {
                     overworld.setBlockAndUpdate(scratch.offset(x, 0, z), Blocks.AIR.defaultBlockState());
 
             // 1. An instance dimension is created on demand, before anybody is allowed in.
-            RealmRecord first = openInstance(server, trial, 0, 12345L, opened);
+            SecretRealmRecord first = openInstance(server, trial, 0, 12345L, opened);
             ServerLevel dimension = first == null ? null : server.getLevel(first.dimension());
-            ok &= check(source, "realm probe: tower_saved=" + towerSaved + " dimension=" + (first != null)
+            ok &= check(source, "secret realm probe: tower_saved=" + towerSaved + " dimension=" + (first != null)
                     + " level=" + (dimension != null), towerSaved && first != null && dimension != null);
             if (dimension == null) return 0;
 
             // 2. The declared border lands on the instance dimension, which also carries the instance seed.
             WorldBorder border = dimension.getWorldBorder();
-            ok &= check(source, "realm probe: border size=" + border.getSize() + " center=(" + border.getCenterX()
+            ok &= check(source, "secret realm probe: border size=" + border.getSize() + " center=(" + border.getCenterX()
                             + "," + border.getCenterZ() + ")",
                     close(border.getSize(), 128.0D) && close(border.getCenterX(), 0.0D) && close(border.getCenterZ(), 0.0D));
-            ok &= check(source, "realm probe: seed=" + dimension.getSeed(), dimension.getSeed() == 12345L);
+            ok &= check(source, "secret realm probe: seed=" + dimension.getSeed(), dimension.getSeed() == 12345L);
 
             // 3. Structures are placed before the landing is chosen, so an arrival can stand on them.
-            ok &= check(source, "realm probe: structure block=" + dimension.getBlockState(new BlockPos(8, 64, 8)).getBlock(),
+            ok &= check(source, "secret realm probe: structure block=" + dimension.getBlockState(new BlockPos(8, 64, 8)).getBlock(),
                     dimension.getBlockState(new BlockPos(8, 64, 8)).is(Blocks.GOLD_BLOCK));
 
             // 4. A fixed entry point becomes the instance anchor.
             Vec3 anchor = first.anchor().orElse(null);
-            ok &= check(source, "realm probe: anchor=" + anchor + " prepared=" + first.prepared(),
+            ok &= check(source, "secret realm probe: anchor=" + anchor + " prepared=" + first.prepared(),
                     anchor != null && close(anchor.x, 0.5D) && close(anchor.y, 65.0D) && close(anchor.z, 0.5D) && first.prepared());
 
             // 5. The instance cap counts every instance of the definition.
-            RealmRecord second = openInstance(server, trial, 1, 999L, opened);
-            int count = RealmInstanceRegistry.of(trial).size();
-            ok &= check(source, "realm probe: instances=" + count + " cap=" + trial.value().maxInstances(),
+            SecretRealmRecord second = openInstance(server, trial, 1, 999L, opened);
+            int count = SecretRealmRegistry.of(trial).size();
+            ok &= check(source, "secret realm probe: instances=" + count + " cap=" + trial.value().maxInstances(),
                     second != null && count >= trial.value().maxInstances());
 
             // 6. Membership is capped per instance and a full instance is not joinable.
             List<UUID> two = List.of(UUID.randomUUID(), UUID.randomUUID());
-            RealmRecord full = second.with(two);
-            RealmInstanceRegistry.replace(full);
-            RealmInstanceRegistry.at(first.dimension()).ifPresent(record -> RealmInstanceRegistry.replace(record.with(two)));
-            boolean joinable = RealmInstanceRegistry.joinable(trial, UUID.randomUUID()).isPresent();
-            ok &= check(source, "realm probe: full=" + full.full() + " joinable=" + joinable, full.full() && !joinable);
+            SecretRealmRecord full = second.with(two);
+            SecretRealmRegistry.replace(full);
+            SecretRealmRegistry.at(first.dimension()).ifPresent(record -> SecretRealmRegistry.replace(record.with(two)));
+            boolean joinable = SecretRealmRegistry.joinable(trial, UUID.randomUUID()).isPresent();
+            ok &= check(source, "secret realm probe: full=" + full.full() + " joinable=" + joinable, full.full() && !joinable);
 
             // 7. A claim is recorded, and the condition tells owner from guest.
             LivingEntity probe = spawnProbe(overworld, overworld.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO).above(2), PROBE_FIRE_ROOT);
             probes.add(probe);
             boolean ownerSeen = false, guestSeen = true, foreignSeen = true;
             if (probe != null) {
-                RealmInstanceRegistry.replace(first.withOwner(probe.getUUID()).with(List.of(probe.getUUID())));
-                ownerSeen = new InRealmInstanceEntityCondition(Optional.of(Either.left(trial)), Role.OWNER).test(probe, FormulaContext.of(probe));
-                guestSeen = new InRealmInstanceEntityCondition(Optional.of(Either.left(trial)), Role.GUEST).test(probe, FormulaContext.of(probe));
-                foreignSeen = new InRealmInstanceEntityCondition(Optional.of(Either.left(mirror)), Role.ANY).test(probe, FormulaContext.of(probe));
+                SecretRealmRegistry.replace(first.withOwner(probe.getUUID()).with(List.of(probe.getUUID())));
+                ownerSeen = new InSecretRealmEntityCondition(Optional.of(Either.left(trial)), Role.OWNER).test(probe, FormulaContext.of(probe));
+                guestSeen = new InSecretRealmEntityCondition(Optional.of(Either.left(trial)), Role.GUEST).test(probe, FormulaContext.of(probe));
+                foreignSeen = new InSecretRealmEntityCondition(Optional.of(Either.left(mirror)), Role.ANY).test(probe, FormulaContext.of(probe));
             }
-            ok &= check(source, "realm probe: role owner=" + ownerSeen + " guest=" + guestSeen + " foreign=" + foreignSeen,
+            ok &= check(source, "secret realm probe: role owner=" + ownerSeen + " guest=" + guestSeen + " foreign=" + foreignSeen,
                     probe != null && ownerSeen && !guestSeen && !foreignSeen);
 
-            // 8. A realm dimension is reachable by its definition id, a stem realm also by its stem.
-            List<Identifier> aliases = RealmInstanceRegistry.aliases(first.dimension().identifier()).toList();
-            ok &= check(source, "realm probe: aliases=" + aliases, aliases.contains(REALM));
+            // 8. A secret realm dimension is reachable by its definition id, a stem realm also by its stem.
+            List<Identifier> aliases = SecretRealmRegistry.aliases(first.dimension().identifier()).toList();
+            ok &= check(source, "secret realm probe: aliases=" + aliases, aliases.contains(TRIAL_REALM));
 
             // 9. A weighted entry list picks by weight: the zero-weight fixed point is never chosen, so a random
             //    landing inside random_radius is what the anchor has to be.
-            RealmRecord mirrorRecord = openInstance(server, mirror, 0, 777L, opened);
+            SecretRealmRecord mirrorRecord = openInstance(server, mirror, 0, 777L, opened);
             Vec3 mirrorAnchor = mirrorRecord == null ? null : mirrorRecord.anchor().orElse(null);
             ServerLevel mirrorLevel = mirrorRecord == null ? null : server.getLevel(mirrorRecord.dimension());
             boolean inRadius = mirrorAnchor != null && Math.hypot(mirrorAnchor.x, mirrorAnchor.z) <= 16.0D + 1.0E-6D;
             boolean skipped = mirrorLevel != null && !mirrorLevel.getBlockState(new BlockPos(0, 100, 0)).is(Blocks.GOLD_BLOCK);
-            ok &= check(source, "realm probe: random anchor=" + mirrorAnchor + " chance_skipped=" + skipped, inRadius && skipped);
-            ok &= check(source, "realm probe: stem alias=" + (mirrorRecord == null ? "-"
-                            : RealmInstanceRegistry.aliases(mirrorRecord.dimension().identifier()).toList()),
-                    mirrorRecord != null && RealmInstanceRegistry.aliases(mirrorRecord.dimension().identifier())
+            ok &= check(source, "secret realm probe: random anchor=" + mirrorAnchor + " chance_skipped=" + skipped, inRadius && skipped);
+            ok &= check(source, "secret realm probe: stem alias=" + (mirrorRecord == null ? "-"
+                            : SecretRealmRegistry.aliases(mirrorRecord.dimension().identifier()).toList()),
+                    mirrorRecord != null && SecretRealmRegistry.aliases(mirrorRecord.dimension().identifier())
                             .anyMatch(alias -> alias.equals(Identifier.fromNamespaceAndPath("minecraft", "the_end"))));
 
-            // 10. An existing realm creates nothing and reuses the dimension it names.
-            RealmRecord existingRecord = openInstance(server, existing, 0, 0L, opened);
-            ok &= check(source, "realm probe: existing=" + (existingRecord == null ? "-" : existingRecord.dimension().identifier()),
+            // 10. An existing secret realm creates nothing and reuses the dimension it names.
+            SecretRealmRecord existingRecord = openInstance(server, existing, 0, 0L, opened);
+            ok &= check(source, "secret realm probe: existing=" + (existingRecord == null ? "-" : existingRecord.dimension().identifier()),
                     existingRecord != null && existingRecord.dimension().equals(Level.OVERWORLD)
                             && server.getLevel(existingRecord.dimension()) == overworld);
 
             // 11. A definition that names a template or a structure that does not exist creates nothing.
-            boolean resolvable = RealmStructurePlacer.resolvable(server.getStructureManager(), absentStructure.value());
-            RealmRecord templateAttempt = planned(absentTemplate, 0, 0L);
-            boolean templateFailed = RealmInstanceService.open(server, templateAttempt).isEmpty();
-            ok &= check(source, "realm probe: structure_resolvable=" + resolvable + " template_failed=" + templateFailed
-                            + " leftover=" + RealmInstanceRegistry.at(templateAttempt.dimension()).isPresent(),
-                    !resolvable && templateFailed && RealmInstanceRegistry.at(templateAttempt.dimension()).isEmpty());
+            boolean resolvable = SecretRealmStructurePlacer.resolvable(server.getStructureManager(), absentStructure.value());
+            SecretRealmRecord templateAttempt = planned(absentTemplate, 0, 0L);
+            boolean templateFailed = SecretRealmService.open(server, templateAttempt).isEmpty();
+            ok &= check(source, "secret realm probe: structure_resolvable=" + resolvable + " template_failed=" + templateFailed
+                            + " leftover=" + SecretRealmRegistry.at(templateAttempt.dimension()).isPresent(),
+                    !resolvable && templateFailed && SecretRealmRegistry.at(templateAttempt.dimension()).isEmpty());
 
             // 12. An unclaimed instance dies with its clock: the record goes and the dimension is released.
-            boolean expired = mirrorRecord != null && RealmInstanceService.expire(server, mirrorRecord, server.overworld().getGameTime() + 100L);
-            boolean released = mirrorRecord != null && RealmInstanceRegistry.at(mirrorRecord.dimension()).isEmpty()
+            boolean expired = mirrorRecord != null && SecretRealmService.expire(server, mirrorRecord, server.overworld().getGameTime() + 100L);
+            boolean released = mirrorRecord != null && SecretRealmRegistry.at(mirrorRecord.dimension()).isEmpty()
                     && server.getLevel(mirrorRecord.dimension()) == null;
-            ok &= check(source, "realm probe: expired=" + expired + " released=" + released, expired && released);
+            ok &= check(source, "secret realm probe: expired=" + expired + " released=" + released, expired && released);
 
-            // 13. A claimed realm survives its visitors: the policy is what decides keep versus delete.
-            RealmRecord claimed = RealmInstanceRegistry.at(first.dimension()).orElse(null);
-            RealmRecord idled = claimed == null ? null : claimed.idle();
-            ok &= check(source, "realm probe: persists=" + (claimed != null && claimed.persists())
+            // 13. A claimed secret realm survives its visitors: the policy is what decides keep versus delete.
+            SecretRealmRecord claimed = SecretRealmRegistry.at(first.dimension()).orElse(null);
+            SecretRealmRecord idled = claimed == null ? null : claimed.idle();
+            ok &= check(source, "secret realm probe: persists=" + (claimed != null && claimed.persists())
                             + " idle_members=" + (idled == null ? -1 : idled.members().size()),
                     claimed != null && claimed.persists() && idled.empty() && probe != null && idled.isOwner(probe.getUUID()));
         } finally {
             for (LivingEntity probe : probes) if (probe != null) probe.discard();
             for (ResourceKey<Level> key : opened) {
-                RealmInstanceRegistry.at(key).ifPresent(record -> RealmInstanceService.destroy(server, record));
+                SecretRealmRegistry.at(key).ifPresent(record -> SecretRealmService.destroy(server, record));
             }
         }
         if (ok) {
-            source.sendSuccess(() -> Component.literal("realm probe: OK"), false);
+            source.sendSuccess(() -> Component.literal("secret realm probe: OK"), false);
             return 1;
         }
-        source.sendFailure(Component.literal("realm probe: MISMATCH"));
+        source.sendFailure(Component.literal("secret realm probe: MISMATCH"));
         return 0;
     }
 
     // Leaves one claimed instance behind instead of cleaning up, so a restart can be checked for keeping it.
-    // The realm probe itself destroys everything it opens.
-    private static int keepRealm(CommandSourceStack source) {
+    // The secret realm probe itself destroys everything it opens.
+    private static int keepSecretRealm(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
-        Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
-        RealmRecord record = RealmInstanceService.open(server, planned(trial, 0, 4242L)).orElse(null);
+        Holder<SecretRealm> trial = require(MxtResourceKeys.SECRET_REALM, TRIAL_REALM);
+        SecretRealmRecord record = SecretRealmService.open(server, planned(trial, 0, 4242L)).orElse(null);
         if (record == null) {
-            source.sendFailure(Component.literal("realm keep: could not open the instance"));
+            source.sendFailure(Component.literal("secret realm keep: could not open the instance"));
             return 0;
         }
         UUID owner = UUID.randomUUID();
-        RealmInstanceRegistry.replace(record.withOwner(owner));
-        source.sendSuccess(() -> Component.literal("realm keep: " + record.dimension().identifier() + " owner=" + owner), false);
+        SecretRealmRegistry.replace(record.withOwner(owner));
+        source.sendSuccess(() -> Component.literal("secret realm keep: " + record.dimension().identifier() + " owner=" + owner), false);
         return 1;
     }
 
-    // Reopens a dormant instance the way an entry does, to prove a claimed realm comes back with the terrain it
+    // Reopens a dormant instance the way an entry does, to prove a claimed secret realm comes back with the terrain it
     // had instead of being generated and furnished again.
-    private static int reopenRealm(CommandSourceStack source) {
+    private static int reopenSecretRealm(CommandSourceStack source) {
         MinecraftServer server = source.getServer();
-        Holder<RealmInstance> trial = require(MxtResourceKeys.REALM_INSTANCE, REALM);
-        RealmRecord dormant = RealmInstanceRegistry.of(trial).stream()
+        Holder<SecretRealm> trial = require(MxtResourceKeys.SECRET_REALM, TRIAL_REALM);
+        SecretRealmRecord dormant = SecretRealmRegistry.of(trial).stream()
                 .filter(record -> record.index() == 0).findFirst().orElse(null);
         if (dormant == null) {
-            source.sendFailure(Component.literal("realm reopen: there is no dormant instance"));
+            source.sendFailure(Component.literal("secret realm reopen: there is no dormant instance"));
             return 0;
         }
-        RealmRecord reopened = RealmInstanceService.open(server, dormant.restarted(server.overworld().getGameTime())).orElse(null);
+        SecretRealmRecord reopened = SecretRealmService.open(server, dormant.restarted(server.overworld().getGameTime())).orElse(null);
         ServerLevel level = reopened == null ? null : server.getLevel(reopened.dimension());
         boolean kept = level != null && level.getBlockState(new BlockPos(8, 64, 8)).is(Blocks.GOLD_BLOCK);
         boolean prepared = reopened != null && reopened.prepared();
         if (kept && prepared) {
-            source.sendSuccess(() -> Component.literal("realm reopen: terrain kept=" + true + " prepared=" + true), false);
+            source.sendSuccess(() -> Component.literal("secret realm reopen: terrain kept=" + true + " prepared=" + true), false);
             return 1;
         }
-        source.sendFailure(Component.literal("realm reopen: terrain kept=" + kept + " prepared=" + prepared));
+        source.sendFailure(Component.literal("secret realm reopen: terrain kept=" + kept + " prepared=" + prepared));
         return 0;
     }
 
@@ -2170,13 +2285,13 @@ public final class MxtTestCommands {
         return false;
     }
 
-    private static RealmRecord planned(Holder<RealmInstance> definition, int index, long seed) {
-        return RealmInstanceService.plan(definition, index, seed, 0L);
+    private static SecretRealmRecord planned(Holder<SecretRealm> definition, int index, long seed) {
+        return SecretRealmService.plan(definition, index, seed, 0L);
     }
 
-    private static RealmRecord openInstance(MinecraftServer server, Holder<RealmInstance> definition, int index,
+    private static SecretRealmRecord openInstance(MinecraftServer server, Holder<SecretRealm> definition, int index,
                                             long seed, List<ResourceKey<Level>> opened) {
-        RealmRecord record = RealmInstanceService.open(server, planned(definition, index, seed)).orElse(null);
+        SecretRealmRecord record = SecretRealmService.open(server, planned(definition, index, seed)).orElse(null);
         if (record != null) opened.add(record.dimension());
         return record;
     }
@@ -2211,7 +2326,7 @@ public final class MxtTestCommands {
         give(player, new ItemStack(Items.HONEY_BOTTLE, 2));
         give(player, new ItemStack(Items.APPLE));
         give(player, formationPlate());
-        give(player, realmToken());
+        give(player, secretRealmToken());
         give(player, contractScroll());
         // The artifact fixtures, handed over already bound: nothing in the test pack refines an item yet, and an
         // unowned artifact refuses flight, storage and mxt:owned_by.
@@ -2297,9 +2412,9 @@ public final class MxtTestCommands {
         return stack;
     }
 
-    private static ItemStack realmToken() {
-        ItemStack stack = new ItemStack(MxtItems.REALM_TOKEN.get());
-        stack.set(MxtDataComponents.REALM_TOKEN, new RealmTokenComponent(Optional.of(require(MxtResourceKeys.REALM_INSTANCE, REALM))));
+    private static ItemStack secretRealmToken() {
+        ItemStack stack = new ItemStack(MxtItems.SECRET_REALM_TOKEN.get());
+        stack.set(MxtDataComponents.SECRET_REALM_TOKEN, new SecretRealmTokenComponent(Optional.of(require(MxtResourceKeys.SECRET_REALM, TRIAL_REALM))));
         return stack;
     }
 

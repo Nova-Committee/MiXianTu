@@ -42,6 +42,9 @@
 | `09_资源条注册表设计.md` | `resource` / `resource_bar` 的数据模型、渲染器与统一资源成本格式 | 已落地 |
 | `10_诅咒动态注册表设计.md` | `curse` 字段、解毒改由解毒剂 + 标签管理、运行时顺序与热重载 | 已落地（"诅咒"语义已泛化为状态） |
 | `33_Trigger系统设计.md` | Dispatcher / Trigger / Subscription 分层、订阅不入存档、重建器约定 | 已落地；文末是持久化审计 |
+| `36_子境界设计.md` | `realm_stage` 的 `minor_stages`：子境界名列表只喂信息面板显示与公式变量 `minor_stage`，按本境界 `breakthrough_exp` 均分；含"凡人读 `NaN`"与"超阈值停在最后一重"两个口径取舍 | 已落地（2026-09-23；同日改成"组件数组或整数"，见文首修订与 `37`） |
+| `37_名字与描述自动填充设计.md` | 定义文本字段的自动填充：`ContextNameCodec` / `ContextNameListCodec`（原 `NameMapCodec`，2026-09-23 拆成两个）+ `RegistryOps` 携带当前条目 id（`RegistryLoadTask$PendingRegistration` 两处注入），`item_quality` 的 `display_name`→`name` 与新增 `description`、`Modifier.description` 改为可选、`minor_stages` 改成组件数组或整数；"两套名字键"已被 `38` 作废 | 已落地（2026-09-23；§3、§6 由 `38` 修订） |
+| `38_定义文本字段全量应用.md` | 把这套字段应用到 18 张注册表，并把 id 派生键统一成生成键那一条四段式（`<类别>.mxt.<命名空间>.<路径>`，破坏性迁移）；`api/NamedDefinition` 让显示路径直接读字段；`RecordCodecBuilder.group` 的 16 组件上限用 `MiscCodecs.pair` 绕开 | 已落地（2026-09-23） |
 
 ### C. 玩法模块
 
@@ -52,7 +55,7 @@
 | `17_灵气解析性能与记忆化.md` | 灵气解析按 tick 记忆化 + 按需重算的实测与线上观测 | 已落地 |
 | `18_阵法系统设计.md` | 阵法类型、基座要提供的基础能力、实现路径与缺陷清单 | 部分有效：§1 / §5 有效，基座侧 3 处判断与宗门领地段落已作废（修订见 `audit/formation.md`） |
 | `21_元素系统设计补完.md` | 元素认领伤害类型（伤害的元素通道）、附着与反应等 P0/P1 补完 | 已落地（§9 落地记录，2026-09-20） |
-| `22_秘境重做设计.md` | `realm_instance` 重做成"按需创建的实例维度"：生成参数、运行时与迁移 | 已落地（§10 落地记录） |
+| `22_秘境重做设计.md` | `secret_realm`（当时叫 `realm_instance`）重做成"按需创建的实例维度"：生成参数、运行时与迁移 | 已落地（§10 落地记录；2026-09-23 全仓改名 `secret_realm`，正文保留原写法） |
 | `23_法器数据重设计.md` | `mxt:artifact` 的数据形状重做（`items` 认领物品 + `abilities` 固有分派） | 已落地（§10 落地记录；§11 并入原护符槽位稿） |
 | `24_法器长按与认主设计.md` | 长按认主 / 注灵的字段、判定与代价，共 8 次修订 | 已落地；读数以最后一节（§17）为准，§11–§16 是历史层 |
 | `26_可拖动HUD框架设计.md` | 从 KronHUD 一系移植的可拖动 HUD 框架（去掉缩放）与已接入元素 | 已落地（实机观感未验） |
@@ -91,7 +94,8 @@
 | `audit/formation.md` | 阵法落地设计：对照 `18` 与当前代码，修订 3 处过时判断并重写缺口方案 |
 | `audit/resource-cultivation-split.md` | `resource` / `cultivation` 拆分的破坏性变更记要 |
 | `audit/spirit.md` | 灵石灌注（`AuraItemAccess` 反向使用 `item_aura`）审计 |
-| `audit/talisman.md` | 符箓灌注与激发审计 |
+| udit/talisman.md | 符箓灌注与激发审计 |
+| `audit/secret-realm-rename.md` | 秘境一系从 `realm_instance` 改成 `secret_realm` 的破坏性改名记要：完整映射、受影响的 id 与存档格式、保留不动的名字 |
 | `audit/technique.md` | 功法数据驱动与功能审计 |
 | `测试设定参考/` | 来源与阅读记录、常见设定测试面、集成测试场景矩阵 |
 
@@ -123,7 +127,7 @@
 
 | 内容 | 位置 | 命名 |
 | --- | --- | --- |
-| 设计稿 / 方案 / 改版 | 本目录根下 | `NN_<主题>设计.md`，`NN` 取当前最大编号加一（现到 `35_御剑飞行系统设计.md`，下一个是 `36_`） |
+| 设计稿 / 方案 / 改版 | 本目录根下 | `NN_<主题>设计.md`，`NN` 取当前最大编号加一（现到 `37_名字与描述自动填充设计.md`，下一个是 `38_`） |
 | 实现说明（已经落地的机制怎么跑） | 本目录根下 | `<模块>实现.md`（如 `裂缝渲染实现.md`；`方块灵气实现.md` 沿用这个名字，内容是提案留档） |
 | 审计与差距清单 | `audit/` | 按模块或主题命名（`content-coverage-gaps.md`、`technique.md`…） |
 | 测试设定参考 | `测试设定参考/` | 场景矩阵、常见设定与来源记录 |

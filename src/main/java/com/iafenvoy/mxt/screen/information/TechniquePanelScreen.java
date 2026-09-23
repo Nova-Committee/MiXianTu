@@ -229,9 +229,8 @@ public final class TechniquePanelScreen extends Screen {
             // level and the progress value share one line.
             private Component levelText(Font font, int width) {
                 if (!this.row.hasStage()) return Component.translatable("screen.mxt.technique_panel.level_unknown");
-                Identifier stage = HolderHelper.id(this.row.stage());
-                Component name = DefinitionText.name(stage, "skill_stage");
-                Component label = Language.getInstance().has(stage.toLanguageKey("skill_stage"))
+                Component name = DefinitionText.name(this.row.stage(), "skill_stage");
+                Component label = DefinitionText.resolved(name)
                         ? name : Component.literal(Integer.toString(this.row.rank() + 1));
                 Component text = Component.translatable("screen.mxt.technique_panel.level", label,
                         this.row.rank() + 1, this.row.total());

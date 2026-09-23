@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -24,22 +24,22 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * Datapack-selected realm instance carried by an access token.
+ * Datapack-selected secret realm carried by an access token.
  */
 @EventBusSubscriber(Dist.CLIENT)
-public record RealmTokenComponent(Optional<Holder<RealmInstance>> realm) implements TooltipProvider {
-    public static final RealmTokenComponent EMPTY = new RealmTokenComponent(Optional.empty());
-    public static final Codec<RealmTokenComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTokenComponent::realm)
-    ).apply(i, RealmTokenComponent::new));
+public record SecretRealmTokenComponent(Optional<Holder<SecretRealm>> realm) implements TooltipProvider {
+    public static final SecretRealmTokenComponent EMPTY = new SecretRealmTokenComponent(Optional.empty());
+    public static final Codec<SecretRealmTokenComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).optionalFieldOf("realm").forGetter(SecretRealmTokenComponent::realm)
+    ).apply(i, SecretRealmTokenComponent::new));
 
     @SubscribeEvent
     public static void registerTooltipAppender(RegisterTooltipAppendersEvent event) {
-        event.registerComponentAppenderBeforeAll(MxtDataComponents.REALM_TOKEN, TooltipAppender.createComponentAppender(MxtDataComponents.REALM_TOKEN.get()));
+        event.registerComponentAppenderBeforeAll(MxtDataComponents.SECRET_REALM_TOKEN, TooltipAppender.createComponentAppender(MxtDataComponents.SECRET_REALM_TOKEN.get()));
     }
 
     @Override
     public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
-        consumer.accept(Component.translatable("tooltip.mxt.realm_token.realm", this.realm.map(value -> DefinitionText.name(value, "realm_instance")).orElse(Component.literal("-"))));
+        consumer.accept(Component.translatable("tooltip.mxt.secret_realm_token.realm", this.realm.map(value -> DefinitionText.name(value, "secret_realm")).orElse(Component.literal("-"))));
     }
 }

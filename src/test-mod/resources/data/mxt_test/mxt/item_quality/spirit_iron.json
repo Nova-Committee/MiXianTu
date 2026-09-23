@@ -1,15 +1,14 @@
 {
-  "display_name": "quality.mxt_test.spirit_iron",
   "value_multiplier": {
-    "description": "quality.mxt_test.spirit_iron.currency",
+    "description": "quality.mxt.mxt_test.spirit_iron.value_multiplier",
     "modifier": 1.5
   },
   "forging_modifier": {
-    "description": "quality.mxt_test.spirit_iron.forging",
+    "description": "quality.mxt.mxt_test.spirit_iron.forging_modifier",
     "modifier": 1.1
   },
   "alchemy_modifier": {
-    "description": "quality.mxt_test.spirit_iron.alchemy",
+    "description": "quality.mxt.mxt_test.spirit_iron.alchemy_modifier",
     "modifier": 1
   }
 }

@@ -42,7 +42,7 @@ the changelog.**
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Cultivation Jade Slip, Blank Talisman
   Paper with Talisman Brush and Ink, Talisman (written with a sigil, poured full of aura, and spent the moment it
-  fires), Contract Scroll, Beast Taming Bell, Spirit Beast Bag, Formation Plate, Wooden and Stone Tokens, Realm Token
+  fires), Contract Scroll, Beast Taming Bell, Spirit Beast Bag, Formation Plate, Wooden and Stone Tokens, Secret Realm Token
   and Recall Talisman.
 - **Talismans**: a Talisman Brush writes ability definitions onto a carrier, and pouring aura in loads it; the
   moment the bill is full every inscribed ability fires and one carrier is spent. A carrier that would not fire -
@@ -96,7 +96,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Formations                      |   ✅    | Players can build and activate formations; a formation keeps running by consuming resources, applies effects within its area and temporarily provides buffs/debuffs.                                                                                                         |
 | Tribulations                    |   ✅    | A tribulation can be triggered on a realm breakthrough: it consumes a timeline of beats (an action, an idle wait, or a wait for a condition), gets harder with the realm and the local aura, and success or failure each run their own outcome.                              |
 | Creature Profiles and Contracts |   🔲   | Creature profiles define a creature's strength, inner core and drops; players can also sign a contract with a creature, letting the spirit beast follow and fight, be stored in a Spirit Beast Bag or recalled with a Beast Taming Bell.                                     |
-| Secret Realms                   |   ✅    | Each entry opens an instance dimension on demand from a realm definition, with its own border, generation, structures and landing spot, claimable terrain, member and time limits, and enter/exit conditions.                                                                |
+| Secret Realms                   |   ✅    | Each entry opens an instance dimension on demand from a secret realm definition, with its own border, generation, structures and landing spot, claimable terrain, member and time limits, and enter/exit conditions.                                                                |
 | Spirit Crafting Table           |   ✅    | Crafting with a spirit crafting recipe at the Spirit Crafting Table costs aura in addition to materials, deducted when the result is taken out.                                                                                                                              |
 | Forging                         |   ✅    | At a Forge Table, several materials are hammered into a result following a blueprint; different tools unlock different methods, and the quality of the result depends on the process and the number of steps.                                                                |
 | Alchemy                         |   🚧   | Recipes and the batch state machine are ready, but the alchemy workstation itself has not been started, so there is no way to begin a batch yet; pills apply their effect, and too many accumulate toxicity.                                                                 |

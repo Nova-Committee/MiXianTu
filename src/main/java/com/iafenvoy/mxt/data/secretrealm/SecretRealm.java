@@ -1,9 +1,14 @@
-package com.iafenvoy.mxt.data.realm;
+package com.iafenvoy.mxt.data.secretrealm;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CombinedCodecs;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -19,39 +24,50 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Datapack policy for a secret realm. A realm is not a fixed dimension: every instance is a dimension created on
- * demand from {@link RealmGeneration}. A claimed ({@code owned}) realm only unloads when its last member leaves,
+ * Datapack policy for a secret realm. A secret realm is not a fixed dimension: every instance is a dimension created on
+ * demand from {@link SecretRealmGeneration}. A claimed ({@code owned}) secret realm only unloads when its last member leaves,
  * keeping its terrain, while an unclaimed one is destroyed with its region data.
  */
-public record RealmInstance(RealmGeneration generation, long seed, Optional<Border> border, int maxInstances,
+public record SecretRealm(Component name, Component description, SecretRealmGeneration generation, long seed,
+                            Optional<Border> border, int maxInstances,
                             Optional<Integer> maxMembers, boolean owned, long durationTicks,
                             List<StructurePlacement> structures, List<EntryPoint> entry,
                             EntityCondition enterCondition, EntityCondition exitCondition,
                             Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
-                            EntityAction enterAction, EntityAction exitAction) {
+                            EntityAction enterAction, EntityAction exitAction) implements NamedDefinition {
     // Written explicitly onto an instance without a border instead of inheriting the overworld border that derived
     // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
     public static final int MAX_INSTANCES = 256;
     public static final int MAX_MEMBERS = 100_000;
 
-    public static final Codec<RealmInstance> CODEC = RecordCodecBuilder.<RealmInstance>create(i -> i.group(
-            RealmGeneration.CODEC.fieldOf("generation").forGetter(RealmInstance::generation),
-            Codec.LONG.optionalFieldOf("seed", 0L).forGetter(RealmInstance::seed),
-            Border.CODEC.optionalFieldOf("border").forGetter(RealmInstance::border),
-            Codec.intRange(1, MAX_INSTANCES).optionalFieldOf("max_instances", 1).forGetter(RealmInstance::maxInstances),
-            Codec.intRange(1, MAX_MEMBERS).optionalFieldOf("max_members").forGetter(RealmInstance::maxMembers),
-            Codec.BOOL.optionalFieldOf("owned", false).forGetter(RealmInstance::owned),
-            MiscCodecs.longRange(0L, Long.MAX_VALUE).optionalFieldOf("duration_ticks", 0L).forGetter(RealmInstance::durationTicks),
-            StructurePlacement.CODEC.listOf().optionalFieldOf("structures", List.of()).forGetter(RealmInstance::structures),
-            EntryPoint.LIST_CODEC.optionalFieldOf("entry", List.of()).forGetter(RealmInstance::entry),
-            EntityCondition.optionalCodec("enter_condition").forGetter(RealmInstance::enterCondition),
-            EntityCondition.optionalCodec("exit_condition").forGetter(RealmInstance::exitCondition),
-            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("enter_denied_message").forGetter(RealmInstance::enterDeniedMessage),
-            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("exit_denied_message").forGetter(RealmInstance::exitDeniedMessage),
-            EntityAction.optionalCodec("enter_action").forGetter(RealmInstance::enterAction),
-            EntityAction.optionalCodec("exit_action").forGetter(RealmInstance::exitAction)
-    ).apply(i, RealmInstance::new)).validate(RealmInstance::validate);
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SECRET_REALM.identifier());
+    public static final Codec<SecretRealm> CODEC = RecordCodecBuilder.<SecretRealm>create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(SecretRealm::name),
+            ContextNameCodec.description(CATEGORY).forGetter(SecretRealm::description),
+            SecretRealmGeneration.CODEC.fieldOf("generation").forGetter(SecretRealm::generation),
+            Codec.LONG.optionalFieldOf("seed", 0L).forGetter(SecretRealm::seed),
+            Border.CODEC.optionalFieldOf("border").forGetter(SecretRealm::border),
+            Codec.intRange(1, MAX_INSTANCES).optionalFieldOf("max_instances", 1).forGetter(SecretRealm::maxInstances),
+            Codec.intRange(1, MAX_MEMBERS).optionalFieldOf("max_members").forGetter(SecretRealm::maxMembers),
+            Codec.BOOL.optionalFieldOf("owned", false).forGetter(SecretRealm::owned),
+            MiscCodecs.longRange(0L, Long.MAX_VALUE).optionalFieldOf("duration_ticks", 0L).forGetter(SecretRealm::durationTicks),
+            StructurePlacement.CODEC.listOf().optionalFieldOf("structures", List.of()).forGetter(SecretRealm::structures),
+            EntryPoint.LIST_CODEC.optionalFieldOf("entry", List.of()).forGetter(SecretRealm::entry),
+            // Seventeen components; one pair keeps the group at sixteen.
+            MiscCodecs.pair(
+                    EntityCondition.optionalCodec("enter_condition"),
+                    EntityCondition.optionalCodec("exit_condition"))
+                    .forGetter(realm -> Pair.of(realm.enterCondition(), realm.exitCondition())),
+            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("enter_denied_message").forGetter(SecretRealm::enterDeniedMessage),
+            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("exit_denied_message").forGetter(SecretRealm::exitDeniedMessage),
+            EntityAction.optionalCodec("enter_action").forGetter(SecretRealm::enterAction),
+            EntityAction.optionalCodec("exit_action").forGetter(SecretRealm::exitAction)
+    ).apply(i, (name, description, generation, seed, border, maxInstances, maxMembers, owned, durationTicks,
+                structures, entry, conditions, enterDeniedMessage, exitDeniedMessage, enterAction, exitAction) ->
+            new SecretRealm(name, description, generation, seed, border, maxInstances, maxMembers, owned,
+                    durationTicks, structures, entry, conditions.getFirst(), conditions.getSecond(),
+                    enterDeniedMessage, exitDeniedMessage, enterAction, exitAction))).validate(SecretRealm::validate);
 
     // Never "whatever the overworld uses": an omitted definition border still gets the vanilla default.
     public Border effectiveBorder() {
@@ -66,36 +82,36 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
         return EntryPoint.select(this.entry, random);
     }
 
-    private static DataResult<RealmInstance> validate(RealmInstance value) {
+    private static DataResult<SecretRealm> validate(SecretRealm value) {
         String failure = null;
         if (value.border().isPresent()) {
             Border border = value.border().get();
             if (!Double.isFinite(border.size()) || border.size() <= 0.0D)
-                failure = "Realm border size must be a positive finite number";
+                failure = "Secret realm border size must be a positive finite number";
             else if (border.warningBlocks() < 0 || border.warningTime() < 0)
-                failure = "Realm border warning numbers must not be negative";
+                failure = "Secret realm border warning numbers must not be negative";
             else if (!Double.isFinite(border.damagePerBlock()) || border.damagePerBlock() < 0.0D
                     || !Double.isFinite(border.safeZone()) || border.safeZone() < 0.0D)
-                failure = "Realm border damage numbers must be finite and non-negative";
+                failure = "Secret realm border damage numbers must be finite and non-negative";
             else
                 for (StructurePlacement placement : value.structures())
                     if (!placement.relativeToEntry() && !inside(border, placement.pos())) {
-                        failure = "Structure " + placement.nbt() + " at " + placement.pos().toShortString() + " lies outside the realm border";
+                        failure = "Structure " + placement.nbt() + " at " + placement.pos().toShortString() + " lies outside the secret realm border";
                         break;
                     }
         }
         if (failure == null)
             for (EntryPoint point : value.entry()) {
                 if (point.randomRadius().isPresent() && !(point.randomRadius().get() > 0.0D)) {
-                    failure = "Realm entry random_radius must be positive";
+                    failure = "Secret realm entry random_radius must be positive";
                     break;
                 }
                 if (!Double.isFinite(point.spread()) || point.spread() < 0.0D) {
-                    failure = "Realm entry spread must be a finite non-negative number";
+                    failure = "Secret realm entry spread must be a finite non-negative number";
                     break;
                 }
                 if (point.weight() < 0) {
-                    failure = "Realm entry weight must not be negative";
+                    failure = "Secret realm entry weight must not be negative";
                     break;
                 }
             }
@@ -122,7 +138,7 @@ public record RealmInstance(RealmGeneration generation, long seed, Optional<Bord
         ).apply(i, Border::new));
     }
 
-    // chance is rolled per instance, so the same definition can furnish a realm differently on every visit.
+    // chance is rolled per instance, so the same definition can furnish a secret realm differently on every visit.
     public record StructurePlacement(Identifier nbt, BlockPos pos, Rotation rotation, Mirror mirror, double integrity,
                                      double chance, boolean relativeToEntry, boolean ignoreEntities, boolean keepLiquids) {
         public static final Codec<StructurePlacement> CODEC = RecordCodecBuilder.create(i -> i.group(

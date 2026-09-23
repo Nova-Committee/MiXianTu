@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.mojang.serialization.Codec;
@@ -13,28 +13,28 @@ import net.minecraft.resources.RegistryFixedCodec;
 import java.util.Optional;
 
 /**
- * Return location retained while a player is inside a temporary realm instance.
+ * Return location retained while a player is inside a temporary secret realm.
  */
-public final class RealmTravelAttachment extends ShouldSyncAttachment {
-    public static final MapCodec<RealmTravelAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("realm").forGetter(RealmTravelAttachment::realm),
-            Identifier.CODEC.optionalFieldOf("origin_dimension").forGetter(RealmTravelAttachment::originDimension),
-            Codec.DOUBLE.optionalFieldOf("origin_x", 0.0D).forGetter(RealmTravelAttachment::originX),
-            Codec.DOUBLE.optionalFieldOf("origin_y", 0.0D).forGetter(RealmTravelAttachment::originY),
-            Codec.DOUBLE.optionalFieldOf("origin_z", 0.0D).forGetter(RealmTravelAttachment::originZ),
-            Codec.FLOAT.optionalFieldOf("origin_yaw", 0.0F).forGetter(RealmTravelAttachment::originYaw),
-            Codec.FLOAT.optionalFieldOf("origin_pitch", 0.0F).forGetter(RealmTravelAttachment::originPitch)
-    ).apply(i, RealmTravelAttachment::new));
-    private Optional<Holder<RealmInstance>> realm;
+public final class SecretRealmTravelAttachment extends ShouldSyncAttachment {
+    public static final MapCodec<SecretRealmTravelAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).optionalFieldOf("realm").forGetter(SecretRealmTravelAttachment::realm),
+            Identifier.CODEC.optionalFieldOf("origin_dimension").forGetter(SecretRealmTravelAttachment::originDimension),
+            Codec.DOUBLE.optionalFieldOf("origin_x", 0.0D).forGetter(SecretRealmTravelAttachment::originX),
+            Codec.DOUBLE.optionalFieldOf("origin_y", 0.0D).forGetter(SecretRealmTravelAttachment::originY),
+            Codec.DOUBLE.optionalFieldOf("origin_z", 0.0D).forGetter(SecretRealmTravelAttachment::originZ),
+            Codec.FLOAT.optionalFieldOf("origin_yaw", 0.0F).forGetter(SecretRealmTravelAttachment::originYaw),
+            Codec.FLOAT.optionalFieldOf("origin_pitch", 0.0F).forGetter(SecretRealmTravelAttachment::originPitch)
+    ).apply(i, SecretRealmTravelAttachment::new));
+    private Optional<Holder<SecretRealm>> realm;
     private Optional<Identifier> originDimension;
     private double originX, originY, originZ;
     private float originYaw, originPitch;
 
-    public RealmTravelAttachment() {
+    public SecretRealmTravelAttachment() {
         this(Optional.empty(), Optional.empty(), 0.0D, 0.0D, 0.0D, 0.0F, 0.0F);
     }
 
-    public RealmTravelAttachment(Optional<Holder<RealmInstance>> realm, Optional<Identifier> originDimension, double originX, double originY, double originZ, float originYaw, float originPitch) {
+    public SecretRealmTravelAttachment(Optional<Holder<SecretRealm>> realm, Optional<Identifier> originDimension, double originX, double originY, double originZ, float originYaw, float originPitch) {
         this.realm = realm;
         this.originDimension = originDimension;
         this.originX = originX;
@@ -48,7 +48,7 @@ public final class RealmTravelAttachment extends ShouldSyncAttachment {
         return this.realm.isPresent() && this.originDimension.isPresent();
     }
 
-    public Optional<Holder<RealmInstance>> realm() {
+    public Optional<Holder<SecretRealm>> realm() {
         return this.realm;
     }
 
@@ -76,7 +76,7 @@ public final class RealmTravelAttachment extends ShouldSyncAttachment {
         return this.originPitch;
     }
 
-    public void begin(Holder<RealmInstance> realm, Identifier originDimension, double x, double y, double z, float yaw, float pitch) {
+    public void begin(Holder<SecretRealm> realm, Identifier originDimension, double x, double y, double z, float yaw, float pitch) {
         this.realm = Optional.ofNullable(realm);
         this.originDimension = Optional.ofNullable(originDimension);
         this.originX = x;

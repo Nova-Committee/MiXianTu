@@ -4,6 +4,11 @@
   "next_realm": "mxt_test:nascent_soul",
   "breakthrough_exp": 500,
   "max_experience": 500,
+  "minor_stages": [
+    "realm_stage.mxt.mxt_test.core_forming.minor_stage.early",
+    "realm_stage.mxt.mxt_test.core_forming.minor_stage.middle",
+    "realm_stage.mxt.mxt_test.core_forming.minor_stage.late"
+  ],
   "costs": [{ "id": "mxt_test:qi", "amount": 50 }],
   "success_action": { "type": "mxt:apply_effect", "effect": "minecraft:strength", "duration_ticks": 200 }
 }

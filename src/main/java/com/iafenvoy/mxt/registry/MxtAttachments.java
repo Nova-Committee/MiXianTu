@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment;
-import com.iafenvoy.mxt.runtime.world.RealmWorldAttachment;
+import com.iafenvoy.mxt.runtime.world.SecretRealmWorldAttachment;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -41,7 +41,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CurseHolderAttachment>> CURSE_HOLDER = entity("curse_holder", CurseHolderAttachment::new, CurseHolderAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TribulationAttachment>> TRIBULATION = entity("tribulation", TribulationAttachment::new, TribulationAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ContractAttachment>> CONTRACT = entity("contract", ContractAttachment::new, ContractAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmTravelAttachment>> REALM_TRAVEL = entity("realm_travel", RealmTravelAttachment::new, RealmTravelAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SecretRealmTravelAttachment>> SECRET_REALM_TRAVEL = entity("secret_realm_travel", SecretRealmTravelAttachment::new, SecretRealmTravelAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulAttachment>> SOUL = entity("soul", SoulAttachment::new, SoulAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CreatureSpiritAttachment>> CREATURE_SPIRIT = entity("creature_spirit", CreatureSpiritAttachment::new, CreatureSpiritAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillToxicityAttachment>> PILL_TOXICITY = entity("pill_toxicity", PillToxicityAttachment::new, PillToxicityAttachment.CODEC);
@@ -51,7 +51,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraWorldAttachment>> AURA_WORLD = REGISTRY.register("aura_world", () -> AttachmentType.builder(AuraWorldAttachment::new).serialize(AuraWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FormationWorldAttachment>> FORMATION_WORLD = REGISTRY.register("formation_world", () -> AttachmentType.builder(FormationWorldAttachment::new).serialize(FormationWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkAttachment>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkAttachment::new).serialize(AuraChunkAttachment.CODEC).build());
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RealmWorldAttachment>> REALM_WORLD = REGISTRY.register("realm_world", () -> AttachmentType.builder(RealmWorldAttachment::new).serialize(RealmWorldAttachment.MAP_CODEC).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SecretRealmWorldAttachment>> SECRET_REALM_WORLD = REGISTRY.register("secret_realm_world", () -> AttachmentType.builder(SecretRealmWorldAttachment::new).serialize(SecretRealmWorldAttachment.MAP_CODEC).build());
 
     @SubscribeEvent
     public static void flushDirtyAttachments(Post event) {

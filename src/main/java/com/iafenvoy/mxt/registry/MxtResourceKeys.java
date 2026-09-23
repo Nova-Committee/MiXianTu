@@ -34,8 +34,8 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.realm.RealmGeneration;
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
@@ -87,7 +87,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends Entry>>> ITEM_MATCHER_ENTRY_TYPE = create("item_matcher_entry_type");
     public static final ResourceKey<Registry<MapCodec<? extends FormationActionType>>> FORMATION_ACTION_TYPE = create("formation_action_type");
     public static final ResourceKey<Registry<MapCodec<? extends TimelineEntry>>> TIMELINE_ENTRY_TYPE = create("timeline_entry_type");
-    public static final ResourceKey<Registry<MapCodec<? extends RealmGeneration>>> REALM_GENERATION_TYPE = create("realm_generation_type");
+    public static final ResourceKey<Registry<MapCodec<? extends SecretRealmGeneration>>> SECRET_REALM_GENERATION_TYPE = create("secret_realm_generation_type");
 
     // Datapack registries
     public static final ResourceKey<Registry<Resource>> RESOURCE = create("resource");
@@ -113,7 +113,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<Tribulation>> TRIBULATION = create("tribulation");
     public static final ResourceKey<Registry<CreatureProfile>> CREATURE_PROFILE = create("creature_profile");
     public static final ResourceKey<Registry<ContractType>> CONTRACT_TYPE = create("contract_type");
-    public static final ResourceKey<Registry<RealmInstance>> REALM_INSTANCE = create("realm_instance");
+    public static final ResourceKey<Registry<SecretRealm>> SECRET_REALM = create("secret_realm");
     public static final ResourceKey<Registry<CurrencyValue>> CURRENCY = create("currency");
     public static final ResourceKey<Registry<ItemBinding>> ITEM_BINDING = create("item_binding");
     public static final ResourceKey<Registry<WeaponBinding>> WEAPON_BINDING = create("weapon_binding");

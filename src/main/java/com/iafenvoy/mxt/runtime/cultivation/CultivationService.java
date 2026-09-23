@@ -44,6 +44,8 @@ import java.util.function.BooleanSupplier;
  */
 public final class CultivationService {
     private static final double PROGRESS_EPSILON = 1.0E-7D;
+    // Guards the segment total against a breakthrough requirement whose own formula reads minor_stage.
+    private static final ThreadLocal<Boolean> RESOLVING_MINOR_STAGE = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     private CultivationService() {
     }
@@ -195,6 +197,32 @@ public final class CultivationService {
             return 0.0D;
         }
         return remaining <= PROGRESS_EPSILON ? 0.0D : remaining;
+    }
+
+    // 0-based index of the minor stage this chain's progress sits in, or NaN when there is nothing to cut: a
+    // mortal stands on no stage, and a stage that declares no minor stages has none. This is the one place the
+    // segment arithmetic lives; the panel and the {@code minor_stage} formula variable both read it.
+    public static double minorStage(Holder<Aura> aura, CultivationAttachment spirit, FormulaContext context) {
+        Holder<RealmStage> current = spirit.realmStage(aura);
+        return current == null ? Double.NaN : minorStage(current.value(), spirit.cultivationProgress(aura), context);
+    }
+
+    // Even cuts of the stage's own breakthrough requirement, which is the number its progress climbs to. Progress
+    // banked past that requirement (up to max_experience) stays on the last segment, so the index never runs off
+    // the declared names.
+    public static double minorStage(RealmStage stage, double progress, FormulaContext context) {
+        int count = stage.minorStages().size();
+        if (count == 0 || !Double.isFinite(progress) || progress < 0.0D) return Double.NaN;
+        double requirement;
+        if (RESOLVING_MINOR_STAGE.get()) return Double.NaN;
+        RESOLVING_MINOR_STAGE.set(Boolean.TRUE);
+        try {
+            requirement = stage.breakthroughExp().evaluate(context);
+        } finally {
+            RESOLVING_MINOR_STAGE.set(Boolean.FALSE);
+        }
+        if (!Double.isFinite(requirement) || requirement <= 0.0D) return Double.NaN;
+        return Math.min(count - 1, Math.floor(progress * count / requirement));
     }
 
     // Read-only, shared by the automatic breakthrough tick and the information screen.

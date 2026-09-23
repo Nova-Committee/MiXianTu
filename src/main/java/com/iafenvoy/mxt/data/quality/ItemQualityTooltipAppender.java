@@ -42,7 +42,9 @@ public final class ItemQualityTooltipAppender {
 
     private static void appendQuality(Consumer<Component> builder, TooltipFlag flag, Holder<ItemQuality> quality) {
         ItemQuality value = quality.value();
-        builder.accept(Component.translatable("tooltip.mxt.item.quality", value.displayName()));
+        builder.accept(Component.translatable("tooltip.mxt.item.quality", value.name()));
+        if (!value.description().getString().isEmpty())
+            builder.accept(value.description().copy().withStyle(ChatFormatting.GRAY));
         appendModifier(builder, value.valueMultiplier());
         appendModifier(builder, value.forgingModifier());
         appendModifier(builder, value.alchemyModifier());

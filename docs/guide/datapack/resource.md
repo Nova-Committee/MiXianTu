@@ -30,4 +30,4 @@ title: resource：数值存储与资源条
 
 `use_condition`（在 `aura` 定义中）是可选的 `EntityCondition`，用于控制实体能否主动消耗该数值，同时控制其所有资源条的可见性。它不影响修炼、环境吸收、自然恢复或突破。`show_cultivation_info` 默认为 `true`；设为 `false` 时该数值仍可拥有境界链和修为，但不会出现在人物信息面板的“境界”或“修为进度”中。
 
-数值、境界、元素、技能等数据驱动定义不再填写 `translation_key`。显示名称统一由定义文件的标识符自动生成翻译键 `<注册表类别>.<命名空间>.<路径>`，类别默认取注册表自己的 path，例如 `example:qi` 在 `resource` 类别下对应 `resource.example.qi`。路径里的 `/` **原样**保留（`example:foo/bar` 得到 `resource.example.foo/bar`），不会被转成 `.`，所以定义文件名建议不要带子目录。数据包作者只需在语言文件中提供该键的翻译。
+数值、境界、元素、技能等数据驱动定义不再填写 `translation_key`。显示名称统一由定义文件的标识符自动生成翻译键 `<注册表类别>.<注册表命名空间>.<定义命名空间>.<路径>`：注册表命名空间就是 `mxt`（本模组的注册表都在 `mxt` 下），类别默认取注册表自己的 path，例如 `example:qi` 在 `resource` 类别下对应 `resource.mxt.example.qi`。路径里的 `/` **原样**保留（`example:foo/bar` 得到 `resource.mxt.example.foo/bar`），不会被转成 `.`，所以定义文件名建议不要带子目录。数据包作者只需在语言文件中提供该键的翻译，也可以给上表中的 `name` / `description` 直接写文本。

@@ -4,6 +4,7 @@
   "next_realm": "mxt_test:foundation",
   "breakthrough_exp": 100,
   "max_experience": 100,
+  "minor_stages": 9,
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
   "breakthrough_particle": {
     "particle": { "type": "minecraft:enchant" },

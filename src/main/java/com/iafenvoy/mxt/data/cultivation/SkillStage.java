@@ -1,12 +1,16 @@
 package com.iafenvoy.mxt.data.cultivation;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import org.jspecify.annotations.NonNull;
@@ -19,10 +23,14 @@ import java.util.Optional;
  * is a holder reference, so a broken chain is only detectable at runtime. {@code damage_multiplier} belongs to the
  * abilities the chain grants at that level, not to everything the holder does.
  */
-public record SkillStage(Identifier skill, Optional<Holder<SkillStage>> nextStage, NumberProvider mastery,
-                         double damageMultiplier) {
+public record SkillStage(Component name, Component description, Identifier skill,
+                         Optional<Holder<SkillStage>> nextStage, NumberProvider mastery,
+                         double damageMultiplier) implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SKILL_STAGE.identifier());
     public static final Codec<Holder<SkillStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SKILL_STAGE);
     public static final Codec<SkillStage> DIRECT_CODEC = RecordCodecBuilder.<SkillStage>create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(SkillStage::name),
+            ContextNameCodec.description(CATEGORY).forGetter(SkillStage::description),
             Identifier.CODEC.fieldOf("skill").forGetter(SkillStage::skill),
             RegistryFixedCodec.create(MxtResourceKeys.SKILL_STAGE).optionalFieldOf("next_stage").forGetter(SkillStage::nextStage),
             NumberProvider.CODEC.optionalFieldOf("mastery", new Constant(0.0D)).forGetter(SkillStage::mastery),

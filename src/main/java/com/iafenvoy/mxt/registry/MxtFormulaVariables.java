@@ -5,10 +5,11 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
-import com.iafenvoy.mxt.runtime.world.RealmRecord;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
 import com.iafenvoy.mxt.util.formula.FormulaNames;
@@ -42,7 +43,7 @@ public final class MxtFormulaVariables {
     public static final DeferredHolder<FormulaVariable, FormulaVariable> CASTER = REGISTRY.register("caster", () -> new EntityVariable("caster_"));
     public static final DeferredHolder<FormulaVariable, FormulaVariable> TARGET = REGISTRY.register("target", () -> new EntityVariable("target_"));
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
-    public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM_INSTANCE = REGISTRY.register("realm_instance", RealmInstanceVariable::new);
+    public static final DeferredHolder<FormulaVariable, FormulaVariable> SECRET_REALM = REGISTRY.register("secret_realm", SecretRealmVariable::new);
 
     // For formulas that must switch a term off without editing the expression.
     private record ZeroVariable() implements FormulaVariable {
@@ -145,9 +146,10 @@ public final class MxtFormulaVariables {
 
     // The cultivation state of the resource the formula is evaluated for. These names exist only in a resource
     // context, which is why {@code level} means a realm rank here while {@code caster_level} stays the vanilla
-    // experience level.
+    // experience level. {@code minor_stage} is the 0-based position inside the current stage's own minor stages,
+    // and unlike {@code realm} it answers NaN for a mortal, who stands on no stage there is to cut.
     private static final class RealmVariable implements FormulaVariable {
-        private static final Set<String> NAMES = Set.of("realm", "realm_rank", "level", "absorbed_aura", "cultivation_progress");
+        private static final Set<String> NAMES = Set.of("realm", "realm_rank", "level", "absorbed_aura", "cultivation_progress", "minor_stage");
 
         @Override
         public Set<String> names() {
@@ -161,6 +163,8 @@ public final class MxtFormulaVariables {
             if (subject == null) return Double.NaN;
             Holder<Aura> aura = AuraLookup
                     .holder(AuraLookup.access(context), subject.resource()).orElse(null);
+            if (key.equals("minor_stage"))
+                return aura == null ? Double.NaN : CultivationService.minorStage(aura, subject.cultivation(), context);
             int rank = aura == null ? -1 : ResourceService.realmRank(subject.cultivation(), aura);
             if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
                 return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(aura);
@@ -168,12 +172,12 @@ public final class MxtFormulaVariables {
         }
     }
 
-    // The state of the realm instance the subject is inside. The names carry the {@code realm_instance_} prefix
+    // The state of the secret realm the subject is inside. The names carry the {@code secret_realm_} prefix
     // because {@code realm} already means a cultivation stage and both can be read in one expression; every name
-    // answers NaN outside a realm, so a condition can tell "not in a realm" from "in an empty one".
-    private static final class RealmInstanceVariable implements FormulaVariable {
-        private static final Set<String> NAMES = Set.of("realm_instance_members", "realm_instance_limit",
-                "realm_instance_elapsed", "realm_instance_duration", "realm_instance_index", "realm_instance_is_owner");
+    // answers NaN outside a secret realm, so a condition can tell "not in a secret realm" from "in an empty one".
+    private static final class SecretRealmVariable implements FormulaVariable {
+        private static final Set<String> NAMES = Set.of("secret_realm_members", "secret_realm_limit",
+                "secret_realm_elapsed", "secret_realm_duration", "secret_realm_index", "secret_realm_is_owner");
 
         @Override
         public Set<String> names() {
@@ -185,16 +189,16 @@ public final class MxtFormulaVariables {
             if (!suffix.isEmpty()) return Double.NaN;
             Entity entity = context.caster() != null ? context.caster() : context.player();
             if (entity == null) return Double.NaN;
-            RealmRecord record = RealmInstanceRegistry.ofMember(entity.getUUID()).orElse(null);
+            SecretRealmRecord record = SecretRealmRegistry.ofMember(entity.getUUID()).orElse(null);
             if (record == null) return Double.NaN;
             return switch (key) {
-                case "realm_instance_members" -> record.members().size();
-                case "realm_instance_limit" -> record.instance().maxMembers().orElse(-1);
-                case "realm_instance_elapsed" -> record.startedAt() < 0L ? 0.0D
+                case "secret_realm_members" -> record.members().size();
+                case "secret_realm_limit" -> record.instance().maxMembers().orElse(-1);
+                case "secret_realm_elapsed" -> record.startedAt() < 0L ? 0.0D
                         : Math.max(0.0D, entity.level().getGameTime() - record.startedAt());
-                case "realm_instance_duration" -> record.instance().durationTicks();
-                case "realm_instance_index" -> record.index();
-                case "realm_instance_is_owner" -> record.isOwner(entity.getUUID()) ? 1.0D : 0.0D;
+                case "secret_realm_duration" -> record.instance().durationTicks();
+                case "secret_realm_index" -> record.index();
+                case "secret_realm_is_owner" -> record.isOwner(entity.getUUID()) ? 1.0D : 0.0D;
                 default -> Double.NaN;
             };
         }

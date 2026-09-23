@@ -1,3 +1,6 @@
 {
-  "display_name": "quality.mxt_test.excellent"
+  "name": {
+    "text": "Excellent",
+    "color": "gold"
+  }
 }

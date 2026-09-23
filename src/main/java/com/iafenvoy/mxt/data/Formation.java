@@ -1,12 +1,15 @@
 package com.iafenvoy.mxt.data;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -15,6 +18,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.world.level.block.Block;
@@ -32,16 +36,20 @@ import java.util.function.Function;
  * controller. {@code spare_friends} decides whether per-entity work goes to everyone the array covers or only to
  * those its owner does not recognise; what the array is for is its actions, not this field.
  */
-public record Formation(Optional<Identifier> structureTemplate, List<RequiredBlock> structure,
+public record Formation(Component name, Component description, Optional<Identifier> structureTemplate,
+                        List<RequiredBlock> structure,
                         NumberProvider radius, List<ResourceCost> activationCosts,
                         List<ResourceCost> maintenanceCosts, Optional<Storage> storage,
                         List<FormationActionType> actions,
                         boolean spareFriends, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction, EntityAction entityEnterAction,
-                        EntityAction entityExitAction) {
+                        EntityAction entityExitAction) implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.FORMATION.identifier());
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(Formation::name),
+            ContextNameCodec.description(CATEGORY).forGetter(Formation::description),
             Identifier.CODEC.optionalFieldOf("structure_template").forGetter(Formation::structureTemplate),
             // Strict, unlike the action and cost lists: dropping a mistyped required block would quietly make
             // the structure easier to satisfy, and a formation standing on half its flags is worse.

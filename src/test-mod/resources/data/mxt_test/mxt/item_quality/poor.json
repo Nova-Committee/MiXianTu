@@ -1,5 +1,4 @@
 {
-  "display_name": "quality.mxt_test.poor",
   "condition": {
     "type": "mxt:always_true"
   }

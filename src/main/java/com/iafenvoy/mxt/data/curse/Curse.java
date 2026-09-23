@@ -1,17 +1,21 @@
 package com.iafenvoy.mxt.data.curse;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.curse.CurseType.Timed;
 import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import org.jspecify.annotations.NonNull;
 
@@ -23,11 +27,16 @@ import java.util.Locale;
  * never decided here - the cure side names the curse tags it removes, and the tag file lists the curses in them.
  * {@code on_apply} runs only when an instance is created, not when one is stacked onto or refreshed.
  */
-public record Curse(CurseType typedType, NumberProvider durationTicks, NumberProvider tickInterval, int maxStacks,
+public record Curse(Component name, Component description, CurseType typedType, NumberProvider durationTicks,
+                    NumberProvider tickInterval, int maxStacks,
                     StackingMode stackingMode, EntityCondition applicationCondition, EntityCondition displayCondition,
-                    EntityAction onApply, EntityAction onTick, EntityAction onExpire, EntityAction onCleanse) {
+                    EntityAction onApply, EntityAction onTick, EntityAction onExpire,
+                    EntityAction onCleanse) implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.CURSE.identifier());
     public static final Codec<Holder<Curse>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CURSE);
     public static final Codec<Curse> DIRECT_CODEC = RecordCodecBuilder.<Curse>create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(Curse::name),
+            ContextNameCodec.description(CATEGORY).forGetter(Curse::description),
             CurseType.MAP_CODEC.forGetter(Curse::typedType),
             NumberProvider.CODEC.optionalFieldOf("duration_ticks", new Constant(0.0D)).forGetter(Curse::durationTicks),
             NumberProvider.CODEC.optionalFieldOf("tick_interval", new Constant(20.0D)).forGetter(Curse::tickInterval),

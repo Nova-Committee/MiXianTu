@@ -1,8 +1,11 @@
 package com.iafenvoy.mxt.data.cultivation;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -11,6 +14,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
@@ -21,12 +25,16 @@ import java.util.List;
  * reading of the element relations - two elements may be opposed in the damage pipeline and still be perfectly
  * possible to hold together - and the check is symmetric, so writing the rule on either root is enough.
  */
-public record SpiritRoot(Holder<Element> element, NumberProvider cultivationMultiplier,
+public record SpiritRoot(Component name, Component description, Holder<Element> element,
+                         NumberProvider cultivationMultiplier,
                          NumberProvider elementAbilityModifier, String rarity,
                          List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
-                         List<Either<Holder<Element>, TagKey<Element>>> conflictingElements) {
+                         List<Either<Holder<Element>, TagKey<Element>>> conflictingElements) implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SPIRIT_ROOT.identifier());
     public static final Codec<Holder<SpiritRoot>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SPIRIT_ROOT);
     public static final Codec<SpiritRoot> DIRECT_CODEC = RecordCodecBuilder.<SpiritRoot>create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(SpiritRoot::name),
+            ContextNameCodec.description(CATEGORY).forGetter(SpiritRoot::description),
             Element.CODEC.fieldOf("element").forGetter(SpiritRoot::element),
             NumberProvider.CODEC.optionalFieldOf("cultivation_multiplier", new Constant(1.0D)).forGetter(SpiritRoot::cultivationMultiplier),
             NumberProvider.CODEC.optionalFieldOf("element_ability_modifier", new Constant(1.0D)).forGetter(SpiritRoot::elementAbilityModifier),

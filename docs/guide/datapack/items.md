@@ -38,4 +38,4 @@ title: 物品绑定、品质与经济
 }
 ```
 
-`item_quality` 定义品质内容，品质组使用原版标签组织顺序，物品通过 `quality_group` 引用品质序列。`currency` 为物品定义货币价值，`unavailable_when` 是包含 `condition` 和 `reason` 的 ItemCondition 数组。
+`item_quality` 定义品质内容，品质组使用原版标签组织顺序，物品通过 `quality_group` 引用品质序列。品质自己的 `name` / `description` 可以省略（按 id 生成翻译键），三个修正对象里的 `description` 省略就不画那一行。`currency` 为物品定义货币价值，`unavailable_when` 是包含 `condition` 和 `reason` 的 ItemCondition 数组。

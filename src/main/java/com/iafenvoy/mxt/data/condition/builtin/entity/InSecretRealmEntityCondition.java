@@ -2,10 +2,10 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.data.realm.RealmInstance;
+import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.world.RealmInstanceRegistry;
-import com.iafenvoy.mxt.runtime.world.RealmRecord;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
@@ -22,32 +22,32 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * True when the entity is inside a realm instance, optionally one this condition names. The {@code role} field
- * asks about membership and claims, so a realm definition needs no permission field of its own.
+ * True when the entity is inside a secret realm, optionally one this condition names. The {@code role} field
+ * asks about membership and claims, so a secret realm definition needs no permission field of its own.
  */
-public record InRealmInstanceEntityCondition(Optional<Either<Holder<RealmInstance>, TagKey<RealmInstance>>> definition,
+public record InSecretRealmEntityCondition(Optional<Either<Holder<SecretRealm>, TagKey<SecretRealm>>> definition,
                                              Role role) implements EntityCondition {
-    public static final MapCodec<InRealmInstanceEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryCodecs.holderOrTag(MxtResourceKeys.REALM_INSTANCE).optionalFieldOf("definition").forGetter(InRealmInstanceEntityCondition::definition),
-            Role.CODEC.optionalFieldOf("role", Role.ANY).forGetter(InRealmInstanceEntityCondition::role)
-    ).apply(i, InRealmInstanceEntityCondition::new));
+    public static final MapCodec<InSecretRealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            RegistryCodecs.holderOrTag(MxtResourceKeys.SECRET_REALM).optionalFieldOf("definition").forGetter(InSecretRealmEntityCondition::definition),
+            Role.CODEC.optionalFieldOf("role", Role.ANY).forGetter(InSecretRealmEntityCondition::role)
+    ).apply(i, InSecretRealmEntityCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        Optional<RealmRecord> found = RealmInstanceRegistry.ofMember(entity.getUUID());
+        Optional<SecretRealmRecord> found = SecretRealmRegistry.ofMember(entity.getUUID());
         if (found.isEmpty()) return false;
-        RealmRecord record = found.get();
+        SecretRealmRecord record = found.get();
         if (this.definition.isPresent() && !matches(this.definition.get(), record.definition())) return false;
         return this.role.holds(record, entity.getUUID());
     }
 
     @Override
-    public @NonNull MapCodec<InRealmInstanceEntityCondition> codec() {
+    public @NonNull MapCodec<InSecretRealmEntityCondition> codec() {
         return CODEC;
     }
 
-    private static boolean matches(Either<Holder<RealmInstance>, TagKey<RealmInstance>> value, Holder<RealmInstance> candidate) {
+    private static boolean matches(Either<Holder<SecretRealm>, TagKey<SecretRealm>> value, Holder<SecretRealm> candidate) {
         return value.map(holder -> HolderHelper.id(holder).equals(HolderHelper.id(candidate)), candidate::is);
     }
 
@@ -63,7 +63,7 @@ public record InRealmInstanceEntityCondition(Optional<Either<Holder<RealmInstanc
                 value -> valueOf(value.toUpperCase(Locale.ROOT)),
                 value -> value.name().toLowerCase(Locale.ROOT));
 
-        boolean holds(RealmRecord record, UUID member) {
+        boolean holds(SecretRealmRecord record, UUID member) {
             return switch (this) {
                 case ANY -> true;
                 case OWNER -> record.isOwner(member);

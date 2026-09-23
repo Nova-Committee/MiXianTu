@@ -21,7 +21,7 @@ import java.util.Optional;
 
 /**
  * Optional runtime dimension loader operating on already decoded LevelStem values. It never mutates the dynamic
- * dimension registry, so callers can keep it as a fallback for realm instances.
+ * dimension registry, so callers can keep it as a fallback for secret realms.
  */
 public final class RuntimeDimensionService {
     private RuntimeDimensionService() {
@@ -87,7 +87,7 @@ public final class RuntimeDimensionService {
             level.noSave = true;
             unload(server, key);
         }
-        RealmGenerationService.clearData(server, key);
+        SecretRealmGenerationService.clearData(server, key);
         return true;
     }
 }

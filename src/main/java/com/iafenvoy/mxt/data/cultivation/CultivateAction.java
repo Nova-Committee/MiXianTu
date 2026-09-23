@@ -1,18 +1,22 @@
 package com.iafenvoy.mxt.data.cultivation;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraGain;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
@@ -26,14 +30,18 @@ import java.util.Map;
 // TODO: may be removed. What it holds is "how an entity cultivates right now", which the rest of the system could
 // keep in the state attachment rather than a datapack registry; CultivationModeService, CultivationActionService,
 // AuraDistributionService and the registry key below would go with it. Marked, not scheduled.
-public record CultivateAction(boolean defaultAction, EntityCondition startCondition, EntityCondition condition,
+public record CultivateAction(Component name, Component description, boolean defaultAction,
+                              EntityCondition startCondition, EntityCondition condition,
                               int tickInterval,
                               List<ResourceCost> costs, NumberProvider absorbAmount,
                               Map<Holder<Aura>, NumberProvider> auraCosts, List<AuraGain> auraGains,
                               int cooldownTicks,
-                              EntityAction tickAction) {
+                              EntityAction tickAction) implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.CULTIVATE_ACTION.identifier());
     public static final Codec<Holder<CultivateAction>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CULTIVATE_ACTION);
     public static final Codec<CultivateAction> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(CultivateAction::name),
+            ContextNameCodec.description(CATEGORY).forGetter(CultivateAction::description),
             Codec.BOOL.optionalFieldOf("default", false).forGetter(CultivateAction::defaultAction),
             EntityCondition.optionalCodec("start_condition").forGetter(CultivateAction::startCondition),
             EntityCondition.optionalCodec("condition").forGetter(CultivateAction::condition),

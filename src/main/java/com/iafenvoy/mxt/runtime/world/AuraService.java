@@ -181,12 +181,12 @@ public final class AuraService {
     }
 
     // Dimension stems are a writable registry that is not synced to clients, so only the server may expand a
-    // dimension tag through LEVEL_STEM; a realm instance has no level stem of its own, so it also matches aliases.
+    // dimension tag through LEVEL_STEM; a secret realm has no level stem of its own, so it also matches aliases.
     private static boolean matchesDimension(Level level, AuraZone zone, Identifier dimension) {
         if (!(level instanceof ServerLevel server)) return RegistryCodecs.matchesKey(zone.dimensions(), dimension);
         Registry<LevelStem> registry = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
         if (RegistryCodecs.matchesKey(zone.dimensions(), registry, dimension)) return true;
-        return RealmInstanceRegistry.aliases(dimension)
+        return SecretRealmRegistry.aliases(dimension)
                 .anyMatch(alias -> RegistryCodecs.matchesKey(zone.dimensions(), registry, alias));
     }
 

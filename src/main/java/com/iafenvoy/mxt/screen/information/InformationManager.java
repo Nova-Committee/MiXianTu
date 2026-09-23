@@ -7,12 +7,14 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -25,6 +27,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -173,15 +176,29 @@ public final class InformationManager {
             collector.add("info.mxt.realm", Component.translatable("info.mxt.mortal"));
             return;
         }
+        FormulaContext context = FormulaContexts.forEntity(collector.getPlayer());
         boolean first = true;
         for (Holder<Aura> chain : chains) {
             if (!chain.value().showCultivationInfo()) continue;
-            Holder<?> realm = cultivation.realmStage(chain);
+            Holder<RealmStage> realm = cultivation.realmStage(chain);
             Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.name(realm, "realm_stage");
+            Component minorStage = minorStageText(collector.getPlayer(), chain, realm, cultivation.cultivationProgress(chain), context);
+            if (minorStage != null) realmName = realmName.copy().append(" ").append(minorStage);
             collector.add(first ? Component.translatable("info.mxt.realm") : null,
                     DefinitionText.name(chain.value().resource(), "resource").copy().append(": ").append(realmName));
             first = false;
         }
+    }
+
+    // A mortal, and a stage that declares no minor stages, add nothing to the row. The segment total has to be
+    // read in the same resource context the breakthrough runtime uses, or a formula would be evaluated twice
+    // with different variables.
+    private static Component minorStageText(Player player, Holder<Aura> chain, @Nullable Holder<RealmStage> realm,
+                                            double progress, FormulaContext context) {
+        if (realm == null) return null;
+        FormulaContext resourceContext = ResourceService.formulaContext(player, chain.value().resource(), context);
+        double index = CultivationService.minorStage(realm.value(), progress, resourceContext);
+        return Double.isNaN(index) ? null : realm.value().minorStages().get((int) index);
     }
 
     // A curse whose display_condition fails leaves no row behind at all, not an empty one: that is the point

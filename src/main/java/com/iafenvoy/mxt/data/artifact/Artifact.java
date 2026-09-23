@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.artifact;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.mxt.data.artifact.ability.ArtifactAbility;
@@ -13,7 +14,9 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -25,6 +28,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
@@ -41,11 +45,13 @@ import java.util.Set;
  * only the per-aura ceiling is declared here. At most one {@code mxt:flight}, {@code mxt:storage} and
  * {@code mxt:upkeep} entry, and at most one togglable per key (the wheel addresses a cell by artifact id + key).
  */
-public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spiritCapacity,
+public record Artifact(Component name, Component description, List<Entry> items,
+                       Map<Holder<Aura>, NumberProvider> spiritCapacity,
                        List<ArtifactAbility> abilities, boolean curiosEquipable, boolean requireOwner,
                        ItemAction claimAction, EntityCondition claimCondition,
                        ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks,
-                       List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier) implements ItemMatcher {
+                       List<Either<Holder<Element>, TagKey<Element>>> element,
+                       double attachmentMultiplier) implements ItemMatcher, NamedDefinition {
     // Two hearts.
     public static final double DEFAULT_CLAIM_HEALTH = 4.0D;
     // One second.
@@ -54,7 +60,10 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
     // (mxt:no_op) or charges something else.
     public static final ItemAction DEFAULT_CLAIM_ACTION = new ConsumeHealthItemAction(new Constant(DEFAULT_CLAIM_HEALTH));
     public static final Codec<Holder<Artifact>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ARTIFACT);
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ARTIFACT.identifier());
     private static final MapCodec<Artifact> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(Artifact::name),
+            ContextNameCodec.description(CATEGORY).forGetter(Artifact::description),
             ENTRIES_CODEC.fieldOf("items").forGetter(Artifact::items),
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("spirit_capacity", Map.of()).forGetter(Artifact::spiritCapacity),
             ArtifactAbility.CODEC.listOf().optionalFieldOf("abilities", List.of()).forGetter(Artifact::abilities),

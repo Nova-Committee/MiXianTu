@@ -1,9 +1,12 @@
 package com.iafenvoy.mxt.data.cultivation;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -12,6 +15,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
@@ -24,14 +28,18 @@ import java.util.List;
  * reads only the keys named below. The two damage multipliers are read by the damage pipeline next to the element
  * relations rather than instead of them; several physiques multiply together, and both default to 1.
  */
-public record Physique(List<AttributeEntry> attributeModifiers,
+public record Physique(Component name, Component description, List<AttributeEntry> attributeModifiers,
                        List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities, EntityCondition holderCondition,
                        List<Identifier> exclusiveTags, String rarity, boolean allowStacking,
-                       NumberProvider damageDealtMultiplier, NumberProvider damageTakenMultiplier) {
+                       NumberProvider damageDealtMultiplier, NumberProvider damageTakenMultiplier)
+        implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.PHYSIQUE.identifier());
     public static final Codec<Holder<Physique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PHYSIQUE);
 
     public static final Codec<Physique> DIRECT_CODEC =
             RecordCodecBuilder.<Physique>mapCodec(i -> i.group(
+                    ContextNameCodec.name(CATEGORY).forGetter(Physique::name),
+                    ContextNameCodec.description(CATEGORY).forGetter(Physique::description),
                     AttributeEntry.CODEC.listOf().optionalFieldOf("attribute_modifiers", List.of()).forGetter(Physique::attributeModifiers),
                     RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
                     EntityCondition.optionalCodec("holder_condition").forGetter(Physique::holderCondition),

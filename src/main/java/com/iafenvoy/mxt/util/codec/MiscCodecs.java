@@ -1,8 +1,11 @@
 package com.iafenvoy.mxt.util.codec;
 
 import com.mojang.datafixers.util.Either;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.world.phys.Vec2;
@@ -20,7 +23,7 @@ public final class MiscCodecs {
      */
     public static final Codec<Double> NON_NEGATIVE = Codec.doubleRange(0.0D, Double.MAX_VALUE);
 
-    // Two element [x, z]; realm borders use it for their center.
+    // Two element [x, z]; secret realm borders use it for their center.
     public static final Codec<Vec2> HORIZONTAL_PAIR = Codec.DOUBLE.listOf().comapFlatMap(
             values -> values.size() == 2
                     ? DataResult.success(new Vec2(values.getFirst().floatValue(), values.get(1).floatValue()))
@@ -31,6 +34,17 @@ public final class MiscCodecs {
     // without losing styling.
     public static final Codec<Component> TRANSLATABLE_COMPONENT = Codec.either(Codec.STRING, ComponentSerialization.CODEC)
             .xmap(value -> value.map(Component::translatable, component -> component), Either::right);
+
+    /**
+     * Two fields read as one group: {@code RecordCodecBuilder.group} stops at sixteen components, so a definition
+     * with more fields pairs two of them and stays under the limit. The JSON keys are unchanged.
+     */
+    public static <A, B> MapCodec<Pair<A, B>> pair(MapCodec<A> first, MapCodec<B> second) {
+        return RecordCodecBuilder.mapCodec(i -> i.group(
+                first.<Pair<A, B>>forGetter(Pair::getFirst),
+                second.<Pair<A, B>>forGetter(Pair::getSecond)
+        ).apply(i, Pair::of));
+    }
 
     private static Codec<Integer> color(boolean alpha) {
         int digits = alpha ? 8 : 6;

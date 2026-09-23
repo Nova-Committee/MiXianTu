@@ -1,11 +1,14 @@
 package com.iafenvoy.mxt.data.cultivation;
 
+import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -14,6 +17,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
@@ -28,15 +32,19 @@ import java.util.Optional;
  * {@link SkillStage} chain. {@code default_stage} is the chain entry point and is mandatory as soon as any level
  * is configured; {@code mastery_resource} names the stored value that measures mastery.
  */
-public record Technique(String grade, Optional<IconReference> icon, EntityCondition learnCondition,
+public record Technique(Component name, Component description, String grade, Optional<IconReference> icon,
+                        EntityCondition learnCondition,
                         List<Identifier> exclusiveTags,
                         NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,
                         List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                         Optional<Holder<SkillStage>> defaultStage,
                         Optional<Holder<Resource>> masteryResource,
-                        Map<Holder<SkillStage>, StageConfiguration> configuration) {
+                        Map<Holder<SkillStage>, StageConfiguration> configuration) implements NamedDefinition {
+    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.TECHNIQUE.identifier());
     public static final Codec<Holder<Technique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TECHNIQUE);
     public static final Codec<Technique> DIRECT_CODEC = RecordCodecBuilder.<Technique>create(i -> i.group(
+            ContextNameCodec.name(CATEGORY).forGetter(Technique::name),
+            ContextNameCodec.description(CATEGORY).forGetter(Technique::description),
             Codec.STRING.optionalFieldOf("grade", "common").forGetter(Technique::grade),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(Technique::icon),
             EntityCondition.optionalCodec("learn_condition").forGetter(Technique::learnCondition),
