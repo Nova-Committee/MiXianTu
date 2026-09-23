@@ -16,7 +16,7 @@ import java.util.Map;
 public record BlockAuraSectionCache(Map<Holder<Aura>, AuraValue> aura,
                                     List<BlockAuraContribution> sources) {
     public static final Codec<BlockAuraSectionCache> CODEC = RecordCodecBuilder.create(i -> i.group(
-            AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(BlockAuraSectionCache::aura),
-            CollectionCodecs.list(BlockAuraContribution.CODEC).optionalFieldOf("sources", List.of()).forGetter(BlockAuraSectionCache::sources)
+            AuraValue.MAP_CODEC.lenientOptionalFieldOf("aura", Map.of()).forGetter(BlockAuraSectionCache::aura),
+            CollectionCodecs.list(BlockAuraContribution.CODEC).lenientOptionalFieldOf("sources", List.of()).forGetter(BlockAuraSectionCache::sources)
     ).apply(i, BlockAuraSectionCache::new));
 }

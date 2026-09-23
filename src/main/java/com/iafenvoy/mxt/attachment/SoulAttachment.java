@@ -13,11 +13,11 @@ import java.util.UUID;
  */
 public final class SoulAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SoulAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.BOOL.optionalFieldOf("active", false).forGetter(SoulAttachment::active),
-            Codec.STRING.optionalFieldOf("origin", "").forGetter(SoulAttachment::origin),
-            Codec.LONG.optionalFieldOf("created_at", -1L).forGetter(SoulAttachment::createdAt),
-            Codec.STRING.optionalFieldOf("source", "").forGetter(SoulAttachment::source),
-            Codec.STRING.optionalFieldOf("manifestation", "").forGetter(SoulAttachment::manifestationValue)
+            Codec.BOOL.lenientOptionalFieldOf("active", false).forGetter(SoulAttachment::active),
+            Codec.STRING.lenientOptionalFieldOf("origin", "").forGetter(SoulAttachment::origin),
+            Codec.LONG.lenientOptionalFieldOf("created_at", -1L).forGetter(SoulAttachment::createdAt),
+            Codec.STRING.lenientOptionalFieldOf("source", "").forGetter(SoulAttachment::source),
+            Codec.STRING.lenientOptionalFieldOf("manifestation", "").forGetter(SoulAttachment::manifestationValue)
     ).apply(i, SoulAttachment::new));
     private boolean active;
     private String origin;

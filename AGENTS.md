@@ -9,7 +9,7 @@
 | 文档怎么写、怎么维护 | [`docs/ai/FORMAT.md`](docs/ai/FORMAT.md) |
 | 字段级数据格式（唯一权威） | [`docs/数据包格式.md`](docs/数据包格式.md) |
 | 每个模块做到哪一步、还缺什么 | [`docs/模块实现审计.md`](docs/模块实现审计.md) |
-| 设计意图与历史决策 | `research/`——**新设计必须留档在这里**，规矩见 [`research/README.md`](research/README.md) |
+| 设计意图与历史决策 | `research/`——**大改的设计稿与历史决策**（日常小改不写稿），规矩见 [`research/README.md`](research/README.md) |
 | 玩家文档站 | **另一个仓库**：[`IAFEnvoy/mxt-docs`](https://github.com/IAFEnvoy/mxt-docs)——本仓库不含它，怎么在那边干活看它自己的 `AGENTS.md` |
 
 ## 0. 五分钟上手
@@ -27,7 +27,7 @@
 3. **不要自行 `git commit` / `git push`。** 也不要 `git checkout --`、`git stash`、`git reset` 别人的改动。
 4. **默认不启动游戏/测试服务端。** 代码改动的最低验证是编译（第 2 节）；要实机验证（`runTestClient` / `runTestServer`）**先问**，跑完把结果贴出来。
 5. **文档同步三处**：本仓库 `docs/`（字段与教程）+ 本仓库 `docs/模块实现审计.md`（完成度）+ **文档站仓库**（中英各一份）。只改一处等于制造 bug。
-6. **设计先留档。** `research/` 是**设计稿存储处**：新模块、改版、重构方案（哪怕最后不做）、以及"推翻了以前哪个设计"都要在那里落一份档，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前编号看 [`research/README.md`](research/README.md) 的目录，别在这里抄死），审计放 `research/audit/`。规矩见 [`research/README.md`](research/README.md)。**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明。**
+6. **大改才留档。** `research/` 是**设计稿存储处**，不是改动日志：**只有大改**（新模块、换形状的改版、跨模块重构）**或用户明确要求先设计**时才写稿，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前编号看 [`research/README.md`](research/README.md) 的目录，别在这里抄死），审计放 `research/audit/`。日常小改、修 bug、改名、拆包、加字段、文档同步**不写稿**——结论写进代码注释（硬约束）与 `docs/`、本文件（约定）里就够。反过来，真要写的稿子**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明**。规矩见 [`research/README.md`](research/README.md)。
 7. **不把研究设计写成"已完成"。** 「制作中 / 完成」只能由代码事实支撑；做不到的部分要明说。
 8. **不在文档里写死模组版本号。** 版本以 `gradle.properties` / 你装的那份 Jar 为准。平台与依赖版本（Minecraft / NeoForge / Curios / KubeJS）可以写。
 9. **内容不进本体。** 具体世界观数值、五行、丹方、灵根表这类内容属于数据包 / 测试包 / 内容模组；本体只提供框架与规则。
@@ -62,12 +62,12 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | 附件（存档 / 同步状态） | `attachment/` + `registry/MxtAttachments.java` |
 | 伤害结算 | `runtime/damage/DamageCalculationService.java`（唯一出口）、`DamageElements.java`、`DamageEventBridge.java` |
 | 元素 / 灵根 / 体质 / 反应 | `runtime/cultivation/`、`runtime/element/` |
-| 命令 | `command/`（一个节点一个类，`ROOT` 常量）+ `command/CommandManager.java` + `config/MxtServerConfig.Commands` + 两份 lang |
+| 命令 | `command/`（一个节点一个类，`ROOT` 是 `Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>` 子树工厂；服务端节点在 `command/server/`、客户端节点在 `command/client/`）+ `command/ServerCommandManager.java` / `command/ClientCommandManager.java` / `command/Suggestions.java` + `config/MxtServerConfig.Commands` + 两份 lang |
 | KubeJS 桥接 | `compat/kubejs/MxtKubeJsApi.java`（受校验的操作）+ `compat/kubejs/binding/`（一个全局对象一个类）+ `MxtKubeJsPlugin.registerBindings` |
 | 界面 / HUD / 信息面板 | `screen/` |
 | 原版注入（mixin / 访问器） | `mixin/`（登记在 `src/main/resources/mxt.mixins.json` 的 `mixins` 段；访问器接口与实现分开时放 `accessor/`，见 `accessor/ResourceLoadingOps.java` 与 `mixin/codec/`）——**注入只在运行时生效，编译不代表注入成功**，`defaultRequire: 1` 会让失败的注入直接崩在启动 |
 | 测试探针与夹具 | `src/test-mod/java/com/iafenvoy/mxt/testmod/`、`src/test-mod/resources/data/mxt_test/` |
-| 设计稿 / 审计 / 测试设定 | `research/`——**新设计必须留档在这里**，命名与分工见 [`research/README.md`](research/README.md) |
+| 设计稿 / 审计 / 测试设定 | `research/`——**大改、或按用户要求先设计时才留档在这里**，命名与分工见 [`research/README.md`](research/README.md) |
 | 模组文档（仓库内，作者向） | `docs/`（Docusaurus 风格：front matter + `_category_.json`）——**不是**玩家文档站，两者用途对照见 [`docs/README.md`](docs/README.md) |
 | 玩家文档站 | **另一个仓库**：[`IAFEnvoy/mxt-docs`](https://github.com/IAFEnvoy/mxt-docs) |
 
@@ -90,7 +90,9 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 - **显示名走 `DefinitionText.name(holder, category)`**；自由文本（`rarity`、功法 `grade`）先查 `mxt.rarity.<值>` / `mxt.technique_grade.<值>`，有翻译用翻译、否则显示原文。**18 张注册表的定义自带 `name` / `description` 两个可选字段**（`api/NamedDefinition`，走 `util/codec/ContextNameCodec`；一组文本用 `util/codec/ContextNameListCodec`，目前只有子境界名）：省略时按解码时的条目 id 生成**和上面同一个键** `<类别>.<注册表命名空间>.<定义命名空间>.<路径>`（注册表命名空间就是 `mxt`），`DefinitionText.name(...)` 认得出这个接口、直接读字段——别在别处再拼一套名字键，也别再造第二套键。
 - **`RecordCodecBuilder.group` 最多 16 个组件**：加上 `name` / `description` 后超出的记录（`RealmStage` 18 个、`SecretRealm` 17 个、`Ability` **19** 个——2026-09-23 合并新增 `hidden` 与 `item_action` 后用了三组 `pair`）用 `MiscCodecs.pair(a, b)` 把两个字段并成一组，JSON 键不变。`ContextNameCodec` 与 `DefinitionText` 共用 `DefinitionText.key(...)` / `defaultText(...)` 两个出口，两边永远同形。
 - **消耗只有一套形状**：所有"使用消耗"字段都是 `Cost[]`（`mxt:resource` / `mxt:aura` / `mxt:item` / `mxt:js` + `{id, amount}` 简写，见 `docs/数据包格式.md` 的「`Cost`」）。一个 `Cost` 只描述"要扣什么"（`charge`，只读），校验与扣除都由 `CostTransaction` 用同一份计划完成（`plan` → `commit`，中途拒付会还原已写入的部分）；**别在别处再写一套扣费逻辑，也别为某个字段另造一种代价格式**。付款者是 `LivingEntity` + 通道（`CostContext`）：`mxt:item` / `mxt:js` 需要玩家，缺通道就是拒付而不是报错；阵法维护这类"主人可能不在线"的字段直接点名一个资源账户。消耗数组解码失败**不许静默丢弃**（旧的 `AutoIgnoreListCodec` 容错口径不适用于它）。**货币不是消耗**：`currency` 的 `exchanges[].cost` 与 `value_multiplier` 是价格/价值，永远不进 `Cost`。
-- **能力只有一套形状**（2026-09-23 合并，同日取消内联）：技能就是一个 `mxt:ability` 注册表条目，**定义只写一处**，别处（法器 `abilities`、功法 `granted_abilities`、灵根/体质、符箓…）只用**它自己的 id 或 `#技能标签`** 引用，身份统一为**它自己的注册表 holder**（`Holder<Ability>`；要 id 就用 `HolderHelper.id(holder)`，见 `research/41_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））；**别再造"内联技能"或第二张能力分派表**。`mxt:flight` / `mxt:storage` / `mxt:upkeep` 就是普通的 `mxt:ability_type`（法器专用的 `mxt:artifact_ability_type` 已删除），需要展开标签时用 `RegistryCodecs.resolve(values, Provider, key)`（客户端与服务端同一条路径）。凡是"需要按键才发动"的实现 `data/ability/Toggable`（只有 `state` / `gated` / `activate` 三个方法，别再加"宿主内的名字"），服务端只经 `runtime/ability/AbilityActivationService` 受理（轮盘、命令、KubeJS 都走它），**别在别处再写一套"按下某个开关"的分派**；冷却与消耗由 `AbilityService` 的同一条闸门负责，`cooldown` 字段自己会写 `mxt:cooldown` 状态，不需要内容再声明一遍。
+- **能力只有一套形状**（2026-09-23 合并，同日取消内联）：技能就是一个 `mxt:ability` 注册表条目，**定义只写一处**，别处（法器 `abilities`、功法 `granted_abilities`、灵根/体质、符箓…）只用**它自己的 id 或 `#技能标签`** 引用，身份统一为**它自己的注册表 holder**（`Holder<Ability>`；要 id 就用 `HolderHelper.id(holder)`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））；**别再造"内联技能"或第二张能力分派表**。`mxt:flight` / `mxt:storage` / `mxt:upkeep` 就是普通的 `mxt:ability_type`（法器专用的 `mxt:artifact_ability_type` 已删除），需要展开标签时用 `RegistryCodecs.resolve(values, Provider, key)`（客户端与服务端同一条路径）。凡是"需要按键才发动"的实现 `data/ability/Toggable`（只有 `state` / `gated` / `activate` 三个方法，别再加"宿主内的名字"），服务端只经 `runtime/ability/AbilityActivationService` 受理（轮盘、命令、KubeJS 都走它），**别在别处再写一套"按下某个开关"的分派**；冷却与消耗由 `AbilityService` 的同一条闸门负责，`cooldown` 字段自己会写 `mxt:cooldown` 状态，不需要内容再声明一遍。
+- **命令的注册表参数只有一套形状**：每个命令类的 `ROOT` 是 `Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>`（注册表参数要在**建树时**就拿到上下文，所以子树是现造的而不是静态常量），注册表条目参数一律用原版 `ResourceArgument`——解析、Tab 补全、"没有这个条目"的报错三件事一起从原版拿来；**别再加"`IdentifierArgument.id()` + 手写 `suggests` + 执行期 `MxtDatapackRegistries.holder(...)` 回查"这三件套**。只有**点名一个当前数据包已不提供的引用**的节点（`technique drop`、`spirit_root`/`physique` 的 `remove|enable|disable`、`curse remove`、`ability revoke`）与维度 / 触发器信号 / `/picker` 的注册表 ID 参数留在 `IdentifierArgument`，它们要补全就用 `Suggestions.enabledIds`；这几条要救的其实是**被 `mxt:disabled` 停用**的条目（仍然被持有），**已删除**的定义在附件解码时就随容错 Codec 掉了，所以"按名字找"必须找**身体持有的引用**而不是回查注册表。`ResourceArgument` 读的是**原始**注册表，所以被 `mxt:disabled` 停用的条目会进补全、执行时仍要按 `MxtDatapackRegistries.isDisabled` 拒绝。服务端节点的写操作一律 `requires(ServerCommandManager::mayChange)`——权限判断只有这一份，别在节点里再写一遍 `source.permissions().hasPermission(...)`；两侧的注册分别只在 `ServerCommandManager` / `ClientCommandManager`（节点类不要自己 `register`）。
+- **附件是存档，读宽容；注册表引用存 Holder / ResourceKey**：`attachment/` 与 `runtime/{world,formation}` 里那几个附件 codec 的可选字段一律用 `lenientOptionalFieldOf`——附件解码失败时 NeoForge 会**整份丢弃**（日志 `Failed to deserialize data attachment … Skipping.`），宽容读法只丢那一个字段、但也不留日志；**数据包定义的 codec 不跟着宽容**（定义写错必须报错），共用的值 codec（如 `AuraPool`，网络 payload 也用）同样不动。附件里指向注册表的字段不要存 `Identifier` 再回查：`mxt:` 定义与静态注册表条目存 `Holder`（`Xxx.CODEC` / `holderByNameCodec()`），**会被 `/reload` 换掉实例的原版表（战利品表）存 `ResourceKey`**；比较用 `Holder.is(Identifier)`，不要用 `Holder.equals`（key 在重载后未必可靠）。**存 holder 会丢掉 `Abilities.resolve` 自带的 `mxt:disabled` 过滤**（`MxtDatapackRegistries.holder(Provider, …)` 会滤停用条目，而 `RegistryFixedCodec` 不认识标签），所以读了 holder 就动手的地方要自己补 `MxtDatapackRegistries.isDisabled`；id → 能力 holder 一律走 `Abilities.resolve`，这一层**保留**（理由见 `research/40` 的拍板）。
 - **服务端权威**：扣费、校验、修炼、突破、实体行为只在服务端；客户端只渲染与发请求。
 - **数据包对象视为不可变**，别做多余的 `copyOf` / Mutable 转换；颜色用 `MiscCodecs.COLOR`；数值加载期校验有限性，运行期遇到 NaN/Infinity 记一次警告并按 0（或 1，视语义）处理。
 - **元素相关规则只有一份实现**：`mxt:disabled` 的语义、灵根"持有 vs 生效"、这一击是什么元素、伤害管线的每个因子（`damage_multiplier`、`element_modifier`、攻击方 `overcomes`、受击方 `adapted_to`、体质的 `damage_dealt_multiplier` / `damage_taken_multiplier`）都已经有公共入口（`Elements`、`DamageElements`、`DamageCalculationService`），新代码接进去，不要在别处再算一套。
@@ -124,7 +126,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 
 - **倍率语义**：某个数该由数据包自己乘进公式，还是由管线统一乘（历史上 `element_modifier` 从"公式变量"改成"管线因子"就属于这一类，会静默改变已有包的伤害）。
 - **注册 vs 删除**：发现一个零引用的类，是让它成为该类型的实现，还是认定它是被新写法取代的遗留物而删掉。
-- **玩家入口**：哪些状态只给脚本与管理员命令（当前：灵根/体质的开关只有 KubeJS 与 `/mxt identity`），不加按键与界面。
+- **玩家入口**：哪些状态只给脚本与管理员命令（当前：灵根/体质的开关只有 KubeJS 与 `/mxt spirit_root` / `/mxt physique`），不加按键与界面。
 - **删字段 / 改字段名**：未发布阶段允许不兼容，但仍要问，并同步全部文档与测试包。
 
 ## 8. 汇报格式

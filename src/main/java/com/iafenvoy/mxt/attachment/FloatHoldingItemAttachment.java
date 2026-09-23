@@ -10,7 +10,7 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class FloatHoldingItemAttachment extends ShouldSyncAttachment {
     public static final MapCodec<FloatHoldingItemAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemStack.CODEC.optionalFieldOf("item", ItemStack.EMPTY).forGetter(FloatHoldingItemAttachment::item)
+            ItemStack.CODEC.lenientOptionalFieldOf("item", ItemStack.EMPTY).forGetter(FloatHoldingItemAttachment::item)
     ).apply(i, FloatHoldingItemAttachment::new));
     private ItemStack item;
 

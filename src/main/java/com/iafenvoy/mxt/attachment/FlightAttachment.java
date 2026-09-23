@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -18,16 +19,16 @@ import java.util.UUID;
  */
 public final class FlightAttachment extends ShouldSyncAttachment {
     public static final MapCodec<FlightAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.BOOL.optionalFieldOf("active", false).forGetter(FlightAttachment::active),
-            Identifier.CODEC.optionalFieldOf("archetype").forGetter(FlightAttachment::archetype),
-            Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(FlightAttachment::startedAt),
-            Codec.DOUBLE.optionalFieldOf("previous_flight", 0.0D).forGetter(FlightAttachment::previousFlight),
-            Codec.BOOL.optionalFieldOf("previous_flying", false).forGetter(FlightAttachment::previousFlying),
-            Codec.FLOAT.optionalFieldOf("previous_flying_speed", 0.05F).forGetter(FlightAttachment::previousFlyingSpeed),
-            Codec.STRING.optionalFieldOf("vehicle").forGetter(FlightAttachment::vehicleRaw)
+            Codec.BOOL.lenientOptionalFieldOf("active", false).forGetter(FlightAttachment::active),
+            Ability.CODEC.lenientOptionalFieldOf("archetype").forGetter(FlightAttachment::archetype),
+            Codec.LONG.lenientOptionalFieldOf("started_at", 0L).forGetter(FlightAttachment::startedAt),
+            Codec.DOUBLE.lenientOptionalFieldOf("previous_flight", 0.0D).forGetter(FlightAttachment::previousFlight),
+            Codec.BOOL.lenientOptionalFieldOf("previous_flying", false).forGetter(FlightAttachment::previousFlying),
+            Codec.FLOAT.lenientOptionalFieldOf("previous_flying_speed", 0.05F).forGetter(FlightAttachment::previousFlyingSpeed),
+            Codec.STRING.lenientOptionalFieldOf("vehicle").forGetter(FlightAttachment::vehicleRaw)
     ).apply(i, FlightAttachment::new));
     private boolean active;
-    private Identifier archetype;
+    private Holder<Ability> archetype;
     private long startedAt;
     private double previousFlight;
     private boolean previousFlying;
@@ -37,7 +38,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
     public FlightAttachment() {
     }
 
-    private FlightAttachment(boolean active, Optional<Identifier> archetype, long startedAt, double previousFlight, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
+    private FlightAttachment(boolean active, Optional<Holder<Ability>> archetype, long startedAt, double previousFlight, boolean previousFlying, float previousFlyingSpeed, Optional<String> vehicle) {
         this.active = active;
         this.archetype = archetype.orElse(null);
         this.startedAt = startedAt;
@@ -51,7 +52,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
         return this.active;
     }
 
-    public Optional<Identifier> archetype() {
+    public Optional<Holder<Ability>> archetype() {
         return Optional.ofNullable(this.archetype);
     }
 
@@ -83,7 +84,7 @@ public final class FlightAttachment extends ShouldSyncAttachment {
         return Optional.ofNullable(this.vehicle);
     }
 
-    public void start(Identifier archetype, long gameTime, double flight, boolean flying, float flyingSpeed, UUID vehicle) {
+    public void start(Holder<Ability> archetype, long gameTime, double flight, boolean flying, float flyingSpeed, UUID vehicle) {
         this.active = true;
         this.archetype = archetype;
         this.startedAt = gameTime;

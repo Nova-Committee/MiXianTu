@@ -1,8 +1,9 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.command.ServerCommandManager;
+import com.iafenvoy.mxt.command.Suggestions;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -16,23 +17,20 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
-import net.minecraft.core.Holder;
+import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -46,36 +44,31 @@ import static net.minecraft.commands.Commands.literal;
 public final class AbilityCommand {
     // Recorded as the source of what the command grants, in the same shape the other modules use.
     private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "command");
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("ability")
-            .then(literal("list")
-                    .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
-                    .then(argument("target", EntityArgument.entity())
-                            .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
-            .then(literal("cast").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                    .then(argument("id", IdentifierArgument.id())
-                            .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
-                                    MxtDatapackRegistries.holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.ABILITY)
-                                            .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder))
-                            .executes(ctx -> castAbility(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
-            .then(literal("grant").requires(AbilityCommand::mayChange)
-                    .then(argument("targets", EntityArgument.entities())
-                            .then(argument("ability", IdentifierArgument.id())
-                                    .suggests(AbilityCommand::suggestAbilities)
-                                    .executes(AbilityCommand::grant))))
-            .then(literal("revoke").requires(AbilityCommand::mayChange)
-                    .then(argument("targets", EntityArgument.entities())
-                            .then(argument("ability", IdentifierArgument.id())
-                                    .suggests(AbilityCommand::suggestAbilities)
-                                    .executes(AbilityCommand::revoke))));
 
-    private static boolean mayChange(CommandSourceStack source) {
-        return source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
+        return literal("ability")
+                .then(literal("list")
+                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .then(argument("target", EntityArgument.entity())
+                                .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
+                .then(literal("cast").requires(ServerCommandManager::mayChange)
+                        .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.ABILITY))
+                                .executes(ctx -> castAbility(ctx.getSource(), id(ctx)))))
+                .then(literal("grant").requires(ServerCommandManager::mayChange)
+                        .then(argument("targets", EntityArgument.entities())
+                                .then(argument("ability", ResourceArgument.resource(context, MxtResourceKeys.ABILITY))
+                                        .executes(AbilityCommand::grant))))
+                // IdentifierArgument, not ResourceArgument: a revoked ability only has to be held by the source
+                // ledger, so an id whose definition is gone is still exactly what has to be named here.
+                .then(literal("revoke").requires(ServerCommandManager::mayChange)
+                        .then(argument("targets", EntityArgument.entities())
+                                .then(argument("ability", IdentifierArgument.id())
+                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.ABILITY))
+                                        .executes(AbilityCommand::revoke))));
     }
 
-    private static CompletableFuture<Suggestions> suggestAbilities(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(MxtDatapackRegistries
-                .holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.ABILITY)
-                .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
+    private static Reference<Ability> id(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "id", MxtResourceKeys.ABILITY);
     }
 
     // Read from the attachment rather than the registry, so an ability whose definition was disabled or deleted is
@@ -102,9 +95,10 @@ public final class AbilityCommand {
 
     private static int grant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "ability");
+        Reference<Ability> ability = ResourceArgument.getResource(ctx, "ability", MxtResourceKeys.ABILITY);
+        Identifier id = HolderHelper.id(ability);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
-        if (Abilities.resolve(source.getServer().registryAccess(), id).isEmpty()) {
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, ability)) {
             source.sendFailure(Component.translatable("command.mxt.ability.unknown", id.toString()));
             return 0;
         }
@@ -115,10 +109,10 @@ public final class AbilityCommand {
                 granted++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.granted",
-                        DefinitionText.name(id, "ability"), target.getDisplayName()), true);
+                        DefinitionText.name(ability, "ability"), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.grant_failed",
-                        target.getDisplayName(), DefinitionText.name(id, "ability")));
+                        target.getDisplayName(), DefinitionText.name(ability, "ability")));
             }
         }
         return granted;
@@ -150,10 +144,9 @@ public final class AbilityCommand {
         if (target instanceof LivingEntity living) AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }
 
-    private static int castAbility(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+    private static int castAbility(CommandSourceStack source, Reference<Ability> ability) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
-        if (ability == null) {
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, ability)) {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", "unknown_definition"));
             return 0;
         }
@@ -163,7 +156,7 @@ public final class AbilityCommand {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().name()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.name(id, "ability")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.name(ability, "ability")), true);
         return 1;
     }
 }

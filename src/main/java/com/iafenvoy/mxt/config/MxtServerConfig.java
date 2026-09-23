@@ -159,9 +159,10 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry display = BooleanEntry.builder("config.mxt.server.commands.display", true).key("display").tooltip("config.mxt.server.commands.display.tooltip").build();
         public final BooleanEntry formation = BooleanEntry.builder("config.mxt.server.commands.formation", true).key("formation").tooltip("config.mxt.server.commands.formation.tooltip").build();
         public final BooleanEntry friend = BooleanEntry.builder("config.mxt.server.commands.friend", true).key("friend").tooltip("config.mxt.server.commands.friend.tooltip").build();
-        public final BooleanEntry identity = BooleanEntry.builder("config.mxt.server.commands.identity", true).key("identity").tooltip("config.mxt.server.commands.identity.tooltip").build();
         public final BooleanEntry lightning = BooleanEntry.builder("config.mxt.server.commands.lightning", true).key("lightning").tooltip("config.mxt.server.commands.lightning.tooltip").build();
+        public final BooleanEntry physique = BooleanEntry.builder("config.mxt.server.commands.physique", true).key("physique").tooltip("config.mxt.server.commands.physique.tooltip").build();
         public final BooleanEntry picker = BooleanEntry.builder("config.mxt.server.commands.picker", true).key("picker").tooltip("config.mxt.server.commands.picker.tooltip").build();
+        public final BooleanEntry spirit_root = BooleanEntry.builder("config.mxt.server.commands.spirit_root", true).key("spirit_root").tooltip("config.mxt.server.commands.spirit_root.tooltip").build();
         public final BooleanEntry talisman = BooleanEntry.builder("config.mxt.server.commands.talisman", true).key("talisman").tooltip("config.mxt.server.commands.talisman.tooltip").build();
         public final BooleanEntry technique = BooleanEntry.builder("config.mxt.server.commands.technique", true).key("technique").tooltip("config.mxt.server.commands.technique.tooltip").build();
         public final BooleanEntry trade = BooleanEntry.builder("config.mxt.server.commands.trade", true).key("trade").tooltip("config.mxt.server.commands.trade.tooltip").build();

@@ -23,13 +23,13 @@ import java.util.Optional;
  */
 public final class CultivationAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CultivationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.doubleMap(Aura.CODEC).optionalFieldOf("cultivation_progress", Object2DoubleMaps.emptyMap()).forGetter(CultivationAttachment::cultivationProgresses),
-            CollectionCodecs.map(Aura.CODEC, RealmStage.CODEC).optionalFieldOf("realm_stages", Map.of()).forGetter(CultivationAttachment::realmStages),
-            CultivateAction.CODEC.optionalFieldOf("cultivate_action").forGetter(CultivationAttachment::cultivateAction),
-            Codec.BOOL.optionalFieldOf("cultivating", false).forGetter(CultivationAttachment::cultivating),
-            Codec.LONG.optionalFieldOf("cultivate_started_at", 0L).forGetter(CultivationAttachment::cultivateStartedAt),
-            Codec.LONG.optionalFieldOf("next_cultivate_tick", 0L).forGetter(CultivationAttachment::nextCultivateTick),
-            CollectionCodecs.longMap(CultivateAction.CODEC).optionalFieldOf("cultivate_cooldowns", Object2LongMaps.emptyMap()).forGetter(CultivationAttachment::cultivateCooldowns)
+            CollectionCodecs.doubleMap(Aura.CODEC).lenientOptionalFieldOf("cultivation_progress", Object2DoubleMaps.emptyMap()).forGetter(CultivationAttachment::cultivationProgresses),
+            CollectionCodecs.map(Aura.CODEC, RealmStage.CODEC).lenientOptionalFieldOf("realm_stages", Map.of()).forGetter(CultivationAttachment::realmStages),
+            CultivateAction.CODEC.lenientOptionalFieldOf("cultivate_action").forGetter(CultivationAttachment::cultivateAction),
+            Codec.BOOL.lenientOptionalFieldOf("cultivating", false).forGetter(CultivationAttachment::cultivating),
+            Codec.LONG.lenientOptionalFieldOf("cultivate_started_at", 0L).forGetter(CultivationAttachment::cultivateStartedAt),
+            Codec.LONG.lenientOptionalFieldOf("next_cultivate_tick", 0L).forGetter(CultivationAttachment::nextCultivateTick),
+            CollectionCodecs.longMap(CultivateAction.CODEC).lenientOptionalFieldOf("cultivate_cooldowns", Object2LongMaps.emptyMap()).forGetter(CultivationAttachment::cultivateCooldowns)
     ).apply(i, CultivationAttachment::new));
 
     private final Object2DoubleMap<Holder<Aura>> cultivationProgresses;

@@ -25,11 +25,11 @@ import java.util.Map.Entry;
  */
 public final class AuraChunkAttachment {
     public static final MapCodec<AuraChunkAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.BOOL.optionalFieldOf("initialized", false).forGetter(AuraChunkAttachment::initialized),
-            AuraZone.CODEC.optionalFieldOf("template").forGetter(AuraChunkAttachment::template),
-            CollectionCodecs.intObjectMap(BlockAuraSectionCache.CODEC).optionalFieldOf("block_aura_sections", new Int2ObjectOpenHashMap<>()).forGetter(AuraChunkAttachment::blockAuraSections),
-            AuraValue.MAP_CODEC.optionalFieldOf("absorbed_aura", Map.of()).forGetter(AuraChunkAttachment::absorbedAura),
-            AuraPool.GROUPED_CODEC.optionalFieldOf("aura", Map.of()).forGetter(AuraChunkAttachment::auras)
+            Codec.BOOL.lenientOptionalFieldOf("initialized", false).forGetter(AuraChunkAttachment::initialized),
+            AuraZone.CODEC.lenientOptionalFieldOf("template").forGetter(AuraChunkAttachment::template),
+            CollectionCodecs.intObjectMap(BlockAuraSectionCache.CODEC).lenientOptionalFieldOf("block_aura_sections", new Int2ObjectOpenHashMap<>()).forGetter(AuraChunkAttachment::blockAuraSections),
+            AuraValue.MAP_CODEC.lenientOptionalFieldOf("absorbed_aura", Map.of()).forGetter(AuraChunkAttachment::absorbedAura),
+            AuraPool.GROUPED_CODEC.lenientOptionalFieldOf("aura", Map.of()).forGetter(AuraChunkAttachment::auras)
     ).apply(i, AuraChunkAttachment::new));
     private boolean initialized;
     private Optional<Holder<AuraZone>> template;

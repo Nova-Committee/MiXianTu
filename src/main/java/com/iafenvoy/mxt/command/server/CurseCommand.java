@@ -1,7 +1,9 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
+import com.iafenvoy.mxt.command.ServerCommandManager;
+import com.iafenvoy.mxt.command.Suggestions;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -17,23 +19,21 @@ import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -48,44 +48,34 @@ public final class CurseCommand {
     // Recorded as the source of what the command applies, in the same shape the other modules use.
     private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "command");
 
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("curse")
-            .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
-            .then(literal("list")
-                    .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
-                    .then(argument("target", EntityArgument.entity())
-                            .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
-            .then(literal("apply").requires(CurseCommand::mayChange)
-                    .then(argument("targets", EntityArgument.entities())
-                            .then(argument("curse", IdentifierArgument.id())
-                                    .suggests(CurseCommand::suggestCurses)
-                                    .executes(ctx -> apply(ctx, 1, OptionalLong.empty()))
-                                    .then(argument("stacks", IntegerArgumentType.integer(1, 256))
-                                            .executes(ctx -> apply(ctx, IntegerArgumentType.getInteger(ctx, "stacks"), OptionalLong.empty()))
-                                            .then(argument("duration_ticks", LongArgumentType.longArg(1L))
-                                                    .executes(ctx -> apply(ctx,
-                                                            IntegerArgumentType.getInteger(ctx, "stacks"),
-                                                            OptionalLong.of(LongArgumentType.getLong(ctx, "duration_ticks")))))))))
-            .then(literal("remove").requires(CurseCommand::mayChange)
-                    .then(argument("targets", EntityArgument.entities())
-                            .then(argument("curse", IdentifierArgument.id())
-                                    .suggests(CurseCommand::suggestCurses)
-                                    .executes(CurseCommand::remove))))
-            .then(literal("cleanse").requires(CurseCommand::mayChange)
-                    .then(argument("targets", EntityArgument.entities())
-                            .then(argument("tag", IdentifierArgument.id())
-                                    .executes(CurseCommand::cleanse))));
-
-    private CurseCommand() {
-    }
-
-    private static boolean mayChange(CommandSourceStack source) {
-        return source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
-    }
-
-    private static CompletableFuture<Suggestions> suggestCurses(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(MxtDatapackRegistries
-                .holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.CURSE)
-                .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
+    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
+        return literal("curse")
+                .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                .then(literal("list")
+                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .then(argument("target", EntityArgument.entity())
+                                .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
+                .then(literal("apply").requires(ServerCommandManager::mayChange)
+                        .then(argument("targets", EntityArgument.entities())
+                                .then(argument("curse", ResourceArgument.resource(context, MxtResourceKeys.CURSE))
+                                        .executes(ctx -> apply(ctx, 1, OptionalLong.empty()))
+                                        .then(argument("stacks", IntegerArgumentType.integer(1, 256))
+                                                .executes(ctx -> apply(ctx, IntegerArgumentType.getInteger(ctx, "stacks"), OptionalLong.empty()))
+                                                .then(argument("duration_ticks", LongArgumentType.longArg(1L))
+                                                        .executes(ctx -> apply(ctx,
+                                                                IntegerArgumentType.getInteger(ctx, "stacks"),
+                                                                OptionalLong.of(LongArgumentType.getLong(ctx, "duration_ticks")))))))))
+                // IdentifierArgument, not ResourceArgument: an instance whose definition is gone is still held, and
+                // naming it here is the only way to take it off.
+                .then(literal("remove").requires(ServerCommandManager::mayChange)
+                        .then(argument("targets", EntityArgument.entities())
+                                .then(argument("curse", IdentifierArgument.id())
+                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.CURSE))
+                                        .executes(CurseCommand::remove))))
+                .then(literal("cleanse").requires(ServerCommandManager::mayChange)
+                        .then(argument("targets", EntityArgument.entities())
+                                .then(argument("tag", IdentifierArgument.id())
+                                        .executes(CurseCommand::cleanse))));
     }
 
     private static int list(CommandSourceStack source, @Nullable Entity target) {
@@ -115,15 +105,10 @@ public final class CurseCommand {
 
     private static int apply(CommandContext<CommandSourceStack> ctx, int stacks, OptionalLong durationTicks) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "curse");
-        // The raw entry, not the enabled one: a disabled definition must reach the service so it can answer
-        // DISABLED, and a definition that is gone entirely can still be held and therefore still be removed.
+        // The raw entry, not an enabled-only lookup: a disabled definition must reach the service so it can answer
+        // DISABLED and say why it refused.
+        Reference<Curse> curse = ResourceArgument.getResource(ctx, "curse", MxtResourceKeys.CURSE);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
-        Holder<Curse> curse = resolve(targets, id).orElse(null);
-        if (curse == null) {
-            source.sendFailure(Component.translatable("command.mxt.curse.unknown", id.toString()));
-            return 0;
-        }
         Optional<Long> duration = durationTicks.isPresent() ? Optional.of(durationTicks.getAsLong()) : Optional.empty();
         int applied = 0;
         for (Entity target : targets) {

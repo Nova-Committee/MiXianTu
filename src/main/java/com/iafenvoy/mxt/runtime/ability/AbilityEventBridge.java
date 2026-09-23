@@ -97,7 +97,7 @@ public final class AbilityEventBridge {
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-       ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         initializeHudResources(entity, resourceHolder);
         // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
         // with no stored entry yet is created by its first change instead of by this loop.
@@ -120,8 +120,8 @@ public final class AbilityEventBridge {
         }
         tickAuras(entity, abilities, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
-        abilities.channelledAbility().ifPresent(channelled -> Abilities.resolve(entity.level().registryAccess(), channelled).ifPresent(ability ->
-                AbilityService.tickChannel(ability, entity, abilities, resourceHolder, entity.level().getGameTime(), FormulaContext.of(entity))));
+        // The disabled check the id lookup used to apply: a channel must stop ticking once its ability is disabled.
+        abilities.channelledAbility().filter(ability -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, ability)).ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities, resourceHolder, entity.level().getGameTime(), FormulaContext.of(entity)));
     }
 
     @SubscribeEvent

@@ -1,5 +1,6 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -15,7 +16,6 @@ import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.phys.Vec3;
 
@@ -31,20 +31,16 @@ import static net.minecraft.commands.Commands.literal;
  * where the server option allows it.
  */
 public final class LightningCommand {
-    private static final DynamicCommandExceptionType INVALID_COLOR = new DynamicCommandExceptionType(
-            value -> Component.translatable("command.mxt.lightning.invalid_color", value));
-    private static final DynamicCommandExceptionType INVALID_PALETTE = new DynamicCommandExceptionType(
-            value -> Component.translatable("command.mxt.lightning.invalid_palette", value));
+    private static final DynamicCommandExceptionType INVALID_COLOR = new DynamicCommandExceptionType(value -> Component.translatable("command.mxt.lightning.invalid_color", value));
+    private static final DynamicCommandExceptionType INVALID_PALETTE = new DynamicCommandExceptionType(value -> Component.translatable("command.mxt.lightning.invalid_palette", value));
     // Completion only: a colour is six hexadecimal digits, a palette lists such colours top first, comma separated.
     private static final List<String> COLORS = List.of("737380", "FFFFFF", "000000", "66CCFF", "7A5CFF", "FF4444", "44FF88", "FFCC00");
     private static final List<String> PALETTES = List.of("7A5CFF,66CCFF", "FF4444,FFCC00", "66CCFF,7A5CFF,FF4444");
     private static final double DEFAULT_DAMAGE = 5.0D;
 
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = build();
-
-    private static LiteralArgumentBuilder<CommandSourceStack> build() {
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return literal("lightning")
-                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .requires(ServerCommandManager::mayChange)
                 .executes(ctx -> strike(ctx, ctx.getSource().getPosition(), flat(ColoredLightningBolt.DEFAULT_COLOR),
                         ColoredLightningBolt.DEFAULT_ALPHA, ColoredLightningBolt.DEFAULT_THICKNESS, DEFAULT_DAMAGE, false))
                 .then(argument("pos", Vec3Argument.vec3())

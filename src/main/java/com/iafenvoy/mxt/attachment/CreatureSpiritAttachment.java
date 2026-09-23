@@ -7,8 +7,12 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.storage.loot.LootTable;
 
 import java.util.Optional;
 
@@ -17,20 +21,23 @@ import java.util.Optional;
  */
 public final class CreatureSpiritAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CreatureSpiritAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE).optionalFieldOf("profile").forGetter(CreatureSpiritAttachment::profile),
-            Codec.DOUBLE.optionalFieldOf("intelligence", 0.0D).forGetter(CreatureSpiritAttachment::intelligence),
-            Identifier.CODEC.optionalFieldOf("inner_core").forGetter(CreatureSpiritAttachment::innerCore),
-            Identifier.CODEC.optionalFieldOf("loot_table").forGetter(CreatureSpiritAttachment::lootTable)
+            RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE).lenientOptionalFieldOf("profile").forGetter(CreatureSpiritAttachment::profile),
+            Codec.DOUBLE.lenientOptionalFieldOf("intelligence", 0.0D).forGetter(CreatureSpiritAttachment::intelligence),
+            BuiltInRegistries.ITEM.holderByNameCodec().lenientOptionalFieldOf("inner_core").forGetter(CreatureSpiritAttachment::innerCore),
+            ResourceKey.codec(Registries.LOOT_TABLE).lenientOptionalFieldOf("loot_table").forGetter(CreatureSpiritAttachment::lootTable)
     ).apply(i, CreatureSpiritAttachment::new));
     private Holder<CreatureProfile> profile;
     private double intelligence;
-    private Identifier innerCore, lootTable;
+    // The inner core is a static-registry item, so a holder is safe to keep. A loot table is not: /reload swaps
+    // the reloadable loot registries, so what is kept is the key it is looked up by, the way vanilla save data does.
+    private Holder<Item> innerCore;
+    private ResourceKey<LootTable> lootTable;
 
     public CreatureSpiritAttachment() {
         this(Optional.empty(), 0.0D, Optional.empty(), Optional.empty());
     }
 
-    private CreatureSpiritAttachment(Optional<Holder<CreatureProfile>> profile, double intelligence, Optional<Identifier> innerCore, Optional<Identifier> lootTable) {
+    private CreatureSpiritAttachment(Optional<Holder<CreatureProfile>> profile, double intelligence, Optional<Holder<Item>> innerCore, Optional<ResourceKey<LootTable>> lootTable) {
         this.profile = profile.orElse(null);
         if (!Double.isFinite(intelligence) || intelligence < 0.0D)
             throw new IllegalArgumentException("Creature intelligence must be finite and non-negative");
@@ -48,15 +55,15 @@ public final class CreatureSpiritAttachment extends ShouldSyncAttachment {
         return this.intelligence;
     }
 
-    public Optional<Identifier> innerCore() {
+    public Optional<Holder<Item>> innerCore() {
         return Optional.ofNullable(this.innerCore);
     }
 
-    public Optional<Identifier> lootTable() {
+    public Optional<ResourceKey<LootTable>> lootTable() {
         return Optional.ofNullable(this.lootTable);
     }
 
-    public void apply(Holder<CreatureProfile> profile, double intelligence, Optional<Identifier> innerCore, Optional<Identifier> lootTable) {
+    public void apply(Holder<CreatureProfile> profile, double intelligence, Optional<Holder<Item>> innerCore, Optional<ResourceKey<LootTable>> lootTable) {
         if (!Double.isFinite(intelligence) || intelligence < 0.0D)
             throw new IllegalArgumentException("Creature intelligence must be finite and non-negative");
         this.profile = profile;

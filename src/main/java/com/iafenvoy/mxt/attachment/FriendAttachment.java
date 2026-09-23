@@ -17,8 +17,8 @@ import java.util.UUID;
  */
 public final class FriendAttachment {
     public static final MapCodec<FriendAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.list(NameAndId.CODEC).optionalFieldOf("permanent", List.of()).forGetter(FriendAttachment::permanent),
-            CollectionCodecs.list(NameAndId.CODEC).optionalFieldOf("temporary", List.of()).forGetter(FriendAttachment::temporary)
+            CollectionCodecs.list(NameAndId.CODEC).lenientOptionalFieldOf("permanent", List.of()).forGetter(FriendAttachment::permanent),
+            CollectionCodecs.list(NameAndId.CODEC).lenientOptionalFieldOf("temporary", List.of()).forGetter(FriendAttachment::temporary)
     ).apply(i, FriendAttachment::new));
 
     private final Map<UUID, NameAndId> permanent = new LinkedHashMap<>();

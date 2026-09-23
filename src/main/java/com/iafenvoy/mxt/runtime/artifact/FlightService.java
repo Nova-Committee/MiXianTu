@@ -54,7 +54,7 @@ public final class FlightService {
         }
         // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
         // deprecated view of it, and reading the attribute is what can actually be written back.
-        data.start(HolderHelper.id(ability), player.level().getGameTime(), player.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
+        data.start(ability, player.level().getGameTime(), player.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
                 player.getAbilities().flying, player.getAbilities().getFlyingSpeed(), sword.getUUID());
         return Result.mounted();
     }

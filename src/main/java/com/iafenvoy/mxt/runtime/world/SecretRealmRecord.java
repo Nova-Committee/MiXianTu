@@ -28,15 +28,15 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
     public static final Codec<UUID> UUID_CODEC = Codec.STRING.xmap(UUID::fromString, UUID::toString);
     public static final Codec<SecretRealmRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).fieldOf("definition").forGetter(SecretRealmRecord::definition),
-            Codec.INT.optionalFieldOf("index", 0).forGetter(SecretRealmRecord::index),
+            Codec.INT.lenientOptionalFieldOf("index", 0).forGetter(SecretRealmRecord::index),
             ResourceKey.codec(Registries.DIMENSION).fieldOf("dimension").forGetter(SecretRealmRecord::dimension),
-            Codec.LONG.optionalFieldOf("seed", 0L).forGetter(SecretRealmRecord::seed),
-            UUID_CODEC.optionalFieldOf("owner").forGetter(SecretRealmRecord::owner),
-            Codec.LONG.optionalFieldOf("started_at", -1L).forGetter(SecretRealmRecord::startedAt),
-            Codec.LONG.optionalFieldOf("expires_at", -1L).forGetter(SecretRealmRecord::expiresAt),
-            Vec3.CODEC.optionalFieldOf("anchor").forGetter(SecretRealmRecord::anchor),
-            Codec.BOOL.optionalFieldOf("prepared", false).forGetter(SecretRealmRecord::prepared),
-            UUID_CODEC.listOf().optionalFieldOf("members", List.of()).forGetter(SecretRealmRecord::members)
+            Codec.LONG.lenientOptionalFieldOf("seed", 0L).forGetter(SecretRealmRecord::seed),
+            UUID_CODEC.lenientOptionalFieldOf("owner").forGetter(SecretRealmRecord::owner),
+            Codec.LONG.lenientOptionalFieldOf("started_at", -1L).forGetter(SecretRealmRecord::startedAt),
+            Codec.LONG.lenientOptionalFieldOf("expires_at", -1L).forGetter(SecretRealmRecord::expiresAt),
+            Vec3.CODEC.lenientOptionalFieldOf("anchor").forGetter(SecretRealmRecord::anchor),
+            Codec.BOOL.lenientOptionalFieldOf("prepared", false).forGetter(SecretRealmRecord::prepared),
+            UUID_CODEC.listOf().lenientOptionalFieldOf("members", List.of()).forGetter(SecretRealmRecord::members)
     ).apply(i, SecretRealmRecord::new));
 
     public SecretRealm instance() {

@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -27,17 +27,20 @@ import static net.minecraft.commands.Commands.literal;
 public final class DisplayCommand {
     private static final EnumSet<EquipmentSlot> DISPLAY_SLOTS = EnumSet.of(EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND, EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET);
     private static final List<String> SLOT_NAMES = DISPLAY_SLOTS.stream().map(EquipmentSlot::getName).sorted().toList();
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("display")
-            .requires(CommandSourceStack::isPlayer)
-            .executes(ctx -> display(ctx, EquipmentSlot.MAINHAND))
-            .then(argument("target_or_slot", StringArgumentType.word())
-                    .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(Stream.concat(
-                            SLOT_NAMES.stream(), ctx.getSource().getServer().getPlayerList().getPlayers().stream()
-                                    .map(player -> player.getGameProfile().name())).sorted().toList(), builder))
-                    .executes(DisplayCommand::displayTargetOrSlot)
-                    .then(argument("slot", StringArgumentType.word())
-                            .suggests((_, builder) -> SharedSuggestionProvider.suggest(SLOT_NAMES, builder))
-                            .executes(DisplayCommand::displayTargetSlot)));
+
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
+        return literal("display")
+                .requires(CommandSourceStack::isPlayer)
+                .executes(ctx -> display(ctx, EquipmentSlot.MAINHAND))
+                .then(argument("target_or_slot", StringArgumentType.word())
+                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(Stream.concat(
+                                SLOT_NAMES.stream(), ctx.getSource().getServer().getPlayerList().getPlayers().stream()
+                                        .map(player -> player.getGameProfile().name())).sorted().toList(), builder))
+                        .executes(DisplayCommand::displayTargetOrSlot)
+                        .then(argument("slot", StringArgumentType.word())
+                                .suggests((_, builder) -> SharedSuggestionProvider.suggest(SLOT_NAMES, builder))
+                                .executes(DisplayCommand::displayTargetSlot)));
+    }
 
     private static int displayTargetOrSlot(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         String value = StringArgumentType.getString(ctx, "target_or_slot");

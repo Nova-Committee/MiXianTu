@@ -204,7 +204,7 @@ public final class AbilityService {
                 actor instanceof LivingEntity living ? living : null);
         if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelledAbilityType) {
-            abilities.setChannelledAbility(HolderHelper.id(preparedUse.ability()));
+            abilities.setChannelledAbility(preparedUse.ability());
             AbilityStorage.set(abilities, HolderHelper.id(preparedUse.ability()),
                     new ChannelPulse(Math.addExact(gameTime, preparedUse.channelIntervalTicks())), gameTime);
         }
@@ -267,7 +267,8 @@ public final class AbilityService {
                 return ChannelResult.stopped(Failure.ELEMENT_AFFINITY);
             }
         }
-        if (abilities.channelledAbility().filter(HolderHelper.id(ability)::equals).isEmpty()) return ChannelResult.inactive();
+        if (abilities.channelledAbility().filter(channelled -> channelled.is(HolderHelper.id(ability))).isEmpty())
+            return ChannelResult.inactive();
         if (!abilities.has(HolderHelper.id(ability)) || !(definition.type() instanceof ChannelledAbilityType(
                 NumberProvider tickInterval,
                 List<Cost> upkeepCosts
@@ -428,7 +429,7 @@ public final class AbilityService {
         }
         for (CompositeStep step : steps) {
             if (step.ability().value().type() instanceof ChannelledAbilityType) {
-                abilities.setChannelledAbility(HolderHelper.id(step.use().ability()));
+                abilities.setChannelledAbility(step.use().ability());
                 AbilityStorage.set(abilities, HolderHelper.id(step.use().ability()),
                         new ChannelPulse(Math.addExact(gameTime, step.use().channelIntervalTicks())), gameTime);
             } else {

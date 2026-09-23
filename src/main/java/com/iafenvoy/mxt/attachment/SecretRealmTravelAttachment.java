@@ -17,13 +17,13 @@ import java.util.Optional;
  */
 public final class SecretRealmTravelAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SecretRealmTravelAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).optionalFieldOf("realm").forGetter(SecretRealmTravelAttachment::realm),
-            Identifier.CODEC.optionalFieldOf("origin_dimension").forGetter(SecretRealmTravelAttachment::originDimension),
-            Codec.DOUBLE.optionalFieldOf("origin_x", 0.0D).forGetter(SecretRealmTravelAttachment::originX),
-            Codec.DOUBLE.optionalFieldOf("origin_y", 0.0D).forGetter(SecretRealmTravelAttachment::originY),
-            Codec.DOUBLE.optionalFieldOf("origin_z", 0.0D).forGetter(SecretRealmTravelAttachment::originZ),
-            Codec.FLOAT.optionalFieldOf("origin_yaw", 0.0F).forGetter(SecretRealmTravelAttachment::originYaw),
-            Codec.FLOAT.optionalFieldOf("origin_pitch", 0.0F).forGetter(SecretRealmTravelAttachment::originPitch)
+            RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).lenientOptionalFieldOf("realm").forGetter(SecretRealmTravelAttachment::realm),
+            Identifier.CODEC.lenientOptionalFieldOf("origin_dimension").forGetter(SecretRealmTravelAttachment::originDimension),
+            Codec.DOUBLE.lenientOptionalFieldOf("origin_x", 0.0D).forGetter(SecretRealmTravelAttachment::originX),
+            Codec.DOUBLE.lenientOptionalFieldOf("origin_y", 0.0D).forGetter(SecretRealmTravelAttachment::originY),
+            Codec.DOUBLE.lenientOptionalFieldOf("origin_z", 0.0D).forGetter(SecretRealmTravelAttachment::originZ),
+            Codec.FLOAT.lenientOptionalFieldOf("origin_yaw", 0.0F).forGetter(SecretRealmTravelAttachment::originYaw),
+            Codec.FLOAT.lenientOptionalFieldOf("origin_pitch", 0.0F).forGetter(SecretRealmTravelAttachment::originPitch)
     ).apply(i, SecretRealmTravelAttachment::new));
     private Optional<Holder<SecretRealm>> realm;
     private Optional<Identifier> originDimension;

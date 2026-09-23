@@ -38,7 +38,7 @@ public record FlightAbilityType(NumberProvider speed, FlightDisplay display) imp
     public Optional<Boolean> state(ToggleContext context) {
         FlightAttachment data = context.holder().getExistingData(MxtAttachments.FLIGHT).orElse(null);
         if (data == null || !data.active()) return Optional.of(false);
-        return Optional.of(data.archetype().filter(HolderHelper.id(context.ability())::equals).isPresent());
+        return Optional.of(data.archetype().filter(archetype -> archetype.is(HolderHelper.id(context.ability()))).isPresent());
     }
 
     // Landing is free: whatever the flight cost was paid per tick while it lasted, and charging a price for coming

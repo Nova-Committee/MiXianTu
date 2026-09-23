@@ -10,11 +10,13 @@ import org.jspecify.annotations.Nullable;
 import java.util.Optional;
 
 /**
- * Turns a stored ability id back into its registry holder, and a declared ability list ("an id or a {@code #tag}")
- * into the holders it names. Both halves of the reference end here, against the same registry both sides of the
- * connection have; the holder is an ability's whole address, since the id is the registry id of {@code mxt:ability}
- * and nothing else names one. A missing holder reads as "no such ability", which is how a deleted definition and a
- * disabled one look the same to every caller.
+ * The one place a stored ability id becomes its holder: the caller passes the registry access it has, so both sides
+ * of the connection read the same registry. The holder is an ability's whole address, since the id is the registry
+ * id of {@code mxt:ability} and nothing else names one. A missing holder reads as "no such ability", which is how a
+ * deleted definition and a disabled one look the same to every caller.
+ *
+ * <p>That last half is the part a stored {@code Holder} does not carry: whoever keeps a holder instead of an id
+ * loses the {@code mxt:disabled} filter and has to ask {@code MxtDatapackRegistries.isDisabled} before acting.
  */
 public final class Abilities {
     private Abilities() {

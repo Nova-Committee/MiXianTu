@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.FriendAttachment;
 import com.iafenvoy.mxt.attachment.FriendAttachment.AddResult;
@@ -36,26 +36,24 @@ import static net.minecraft.commands.Commands.literal;
  * error.
  */
 public final class FriendCommand {
-    private static final SimpleCommandExceptionType ERROR_NOT_SINGLE_PLAYER =
-            new SimpleCommandExceptionType(Component.translatable("command.mxt.friend.single"));
+    private static final SimpleCommandExceptionType ERROR_NOT_SINGLE_PLAYER =            new SimpleCommandExceptionType(Component.translatable("command.mxt.friend.single"));
 
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("friend")
-            .requires(CommandSourceStack::isPlayer)
-            .executes(ctx -> help(ctx.getSource()))
-            .then(literal("list").executes(ctx -> list(ctx.getSource())))
-            .then(literal("add").then(argument("player", GameProfileArgument.gameProfile())
-                    .executes(ctx -> add(ctx, false))))
-            .then(literal("remove").then(argument("player", GameProfileArgument.gameProfile())
-                    .suggests(FriendCommand::suggestRemovable)
-                    .executes(ctx -> remove(ctx, false))))
-            .then(literal("permanent")
-                    .then(literal("add").then(argument("player", GameProfileArgument.gameProfile())
-                            .executes(ctx -> add(ctx, true))))
-                    .then(literal("remove").then(argument("player", GameProfileArgument.gameProfile())
-                            .suggests(FriendCommand::suggestRemovablePermanently)
-                            .executes(ctx -> remove(ctx, true)))));
-
-    private FriendCommand() {
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
+        return literal("friend")
+                .requires(CommandSourceStack::isPlayer)
+                .executes(ctx -> help(ctx.getSource()))
+                .then(literal("list").executes(ctx -> list(ctx.getSource())))
+                .then(literal("add").then(argument("player", GameProfileArgument.gameProfile())
+                        .executes(ctx -> add(ctx, false))))
+                .then(literal("remove").then(argument("player", GameProfileArgument.gameProfile())
+                        .suggests(FriendCommand::suggestRemovable)
+                        .executes(ctx -> remove(ctx, false))))
+                .then(literal("permanent")
+                        .then(literal("add").then(argument("player", GameProfileArgument.gameProfile())
+                                .executes(ctx -> add(ctx, true))))
+                        .then(literal("remove").then(argument("player", GameProfileArgument.gameProfile())
+                                .suggests(FriendCommand::suggestRemovablePermanently)
+                                .executes(ctx -> remove(ctx, true)))));
     }
 
     private static int help(CommandSourceStack source) {

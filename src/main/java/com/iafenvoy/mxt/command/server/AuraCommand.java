@@ -1,5 +1,6 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -12,29 +13,21 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -43,44 +36,36 @@ import static net.minecraft.commands.Commands.literal;
  * The {@code /aura} command; also reachable as {@code /mxt aura}.
  */
 public final class AuraCommand {
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("aura")
-            .then(literal("query")
-                    .executes(ctx -> queryAura(ctx.getSource(), null))
-                    .then(literal("element")
-                            .then(argument("element", IdentifierArgument.id())
-                                    .suggests((ctx, builder) -> suggest(ctx, builder, MxtResourceKeys.ELEMENT))
-                                    .executes(ctx -> queryElement(ctx.getSource(), IdentifierArgument.getId(ctx, "element")))))
-                    .then(argument("type", IdentifierArgument.id())
-                            .suggests((ctx, builder) -> suggest(ctx, builder, MxtResourceKeys.AURA))
-                            .executes(ctx -> queryAura(ctx.getSource(), IdentifierArgument.getId(ctx, "type")))))
-            .then(literal("vein").executes(ctx -> queryVein(ctx.getSource())))
-            .then(literal("cache")
-                    .then(literal("clear")
-                            .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                            .executes(ctx -> clearAuraCache(ctx.getSource(), 3))
-                            .then(argument("radius", IntegerArgumentType.integer(0, 32))
-                                    .executes(ctx -> clearAuraCache(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius"))))));
-
-    // Read through the enabled-entry accessor, so a disabled definition is never offered. Each argument passes the
-    // registry it actually resolves: offering one registry's ids for another one's lookup cannot work.
-    private static <T> CompletableFuture<Suggestions> suggest(
-            CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder, ResourceKey<? extends Registry<T>> key) {
-        return SharedSuggestionProvider.suggest(
-                MxtDatapackRegistries.holders(ctx.getSource().getServer().registryAccess(), key)
-                        .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
+    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
+        return literal("aura")
+                .then(literal("query")
+                        .executes(ctx -> queryAura(ctx.getSource(), null))
+                        .then(literal("element")
+                                .then(argument("element", ResourceArgument.resource(context, MxtResourceKeys.ELEMENT))
+                                        .executes(ctx -> queryElement(ctx.getSource(),
+                                                ResourceArgument.getResource(ctx, "element", MxtResourceKeys.ELEMENT)))))
+                        .then(argument("type", ResourceArgument.resource(context, MxtResourceKeys.AURA))
+                                .executes(ctx -> queryAura(ctx.getSource(),
+                                        ResourceArgument.getResource(ctx, "type", MxtResourceKeys.AURA)))))
+                .then(literal("vein").executes(ctx -> queryVein(ctx.getSource())))
+                .then(literal("cache")
+                        .then(literal("clear")
+                                .requires(ServerCommandManager::mayChange)
+                                .executes(ctx -> clearAuraCache(ctx.getSource(), 3))
+                                .then(argument("radius", IntegerArgumentType.integer(0, 32))
+                                        .executes(ctx -> clearAuraCache(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "radius"))))));
     }
 
-    private static int queryAura(CommandSourceStack source, Identifier type) throws CommandSyntaxException {
+    private static int queryAura(CommandSourceStack source, @Nullable Reference<Aura> selection) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
-        if (type != null) {
-            Reference<Aura> holder = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, type).orElse(null);
-            if (holder == null) {
-                source.sendFailure(Component.translatable("command.mxt.aura.unknown_type", type.toString()));
+        if (selection != null) {
+            if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.AURA, selection)) {
+                source.sendFailure(Component.translatable("command.mxt.aura.unknown_type", HolderHelper.id(selection).toString()));
                 return 0;
             }
-            AuraPool pool = aura.pool(holder);
-            source.sendSuccess(() -> auraReport(aura, Map.of(holder, pool), null), false);
+            AuraPool pool = aura.pool(selection);
+            source.sendSuccess(() -> auraReport(aura, Map.of(selection, pool), null), false);
             return 1;
         }
         source.sendSuccess(() -> auraReport(aura, aura.aura(), null), false);
@@ -88,11 +73,10 @@ public final class AuraCommand {
     }
 
     // The question is asked of the element because several auras can carry the same aura_type.
-    private static int queryElement(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+    private static int queryElement(CommandSourceStack source, Reference<Element> element) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        Reference<Element> element = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, id).orElse(null);
-        if (element == null) {
-            source.sendFailure(Component.translatable("command.mxt.aura.unknown_element", id.toString()));
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element)) {
+            source.sendFailure(Component.translatable("command.mxt.aura.unknown_element", HolderHelper.id(element).toString()));
             return 0;
         }
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());

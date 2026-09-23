@@ -1,5 +1,6 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.network.payload.ItemPickerS2CPayload;
 import com.iafenvoy.mxt.screen.picker.ItemPickerManager;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -14,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
@@ -24,12 +24,14 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 public final class PickerCommand {
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("picker")
-            .requires(source -> source.isPlayer() && source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-            .executes(context -> open(context, List.of()))
-            .then(argument("category", IdentifierArgument.id())
-                    .suggests(PickerCommand::suggestCategories)
-                    .executes(context -> open(context, categories(context))));
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
+        return literal("picker")
+                .requires(source -> source.isPlayer() && ServerCommandManager.mayChange(source))
+                .executes(ctx -> open(ctx, List.of()))
+                .then(argument("category", IdentifierArgument.id())
+                        .suggests(PickerCommand::suggestCategories)
+                        .executes(ctx -> open(ctx, categories(ctx))));
+    }
 
     private static CompletableFuture<Suggestions> suggestCategories(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(ItemPickerManager.categories().stream().map(key -> key.identifier().toString()), builder);

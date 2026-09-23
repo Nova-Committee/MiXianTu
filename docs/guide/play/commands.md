@@ -4,7 +4,7 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限；纯查询的入口（例如 `/mxt curse list`、`/ability list`、`/mxt trigger list`）不需要权限，只是不填目标时要用到自己，因此仍需由玩家执行。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 13 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`identity`、`lightning`、`picker`、`talisman`、`technique`、`trade`、`tribulation`。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 14 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`lightning`、`physique`、`picker`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
 
 **客户端命令有两条**：`/hud`（查看与复位可拖动 HUD 元素）与 `/wheel`（打开轮盘配置界面）。它们注册在客户端自己的命令表里（不进 `/mxt` 树，也不发往服务端），只在聊天栏里手打有效、不需要任何权限，详见文末的[客户端命令](#客户端命令hud--wheel)。
 
@@ -41,13 +41,13 @@ title: 命令
 | `/mxt trigger publish <signal> [<entity>]` | 手动发布一个信号（需要 gamemaster 权限），不必等待真实事件就能检查规则或订阅；既没有订阅也没有规则监听时会明确提示。 |
 | `/mxt formation list`（= `/formation list`） | 列出当前维度所有已激活阵法：ID、阵心坐标、半径、阵主与已付费的维持次数。 |
 | `/mxt formation info`（= `/formation info`） | 列出覆盖玩家所在位置的阵法；重叠时全部列出，不做取舍。 |
-| `/mxt formation bind <formation>`（= `/formation bind`） | 把指定阵法写入**主手**的阵盘（需要 gamemaster 权限）。阵盘是唯一能把阵法带进世界的物品，而它的绑定存在物品组件里；这条命令是生存流程里取得可用阵盘的入口。Tab 补全只列出**这块阵盘允许的**阵法，不在白名单里的会被拒绝且不修改阵盘；重复绑定会覆盖原值，ID 写错时阵盘保持原样。 |
-| `/identity root list [<target>]`（= `/mxt identity root list`） | 列出该实体持有的灵根：名字、稀有度、绑定元素与是否生效。读附件而不是注册表，所以定义被停用/删除的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
-| `/identity root grant\|remove <targets> <root>`（= `/mxt identity root …`） | 授予或移除灵根（需要 gamemaster 权限）。授予走实体行为 `mxt:grant_spirit_root` 的同一套服务，因此 `conflicting_elements` 与「已持有」都会拒绝并逐个目标报出原因。 |
-| `/identity root enable\|disable <targets> <root>`（= `/mxt identity root …`） | 「关闭但不失去」：关掉的灵根仍然持有，只是不再提供元素、修炼倍率、授予能力与 `conflicting_elements`。这与数据包标签 `mxt:disabled` 不是一回事。 |
-| `/identity physique list [<target>]`（= `/mxt identity physique list`） | 列出该实体持有的体质：名字、稀有度与是否生效（叠加时同名只列一行），不需要权限。 |
-| `/identity physique grant\|remove <targets> <physique>`（= `/mxt identity physique …`） | 授予（按当前实体判定 `holder_condition` 与互斥标签）或移除体质（需要 gamemaster 权限）。 |
-| `/identity physique enable\|disable <targets> <physique>`（= `/mxt identity physique …`） | 与灵根同义的开关：关闭后属性修正、授予能力与两个伤害倍率全部不生效，但体质仍然被持有。 |
+| `/mxt formation bind <formation>`（= `/formation bind`） | 把指定阵法写入**主手**的阵盘（需要 gamemaster 权限）。阵盘是唯一能把阵法带进世界的物品，而它的绑定存在物品组件里；这条命令是生存流程里取得可用阵盘的入口。Tab 补全列出注册表里的全部阵法（不再只列白名单内那些），但**白名单仍在写盘之前把关**：不在名单里的会被拒绝且不修改阵盘；重复绑定会覆盖原值，ID 写错时连解析都过不去，阵盘自然保持原样。 |
+| `/spirit_root list [<target>]`（= `/mxt spirit_root list`） | 列出该实体持有的灵根：名字、稀有度、绑定元素与是否生效。读附件而不是注册表，所以定义被停用/删除的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
+| `/spirit_root grant\|remove <targets> <root>`（= `/mxt spirit_root …`） | 授予或移除灵根（需要 gamemaster 权限）。授予走实体行为 `mxt:grant_spirit_root` 的同一套服务，因此 `conflicting_elements` 与「已持有」都会拒绝并逐个目标报出原因；移除按 `spirit_identity` 附件里**持有的那条引用**去找，所以被 `mxt:disabled` 停用的灵根照样摘得掉。 |
+| `/spirit_root enable\|disable <targets> <root>`（= `/mxt spirit_root …`） | 「关闭但不失去」：关掉的灵根仍然持有，只是不再提供元素、修炼倍率、授予能力与 `conflicting_elements`。这与数据包标签 `mxt:disabled` 不是一回事。 |
+| `/physique list [<target>]`（= `/mxt physique list`） | 列出该实体持有的体质：名字、稀有度与是否生效（叠加时同名只列一行），不需要权限。 |
+| `/physique grant\|remove <targets> <physique>`（= `/mxt physique …`） | 授予（按当前实体判定 `holder_condition` 与互斥标签）或移除体质（需要 gamemaster 权限）。移除与灵根同一口径：按附件里持有的引用找。 |
+| `/physique enable\|disable <targets> <physique>`（= `/mxt physique …`） | 与灵根同义的开关：关闭后属性修正、授予能力与两个伤害倍率全部不生效，但体质仍然被持有。 |
 | `/technique repair [dry-run]`（= `/mxt technique repair`） | 清理指向已删除功法定义的失效数据。 |
 | `/technique drop <id>`（= `/mxt technique drop <id>`） | 移除一项已习得功法并重建其带来的属性与能力。 |
 | `/technique diagnose`（= `/mxt technique diagnose`） | 逐条检查手持功法物品为何无法使用。 |
@@ -65,6 +65,11 @@ title: 命令
 | `/mxt curse apply <targets> <curse> [<stacks>] [<duration_ticks>]`（= `/curse apply …`） | 施加一条诅咒（需要 gamemaster 权限），`stacks` 取 1–256，走与内容同一条事务：条件、叠层、`on_apply` 照常；被 `#mxt:disabled` 停用或已删除的定义会被拒绝并报出原因。`duration_ticks` 只能收紧定义自己的时长。 |
 | `/mxt curse remove <targets> <curse>`（= `/curse remove …`） | 以 `explicit` 原因移除（需要 gamemaster 权限）。这也是**被停用/已删除定义的唯一出口**。 |
 | `/mxt curse cleanse <targets> <tag>`（= `/curse cleanse …`） | 按 `mxt:curse` 标签解毒（需要 gamemaster 权限），与解毒剂同一个 `cleansed` 原因；被停用的实例会拒绝并说明原因。 |
+| `/talisman blank [count <count>]`（= `/mxt talisman blank …`） | 给空白载体：什么都没铭刻，因此没有灵气账单。 |
+| `/talisman give <talisman> [count <count>] [stored]`（= `/mxt talisman give …`） | 发给你已铭刻这条符箓定义的载体；`count` 一次给出多份（1–64，默认 1），`stored` 以储存模式铭刻，于是它们靠手动灌注而不是下一次点按发动。 |
+| `/talisman give <talisman> count <count> charged`（= `/mxt talisman give …`） | 同上，并同时把整笔灵气灌进去，这正是让载体在下一次点按发动的方式。`charged` 只能写在 `count` 之后。 |
+
+**`give` 一次只收一个符箓 ID，一张载体只铭刻一条定义。** 以前的逗号列表写法已取消：`ResourceArgument` 表达不了"一次列举多个条目"，那种写法连补全和解析都拿不到。要在一张载体上刻多条（例如一条触发符配一条储能符），改用物品组件写法 `give @s mxt:talisman[mxt:talisman={talismans:["mxt_test:flame_sigil","mxt_test:common_sigil"]}]`，字段含义见[数据包 JSON 格式](../../数据包格式)。
 
 ### `/mxt lightning`
 
@@ -91,7 +96,11 @@ title: 命令
 
 `color <色>` 与 `palette <渐变>` 是**二选一**的两支，各自后面接着同一条固定顺序的尾巴 `[alpha [thickness [damage [visual_only]]]]`：想写后面的就必须把前面的也写出来（Tab 补全会一路提示），例如要 `thickness` 就得先写颜色或渐变、再写 `alpha`。数据包侧的同一个行为 `mxt:spawn_lightning` 支持任意组合的字段（渐变写在 `palette`），见[数据包 JSON 格式](../../数据包格式)。
 
-命令中的注册表 ID 使用原版 `IdentifierArgument`，Tab 补全来自服务端当前注册表。
+命令中的注册表 ID 使用原版 `ResourceArgument`：解析、Tab 补全与"没有这个条目"的报错都由它给出，补全来自服务端当前注册表。有一点要记住：`ResourceArgument` 读的是**原始注册表**，所以被 `#mxt:disabled` 停用的条目**会出现在补全里**，但真正执行时仍会被拒绝（与以前一样按"没有这个定义"处理）。
+
+少数参数**故意**仍然用 `IdentifierArgument`，它们的用途就是点名一个**当前数据包已经不提供**的引用：`/technique drop <id>`、`/spirit_root remove|enable|disable <targets> <id>`、`/physique remove|enable|disable <targets> <id>`、`/curse remove`、`/ability revoke`。换成 `ResourceArgument` 会在解析阶段就被拒绝。要注意**"已经删掉的定义"实际上到不了这几条**：灵根/体质在附件里存的是 `Holder`，解码时条目已被删除的那一条会被容错 Codec 丢掉，所以真正需要它们救的是**被 `mxt:disabled` 停用**的条目——它仍然被身体持有，这三条都按身体持有的引用去找（不是查注册表），因此照样摘得掉、关得掉。它们的 Tab 补全来自当前注册表里**还生效**的条目。
+
+维度 ID（`/mxt secret_realm info|destroy`、`/mxt rift target|place|bind`）与触发器信号（`/mxt trigger …`）同样不是注册表条目，也留在 `IdentifierArgument`；`/picker <category>` 收的是**注册表自己的 ID**（如 `mxt:aura`）而不是某个条目，所以也留在它那里。
 
 ### 秘境实例（`/mxt secret_realm`）
 

@@ -18,8 +18,8 @@ import java.util.UUID;
  */
 public final class ContractAttachment extends ShouldSyncAttachment {
     public static final MapCodec<ContractAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).optionalFieldOf("contract_type").forGetter(ContractAttachment::contractType), UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(ContractAttachment::owner),
-            Codec.LONG.optionalFieldOf("bound_at", -1L).forGetter(ContractAttachment::boundAt), Codec.BOOL.optionalFieldOf("recalled", false).forGetter(ContractAttachment::recalled)
+            RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).lenientOptionalFieldOf("contract_type").forGetter(ContractAttachment::contractType), UUIDUtil.CODEC.lenientOptionalFieldOf("owner").forGetter(ContractAttachment::owner),
+            Codec.LONG.lenientOptionalFieldOf("bound_at", -1L).forGetter(ContractAttachment::boundAt), Codec.BOOL.lenientOptionalFieldOf("recalled", false).forGetter(ContractAttachment::recalled)
     ).apply(i, ContractAttachment::new));
     private Optional<Holder<ContractType>> contractType;
     private Optional<UUID> owner;

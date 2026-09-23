@@ -23,7 +23,7 @@ public final class FormationWorldAttachment {
     public static final MapCodec<FormationWorldAttachment> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             // Tolerant per row, via the shared list codec: one unreadable or invalid entry is dropped with a
             // named warning instead of costing every other formation in the level.
-            CollectionCodecs.list(Stored.CODEC).optionalFieldOf("formations", List.of()).forGetter(FormationWorldAttachment::stored)
+            CollectionCodecs.list(Stored.CODEC).lenientOptionalFieldOf("formations", List.of()).forGetter(FormationWorldAttachment::stored)
     ).apply(i, FormationWorldAttachment::new));
     public static final Codec<FormationWorldAttachment> CODEC = MAP_CODEC.codec();
     private static final Logger LOGGER = LogUtils.getLogger();

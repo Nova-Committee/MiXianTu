@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService.RequestResult;
@@ -15,10 +15,12 @@ import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
 
 public final class TradeCommand {
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("trade")
-            .requires(CommandSourceStack::isPlayer)
-            .then(argument("target", EntityArgument.player())
-                    .executes(TradeCommand::trade));
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
+        return literal("trade")
+                .requires(CommandSourceStack::isPlayer)
+                .then(argument("target", EntityArgument.player())
+                        .executes(TradeCommand::trade));
+    }
 
     private static int trade(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException(), target = EntityArgument.getPlayer(ctx, "target");

@@ -19,7 +19,7 @@ import java.util.Map;
  */
 public final class ElementAttachment extends ShouldSyncAttachment {
     public static final MapCodec<ElementAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.map(Element.CODEC, Codec.DOUBLE).optionalFieldOf("amounts", Map.of()).forGetter(ElementAttachment::amounts)
+            CollectionCodecs.map(Element.CODEC, Codec.DOUBLE).lenientOptionalFieldOf("amounts", Map.of()).forGetter(ElementAttachment::amounts)
     ).apply(i, ElementAttachment::new));
     private final Map<Holder<Element>, Double> amounts;
 

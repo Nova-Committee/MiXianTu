@@ -1,19 +1,14 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.client;
 
 import com.iafenvoy.mxt.screen.hud.HudEntry;
 import com.iafenvoy.mxt.screen.hud.HudManager;
 import com.iafenvoy.mxt.screen.hud.ScreenBounds;
-import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 
 import java.util.List;
 
@@ -26,18 +21,19 @@ import static net.minecraft.commands.Commands.literal;
  * is visible and movable, and how many blocks it offers to draw. Being a client command it needs no permission, and
  * it is the only command in this mod registered on the client.
  */
-@EventBusSubscriber(Dist.CLIENT)
 public final class HudCommand {
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("hud")
-            .executes(HudCommand::list)
-            .then(literal("open").executes(context -> {
-                HudManager.openEditor();
-                return 1;
-            }))
-            .then(argument("element", StringArgumentType.string())
-                    .suggests((context, builder) -> SharedSuggestionProvider.suggest(
-                            HudManager.moveableEntries().stream().map(HudEntry::layoutKey), builder))
-                    .then(literal("reset").executes(HudCommand::reset)));
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
+        return literal("hud")
+                .executes(HudCommand::list)
+                .then(literal("open").executes(ctx -> {
+                    HudManager.openEditor();
+                    return 1;
+                }))
+                .then(argument("element", StringArgumentType.string())
+                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                HudManager.moveableEntries().stream().map(HudEntry::layoutKey), builder))
+                        .then(literal("reset").executes(HudCommand::reset)));
+    }
 
     private static int list(CommandContext<CommandSourceStack> context) {
         List<HudEntry> entries = HudManager.moveableEntries();
@@ -64,14 +60,5 @@ public final class HudCommand {
         }
         context.getSource().sendFailure(Component.translatable("command.mxt.hud.unknown", key));
         return 0;
-    }
-
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(ROOT);
-    }
-
-    @SubscribeEvent
-    public static void registerClientCommands(RegisterClientCommandsEvent event) {
-        register(event.getDispatcher());
     }
 }

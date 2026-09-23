@@ -18,10 +18,10 @@ import java.util.*;
  */
 public final class TribulationAttachment extends ShouldSyncAttachment {
     public static final MapCodec<TribulationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Tribulation.CODEC.optionalFieldOf("tribulation").forGetter(TribulationAttachment::tribulation),
-            TimelineEntry.CODEC.listOf().optionalFieldOf("timeline", List.of()).forGetter(TribulationAttachment::beats),
-            DataStorage.CODEC.optionalFieldOf("state").forGetter(TribulationAttachment::state),
-            Codec.LONG.optionalFieldOf("windup", 0L).forGetter(TribulationAttachment::windup)
+            Tribulation.CODEC.lenientOptionalFieldOf("tribulation").forGetter(TribulationAttachment::tribulation),
+            TimelineEntry.CODEC.listOf().lenientOptionalFieldOf("timeline", List.of()).forGetter(TribulationAttachment::beats),
+            DataStorage.CODEC.lenientOptionalFieldOf("state").forGetter(TribulationAttachment::state),
+            Codec.LONG.lenientOptionalFieldOf("windup", 0L).forGetter(TribulationAttachment::windup)
     ).apply(i, TribulationAttachment::new));
     private Optional<Holder<Tribulation>> tribulation;
     private final Deque<TimelineEntry> queue;

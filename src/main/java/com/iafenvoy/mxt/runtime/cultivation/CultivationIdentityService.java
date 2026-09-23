@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -59,12 +60,13 @@ public final class CultivationIdentityService {
         return Result.changedResult();
     }
 
+    // The reference is looked up among the held ones rather than in the registry: a definition the pack has since
+    // disabled is still held and has to be removable. A deleted one cannot be in the list to begin with, because
+    // the attachment decodes its holders through the registry.
     public static boolean removeSpiritRoot(LivingEntity entity, Identifier id) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        Holder<SpiritRoot> root = MxtDatapackRegistries.holder(MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
-        if (root == null) return false;
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
-        if (!roots.remove(root)) return false;
+        if (!roots.removeIf(held -> HolderHelper.id(held).equals(id))) return false;
         spirit.setSpiritRoots(roots);
         CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return true;
@@ -72,10 +74,8 @@ public final class CultivationIdentityService {
 
     public static boolean removePhysique(LivingEntity entity, Identifier id) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        Holder<Physique> physique = MxtDatapackRegistries.holder(MxtResourceKeys.PHYSIQUE, id).orElse(null);
-        if (physique == null) return false;
         List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
-        if (!physiques.remove(physique)) return false;
+        if (!physiques.removeIf(held -> HolderHelper.id(held).equals(id))) return false;
         spirit.setPhysiques(physiques);
         CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
         return true;

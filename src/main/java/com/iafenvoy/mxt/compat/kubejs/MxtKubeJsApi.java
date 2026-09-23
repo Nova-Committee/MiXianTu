@@ -279,9 +279,10 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Every spirit root the entity holds, sorted. Read off the body, so a root a pack disabled or deleted is
-     * still reported and {@link #removeSpiritRoot} by that name still takes it off. This is the held list; the
-     * roots that count right now are {@link #activeSpiritRoots}.
+     * Every spirit root the entity holds, sorted. Read off the body, so a root a pack disabled is still reported,
+     * and {@link #removeSpiritRoot} by that name still takes it off: both work off the held list, never the
+     * registry. A deleted one cannot be held at all, because the attachment decodes its holders. This is the held
+     * list; the roots that count right now are {@link #activeSpiritRoots}.
      */
     public static List<String> spiritRoots(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);

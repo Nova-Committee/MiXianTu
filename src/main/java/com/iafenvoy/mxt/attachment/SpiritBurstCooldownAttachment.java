@@ -16,7 +16,7 @@ import net.minecraft.core.Holder;
  */
 public final class SpiritBurstCooldownAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritBurstCooldownAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.longMap(Aura.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap())
+            CollectionCodecs.longMap(Aura.CODEC).lenientOptionalFieldOf("cooldowns", Object2LongMaps.emptyMap())
                     .forGetter(SpiritBurstCooldownAttachment::cooldowns)
     ).apply(i, SpiritBurstCooldownAttachment::new));
     private final Object2LongMap<Holder<Aura>> cooldowns;

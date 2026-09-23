@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
@@ -90,8 +89,7 @@ public final class ServerNetworkHandler {
 
     static void onFlightToggle(FlightToggleC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), payload.ability()).orElse(null);
-        if (ability == null) return;
+        Holder<Ability> ability = payload.ability();
         // A request names the state it wants; a press is the same thing with the state read first, so a request
         // that already holds is a no-op rather than a take-off followed by a landing.
         boolean on = AbilityActivationService.state(player, ability).orElse(false);

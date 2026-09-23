@@ -10,7 +10,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  */
 public final class PillToxicityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<PillToxicityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.DOUBLE.optionalFieldOf("toxicity", 0.0D).forGetter(PillToxicityAttachment::toxicity)
+            Codec.DOUBLE.lenientOptionalFieldOf("toxicity", 0.0D).forGetter(PillToxicityAttachment::toxicity)
     ).apply(i, PillToxicityAttachment::new));
     private double toxicity;
 

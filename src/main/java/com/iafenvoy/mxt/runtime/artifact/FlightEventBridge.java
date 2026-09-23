@@ -1,14 +1,14 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.attachment.FlightAttachment;
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,15 +29,14 @@ public final class FlightEventBridge {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.level().isClientSide()) return;
         FlightAttachment data = player.getData(MxtAttachments.FLIGHT);
         if (!data.active()) return;
-        Identifier archetype = data.archetype().orElse(null);
-        if (archetype == null) {
+        // The disabled check the id lookup used to apply: mxt:disabled has to end a flight that is already up.
+        Holder<Ability> ability = data.archetype().filter(archetype -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, archetype)).orElse(null);
+        if (ability == null) {
             FlightService.dismount(player, Failure.NOT_FLYABLE);
             return;
         }
-        Provider access = player.level().registryAccess();
-        Holder<Ability> ability = Abilities.resolve(access, archetype).orElse(null);
-        Optional<ItemStack> carrier = ArtifactService.carried(access, player, archetype);
-        if (ability == null || carrier.isEmpty() || !FlightService.ownsEquippedArchetype(player, carrier.get(), ability)) {
+        Optional<ItemStack> carrier = ArtifactService.carried(player.level().registryAccess(), player, HolderHelper.id(ability));
+        if (carrier.isEmpty() || !FlightService.ownsEquippedArchetype(player, carrier.get(), ability)) {
             FlightService.dismount(player, Failure.NOT_OWNED);
             return;
         }

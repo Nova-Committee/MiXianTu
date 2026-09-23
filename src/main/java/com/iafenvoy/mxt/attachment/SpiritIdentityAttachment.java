@@ -22,12 +22,12 @@ import java.util.*;
  */
 public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritIdentityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.list(SpiritRoot.CODEC).optionalFieldOf("spirit_roots", List.of()).forGetter(SpiritIdentityAttachment::spiritRoots),
-            CollectionCodecs.list(Physique.CODEC).optionalFieldOf("physiques", List.of()).forGetter(SpiritIdentityAttachment::physiques),
-            CollectionCodecs.list(Technique.CODEC).optionalFieldOf("learned_techniques", List.of()).forGetter(SpiritIdentityAttachment::learnedTechniques),
-            CollectionCodecs.map(Technique.CODEC, SkillStage.CODEC).optionalFieldOf("technique_stages", Map.of()).forGetter(SpiritIdentityAttachment::techniqueStages),
-            CollectionCodecs.set(SpiritRoot.CODEC).optionalFieldOf("disabled_spirit_roots", Set.of()).forGetter(SpiritIdentityAttachment::disabledSpiritRoots),
-            CollectionCodecs.set(Physique.CODEC).optionalFieldOf("disabled_physiques", Set.of()).forGetter(SpiritIdentityAttachment::disabledPhysiques)
+            CollectionCodecs.list(SpiritRoot.CODEC).lenientOptionalFieldOf("spirit_roots", List.of()).forGetter(SpiritIdentityAttachment::spiritRoots),
+            CollectionCodecs.list(Physique.CODEC).lenientOptionalFieldOf("physiques", List.of()).forGetter(SpiritIdentityAttachment::physiques),
+            CollectionCodecs.list(Technique.CODEC).lenientOptionalFieldOf("learned_techniques", List.of()).forGetter(SpiritIdentityAttachment::learnedTechniques),
+            CollectionCodecs.map(Technique.CODEC, SkillStage.CODEC).lenientOptionalFieldOf("technique_stages", Map.of()).forGetter(SpiritIdentityAttachment::techniqueStages),
+            CollectionCodecs.set(SpiritRoot.CODEC).lenientOptionalFieldOf("disabled_spirit_roots", Set.of()).forGetter(SpiritIdentityAttachment::disabledSpiritRoots),
+            CollectionCodecs.set(Physique.CODEC).lenientOptionalFieldOf("disabled_physiques", Set.of()).forGetter(SpiritIdentityAttachment::disabledPhysiques)
     ).apply(i, SpiritIdentityAttachment::new));
 
     private final List<Holder<SpiritRoot>> spiritRoots;

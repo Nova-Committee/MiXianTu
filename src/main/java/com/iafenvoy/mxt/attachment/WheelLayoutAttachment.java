@@ -17,8 +17,8 @@ import java.util.Optional;
  */
 public final class WheelLayoutAttachment extends ShouldSyncAttachment {
     public static final MapCodec<WheelLayoutAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            WheelLayout.CODEC.optionalFieldOf("layout").forGetter(WheelLayoutAttachment::layout),
-            Codec.INT.optionalFieldOf("armed").forGetter(WheelLayoutAttachment::armed)
+            WheelLayout.CODEC.lenientOptionalFieldOf("layout").forGetter(WheelLayoutAttachment::layout),
+            Codec.INT.lenientOptionalFieldOf("armed").forGetter(WheelLayoutAttachment::armed)
     ).apply(i, WheelLayoutAttachment::new));
 
     private Optional<WheelLayout> layout = Optional.empty();

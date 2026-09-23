@@ -1,6 +1,9 @@
 package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -14,10 +17,10 @@ import org.jspecify.annotations.NonNull;
  * it sends a press and lets the server read the state - so this remains the entry point for a script or a screen
  * that asks for one specific direction.
  */
-public record FlightToggleC2SPayload(Identifier ability, boolean enabled) implements CustomPacketPayload {
+public record FlightToggleC2SPayload(Holder<Ability> ability, boolean enabled) implements CustomPacketPayload {
     public static final Type<FlightToggleC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "flight_toggle_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, FlightToggleC2SPayload> STREAM_CODEC = StreamCodec.composite(
-            Identifier.STREAM_CODEC, FlightToggleC2SPayload::ability,
+            ByteBufCodecs.holderRegistry(MxtResourceKeys.ABILITY), FlightToggleC2SPayload::ability,
             ByteBufCodecs.BOOL, FlightToggleC2SPayload::enabled,
             FlightToggleC2SPayload::new);
 

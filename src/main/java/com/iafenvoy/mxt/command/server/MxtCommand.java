@@ -1,7 +1,9 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.*;
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
@@ -34,17 +36,19 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -52,7 +56,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -73,46 +76,41 @@ public final class MxtCommand {
     // The chat report lists at most this many problems; the log keeps all of them.
     private static final int MAX_REPORTED_PROBLEMS = 12;
 
-    public static void attach(LiteralArgumentBuilder<CommandSourceStack> root) {
+    public static void attach(CommandBuildContext context, LiteralArgumentBuilder<CommandSourceStack> root) {
         root.then(literal("registries")
                         .then(literal("list").executes(ctx -> listRegistries(ctx.getSource())))
                         .then(literal("validate").executes(ctx -> validationStatus(ctx.getSource()))))
                 .then(literal("attachment").then(literal("status").executes(ctx -> attachmentStatus(ctx.getSource()))))
                 .then(literal("resource")
-                        .then(argument("id", IdentifierArgument.id())
-                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.RESOURCE))
-                                .executes(ctx -> queryResource(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))
-                                .then(literal("set").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                        .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.RESOURCE))
+                                .executes(ctx -> queryResource(ctx.getSource(), resource(ctx, "id")))
+                                .then(literal("set").requires(ServerCommandManager::mayChange)
                                         .then(argument("value", DoubleArgumentType.doubleArg()).executes(ctx -> setResource(ctx.getSource(),
-                                                IdentifierArgument.getId(ctx, "id"), DoubleArgumentType.getDouble(ctx, "value")))))))
+                                                resource(ctx, "id"), DoubleArgumentType.getDouble(ctx, "value")))))))
                 .then(literal("resourcebar")
                         .executes(ctx -> listResourceBars(ctx.getSource(), null, null))
-                        .then(argument("resource", IdentifierArgument.id())
-                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.RESOURCE))
-                                .executes(ctx -> listResourceBars(ctx.getSource(), IdentifierArgument.getId(ctx, "resource"), null))
+                        .then(argument("resource", ResourceArgument.resource(context, MxtResourceKeys.RESOURCE))
+                                .executes(ctx -> listResourceBars(ctx.getSource(), resource(ctx, "resource"), null))
                                 .then(argument("index", IntegerArgumentType.integer(0, 255))
-                                        .executes(ctx -> listResourceBars(ctx.getSource(), IdentifierArgument.getId(ctx, "resource"),
+                                        .executes(ctx -> listResourceBars(ctx.getSource(), resource(ctx, "resource"),
                                                 IntegerArgumentType.getInteger(ctx, "index"))))))
                 .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
-                .then(literal("breakthrough").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(argument("aura", IdentifierArgument.id())
-                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.AURA))
-                                .executes(ctx -> attemptBreakthrough(ctx.getSource(), IdentifierArgument.getId(ctx, "aura")))))
-                .then(literal("secret_realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                        .then(literal("set").then(argument("realm", IdentifierArgument.id())
-                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.REALM_STAGE))
-                                .executes(ctx -> setRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "realm"))))))
-                .then(literal("secret_realm").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .then(literal("breakthrough").requires(ServerCommandManager::mayChange)
+                        .then(argument("aura", ResourceArgument.resource(context, MxtResourceKeys.AURA))
+                                .executes(ctx -> attemptBreakthrough(ctx.getSource(), aura(ctx)))))
+                .then(literal("secret_realm").requires(ServerCommandManager::mayChange)
+                        .then(literal("set").then(argument("realm", ResourceArgument.resource(context, MxtResourceKeys.REALM_STAGE))
+                                .executes(ctx -> setRealm(ctx.getSource(), realm(ctx))))))
+                .then(literal("secret_realm").requires(ServerCommandManager::mayChange)
                         .then(literal("list").executes(ctx -> listSecretRealms(ctx.getSource())))
                         .then(literal("info").then(argument("dimension", IdentifierArgument.id())
                                 .executes(ctx -> secretRealmInfo(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))))
-                        .then(literal("enter").then(argument("definition", IdentifierArgument.id())
-                                .suggests((ctx, builder) -> suggestRegistry(ctx, builder, MxtResourceKeys.SECRET_REALM))
-                                .executes(ctx -> enterSecretRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "definition")))))
+                        .then(literal("enter").then(argument("definition", ResourceArgument.resource(context, MxtResourceKeys.SECRET_REALM))
+                                .executes(ctx -> enterSecretRealm(ctx.getSource(), secretRealm(ctx)))))
                         .then(literal("exit").executes(ctx -> exitSecretRealm(ctx.getSource())))
                         .then(literal("destroy").then(argument("dimension", IdentifierArgument.id())
                                 .executes(ctx -> destroySecretRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"))))))
-                .then(literal("rift").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .then(literal("rift").requires(ServerCommandManager::mayChange)
                         .then(literal("info").then(argument("pos", BlockPosArgument.blockPos())
                                 .executes(ctx -> riftInfo(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))))
                         .then(literal("target").then(argument("pos", BlockPosArgument.blockPos())
@@ -135,7 +133,7 @@ public final class MxtCommand {
                                 .then(argument("color", StringArgumentType.word())
                                         .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"),
                                                 StringArgumentType.getString(ctx, "color")))))))
-                .then(literal("soul").then(literal("reclaim").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .then(literal("soul").then(literal("reclaim").requires(ServerCommandManager::mayChange)
                         .executes(ctx -> reclaimSoul(ctx.getSource()))))
                 .then(literal("trigger")
                         .then(literal("list")
@@ -146,7 +144,7 @@ public final class MxtCommand {
                                 .then(argument("signal", IdentifierArgument.id())
                                         .suggests((ctx, builder) -> suggestRuleSignals(builder))
                                         .executes(ctx -> listTriggerRules(ctx.getSource(), IdentifierArgument.getId(ctx, "signal")))))
-                        .then(literal("publish").requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                        .then(literal("publish").requires(ServerCommandManager::mayChange)
                                 .then(argument("signal", IdentifierArgument.id())
                                         .suggests((ctx, builder) -> suggestPublishedSignals(builder))
                                         .executes(ctx -> publishTrigger(ctx.getSource(), IdentifierArgument.getId(ctx, "signal"), null))
@@ -163,13 +161,22 @@ public final class MxtCommand {
         return MxtDatapackRegistries.registries().size();
     }
 
-    private static <T> CompletableFuture<Suggestions> suggestRegistry(
-            CommandContext<CommandSourceStack> context,
-            SuggestionsBuilder builder,
-            ResourceKey<Registry<T>> key) {
-        return SharedSuggestionProvider.suggest(
-                MxtDatapackRegistries.holders(context.getSource().getServer().registryAccess(), key)
-                        .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
+    // The registry arguments have already resolved their entries; naming the four lookups keeps the node bodies
+    // readable, and each one passes the registry the argument was built from.
+    private static Reference<Resource> resource(CommandContext<CommandSourceStack> ctx, String name) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, name, MxtResourceKeys.RESOURCE);
+    }
+
+    private static Reference<Aura> aura(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "aura", MxtResourceKeys.AURA);
+    }
+
+    private static Reference<RealmStage> realm(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "realm", MxtResourceKeys.REALM_STAGE);
+    }
+
+    private static Reference<SecretRealm> secretRealm(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "definition", MxtResourceKeys.SECRET_REALM);
     }
 
     private static int validationStatus(CommandSourceStack source) {
@@ -224,37 +231,37 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int queryResource(CommandSourceStack source, Identifier id) {
+    private static int queryResource(CommandSourceStack source, Reference<Resource> resource) {
         ServerPlayer player = source.getPlayer();
-        if (player == null) return 0;
-        Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
-        if (resource == null) return 0;
+        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, resource)) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(id, "resource"), value), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(resource, "resource"), value), false);
         return 1;
     }
 
-    private static int setResource(CommandSourceStack source, Identifier id, double value) {
+    private static int setResource(CommandSourceStack source, Reference<Resource> resource, double value) {
         ServerPlayer player = source.getPlayer();
-        if (player == null) return 0;
-        Reference<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).orElse(null);
-        if (resource == null) return 0;
+        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, resource)) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(id, "resource"), value), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(resource, "resource"), value), true);
         return 1;
     }
 
-    private static int listResourceBars(CommandSourceStack source, Identifier resourceId, Integer index) {
+    private static int listResourceBars(CommandSourceStack source, @Nullable Reference<Resource> selection, Integer index) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        List<Reference<Resource>> resources = MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE)
-                .filter(holder -> resourceId == null || HolderHelper.id(holder).equals(resourceId)).toList();
+        // A disabled definition is no more usable here than a missing one, which is what the old lookup said.
+        if (selection != null && MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, selection)) {
+            source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_resource", HolderHelper.id(selection).toString()));
+            return 0;
+        }
+        List<Reference<Resource>> resources = selection != null ? List.of(selection)
+                : MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE).toList();
         if (resources.isEmpty()) {
-            source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_resource",
-                    resourceId == null ? "null" : resourceId.toString()));
+            source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_resource", "null"));
             return 0;
         }
         int shown = 0;
@@ -262,7 +269,7 @@ public final class MxtCommand {
             List<ResourceBar> bars = resource.value().bars();
             if (index != null && index >= bars.size()) {
                 source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_index",
-                        resourceId == null ? "null" : resourceId.toString(), index, bars.size()));
+                        HolderHelper.id(resource).toString(), index, bars.size()));
                 return 0;
             }
             for (int barIndex = 0; barIndex < bars.size(); barIndex++) {
@@ -273,7 +280,7 @@ public final class MxtCommand {
         }
         if (shown == 0) {
             source.sendFailure(Component.translatable("command.mxt.resourcebar.empty",
-                    resourceId == null ? "all" : resourceId.toString()));
+                    selection == null ? "all" : HolderHelper.id(selection).toString()));
             return 0;
         }
         return shown;
@@ -342,11 +349,10 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int attemptBreakthrough(CommandSourceStack source, Identifier id) {
+    private static int attemptBreakthrough(CommandSourceStack source, Reference<Aura> aura) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.get(MxtResourceKeys.AURA, id).isEmpty())
-            return 0;
-        BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), id, FormulaContext.of(player), () -> true);
+        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.AURA, aura)) return 0;
+        BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), HolderHelper.id(aura), FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
             Component reason = result == null || result.failure() == null
                     ? Component.translatable("command.mxt.breakthrough.failure.unknown")
@@ -357,14 +363,14 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(id, "aura")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(aura, "aura")), true);
         return 1;
     }
 
-    private static int setRealm(CommandSourceStack source, Identifier realm) {
+    private static int setRealm(CommandSourceStack source, Reference<RealmStage> realm) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        if (!CultivationService.setRealm(player.getData(MxtAttachments.CULTIVATION), realm)) {
+        if (!CultivationService.setRealm(player.getData(MxtAttachments.CULTIVATION), HolderHelper.id(realm))) {
             source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.name(realm, "realm_stage")));
             return 0;
         }
@@ -405,24 +411,23 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int enterSecretRealm(CommandSourceStack source, Identifier definition) {
+    private static int enterSecretRealm(CommandSourceStack source, Reference<SecretRealm> definition) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        Holder<SecretRealm> holder = MxtDatapackRegistries.holder(MxtResourceKeys.SECRET_REALM, definition).orElse(null);
-        if (holder == null) {
-            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", definition.toString()));
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.SECRET_REALM, definition)) {
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", HolderHelper.id(definition).toString()));
             return 0;
         }
-        Result result = SecretRealmService.enter(player, holder);
+        Result result = SecretRealmService.enter(player, definition);
         if (!result.changed()) {
             source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.enter_failed",
                     result.failure().name())));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.name(holder, "secret_realm")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.name(definition, "secret_realm")), true);
         return 1;
     }
 

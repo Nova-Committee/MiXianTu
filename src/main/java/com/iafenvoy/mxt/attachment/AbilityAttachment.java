@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.SourceLedger;
@@ -9,7 +10,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMaps;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.List;
@@ -21,28 +24,28 @@ import java.util.Optional;
  * belong to this attachment, so they are saved and synced with it. Revoking the last source drops that state with
  * it, so a re-granted ability does not come back with the charges it had before.
  *
- * <p>The id is the whole address, which is what lets one ability be granted, cooled down and stored the same way
- * whoever handed it out. An id that no longer resolves is kept rather than dropped, so revoking a definition that
- * was deleted still takes it off.
+ * <p>Grants, cooldowns and stored state address an ability by id and keep an id that no longer resolves rather than
+ * dropping it, so revoking a definition that was deleted still takes it off. The channelled ability is the one
+ * running right now, so it is kept as a holder instead: a definition that was deleted stops the channel on load.
  */
 public final class AbilityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<AbilityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            SourceLedger.codec(Identifier.CODEC).optionalFieldOf("sources", new SourceLedger<>()).forGetter(AbilityAttachment::sources),
-            CollectionCodecs.longMap(Identifier.CODEC).optionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityAttachment::cooldowns),
-            Identifier.CODEC.optionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility),
-            DataStorageHolder.CODEC.optionalFieldOf("storage").forGetter(attachment -> Optional.of(attachment.storage))
+            SourceLedger.codec(Identifier.CODEC).lenientOptionalFieldOf("sources", new SourceLedger<>()).forGetter(AbilityAttachment::sources),
+            CollectionCodecs.longMap(Identifier.CODEC).lenientOptionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityAttachment::cooldowns),
+            Ability.CODEC.lenientOptionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility),
+            DataStorageHolder.CODEC.lenientOptionalFieldOf("storage").forGetter(attachment -> Optional.of(attachment.storage))
     ).apply(i, AbilityAttachment::new));
     private final SourceLedger<Identifier> sources;
     private final Object2LongMap<Identifier> cooldowns;
     private final DataStorageHolder storage;
-    private Optional<Identifier> channelledAbility;
+    private Optional<Holder<Ability>> channelledAbility;
 
     public AbilityAttachment() {
         this(new SourceLedger<>(), Object2LongMaps.emptyMap(), Optional.empty(), Optional.empty());
     }
 
     private AbilityAttachment(SourceLedger<Identifier> sources, Object2LongMap<Identifier> cooldowns,
-                              Optional<Identifier> channelledAbility, Optional<DataStorageHolder> storage) {
+                              Optional<Holder<Ability>> channelledAbility, Optional<DataStorageHolder> storage) {
         this.sources = sources.copy();
         this.cooldowns = new Object2LongOpenHashMap<>(cooldowns);
         this.channelledAbility = channelledAbility;
@@ -62,7 +65,7 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return this.storage;
     }
 
-    public Optional<Identifier> channelledAbility() {
+    public Optional<Holder<Ability>> channelledAbility() {
         return this.channelledAbility;
     }
 
@@ -110,7 +113,7 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         this.markDirty();
     }
 
-    public void setChannelledAbility(Identifier ability) {
+    public void setChannelledAbility(@Nullable Holder<Ability> ability) {
         this.channelledAbility = Optional.ofNullable(ability);
         this.markDirty();
     }

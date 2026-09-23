@@ -18,7 +18,7 @@ public record BlockAuraContribution(BlockPos position, Map<Holder<Aura>, AuraVal
     public static final Codec<BlockAuraContribution> CODEC = RecordCodecBuilder.create(i -> i.group(
             BlockPos.CODEC.fieldOf("position").forGetter(BlockAuraContribution::position),
             AuraValue.MAP_CODEC.fieldOf("aura").forGetter(BlockAuraContribution::aura),
-            Codec.BOOL.optionalFieldOf("absorbed", false).forGetter(BlockAuraContribution::absorbed)
+            Codec.BOOL.lenientOptionalFieldOf("absorbed", false).forGetter(BlockAuraContribution::absorbed)
     ).apply(i, BlockAuraContribution::new));
 
     public BlockAuraContribution {

@@ -35,6 +35,6 @@
 
 它们同时是文档站那几页的迁移语料，所以站点仓库的 `pnpm run migrate` 现在会**明确拒绝重跑并列出缺哪些语料**，而不是拿着空输入重写页面（那几页现在是手工维护）。`research/audit/` 里提到的 `docs/通用物品.md:23` 这类引用是当时的审计证据，指向的文件已删，结论仍然有效。
 
-设计稿不在这里，在 [`../research/`](../research/README.md)（新设计必须留档在那里）。
+设计稿不在这里，在 [`../research/`](../research/README.md)（大改、或按用户要求先设计时才在那里留档）。
 
 改文档之前先读 [`ai/FORMAT.md`](ai/FORMAT.md)；改代码或数据包之前先读仓库根目录的 [`AGENTS.md`](../AGENTS.md)。

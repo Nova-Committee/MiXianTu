@@ -25,12 +25,12 @@ public final class FormationInstance {
     public static final Codec<FormationInstance> CODEC = RecordCodecBuilder.<FormationInstance>create(i -> i.group(
             Identifier.CODEC.fieldOf("formation").forGetter(FormationInstance::formation),
             Codec.DOUBLE.fieldOf("radius").forGetter(FormationInstance::radius),
-            UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(FormationInstance::owner),
-            Codec.LONG.optionalFieldOf("maintenance_count", 0L).forGetter(FormationInstance::maintenanceCount),
+            UUIDUtil.CODEC.lenientOptionalFieldOf("owner").forGetter(FormationInstance::owner),
+            Codec.LONG.lenientOptionalFieldOf("maintenance_count", 0L).forGetter(FormationInstance::maintenanceCount),
             // Written only when something is banked, so a save of the common case does not grow a field. Strict
             // rather than tolerant: this map is written by the mod itself, so a row that does not read back is a
             // bug worth seeing, not a row to drop silently.
-            Codec.unboundedMap(Aura.CODEC, Codec.DOUBLE).optionalFieldOf("stored")
+            Codec.unboundedMap(Aura.CODEC, Codec.DOUBLE).lenientOptionalFieldOf("stored")
                     .forGetter(instance -> instance.stored.isEmpty() ? Optional.empty() : Optional.of(instance.stored))
     ).apply(i, FormationInstance::new)).flatXmap(FormationInstance::validate, FormationInstance::validate);
 

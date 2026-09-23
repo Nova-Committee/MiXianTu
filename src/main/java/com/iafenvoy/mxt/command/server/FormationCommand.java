@@ -1,5 +1,6 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.item.FormationPlateItem;
@@ -9,29 +10,24 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -42,42 +38,24 @@ import static net.minecraft.commands.Commands.literal;
  * produce a usable plate.
  */
 public final class FormationCommand {
-    // Built by the same method as the {@code /mxt} copy so the two cannot drift.
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("formation")
-            .then(literal("list").executes(ctx -> listFormations(ctx.getSource())))
-            .then(literal("info").executes(ctx -> formationCoverage(ctx.getSource())))
-            .then(literal("bind")
-                    .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                    .then(argument("formation", IdentifierArgument.id())
-                            .suggests(FormationCommand::suggestAllowed)
-                            .executes(ctx -> bind(ctx.getSource(), IdentifierArgument.getId(ctx, "formation")))));
-
-    // The plate's own allow list, because IdentifierArgument would otherwise complete to nothing.
-    private static CompletableFuture<Suggestions> suggestAllowed(CommandContext<CommandSourceStack> context,
-                                                                 SuggestionsBuilder builder) {
-        ServerPlayer player = context.getSource().getPlayer();
-        if (player == null) return builder.buildFuture();
-        FormationPlateComponent plate = player.getMainHandItem()
-                .getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY);
-        plate.admissible(formationRegistry()).stream()
-                .map(holder -> holder.key().identifier())
-                .filter(identifier -> identifier.toString().startsWith(builder.getRemainingLowerCase()))
-                .forEach(identifier -> builder.suggest(identifier.toString()));
-        return builder.buildFuture();
+    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
+        return literal("formation")
+                .then(literal("list").executes(ctx -> listFormations(ctx.getSource())))
+                .then(literal("info").executes(ctx -> formationCoverage(ctx.getSource())))
+                .then(literal("bind")
+                        .requires(ServerCommandManager::mayChange)
+                        .then(argument("formation", ResourceArgument.resource(context, MxtResourceKeys.FORMATION))
+                                .executes(ctx -> bind(ctx.getSource(),
+                                        ResourceArgument.getResource(ctx, "formation", MxtResourceKeys.FORMATION)))));
     }
 
-    private static Registry<Formation> formationRegistry() {
-        return MxtDatapackRegistries.registry(MxtResourceKeys.FORMATION);
-    }
-
-    // Rebinding is allowed and overwrites, and a typo leaves the plate as it was because the id resolves first.
-    // Public so the server audit can drive the command body with a FakePlayer.
-    public static int bind(CommandSourceStack source, Identifier formation) throws CommandSyntaxException {
+    // Rebinding is allowed and overwrites, and a definition the pack switched off is refused before the plate is
+    // touched. Public so the server audit can drive the command body with a FakePlayer.
+    public static int bind(CommandSourceStack source, Reference<Formation> definition) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        Holder<Formation> definition = MxtDatapackRegistries
-                .holder(MxtResourceKeys.FORMATION, formation)
-                .orElseThrow(() -> new SimpleCommandExceptionType(
-                        Component.translatable("command.mxt.formation.bind.unknown", formation.toString())).create());
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.FORMATION, definition))
+            throw new SimpleCommandExceptionType(Component.translatable("command.mxt.formation.bind.unknown",
+                    HolderHelper.id(definition).toString())).create();
         ItemStack stack = player.getMainHandItem();
         if (!(stack.getItem() instanceof FormationPlateItem)) {
             source.sendFailure(Component.translatable("command.mxt.formation.bind.missing"));

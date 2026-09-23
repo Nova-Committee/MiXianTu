@@ -1,6 +1,7 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -16,24 +17,20 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.suggestion.Suggestions;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.JsonOps;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
-import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -45,22 +42,23 @@ import static net.minecraft.commands.Commands.literal;
  * decision to start one is replaced. {@code status} prints the state slot in the spelling the codec saves.
  */
 public final class TribulationCommand {
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("tribulation")
-            .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-            .then(literal("start")
-                    .then(argument("id", IdentifierArgument.id())
-                            .suggests(TribulationCommand::suggestTribulations)
-                            .executes(ctx -> start(ctx.getSource(), IdentifierArgument.getId(ctx, "id"), null))
-                            .then(target(ctx -> start(ctx.getSource(), IdentifierArgument.getId(ctx, "id"),
-                                    EntityArgument.getEntity(ctx, "target"))))))
-            .then(literal("stop")
-                    .executes(ctx -> stop(ctx.getSource(), null))
-                    .then(target(ctx -> stop(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
-            .then(literal("status")
-                    .executes(ctx -> status(ctx.getSource(), null))
-                    .then(target(ctx -> status(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))));
+    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
+        return literal("tribulation")
+                .requires(ServerCommandManager::mayChange)
+                .then(literal("start")
+                        .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.TRIBULATION))
+                                .executes(ctx -> start(ctx.getSource(), tribulation(ctx), null))
+                                .then(target(ctx -> start(ctx.getSource(), tribulation(ctx), EntityArgument.getEntity(ctx, "target"))))))
+                .then(literal("stop")
+                        .executes(ctx -> stop(ctx.getSource(), null))
+                        .then(target(ctx -> stop(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
+                .then(literal("status")
+                        .executes(ctx -> status(ctx.getSource(), null))
+                        .then(target(ctx -> status(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))));
+    }
 
-    private TribulationCommand() {
+    private static Reference<Tribulation> tribulation(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "id", MxtResourceKeys.TRIBULATION);
     }
 
     // Optional: without it the command works on the caller.
@@ -68,18 +66,11 @@ public final class TribulationCommand {
         return argument("target", EntityArgument.entity()).executes(verb);
     }
 
-    private static CompletableFuture<Suggestions> suggestTribulations(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(
-                MxtDatapackRegistries.holders(ctx.getSource().getServer().registryAccess(), MxtResourceKeys.TRIBULATION)
-                        .map(HolderHelper::id).map(Identifier::toString).sorted().toList(), builder);
-    }
-
-    private static int start(CommandSourceStack source, Identifier id, @Nullable Entity target) {
+    private static int start(CommandSourceStack source, Reference<Tribulation> tribulation, @Nullable Entity target) {
         LivingEntity entity = target(source, target);
         if (entity == null) return 0;
-        Reference<Tribulation> tribulation = MxtDatapackRegistries.holder(MxtResourceKeys.TRIBULATION, id).orElse(null);
-        if (tribulation == null) {
-            source.sendFailure(Component.translatable("command.mxt.tribulation.unknown", id.toString()));
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.TRIBULATION, tribulation)) {
+            source.sendFailure(Component.translatable("command.mxt.tribulation.unknown", HolderHelper.id(tribulation).toString()));
             return 0;
         }
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);

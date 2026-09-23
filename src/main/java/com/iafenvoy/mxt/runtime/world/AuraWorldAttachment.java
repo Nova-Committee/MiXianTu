@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 public final class AuraWorldAttachment {
     public static final MapCodec<AuraWorldAttachment> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.unboundedMap(Codec.STRING, Area.CODEC).optionalFieldOf("areas", Map.of()).forGetter(AuraWorldAttachment::encoded)
+            Codec.unboundedMap(Codec.STRING, Area.CODEC).lenientOptionalFieldOf("areas", Map.of()).forGetter(AuraWorldAttachment::encoded)
     ).apply(i, AuraWorldAttachment::new));
     public static final Codec<AuraWorldAttachment> CODEC = MAP_CODEC.codec();
     private final Map<String, Area> areas;
@@ -53,7 +53,7 @@ public final class AuraWorldAttachment {
     }
 
     public record Area(Identifier zone, Shape shape, int priority) implements Comparable<Area> {
-        public static final Codec<Area> CODEC = RecordCodecBuilder.create(i -> i.group(Identifier.CODEC.fieldOf("zone").forGetter(Area::zone), Shape.CODEC.fieldOf("shape").forGetter(Area::shape), Codec.INT.optionalFieldOf("priority", 0).forGetter(Area::priority)).apply(i, Area::new));
+        public static final Codec<Area> CODEC = RecordCodecBuilder.create(i -> i.group(Identifier.CODEC.fieldOf("zone").forGetter(Area::zone), Shape.CODEC.fieldOf("shape").forGetter(Area::shape), Codec.INT.lenientOptionalFieldOf("priority", 0).forGetter(Area::priority)).apply(i, Area::new));
 
         boolean contains(BlockPos pos) {
             return this.shape.contains(pos);

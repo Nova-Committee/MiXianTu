@@ -21,8 +21,8 @@ import java.util.*;
  */
 public final class CurseHolderAttachment extends ShouldSyncAttachment {
     public static final MapCodec<CurseHolderAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.map(Curse.CODEC, State.CODEC).optionalFieldOf("instances", Map.of()).forGetter(CurseHolderAttachment::instances),
-            SourceLedger.codec(Curse.CODEC).optionalFieldOf("sources", new SourceLedger<>()).forGetter(CurseHolderAttachment::sources)
+            CollectionCodecs.map(Curse.CODEC, State.CODEC).lenientOptionalFieldOf("instances", Map.of()).forGetter(CurseHolderAttachment::instances),
+            SourceLedger.codec(Curse.CODEC).lenientOptionalFieldOf("sources", new SourceLedger<>()).forGetter(CurseHolderAttachment::sources)
     ).apply(i, CurseHolderAttachment::new));
     private final Map<Holder<Curse>, State> instances;
     private final SourceLedger<Holder<Curse>> sources;
@@ -101,9 +101,9 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
                 Codec.intRange(1, 256).fieldOf("stacks").forGetter(State::stacks),
                 Codec.LONG.fieldOf("applied_at").forGetter(State::appliedAt),
                 Codec.LONG.fieldOf("expires_at").forGetter(State::expiresAt),
-                Codec.BOOL.optionalFieldOf("unknown_definition", false).forGetter(State::unknownDefinition),
+                Codec.BOOL.lenientOptionalFieldOf("unknown_definition", false).forGetter(State::unknownDefinition),
                 // Read for saves written before the ledger existed; never written back, since the ledger owns it.
-                Codec.STRING.optionalFieldOf("source").forGetter(State::legacySource)
+                Codec.STRING.lenientOptionalFieldOf("source").forGetter(State::legacySource)
         ).apply(i, State::new));
 
         public State(int stacks, long appliedAt, long expiresAt) {

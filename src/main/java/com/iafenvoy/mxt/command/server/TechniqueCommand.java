@@ -1,6 +1,7 @@
-package com.iafenvoy.mxt.command;
+package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
@@ -25,7 +26,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
@@ -40,16 +40,19 @@ import static net.minecraft.commands.Commands.literal;
  * so such a reference survives but fails quietly ({@code Ignoring invalid list element} in the log is the tell).
  */
 public final class TechniqueCommand {
-    public static final LiteralArgumentBuilder<CommandSourceStack> ROOT = literal("technique")
-            .then(literal("repair")
-                    .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                    .executes(ctx -> repair(ctx.getSource(), false))
-                    .then(literal("dry-run").executes(ctx -> repair(ctx.getSource(), true))))
-            .then(literal("drop")
-                    .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
-                    .then(argument("id", IdentifierArgument.id())
-                            .executes(ctx -> drop(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
-            .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
+        return literal("technique")
+                .then(literal("repair")
+                        .requires(ServerCommandManager::mayChange)
+                        .executes(ctx -> repair(ctx.getSource(), false))
+                        .then(literal("dry-run").executes(ctx -> repair(ctx.getSource(), true))))
+                // IdentifierArgument, not ResourceArgument: the id named here is exactly the one that no longer resolves.
+                .then(literal("drop")
+                        .requires(ServerCommandManager::mayChange)
+                        .then(argument("id", IdentifierArgument.id())
+                                .executes(ctx -> drop(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
+                .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
+    }
 
     private static int diagnose(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();

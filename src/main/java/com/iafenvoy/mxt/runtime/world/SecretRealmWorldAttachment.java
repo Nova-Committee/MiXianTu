@@ -12,7 +12,7 @@ import java.util.List;
  */
 public final class SecretRealmWorldAttachment {
     public static final MapCodec<SecretRealmWorldAttachment> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            SecretRealmRecord.CODEC.listOf().optionalFieldOf("instances", List.of()).forGetter(SecretRealmWorldAttachment::records)
+            SecretRealmRecord.CODEC.listOf().lenientOptionalFieldOf("instances", List.of()).forGetter(SecretRealmWorldAttachment::records)
     ).apply(i, SecretRealmWorldAttachment::new));
     private final List<SecretRealmRecord> records;
 

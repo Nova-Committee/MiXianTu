@@ -15,9 +15,11 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.item.Item;
 
 import java.util.Comparator;
 import java.util.List;
@@ -58,7 +60,9 @@ public final class CreatureProfileService {
         if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
         MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id)
                 .ifPresent(profile -> creature.getData(MxtAttachments.CREATURE_SPIRIT)
-                        .apply(profile, intelligence, definition.innerCore(), definition.lootTable()));
+                        .apply(profile, intelligence,
+                                definition.innerCore().flatMap(core -> BuiltInRegistries.ITEM.get(core).map(holder -> (Holder<Item>) holder)),
+                                definition.lootTable().map(table -> ResourceKey.create(Registries.LOOT_TABLE, table))));
         return true;
     }
 
