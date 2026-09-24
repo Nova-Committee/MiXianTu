@@ -607,7 +607,7 @@ MxtEvents.friendRelation(event => {
 | `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Pre` 可取消结束，取消后寿元会被设为不受限。 |
 | `secretRealm` | `Create`、`Destroy`、`EnterPre`、`EnterPost`、`Exit` | `definition()`（`Holder<SecretRealm>`）、`dimension()`（`ResourceKey<Level>`）、`index()`、`owner()`（`Optional<UUID>`）、`server()`；成员事件（`EnterPre`/`EnterPost`/`Exit`）另有 `member()`，只有 `EnterPre` 可取消。`Create` 在一份实例维度刚建好时发出，`Destroy` 在实例结束时发出——**无论是删掉地形还是只卸载保留**（被认领的秘境没人后只是休眠）。 |
 | `soul` | `TransferPre`、`TransferPost`、`ReclaimPre`、`ReclaimPost` | `entity()`、`soul()`；所有 `*Pre` 可取消。 |
-| `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`BREAK`、`RECALL`、`RELEASE`；`Pre` 可取消。 |
+| `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`RELEASE`、`DEATH`、`RECALL`、`RECALL_COMPLETED`（召回闩被消费，不可取消）；`Pre` 可取消。 |
 | `tribulation` | `StartPre`、`StartPost`、`EntryPre`、`EntryPost`、`Complete` | `tribulation()`（`Holder<Tribulation>`）、`data()`；两种节拍事件另有 `index()`（第几拍，从 0 数）与 `entry()`。`data()` 就是附件本身：`peek()`/`remaining()` 读队首与还剩几拍，`state()` 读当前节拍写下的现场，`windup()` 读启动前摇还剩多少 tick（0 表示已经在走时间线、或这场天劫没有前摇）。`StartPre` 可取消（拒绝这次启动），`EntryPre` 可取消（跳过该节拍）。 |
 
 ### `forging` 的两条额外约定

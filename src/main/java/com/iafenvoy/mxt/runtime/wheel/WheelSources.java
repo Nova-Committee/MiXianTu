@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -95,13 +96,19 @@ public final class WheelSources {
             case MAIN_HAND -> List.of(entity.getMainHandItem());
             case OFF_HAND -> List.of(entity.getOffhandItem());
             case CURIOS -> CuriosIntegration.equipped(entity);
+            // The bell itself, which is what the contract page is read from; it grants no abilities.
+            case CONTRACT -> List.of(entity.getMainHandItem(), entity.getOffhandItem());
         };
     }
 
     // The check behind every trigger: the id alone is not enough, because the same ability can come from something
-    // the player no longer has.
+    // the player no longer has. An order is checked against the bell's tuned beast the same way - the creature it
+    // names is what decides whether the order is still reachable, and the service behind it checks the record.
     public static boolean offers(LivingEntity entity, WheelSource source, WheelEntryKind kind, Identifier id) {
         if (kind == null || id == null || !kind.holdsEntry()) return false;
+        if (source == WheelSource.CONTRACT)
+            return kind == WheelEntryKind.BEHAVIOR
+                    && ContractBells.selection(entity).map(selection -> selection.offers(id)).orElse(false);
         if (!source.configured())
             return kind == WheelEntryKind.ABILITY
                     && abilities(entity, source).stream().anyMatch(ability -> HolderHelper.id(ability).equals(id));

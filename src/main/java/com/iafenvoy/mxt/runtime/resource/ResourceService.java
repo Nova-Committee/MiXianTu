@@ -38,7 +38,7 @@ public final class ResourceService {
         return Result.changed(clamped);
     }
 
-    public static Result initialize(ResourceHolderAttachment holder, Identifier id, Resource definition, FormulaContext context) {
+    public static Result initialize(ResourceHolderAttachment holder, Identifier id, FormulaContext context) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> initialize(holder, resource, context)).orElse(Result.invalid());
     }
@@ -56,7 +56,7 @@ public final class ResourceService {
         return Result.changed(value);
     }
 
-    public static Result change(ResourceHolderAttachment holder, Identifier id, Resource definition, double amount, FormulaContext context) {
+    public static Result change(ResourceHolderAttachment holder, Identifier id, double amount, FormulaContext context) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .map(resource -> change(holder, resource, amount, context)).orElse(Result.invalid());
     }
@@ -74,7 +74,7 @@ public final class ResourceService {
         return base.withResource(spirit, resource);
     }
 
-    public static FormulaContext formulaContext(CultivationAttachment spirit, Identifier resource, Resource definition, FormulaContext base) {
+    public static FormulaContext formulaContext(CultivationAttachment spirit, Identifier resource, FormulaContext base) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource)
                 .map(value -> formulaContext(spirit, value, base)).orElse(base);
     }
@@ -84,7 +84,7 @@ public final class ResourceService {
                 .withResource(entity.getData(MxtAttachments.CULTIVATION), resource);
     }
 
-    public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, Resource definition, FormulaContext base) {
+    public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, FormulaContext base) {
         return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource)
                 .map(value -> formulaContext(entity, value, base)).orElse(base);
     }

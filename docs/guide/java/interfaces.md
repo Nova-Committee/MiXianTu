@@ -2,7 +2,7 @@
 title: 特殊公开接口
 ---
 
-本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`Toggable` 留在 `data/ability`——它不算对外 API**（它是本体登记"需要按键的技能"的形状，`mxt:active` / `mxt:flight` / `mxt:storage` 三个技能类型实现它）。哪些东西**不**进 `api` 见 `AGENTS.md` §3：只有"别的模组会实现或调用"的契约才进去，服务类的静态代理是明确的推迟项。
+本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；同一天这一族又多了三个生物侧契约（`Contractable`、`ContractOperations`、`CaptureListener`，见文末三节）。该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`Toggable` 留在 `data/ability`——它不算对外 API**（它是本体登记"需要按键的技能"的形状，`mxt:active` / `mxt:flight` / `mxt:storage` 三个技能类型实现它）。哪些东西**不**进 `api` 见 `AGENTS.md` §3：只有"别的模组会实现或调用"的契约才进去，服务类的静态代理是明确的推迟项。
 
 ### `AuraAccess`
 
@@ -38,8 +38,32 @@ title: 特殊公开接口
 
 ### `WheelMenuEntry`
 
-轮盘条目的纯客户端接口：`kind()`（技能 / 灵气）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider`（唯一实现 `WheelContent`）给出——它的入参是 `(player, source)`，`source` 是 `WheelSource`（主盘 / 主手物品 / 副手物品 / 法器），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
+轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 契约行为）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider`（唯一实现 `WheelContent`）给出——它的入参是 `(player, source)`，`source` 是 `WheelSource`（主盘 / 主手物品 / 副手物品 / 法器 / 契约灵兽），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
 
 ### `Toggable`
 
-**需要按键才能发动的技能**（2026-09-22 作为 `ToggableArtifactAbility` 诞生，2026-09-23 合并后升格为与宿主无关的 `Toggable`，同日内联技能取消后删掉了它的 `key()` 与 `displayName()`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））：判据是一句话——**凡是要按键才发动的都算技能、都进轮盘**。它是**数据层**的接口，不是 `api` 包里的对外契约，任何 `mxt:ability_type` 都能实现它。接口把三件事交给实现自己回答：`state(ctx)`（有没有开关状态、现在是哪一边；**空 = 一次性**，如储物）、`activate(ctx)`（按下了；只有服务端调，返回 `Result(changed, failure, failedResource)`，`Failure` 的 15 个取值与 `AbilityService.Failure` 同名同义，会被轮盘翻译成动作栏那一句——按压与施放共用 `actionbar.mxt.ability.failure.*` 一份文案表，见 [`docs/guide/java/wheel.md`](wheel.md)），以及一个有默认实现的 `gated(ctx)`（这次按压要不要先过共用的"条件 + 冷却 + 消耗"闸门；开关在**关**的那一下返回 false，因为落地不该收费）。**这一格叫什么用技能自己的 `name`**，接口不再另给一个名字；`type` 也不需要报一个"宿主内的 key"——轮盘条目的身份就是这条技能的注册表 id。**状态归实现自己管**（飞行读 `FlightAttachment`，储物没有状态），轮盘不认识"这件事是什么"，只认识这几件事，所以加一个新技能类型不需要动轮盘。今天三个实现是 `mxt:active`（原本就按一下施放——它 `gated` 返回 false，因为施放事务自己付款）、`mxt:flight`（开关）与 `mxt:storage`（一次性——打开承载物的储物箱，容器菜单与窗口都复用原版箱子那一套，见 `docs/guide/java/screens.md`）。字段与玩家侧表现见 `docs/数据包格式.md` 的 `ability` / `artifact` 两节。
+**需要按键才能发动的技能**（2026-09-22 作为 `ToggableArtifactAbility` 诞生，2026-09-23 合并后升格为与宿主无关的 `Toggable`，同日内联技能取消后删掉了它的 `key()` 与 `displayName()`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））：判据是一句话——**凡是要按键才发动的都算技能、都进轮盘**。它是**数据层**的接口，不是 `api` 包里的对外契约，任何 `mxt:ability_type` 都能实现它。接口把三件事交给实现自己回答：`state(ctx)`（有没有开关状态、现在是哪一边；**空 = 一次性**，如储物）、`activate(ctx)`（按下了；只有服务端调，返回 `Result(changed, failure, failedResource)`，`Failure` 的 15 个取值与 `AbilityService.Failure` 同名同义，会被轮盘翻译成动作栏那一句——按压与施放共用 `actionbar.mxt.ability.failure.*` 一份文案表，见 [`docs/guide/java/wheel.md`](wheel.md)），以及一个有默认实现的 `gated(ctx)`（这次按压要不要先过共用的"条件 + 冷却 + 消耗"闸门；开关在**关**的那一下返回 false，因为落地不该收费）。**这一格叫什么用技能自己的 `name`**，接口不再另给一个名字；`type` 也不需要报一个"宿主内的 key"——轮盘条目的身份就是这条技能的注册表 id。**状态归实现自己管**（飞行读**承载者**的 `FlightAttachment`，储物没有状态），轮盘不认识"这件事是什么"，只认识这几件事，所以加一个新技能类型不需要动轮盘。今天三个实现是 `mxt:active`（原本就按一下施放——它 `gated` 返回 false，因为施放事务自己付款）、`mxt:flight`（开关）与 `mxt:storage`（一次性——打开承载物的储物箱，容器菜单与窗口都复用原版箱子那一套，见 `docs/guide/java/screens.md`）。字段与玩家侧表现见 `docs/数据包格式.md` 的 `ability` / `artifact` 两节。
+
+### `Contractable`
+
+让生物**能被契约**的资格接口（2026-09-24）：**实现它就是全部资格**——数据包无法把一个实体变成契约对象，所以原版生物默认都签不了；"不是所有生物均可契约"就是这条的落地。它同时继承原版的 `OwnableEntity`，所以"谁是主人"整个交给**原版的 owner 逻辑**：`getOwner()` 由 `EntityReference` 经所在维度解析、`getRootOwner()` 白拿。自己的成员是 `setContractOwner(owner)`（签订时由框架调用，生物把主人写进**它自己存主人的地方**）、`acceptsContract(context)`（这份契约类型它签不签；默认读**该契约类型自己的实体类型标签** `#<命名空间>:contract/<路径>`，标签不存在或为空即不限制，见 [`contract_type`](../../数据包格式.md#contract_type)）、`onContractBound(context)`（主人写好之后）、`onContractReleased(context)` 与 `onContractDeath(context)`（**解除**与**死亡**是两个钩子，谁也不替谁猜）。
+
+**主人没有第二份**：本体不存主人，`mxt:contract` 附件里也没有这个字段——`getOwnerReference()` 与 `setContractOwner` 都由实体自己实现（原版驯服动物用 `TamableAnimal` 已有的那一对，其它生物自己存一个 `EntityReference<LivingEntity>`，放进自己的存档与同步数据里）。于是框架侧只有一个读点 `Contracts.ownerOf` / `Contracts.owner`，问的永远是实体。**解除契约只清契约记录**：要不要连主人一起忘掉由生物自己在 `onContractReleased` 里决定，"解约"与"忘掉谁驯服了它"不是同一件事。
+
+契约的其余部分不在接口里：契约类型、签订时刻、召回闩只有一份，在生物的 `mxt:contract` 附件上。
+
+### `ContractOperations`
+
+契约之后"这只灵兽自己怎么做"的接口：`recall(context)`（主人摇了铃，落地动作交给它）、`follow(context)`（每 tick 跟随；主人必须在线且同维度）、`onDealtDamage(context, target, damage)`（自己打出伤害、结算之后），以及 2026-09-25 加进来的行为三件套（下段）。**每个默认实现就是框架从前写死的那一段**——`recall` 直接传送到主人，`follow` 超过 32 格传送、超过 4 格寻路——所以实现了接口却什么都不覆写的灵兽，行为与从前完全一致。**不实现它等于不要这套通用行为**：这只生物仍然能被契约，但框架不替它跟随、不替它召回落地、也不上报协战，`follow_action` 与 `combat_action` 因此不跑（它们本来就是给这两个时刻配色的）。带着生物本身、主人 UUID、在线的主人（离线为空）与契约类型的 `ContractContext` 是这些方法的入参。
+
+**行为（order）是三类东西，都不在接口的固定形状里**：`behaviors()` 是"这只兽认哪些命令"（默认＝`ContractBehaviors.BUILT_IN` 的跟随 / 游荡 / 驻守 / 召回，**两侧都要能答**，御兽铃读它填轮盘页）、`onBehaviorSelected(context, behavior)` 是**输入**（主人下了命令；返回 `false` 即拒绝，记录保持原样）、`tick(context, behavior)` 是每 tick 的驱动（默认分派到 `follow` / `wander` / `stay`，不认识的命令什么都不做）。`wander` 与 `stay` 是新增的默认：前者在主人 32 格外先传送过去（免得游荡的兽被丢下），否则每约两秒、且寻路空闲时在主人周围 3–8 格挑一个新点走过去——**框架不往实体里塞 goal**，所以生物自己的游荡目标照旧，要改由它自己覆写；后者停寻路并清攻击目标（"停下来"而不是"冻住"）。
+
+**行为本身是类，不是枚举**（`data/creature/ContractBehavior` + `ContractBehaviors`，用户点名要求）：`new ContractBehavior(id, momentary)` 一把就是一条命令，`ContractBehaviors.register(...)` 让它能被 id 读回来，内容方因此**不用改框架的清单**就能加一条（"停手""回窝""盘旋"都行）；框架只保证自己的四个内置项一定在。`momentary` 区分"常驻"与"只此一次"（召回的闩与冷却归框架，所以它走 `ContractService.requestRecall`，不写记录）。**当前命令只有一份**，在 `mxt:contract` 附件上（存 id；读不出来的 id 与旧存档一律退回跟随）。**输入端唯一出口**是 `runtime/creature/ContractBehaviorService.request(...)`：御兽铃的轮盘与 `/contract behavior` 都走它，检查顺序是"已绑定 → 主人 → 实现了接口 → 这条命令在它的清单里 → 生物的 `onBehaviorSelected` → 写入或执行一次"。
+
+**御兽铃是指针**：右键生物＝把这只兽对准（服务端把"生物 UUID + 显示名 + 它自己答的命令"写进物品组件 `mxt:contract_bell`），右键空处＝在客户端打开轮盘并停在「契约灵兽」那一页——页面读的正是铃上那份快照，所以不需要在客户端解析一只可能没加载的灵兽。下命令（含召回）是轮盘里的一格，走 `WheelService` 与 `WheelEntryKind.BEHAVIOR`。
+
+### `CaptureListener`
+
+**被捕捉与释放的通知接口**（2026-09-24；它前身 `Capturable` 的门槛已经取消）：捕捉**不是实体的资格**——任何生物都可能被捕捉，**怎么捕捉由物品决定**（能装什么、要不要契约、代价多少，全是那个物品自己的规则；灵兽袋自己的规则是"你自己的已契约灵兽、一次一只"）。所以这里只剩两个可选钩子：`onCaptured(captor)`（被收走之后，实体离开世界之前调用）与 `onReleased(captor)`（重新回到世界之后），默认什么都不做。**不实现它也照样能被捕捉**，只是收不到这两次通知；`captor` 在不是玩家动手时为空。运行时查找点同样是 `runtime/creature/Contracts`。
+
+这三个接口的查找只有一处（`runtime/creature/Contracts`），卷轴、御兽铃、灵兽袋、命令与两个事件桥都走它；契约类型的字段、代价与上限见 [`contract_type`](../../数据包格式.md#contract_type)，命令见[命令](../play/commands)。

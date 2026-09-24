@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
+import com.iafenvoy.mxt.runtime.creature.BoundBeastsAttachment;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.SecretRealmWorldAttachment;
@@ -52,6 +53,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FormationWorldAttachment>> FORMATION_WORLD = REGISTRY.register("formation_world", () -> AttachmentType.builder(FormationWorldAttachment::new).serialize(FormationWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkAttachment>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkAttachment::new).serialize(AuraChunkAttachment.CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SecretRealmWorldAttachment>> SECRET_REALM_WORLD = REGISTRY.register("secret_realm_world", () -> AttachmentType.builder(SecretRealmWorldAttachment::new).serialize(SecretRealmWorldAttachment.MAP_CODEC).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<BoundBeastsAttachment>> BOUND_BEASTS = REGISTRY.register("bound_beasts", () -> AttachmentType.builder(BoundBeastsAttachment::new).serialize(BoundBeastsAttachment.MAP_CODEC).build());
 
     @SubscribeEvent
     public static void flushDirtyAttachments(Post event) {

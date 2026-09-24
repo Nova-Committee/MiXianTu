@@ -26,7 +26,10 @@ public enum WheelSource implements StringRepresentable {
     CONFIGURED,
     MAIN_HAND,
     OFF_HAND,
-    CURIOS;
+    CURIOS,
+    // The orders of the beast the held taming bell is tuned to. A derived page like the equipment ones: it is
+    // empty until a bell names a creature, and it is not part of the saved layout.
+    CONTRACT;
 
     public static final Codec<WheelSource> CODEC = StringRepresentable.fromEnum(WheelSource::values);
     public static final StreamCodec<ByteBuf, WheelSource> STREAM_CODEC = MiscStreamCodecs.enumCodec(WheelSource.class);
@@ -61,6 +64,9 @@ public enum WheelSource implements StringRepresentable {
             case MAIN_HAND -> List.of(AbilitySources.equipment(EquipmentSlot.MAINHAND, entity.getMainHandItem()));
             case OFF_HAND -> List.of(AbilitySources.equipment(EquipmentSlot.OFFHAND, entity.getOffhandItem()));
             case CURIOS -> List.of(AbilitySources.CURIOS);
+            // Orders are not granted abilities: the page holds what the tuned creature answers with, not what an
+            // item grants.
+            case CONTRACT -> List.of();
         };
     }
 

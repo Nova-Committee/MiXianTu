@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.command.server.AbilityCommand;
 import com.iafenvoy.mxt.command.server.AuraCommand;
 import com.iafenvoy.mxt.command.server.CurseCommand;
+import com.iafenvoy.mxt.command.server.ContractCommand;
 import com.iafenvoy.mxt.command.server.DisplayCommand;
 import com.iafenvoy.mxt.command.server.FormationCommand;
 import com.iafenvoy.mxt.command.server.FriendCommand;
@@ -46,6 +47,7 @@ public final class ServerCommandManager {
         Builder<Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>, BooleanEntry> builder = ImmutableMap.builder();
         builder.put(AbilityCommand::build, config.ability);
         builder.put(AuraCommand::build, config.aura);
+        builder.put(ContractCommand::build, config.contract);
         builder.put(CurseCommand::build, config.curse);
         builder.put(_ -> DisplayCommand.build(), config.display);
         builder.put(FormationCommand::build, config.formation);

@@ -387,7 +387,7 @@ public final class CultivationActionService {
                                           FormulaContext context) {
         for (Holder<Aura> aura : realmCultivations(spirit)) {
             ActiveCultivation active = active(aura);
-            ResourceService.change(resources, active.id(), active.definition(), absorbed,
+            ResourceService.change(resources, active.id(), absorbed,
                     ResourceService.formulaContext(spirit, active.resource(), context));
         }
     }
@@ -396,7 +396,7 @@ public final class CultivationActionService {
                                           double absorbed, FormulaContext context) {
         for (Holder<Aura> aura : realmCultivations(spirit)) {
             ActiveCultivation active = active(aura);
-            ResourceService.change(resources, active.id(), active.definition(), absorbed,
+            ResourceService.change(resources, active.id(), absorbed,
                     ResourceService.formulaContext(entity, active.resource(), context));
         }
     }
@@ -450,7 +450,7 @@ public final class CultivationActionService {
             double consumed = Math.min(conversion.resourceToCultivationMaxPerTick(),
                     Math.min(available, remainingProgress / conversion.resourceToCultivation()));
             if (consumed > 0.0D) {
-                ResourceService.change(resources, active.id(), definition, -consumed, context);
+                ResourceService.change(resources, active.id(), -consumed, context);
                 CultivationService.addProgressForChain(spirit, aura, consumed * conversion.resourceToCultivation(), context);
                 return;
             }
@@ -462,7 +462,7 @@ public final class CultivationActionService {
                     Math.min(spirit.cultivationProgress(aura), capacity / conversion.cultivationToResource()));
             if (extracted > 0.0D) {
                 spirit.setCultivationProgress(aura, Math.max(0.0D, spirit.cultivationProgress(aura) - extracted));
-                ResourceService.change(resources, active.id(), definition, extracted * conversion.cultivationToResource(), context);
+                ResourceService.change(resources, active.id(), extracted * conversion.cultivationToResource(), context);
             }
         }
     }

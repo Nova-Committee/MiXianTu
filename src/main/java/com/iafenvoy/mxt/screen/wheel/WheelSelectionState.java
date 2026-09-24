@@ -110,7 +110,15 @@ public final class WheelSelectionState {
         page = wrap ? Math.floorMod(next, pages.size()) : Mth.clamp(next, 0, pages.size() - 1);
     }
 
-    public static void firstPage() {
+    // Opening at a named page: the wheel key opens on the player's own page, while an item opens on the page it is
+    // about. A source with no page up (nothing to read it from) leaves the first page, which the empty check
+    // reports.
+    public static void firstPageOf(WheelSource source) {
+        for (int index = 0; index < pages.size(); index++)
+            if (pages.get(index).source() == source) {
+                page = index;
+                return;
+            }
         page = 0;
     }
 

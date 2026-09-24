@@ -29,6 +29,9 @@ import java.util.Set;
  * one chain holds its tier, that one; two chains holding the same tier leave "where does this climb to" unanswered
  * on purpose rather than guessing.
  */
+// TODO: may be removed. It holds what a single Quality cannot say - the order, the default tier and the price of
+// each step; QualityChainService, the quality_chain field on the four binding tables and both upgrade entry
+// points would go with it if the ladder ever moves back into Quality itself. Marked, not scheduled.
 public record QualityChain(Component name, Component description, List<Holder<ItemQuality>> tiers,
                            Optional<Holder<ItemQuality>> defaultTier, List<Step> upgrades) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.QUALITY_CHAIN.identifier());

@@ -230,8 +230,8 @@ public final class AbilityEventBridge {
     }
 
     private static boolean initializeResource(LivingEntity entity, ResourceHolderAttachment holder, Reference<Resource> resource) {
-        return HolderHelper.idOptional(resource).map(id -> ResourceService.initialize(holder, id, resource.value(),
-                ResourceService.formulaContext(entity, id, resource.value(), FormulaContext.EMPTY)).changed()).orElse(false);
+        return HolderHelper.idOptional(resource).map(id -> ResourceService.initialize(holder, id,
+                ResourceService.formulaContext(entity, id, FormulaContext.EMPTY)).changed()).orElse(false);
     }
 
     // Only an ability that declares mxt:charges is looked at, and AbilityStorage.recharge writes only when a step

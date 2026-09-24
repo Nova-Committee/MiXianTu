@@ -42,7 +42,7 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
         // Each cost is evaluated with the formula context of the resource it spends, so a cost may refer to that
         // resource's realm rank and absorbed aura.
         FormulaContext formula = context.payer() == null ? context.formula()
-                : ResourceService.formulaContext(context.payer(), this.id(), this.resource.value(), context.formula());
+                : ResourceService.formulaContext(context.payer(), this.id(), context.formula());
         double value = this.evaluate(formula);
         if (Double.isNaN(value)) return Either.right(CostFailure.INVALID_AMOUNT);
         if (!context.hasChannel(CostChannel.RESOURCE_ACCOUNT)) return Either.right(CostFailure.NO_CHANNEL);

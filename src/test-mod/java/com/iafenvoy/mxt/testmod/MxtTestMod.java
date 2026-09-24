@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import org.slf4j.Logger;
 
@@ -29,10 +30,16 @@ public final class MxtTestMod {
         MxtTestItems.REGISTRY.register(modBus);
         MxtTestForgeItems.REGISTRY.register(modBus);
         MxtTestTechniqueItems.REGISTRY.register(modBus);
+        MxtTestEntities.REGISTRY.register(modBus);
+        modBus.addListener(MxtTestMod::registerAttributes);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::grantTestAbilities);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::logCurseRemovals);
         LOGGER.info("Loaded MiXianTu test mod");
+    }
+
+    private static void registerAttributes(EntityAttributeCreationEvent event) {
+        event.put(MxtTestEntities.PROBE_BEAST.get(), ProbeBeast.createAttributes().build());
     }
 
     // Nothing in the mod logs a removal by itself, and the reason is the one part no data pack can observe.

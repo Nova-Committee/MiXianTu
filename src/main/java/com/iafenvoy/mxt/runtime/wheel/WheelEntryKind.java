@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.wheel;
 
 import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.MiscStreamCodecs;
@@ -27,7 +28,10 @@ public enum WheelEntryKind implements StringRepresentable {
     // Part of this enum so a layout is always twelve entries, never a null kind.
     EMPTY,
     ABILITY,
-    AURA;
+    AURA,
+    // An order for a bound creature. The id is a {@code ContractBehavior} id rather than a registry entry, and the
+    // page it appears on is read from the taming bell's tuned beast.
+    BEHAVIOR;
 
     public static final Codec<WheelEntryKind> CODEC = Codec.STRING.comapFlatMap(WheelEntryKind::parse, WheelEntryKind::getSerializedName);
     public static final StreamCodec<ByteBuf, WheelEntryKind> STREAM_CODEC = MiscStreamCodecs.enumCodec(WheelEntryKind.class);
@@ -57,6 +61,8 @@ public enum WheelEntryKind implements StringRepresentable {
         return switch (this) {
             case ABILITY -> Abilities.resolve(access, id).isPresent();
             case AURA -> MxtDatapackRegistries.holder(access, MxtResourceKeys.AURA, id).isPresent();
+            // Orders live in code, not in a registry, so the registry access is not what answers here.
+            case BEHAVIOR -> ContractBehaviors.isKnown(id);
             case EMPTY -> false;
         };
     }

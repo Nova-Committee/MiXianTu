@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
@@ -33,6 +32,7 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
@@ -218,16 +218,18 @@ public final class ArtifactService {
         return definition(access, stack).map(holder -> holder.value().curiosEquipable()).orElse(false);
     }
 
-    // Wherever the player keeps it: both hands, the rest of the inventory, and the Curios slots. Deliberately
-    // wider than what a wheel page reads - an open screen has to keep working while the artifact is moved around
-    // the inventory, and has to stop the moment it leaves the player, because what it writes into would otherwise
-    // be a stack nobody carries, which is how items disappear.
-    public static Optional<ItemStack> carried(Provider access, Player player, Identifier abilityId) {
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
-            if (holds(access, player.getInventory().getItem(slot), abilityId))
-                return Optional.of(player.getInventory().getItem(slot));
-        for (ItemStack stack : CuriosIntegration.equippedLive(player))
+    // Wherever the holder keeps it: both hands and the Curios slots for anything living, plus the whole inventory
+    // when the holder is a player. Deliberately wider than what a wheel page reads - an open screen has to keep
+    // working while the artifact is moved around the inventory, and has to stop the moment it leaves the holder,
+    // because what it writes into would otherwise be a stack nobody carries, which is how items disappear.
+    public static Optional<ItemStack> carried(Provider access, LivingEntity holder, Identifier abilityId) {
+        for (ItemStack stack : ArtifactUpkeepService.carried(holder))
             if (holds(access, stack, abilityId)) return Optional.of(stack);
+        if (holder instanceof Player player)
+            for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+                ItemStack stack = player.getInventory().getItem(slot);
+                if (holds(access, stack, abilityId)) return Optional.of(stack);
+            }
         return Optional.empty();
     }
 

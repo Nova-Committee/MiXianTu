@@ -20,7 +20,6 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrowableProjectile;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.ClipContext.Block;
@@ -53,7 +52,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         super(type, level);
     }
 
-    public SpiritBurstEntity(Level level, Player owner, Holder<Aura> aura, int amount, int particleColor) {
+    public SpiritBurstEntity(Level level, LivingEntity owner, Holder<Aura> aura, int amount, int particleColor) {
         this(MxtEntityTypes.SPIRIT_BURST.get(), level);
         this.setOwner(owner);
         this.setAura(aura);

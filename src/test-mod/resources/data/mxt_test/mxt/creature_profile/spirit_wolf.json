@@ -1,10 +1,8 @@
 {
-  "realm_stages": ["mxt_test:foundation"],
+  "entities": ["minecraft:wolf", "#mxt_test:spirit_wolves"],
   "intelligence": 12,
   "condition": { "type": "mxt:always_true" },
-  "inner_core": "minecraft:amethyst_shard",
-  "contract_tags": ["mxt_test:contract/master_servant"],
-  "entity_type_tags": ["minecraft:wolf", "#mxt_test:spirit_wolves"],
+  "inner_core": { "id": "minecraft:amethyst_shard" },
   "preferred_aura_elements": ["mxt_test:fire", "#mxt_test:warm_elements"],
   "minimum_aura": { "mxt_test:spirit_power": 10.0 }
 }

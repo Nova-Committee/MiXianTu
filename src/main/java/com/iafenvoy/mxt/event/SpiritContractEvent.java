@@ -54,5 +54,13 @@ public abstract class SpiritContractEvent extends Event {
         }
     }
 
-    public enum Action {BIND, BREAK, RECALL, RELEASE}
+    // One value per moment, so a listener never has to guess which of two events it is looking at: a release
+    // and a death both end a contract and are still told apart.
+    public enum Action {
+        BIND,
+        RELEASE,
+        DEATH,
+        RECALL,
+        RECALL_COMPLETED
+    }
 }

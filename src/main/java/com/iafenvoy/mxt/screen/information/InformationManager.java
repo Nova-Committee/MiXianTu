@@ -64,6 +64,8 @@ public final class InformationManager {
         INFORMATION.put(id, new RegisteredInformation(side, collector));
     }
 
+    // Reserved extension point: the panel describes the local player only. Showing another entity means widening
+    // the collector's subject to LivingEntity (guarding the four player-only rows) plus a target for the screen.
     public static List<InformationEntry> collectEntries(Player player, Side side) {
         if (player == null) return List.of();
         InformationCollector collector = new InformationCollector(player);

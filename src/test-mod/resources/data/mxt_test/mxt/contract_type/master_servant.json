@@ -4,6 +4,8 @@
     "type": "mxt:target_action",
     "action": { "type": "mxt:set_on_fire", "ticks": 40 }
   },
-  "break_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 },
-  "penalty_action": { "type": "mxt:set_on_fire", "ticks": 100 }
+  "release_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 },
+  "death_action": { "type": "mxt:set_on_fire", "ticks": 100 },
+  "costs": [{ "id": "mxt_test:qi", "amount": 5 }],
+  "recall_cooldown": 100
 }

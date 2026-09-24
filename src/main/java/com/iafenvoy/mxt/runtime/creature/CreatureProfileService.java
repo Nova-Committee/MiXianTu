@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.creature;
 
-import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -8,26 +7,20 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.tags.TagKey;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Optional;
 
 /**
- * Selects and persists a tagged creature profile after evaluating its entity condition, and reads the persisted
- * profile back for other modules that need it, such as contract eligibility.
+ * Selects and persists a tagged creature profile after evaluating its entity condition, runs the profile's spawn
+ * action once, and reads the persisted profile back for other modules that need it, such as contract eligibility.
  */
 public final class CreatureProfileService {
     private CreatureProfileService() {
@@ -59,29 +52,19 @@ public final class CreatureProfileService {
         }
         if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
         MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id)
-                .ifPresent(profile -> creature.getData(MxtAttachments.CREATURE_SPIRIT)
-                        .apply(profile, intelligence,
-                                definition.innerCore().flatMap(core -> BuiltInRegistries.ITEM.get(core).map(holder -> (Holder<Item>) holder)),
-                                definition.lootTable().map(table -> ResourceKey.create(Registries.LOOT_TABLE, table))));
+                .ifPresent(profile -> {
+                    creature.getData(MxtAttachments.CREATURE_SPIRIT)
+                            .apply(profile, intelligence, definition.innerCore().orElse(ItemStack.EMPTY));
+                    // The profile is written once per creature, so its spawn action runs once: after the write, so
+                    // the action can already read the profile it belongs to.
+                    definition.spawnAction().execute(creature, context);
+                });
         return true;
     }
 
     public static boolean matchesType(Mob creature, CreatureProfile definition) {
         Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(creature.getType());
-        return RegistryCodecs.matches(definition.entityTypeTags(), BuiltInRegistries.ENTITY_TYPE, Registries.ENTITY_TYPE, type);
-    }
-
-    // contract_tags entries are read inside the mxt:contract_type namespace, so each names the type's own id or a
-    // native tag it declares. Client-safe: a client answers "no match" rather than throwing.
-    public static boolean declaresContract(Entity creature, Holder<ContractType> type) {
-        List<Identifier> declared = creature.getData(MxtAttachments.CREATURE_SPIRIT).profile()
-                .map(Holder::value)
-                .map(CreatureProfile::contractTags)
-                .orElse(List.of());
-        if (declared.isEmpty()) return false;
-        Identifier contractId = HolderHelper.idOrNull(type);
-        return declared.stream().anyMatch(entry -> entry.equals(contractId)
-                || type.is(TagKey.create(MxtResourceKeys.CONTRACT_TYPE, entry)));
+        return RegistryCodecs.matches(definition.entities(), BuiltInRegistries.ENTITY_TYPE, Registries.ENTITY_TYPE, type);
     }
 
     public static boolean applySelected(Mob creature) {

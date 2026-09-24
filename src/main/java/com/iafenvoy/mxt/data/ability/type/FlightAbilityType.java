@@ -10,7 +10,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
@@ -42,7 +42,7 @@ public record FlightAbilityType(NumberProvider speed, FlightDisplay display) imp
     }
 
     // Landing is free: whatever the flight cost was paid per tick while it lasted, and charging a price for coming
-    // down would leave a player who cannot pay stuck in the air.
+    // down would leave a holder who cannot pay stuck in the air.
     @Override
     public boolean gated(ToggleContext context) {
         return !this.state(context).orElse(false);
@@ -50,14 +50,14 @@ public record FlightAbilityType(NumberProvider speed, FlightDisplay display) imp
 
     @Override
     public Result activate(ToggleContext context) {
-        if (!(context.holder() instanceof ServerPlayer player)) return Result.refused(Failure.UNAVAILABLE);
+        LivingEntity holder = context.holder();
         if (this.state(context).orElse(false)) {
-            FlightService.dismount(player, FlightService.Failure.STOPPED);
+            FlightService.dismount(holder, FlightService.Failure.STOPPED);
             return Result.activated();
         }
         ItemStack carrier = context.carrier();
         if (carrier == null || carrier.isEmpty()) return Result.refused(Failure.NO_CARRIER);
-        FlightService.Result mounted = FlightService.mount(player, carrier, context.ability(), context.formula());
+        FlightService.Result mounted = FlightService.mount(holder, carrier, context.ability(), context.formula());
         if (mounted.failure() == null) return Result.activated();
         // Each reason a take-off can give is reported as itself: NOT_FLYABLE cannot happen here (the type was just
         // read) and the rest are dismount-time states.

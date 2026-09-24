@@ -70,6 +70,7 @@
 | `31_多轮盘与轮盘来源设计.md`   | 一个玩家几张盘、每张盘的内容从哪来、请求怎么被服务端认下来                                                                | 已落地（含同日两轮修正）                                                                                                                                                                   |
 | `32_法器开关与轮盘接线设计.md`  | 法器技能（`ToggableArtifactAbility`）与轮盘接线                                                         | **部分有效**：`ToggableArtifactAbility` / `ArtifactToggleService` / `WheelEntryKind.ARTIFACT` 已于 2026-09-23 被 `41` 取代（升格为通用 `Toggable` + `AbilityActivationService`）；文内推理与储物界面结论仍成立 |
 | `35_御剑飞行系统设计.md`     | 通用御剑飞行：`mxt:flight` 加可选 `mount`（外形/尺寸/乘客位置/步高/坐姿）与 `custody`，载具实体的同步、朝向与渲染器，生命周期出口清单与 7 处待拍板 | 方案（未落地；外部工程「飞行法器」对照 + 现状缺口，含 3 条只读代码推断未实机）                                                                                                                                     |
+| `47_生物与契约接口设计.md`   | 生物模块接口化：契约资格从数据（`creature_profile.contract_tags`）改成代码（实体实现 `Contractable` / `ContractOperations`），捕捉改成物品自己的规则、实体只收 `CaptureListener` 通知；主人交给原版 `OwnableEntity`；含 `contract_type` 的 `costs` / `max_owned` / `recall_cooldown`、主世界附件 `bound_beasts` 主人索引与 `/mxt contract` 命令；§14 追加契约兽的**行为**（`ContractBehavior` 类 + `ContractBehaviors` 装载，不是 enum）与御兽铃的轮盘输入；§11–§13 是落地记录与三处追加 | **已落地**（2026-09-24，§14 于 2026-09-25 追加；`compileJava`/`compileTestModJava`/`processTestModResources` 通过；两份 lang 一致；文档三处与文档站中英已同步；**`/mxt_test contract` 探针未实跑**）                                                                                                                                     |
 
 ### D. 分析与参考
 
@@ -124,6 +125,7 @@
 - **伤害与元素**：`21`（元素补完，含附着与反应）→ `29`（加成口径与直通标签）→ `30`（物品与元素通道，分批落地）。
 - **灵气**：`15`（缓存误差）→ `17`（解析记忆化）→ `方块灵气实现.md`（方块来源与查询范围映射）。
 - **能力与触发内核**：`05`（能力模型）→ `33`（Trigger 分层与订阅重建）→ `40`（与法器能力的统一与合并，已落地）→ 各玩法模块按需复用。
+- **生物 / 契约**：`47`（资格归代码、行为归实体；未落地，待拍板）。
 
 ## 什么时候必须写
 

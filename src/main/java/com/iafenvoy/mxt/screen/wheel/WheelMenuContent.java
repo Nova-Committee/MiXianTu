@@ -78,6 +78,16 @@ public final class WheelMenuContent {
         return false;
     }
 
+    // Whether one source's own page holds anything: what an item-opened wheel asks before it opens, since the
+    // general check would open it on another page instead of saying that this item has nothing to offer.
+    public static boolean hasAnyEntry(List<WheelPage> pages, WheelSource source) {
+        for (WheelPage page : pages) {
+            if (page.source() != source) continue;
+            for (WheelMenuEntry entry : page.sectors()) if (entry != null) return true;
+        }
+        return false;
+    }
+
     // The cell a stored number stands for now. Nothing chosen yet, or a cell that no longer holds anything, falls
     // back to the first cell that does - an empty wheel is the only case that answers NONE, which is the check
     // every caller has to keep - while a number whose page is gone keeps the older rule of landing on the last

@@ -23,7 +23,7 @@
         "type": "mxt:weighted_list",
         "distribution": [
           {
-            "data": 0,
+            "value": 0,
             "weight": 1
           }
         ]

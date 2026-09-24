@@ -6,9 +6,15 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.creature.ContractBehavior;
+import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
+import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
+import com.iafenvoy.mxt.runtime.creature.ContractBells;
+import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
+import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -18,6 +24,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
@@ -66,6 +73,7 @@ public final class WheelService {
         return switch (kind) {
             case ABILITY -> press(player, source, id);
             case AURA -> burst(player, id);
+            case BEHAVIOR -> order(player, id);
             case EMPTY -> false;
         };
     }
@@ -120,6 +128,37 @@ public final class WheelService {
                 id, player.getGameProfile().name());
         player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.burst_failed"), true);
         return false;
+    }
+
+    // An order for the beast the player's bell is tuned to. The creature is re-read from the bell here, and the
+    // record, the owner and the order itself are all re-checked behind that, so a stale bell orders nothing.
+    private static boolean order(ServerPlayer player, Identifier id) {
+        ContractBehavior behavior = ContractBehaviors.byId(id).orElse(null);
+        if (behavior == null) {
+            // A layout or a hand-edited stack can name an order whose provider is gone; the same race the ability
+            // path guards against, one registry-like list later.
+            MiXianTu.LOGGER.info("Dropping the wheel order {} from {}: no such order is known",
+                    id, player.getGameProfile().name());
+            player.sendSystemMessage(ContractFeedback.of(ContractService.Failure.UNSUPPORTED_BEHAVIOR), true);
+            return false;
+        }
+        Mob beast = ContractBells.beast(player).orElse(null);
+        if (beast == null) {
+            MiXianTu.LOGGER.info("Dropping the wheel order {} from {}: no loaded beast is tuned to that bell",
+                    id, player.getGameProfile().name());
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.contract.no_beast"), true);
+            return false;
+        }
+        ContractService.Result result = ContractBehaviorService.request(beast, player.getUUID(), behavior, false);
+        if (!result.changed()) {
+            MiXianTu.LOGGER.info("Refusing the wheel order {} for {}: {}", id, player.getGameProfile().name(),
+                    result.failure());
+            player.sendSystemMessage(ContractFeedback.of(result.failure()), true);
+            return false;
+        }
+        player.sendSystemMessage(Component.translatable("actionbar.mxt.contract.ordered", beast.getDisplayName(),
+                behavior.name()), true);
+        return true;
     }
 
     // Both paths report the same way, because the client cannot tell a press from a cast: the reason comes out of

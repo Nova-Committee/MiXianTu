@@ -182,7 +182,7 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
         ).apply(i, EntryPoint::new));
         public static final Codec<List<EntryPoint>> LIST_CODEC = CombinedCodecs.combineCodec(CODEC);
 
-        // Same fallback as WeightedActionEntry: a non-positive total picks uniformly instead of failing.
+        // Same fallback as Weighted: a non-positive total picks uniformly instead of failing.
         public static EntryPoint select(List<EntryPoint> entries, RandomSource random) {
             if (entries.isEmpty()) return null;
             long total = entries.stream().mapToLong(entry -> Math.max(0, entry.weight())).sum();

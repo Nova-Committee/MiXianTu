@@ -18,10 +18,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -36,19 +37,19 @@ public final class SecretRealmService {
     private SecretRealmService() {
     }
 
-    public static Result enter(ServerPlayer player, Holder<SecretRealm> definition) {
+    public static Result enter(LivingEntity traveller, Holder<SecretRealm> definition) {
         Identifier id = HolderHelper.id(definition);
         if (MxtDatapackRegistries.holder(MxtResourceKeys.SECRET_REALM, id).isEmpty())
             return Result.rejected(Failure.DISABLED);
-        SecretRealmTravelAttachment travel = player.getData(MxtAttachments.SECRET_REALM_TRAVEL);
+        SecretRealmTravelAttachment travel = traveller.getData(MxtAttachments.SECRET_REALM_TRAVEL);
         if (travel.active()) return Result.rejected(Failure.ALREADY_TRAVELLING);
 
-        MinecraftServer server = player.level().getServer();
-        UUID member = player.getUUID();
-        long gameTime = player.level().getGameTime();
+        MinecraftServer server = traveller.level().getServer();
+        UUID member = traveller.getUUID();
+        long gameTime = traveller.level().getGameTime();
         SecretRealm value = definition.value();
-        FormulaContext context = FormulaContext.of(player);
-        if (!value.enterCondition().test(player, context))
+        FormulaContext context = FormulaContext.of(traveller);
+        if (!value.enterCondition().test(traveller, context))
             return Result.rejected(Failure.CONDITION_NOT_MET, value.enterDeniedMessage());
 
         // A clock that ran out while nobody was watching must not keep an instance alive.
@@ -95,61 +96,76 @@ public final class SecretRealmService {
             SecretRealmRegistry.replace(record);
         }
         int slot = Math.max(0, record.members().indexOf(member));
-        Arrival arrival = SecretRealmEntryLocator.arrival(destination, record, slot, player.getYRot(), player.getXRot());
-        travel.begin(definition, player.level().dimension().identifier(), player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
-        player.teleportTo(destination, arrival.position().x, arrival.position().y, arrival.position().z, Set.of(), arrival.yaw(), arrival.pitch(), false);
+        Arrival arrival = SecretRealmEntryLocator.arrival(destination, record, slot, traveller.getYRot(), traveller.getXRot());
+        travel.begin(definition, traveller.level().dimension().identifier(), traveller.getX(), traveller.getY(), traveller.getZ(), traveller.getYRot(), traveller.getXRot());
+        traveller.teleportTo(destination, arrival.position().x, arrival.position().y, arrival.position().z, Set.of(), arrival.yaw(), arrival.pitch(), false);
         NeoForge.EVENT_BUS.post(new EnterPost(server, definition, record.dimension(), record.index(), record.owner(), member));
-        value.enterAction().execute(player, context);
+        value.enterAction().execute(traveller, context);
         return Result.entered();
     }
 
-    public static Result exit(ServerPlayer player) {
-        SecretRealmTravelAttachment travel = player.getData(MxtAttachments.SECRET_REALM_TRAVEL);
-        Holder<SecretRealm> definition = travel.realm().orElse(null);
+    public static Result exit(LivingEntity traveller) {
+        SecretRealmTravelAttachment travel = travel(traveller);
+        Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
         if (definition == null || !travel.active()) return Result.rejected(Failure.NOT_TRAVELLING);
         SecretRealm value = definition.value();
-        if (!value.exitCondition().test(player, FormulaContext.of(player)))
+        if (!value.exitCondition().test(traveller, FormulaContext.of(traveller)))
             return Result.rejected(Failure.EXIT_DENIED, value.exitDeniedMessage());
-        return leave(player) ? Result.exited() : Result.rejected(Failure.MISSING_ORIGIN);
+        return leave(traveller) ? Result.exited() : Result.rejected(Failure.MISSING_ORIGIN);
     }
 
     // Also the exit used by an expiry and by an administrator, which is why it never consults the exit
-    // condition: a definition must not be able to lock a player inside a secret realm forever.
-    private static boolean leave(ServerPlayer player) {
-        SecretRealmTravelAttachment travel = player.getData(MxtAttachments.SECRET_REALM_TRAVEL);
-        Holder<SecretRealm> definition = travel.realm().orElse(null);
+    // condition: a definition must not be able to lock a traveller inside a secret realm forever.
+    private static boolean leave(LivingEntity traveller) {
+        SecretRealmTravelAttachment travel = travel(traveller);
+        Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
         if (definition == null || !travel.active()) return false;
-        MinecraftServer server = player.level().getServer();
+        MinecraftServer server = traveller.level().getServer();
         ServerLevel origin = origin(server, travel).orElse(null);
         if (origin == null) return false;
-        Optional<SecretRealmRecord> held = SecretRealmRegistry.ofMember(player.getUUID());
-        player.teleportTo(origin, travel.originX(), travel.originY(), travel.originZ(), Set.of(), travel.originYaw(), travel.originPitch(), false);
+        Optional<SecretRealmRecord> held = SecretRealmRegistry.ofMember(traveller.getUUID());
+        traveller.teleportTo(origin, travel.originX(), travel.originY(), travel.originZ(), Set.of(), travel.originYaw(), travel.originPitch(), false);
         travel.clear();
         if (held.isPresent()) {
             SecretRealmRecord record = held.get();
             List<UUID> members = new ArrayList<>(record.members());
-            members.remove(player.getUUID());
+            members.remove(traveller.getUUID());
             SecretRealmRecord updated = record.with(members);
             if (updated.empty()) retire(server, updated);
             else SecretRealmRegistry.replace(updated);
-            NeoForge.EVENT_BUS.post(new Exit(server, definition, record.dimension(), record.index(), record.owner(), player.getUUID()));
-            definition.value().exitAction().execute(player, FormulaContext.of(player));
+            NeoForge.EVENT_BUS.post(new Exit(server, definition, record.dimension(), record.index(), record.owner(), traveller.getUUID()));
+            definition.value().exitAction().execute(traveller, FormulaContext.of(traveller));
         }
         return true;
     }
 
+    // Only a read: a traveller that never entered a secret realm should not be handed an attachment for asking.
+    private static @Nullable SecretRealmTravelAttachment travel(LivingEntity traveller) {
+        return traveller.getExistingData(MxtAttachments.SECRET_REALM_TRAVEL).orElse(null);
+    }
+
+    // A member can be a player or anything else living: a player is found through the player list even when their
+    // chunk is unloaded, everything else through the level it is loaded in.
+    private static @Nullable LivingEntity findMember(MinecraftServer server, UUID id) {
+        LivingEntity player = server.getPlayerList().getPlayer(id);
+        if (player != null) return player;
+        for (ServerLevel level : server.getAllLevels())
+            if (level.getEntity(id) instanceof LivingEntity living) return living;
+        return null;
+    }
+
     public static boolean expire(MinecraftServer server, SecretRealmRecord record, long gameTime) {
         if (!record.expired(gameTime)) return false;
-        for (UUID member : List.copyOf(record.members())) {
-            ServerPlayer player = server.getPlayerList().getPlayer(member);
-            if (player != null) {
-                leave(player);
+        for (UUID id : List.copyOf(record.members())) {
+            LivingEntity member = findMember(server, id);
+            if (member != null) {
+                leave(member);
                 continue;
             }
             SecretRealmRecord current = SecretRealmRegistry.at(record.dimension()).orElse(null);
             if (current == null) return true;
             List<UUID> members = new ArrayList<>(current.members());
-            members.remove(member);
+            members.remove(id);
             SecretRealmRegistry.replace(current.with(members));
         }
         SecretRealmRegistry.at(record.dimension()).ifPresent(current -> retire(server, current));
@@ -158,9 +174,9 @@ public final class SecretRealmService {
 
     // By force: the terrain is discarded even when the instance was claimed.
     public static boolean destroy(MinecraftServer server, SecretRealmRecord record) {
-        for (UUID member : List.copyOf(record.members())) {
-            ServerPlayer player = server.getPlayerList().getPlayer(member);
-            if (player != null) leave(player);
+        for (UUID id : List.copyOf(record.members())) {
+            LivingEntity member = findMember(server, id);
+            if (member != null) leave(member);
         }
         SecretRealmRecord current = SecretRealmRegistry.at(record.dimension()).orElse(null);
         if (current == null) return false;
@@ -171,16 +187,16 @@ public final class SecretRealmService {
         return true;
     }
 
-    // For a traveller whose instance no longer holds them: what a destroyed or expired secret realm leaves behind for
-    // a player who was offline at the time.
-    public static boolean returnIfOrphaned(ServerPlayer player) {
-        SecretRealmTravelAttachment travel = player.getData(MxtAttachments.SECRET_REALM_TRAVEL);
-        if (!travel.active()) return false;
-        if (SecretRealmRegistry.ofMember(player.getUUID()).isPresent()) return false;
-        MinecraftServer server = player.level().getServer();
+    // For a traveller whose instance no longer holds them: what a destroyed or expired secret realm leaves behind
+    // for one that was not loaded at the time (an offline player, or any other kind of traveller).
+    public static boolean returnIfOrphaned(LivingEntity traveller) {
+        SecretRealmTravelAttachment travel = travel(traveller);
+        if (travel == null || !travel.active()) return false;
+        if (SecretRealmRegistry.ofMember(traveller.getUUID()).isPresent()) return false;
+        MinecraftServer server = traveller.level().getServer();
         ServerLevel origin = origin(server, travel).orElse(null);
         if (origin == null) return false;
-        player.teleportTo(origin, travel.originX(), travel.originY(), travel.originZ(), Set.of(), travel.originYaw(), travel.originPitch(), false);
+        traveller.teleportTo(origin, travel.originX(), travel.originY(), travel.originZ(), Set.of(), travel.originYaw(), travel.originPitch(), false);
         travel.clear();
         return true;
     }

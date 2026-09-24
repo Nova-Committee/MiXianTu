@@ -12,6 +12,8 @@ import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
+import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.SetNoGravityAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
 import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
@@ -25,6 +27,12 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityConditi
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+import com.iafenvoy.mxt.data.creature.ContractBehavior;
+import com.iafenvoy.mxt.data.creature.ContractBehaviors;
+import com.iafenvoy.mxt.data.creature.ContractContext;
+import com.iafenvoy.mxt.data.creature.ContractTags;
+import com.iafenvoy.mxt.data.creature.ContractType;
+import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostTransaction;
 import com.iafenvoy.mxt.data.cost.Costs;
@@ -39,9 +47,11 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.data.item.ContractBellComponent;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
+import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
@@ -58,6 +68,8 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
+import com.iafenvoy.mxt.runtime.artifact.FlightService;
+import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
@@ -68,6 +80,11 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
+import com.iafenvoy.mxt.runtime.creature.BoundBeastService;
+import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
+import com.iafenvoy.mxt.runtime.creature.ContractEventBridge;
+import com.iafenvoy.mxt.runtime.creature.ContractService;
+import com.iafenvoy.mxt.runtime.creature.Contracts;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
@@ -77,12 +94,14 @@ import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.rift.RiftColors;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
 import com.iafenvoy.mxt.runtime.rift.RiftMesh;
 import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.runtime.wheel.WheelSource;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -107,6 +126,7 @@ import com.mojang.serialization.JsonOps;
 import io.netty.buffer.Unpooled;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -129,17 +149,21 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.pig.Pig;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -147,9 +171,11 @@ import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.levelgen.Heightmap.Types;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.level.portal.TeleportTransition;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
 import static net.minecraft.commands.Commands.literal;
@@ -189,6 +215,10 @@ public final class MxtTestCommands {
     private static final Identifier FORMATION = id("spirit_gathering");
     private static final Identifier TRIAL_REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
+    private static final Identifier OPEN_CONTRACT = id("open_contract");
+    // A content mod's order, registered by the probe the way a content mod registers one: known to both sides, and
+    // deliberately not on the probe beast's own list.
+    private static final Identifier PROBE_ONLY = id("probe_only");
     private static final Identifier PROBE_FIRE_ROOT = id("fire_root");
     private static final Identifier PROBE_WATER_ROOT = id("water_root");
     private static final Identifier PROBE_INERT_ROOT = id("inert_root");
@@ -255,6 +285,7 @@ public final class MxtTestCommands {
                 .then(literal("damage").executes(context -> probeDamage(context.getSource())))
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
                 .then(literal("identity").executes(context -> probeIdentity(context.getSource())))
+                .then(literal("contract").executes(context -> probeContract(context.getSource())))
                 .then(literal("artifacts").executes(context -> probeArtifactRoster(context.getSource())))
                 .then(literal("secret_realm")
                         .executes(context -> probeSecretRealm(context.getSource()))
@@ -899,7 +930,22 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("identity probe: foreign_fields_ignored=" + foreignIgnored
                     + " negative_refused=" + negative + " plain_accepted=" + plain + (loose ? " OK" : " MISMATCH")), false);
 
-            if (identity && rarity && loose) {
+            // A burst is a resource spend plus a projectile, and neither half asks for a player: the wheel is only
+            // how a player requests one. The probe stands at the realm the aura's own use gate names.
+            ResourceHolderAttachment burstResources = probe.getData(MxtAttachments.RESOURCE_HOLDER);
+            ensureResource(probe, burstResources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 20.0D);
+            Holder<Aura> burstAura = require(MxtResourceKeys.AURA, SPIRIT_POWER);
+            Holder<Resource> burstResource = require(MxtResourceKeys.RESOURCE, SPIRIT_POWER);
+            long burstAt = level.getGameTime();
+            boolean burst = CultivationService.setRealm(probe.getData(MxtAttachments.CULTIVATION), SPIRIT_POWER_REFINING)
+                    && SpiritBurstService.fireOnce(probe, SPIRIT_POWER)
+                    && close(burstResources.get(burstResource), 10.0D)
+                    && probe.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS).isOnCooldown(burstAura, burstAt)
+                    && !SpiritBurstService.fireOnce(probe, SPIRIT_POWER);
+            source.sendSuccess(() -> Component.literal("identity probe: mob_burst=" + burst
+                    + " spent=" + burstResources.get(burstResource) + (burst ? " OK" : " MISMATCH")), false);
+
+            if (identity && rarity && loose && burst) {
                 source.sendSuccess(() -> Component.literal("identity probe: OK"), false);
                 return 1;
             }
@@ -908,6 +954,233 @@ public final class MxtTestCommands {
         } finally {
             if (probe != null) probe.discard();
         }
+    }
+
+    // Drives the contract interfaces on a creature that implements them itself, which is the extension point a
+    // content mod uses. Every leg here is synchronous: the recall landing and the following tick happen between
+    // ticks inside the event bridge, so this leg asserts the state the bridge reads rather than the movement it
+    // performs with it.
+    private static int probeContract(CommandSourceStack source) {
+        ServerPlayer player = player(source);
+        if (player == null) return 0;
+        ServerLevel level = source.getLevel();
+        MinecraftServer server = source.getServer();
+        ProbeBeast.reset();
+        // The index outlives the probe entities a previous run discarded, so the leg starts from a clean list.
+        BoundBeastService.clear(server, player.getUUID());
+        List<Mob> spawned = new ArrayList<>();
+        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> qi = require(MxtResourceKeys.RESOURCE, QI);
+        double previousQi = resources.get(qi);
+        try {
+            Holder<ContractType> tagged = require(MxtResourceKeys.CONTRACT_TYPE, CONTRACT);
+            Holder<ContractType> open = require(MxtResourceKeys.CONTRACT_TYPE, OPEN_CONTRACT);
+
+            // Eligibility is code: a vanilla creature implements nothing, so no record ever reaches it, while the
+            // contract type's own entity type tag narrows the list among the creatures that do implement it.
+            Wolf wolf = EntityType.WOLF.create(level, EntitySpawnReason.COMMAND);
+            if (wolf == null) {
+                source.sendFailure(Component.literal("contract probe: could not create the vanilla creature"));
+                return 0;
+            }
+            spawned.add(wolf);
+            boolean vanillaRefused = ContractService.bind(tagged, player, wolf, false).failure()
+                    == ContractService.Failure.NOT_CONTRACTABLE;
+            boolean tagNarrows = !ContractTags.accepts(context(wolf, player, tagged))
+                    && ContractTags.accepts(context(wolf, player, open));
+            boolean eligibility = vanillaRefused && tagNarrows;
+            source.sendSuccess(() -> Component.literal("contract probe: vanilla_refused=" + vanillaRefused
+                    + " tag_narrows=" + tagNarrows + (eligibility ? " OK" : " MISMATCH")), false);
+
+            // Price before the record: a beast that cannot pay is not bound, nothing is charged and no row is
+            // written; paying leaves exactly the price behind and a record that names the owner.
+            resources.set(qi, 3.0D, 0.0D, 10_000.0D, -1L, "probe");
+            ProbeBeast beast = spawnProbeBeast(level, player.blockPosition().offset(6, 0, 0));
+            spawned.add(beast);
+            boolean priceRefused = ContractService.bind(tagged, player, beast, false).failure()
+                    == ContractService.Failure.INSUFFICIENT_COST
+                    && !beast.getData(MxtAttachments.CONTRACT).bound()
+                    && close(resources.get(qi), 3.0D)
+                    && BoundBeastService.of(server, player.getUUID()).isEmpty();
+            resources.set(qi, 5.0D, 0.0D, 10_000.0D, -1L, "probe");
+            boolean bound = ContractService.bind(tagged, player, beast, false).changed()
+                    && close(resources.get(qi), 0.0D)
+                    && Contracts.ownerOf(beast).filter(player.getUUID()::equals).isPresent()
+                    && beast.getOwner() == player
+                    && BoundBeastService.of(server, player.getUUID()).size() == 1;
+            ItemStack probeCore = beast.getData(MxtAttachments.CREATURE_SPIRIT).innerCore();
+            // A profile's spawn action is one action, and the profile is written once, so it runs once: the probe
+            // beast is left weightless by its own definition rather than by probe code.
+            CreatureProfile beastProfile = MxtDatapackRegistries.get(MxtResourceKeys.CREATURE_PROFILE, id("probe_beast")).orElse(null);
+            boolean spawnAction = beastProfile != null && beastProfile.spawnAction() instanceof SetNoGravityAction
+                    && beast.isNoGravity();
+            // Declaring no action writes the no-op in, which is the same as running nothing at all.
+            CreatureProfile wolfProfile = MxtDatapackRegistries.get(MxtResourceKeys.CREATURE_PROFILE, id("spirit_wolf")).orElse(null);
+            boolean idleAction = wolfProfile != null && wolfProfile.spawnAction() == NoOpAction.INSTANCE;
+            boolean profiled = beast.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()
+                    && close(beast.getData(MxtAttachments.CREATURE_SPIRIT).intelligence(), 20.0D)
+                    && probeCore.is(Items.AMETHYST_SHARD) && probeCore.getCount() == 2 && spawnAction && idleAction;
+            boolean twice = ContractService.bind(tagged, player, beast, false).failure()
+                    == ContractService.Failure.ALREADY_BOUND;
+            boolean record = priceRefused && bound && profiled && twice;
+            source.sendSuccess(() -> Component.literal("contract probe: price_refused=" + priceRefused
+                    + " bound=" + bound + " profiled=" + profiled + " twice=" + twice
+                    + (record ? " OK" : " MISMATCH")), false);
+
+            // The owner's list is what a limit counts, and releasing frees the slot it held.
+            ProbeBeast first = spawnProbeBeast(level, player.blockPosition().offset(-6, 0, 0));
+            ProbeBeast second = spawnProbeBeast(level, player.blockPosition().offset(-9, 0, 0));
+            spawned.add(first);
+            spawned.add(second);
+            boolean firstBound = ContractService.bind(open, player, first, false).changed();
+            boolean limitHit = ContractService.bind(open, player, second, false).failure()
+                    == ContractService.Failure.LIMIT_REACHED;
+            // Ending a contract is not the same act as forgetting who owns the creature, and the owner lives on
+            // the creature, so a released probe still answers the player it was signed with.
+            boolean freed = ContractService.release(first, player.getUUID(), false).changed()
+                    && !first.getData(MxtAttachments.CONTRACT).bound()
+                    && Contracts.ownerOf(first).filter(player.getUUID()::equals).isPresent()
+                    && ContractService.bind(open, player, second, false).changed();
+            boolean limit = firstBound && limitHit && freed;
+            source.sendSuccess(() -> Component.literal("contract probe: first_bound=" + firstBound
+                    + " limit_hit=" + limitHit + " freed=" + freed + (limit ? " OK" : " MISMATCH")), false);
+
+            // The latch and its stamp: the bell sets it, the type's cooldown gates the next one from the stamp
+            // rather than from a countdown, and force is the operator's bypass of the wait alone.
+            long now = level.getGameTime();
+            boolean latch = ContractService.requestRecall(beast, player.getUUID(), false).changed()
+                    && beast.getData(MxtAttachments.CONTRACT).recalled()
+                    && beast.getData(MxtAttachments.CONTRACT).recallAt() == now;
+            ContractService.completeRecall(beast);
+            boolean cooling = ContractService.requestRecall(beast, player.getUUID(), false).failure()
+                    == ContractService.Failure.RECALL_COOLDOWN;
+            boolean forced = ContractService.requestRecall(beast, player.getUUID(), true).changed();
+            ContractService.completeRecall(beast);
+            // The interface default is the movement the framework used to hardcode, asked through the same
+            // context the bridge builds.
+            beast.setPos(player.getX() + 20.0D, player.getY(), player.getZ());
+            Contracts.operations(beast).orElseThrow().recall(context(beast, player, tagged));
+            boolean landed = beast.distanceToSqr(player) < 1.0D;
+            boolean recall = latch && cooling && forced && landed;
+            source.sendSuccess(() -> Component.literal("contract probe: latch=" + latch + " cooling=" + cooling
+                    + " forced=" + forced + " landed=" + landed + (recall ? " OK" : " MISMATCH")), false);
+
+            // The bell names one beast and carries that creature's own answer about the orders it takes, which is
+            // what lets the wheel be drawn without resolving the creature. A creature that is not a bound beast of
+            // the holder's is never named, however the bell is used.
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtItems.BEAST_TAMING_BELL.get()));
+            ItemStack bell = player.getMainHandItem();
+            boolean tuned = bell.getItem().interactLivingEntity(bell, player, beast, InteractionHand.MAIN_HAND) == InteractionResult.SUCCESS
+                    && bell.get(MxtDataComponents.CONTRACT_BELL) instanceof ContractBellComponent component
+                    && component.beast().equals(beast.getUUID())
+                    && component.behaviors().contains(ContractBehaviors.WANDER.id());
+            boolean wolfRefused = bell.getItem().interactLivingEntity(bell, player, wolf, InteractionHand.MAIN_HAND) == InteractionResult.FAIL;
+            boolean bellLeg = tuned && wolfRefused;
+            source.sendSuccess(() -> Component.literal("contract probe: bell_tuned=" + tuned + " wolf_refused=" + wolfRefused
+                    + (bellLeg ? " OK" : " MISMATCH")), false);
+
+            // The wheel is the owner's input: it sends the order, the creature is asked, and the order that stays in
+            // force lands on the creature's own record. A creature that refuses is left with what it had.
+            boolean ordered = WheelService.trigger(player, WheelSource.CONTRACT, WheelEntryKind.BEHAVIOR,
+                    ContractBehaviors.WANDER.id())
+                    && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
+            ProbeBeast.refuseBehavior(true);
+            boolean refusedOrder = !WheelService.trigger(player, WheelSource.CONTRACT, WheelEntryKind.BEHAVIOR,
+                    ContractBehaviors.STAY.id())
+                    && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
+            ProbeBeast.refuseBehavior(false);
+            // An order the creature does not take is refused before the creature is even asked, which is what the
+            // registered-but-not-offered probe order shows.
+            ContractBehaviors.register(new ContractBehavior(PROBE_ONLY, false));
+            boolean unsupported = ContractBehaviorService.request(beast, player.getUUID(),
+                    ContractBehaviors.byId(PROBE_ONLY).orElseThrow(), false).failure()
+                    == ContractService.Failure.UNSUPPORTED_BEHAVIOR;
+            boolean input = ordered && refusedOrder && unsupported;
+            source.sendSuccess(() -> Component.literal("contract probe: ordered=" + ordered + " refused=" + refusedOrder
+                    + " unsupported=" + unsupported + (input ? " OK" : " MISMATCH")), false);
+
+            // A recall is an order that happens once: it sets the latch and leaves the order in force alone. The
+            // framework's own orders are dispatched from there, so a strolling beast that has been left behind is
+            // brought back to its owner on the tick the bridge drives.
+            boolean momentary = ContractBehaviorService.request(beast, player.getUUID(), ContractBehaviors.RECALL, false).changed()
+                    && beast.getData(MxtAttachments.CONTRACT).recalled()
+                    && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
+            ContractService.completeRecall(beast);
+            beast.setPos(player.getX() + 40.0D, player.getY(), player.getZ());
+            ContractEventBridge.onEntityTick(new EntityTickEvent.Post(beast));
+            boolean dispatched = beast.distanceToSqr(player) < 1.0D && ProbeBeast.calls().contains("tick:wander");
+            boolean orders = momentary && dispatched;
+            source.sendSuccess(() -> Component.literal("contract probe: momentary=" + momentary + " dispatched=" + dispatched
+                    + (orders ? " OK" : " MISMATCH")), false);
+
+            // Carrying is the item's business: the framework gates nothing, the bag keeps its own rule (your own
+            // contracted beast), and the creature is only told. The probe hears it, and the round trip brings its
+            // owner back because the probe saves that reference itself. The bag also carries what it has to say
+            // about the creature without loading it - type, name, contract type and owner - and the released one
+            // is still bound, because attachments ride along in the saved data.
+            ItemStack bagStack = new ItemStack(MxtItems.SPIRIT_BEAST_BAG.get());
+            boolean captured = bagStack.getItem().interactLivingEntity(bagStack, player, second, InteractionHand.MAIN_HAND) == InteractionResult.SUCCESS
+                    && second.isRemoved();
+            SpiritBeastComponent stored = bagStack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
+            boolean described = stored.stored()
+                    && stored.entityType().filter(BuiltInRegistries.ENTITY_TYPE.getKey(second.getType())::equals).isPresent()
+                    && stored.name().isPresent()
+                    && stored.contractType().map(HolderHelper::id).filter(OPEN_CONTRACT::equals).isPresent()
+                    && stored.owner().filter(player.getUUID()::equals).isPresent()
+                    && !stored.ownerName().isBlank();
+            player.setItemInHand(InteractionHand.MAIN_HAND, bagStack);
+            BlockPos releaseAt = player.blockPosition();
+            UseOnContext release = new UseOnContext(player, InteractionHand.MAIN_HAND,
+                    new BlockHitResult(Vec3.atBottomCenterOf(releaseAt), Direction.UP, releaseAt, false));
+            boolean releasedFromBag = bagStack.getItem().useOn(release) == InteractionResult.SUCCESS_SERVER
+                    && !bagStack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY).stored();
+            ProbeBeast restored = level.getEntitiesOfClass(ProbeBeast.class, player.getBoundingBox().inflate(2.0D)).stream()
+                    .filter(candidate -> candidate != beast && candidate != first)
+                    .findFirst().orElse(null);
+            if (restored != null) spawned.add(restored);
+            boolean bag = captured && described && releasedFromBag && restored != null
+                    && restored.getUUID().equals(second.getUUID())
+                    && Contracts.ownerOf(restored).filter(player.getUUID()::equals).isPresent()
+                    && restored.getData(MxtAttachments.CONTRACT).bound();
+            source.sendSuccess(() -> Component.literal("contract probe: captured=" + captured + " described=" + described
+                    + " freed=" + releasedFromBag + " restored=" + (restored != null) + (bag ? " OK" : " MISMATCH")), false);
+
+            // Death ends the record, runs the creature's own death hook and drops its row. The death action is a
+            // field of its own, so a release and a death never share one.
+            int rowsBefore = BoundBeastService.of(server, player.getUUID()).size();
+            beast.hurtServer(level, level.damageSources().genericKill(), Float.MAX_VALUE);
+            boolean death = !beast.getData(MxtAttachments.CONTRACT).bound()
+                    && beast.isOnFire()
+                    && BoundBeastService.of(server, player.getUUID()).size() == rowsBefore - 1;
+            boolean order = ProbeBeast.calls().equals(List.of("bound", "bound", "released", "bound", "recall",
+                    "order:wander", "order:stay", "tick:wander", "captured", "freed", "death"));
+            boolean ending = death && order;
+            source.sendSuccess(() -> Component.literal("contract probe: death=" + death + " calls=" + ProbeBeast.calls()
+                    + (ending ? " OK" : " MISMATCH")), false);
+
+            if (eligibility && record && limit && recall && bellLeg && input && orders && bag && ending) {
+                source.sendSuccess(() -> Component.literal("contract probe: OK"), false);
+                return 1;
+            }
+            source.sendFailure(Component.literal("contract probe: MISMATCH"));
+            return 0;
+        } finally {
+            resources.set(qi, previousQi, 0.0D, 10_000.0D, -1L, "probe");
+            for (Mob mob : spawned) mob.discard();
+        }
+    }
+
+    private static ContractContext context(Mob creature, ServerPlayer owner, Holder<ContractType> type) {
+        return ContractContext.of(creature, owner.getUUID(), owner, type);
+    }
+
+    private static ProbeBeast spawnProbeBeast(ServerLevel level, BlockPos pos) {
+        ProbeBeast beast = MxtTestEntities.PROBE_BEAST.get().create(level, EntitySpawnReason.COMMAND);
+        if (beast == null) throw new IllegalStateException("The probe beast type failed to create an entity");
+        beast.setNoAi(true);
+        beast.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+        level.addFreshEntity(beast);
+        return beast;
     }
 
     // Ignoring a field is only a guarantee if it leaves no trace, so the two decoded definitions are compared.
@@ -999,6 +1272,30 @@ public final class MxtTestCommands {
                 .filter(display -> close(display.translation().y(), 0.25D) && close(display.scale().y(), 0.0D))
                 .isPresent();
         ok &= check(source, "artifact roster flight display reads 4/16 as 0.25", displayRead);
+
+        // The same flight with a holder that is not a player: the mount, the carrier lookup and the stored state
+        // all read off the entity, and only a player's own flight permission has nothing to restore. The carrier is
+        // claimed first because the definition asks for an owner, and the tick is driven with the qi to pay for it.
+        LivingEntity mobRider = spawnProbe(source.getLevel(), player.blockPosition().above(5), null);
+        Holder<Ability> mobFlightAbility = require(MxtResourceKeys.ABILITY, id("azure_flight"));
+        boolean mobFlight = false;
+        if (mobRider != null) {
+            ItemStack mobCarrier = flightStack.copy();
+            mobRider.setItemInHand(InteractionHand.MAIN_HAND, mobCarrier);
+            ensureResource(mobRider, mobRider.getData(MxtAttachments.RESOURCE_HOLDER), require(MxtResourceKeys.RESOURCE, QI), 10.0D);
+            boolean sighted = ArtifactService.refine(mobCarrier, mobRider) == RefineResult.REFINED
+                    && ArtifactService.carried(access, mobRider, HolderHelper.id(mobFlightAbility)).isPresent();
+            FlightService.Result mounted = FlightService.mount(mobRider, mobCarrier, mobFlightAbility, FormulaContext.of(mobRider));
+            boolean riding = mounted.state() == FlightService.Result.State.MOUNTED
+                    && mobRider.getVehicle() instanceof FlyingSwordEntity
+                    && mobRider.getData(MxtAttachments.FLIGHT).active()
+                    && FlightService.tick(mobRider, mobFlightAbility, FormulaContext.of(mobRider)).state() == FlightService.Result.State.FLYING;
+            boolean landed = FlightService.dismount(mobRider, FlightService.Failure.STOPPED).state() == FlightService.Result.State.STOPPED
+                    && mobRider.getVehicle() == null && !mobRider.getData(MxtAttachments.FLIGHT).active();
+            mobFlight = sighted && riding && landed;
+        }
+        if (mobRider != null) mobRider.discard();
+        ok &= check(source, "artifact roster mob flight carried=in-hand mounted=on-sword tick=flying landed=off-sword", mobFlight);
 
         ItemStack wardStack = new ItemStack(Items.PRISMARINE_SHARD);
         // Two written entries - one id and one ability tag - reaching the two ids the definition grants: the tag
@@ -1730,6 +2027,22 @@ public final class MxtTestCommands {
             ok &= check(source, "secret realm probe: persists=" + (claimed != null && claimed.persists())
                             + " idle_members=" + (idled == null ? -1 : idled.members().size()),
                     claimed != null && claimed.persists() && idled.empty() && probe != null && idled.isOwner(probe.getUUID()));
+
+            // 14. A traveller that is not a player enters and leaves through the same calls: the record, the
+            //     membership row and the teleport are keyed on the entity, not on a connection.
+            LivingEntity mobTraveller = spawnProbe(overworld, overworld.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO).above(4), null);
+            probes.add(mobTraveller);
+            SecretRealmService.Result mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, mirror);
+            SecretRealmRecord mobHome = mobTraveller == null ? null : SecretRealmRegistry.ofMember(mobTraveller.getUUID()).orElse(null);
+            if (mobHome != null) opened.add(mobHome.dimension());
+            boolean mobIn = mobTraveller != null && mobEntered != null && mobEntered.changed() && mobHome != null
+                    && mobTraveller.level().dimension().equals(mobHome.dimension())
+                    && mobTraveller.getData(MxtAttachments.SECRET_REALM_TRAVEL).active();
+            boolean mobOut = mobIn && SecretRealmService.exit(mobTraveller).changed()
+                    && mobTraveller.level().dimension().equals(Level.OVERWORLD)
+                    && !mobTraveller.getData(MxtAttachments.SECRET_REALM_TRAVEL).active()
+                    && SecretRealmRegistry.ofMember(mobTraveller.getUUID()).isEmpty();
+            ok &= check(source, "secret realm probe: mob_entered=" + mobIn + " mob_returned=" + mobOut, mobIn && mobOut);
         } finally {
             for (LivingEntity probe : probes) if (probe != null) probe.discard();
             for (ResourceKey<Level> key : opened) {
@@ -2177,8 +2490,8 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static void ensureResource(ServerPlayer player, ResourceHolderAttachment resources, Holder<Resource> resource, double minimum) {
-        FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
+    private static void ensureResource(LivingEntity holder, ResourceHolderAttachment resources, Holder<Resource> resource, double minimum) {
+        FormulaContext context = ResourceService.formulaContext(holder, resource, FormulaContext.of(holder));
         ResourceService.initialize(resources, resource, context);
         double missing = minimum - resources.get(resource);
         if (missing > 0.0D) ResourceService.change(resources, resource, missing, context);

@@ -1,0 +1,6 @@
+{
+  "entities": ["mxt_test:probe_beast"],
+  "spawn_action": { "type": "mxt:set_no_gravity" },
+  "intelligence": 20,
+  "inner_core": { "id": "minecraft:amethyst_shard", "count": 2 }
+}

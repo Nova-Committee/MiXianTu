@@ -4,7 +4,7 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限；纯查询的入口（例如 `/mxt curse list`、`/ability list`、`/mxt trigger list`）不需要权限，只是不填目标时要用到自己，因此仍需由玩家执行。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 16 个：`ability`、`aura`、`curse`、`display`、`formation`、`friend`、`lightning`、`physique`、`picker`、`quality`、`realm`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 17 个：`ability`、`aura`、`contract`、`curse`、`display`、`formation`、`friend`、`lightning`、`physique`、`picker`、`quality`、`realm`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
 
 **客户端命令有两条**：`/hud`（查看与复位可拖动 HUD 元素）与 `/wheel`（打开轮盘配置界面）。它们注册在客户端自己的命令表里（不进 `/mxt` 树，也不发往服务端），只在聊天栏里手打有效、不需要任何权限，详见文末的[客户端命令](#客户端命令hud--wheel)。
 
@@ -37,6 +37,12 @@ title: 命令
 | `/mxt breakthrough <resource>` | 尝试突破指定资源对应的境界。 |
 | `/realm set <realm>`（= `/mxt realm set …`） | 把自己的境界直接设成链上的某一档（需要 gamemaster 权限）；不在当前有效修炼链上的档会被拒绝。 |
 | `/realm chain <realm>`（= `/mxt realm chain …`） | 打印这一档所在的**整条境界链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。抬头是这条链的身份，也就是该链所属的 `mxt:aura` 条目 ID。 |
+| `/contract list [<player>]`（= `/mxt contract list`） | 按**主人索引**列出该玩家名下的灵兽：契约类型、灵兽 UUID，以及它此刻是否已加载；不填 `player` 时看自己，不需要权限。索引是名单不是真值，所以每行都会回查灵兽身上的契约记录，已经对不上的行当场清掉。 |
+| `/contract info <target>`（= `/mxt contract info`） | 读目标身上的契约记录：类型、主人、签订时刻、召回状态与冷却剩余；它没有契约时按"它没有契约"拒绝。不需要权限。 |
+| `/contract bind <player> <target> <contract_type> [force]`（= `/mxt contract bind …`） | 让 `<player>` 与目标生物签订契约（需要 gamemaster 权限），走的是与契约卷轴完全相同的那条流程，代价由该玩家支付；目标必须实现 `Contractable`，否则按"它不能被契约"拒绝。`force` 跳过代价与每人上限。 |
+| `/contract break <target> [force]`（= `/mxt contract break …`） | 解除目标身上的契约（需要 gamemaster 权限），灵宠与主人都还活着：执行该契约类型的 `release_action`，清掉记录与主人索引。`force` 跳过"必须是主人"的校验。 |
+| `/contract recall <target> [force]`（= `/mxt contract recall …`） | 让目标响应召回，等同于在御兽铃轮盘上点它的「召回」那一格（需要 gamemaster 权限）：置上召回闩，由它下一个 tick 落地。`force` 跳过召回冷却。 |
+| `/contract behavior <target> <behavior> [force]`（= `/mxt contract behavior …`） | 给目标下一条行为命令（需要 gamemaster 权限），走的是与御兽铃轮盘完全相同的那条流程。`behavior` 是代码里的行为 id（默认 `mxt:follow` / `mxt:wander` / `mxt:stay` / `mxt:recall`，补全给的是框架已知的那一份），目标没提供这条命令时按"它不接受这道命令"拒绝；`mxt:recall` 是**一次性**的，等价于上面的 `recall`。`force` 跳过"必须是主人"的校验（召回时也跳过冷却）。 |
 | `/mxt secret_realm list` | 列出当前所有秘境实例：维度键、序号、定义、在场人数与上限、主人、地形是否已布置、维度当前是否加载。 |
 | `/mxt secret_realm info <dimension>` | 查看某一份实例的同一行信息。 |
 | `/mxt secret_realm enter <definition>` | 以自己为进入者开一份或加入一份秘境实例（需要 gamemaster 权限）。这是无需令牌就能进秘境的管理入口，走的是与令牌完全相同的那条流程（条件、人数、实例上限、生成）。 |
@@ -115,6 +121,18 @@ title: 命令
 
 境界链属于**灵气定义**（[aura](../../数据包格式) 的 `first_realm` 是链的入口），链上每一档用 `next_realm` 指向下一档，所以一条链是单向的、每份定义一条。`/realm chain <realm>` 不看谁持有哪一档，纯粹回答"这一档前面是谁、后面是谁"——数据包写错 `next_realm` 时这是最快的核对方式。它看的是**当前生效**的阶段：某一档被 `#mxt:disabled` 停用就从链上断开（服务端重建境界索引时同样会拒绝这样的链），被停用的那一档本身会报"没有可用的境界链包含它"。
 
+### 契约（`/contract`）
+
+**能不能被契约是代码事实**：目标生物必须自己实现 `com.iafenvoy.mxt.api.Contractable`（见[特殊公开接口](../java/interfaces)），任何数据包都造不出这个资格，所以原版生物默认都签不了。数据包能做的是：用契约类型自己的**实体类型标签** `#<命名空间>:contract/<路径>` 收窄"这类生物签不签这份契约"（没写标签或标签为空就是不限制，见 [`contract_type`](../../数据包格式.md#contract_type)）；用 `owner_condition` / `creature_condition` 收窄双方；用 `costs` 收代价。
+
+签订一步的顺序是固定的，也是这组命令与卷轴共用的那一份：已经签过 → 目标没实现接口 → 契约类型被 `#mxt:disabled` 停用 → 接口的 `acceptsContract` → 主人条件 → 灵宠条件 → 每人上限 → `Pre` 事件（可取消）→ **最后才收钱** → 写记录 → 写主人索引 → 生物的 `onContractBound`。**收钱排在事件之后**是因为脚本通道退不了款，取消之后要还钱的地方就不该先收。
+
+解除与死亡是**两条不同的路**：`break` 走 `release_action` 并回调 `onContractReleased`，灵宠还活着；灵宠自己死亡走 `death_action` 并回调 `onContractDeath`。两者都会清掉记录与主人索引，也都会发对应的事件。**捕捉不是实体侧的门槛**：任何生物都可能被捕捉，怎么捕捉由物品决定（灵兽袋自己的规则是"你自己的已契约灵兽、一次一只"）。生物只有在实现 `CaptureListener` 时才会收到"被收走/被放出"的通知——不实现它照样能被收走，只是收不到通知。
+
+失败原因共用一套文案键 `contract.mxt.failure.<小写枚举名>`（卷轴、御兽铃、灵兽袋与这组命令打的是同一张表），取值有 `already_bound`、`disabled`、`not_contractable`、`owner_conditions`、`creature_conditions`、`limit_reached`、`insufficient_cost`、`not_bound`、`not_owner`、`recall_cooldown`、`cancelled`、`unsupported_behavior`、`behavior_refused`。
+
+**行为（order）不是数据包字段**：它由生物自己回答（`ContractOperations.behaviors()`），框架只内置跟随 / 游荡 / 驻守 / 召回四条，其余由内容方用 `ContractBehavior` + `ContractBehaviors.register` 添。当前那条写在灵兽的 `mxt:contract` 记录里（读不出来就退回跟随），`follow_action` 只在当前是**跟随**时才跑。玩家的入口是御兽铃右键生物（对准它）再右键空处（开轮盘选），这组命令是管理员入口。
+
 ### 秘境实例（`/mxt secret_realm`）
 
 秘境定义（`mxt:secret_realm`）是模板而不是某个固定维度：每次进入都可能开出一份**新的实例维度**，维度键是 `<定义命名空间>:secret_realm/<定义路径>/<序号>`，序号从 `0` 开始（只能开一份的定义也带序号）。这组命令是它的运维入口，**整棵子树都需要 gamemaster 权限**（`list`、`info`、`exit` 也一样，它们是给管理员看状态用的）。
@@ -187,7 +205,7 @@ title: 命令
 | `/hud` | 列出框架登记的全部可移动 HUD 元素：布局键、显示名、位置、尺寸、当前要画几个块、是否可见、是否可拖。 |
 | `/hud open` | 打开 HUD 布局编辑器，等同于按键 `key.mxt.hud_layout`（默认右 Shift）。 |
 | `/hud <布局键> reset` | 把某个元素复位到它自己的默认位置（布局键见 `/hud` 的输出，如 `resource_bars.left`）。复位会**同时删掉 `config/mxt/mxt-hud.json` 里那一项**，所以它跨重启有效；删掉之后这个元素重新跟着窗口走（默认位置就定义在窗口上），直到玩家再次拖动它。 |
-| `/wheel` | 打开轮盘配置界面，等同于按键 `key.mxt.wheel_configuration`（**默认未绑定**）。左边 6 列是能发射的灵气、右边 6 列是已学会的主动技能，下面一排 12 格是**主盘**的 12 格；`Esc` 保存并关闭。**从盘（主手物品 / 副手物品 / 法器）不在这里**：它们的内容由随身装备现读，界面只编辑主盘。 |
+| `/wheel` | 打开轮盘配置界面，等同于按键 `key.mxt.wheel_configuration`（**默认未绑定**）。左边 6 列是能发射的灵气、右边 6 列是已学会的主动技能，下面一排 12 格是**主盘**的 12 格；`Esc` 保存并关闭。**从盘（主手物品 / 副手物品 / 法器 / 契约灵兽）不在这里**：它们的内容由随身装备与手里的御兽铃现读，界面只编辑主盘。 |
 
 `/hud` 存在的理由是**让"编辑器里什么都没有"变成一句能回答的问题**：`/hud` 打出"没有任何可移动元素"就说明元素根本没登记，打出 `resource_bars.left/right` 与 `wheel.selection` 这几行则说明框架是有元素的、只是当前没有内容可画（没有资源条的存档里那两行会是 `块 0`，尺寸仍是空列的 71×8；`wheel.selection` 是轮盘格，它整块自绘所以永远是 `块 0`，尺寸随内容变——永远 4 列、行数按格子数往下长）。这两种情况的界面表现一模一样，只有这里能分开。
 

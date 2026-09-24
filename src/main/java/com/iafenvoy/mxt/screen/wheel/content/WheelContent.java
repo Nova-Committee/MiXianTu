@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
+import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
@@ -86,11 +87,20 @@ public final class WheelContent implements WheelMenuProvider {
     // One derived page: what the named equipment grants and declares right now, never stored, so the page follows
     // the gear; a source with more entries than a page gets more pages rather than being cut.
     private static List<WheelMenuEntry> derived(Player player, WheelSource source) {
+        if (source == WheelSource.CONTRACT) return orders(player);
         List<WheelMenuEntry> entries = new ArrayList<>();
         Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, source);
         for (Holder<Ability> ability : WheelSources.abilities(player, source))
             entries.add(entry(player, ability, carriers.get(HolderHelper.id(ability))));
         return List.copyOf(entries);
+    }
+
+    // The orders of the beast the held taming bell is tuned to. Read from the bell, which carries the creature's
+    // own answer, so nothing here has to find a creature that may not be loaded on this side.
+    private static List<WheelMenuEntry> orders(Player player) {
+        return ContractBells.selection(player)
+                .map(selection -> selection.orders().stream().<WheelMenuEntry>map(ContractWheelEntry::new).toList())
+                .orElse(List.of());
     }
 
     // The state is asked here rather than read off the definition, because a switch answers from wherever it keeps

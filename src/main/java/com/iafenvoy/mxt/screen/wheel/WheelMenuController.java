@@ -48,11 +48,30 @@ public final class WheelMenuController {
         if (open == screen) open = null;
     }
 
+    // Opened by an item rather than by the wheel key: the page named is the one the item is about, and the wheel
+    // stays up the way the toggle mode leaves it, since no key is being held down. An item whose page holds
+    // nothing says so with its own line - the wheel key's complaint would be about the wrong thing.
+    public static void openAt(WheelSource source, Component empty) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.screen != null) return;
+        WheelSelectionState.refresh(minecraft.player);
+        if (!WheelMenuContent.hasAnyEntry(WheelSelectionState.pages(), source)) {
+            notice(empty);
+            return;
+        }
+        WheelSelectionState.firstPageOf(source);
+        show(minecraft);
+    }
+
     private static void open(Minecraft minecraft) {
         if (minecraft.screen != null) return;
-        // Opening always lands on the first page: the one the player arranged, the gear pages being one keypress away.
-        WheelSelectionState.firstPage();
+        // The pages are read before the page is chosen, so the page the wheel opens on is the first that has one.
         WheelSelectionState.refresh(minecraft.player);
+        WheelSelectionState.firstPageOf(WheelSource.PAGES.getFirst());
+        show(minecraft);
+    }
+
+    private static void show(Minecraft minecraft) {
         // A wheel with nothing anywhere is not opened - there would be nothing to point at - and says so instead.
         // The test spans every page, because an empty first page must not hide the rest.
         if (WheelMenuContent.hasAnyEntry(WheelSelectionState.pages())) {

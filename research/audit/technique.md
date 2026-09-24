@@ -354,7 +354,7 @@
 | `Title.maximum_level`（`data/Title.java:24`）                                             | 单字段等级上限（1..1000）                                                                                 | 只有上限，**没有等级系统**（审计已记"等级上限缺少消费者"）                        |
 | `Curse.max_stacks` + `StackingMode`（`data/curse/Curse.java:21, 30-31, 49-57`）           | 层数上限 + 堆叠策略                                                                                      | 层数语义，不是等级链                                              |
 | `SpiritStoneVein.Grade`（`runtime/world/SpiritStoneVein.java:34-51`）                     | 硬编码 6 级枚举 + `minimumBlocks` 阈值                                                                   | 纯运行时，数据包不可扩展                                            |
-| `CreatureProfile.realm_stages`（`data/creature/CreatureProfile.java:28, 35`）             | `List<Holder<RealmStage>>`，**无任何消费者**（`CreatureProfileService` 不读）                               | "非玩家对象复用境界链"曾预留但未落地，是给功法复用境界链的前车之鉴                      |
+| `CreatureProfile.realm_stages`（`data/creature/CreatureProfile.java:28, 35`）             | `List<Holder<RealmStage>>`，**无任何消费者**（`CreatureProfileService` 不读）                               | "非玩家对象复用境界链"曾预留但未落地，是给功法复用境界链的前车之鉴。**已于 2026-09-25 关闭**：字段删除，换成 `spawn_action`（见 `research/47` §4.1）                      |
 
 ### 8.3 平面注册表（有序但无进阶语义）
 

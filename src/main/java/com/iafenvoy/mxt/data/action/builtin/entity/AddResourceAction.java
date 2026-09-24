@@ -34,9 +34,9 @@ public record AddResourceAction(Holder<Resource> resource,
         if (!Double.isFinite(amount)) return;
         Identifier id = HolderHelper.id(this.resource);
         FormulaContext resourceContext = entity instanceof LivingEntity living
-                ? ResourceService.formulaContext(living, id, this.resource.value(), context)
+                ? ResourceService.formulaContext(living, id, context)
                 : context;
-        ResourceService.change(entity.getData(MxtAttachments.RESOURCE_HOLDER), id, this.resource.value(), amount, resourceContext);
+        ResourceService.change(entity.getData(MxtAttachments.RESOURCE_HOLDER), id, amount, resourceContext);
     }
 
     @Override
