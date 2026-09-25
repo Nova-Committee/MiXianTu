@@ -24,6 +24,7 @@ title: Java 公开 API
 | 问某个坐标有多少灵气 | [`AuraService`](#auraservice) | `runtime.world` |
 | 读写实体身上的一条数值 | [`ResourceService`](#resourceservice) | `runtime.resource` |
 | 加修炼进度、突破、设置境界 | [`CultivationService`](#cultivationservice) | `runtime.cultivation` |
+| 读写一个生物的寿元 | [`LifeSpanService`](#lifespanservice) | `runtime.cultivation` |
 | 执行一个技能、受理一次按键 | [`AbilityService`](#abilityservice) | `runtime.ability` |
 | 自己造成一次伤害 | [`DamageCalculationService`](#damagecalculationservice) | `runtime.damage` |
 | 给阵法加一种功能模块 | [`FormationActionType`](#formationactiontype-与-mxtformationactiontypes) | `data.formation` |
@@ -243,6 +244,27 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 - `INVALID_FORMULA` 同时兼任"一切非资源不足的扣费失败"的归一化出口；`failedResource` 只在扣费阶段资源不足时非空。
 - `Failure.DISABLED` 只有脚本桥会产出（`MxtKubeJsApi.tryBreakthrough` 在灵气 id 解析不到时），`attempt` 自己不产出它。
 - `Failure.MAX_PROGRESS` 已于 2026-09-25 **删除**：进度上限不可能成为拒绝突破的理由——`threshold()` 要求某一段的 `max_experience ≥ breakthrough_exp`，所以进度被顶在 `max_experience` 时必然已经满足 `progress ≥ breakthrough_exp`，此时只会因条件、代价或取消而失败。内联的 `Failure` 分支若写了它，编译期就会报错。
+
+### `LifeSpanService`
+
+包 `com.iafenvoy.mxt.runtime.cultivation`。寿元账本（剩余与上限两个数，单位都是刻）的读写与唯一的耗尽出口。数值由数据包给（`realm_stage.lifespan`、`mxt:modify_lifespan`），节奏与后果由服务端配置决定。
+
+| 方法 | 作用 | 备注 |
+| --- | --- | --- |
+| `remaining(Entity)` / `total(Entity)` | 读两个数 | **只读，不创建附件**；没有账本答 `-1`（`UNACCOUNTED`） |
+| `set(LivingEntity entity, long ticks)` | 两个数一起重写 | `ticks < 0` 拒绝；返回 `Result(changed, failure)` |
+| `add(LivingEntity entity, long ticks)` | 正数续命（两个数一起涨）、负数抽寿（只减剩余） | 同上；从未被给过寿元的生物先按配置基数起算 |
+| `seed(LivingEntity entity)` | 按配置的「凡人基础寿元」播种 | 开关关着、基数为 0、已经有账本时返回 `false` |
+| `settle(Entity entity)` | 结算一次并判定耗尽 | 开关关着、创造 / 旁观、不是生物、没有账本时直接 `false`；**这是唯一会致死的入口** |
+| `reincarnate(LivingEntity entity)` | 立刻走一遍转世重置清单（按「转世」页的开关） | 返回 `Result(changed, failure)`：`Pre` 被取消时 `failure` 为 `CANCELLED` 且什么都不做。`/mxt lifespan reincarnate`、`mxt:reincarnate`、KubeJS `MxtLifespan.reincarnate` 与 Java 附属调的是同一个方法；开关关着也照做，**不发**耗尽事件（发 `LifeSpanRebirthEvent`） |
+| `display(long remaining, long total, int ticksPerYear)` | 面板与提醒共用的显示组件 | 剩余为负读作「不受限」 |
+
+要点：
+
+- **写入永不致死**：`set` / `add` 只记账，耗尽只由 `settle` 判定，所以扣费事务或技能的中间不会有人当场身死。
+- 服务端限定：客户端调用写入得到 `Failure.SERVER_ONLY`，不写日志。
+- `Result` 的 `failure` 只有 `SERVER_ONLY` 与 `INVALID_VALUE`。
+- 耗尽流程发 `LifeSpanEndEvent.Pre`（可取消；在事件里写下正值＝续命）与 `Post`（带 `outcome()`）；玩家走 `DEATH` 时被转为旁观者，非玩家生物走 `mxt:lifespan` 伤害类型。**`reincarnate` 不走这两个事件**，它发的是 `LifeSpanRebirthEvent.Pre` / `Post`（`Pre` 可取消＝这次转世整件不做），因为那是明确的裁决，不该被"寿元耗尽"的语义套住。
 
 ## 技能
 

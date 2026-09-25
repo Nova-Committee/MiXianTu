@@ -180,4 +180,11 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
         this.markDirty();
         return true;
     }
+
+    // Reincarnation: the records describe how far one life got inside a realm, so the next life starts over.
+    public void clearMinorStageRecords() {
+        if (this.minorStageRecords.isEmpty()) return;
+        this.minorStageRecords.clear();
+        this.markDirty();
+    }
 }

@@ -13,7 +13,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 

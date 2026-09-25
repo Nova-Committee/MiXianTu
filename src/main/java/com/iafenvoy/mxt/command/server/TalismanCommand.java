@@ -22,6 +22,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -96,17 +97,32 @@ public final class TalismanCommand {
             source.sendFailure(Component.translatable("command.mxt.talisman.unknown", HolderHelper.id(inscribed).toString()));
             return 0;
         }
-        ItemStack stack = new ItemStack(MxtItems.TALISMAN.get(), count(ctx));
-        stack.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), mode));
-        if (charged) charge(player, stack);
-        player.getInventory().placeItemBackInInventory(stack);
+        int count = count(ctx);
+        ItemStack template = new ItemStack(MxtItems.TALISMAN.get());
+        template.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), mode));
+        // The declared wear lands on the stack here, because a carrier handed out by the command is the only one
+        // the framework itself makes: the bar is on the item before it is ever used.
+        TalismanService.applyDurability(template);
+        if (template.has(DataComponents.MAX_DAMAGE)) {
+            // A carrier with wear is not stackable - vanilla refuses a stack that is both damageable and
+            // stackable - so a count of them is that many single carriers instead of one stack of them.
+            for (int i = 0; i < count; i++) hand(player, template.copy(), charged);
+        } else {
+            template.setCount(count);
+            hand(player, template, charged);
+        }
         source.sendSuccess(() -> Component.translatable(
                 "command.mxt.talisman.given",
-                stack.getCount(), stack.getDisplayName(), DefinitionText.name(inscribed, "talisman"),
+                count, template.getDisplayName(), DefinitionText.name(inscribed, "talisman"),
                 Component.translatable("tooltip.mxt.talisman.mode." + mode.key()),
                 Component.translatable(charged ? "command.mxt.talisman.charged"
                         : "command.mxt.talisman.not_charged")), true);
-        return stack.getCount();
+        return count;
+    }
+
+    private static void hand(ServerPlayer player, ItemStack stack, boolean charged) {
+        if (charged) charge(player, stack);
+        player.getInventory().placeItemBackInInventory(stack);
     }
 
     // The capacity comes from the inscriptions themselves, so the carrier is filled to exactly what its

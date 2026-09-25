@@ -41,6 +41,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     private static final EventHandler FORGING = EVENTS.server("forging", () -> GenericKubeEvent.class);
     private static final EventHandler FORMATION = EVENTS.server("formation", () -> GenericKubeEvent.class);
     private static final EventHandler LIFESPAN_END = EVENTS.server("lifespanEnd", () -> GenericKubeEvent.class);
+    private static final EventHandler LIFESPAN_REBIRTH = EVENTS.server("lifespanRebirth", () -> GenericKubeEvent.class);
     private static final EventHandler SECRET_REALM = EVENTS.server("secretRealm", () -> GenericKubeEvent.class);
     private static final EventHandler SOUL = EVENTS.server("soul", () -> GenericKubeEvent.class);
     private static final EventHandler SPIRIT_CONTRACT = EVENTS.server("spiritContract", () -> GenericKubeEvent.class);
@@ -89,6 +90,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
             case "forging" -> FORGING;
             case "formation" -> FORMATION;
             case "lifespanEnd" -> LIFESPAN_END;
+            case "lifespanRebirth" -> LIFESPAN_REBIRTH;
             case "secretRealm" -> SECRET_REALM;
             case "soul" -> SOUL;
             case "spiritContract" -> SPIRIT_CONTRACT;

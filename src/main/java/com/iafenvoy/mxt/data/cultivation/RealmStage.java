@@ -41,7 +41,8 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
                          NumberProvider breakthroughExp, NumberProvider maxExperience, List<Component> minorStages,
                          CultivateConditions breakthrough,
                          boolean autoBreakthrough,
-                         List<AttributeEntry> passiveModifiers, List<Cost> breakthroughCosts,
+                         List<AttributeEntry> passiveModifiers, Optional<NumberProvider> lifespan,
+                         List<Cost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          List<MinorStageAbilities> minorStageAbilities,
                          Optional<Holder<Tribulation>> tribulation, Optional<ParticleEffect> breakthroughParticle,
@@ -65,6 +66,11 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
                 double value1
         ) && value > value1)
             throw new IllegalArgumentException("Realm breakthrough minimum experience cannot exceed maximum experience");
+        // Lifespan is only ever added, so a negative stage would silently shorten a life; a formula is judged at
+        // the breakthrough instead.
+        if (lifespan.isPresent() && lifespan.get() instanceof Constant(double value)
+                && (!Double.isFinite(value) || value < 0.0D))
+            throw new IllegalArgumentException("Realm stage lifespan must be finite and non-negative");
         // An unlock whose stage is not one of this realm's minor stages could never be reached, and two entries
         // on one stage would be the same threshold written twice.
         int count = minorStages.size();
@@ -89,9 +95,12 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
             ContextNameListCodec.minorStages(CATEGORY).forGetter(RealmStage::minorStages),
             CultivateConditions.CODEC.optionalFieldOf("breakthrough", CultivateConditions.EMPTY).forGetter(RealmStage::breakthrough),
             Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
-            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(RealmStage::passiveModifiers),
-            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             // Eighteen components; three pairs keep the group at sixteen.
+            MiscCodecs.pair(
+                            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()),
+                            NumberProvider.CODEC.optionalFieldOf("lifespan"))
+                    .forGetter(stage -> Pair.of(stage.passiveModifiers(), stage.lifespan())),
+            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             MiscCodecs.pair(
                             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()),
                             MinorStageAbilities.CODEC.listOf().optionalFieldOf("minor_stage_abilities", List.of()))
@@ -105,10 +114,10 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
                             EntityAction.optionalCodec("fail_action"))
                     .forGetter(stage -> Pair.of(stage.successAction(), stage.failAction()))
     ).apply(i, (name, description, aura, auraShareWeight, cultivateCondition, nextRealm, breakthroughExp,
-                maxExperience, minorStages, breakthrough, autoBreakthrough, passiveModifiers, breakthroughCosts,
+                maxExperience, minorStages, breakthrough, autoBreakthrough, passive, breakthroughCosts,
                 abilityRequirements, tribulation, actions) -> new RealmStage(name, description, aura,
             auraShareWeight, cultivateCondition, nextRealm, breakthroughExp, maxExperience, minorStages, breakthrough,
-            autoBreakthrough, passiveModifiers, breakthroughCosts,
+            autoBreakthrough, passive.getFirst(), passive.getSecond(), breakthroughCosts,
             abilityRequirements.getFirst(), abilityRequirements.getSecond(),
             tribulation.getFirst(), tribulation.getSecond(), actions.getFirst(), actions.getSecond())));
 

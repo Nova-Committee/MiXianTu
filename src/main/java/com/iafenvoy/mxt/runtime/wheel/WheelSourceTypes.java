@@ -86,7 +86,7 @@ public final class WheelSourceTypes {
     public static WheelSource step(WheelSource from, int delta) {
         List<WheelSource> pages = pages();
         int index = pages.indexOf(from);
-        return pages.get(Math.floorMod((index < 0 ? 0 : index) + delta, pages.size()));
+        return pages.get(Math.floorMod(Math.max(index, 0) + delta, pages.size()));
     }
 
     // 1-based, which is what the player sees and never the index; 0 for a page nothing registered any more.

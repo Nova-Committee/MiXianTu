@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.command.server.FlightCommand;
 import com.iafenvoy.mxt.command.server.FormationCommand;
 import com.iafenvoy.mxt.command.server.FriendCommand;
 import com.iafenvoy.mxt.command.server.LightningCommand;
+import com.iafenvoy.mxt.command.server.LifeSpanCommand;
 import com.iafenvoy.mxt.command.server.MxtCommand;
 import com.iafenvoy.mxt.command.server.PhysiqueCommand;
 import com.iafenvoy.mxt.command.server.PickerCommand;
@@ -55,6 +56,7 @@ public final class ServerCommandManager {
         builder.put(FormationCommand::build, config.formation);
         builder.put(_ -> FriendCommand.build(), config.friend);
         builder.put(_ -> LightningCommand.build(), config.lightning);
+        builder.put(LifeSpanCommand::build, config.lifespan);
         builder.put(PhysiqueCommand::build, config.physique);
         builder.put(_ -> PickerCommand.build(), config.picker);
         builder.put(QualityCommand::build, config.quality);

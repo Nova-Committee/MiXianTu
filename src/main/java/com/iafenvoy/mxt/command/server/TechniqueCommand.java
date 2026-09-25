@@ -130,7 +130,7 @@ public final class TechniqueCommand {
     }
 
     // The sweep cannot reach a reference that is already gone, and naming the entry also undoes a mistaken grant.
-    private static int drop(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+    private static int drop(CommandSourceStack source, Identifier id) {
         ServerPlayer player = source.getPlayerOrException();
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         int before = identity.learnedTechniques().size() + identity.techniqueStages().size();

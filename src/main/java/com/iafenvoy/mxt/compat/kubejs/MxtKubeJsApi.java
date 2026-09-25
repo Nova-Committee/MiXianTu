@@ -32,6 +32,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResul
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
@@ -517,6 +518,37 @@ public final class MxtKubeJsApi {
 
     public static AuraResult aura(Level level, BlockPos position) {
         return AuraService.getPositionAura(level, position);
+    }
+
+    /**
+     * The lifespan ledger, read without creating it: {@code -1} means this body has no ledger at all.
+     */
+    public static long lifespanRemaining(Entity entity) {
+        return entity.level().isClientSide() ? -1L : LifeSpanService.remaining(entity);
+    }
+
+    public static long lifespanTotal(Entity entity) {
+        return entity.level().isClientSide() ? -1L : LifeSpanService.total(entity);
+    }
+
+    /**
+     * Extends or rewrites the ledger; a script cannot write a negative total. Both this and {@link #addLifespan}
+     * write while the lifespan system is switched off, because that switch decides whether time passes.
+     */
+    public static LifeSpanService.Result setLifespan(LivingEntity entity, long ticks) {
+        return LifeSpanService.set(entity, ticks);
+    }
+
+    public static LifeSpanService.Result addLifespan(LivingEntity entity, long ticks) {
+        return LifeSpanService.add(entity, ticks);
+    }
+
+    /**
+     * Runs the configured reincarnation reset now, the same one the expiry outcome runs. An explicit act, so it
+     * also runs while the lifespan system is switched off; a listener may cancel the rebirth event and refuse it.
+     */
+    public static LifeSpanService.Result reincarnateLifespan(LivingEntity entity) {
+        return LifeSpanService.reincarnate(entity);
     }
 
     /**

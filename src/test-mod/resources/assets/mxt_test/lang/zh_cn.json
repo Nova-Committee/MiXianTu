@@ -69,6 +69,8 @@
   "command.mxt_test.verify.wheel_ok": "轮盘扩展点：注册的页与类型可按 id 读回、参与编号、按 id 落盘与发送",
   "command.mxt_test.verify.closure_failed": "C 组收尾检查失败：%s",
   "command.mxt_test.verify.closure_ok": "C 组收尾：slot 被拒收、图标区域与尺寸、规则概率与冷却、物品技能生产者、结构校验策略、维护账单、时间轴分支与超时、阵法多归属",
+  "command.mxt_test.verify.talisman_failed": "符箓检查失败：%s",
+  "command.mxt_test.verify.talisman_ok": "符箓：定义合计成耐久上限、原版组件与耐久条都到位，每次激发扣耐久、越过上限那一次销毁载体并把没烧掉的灵气退回，代价付不出就拒绝激发、付得出才结算，铭刻声明的品阶经品质模块生效",
   "condition.mxt_test.fire_root_item": "需要满足火灵根物品条件",
   "condition.mxt_test.locked_carrot": "该物品当前不可使用",
   "condition.mxt_test.toxicity_pill": "丹药使用条件满足",

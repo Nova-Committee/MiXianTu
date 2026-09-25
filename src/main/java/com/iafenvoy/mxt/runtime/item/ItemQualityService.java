@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
+import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -115,11 +116,14 @@ public final class ItemQualityService {
                 .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality).filter(ItemQualityService::enabled));
     }
 
-    // What the definition claiming this stack says its own tier is: an artifact, or the technique it teaches.
+    // What the definition claiming this stack says its own tier is: an artifact, the sigil written on a talisman
+    // carrier, or the technique it teaches.
     private static Optional<Holder<ItemQuality>> definitionDefault(Provider access, ItemStack stack) {
         Optional<Holder<ItemQuality>> artifact = ArtifactService.definition(access, stack)
                 .flatMap(holder -> holder.value().quality()).filter(ItemQualityService::enabled);
         if (artifact.isPresent()) return artifact;
+        Optional<Holder<ItemQuality>> talisman = TalismanService.quality(stack).filter(ItemQualityService::enabled);
+        if (talisman.isPresent()) return talisman;
         return ItemBindingService.technique(access, stack)
                 .flatMap(binding -> binding.technique().value().quality())
                 .filter(ItemQualityService::enabled);

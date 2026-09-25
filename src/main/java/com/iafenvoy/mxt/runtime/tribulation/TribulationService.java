@@ -68,8 +68,15 @@ public final class TribulationService {
         return StartResult.accepted();
     }
 
-    public static TickResult tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
-        // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
+    // Reincarnation drops a run in progress: no fail action and no completion, because the life that was being
+    // tested for is over. Answers whether there was anything to drop.
+    public static boolean cancel(TribulationAttachment data) {
+        if (data.tribulation().isEmpty()) return false;
+        data.clear();
+        return true;
+    }
+
+    public static TickResult tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {        // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
         // or a cursor that outlived its beats. Dropping it keeps a dead run from blocking the next breakthrough.
         if (data.peek() == null) {
             if (data.tribulation().isPresent()) data.clear();

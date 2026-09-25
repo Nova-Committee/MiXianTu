@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
-import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.screen.wheel.WheelMenuController;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

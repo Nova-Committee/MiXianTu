@@ -69,6 +69,8 @@
   "command.mxt_test.verify.wheel_ok": "wheel extension: a registered page and kind read back by id, take part in the numbering, and travel by id",
   "command.mxt_test.verify.closure_failed": "C-group closure check failed: %s",
   "command.mxt_test.verify.closure_ok": "C-group closure: the slot field is refused, sprite regions and sizes, a rule's chance and cooldown, the item-ability producer, the structure check policy, the upkeep bill, timeline branching and timeouts, and shared formation ownership",
+  "command.mxt_test.verify.talisman_failed": "talisman check failed: %s",
+  "command.mxt_test.verify.talisman_ok": "talisman: the declared cap sums into the vanilla components and its bar, every invocation takes its cost off, the one past the cap destroys the carrier and hands back what it never burned, a price that cannot be paid refuses the invocation and one that can is settled, and a declared tier resolves through the quality module",
   "condition.mxt_test.fire_root_item": "Fire-root item condition required",
   "condition.mxt_test.locked_carrot": "This item cannot be used right now",
   "condition.mxt_test.toxicity_pill": "Pill usage condition passed",

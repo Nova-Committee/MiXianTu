@@ -134,4 +134,17 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
     public boolean isCultivateActionOnCooldown(Holder<CultivateAction> action, long gameTime) {
         return this.cultivateCooldowns.getOrDefault(action, 0L) > gameTime;
     }
+
+    // Back to a mortal: no progress, no realm, no sitting and no cooldown. The identity half (roots, physiques,
+    // techniques) is a different attachment and is not touched here.
+    public void resetCultivation() {
+        this.cultivationProgresses.clear();
+        this.realmStages.clear();
+        this.cultivateAction = Optional.empty();
+        this.cultivating = false;
+        this.cultivateStartedAt = 0L;
+        this.nextCultivateTick = 0L;
+        this.cultivateCooldowns.clear();
+        this.markDirty();
+    }
 }

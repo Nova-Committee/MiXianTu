@@ -8,8 +8,15 @@ import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostFailure;
+import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
 import com.iafenvoy.mxt.item.TalismanItem;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -19,6 +26,8 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.Failure;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
@@ -27,6 +36,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -45,7 +55,8 @@ import java.util.*;
  * the carrier's answer both to being charged and to a right-click once there is nothing left to pour, so a
  * carrier billed nothing at all is still usable. The invocation is an ordinary ability use with one thing
  * changed - the carrier answers for the grant - which is what keeps a talisman from being a way around every
- * other gate.
+ * other gate. What it costs the carrier is its own wear when the definitions written on it declare any, and
+ * the carrier itself one item at a time when none of them do.
  */
 public final class TalismanService {
     private TalismanService() {
@@ -74,6 +85,68 @@ public final class TalismanService {
         if (!(stack.getItem() instanceof UseItemAuraAccess access)) return false;
         SpiritPour pour = access.pour(registries, stack).orElse(null);
         return pour == null || pour.full();
+    }
+
+    // How much wear a carrier has in it, read off the stack first and off what is written on it second: a cap the
+    // pack patched onto the stack overrides the definitions, and a carrier whose definitions declare none has no
+    // wear at all - it is still spent whole, one item per invocation. Wear belongs to a single carrier, so a stack
+    // of several never has any: vanilla refuses a stack that is both damageable and stackable, and a stacked
+    // carrier stays exactly what it was - one item per invocation.
+    public static int durability(ItemStack stack) {
+        if (stack.getCount() > 1) return 0;
+        return stack.has(DataComponents.MAX_DAMAGE) ? stack.getMaxDamage() : declaredDurability(stack);
+    }
+
+    // What one invocation takes off that, summed over the definitions that declared a durability: a carrier
+    // written with two wearing ones wears as fast as both of them together. Definitions that declared none
+    // ride along and cost nothing.
+    public static int durabilityCost(ItemStack stack) {
+        if (stack.getCount() > 1) return 0;
+        int cost = 0;
+        for (Holder<Talisman> talisman : inscribed(stack)) {
+            Talisman written = talisman.value();
+            if (written.durability() > 0) cost = add(cost, written.consume());
+        }
+        return cost;
+    }
+
+    // Puts the declared wear onto the stack in vanilla's own shape: the cap, a stack size of one and a damage
+    // value that exists. All three are needed - a cap with a stack size above one is refused on the way out
+    // ("Item cannot be both damageable and stackable"), and a stack without a damage component is not damageable
+    // at all - so the framework never writes a partial one. A cap the stack already carries is kept as it is.
+    public static void applyDurability(ItemStack stack) {
+        if (stack.isEmpty() || stack.getCount() > 1) return;
+        int cap = stack.has(DataComponents.MAX_DAMAGE) ? stack.getMaxDamage() : declaredDurability(stack);
+        if (cap <= 0) return;
+        stack.set(DataComponents.MAX_DAMAGE, cap);
+        stack.set(DataComponents.MAX_STACK_SIZE, 1);
+        stack.set(DataComponents.DAMAGE, stack.getOrDefault(DataComponents.DAMAGE, 0));
+    }
+
+    private static int declaredDurability(ItemStack stack) {
+        int declared = 0;
+        for (Holder<Talisman> talisman : inscribed(stack))
+            declared = add(declared, Math.max(0, talisman.value().durability()));
+        return declared;
+    }
+
+    // The tier a carrier made from this is written on: the first inscription that declares one, in the order they
+    // were written, because a carrier holding several has no single tier of its own. Nothing is written onto the
+    // stack for it - the quality module reads this as the definition's own default.
+    public static Optional<Holder<ItemQuality>> quality(ItemStack stack) {
+        for (Holder<Talisman> talisman : inscribed(stack)) {
+            Optional<Holder<ItemQuality>> quality = talisman.value().quality();
+            if (quality.isPresent()) return quality;
+        }
+        return Optional.empty();
+    }
+
+    // What one invocation costs the holder on top of what the carrier was filled with, in the order the
+    // definitions were written. The list goes into the shared transaction untouched, so a price that cannot be
+    // paid refuses the invocation instead of half-paying it - which is the threshold a "needs enough spirit
+    // power" condition would have been.
+    private static List<Cost> costs(List<Holder<Talisman>> written) {
+        return written.stream().flatMap(talisman -> talisman.value().costs().stream()).toList();
     }
 
     // The one entry every trigger shares - a hand (TalismanItem#use) and a carrier that filled itself - so
@@ -159,6 +232,16 @@ public final class TalismanService {
         // belong to - the position says where, not who.
         FormulaContext context = FormulaContext.of(holder, Map.of("block_x", source.position().x(),
                 "block_y", source.position().y(), "block_z", source.position().z()));
+        // What the carrier's own definitions charge for one invocation, planned before anything happens: a price
+        // the holder cannot pay refuses the invocation, which is where a "needs enough spirit power" threshold
+        // lives now. Nothing is written by the plan, so a carrier whose abilities all refuse still costs nothing.
+        CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
+        CostTransaction.Planning price = CostTransaction.plan(costs(written), costContext);
+        if (!price.ok()) {
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Component.translatable(
+                    "actionbar.mxt.talisman.failure." + costFailure(price.failure()).name().toLowerCase(Locale.ROOT))));
+            return Attempt.REFUSED;
+        }
         int fired = 0;
         Failure failure = null;
         for (Holder<Ability> ability : abilities) {
@@ -176,18 +259,73 @@ public final class TalismanService {
                     Component.translatable("actionbar.mxt.talisman.failure." + reason.name().toLowerCase(Locale.ROOT))));
             return Attempt.REFUSED;
         }
-        // What was poured in was spent on the invocation, and a placed carrier is spent with it. A stack of them
-        // is a stack of one-shot carriers, so what is left starts empty rather than inheriting the charge.
-        stack.remove(MxtDataComponents.SPIRIT_STORAGE);
-        if (inHand) {
-            // A hand spends one carrier per invocation unless it is creative, where vanilla's own rule already
-            // answers that the stack is not the thing being spent.
-            if (!(holder instanceof Player player) || !player.hasInfiniteMaterials()) stack.consume(1, holder);
-        } else {
-            stack.shrink(1);
+        CostTransaction.PayResult paid = CostTransaction.commit(price, costContext);
+        if (!paid.paid()) {
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Component.translatable(
+                    "actionbar.mxt.talisman.failure." + costFailure(paid.failure()).name().toLowerCase(Locale.ROOT))));
+            return Attempt.REFUSED;
         }
+        // What was poured in was spent on the invocation rather than left for the next one; what the invocation
+        // takes off the carrier itself is spend's business. The charge is read first, because a carrier the wear
+        // burns out from under it never got to spend it, and an empty stack has no components left to read.
+        SpiritStorageComponent charge = stack.get(MxtDataComponents.SPIRIT_STORAGE);
+        stack.remove(MxtDataComponents.SPIRIT_STORAGE);
+        if (spend(stack, holder, inHand)) refund(charge, holder);
         say(holder, Component.translatable("actionbar.mxt.talisman.invoked", fired));
         return Attempt.FIRED;
+    }
+
+    // A price the holder cannot make is the same two answers every other cost gives: not enough of one resource,
+    // or not enough of everything else. The carrier reports it with the ability failures it already has words for.
+    private static Failure costFailure(CostFailure failure) {
+        return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INSUFFICIENT_COST;
+    }
+
+    // What a carrier was still holding when the wear burned it out, handed back to whoever set that invocation
+    // off. The pour charged one unit of the aura's own resource for each unit it put in, so that is what comes
+    // back; a definition that no longer resolves or an amount the resource will not take loses the aura with the
+    // paper rather than failing the invocation that has already happened.
+    private static void refund(@Nullable SpiritStorageComponent charge, LivingEntity holder) {
+        if (charge == null || charge.isEmpty()) return;
+        ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
+        charge.amounts().forEach((aura, units) -> {
+            double amount = units * SpiritChargeService.POUR_COST_PER_UNIT;
+            if (!Double.isFinite(amount) || amount <= 0.0D) return;
+            Holder<Resource> resource = aura.value().resource();
+            FormulaContext context = ResourceService.formulaContext(holder, resource, FormulaContext.of(holder));
+            ResourceService.change(resources, resource, amount, context);
+        });
+    }
+
+    // One invocation's share of the carrier, in one of two currencies: the wear its definitions declare, or the
+    // carrier itself - one item off the stack, which is what a carrier with no wear to spend has always cost.
+    // Wear that passes the cap destroys the carrier and leaves nothing behind, so the damage a stack shows is
+    // always the wear of the item on top. A creative hand spends neither, which is vanilla's own answer that its
+    // stack is not the thing being spent. True means the wear is what destroyed the carrier, which is the one
+    // case where what was poured in is not spent on the invocation.
+    private static boolean spend(ItemStack stack, LivingEntity holder, boolean inHand) {
+        applyDurability(stack);
+        boolean creative = inHand && holder instanceof Player player && player.hasInfiniteMaterials();
+        int cap = durability(stack);
+        int cost = durabilityCost(stack);
+        if (cap > 0 && cost > 0) {
+            if (creative) return false;
+            int damage = stack.getDamageValue() + cost;
+            if (damage < cap) {
+                stack.setDamageValue(damage);
+                return false;
+            }
+            stack.shrink(1);
+            if (!stack.isEmpty()) stack.setDamageValue(0);
+            return true;
+        }
+        if (!inHand) {
+            // A placed carrier is always spent: nobody's creative mode is holding it.
+            stack.shrink(1);
+        } else if (!creative) {
+            stack.consume(1, holder);
+        }
+        return false;
     }
 
     // An attempt is what the use cooldown is charged for, so the two answers are kept apart rather than

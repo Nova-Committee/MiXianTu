@@ -4,7 +4,7 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限；纯查询的入口（例如 `/mxt curse list`、`/ability list`、`/mxt trigger list`）不需要权限，只是不填目标时要用到自己，因此仍需由玩家执行。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 18 个：`ability`、`aura`、`contract`、`curse`、`display`、`flight`、`formation`、`friend`、`lightning`、`physique`、`picker`、`quality`、`realm`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 19 个：`ability`、`aura`、`contract`、`curse`、`display`、`flight`、`formation`、`friend`、`lifespan`、`lightning`、`physique`、`picker`、`quality`、`realm`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
 
 **客户端命令有两条**：`/hud`（查看与复位可拖动 HUD 元素）与 `/wheel`（打开轮盘配置界面，`/wheel configure` 是同一个入口的另一种写法）。它们注册在客户端自己的命令表里（不进 `/mxt` 树，也不发往服务端），只在聊天栏里手打有效、不需要任何权限，详见文末的[客户端命令](#客户端命令hud--wheel)。
 
@@ -25,6 +25,10 @@ title: 命令
 | `/mxt resource <id> set <value>` | 设置资源值。 |
 | `/mxt resourcebar [resource] [index]` | 查看资源条的原始当前值、上下限、未截断百分比、上下文、位置和顺序；不填参数时列出全部资源条。 |
 | `/mxt cultivate status` | 查看修炼状态。 |
+| `/lifespan [<targets>]`（= `/mxt lifespan`） | 查看目标（不填则自己）的寿元账本「剩余 / 上限」，没有账本时读作「未记账」。不需要权限，单位是刻。 |
+| `/lifespan set <targets> <ticks>`（= `/mxt lifespan set …`） | 把两个数一起重写成 `ticks`（必须 ≥ 0，需要 gamemaster 权限）。 |
+| `/lifespan add <targets> <ticks>`（= `/mxt lifespan add …`） | 加减寿元：正数延寿（两个数一起涨）、负数抽寿（只减剩余），需要 gamemaster 权限。 |
+| `/lifespan reincarnate <targets>`（= `/mxt lifespan reincarnate …`） | 让目标当场转世：跑一遍服务端配置「转世」页的重置清单，并把账本按「凡人基础寿元」重开，需要 gamemaster 权限。 |
 | `/aura`（= `/mxt aura`） | 不带子命令时什么都不做（它以前打开轮盘配置界面，现在是客户端命令 `/wheel`）。 |
 | `/aura query [type]`（= `/mxt aura query [type]`） | 查询当前位置灵气；`type` 是**灵气 ID**（`mxt:aura` 的条目，补全给的就是它），不填时显示全部灵气，并在名字后附带该灵气的元素标记。 |
 | `/aura query element <element>`（= `/mxt aura query element …`） | 按**元素**查询：把这个位置上所有元素标记为该元素的灵气汇总列出（元素被停用时不参与）。补全来自 `mxt:element`。 |
@@ -83,7 +87,7 @@ title: 命令
 | `/mxt curse remove <targets> <curse>`（= `/curse remove …`） | 以 `explicit` 原因移除（需要 gamemaster 权限）。这也是**被停用/已删除定义的唯一出口**。 |
 | `/mxt curse cleanse <targets> <tag>`（= `/curse cleanse …`） | 按 `mxt:curse` 标签解毒（需要 gamemaster 权限），与解毒剂同一个 `cleansed` 原因；被停用的实例会拒绝并说明原因。 |
 | `/talisman blank [count <count>]`（= `/mxt talisman blank …`） | 给空白载体：什么都没铭刻，因此没有灵气账单。 |
-| `/talisman give <talisman> [count <count>] [stored]`（= `/mxt talisman give …`） | 发给你已铭刻这条符箓定义的载体；`count` 一次给出多份（1–64，默认 1），`stored` 以储存模式铭刻，于是它们靠手动灌注而不是下一次点按发动。 |
+| `/talisman give <talisman> [count <count>] [stored]`（= `/mxt talisman give …`） | 发给你已铭刻这条符箓定义的载体；`count` 一次给出多份（1–64，默认 1），`stored` 以储存模式铭刻，于是它们靠手动灌注而不是下一次点按发动。**定义的 `durability` 会当场写进载体**，所以拿到手就有耐久条；带耐久的载体不叠放，`count` 给的是**多份单张**。 |
 | `/talisman give <talisman> count <count> charged`（= `/mxt talisman give …`） | 同上，并同时把整笔灵气灌进去，这正是让载体在下一次点按发动的方式。`charged` 只能写在 `count` 之后。 |
 
 **`give` 一次只收一个符箓 ID，一张载体只铭刻一条定义。** 以前的逗号列表写法已取消：`ResourceArgument` 表达不了"一次列举多个条目"，那种写法连补全和解析都拿不到。要在一张载体上刻多条（例如一条触发符配一条储能符），改用物品组件写法 `give @s mxt:talisman[mxt:talisman={talismans:["mxt_test:flame_sigil","mxt_test:common_sigil"]}]`，字段含义见[数据包 JSON 格式](../../数据包格式)。
@@ -119,8 +123,22 @@ title: 命令
 
 维度 ID（`/mxt secret_realm info|destroy`、`/mxt rift target|place|bind`）与触发器信号（`/mxt trigger …`）同样不是注册表条目，也留在 `IdentifierArgument`；`/picker <category>` 收的是**注册表自己的 ID**（如 `mxt:aura`）而不是某个条目，所以也留在它那里。
 
-### 境界链（`/realm`）
+### 寿元（`/lifespan`）
 
+寿元是每个生物自己的一对数：**剩余**（还能活多少刻）与**上限**（这一世一共拿到过多少刻）。它由数据包给（境界的 `lifespan`、`mxt:modify_lifespan` 行为），由服务端配置决定怎么流逝、耗尽了会怎样。这两个数不懂"岁"，命令读写的单位都是刻；面板与提醒会按配置的「每岁刻数」折算成岁显示。
+
+| 命令 | 作用 |
+| --- | --- |
+| `/lifespan` 或 `/lifespan get [<targets>]`（= `/mxt lifespan …`） | 报每个目标的「剩余 / 上限」；没有账本的读作「未记账」。不写目标是读执行者自己。 |
+| `/lifespan set <targets> <ticks>` | 把两个数一起重写成 `ticks`（必须 ≥ 0）。 |
+| `/lifespan add <targets> <ticks>` | 加减。正数延寿（两个数一起涨），**负数抽寿**（只减剩余，上限不动）。 |
+| `/lifespan reincarnate <targets>` | 当场走一遍服务端配置「转世」页那份重置清单，并把账本按「凡人基础寿元」重开。 |
+
+写入需要管理员权限。前三行只记账，**不会当场致死**：耗尽只在下一次结算时判定，所以 `add` 把剩余写到 0 之后，要等结算周期到了才见后果（把「结算周期」配成 1 刻就是立刻）。给一个从没被授过寿元的生物 `add` 时，先从配置的「凡人基础寿元」起算（那是 0 就从这个数起算＝0）。
+
+`reincarnate` 是唯一一条**当场改动身体**的：它跑的就是寿元耗尽时 `REINCARNATE` 结局跑的那份清单（境界、层数记录、渡劫、资源、灵根 / 功法 / 魂按「转世」页的开关来），`kills` 打开时还会先真死一次。同一个入口也挂在数据包行为 `mxt:reincarnate`、KubeJS `MxtLifespan.reincarnate` 与 Java `LifeSpanService.reincarnate` 上。它不发 `lifespanEnd`（那个事件只回答"寿元耗尽了没有"），而是发 **`LifeSpanRebirthEvent.Pre` / `Post`**：`Pre` 可取消，取消就是这次转世整件不做、身体原样不动，命令会逐个目标报「被监听者拦下」。「启用寿元」关着时它同样执行，因为这是一句命令而不是时间流逝。目标是玩家时，**本人**还会在聊天栏收到一句通知（`message.mxt.lifespan.remade`）：命令的反馈只发给执行者，一身修为当场没了的人不该一无所知。
+
+### 境界链（`/realm`）
 **境界（`mxt:realm_stage`）和秘境（`mxt:secret_realm`）是两套东西**：前者是一条数值修炼链上的一档，后者是一份按需生成的实例维度。`/realm` 只管前者，秘境实例那几条在下面的 `/mxt secret_realm` 里。
 
 境界链属于**灵气定义**（[aura](../../数据包格式) 的 `first_realm` 是链的入口），链上每一档用 `next_realm` 指向下一档，所以一条链是单向的、每份定义一条。`/realm chain <realm>` 不看谁持有哪一档，纯粹回答"这一档前面是谁、后面是谁"——数据包写错 `next_realm` 时这是最快的核对方式。它看的是**当前生效**的阶段：某一档被 `#mxt:disabled` 停用就从链上断开（服务端重建境界索引时同样会拒绝这样的链），被停用的那一档本身会报"没有可用的境界链包含它"。

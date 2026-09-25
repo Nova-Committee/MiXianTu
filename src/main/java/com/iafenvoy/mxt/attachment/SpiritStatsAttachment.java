@@ -11,24 +11,33 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 public final class SpiritStatsAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritStatsAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.LONG.lenientOptionalFieldOf("lifespan_remaining", -1L).forGetter(SpiritStatsAttachment::lifespanRemaining),
+            Codec.LONG.lenientOptionalFieldOf("lifespan_total", -1L).forGetter(SpiritStatsAttachment::lifespanTotal),
             SoulState.CODEC.lenientOptionalFieldOf("soul", SoulState.EMPTY).forGetter(SpiritStatsAttachment::soulState)
     ).apply(i, SpiritStatsAttachment::new));
 
     private long lifespanRemaining;
+    private long lifespanTotal;
     private SoulState soulState;
 
     public SpiritStatsAttachment() {
-        this(-1L, SoulState.EMPTY);
+        this(-1L, -1L, SoulState.EMPTY);
     }
 
-    private SpiritStatsAttachment(long lifespanRemaining, SoulState soulState) {
-        if (lifespanRemaining < -1L) throw new IllegalArgumentException("Invalid spirit state");
+    private SpiritStatsAttachment(long lifespanRemaining, long lifespanTotal, SoulState soulState) {
+        if (lifespanRemaining < -1L || lifespanTotal < -1L) throw new IllegalArgumentException("Invalid spirit state");
         this.lifespanRemaining = lifespanRemaining;
+        this.lifespanTotal = lifespanTotal;
         this.soulState = soulState;
     }
 
     public long lifespanRemaining() {
         return this.lifespanRemaining;
+    }
+
+    // The most this body was ever granted in one life; only a set rewrites it downwards. Negative means the
+    // account was never opened, which is how a finished life is told from one that was never started.
+    public long lifespanTotal() {
+        return this.lifespanTotal;
     }
 
     public double karma() {
@@ -47,9 +56,17 @@ public final class SpiritStatsAttachment extends ShouldSyncAttachment {
         return this.soulState.soulSenseRange();
     }
 
-    public void setLifespanRemaining(long value) {
-        if (value < -1L) throw new IllegalArgumentException("Lifespan cannot be less than -1");
-        this.lifespanRemaining = value;
+    public void setLifespan(long remaining, long total) {
+        if (remaining < -1L || total < -1L)
+            throw new IllegalArgumentException("Lifespan cannot be less than -1");
+        this.lifespanRemaining = remaining;
+        this.lifespanTotal = total;
+        this.markDirty();
+    }
+
+    // Reincarnation with the soul switches off: the four soul numbers go back to their defaults.
+    public void resetSoul() {
+        this.soulState = SoulState.EMPTY;
         this.markDirty();
     }
 

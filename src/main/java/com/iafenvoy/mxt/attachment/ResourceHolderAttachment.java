@@ -73,6 +73,15 @@ public final class ResourceHolderAttachment extends ShouldSyncAttachment {
         return this.values;
     }
 
+    // Reincarnation with the resource switch on: an entry that is gone is re-initialized from its definition the
+    // next time anything reads it, so nothing has to be recomputed here.
+    public void clear() {
+        if (this.values.isEmpty() && this.audit.isEmpty()) return;
+        this.values.clear();
+        this.audit.clear();
+        this.markDirty();
+    }
+
     public Map<Holder<Resource>, Audit> audit() {
         return this.audit;
     }

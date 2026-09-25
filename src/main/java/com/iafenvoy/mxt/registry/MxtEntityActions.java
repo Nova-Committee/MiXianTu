@@ -9,7 +9,9 @@ import com.iafenvoy.mxt.data.action.builtin.entity.meta.ChanceAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.ChoiceAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.IfElseAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.SequenceAction;
+import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -70,4 +72,10 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnParticlesAction>> SPAWN_PARTICLES = REGISTRY.register("spawn_particles", () -> SpawnParticlesAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnEffectCloudAction>> SPAWN_EFFECT_CLOUD = REGISTRY.register("spawn_effect_cloud", () -> SpawnEffectCloudAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnLightningAction>> SPAWN_LIGHTNING = REGISTRY.register("spawn_lightning", () -> SpawnLightningAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyLifespanAction>> MODIFY_LIFESPAN = REGISTRY.register("modify_lifespan", () -> ModifyLifespanAction.CODEC);
+    // A pack's own reincarnation pill, trial or curse ends here instead of waiting for a life to run out; the reset
+    // list, the config switches and any listener's veto are the ones the command and the script entry use.
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<? extends EntityAction>> REINCARNATE = REGISTRY.register("reincarnate", () -> createEntity(ctx -> {
+        if (ctx.entity() instanceof LivingEntity living) LifeSpanService.reincarnate(living);
+    }));
 }

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -23,6 +24,7 @@ import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
@@ -96,6 +98,7 @@ public final class CultivationService {
                     effect.send(level, entity.position().add(0.0D, entity.getBbHeight() * 0.5D, 0.0D));
             });
             target.successAction().execute(entity, context);
+            grantLifespan(entity, target, targetId, context);
             // Sampled here so every tribulation phase is scaled by the current environment, not only the
             // phase that starts at breakthrough.
             target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
@@ -106,6 +109,19 @@ public final class CultivationService {
             target.failAction().execute(entity, context);
         }
         return result;
+    }
+
+    // A stage's own lifespan is an increment paid once, on the breakthrough that reached it, so a later stage
+    // written smaller only adds less; it can never take back what an earlier one granted.
+    private static void grantLifespan(LivingEntity entity, RealmStage stage, Identifier stageId, FormulaContext context) {
+        NumberProvider provider = stage.lifespan().orElse(null);
+        if (provider == null) return;
+        double value = provider.evaluate(context);
+        if (!Double.isFinite(value) || value < 0.0D) {
+            MiXianTu.LOGGER.warn("Realm stage {} grants {} lifespan; nothing was added", stageId, value);
+            return;
+        }
+        LifeSpanService.add(entity, Math.round(value));
     }
 
     private static BreakthroughResult commit(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, @NotNull Transition transition,

@@ -38,5 +38,11 @@ public final class TalismanTooltipAppender {
         String key = TalismanService.ready(registries, stack)
                 ? "tooltip.mxt.talisman.ready" : "tooltip.mxt.talisman.charging";
         builder.accept(Component.translatable(key).withStyle(ChatFormatting.DARK_AQUA));
+        // The bar only exists once the component does, and a carrier a pack wrote itself carries none until it is
+        // first used, so the number is read off the definitions and says "full" until then.
+        int durability = TalismanService.durability(stack);
+        if (durability > 0)
+            builder.accept(Component.translatable("tooltip.mxt.talisman.durability",
+                    Math.max(0, durability - stack.getDamageValue()), durability).withStyle(ChatFormatting.GRAY));
     }
 }

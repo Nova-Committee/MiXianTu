@@ -54,7 +54,7 @@ public record SpiritRoot(Component name, Component description, List<ElementWeig
      * that binds one element is unaffected by the number written on it.
      */
     public record ElementWeight(Holder<Element> element, double weight) {
-        private static final MapCodec<ElementWeight> RAW_CODEC = RecordCodecBuilder.<ElementWeight>mapCodec(i -> i.group(
+        private static final MapCodec<ElementWeight> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Element.CODEC.fieldOf("element").forGetter(ElementWeight::element),
                 Codec.DOUBLE.optionalFieldOf("weight", 1.0D).forGetter(ElementWeight::weight)
         ).apply(i, ElementWeight::new));

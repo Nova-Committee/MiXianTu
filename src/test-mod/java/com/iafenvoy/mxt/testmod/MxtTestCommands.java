@@ -1,21 +1,23 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
+import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.api.WheelEntryKind;
-import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.SpriteIcon;
+import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ability.TargetSelector;
 import com.iafenvoy.mxt.data.ability.target.AreaTargetSelector;
@@ -30,7 +32,9 @@ import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
+import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.ModifyLifespanAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.PlaySoundAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.SetNoGravityAction;
 import com.iafenvoy.mxt.data.action.builtin.item.AddAbilityAction;
@@ -48,18 +52,11 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCon
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.ChanceCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
-import com.iafenvoy.mxt.data.timeline.TimelineContext;
-import com.iafenvoy.mxt.data.timeline.TimelineEntry;
-import com.iafenvoy.mxt.data.timeline.TimelineJump;
-import com.iafenvoy.mxt.data.timeline.TimelineState;
-import com.iafenvoy.mxt.data.timeline.builtin.BranchEntry;
-import com.iafenvoy.mxt.data.timeline.builtin.WaitForEntry;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
@@ -84,6 +81,8 @@ import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.config.MxtServerConfig;
+import com.iafenvoy.mxt.config.MxtServerConfig.LifespanOutcome;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
@@ -92,10 +91,14 @@ import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
 import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
+import com.iafenvoy.mxt.data.item.TalismanComponent;
+import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
+import com.iafenvoy.mxt.event.LifeSpanEndEvent;
+import com.iafenvoy.mxt.event.LifeSpanRebirthEvent;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.*;
@@ -122,6 +125,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
+import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
 import com.iafenvoy.mxt.runtime.creature.BoundBeastService;
 import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
@@ -136,8 +140,11 @@ import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
+import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
+import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.runtime.rift.RiftColors;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
@@ -180,6 +187,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -197,6 +205,7 @@ import net.minecraft.server.permissions.Permissions;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
@@ -345,6 +354,8 @@ public final class MxtTestCommands {
                         .then(literal("keep").executes(context -> keepSecretRealm(context.getSource())))
                         .then(literal("reopen").executes(context -> reopenSecretRealm(context.getSource()))))
                 .then(literal("rift").executes(context -> probeRift(context.getSource())))
+                .then(literal("talisman").executes(context -> probeTalisman(context.getSource())))
+                .then(literal("lifespan").executes(context -> probeLifespan(context.getSource())))
                 .then(literal("info").executes(context -> showInformation(context.getSource())))
                 .then(literal("guide").executes(context -> showGuide(context.getSource()))));
     }
@@ -396,6 +407,12 @@ public final class MxtTestCommands {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.closure_ok"), false);
+        String talismanFailure = verifyTalisman(player);
+        if (talismanFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.talisman_failed", talismanFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.talisman_ok"), false);
         return 1;
     }
 
@@ -403,7 +420,7 @@ public final class MxtTestCommands {
     // stopping at a block. Every being stands on a patch of its own, spawned in the order the legs need, and the
     // actor's own rotation is written down, so none of the numbers depend on where the player happens to look.
     private static String verifyTargetSelectors(ServerPlayer player) {
-        if (!(player.level() instanceof ServerLevel level)) return "the selector probe needs a server level";
+        ServerLevel level = player.level();
         BlockPos base = player.blockPosition().offset(30, 20, 30);
         LivingEntity actor = spawnProbe(level, base, null);
         LivingEntity closest = spawnProbe(level, base.offset(2, 0, 0), null);
@@ -490,7 +507,7 @@ public final class MxtTestCommands {
     // cooldown of an event rule, the item-ability producer, a formation that may skip its structure, a timeline
     // beat that can send a run backwards or time a wait out, and a formation's set of owners.
     private static String verifyClosureItems(ServerPlayer player) {
-        if (!(player.level() instanceof ServerLevel level)) return "the closure probe needs a server level";
+        ServerLevel level = player.level();
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
         String slotFailure = verifyActiveSlot(ops);
         if (slotFailure != null) return slotFailure;
@@ -729,6 +746,163 @@ public final class MxtTestCommands {
             resources.set(probe, previous, 0.0D, 100_000.0D, -1L, "probe");
         }
         return null;
+    }
+
+    private static String verifyTalisman(ServerPlayer player) {
+        return player.level() instanceof ServerLevel level ? verifyTalisman(level, player)
+                : "the talisman probe needs a server level";
+    }
+
+    private static String verifyTalisman(ServerLevel level, LivingEntity actor) {
+        String wearFailure = verifyTalismanWear(level, actor);
+        if (wearFailure != null) return wearFailure;
+        String ledgerFailure = verifyTalismanLedger(level, actor);
+        if (ledgerFailure != null) return ledgerFailure;
+        return verifyTalismanRefund(level, actor);
+    }
+
+    // What a carrier wears away by, through the real invocation entry point: the cap comes off the inscriptions and
+    // lands on the stack as the vanilla component, each invocation takes its own cost off, and the invocation that
+    // would pass the cap destroys the carrier instead. A refused invocation would leave the stack untouched, so the
+    // resource the fixture ability adds is the proof that the wear was spent on a firing. Any living being answers
+    // for a carried ability, so the leg is driven from its own subcommand as well as from the verify chain.
+    private static String verifyTalismanWear(ServerLevel level, LivingEntity actor) {
+        Holder<Talisman> durable = require(MxtResourceKeys.TALISMAN, id("durable_sigil"));
+        ItemStack stack = carrier(durable);
+        if (TalismanService.durability(stack) != 5 || TalismanService.durabilityCost(stack) != 2)
+            return "a carrier written with a five-point talisman read cap " + TalismanService.durability(stack)
+                    + " and cost " + TalismanService.durabilityCost(stack) + " instead of 5 and 2";
+        TalismanService.applyDurability(stack);
+        if (!stack.isDamageableItem() || stack.getMaxDamage() != 5)
+            return "the declared durability did not land on the stack as max_damage";
+        // A number a pack patched onto the stack is the one that counts, not the one the definition declares.
+        ItemStack patched = stack.copy();
+        patched.set(DataComponents.MAX_DAMAGE, 3);
+        if (TalismanService.durability(patched) != 3)
+            return "a stack carrying its own max_damage was read off its inscriptions instead";
+
+        ResourceHolderAttachment resources = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> common = require(MxtResourceKeys.RESOURCE, mxt("common"));
+        double before = resources.get(common);
+        try {
+            SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
+            if (!TalismanService.invokeOnUse(placed, stack))
+                return "the first invocation of a worn carrier did not fire";
+            if (stack.getDamageValue() != 2)
+                return "the first invocation left the carrier at " + stack.getDamageValue() + " wear instead of 2";
+            if (!TalismanService.invokeOnUse(placed, stack))
+                return "the second invocation of a worn carrier did not fire";
+            if (stack.getDamageValue() != 4)
+                return "the second invocation left the carrier at " + stack.getDamageValue() + " wear instead of 4";
+            if (!TalismanService.invokeOnUse(placed, stack))
+                return "the invocation that wears the carrier past its cap did not fire";
+            if (!stack.isEmpty())
+                return "a carrier worn past its cap survived at " + stack.getDamageValue() + " wear";
+            if (!close(resources.get(common) - before, 9.0D))
+                return "three invocations added " + (resources.get(common) - before) + " instead of the 9 the ability owes";
+
+            // No declared wear anywhere means the old currency: one whole carrier per invocation.
+            ItemStack plain = new ItemStack(MxtItems.TALISMAN.get(), 2);
+            plain.set(MxtDataComponents.TALISMAN, new TalismanComponent(
+                    List.of(require(MxtResourceKeys.TALISMAN, id("free_sigil"))), TriggerMode.FIRE));
+            if (TalismanService.durability(plain) != 0 || TalismanService.durabilityCost(plain) != 0)
+                return "a carrier whose talisman declares no durability read a cap of " + TalismanService.durability(plain);
+            if (!TalismanService.invokeOnUse(placed, plain) || plain.getCount() != 1)
+                return "an invocation did not spend one whole carrier, leaving " + plain.getCount();
+        } finally {
+            resources.set(common, before);
+        }
+        return null;
+    }
+
+    // The carrier's price and its tier, driven the same way: a price the actor cannot pay refuses the invocation
+    // before anything happens, the same price is taken when the invocation does happen, and the tier resolves
+    // through the quality module off the inscription rather than off a component.
+    private static String verifyTalismanLedger(ServerLevel level, LivingEntity actor) {
+        ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("graded_sigil")));
+        if (TalismanService.quality(stack).filter(holder -> HolderHelper.id(holder).equals(id("poor"))).isEmpty())
+            return "a talisman whose inscription declares a tier did not report it";
+        if (ItemQualityService.find(level.registryAccess(), stack)
+                .filter(holder -> HolderHelper.id(holder).equals(id("poor"))).isEmpty())
+            return "the tier its inscription declares did not resolve for the carrier";
+        if (ItemQualityService.find(level.registryAccess(), carrier(require(MxtResourceKeys.TALISMAN, id("free_sigil")))).isPresent())
+            return "a carrier whose inscription declares no tier resolved one anyway";
+
+        ResourceHolderAttachment resources = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> probe = require(MxtResourceKeys.RESOURCE, id("trigger_probe"));
+        Holder<Resource> common = require(MxtResourceKeys.RESOURCE, mxt("common"));
+        double probeBefore = resources.get(probe);
+        double commonBefore = resources.get(common);
+        try {
+            // Nothing to pay with: the invocation never happens, so neither the ability nor the carrier moved.
+            resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+            SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
+            if (TalismanService.invokeOnUse(placed, stack))
+                return "an invocation whose price could not be paid still happened";
+            if (!close(resources.get(common), commonBefore))
+                return "an invocation that could not pay its price still ran its ability";
+            if (stack.getCount() != 1 || stack.getDamageValue() != 0)
+                return "an invocation that could not pay its price still spent the carrier";
+            // Enough to pay: the price is taken and the ability runs.
+            resources.set(probe, 5.0D, 0.0D, 100_000.0D, -1L, "closure");
+            if (!TalismanService.invokeOnUse(placed, stack))
+                return "an invocation whose price could be paid did not happen";
+            if (!close(resources.get(probe), 0.0D))
+                return "the invocation left " + resources.get(probe) + " of its price unpaid";
+            if (!close(resources.get(common) - commonBefore, 3.0D))
+                return "the ability behind a paid invocation added " + (resources.get(common) - commonBefore) + " instead of 3";
+        } finally {
+            resources.set(probe, probeBefore);
+            resources.set(common, commonBefore);
+        }
+        return null;
+    }
+
+    // What a carrier was holding when the wear burned it out goes back to whoever set that invocation off: the
+    // pour charged one unit of the aura's own resource per unit, so that is what returns. A carrier that survives
+    // its invocation still burns what it holds, which is what the first of the two legs below pins down. The
+    // fixture pours an aura whose resource has a flat ceiling, because one whose ceiling depends on a realm can
+    // only take the refund for a being that has one.
+    private static String verifyTalismanRefund(ServerLevel level, LivingEntity actor) {
+        ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("refund_sigil")));
+        if (!(stack.getItem() instanceof ItemAuraAccess access)) return "a talisman carrier no longer stores aura";
+        Holder<Aura> aura = require(MxtResourceKeys.AURA, SOUL_POWER);
+        Holder<Resource> resource = require(MxtResourceKeys.RESOURCE, SOUL_POWER);
+        ResourceHolderAttachment resources = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        double before = resources.get(resource);
+        try {
+            resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+            SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
+            // One invocation of the two points of wear the fixture declares: the carrier survives, so what was
+            // poured into it is spent on the invocation exactly as it always was.
+            access.insert(actor, stack, aura, 2, false);
+            if (!TalismanService.invokeOnUse(placed, stack))
+                return "the first invocation of a refundable carrier did not fire";
+            if (stack.getCount() != 1 || stack.getDamageValue() != 1)
+                return "a carrier with wear left was not left standing at one point of wear";
+            if (!close(resources.get(resource), 0.0D))
+                return "a carrier that survived its invocation handed its charge back instead of spending it";
+            // The second invocation is the one the wear destroys, and the charge it never spent comes back.
+            access.insert(actor, stack, aura, 2, false);
+            if (!TalismanService.invokeOnUse(placed, stack))
+                return "the invocation that burns the carrier out did not fire";
+            if (!stack.isEmpty()) return "a carrier worn past its cap survived";
+            if (!close(resources.get(resource), 2.0D))
+                return "a carrier burned out by wear returned " + resources.get(resource) + " instead of the 2 it held";
+        } finally {
+            resources.set(resource, before);
+        }
+        return null;
+    }
+
+    private static ItemStack carrier(Holder<Talisman> inscribed) {
+        ItemStack stack = new ItemStack(MxtItems.TALISMAN.get());
+        stack.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), TriggerMode.FIRE));
+        return stack;
+    }
+
+    private static Identifier mxt(String path) {
+        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path);
     }
 
     // A formation's owners are a set, and an instance saved by the version that allowed one owner still reads its
@@ -2884,8 +3058,359 @@ public final class MxtTestCommands {
     // Every leg drives the calls the renderer and the portal use - the point, link and triangle meshes, the 3x3x3
     // neighbour scan, the colour derivation, the stored state, the transition - and then inspects the world that
     // came out. What cannot be checked from a server is the drawing itself.
-    private static int probeRift(CommandSourceStack source) {
-        double thickness = RiftMesh.DEFAULT_THICKNESS;
+    // A living being other than a player answers for a carried ability, so the talisman legs run on their own
+    // here: a dedicated server with nobody logged in can still drive them, which the verify chain cannot. The
+    // verdict is reported as a broadcast, because that is the only feedback an RCON console or the log shows.
+    private static int probeTalisman(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        BlockPos base = level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES,
+                BlockPos.containing(source.getPosition())).above(2);
+        LivingEntity actor = spawnProbe(level, base, null);
+        if (actor == null) {
+            source.sendFailure(Component.literal("talisman probe: could not create the probe being"));
+            return 0;
+        }
+        try {
+            String failure = verifyTalisman(level, actor);
+            if (failure != null) {
+                source.sendFailure(Component.translatable("command.mxt_test.verify.talisman_failed", failure));
+                return 0;
+            }
+            source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.talisman_ok"), true);
+            return 1;
+        } finally {
+            actor.discard();
+        }
+    }
+
+    // Drives the whole lifespan ledger on disposable probes: the master switch, both numbers, seeding, the
+    // settlement, each of the three outcomes and the explicit rebirth the command and the script call. Fixture numbers, which is why changing test-pack content changes
+    // a leg's arithmetic: mxt_test:qi_refining grants 2400 ticks and every leg sets the base to 0 unless it says
+    // otherwise, so a granted stage is the body's whole ledger. The player-only half of the feature - the panel
+    // row, the action bar warning, login seeding and the spectator transition - needs a real ServerPlayer and is
+    // not covered here.
+    private static int probeLifespan(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+        MxtServerConfig.Reincarnation reincarnation = MxtServerConfig.INSTANCE.reincarnation;
+        BooleanEntry[] policy = {reincarnation.kills, reincarnation.resetCultivation, reincarnation.clearMinorStages,
+                reincarnation.cancelTribulation, reincarnation.clearResources, reincarnation.keepSpiritRoots,
+                reincarnation.keepTechniques, reincarnation.keepSoul};
+        boolean wasEnabled = settings.enabled.getValue();
+        long wasBase = settings.baseLifespan.getValue();
+        int wasAge = settings.agePerSettle.getValue();
+        LifespanOutcome wasOutcome = settings.onExpire.getValue();
+        double wasFraction = settings.warningFraction.getValue();
+        boolean[] wasPolicy = new boolean[policy.length];
+        for (int index = 0; index < policy.length; index++) wasPolicy[index] = policy[index].getValue();
+
+        BlockPos origin = source.getPlayer() != null
+                ? source.getPlayer().blockPosition()
+                : level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO);
+        LivingEntity dormant = spawnProbe(level, origin.above(), null);
+        LivingEntity ledger = spawnProbe(level, origin.above(2), null);
+        LivingEntity seeded = spawnProbe(level, origin.above(4), null);
+        LivingEntity settled = spawnProbe(level, origin.above(6), null);
+        LivingEntity cancelled = spawnProbe(level, origin.above(8), null);
+        LivingEntity doomed = spawnProbe(level, origin.above(10), null);
+        LivingEntity reborn = spawnProbe(level, origin.above(12), PROBE_FIRE_ROOT);
+        LivingEntity climber = spawnProbe(level, origin.above(14), null);
+        LivingEntity acted = spawnProbe(level, origin.above(16), null);
+        LivingEntity plain = spawnProbe(level, origin.above(18), null);
+        LivingEntity untouched = spawnProbe(level, origin.above(20), null);
+        LivingEntity restart = spawnProbe(level, origin.above(22), PROBE_FIRE_ROOT);
+        List<LivingEntity> probes = new ArrayList<>();
+        for (LivingEntity probe : Arrays.asList(dormant, ledger, seeded, settled, cancelled, doomed, reborn, climber, acted, plain, untouched, restart))
+            if (probe != null) probes.add(probe);
+        if (probes.size() != 12) {
+            for (LivingEntity probe : probes) probe.discard();
+            source.sendFailure(Component.literal("lifespan probe: could not create the probe beings"));
+            return 0;
+        }
+
+        boolean ok = true;
+        try {
+            // 1. Master switch off: nothing settles, no ledger appears, and a write still lands on the books.
+            settings.enabled.setValue(false);
+            settings.baseLifespan.setValue(24_000L);
+            boolean dormantSettled = LifeSpanService.settle(dormant);
+            boolean dormantLedger = dormant.getExistingData(MxtAttachments.SPIRIT_STATS).isPresent();
+            boolean dormantWrite = LifeSpanService.set(dormant, 100L).changed();
+            ok &= check(source, "lifespan probe: switch_off settled=" + dormantSettled + " ledger=" + dormantLedger
+                            + " written=" + LifeSpanService.remaining(dormant),
+                    !dormantSettled && !dormantLedger && dormantWrite && LifeSpanService.remaining(dormant) == 100L);
+
+            // 2. Switching it back on resumes that ledger where the write left it: switching off never back-pays.
+            settings.enabled.setValue(true);
+            settings.agePerSettle.setValue(20);
+            boolean resumed = LifeSpanService.settle(dormant) && LifeSpanService.remaining(dormant) == 80L;
+            ok &= check(source, "lifespan probe: switch_on remaining=" + LifeSpanService.remaining(dormant)
+                    + "/" + LifeSpanService.total(dormant), resumed);
+
+            // 3. The ledger: a set rewrites both numbers, a positive add grows both, a negative one only spends
+            //    what is left, and a negative set is refused.
+            LifeSpanService.set(ledger, 100L);
+            boolean setLedger = LifeSpanService.remaining(ledger) == 100L && LifeSpanService.total(ledger) == 100L;
+            LifeSpanService.add(ledger, 50L);
+            boolean added = LifeSpanService.remaining(ledger) == 150L && LifeSpanService.total(ledger) == 150L;
+            LifeSpanService.add(ledger, -30L);
+            boolean spent = LifeSpanService.remaining(ledger) == 120L && LifeSpanService.total(ledger) == 150L;
+            boolean refusedSet = !LifeSpanService.set(ledger, -1L).changed()
+                    && LifeSpanService.remaining(ledger) == 120L && LifeSpanService.total(ledger) == 150L;
+            // Ageing of zero settles without spending anything.
+            settings.agePerSettle.setValue(0);
+            boolean ageless = LifeSpanService.settle(ledger) && LifeSpanService.remaining(ledger) == 120L;
+            settings.agePerSettle.setValue(20);
+            ok &= check(source, "lifespan probe: ledger set=" + setLedger + " added=" + added + " spent=" + spent
+                            + " refused=" + refusedSet + " ageless=" + ageless,
+                    setLedger && added && spent && refusedSet && ageless);
+
+            // 4. Seeding: a body with no ledger only takes the configured base, and a base of zero seeds nothing.
+            //    The zero-base leg runs on its own probe, because it is the only thing that has to leave a body
+            //    with a ledger behind - the regression in leg 11 needs one that never had any.
+            LifeSpanService.add(seeded, 40L);
+            boolean fromBase = LifeSpanService.remaining(seeded) == 24_040L && LifeSpanService.total(seeded) == 24_040L;
+            settings.baseLifespan.setValue(0L);
+            LifeSpanService.add(plain, 40L);
+            boolean fromZero = LifeSpanService.remaining(plain) == 40L && LifeSpanService.total(plain) == 40L;
+            ok &= check(source, "lifespan probe: seed base=" + LifeSpanService.remaining(seeded)
+                            + " zero=" + LifeSpanService.remaining(plain), fromBase && fromZero);
+
+            // 5. Settlement and the NONE outcome: 25 spends down to 5 and then closes the account at 0.
+            settings.onExpire.setValue(LifespanOutcome.NONE);
+            LifeSpanService.set(settled, 25L);
+            List<LifespanOutcome> outcomes = new ArrayList<>();
+            Consumer<LifeSpanEndEvent.Post> recorder = event -> outcomes.add(event.outcome());
+            NeoForge.EVENT_BUS.addListener(recorder);
+            boolean decremented;
+            boolean expired;
+            try {
+                decremented = LifeSpanService.settle(settled) && LifeSpanService.remaining(settled) == 5L
+                        && LifeSpanService.total(settled) == 25L;
+                expired = LifeSpanService.settle(settled);
+            } finally {
+                NeoForge.EVENT_BUS.unregister(recorder);
+            }
+            boolean closed = LifeSpanService.remaining(settled) == -1L && LifeSpanService.total(settled) == 0L;
+            ok &= check(source, "lifespan probe: settle decremented=" + decremented + " closed=" + closed
+                            + " outcomes=" + outcomes,
+                    decremented && expired && closed && outcomes.equals(List.of(LifespanOutcome.NONE)));
+
+            // 6. Cancelling the end inside the event: writing nothing closes the account, buying time keeps the
+            //    countdown running - which is the whole point of the cancellable event.
+            Consumer<LifeSpanEndEvent.Pre> refuse = event -> event.setCanceled(true);
+            Consumer<LifeSpanEndEvent.Pre> extend = event -> {
+                event.setCanceled(true);
+                if (event.entity() instanceof LivingEntity living) LifeSpanService.add(living, 50L);
+            };
+            LifeSpanService.set(cancelled, 5L);
+            NeoForge.EVENT_BUS.addListener(refuse);
+            try {
+                LifeSpanService.settle(cancelled);
+            } finally {
+                NeoForge.EVENT_BUS.unregister(refuse);
+            }
+            boolean refusedEnd = LifeSpanService.remaining(cancelled) == -1L && LifeSpanService.total(cancelled) == 0L;
+            LifeSpanService.set(cancelled, 5L);
+            NeoForge.EVENT_BUS.addListener(extend);
+            try {
+                LifeSpanService.settle(cancelled);
+            } finally {
+                NeoForge.EVENT_BUS.unregister(extend);
+            }
+            boolean extended = LifeSpanService.remaining(cancelled) == 50L;
+            ok &= check(source, "lifespan probe: pre_cancel closed=" + refusedEnd
+                    + " extended=" + LifeSpanService.remaining(cancelled), refusedEnd && extended);
+
+            // 7. DEATH on a non-player: it really dies, and it dies of the mxt:lifespan cause that the no_bonus
+            //    tag keeps out of the element pipeline.
+            settings.onExpire.setValue(LifespanOutcome.DEATH);
+            LifeSpanService.set(doomed, 5L);
+            LifeSpanService.settle(doomed);
+            DamageSource cause = doomed.getLastDamageSource();
+            boolean died = !doomed.isAlive() && cause != null && DamageCalculationService.bypasses(cause)
+                    && HolderHelper.id(cause.typeHolder()).equals(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "lifespan"));
+            ok &= check(source, "lifespan probe: death alive=" + doomed.isAlive() + " cause="
+                            + (cause == null ? "none" : HolderHelper.id(cause.typeHolder())),
+                    died);
+
+            // 8. REINCARNATE: the realm, its progress and its minor stage records are gone and the abilities they
+            //    granted are taken back, while roots and techniques survive and the ledger restarts at the base.
+            settings.onExpire.setValue(LifespanOutcome.REINCARNATE);
+            settings.baseLifespan.setValue(24_000L);
+            reincarnation.kills.setValue(false);
+            reincarnation.resetCultivation.setValue(true);
+            reincarnation.clearMinorStages.setValue(true);
+            reincarnation.cancelTribulation.setValue(true);
+            reincarnation.clearResources.setValue(false);
+            reincarnation.keepSpiritRoots.setValue(true);
+            reincarnation.keepTechniques.setValue(true);
+            reincarnation.keepSoul.setValue(true);
+            Holder<RealmStage> qiRefining = require(MxtResourceKeys.REALM_STAGE, QI_REFINING);
+            CultivationAttachment rebornSpirit = reborn.getData(MxtAttachments.CULTIVATION);
+            SpiritIdentityAttachment rebornIdentity = reborn.getData(MxtAttachments.SPIRIT_IDENTITY);
+            AbilityAttachment rebornAbilities = reborn.getData(MxtAttachments.ABILITY_HOLDER);
+            rebornSpirit.setRealmStage(qiRefining);
+            rebornSpirit.setCultivationProgress(requireProfile(QI), 80.0D);
+            rebornIdentity.raiseMinorStageRecord(qiRefining, 2);
+            rebornIdentity.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE));
+            CultivationGrantService.recalculate(reborn, rebornIdentity, rebornAbilities);
+            boolean realmAbility = rebornAbilities.has(id("awaken_divine_sense"));
+            LifeSpanService.set(reborn, 5L);
+            boolean rebornSettled = LifeSpanService.settle(reborn);
+            boolean reset = rebornSpirit.realmStages().isEmpty() && rebornIdentity.minorStageRecord(qiRefining) == -1
+                    && !rebornAbilities.has(id("awaken_divine_sense"));
+            // What the body still is keeps its grants, so the root's own ability survives the realm's.
+            boolean kept = rebornIdentity.learnedTechniques().contains(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE))
+                    && !rebornIdentity.spiritRoots().isEmpty() && rebornAbilities.has(PROBE_AFFINITY_ABILITY);
+            boolean rebornLedger = LifeSpanService.remaining(reborn) == 24_000L && LifeSpanService.total(reborn) == 24_000L;
+            ok &= check(source, "lifespan probe: reincarnate realm_ability=" + realmAbility
+                            + " realms=" + rebornSpirit.realmStages().size()
+                            + " minor_stage=" + rebornIdentity.minorStageRecord(qiRefining)
+                            + " kept=" + kept + " ledger=" + LifeSpanService.remaining(reborn),
+                    realmAbility && rebornSettled && reset && kept && rebornLedger);
+
+            // 9. The realm entry: the fixture stage pays its own lifespan once, on the breakthrough that reaches it.
+            //    The cost is paid in spirit_power, whose cap in this pack only opens for a body standing in the
+            //    spirit_power chain (a plain mortal can hold none of it, so the resource would clamp to 0 and the
+            //    attempt would fail as INSUFFICIENT_RESOURCE). Seating the climber there first is what makes the
+            //    payment possible; the qi chain is a different chain, so this stays the mortal -> first realm step.
+            settings.onExpire.setValue(LifespanOutcome.NONE);
+            settings.baseLifespan.setValue(0L);
+            CultivationAttachment climbSpirit = climber.getData(MxtAttachments.CULTIVATION);
+            ResourceHolderAttachment climbResources = climber.getData(MxtAttachments.RESOURCE_HOLDER);
+            climbSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, SPIRIT_POWER_REFINING));
+            Holder<Resource> climbPayment = require(MxtResourceKeys.RESOURCE, SPIRIT_POWER);
+            ensureResource(climber, climbResources, climbPayment, 100.0D);
+            climbSpirit.setCultivationProgress(requireProfile(QI), 100.0D);
+            CultivationService.BreakthroughResult breakthrough = CultivationService.attempt(climber, climbSpirit,
+                    climbResources, QI, FormulaContext.of(climber), () -> true);
+            boolean declared = qiRefining.value().lifespan().isPresent();
+            // The pack's cap is part of the arithmetic: 25 is the fixture's own cost, and a body that cannot hold
+            // that much turns the whole leg into an INSUFFICIENT_RESOURCE answer that says nothing about lifespan.
+            boolean affordable = climbResources.get(climbPayment) >= 25.0D;
+            boolean granted = breakthrough.advanced() && LifeSpanService.remaining(climber) == 2_400L
+                    && LifeSpanService.total(climber) == 2_400L;
+            ok &= check(source, "lifespan probe: breakthrough advanced=" + breakthrough.advanced()
+                            + " failure=" + breakthrough.failure() + " declared=" + declared
+                            + " affordable=" + affordable + " granted=" + LifeSpanService.remaining(climber),
+                    affordable && granted);
+
+            // 10. The action entry, both modes, plus the load-time refusal of a negative set.
+            settings.baseLifespan.setValue(0L);
+            new ModifyLifespanAction(ModifyLifespanAction.Mode.ADD, new Constant(30.0D))
+                    .execute(acted, FormulaContext.of(acted));
+            boolean actionAdded = LifeSpanService.remaining(acted) == 30L && LifeSpanService.total(acted) == 30L;
+            new ModifyLifespanAction(ModifyLifespanAction.Mode.ADD, new Constant(-10.0D))
+                    .execute(acted, FormulaContext.of(acted));
+            new ModifyLifespanAction(ModifyLifespanAction.Mode.SET, new Constant(-5.0D))
+                    .execute(acted, FormulaContext.of(acted));
+            boolean actionTook = LifeSpanService.remaining(acted) == 20L && LifeSpanService.total(acted) == 30L;
+            JsonObject negativeSet = new JsonObject();
+            negativeSet.addProperty("mode", "set");
+            negativeSet.addProperty("amount", -5);
+            JsonObject negativeAdd = new JsonObject();
+            negativeAdd.addProperty("mode", "add");
+            negativeAdd.addProperty("amount", -5);
+            boolean loadRefusal = ModifyLifespanAction.CODEC.codec().parse(JsonOps.INSTANCE, negativeSet).error().isPresent()
+                    && ModifyLifespanAction.CODEC.codec().parse(JsonOps.INSTANCE, negativeAdd).result().isPresent();
+            ok &= check(source, "lifespan probe: action added=" + actionAdded + " took=" + actionTook
+                            + " load_refusal=" + loadRefusal + " remaining=" + LifeSpanService.remaining(acted),
+                    actionAdded && actionTook && loadRefusal);
+
+            // 11. Regression: neither adding nothing nor settling may give a body that never had a ledger one.
+            //     A stage whose formula rounds to zero goes through add(..., 0) on every breakthrough, so a zero
+            //     that opened a 0/0 account would sentence the body at the next settlement.
+            settings.enabled.setValue(true);
+            settings.baseLifespan.setValue(0L);
+            boolean zeroAdd = LifeSpanService.add(untouched, 0L).changed()
+                    && untouched.getExistingData(MxtAttachments.SPIRIT_STATS).isEmpty();
+            boolean clean = !LifeSpanService.settle(untouched)
+                    && untouched.getExistingData(MxtAttachments.SPIRIT_STATS).isEmpty()
+                    && LifeSpanService.remaining(untouched) == -1L;
+            ok &= check(source, "lifespan probe: no_ledger zero_add=" + zeroAdd + " settle_created="
+                    + untouched.getExistingData(MxtAttachments.SPIRIT_STATS).isPresent(), zeroAdd && clean);
+
+            // 12. The explicit entry point the command, the script and the action call, on leg 8's policy: it runs
+            //     the same reset without an expiry - so no end event fires - and it works while the system is
+            //     switched off, because a command is not time passing. Its own Pre may refuse it outright.
+            settings.enabled.setValue(false);
+            settings.baseLifespan.setValue(24_000L);
+            CultivationAttachment restartSpirit = restart.getData(MxtAttachments.CULTIVATION);
+            SpiritIdentityAttachment restartIdentity = restart.getData(MxtAttachments.SPIRIT_IDENTITY);
+            AbilityAttachment restartAbilities = restart.getData(MxtAttachments.ABILITY_HOLDER);
+            restartSpirit.setRealmStage(qiRefining);
+            restartIdentity.raiseMinorStageRecord(qiRefining, 2);
+            CultivationGrantService.recalculate(restart, restartIdentity, restartAbilities);
+            boolean restartAbility = restartAbilities.has(id("awaken_divine_sense"));
+            LifeSpanService.set(restart, 5L);
+            boolean[] ended = {false};
+            int[] rebirths = {0};
+            Consumer<LifeSpanEndEvent.Post> watch = event -> ended[0] = true;
+            Consumer<LifeSpanRebirthEvent.Post> counted = event -> rebirths[0]++;
+            Consumer<LifeSpanRebirthEvent.Pre> veto = event -> event.setCanceled(true);
+            NeoForge.EVENT_BUS.addListener(watch);
+            NeoForge.EVENT_BUS.addListener(counted);
+            NeoForge.EVENT_BUS.addListener(veto);
+            LifeSpanService.Result refused;
+            try {
+                refused = LifeSpanService.reincarnate(restart);
+            } finally {
+                NeoForge.EVENT_BUS.unregister(veto);
+            }
+            // A refused rebirth changes nothing at all: the realm is still there and the ledger still reads 5.
+            boolean restartRefused = !refused.changed() && refused.failure() == LifeSpanService.Failure.CANCELLED
+                    && !restartSpirit.realmStages().isEmpty() && LifeSpanService.remaining(restart) == 5L;
+            LifeSpanService.Result restarted;
+            try {
+                restarted = LifeSpanService.reincarnate(restart);
+            } finally {
+                NeoForge.EVENT_BUS.unregister(watch);
+                NeoForge.EVENT_BUS.unregister(counted);
+            }
+            boolean restartReset = restartSpirit.realmStages().isEmpty()
+                    && restartIdentity.minorStageRecord(qiRefining) == -1
+                    && !restartAbilities.has(id("awaken_divine_sense"))
+                    && restartAbilities.has(PROBE_AFFINITY_ABILITY);
+            boolean restartLedger = LifeSpanService.remaining(restart) == 24_000L && LifeSpanService.total(restart) == 24_000L;
+            ok &= check(source, "lifespan probe: explicit_reincarnate ran=" + restarted.changed()
+                            + " refused=" + restartRefused + " ability=" + restartAbility
+                            + " realms=" + restartSpirit.realmStages().size()
+                            + " kept_root=" + restartAbilities.has(PROBE_AFFINITY_ABILITY)
+                            + " ledger=" + LifeSpanService.remaining(restart)
+                            + " rebirth_post=" + rebirths[0] + " end_event=" + ended[0],
+                    restartAbility && restarted.changed() && restartRefused && restartReset && restartLedger
+                            && rebirths[0] == 1 && !ended[0]);
+
+            // 13. The data pack entry: mxt:reincarnate decodes by its own type name and runs that same reset, which
+            //     is what a pack's own reincarnation pill needs instead of waiting for a life to run out.
+            restartSpirit.setRealmStage(qiRefining);
+            CultivationGrantService.recalculate(restart, restartIdentity, restartAbilities);
+            EntityAction action = EntityAction.SINGLE_CODEC.parse(JsonOps.INSTANCE,
+                    JsonParser.parseString("{\"type\": \"mxt:reincarnate\"}")).getOrThrow();
+            action.execute(restart, FormulaContext.of(restart));
+            boolean actionRebirth = restartSpirit.realmStages().isEmpty()
+                    && LifeSpanService.remaining(restart) == 24_000L;
+            ok &= check(source, "lifespan probe: reincarnate_action realms=" + restartSpirit.realmStages().size()
+                    + " ledger=" + LifeSpanService.remaining(restart), actionRebirth);
+        } finally {
+            settings.enabled.setValue(wasEnabled);
+            settings.baseLifespan.setValue(wasBase);
+            settings.agePerSettle.setValue(wasAge);
+            settings.onExpire.setValue(wasOutcome);
+            settings.warningFraction.setValue(wasFraction);
+            for (int index = 0; index < policy.length; index++) policy[index].setValue(wasPolicy[index]);
+            for (LivingEntity probe : probes) probe.discard();
+        }
+        if (ok) {
+            source.sendSuccess(() -> Component.literal("lifespan probe: OK"), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("lifespan probe: MISMATCH"));
+        return 0;
+    }
+
+    private static int probeRift(CommandSourceStack source) {        double thickness = RiftMesh.DEFAULT_THICKNESS;
         MinecraftServer server = source.getServer();
         ServerLevel level = server.overworld();
         Identifier here = level.dimension().identifier();

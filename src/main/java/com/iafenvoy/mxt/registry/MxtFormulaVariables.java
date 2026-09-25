@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
@@ -44,6 +45,7 @@ public final class MxtFormulaVariables {
     public static final DeferredHolder<FormulaVariable, FormulaVariable> TARGET = REGISTRY.register("target", () -> new EntityVariable("target_"));
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> SECRET_REALM = REGISTRY.register("secret_realm", SecretRealmVariable::new);
+    public static final DeferredHolder<FormulaVariable, FormulaVariable> LIFESPAN = REGISTRY.register("lifespan", LifespanVariable::new);
 
     // For formulas that must switch a term off without editing the expression.
     private record ZeroVariable() implements FormulaVariable {
@@ -175,8 +177,7 @@ public final class MxtFormulaVariables {
     // The state of the secret realm the subject is inside. The names carry the {@code secret_realm_} prefix
     // because {@code realm} already means a cultivation stage and both can be read in one expression; every name
     // answers NaN outside a secret realm, so a condition can tell "not in a secret realm" from "in an empty one".
-    private static final class SecretRealmVariable implements FormulaVariable {
-        private static final Set<String> NAMES = Set.of("secret_realm_members", "secret_realm_limit",
+    private static final class SecretRealmVariable implements FormulaVariable {        private static final Set<String> NAMES = Set.of("secret_realm_members", "secret_realm_limit",
                 "secret_realm_elapsed", "secret_realm_duration", "secret_realm_index", "secret_realm_is_owner");
 
         @Override
@@ -201,6 +202,27 @@ public final class MxtFormulaVariables {
                 case "secret_realm_is_owner" -> record.isOwner(entity.getUUID()) ? 1.0D : 0.0D;
                 default -> Double.NaN;
             };
+        }
+    }
+
+    // How much life the caster has left and what its ceiling is, in ticks. Both answer NaN for a body with no
+    // ledger, so a condition can tell "never accounted for" from "accounted for and spent".
+    private static final class LifespanVariable implements FormulaVariable {
+        private static final Set<String> NAMES = Set.of("lifespan_remaining", "lifespan_total");
+
+        @Override
+        public Set<String> names() {
+            return NAMES;
+        }
+
+        @Override
+        public double value(String key, String suffix, FormulaContext context) {
+            if (!suffix.isEmpty()) return Double.NaN;
+            Entity entity = context.caster() != null ? context.caster() : context.player();
+            if (entity == null) return Double.NaN;
+            long value = key.equals("lifespan_remaining")
+                    ? LifeSpanService.remaining(entity) : LifeSpanService.total(entity);
+            return value < 0L ? Double.NaN : value;
         }
     }
 }

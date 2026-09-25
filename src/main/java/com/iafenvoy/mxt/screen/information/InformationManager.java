@@ -4,8 +4,8 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -49,6 +50,7 @@ public final class InformationManager {
         register("dimension", Side.BASIC, c -> c.add("info.mxt.dimension", c.getPlayer().level().dimension().identifier().getPath()));
 
         register("realm", Side.CULTIVATION, InformationManager::realmLines);
+        register("lifespan", Side.CULTIVATION, InformationManager::lifespanLine);
         register("cultivation_progress", Side.CULTIVATION, InformationManager::progressLines);
         register("cultivating", Side.CULTIVATION, c -> c.add("info.mxt.cultivating", Component.translatable(c.getData(MxtAttachments.CULTIVATION).cultivating() ? "info.mxt.yes" : "info.mxt.no")));
         register("spirit_roots", Side.CULTIVATION, InformationManager::spiritRootLines);
@@ -85,8 +87,17 @@ public final class InformationManager {
         BASIC, CULTIVATION
     }
 
-    private static void progressLines(InformationCollector collector) {
-        CultivationAttachment cultivation = collector.getData(MxtAttachments.CULTIVATION);
+    // Not drawn while the system is off: a row would describe a rule this server does not run. A spent life is
+    // still drawn, because "0.0 / 120.0" is exactly what a player waiting to be saved needs to see.
+    private static void lifespanLine(InformationCollector collector) {
+        MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+        if (!settings.enabled.getValue()) return;
+        Player player = collector.getPlayer();
+        collector.add("info.mxt.lifespan", LifeSpanService.display(LifeSpanService.remaining(player),
+                LifeSpanService.total(player), settings.ticksPerYear.getValue()));
+    }
+
+    private static void progressLines(InformationCollector collector) {        CultivationAttachment cultivation = collector.getData(MxtAttachments.CULTIVATION);
         if (cultivation.cultivationProgresses().isEmpty()) {
             collector.add("info.mxt.cultivation_progress", "-");
             return;

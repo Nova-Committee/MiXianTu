@@ -2,8 +2,10 @@ package com.iafenvoy.mxt.config;
 
 import com.iafenvoy.jupiter.config.container.AutoInitConfigContainer;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
+import com.iafenvoy.jupiter.config.entry.DoubleEntry;
 import com.iafenvoy.jupiter.config.entry.EnumEntry;
 import com.iafenvoy.jupiter.config.entry.IntegerEntry;
+import com.iafenvoy.jupiter.config.entry.LongEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -18,6 +20,8 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
     public final Curios curios = new Curios();
     public final Cultivation cultivation = new Cultivation();
+    public final Lifespan lifespan = new Lifespan();
+    public final Reincarnation reincarnation = new Reincarnation();
     public final Talisman talisman = new Talisman();
     public final Aura aura = new Aura();
     public final Formations formations = new Formations();
@@ -73,6 +77,90 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
         private Cultivation() {
             super("cultivation", "config.mxt.server.cultivation");
+        }
+    }
+
+    /**
+     * The lifespan rules: whether they run at all, how fast a life is spent, and what running out does. The
+     * numbers a life is made of stay in the data pack ({@code realm_stage.lifespan}, {@code mxt:modify_lifespan}),
+     * so this tab only answers how a server treats that ledger.
+     */
+    public static final class Lifespan extends AutoInitConfigCategoryBase {
+        public final BooleanEntry enabled = BooleanEntry.builder("config.mxt.server.lifespan.enabled", false)
+                .key("enabled")
+                .tooltip("config.mxt.server.lifespan.enabled.tooltip")
+                .build();
+        public final LongEntry baseLifespan = LongEntry.builder("config.mxt.server.lifespan.base_lifespan", 60L)
+                .key("base_lifespan")
+                .tooltip("config.mxt.server.lifespan.base_lifespan.tooltip")
+                .range(0L, 1_000_000_000_000L).build();
+        public final IntegerEntry settleInterval = IntegerEntry.builder("config.mxt.server.lifespan.settle_interval", 20)
+                .key("settle_interval")
+                .tooltip("config.mxt.server.lifespan.settle_interval.tooltip")
+                .range(1, 72_000).build();
+        public final IntegerEntry agePerSettle = IntegerEntry.builder("config.mxt.server.lifespan.age_per_settle", 20)
+                .key("age_per_settle")
+                .tooltip("config.mxt.server.lifespan.age_per_settle.tooltip")
+                .range(0, 72_000).build();
+        public final EnumEntry<LifespanOutcome> onExpire = EnumEntry.builder("config.mxt.server.lifespan.on_expire", LifespanOutcome.DEATH)
+                .key("on_expire")
+                .tooltip("config.mxt.server.lifespan.on_expire.tooltip")
+                .nameProvider(value -> Component.translatable("config.mxt.server.lifespan.on_expire." + value.name().toLowerCase()))
+                .build();
+        public final DoubleEntry warningFraction = DoubleEntry.builder("config.mxt.server.lifespan.warning_fraction", 0.1D)
+                .key("warning_fraction")
+                .tooltip("config.mxt.server.lifespan.warning_fraction.tooltip")
+                .range(0.0D, 1.0D).build();
+        public final IntegerEntry ticksPerYear = IntegerEntry.builder("config.mxt.server.lifespan.ticks_per_year", 24_000)
+                .key("ticks_per_year")
+                .tooltip("config.mxt.server.lifespan.ticks_per_year.tooltip")
+                .range(1, 1_000_000).build();
+
+        private Lifespan() {
+            super("lifespan", "config.mxt.server.lifespan");
+        }
+    }
+
+    /**
+     * What reincarnation keeps. Every switch is one line of the reset list, so a pack that wants a harder or a
+     * softer rebirth changes this tab instead of listening to the event; the defaults are the base's own stance.
+     */
+    public static final class Reincarnation extends AutoInitConfigCategoryBase {
+        public final BooleanEntry kills = BooleanEntry.builder("config.mxt.server.reincarnation.kills", false)
+                .key("kills")
+                .tooltip("config.mxt.server.reincarnation.kills.tooltip")
+                .build();
+        public final BooleanEntry resetCultivation = BooleanEntry.builder("config.mxt.server.reincarnation.reset_cultivation", true)
+                .key("reset_cultivation")
+                .tooltip("config.mxt.server.reincarnation.reset_cultivation.tooltip")
+                .build();
+        public final BooleanEntry clearMinorStages = BooleanEntry.builder("config.mxt.server.reincarnation.clear_minor_stages", true)
+                .key("clear_minor_stages")
+                .tooltip("config.mxt.server.reincarnation.clear_minor_stages.tooltip")
+                .build();
+        public final BooleanEntry cancelTribulation = BooleanEntry.builder("config.mxt.server.reincarnation.cancel_tribulation", true)
+                .key("cancel_tribulation")
+                .tooltip("config.mxt.server.reincarnation.cancel_tribulation.tooltip")
+                .build();
+        public final BooleanEntry clearResources = BooleanEntry.builder("config.mxt.server.reincarnation.clear_resources", false)
+                .key("clear_resources")
+                .tooltip("config.mxt.server.reincarnation.clear_resources.tooltip")
+                .build();
+        public final BooleanEntry keepSpiritRoots = BooleanEntry.builder("config.mxt.server.reincarnation.keep_spirit_roots", true)
+                .key("keep_spirit_roots")
+                .tooltip("config.mxt.server.reincarnation.keep_spirit_roots.tooltip")
+                .build();
+        public final BooleanEntry keepTechniques = BooleanEntry.builder("config.mxt.server.reincarnation.keep_techniques", true)
+                .key("keep_techniques")
+                .tooltip("config.mxt.server.reincarnation.keep_techniques.tooltip")
+                .build();
+        public final BooleanEntry keepSoul = BooleanEntry.builder("config.mxt.server.reincarnation.keep_soul", true)
+                .key("keep_soul")
+                .tooltip("config.mxt.server.reincarnation.keep_soul.tooltip")
+                .build();
+
+        private Reincarnation() {
+            super("reincarnation", "config.mxt.server.reincarnation");
         }
     }
 
@@ -178,6 +266,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry formation = BooleanEntry.builder("config.mxt.server.commands.formation", true).key("formation").tooltip("config.mxt.server.commands.formation.tooltip").build();
         public final BooleanEntry friend = BooleanEntry.builder("config.mxt.server.commands.friend", true).key("friend").tooltip("config.mxt.server.commands.friend.tooltip").build();
         public final BooleanEntry lightning = BooleanEntry.builder("config.mxt.server.commands.lightning", true).key("lightning").tooltip("config.mxt.server.commands.lightning.tooltip").build();
+        public final BooleanEntry lifespan = BooleanEntry.builder("config.mxt.server.commands.lifespan", true).key("lifespan").tooltip("config.mxt.server.commands.lifespan.tooltip").build();
         public final BooleanEntry physique = BooleanEntry.builder("config.mxt.server.commands.physique", true).key("physique").tooltip("config.mxt.server.commands.physique.tooltip").build();
         public final BooleanEntry picker = BooleanEntry.builder("config.mxt.server.commands.picker", true).key("picker").tooltip("config.mxt.server.commands.picker.tooltip").build();
         public final BooleanEntry quality = BooleanEntry.builder("config.mxt.server.commands.quality", true).key("quality").tooltip("config.mxt.server.commands.quality.tooltip").build();
@@ -244,5 +333,13 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
     public enum BeltMode {
         MANUAL, WEAPONS_ARTIFACTS, ALL
+    }
+
+    /**
+     * What a spent life does when nobody extends it: nothing (the event decides), the body dies, or the body
+     * starts over.
+     */
+    public enum LifespanOutcome {
+        NONE, DEATH, REINCARNATE
     }
 }

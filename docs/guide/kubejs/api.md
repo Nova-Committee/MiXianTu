@@ -22,6 +22,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtElements` | 查询实体身上的元素与元素附着，并施加附着。 |
 | `MxtSpiritRoots` | 查询、授予、移除与开关灵根。 |
 | `MxtPhysiques` | 查询、授予、移除与开关体质。 |
+| `MxtLifespan` | 读写成实体自己的寿元账本（剩余与上限），也能让实体当场转世。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
 | `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
 | `MxtLoot` | 注册脚本战利品条件与战利品函数。 |
@@ -430,6 +431,29 @@ MxtQuality.set(player, event.item, 'mxt_test:excellent')
 | --- | --- | --- | --- |
 | `reclaim(entity)` | `Entity` | `boolean` | 使用权威魂魄回收流程。仅适用于可转移魂魄；会触发 `soul` 的回收 pre/post 事件。 |
 
+### `MxtLifespan`
+
+寿元账本是**每个生物自己的一对数**：剩余与上限，单位都是刻。上限只增不减（抽寿扣的是余额），未记账读作 `-1`。写入即使在服务端配置的「寿元 → 启用寿元」关闭时也照记账——那个开关决定的是时间流不流逝，不是数字存不存在。
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `remaining(entity)` | `Entity` | `long` | 剩余刻数；没有账本（或全不受限）答 `-1`。 |
+| `total(entity)` | `Entity` | `long` | 这一世一共拿到过的刻数；没有账本答 `-1`。 |
+| `set(entity, ticks)` | `LivingEntity`、`long` | `{changed, failure}` | 把两个数一起重写；`ticks` 为负时拒绝（`failure` 为 `INVALID_VALUE`）。 |
+| `add(entity, ticks)` | `LivingEntity`、`long` | `{changed, failure}` | 正数续命（两个数一起涨），负数抽寿（只减剩余，上限不动）。从未被给过寿元的生物先按配置的「凡人基础寿元」起算。 |
+| `reincarnate(entity)` | `LivingEntity` | `{changed, failure}` | 让实体当场转世：跑一遍服务端配置「转世」页的重置清单，并把账本按「凡人基础寿元」重开（`kills` 打开时会先真死一次）。**不**发 `lifespanEnd`，改发 `lifespanRebirth`——`Pre` 被取消时这次转世整件不做，`failure` 为 `cancelled`；「启用寿元」关着时也照做；目标若是玩家，本人会在聊天栏收到一句通知。 |
+
+`failure` 取值：`set` / `add` 只有 `SERVER_ONLY` 与 `INVALID_VALUE`；`reincarnate` 另有 `CANCELLED`（`lifespanRebirth` 的 `Pre` 被监听者取消）。三者都不会改动任何状态，也不写日志。这一对数不直接致死：耗尽只在下一次结算时判定，所以把它们写到 0 之后要等结算周期到了才见后果。
+
+```js
+// kubejs/server_scripts/mxt_lifespan.js
+// 一枚续命丹：把剩余寿元抬到上限的一半，至少抬 6000 刻。
+const player = event.entity
+const total = MxtLifespan.total(player)
+const target = Math.max(6000, Math.round(total * 0.5))
+MxtLifespan.set(player, target)
+```
+
 ### `MxtTriggers`
 
 触发器信号就是数据包技能在等待的通知（例如持有者命中目标）。`MxtTriggers` 让脚本发布同一种信号，也让脚本等待它；两侧都走运行时 `TriggerDispatcher`，因此脚本订阅和数据包技能触发器看到的是同一次派发。
@@ -604,7 +628,8 @@ MxtEvents.friendRelation(event => {
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
 | `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
 | `formation` | `Activate`、`Deactivate`、`Tick`、`TickEffects`、`UpkeepFailed` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate`、`TickEffects`、`UpkeepFailed` 可取消，`Deactivate` 与 `Tick` 不可取消。`Tick` 是"本周期已付费"的观察点，`TickEffects` 只挡这一周期的效果且不退费，`UpkeepFailed` 取消表示让阵法撑过付不出钱的这一周期；`UpkeepFailed` 另有 `payer()`（`Optional<Entity>`，无人付款时为空）与 `failedResource()`（`Optional<Identifier>`，没有付款者时为空），脚本据此知道谁欠费、欠的是哪种资源。 |
-| `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Pre` 可取消结束，取消后寿元会被设为不受限。 |
+| `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Post` 另有 `outcome()`（`NONE`、`DEATH`、`REINCARNATE`）。`Pre` 可取消，但**取消不再等于永久不受限**：在事件里写下正值（经 `MxtLifespan` 或直接写附件）＝续命成功，倒计时从新值继续；什么都不写才是记账结束（`remaining = -1`、`total = 0`）。命令与 `MxtLifespan.reincarnate` 的**显式转世不走这个事件**（它不是寿元耗尽）。 |
+| `lifespanRebirth` | `Pre`、`Post` | **显式转世**专用：`entity()`、`spirit()`。`Pre` 可取消，取消＝这次转世整件不做（身体原样不动，调用方拿到 `cancelled`）；`Post` 在重置清单跑完、账本按「凡人基础寿元」重开之后发出，`spirit()` 就是下一世的账本。耗尽那条路不发它——那里发的是 `lifespanEnd`。 |
 | `secretRealm` | `Create`、`Destroy`、`EnterPre`、`EnterPost`、`Exit` | `definition()`（`Holder<SecretRealm>`）、`dimension()`（`ResourceKey<Level>`）、`index()`、`owner()`（`Optional<UUID>`）、`server()`；成员事件（`EnterPre`/`EnterPost`/`Exit`）另有 `member()`，只有 `EnterPre` 可取消。`Create` 在一份实例维度刚建好时发出，`Destroy` 在实例结束时发出——**无论是删掉地形还是只卸载保留**（被认领的秘境没人后只是休眠）。 |
 | `soul` | `TransferPre`、`TransferPost`、`ReclaimPre`、`ReclaimPost` | `entity()`、`soul()`；所有 `*Pre` 可取消。 |
 | `spiritContract` | `Pre`、`Post` | `contract()`、`contractType()`、`requester()`、`action()`；`contractType()` 是 `Optional<Holder<ContractType>>`，`action()` 为 `BIND`、`RELEASE`、`DEATH`、`RECALL`、`RECALL_COMPLETED`（召回闩被消费，不可取消）；`Pre` 可取消。 |
@@ -636,7 +661,7 @@ MxtEvents.cultivationBreak(event => {
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
 
-只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtSouls`、`MxtElements.attach`、`MxtSpiritRoots` 与 `MxtPhysiques` 的改变状态方法，以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` / `failure` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
+只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtLifespan`、`MxtSouls`、`MxtElements.attach`、`MxtSpiritRoots` 与 `MxtPhysiques` 的改变状态方法，以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` / `failure` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
 
 `MxtActions.execute*` 故意不设该保护，因为内置 Action 自己决定作用端：JSON 里声明了客户端执行的 Action（例如带 `client` 标志的速度 Action）本来就应当就地运行。
 

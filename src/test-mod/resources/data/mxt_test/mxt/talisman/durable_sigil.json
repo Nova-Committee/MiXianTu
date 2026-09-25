@@ -1,0 +1,5 @@
+{
+  "abilities": ["mxt_test:sigil_pulse"],
+  "durability": 5,
+  "consume": 2
+}

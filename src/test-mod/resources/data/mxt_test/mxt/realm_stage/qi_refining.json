@@ -10,6 +10,7 @@
     { "stage": 5, "ability": ["mxt_test:sword_focus"] }
   ],
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
+  "lifespan": 2400,
   "breakthrough_particle": {
     "particle": { "type": "minecraft:enchant" },
     "count": 12,

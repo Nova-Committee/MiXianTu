@@ -21,6 +21,7 @@ MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.99` 的服务端权威修仙�
 - 跨表引用优先 Holder；可选引用用 optional Codec，列表/Map 用容错集合 Codec。
 - 行为叫 `action`，判断叫 `condition`，消耗叫 `Cost`。
 - 术语固定：载体与定义一律写「符箓」（`talisman`），配「符纸」「符笔」「符墨」；「符篆」是误用，不要出现在任何文案或文档里。
+- 术语固定：**寿元（`lifespan`）是每个生物自己的生命周期**（剩余 / 上限两个刻数，存在 `spirit_stats` 附件上），**不是 `resource`**——resource 是可回复的数值、会出现在资源条上，寿元只会耗尽；面板上它单独一行。它的数值归数据包（`realm_stage.lifespan`、`mxt:modify_lifespan`），节奏与耗尽后果归服务端配置（「寿元」页与「转世」页）。
 - 所有资源/灵气按类型独立存储；除非语义明确，不要把 Map 求和成单值。
 - 服务端负责 Cost、资源扣除、修炼、境界、交易和实体行为；客户端只渲染和发请求。
 - 颜色使用 `MiscCodecs.COLOR`；有限值加载失败，运行期 NaN/Infinity 警告并返回 0。
@@ -28,6 +29,6 @@ MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.99` 的服务端权威修仙�
 
 ## 公开接口重点
 
-`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`AbilityService` 执行技能（`useCarried` 是"由物品代持能力"的入口），`AbilityActivationService` 是"按一下"的唯一入口（轮盘、命令与脚本都走它，`Toggable` 在那里分派），`DamageCalculationService` 是模组自己发伤害的唯一出口（第一层出力在发伤害处，第二层减免在 `LivingIncomingDamageEvent`，元素克制/适应倍率住在 `element` 定义里），`MxtDatapackRegistries` 查询动态表，`AuraAccess`/`ItemAuraAccess` 处理灵气存取（键是 `Holder<Aura>`），`UseItemAuraAccess` 是物品"按住右键被灌注"的接口（`pour` 自定义容量、`canPourInto` 在付灵气前否掉一 tick、`onCharged` 汇报已写入），`SpiritChargeService` 把持有者灵气灌注进可充能物品，`TalismanService` 在符箓载体灌满时发动铭刻的能力并烧掉一张，`HoldService` 驱动"按住使用"手势，`Cost` 处理行为消耗，`WheelMenuEntry` 是纯客户端轮盘条目契约（技能与灵气各一个实现，法器技能已并入技能），`Contracts` 是"这只生物能不能被契约、它自己怎么做"的唯一查找入口（资格、操作与捕捉通知是 `api` 里的 `Contractable` / `ContractOperations` / `CaptureListener`，契约记录在 `mxt:contract` 附件上，主人由实体自己的 `OwnableEntity` 回答，主人名单在 `BoundBeastService` 的主世界索引里）；契约兽的**命令**是 `data/creature/ContractBehavior` 类 + `ContractBehaviors` 装载（内置跟随 / 游荡 / 驻守 / 召回，**不是 enum**，内容方 new 一个再 register 就多一种），输入端唯一出口是 `runtime/creature/ContractBehaviorService`（御兽铃轮盘的 `WheelSourceTypes.CONTRACT` 与 `/contract behavior` 都走它）。
+`AuraService` 查询灵气，`ResourceService` 修改资源，`CultivationService` 处理修炼和突破，`LifeSpanService` 读写每个生物自己的寿元账本（剩余与上限，单位刻；写入永不致死，耗尽只由 `settle` 判定），`AbilityService` 执行技能（`useCarried` 是"由物品代持能力"的入口），`AbilityActivationService` 是"按一下"的唯一入口（轮盘、命令与脚本都走它，`Toggable` 在那里分派），`DamageCalculationService` 是模组自己发伤害的唯一出口（第一层出力在发伤害处，第二层减免在 `LivingIncomingDamageEvent`，元素克制/适应倍率住在 `element` 定义里），`MxtDatapackRegistries` 查询动态表，`AuraAccess`/`ItemAuraAccess` 处理灵气存取（键是 `Holder<Aura>`），`UseItemAuraAccess` 是物品"按住右键被灌注"的接口（`pour` 自定义容量、`canPourInto` 在付灵气前否掉一 tick、`onCharged` 汇报已写入），`SpiritChargeService` 把持有者灵气灌注进可充能物品，`TalismanService` 在符箓载体灌满时发动铭刻的能力并结算载体（有耐久就扣耐久、扣满销毁，没耐久就烧掉一张），`HoldService` 驱动"按住使用"手势，`Cost` 处理行为消耗，`WheelMenuEntry` 是纯客户端轮盘条目契约（技能与灵气各一个实现，法器技能已并入技能），`Contracts` 是"这只生物能不能被契约、它自己怎么做"的唯一查找入口（资格、操作与捕捉通知是 `api` 里的 `Contractable` / `ContractOperations` / `CaptureListener`，契约记录在 `mxt:contract` 附件上，主人由实体自己的 `OwnableEntity` 回答，主人名单在 `BoundBeastService` 的主世界索引里）；契约兽的**命令**是 `data/creature/ContractBehavior` 类 + `ContractBehaviors` 装载（内置跟随 / 游荡 / 驻守 / 召回，**不是 enum**，内容方 new 一个再 register 就多一种），输入端唯一出口是 `runtime/creature/ContractBehaviorService`（御兽铃轮盘的 `WheelSourceTypes.CONTRACT` 与 `/contract behavior` 都走它）。
 
 完整规则见 [`docs/ai/SKILL.md`](ai/SKILL.md)。

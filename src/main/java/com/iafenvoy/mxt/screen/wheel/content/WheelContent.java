@@ -2,8 +2,6 @@ package com.iafenvoy.mxt.screen.wheel.content;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.api.WheelSource;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;

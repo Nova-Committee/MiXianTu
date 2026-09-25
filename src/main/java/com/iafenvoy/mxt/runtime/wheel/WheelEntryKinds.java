@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.RegistryAccess;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
