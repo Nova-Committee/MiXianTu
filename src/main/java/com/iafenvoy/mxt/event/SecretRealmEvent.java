@@ -23,7 +23,7 @@ public abstract class SecretRealmEvent extends Event {
     private final Optional<UUID> owner;
 
     protected SecretRealmEvent(MinecraftServer server, Holder<SecretRealm> definition, ResourceKey<Level> dimension,
-                                 int index, Optional<UUID> owner) {
+                               int index, Optional<UUID> owner) {
         this.server = server;
         this.definition = definition;
         this.dimension = dimension;

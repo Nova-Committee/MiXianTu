@@ -16,7 +16,8 @@ import org.jspecify.annotations.NonNull;
  * Matches an artifact holding one named aura within a range. The aura is named rather than implied because an
  * artifact may hold several charges.
  */
-public record ArtifactEnergyRangeItemCondition(Holder<Aura> aura, NumberProvider min, NumberProvider max) implements ItemCondition {
+public record ArtifactEnergyRangeItemCondition(Holder<Aura> aura, NumberProvider min,
+                                               NumberProvider max) implements ItemCondition {
     public static final MapCodec<ArtifactEnergyRangeItemCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Aura.CODEC.fieldOf("aura").forGetter(ArtifactEnergyRangeItemCondition::aura),
             NumberProvider.CODEC.fieldOf("min").forGetter(ArtifactEnergyRangeItemCondition::min),

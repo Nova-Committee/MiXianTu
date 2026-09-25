@@ -60,7 +60,8 @@ public final class SpiritBurstService {
     public static void onEntityTick(Post event) {
         if (!(event.getEntity() instanceof LivingEntity holder) || holder.level().isClientSide()) return;
         Set<Holder<Aura>> active = ACTIVE_AURAS.get(holder.getUUID());
-        if ((active == null || active.isEmpty()) && !holder.hasData(MxtAttachments.SPIRIT_BURST_COOLDOWNS.get())) return;
+        if ((active == null || active.isEmpty()) && !holder.hasData(MxtAttachments.SPIRIT_BURST_COOLDOWNS.get()))
+            return;
         SpiritBurstCooldownAttachment cooldowns = holder.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
         cooldowns.clearExpired(holder.level().getGameTime());
         if (active == null || active.isEmpty()) return;

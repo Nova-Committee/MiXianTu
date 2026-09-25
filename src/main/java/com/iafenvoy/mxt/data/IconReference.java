@@ -28,7 +28,9 @@ public record IconReference(Either<Identifier, ItemStackTemplate> value) {
         return new IconReference(Either.right(item));
     }
 
-    /** The icon of a non-empty stack, or empty for an empty stack, so call sites need no null check. */
+    /**
+     * The icon of a non-empty stack, or empty for an empty stack, so call sites need no null check.
+     */
     public static Optional<IconReference> of(ItemStack stack) {
         return stack.isEmpty() ? Optional.empty() : Optional.of(item(ItemStackTemplate.fromNonEmptyStack(stack)));
     }
@@ -41,7 +43,9 @@ public record IconReference(Either<Identifier, ItemStackTemplate> value) {
         return this.value.right();
     }
 
-    /** A fresh stack for this icon, or empty when it draws a texture. The caller owns the result. */
+    /**
+     * A fresh stack for this icon, or empty when it draws a texture. The caller owns the result.
+     */
     public Optional<ItemStack> stack() {
         return this.value.right().map(ItemStackTemplate::create);
     }

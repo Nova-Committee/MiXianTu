@@ -6,14 +6,24 @@ package com.iafenvoy.mxt.data.cost.context;
  * the context does not offer simply cannot be paid there.
  */
 public enum CostChannel {
-    /** The context's resource account: a payer's attachment, or one named directly (a formation with no owner). */
+    /**
+     * The context's resource account: a payer's attachment, or one named directly (a formation with no owner).
+     */
     RESOURCE_ACCOUNT,
-    /** The payer's inventory, which only a player has. */
+    /**
+     * The payer's inventory, which only a player has.
+     */
     PLAYER_INVENTORY,
-    /** The shared aura pool at the context position. */
+    /**
+     * The shared aura pool at the context position.
+     */
     WORLD_AURA,
-    /** A block entity's own aura store. */
+    /**
+     * A block entity's own aura store.
+     */
     AURA_BANK,
-    /** A server script callback. */
+    /**
+     * A server script callback.
+     */
     SCRIPT
 }

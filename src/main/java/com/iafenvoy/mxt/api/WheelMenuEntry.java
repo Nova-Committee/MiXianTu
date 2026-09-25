@@ -16,31 +16,45 @@ import java.util.Optional;
  * kind is part of the contract because one ring mixes abilities and auras.
  */
 public interface WheelMenuEntry {
-    /** Which registry {@link #id()} belongs to. */
+    /**
+     * Which registry {@link #id()} belongs to.
+     */
     WheelEntryKind kind();
 
-    /** Stable identity: the saved layout addresses this entry by it, and it looks the definition back up. */
+    /**
+     * Stable identity: the saved layout addresses this entry by it, and it looks the definition back up.
+     */
     Identifier id();
 
-    /** What the middle of the wheel shows while this sector is under the pointer. */
+    /**
+     * What the middle of the wheel shows while this sector is under the pointer.
+     */
     Component title();
 
-    /** Drawn inside the sector, or nothing; drawing is {@code IconRenderer}'s job. */
+    /**
+     * Drawn inside the sector, or nothing; drawing is {@code IconRenderer}'s job.
+     */
     default Optional<IconReference> icon() {
         return Optional.empty();
     }
 
-    /** The colour marking this entry's kind in the configuration screen's slot row. */
+    /**
+     * The colour marking this entry's kind in the configuration screen's slot row.
+     */
     default int accentColor() {
         return 0xFF7E8799;
     }
 
-    /** The lines shown when the player asks what this entry is; rebuilt, since they depend on the player. */
+    /**
+     * The lines shown when the player asks what this entry is; rebuilt, since they depend on the player.
+     */
     default List<Component> tooltip(Player player) {
         return List.of(this.title(), this.kind().displayName());
     }
 
-    /** Ticks this entry is still on cooldown, {@code 0} when it is ready. */
+    /**
+     * Ticks this entry is still on cooldown, {@code 0} when it is ready.
+     */
     default long cooldownTicks(Player player) {
         return 0L;
     }
@@ -54,11 +68,15 @@ public interface WheelMenuEntry {
         return 0L;
     }
 
-    /** Whether choosing it would do anything. Only dims the sector - the trigger is still sent. */
+    /**
+     * Whether choosing it would do anything. Only dims the sector - the trigger is still sent.
+     */
     default boolean usable(Player player) {
         return this.cooldownTicks(player) <= 0L;
     }
 
-    /** Called on the client once the entry was used; the wheel stays open across it. */
+    /**
+     * Called on the client once the entry was used; the wheel stays open across it.
+     */
     void onSelected(WheelSelection selection);
 }

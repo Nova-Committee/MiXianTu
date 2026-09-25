@@ -16,7 +16,6 @@ import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -79,7 +78,7 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
         int capacity = this.getCapacity(entity, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
-        int stored = Mth.clamp(charge.get(aura), 0, capacity);
+        int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);
         int accepted = Math.min(amount, capacity - stored);
         if (!simulate && accepted > 0)
             stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, stored + accepted));
@@ -92,7 +91,7 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
         int capacity = this.getCapacity(entity, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
-        int stored = Mth.clamp(charge.get(aura), 0, capacity);
+        int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);
         int extracted = Math.min(amount, stored);
         if (!simulate && extracted > 0)
             stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, stored - extracted));

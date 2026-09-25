@@ -51,6 +51,8 @@ public interface Togglable {
         UNAVAILABLE,
         // The ability acts on an item and nothing the press offers is carrying one.
         NO_CARRIER,
+        // The ability acts on a vehicle and neither hand is holding one.
+        NO_VEHICLE,
         CANNOT_MOUNT,
         NOT_GRANTED,
         COOLDOWN,

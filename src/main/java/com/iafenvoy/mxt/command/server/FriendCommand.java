@@ -36,7 +36,7 @@ import static net.minecraft.commands.Commands.literal;
  * error.
  */
 public final class FriendCommand {
-    private static final SimpleCommandExceptionType ERROR_NOT_SINGLE_PLAYER =            new SimpleCommandExceptionType(Component.translatable("command.mxt.friend.single"));
+    private static final SimpleCommandExceptionType ERROR_NOT_SINGLE_PLAYER = new SimpleCommandExceptionType(Component.translatable("command.mxt.friend.single"));
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return literal("friend")

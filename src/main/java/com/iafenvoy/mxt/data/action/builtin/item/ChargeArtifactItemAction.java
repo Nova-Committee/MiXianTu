@@ -16,7 +16,8 @@ import org.jspecify.annotations.NonNull;
  * Charges one named aura of an artifact. {@code capacity} is only the fallback for a stack no definition
  * claims; a stack whose definition names the aura is measured against what the definition declares.
  */
-public record ChargeArtifactItemAction(Holder<Aura> aura, NumberProvider amount, NumberProvider capacity) implements ItemAction {
+public record ChargeArtifactItemAction(Holder<Aura> aura, NumberProvider amount,
+                                       NumberProvider capacity) implements ItemAction {
     public static final MapCodec<ChargeArtifactItemAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Aura.CODEC.fieldOf("aura").forGetter(ChargeArtifactItemAction::aura),
             NumberProvider.CODEC.fieldOf("amount").forGetter(ChargeArtifactItemAction::amount),

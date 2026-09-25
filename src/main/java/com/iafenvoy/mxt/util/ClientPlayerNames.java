@@ -18,9 +18,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * Kept apart so a dedicated server never loads it, where {@code Minecraft} does not exist.
  */
 public final class ClientPlayerNames {
-    /** What the server has answered so far, including "no such player" - a question is not asked twice. */
+    /**
+     * What the server has answered so far, including "no such player" - a question is not asked twice.
+     */
     private static final Map<UUID, Optional<String>> ANSWERED = new ConcurrentHashMap<>();
-    /** The ids this session has already asked about, so a frame that cannot be answered does not ask again. */
+    /**
+     * The ids this session has already asked about, so a frame that cannot be answered does not ask again.
+     */
     private static final Set<UUID> ASKED = ConcurrentHashMap.newKeySet();
 
     private ClientPlayerNames() {
@@ -37,7 +41,9 @@ public final class ClientPlayerNames {
         return Optional.empty();
     }
 
-    /** What the server answered for one id; empty means it has no name for that player. */
+    /**
+     * What the server answered for one id; empty means it has no name for that player.
+     */
     public static void remember(UUID id, Optional<String> name) {
         ANSWERED.put(id, name);
     }

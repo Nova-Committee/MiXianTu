@@ -7,7 +7,7 @@
   "abilities": [
     "mxt_test:artifact_guard",
     "mxt_test:firebolt",
-    "mxt_test:bound_flight",
+    "mxt_test:bound_mount",
     "mxt_test:bound_storage"
   ],
   "curios_equipable": true

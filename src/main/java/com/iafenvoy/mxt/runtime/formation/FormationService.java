@@ -66,6 +66,7 @@ public final class FormationService {
         instance.maintained();
         return MaintainResult.paid();
     }
+
     // What is left for the payer once the formation's own blocks have supplied what they supply and its stock
     // has covered what that left.
     public static final class MaintainRule {

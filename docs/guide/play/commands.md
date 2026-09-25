@@ -4,9 +4,9 @@ title: 命令
 
 所有命令都挂在 `/mxt` 根节点下，需要管理员权限的命令会在命令树中校验 `gamemaster` 权限；纯查询的入口（例如 `/mxt curse list`、`/ability list`、`/mxt trigger list`）不需要权限，只是不填目标时要用到自己，因此仍需由玩家执行。
 
-面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 17 个：`ability`、`aura`、`contract`、`curse`、`display`、`formation`、`friend`、`lightning`、`physique`、`picker`、`quality`、`realm`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
+面向玩家的部分命令同时注册了顶层别名，所以 `/aura` 和 `/mxt aura` 是同一棵树。每个别名都在服务端配置的**「命令别名」标签页**里单独开关（条目名就是命令本身，默认全开），例如关闭 `aura` 只移除 `/aura` 这个顶层写法；`/mxt` 下的入口始终完整，不会出现配置误关导致命令完全不可用的情况。别名一共 18 个：`ability`、`aura`、`contract`、`curse`、`display`、`flight`、`formation`、`friend`、`lightning`、`physique`、`picker`、`quality`、`realm`、`spirit_root`、`talisman`、`technique`、`trade`、`tribulation`。
 
-**客户端命令有两条**：`/hud`（查看与复位可拖动 HUD 元素）与 `/wheel`（打开轮盘配置界面）。它们注册在客户端自己的命令表里（不进 `/mxt` 树，也不发往服务端），只在聊天栏里手打有效、不需要任何权限，详见文末的[客户端命令](#客户端命令hud--wheel)。
+**客户端命令有两条**：`/hud`（查看与复位可拖动 HUD 元素）与 `/wheel`（打开轮盘配置界面，`/wheel configure` 是同一个入口的另一种写法）。它们注册在客户端自己的命令表里（不进 `/mxt` 树，也不发往服务端），只在聊天栏里手打有效、不需要任何权限，详见文末的[客户端命令](#客户端命令hud--wheel)。
 
 | 命令 | 作用 |
 | --- | --- |
@@ -20,6 +20,7 @@ title: 命令
 | `/quality upgrade <targets>`（= `/mxt quality upgrade …`） | 把主手物品在它所属的链条上**往上推一档**（需要 gamemaster 权限）：代价就是链条那一步自己声明的 `costs`（`plan` → `commit` 整组原子，付不出就一点不动），并先过它的 `condition`。没声明代价的那一步不能升；已经在顶端、不属于任何链条、或同一档属于多条链时都会逐个目标报出原因。 |
 | `/quality chain <quality>`（= `/mxt quality chain …`） | 打印这一档所在的**整条品质链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。同一档可能同时在多条链上，那就每条链各一行；一条都没有时报"没有品质链包含它"，这一档自己被 `#mxt:disabled` 停用时同样按"没有这个定义"拒绝。 |
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
+| `/flight fill`（= `/mxt flight fill`） | 把当前玩家所骑飞行器的**空座位全部塞上僵尸**（需要 gamemaster 权限）：僵尸无 AI、不消失、头上戴着一顶**不毁的铁头盔**（原版口径：头上有东西就不会被日光点燃），位置由载具按 `seat_offsets` 自己摆，用来对着实机调座位落点（改完 `/reload` 它们会跟着定义立刻换位）。它们随这一趟飞行结束一起消失；没在飞或座位已满会说明原因。 |
 | `/mxt resource <id>` | 查询资源值。 |
 | `/mxt resource <id> set <value>` | 设置资源值。 |
 | `/mxt resourcebar [resource] [index]` | 查看资源条的原始当前值、上下限、未截断百分比、上下文、位置和顺序；不填参数时列出全部资源条。 |
@@ -34,7 +35,7 @@ title: 命令
 | `/ability list [<target>]`（= `/mxt ability list …`） | 列出持有者身上的技能：名字与**还在维持它的来源**。读的是附件而不是注册表，所以被停用/定义已删除的技能照样列出来——它仍然被持有，也仍然只能按名字撤销。不填 `target` 时看自己，不需要权限。 |
 | `/ability grant <targets> <ability>`（= `/mxt ability grant …`） | 以命令自己的来源 `mxt:command` 授予技能（需要 gamemaster 权限）。逐个目标报告成功或失败，失败发生在该目标已由这一来源持有时。 |
 | `/ability revoke <targets> <ability>`（= `/mxt ability revoke …`） | 只撤销 `mxt:command` 这一份来源（需要 gamemaster 权限）；还有别的来源持有就什么都不发生，该目标记为失败。逐个目标报告结果。 |
-| `/mxt breakthrough <resource>` | 尝试突破指定资源对应的境界。 |
+| `/mxt breakthrough <aura>` | 尝试突破到这门**灵气**（`mxt:aura` 条目，补全给的就是它）所通往的境界。缺哪一种修炼资源由境界自己声明，失败时会点名。 |
 | `/realm set <realm>`（= `/mxt realm set …`） | 把自己的境界直接设成链上的某一档（需要 gamemaster 权限）；不在当前有效修炼链上的档会被拒绝。 |
 | `/realm chain <realm>`（= `/mxt realm chain …`） | 打印这一档所在的**整条境界链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。抬头是这条链的身份，也就是该链所属的 `mxt:aura` 条目 ID。 |
 | `/contract list [<player>]`（= `/mxt contract list`） | 按**主人索引**列出该玩家名下的灵兽：契约类型、灵兽 UUID，以及它此刻是否已加载；不填 `player` 时看自己，不需要权限。索引是名单不是真值，所以每行都会回查灵兽身上的契约记录，已经对不上的行当场清掉。 |
@@ -205,7 +206,7 @@ title: 命令
 | `/hud` | 列出框架登记的全部可移动 HUD 元素：布局键、显示名、位置、尺寸、当前要画几个块、是否可见、是否可拖。 |
 | `/hud open` | 打开 HUD 布局编辑器，等同于按键 `key.mxt.hud_layout`（默认右 Shift）。 |
 | `/hud <布局键> reset` | 把某个元素复位到它自己的默认位置（布局键见 `/hud` 的输出，如 `resource_bars.left`）。复位会**同时删掉 `config/mxt/mxt-hud.json` 里那一项**，所以它跨重启有效；删掉之后这个元素重新跟着窗口走（默认位置就定义在窗口上），直到玩家再次拖动它。 |
-| `/wheel` | 打开轮盘配置界面，等同于按键 `key.mxt.wheel_configuration`（**默认未绑定**）。左边 6 列是能发射的灵气、右边 6 列是已学会的主动技能，下面一排 12 格是**主盘**的 12 格；`Esc` 保存并关闭。**从盘（主手物品 / 副手物品 / 法器 / 契约灵兽）不在这里**：它们的内容由随身装备与手里的御兽铃现读，界面只编辑主盘。 |
+| `/wheel`（= `/wheel configure`） | 打开轮盘配置界面，等同于按键 `key.mxt.wheel_configuration`（**默认未绑定**）。左边 6 列是能发射的灵气、右边 6 列是已学会的主动技能，下面一排 12 格是**主盘**的 12 格；`Esc` 保存并关闭。**从盘（主手物品 / 副手物品 / 法器 / 契约灵兽）不在这里**：它们的内容由随身装备与手里的御兽铃现读，界面只编辑主盘。还没进世界（主菜单里）时它只报一句"现在无法打开轮盘配置"，不会打开空界面。 |
 
 `/hud` 存在的理由是**让"编辑器里什么都没有"变成一句能回答的问题**：`/hud` 打出"没有任何可移动元素"就说明元素根本没登记，打出 `resource_bars.left/right` 与 `wheel.selection` 这几行则说明框架是有元素的、只是当前没有内容可画（没有资源条的存档里那两行会是 `块 0`，尺寸仍是空列的 71×8；`wheel.selection` 是轮盘格，它整块自绘所以永远是 `块 0`，尺寸随内容变——永远 4 列、行数按格子数往下长）。这两种情况的界面表现一模一样，只有这里能分开。
 

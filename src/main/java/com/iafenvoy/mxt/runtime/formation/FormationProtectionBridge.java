@@ -112,7 +112,8 @@ public final class FormationProtectionBridge {
         List<BlockPos> kept = new ArrayList<>(affected.size());
         boolean removed = false;
         for (BlockPos pos : affected) {
-            if (FormationProtection.prevented(event.getExplosion().level(), Action.EXPLOSION, pos, null)) removed = true;
+            if (FormationProtection.prevented(event.getExplosion().level(), Action.EXPLOSION, pos, null))
+                removed = true;
             else kept.add(pos);
         }
         if (!removed) return;

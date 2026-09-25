@@ -16,7 +16,9 @@ public record DescribedEntry<T>(T value, Optional<String> description) {
         this(value, Optional.empty());
     }
 
-    /** Accepts a bare value or {@code {"<key>": value, "description": translation}}. */
+    /**
+     * Accepts a bare value or {@code {"<key>": value, "description": translation}}.
+     */
     public static <T> Codec<DescribedEntry<T>> codec(Codec<T> valueCodec, String key) {
         Codec<DescribedEntry<T>> described = RecordCodecBuilder.create(i -> i.group(
                 valueCodec.fieldOf(key).forGetter(DescribedEntry::value),

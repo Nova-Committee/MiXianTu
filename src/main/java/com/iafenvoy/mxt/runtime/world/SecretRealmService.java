@@ -71,7 +71,8 @@ public final class SecretRealmService {
             int index = SecretRealmRegistry.nextIndex(definition);
             long seed = value.seed() != 0L ? value.seed() : RandomSource.create().nextLong();
             record = plan(definition, index, seed, gameTime);
-            if (SecretRealmRegistry.at(record.dimension()).isPresent()) return Result.rejected(Failure.NO_FREE_INSTANCE);
+            if (SecretRealmRegistry.at(record.dimension()).isPresent())
+                return Result.rejected(Failure.NO_FREE_INSTANCE);
             created = true;
         }
         if (NeoForge.EVENT_BUS.post(new EnterPre(server, definition, record.dimension(), record.index(), record.owner(), member)).isCanceled())

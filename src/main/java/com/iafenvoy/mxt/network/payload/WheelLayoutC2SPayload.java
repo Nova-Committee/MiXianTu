@@ -8,7 +8,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 
-/** A complete wheel layout, sent when the configuration screen closes; never a per-sector edit. */
+/**
+ * A complete wheel layout, sent when the configuration screen closes; never a per-sector edit.
+ */
 public record WheelLayoutC2SPayload(WheelLayout layout) implements CustomPacketPayload {
     public static final Type<WheelLayoutC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "wheel_layout_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, WheelLayoutC2SPayload> STREAM_CODEC = StreamCodec.composite(

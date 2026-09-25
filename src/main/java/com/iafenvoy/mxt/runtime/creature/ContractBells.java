@@ -33,7 +33,7 @@ public final class ContractBells {
     }
 
     public static Optional<ContractBellComponent> selection(LivingEntity entity) {
-        return held(entity).map(stack -> stack.get(MxtDataComponents.CONTRACT_BELL)).filter(Objects::nonNull);
+        return held(entity).map(stack -> stack.get(MxtDataComponents.CONTRACT_BELL));
     }
 
     // Tuning carries the creature's own answer about the orders it takes, so the owner's client can draw the page
@@ -49,7 +49,7 @@ public final class ContractBells {
     public static Optional<Mob> beast(ServerPlayer player) {
         MinecraftServer server = player.level().getServer();
         UUID id = selection(player).map(ContractBellComponent::beast).orElse(null);
-        if (server == null || id == null) return Optional.empty();
+        if (id == null) return Optional.empty();
         for (ServerLevel level : server.getAllLevels())
             if (level.getEntity(id) instanceof Mob mob) return Optional.of(mob);
         return Optional.empty();

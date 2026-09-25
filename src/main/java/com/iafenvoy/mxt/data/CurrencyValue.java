@@ -45,7 +45,9 @@ public record CurrencyValue(List<Entry> items, long value, List<UnavailableWhen>
         return DataResult.success(definition);
     }
 
-    /** A stack condition that makes this denomination unavailable, with a datapack-defined reason. */
+    /**
+     * A stack condition that makes this denomination unavailable, with a datapack-defined reason.
+     */
     public record UnavailableWhen(ItemCondition condition, Component reason) {
         public static final Codec<UnavailableWhen> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ItemCondition.CODEC.fieldOf("condition").forGetter(UnavailableWhen::condition),
@@ -53,7 +55,9 @@ public record CurrencyValue(List<Entry> items, long value, List<UnavailableWhen>
         ).apply(i, UnavailableWhen::new));
     }
 
-    /** One exchange: consume this many currency items, create the configured result stack. */
+    /**
+     * One exchange: consume this many currency items, create the configured result stack.
+     */
     public record Exchange(int cost, ItemStackTemplate result) {
         public static final Codec<Exchange> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ExtraCodecs.intRange(1, 99).fieldOf("cost").forGetter(Exchange::cost),

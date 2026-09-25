@@ -50,7 +50,8 @@ public final class QualityUpgradeService {
         // Not being a member means the item's tier did not come from this ladder at all, which is a different
         // answer from "already at the top".
         if (next == null) return Result.rejected(ladder.isMember(current) ? Failure.AT_TOP : Failure.NOT_MEMBER);
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ITEM_QUALITY, next)) return Result.rejected(Failure.DISABLED);
+        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ITEM_QUALITY, next))
+            return Result.rejected(Failure.DISABLED);
         QualityChain.Step step = ladder.stepUp(current).orElse(null);
         if (step == null) return Result.rejected(Failure.NO_STEP);
         FormulaContext formula = FormulaContext.of(actor);

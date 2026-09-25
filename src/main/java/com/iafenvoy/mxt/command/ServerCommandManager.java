@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.command.server.AuraCommand;
 import com.iafenvoy.mxt.command.server.CurseCommand;
 import com.iafenvoy.mxt.command.server.ContractCommand;
 import com.iafenvoy.mxt.command.server.DisplayCommand;
+import com.iafenvoy.mxt.command.server.FlightCommand;
 import com.iafenvoy.mxt.command.server.FormationCommand;
 import com.iafenvoy.mxt.command.server.FriendCommand;
 import com.iafenvoy.mxt.command.server.LightningCommand;
@@ -50,6 +51,7 @@ public final class ServerCommandManager {
         builder.put(ContractCommand::build, config.contract);
         builder.put(CurseCommand::build, config.curse);
         builder.put(_ -> DisplayCommand.build(), config.display);
+        builder.put(_ -> FlightCommand.build(), config.flight);
         builder.put(FormationCommand::build, config.formation);
         builder.put(_ -> FriendCommand.build(), config.friend);
         builder.put(_ -> LightningCommand.build(), config.lightning);

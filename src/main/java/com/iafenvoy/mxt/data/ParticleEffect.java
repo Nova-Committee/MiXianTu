@@ -8,7 +8,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
-/** Server-authoritative particle emission configuration shared by the data-driven systems. */
+/**
+ * Server-authoritative particle emission configuration shared by the data-driven systems.
+ */
 public record ParticleEffect(ParticleOptions particle, int count, float speed, boolean force,
                              Vec3 spread, float offsetX, float offsetY, float offsetZ) {
     public static final ParticleEffect DEFAULT_BREAKTHROUGH = new ParticleEffect(
@@ -26,7 +28,9 @@ public record ParticleEffect(ParticleOptions particle, int count, float speed, b
             Codec.FLOAT.optionalFieldOf("offset_z", 0.0F).forGetter(ParticleEffect::offsetZ)
     ).apply(i, ParticleEffect::new));
 
-    /** Broadcasts this effect to players in the level. */
+    /**
+     * Broadcasts this effect to players in the level.
+     */
     public void send(ServerLevel level, Vec3 position) {
         Vec3 target = position.add(this.offsetX, this.offsetY, this.offsetZ);
         for (ServerPlayer player : level.players()) {
@@ -34,7 +38,9 @@ public record ParticleEffect(ParticleOptions particle, int count, float speed, b
         }
     }
 
-    /** Sends this effect only to one client, for per-player environment overlays. */
+    /**
+     * Sends this effect only to one client, for per-player environment overlays.
+     */
     public void sendTo(ServerLevel level, ServerPlayer player, Vec3 position) {
         Vec3 target = position.add(this.offsetX, this.offsetY, this.offsetZ);
         this.dispatch(level, player, target);

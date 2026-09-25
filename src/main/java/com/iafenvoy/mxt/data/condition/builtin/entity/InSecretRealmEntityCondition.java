@@ -26,7 +26,7 @@ import java.util.UUID;
  * asks about membership and claims, so a secret realm definition needs no permission field of its own.
  */
 public record InSecretRealmEntityCondition(Optional<Either<Holder<SecretRealm>, TagKey<SecretRealm>>> definition,
-                                             Role role) implements EntityCondition {
+                                           Role role) implements EntityCondition {
     public static final MapCodec<InSecretRealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryCodecs.holderOrTag(MxtResourceKeys.SECRET_REALM).optionalFieldOf("definition").forGetter(InSecretRealmEntityCondition::definition),
             Role.CODEC.optionalFieldOf("role", Role.ANY).forGetter(InSecretRealmEntityCondition::role)

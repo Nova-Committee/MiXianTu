@@ -2,7 +2,7 @@
 title: 特殊公开接口
 ---
 
-本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；同一天这一族又多了三个生物侧契约（`Contractable`、`ContractOperations`、`CaptureListener`，见文末三节）。该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`Toggable` 留在 `data/ability`——它不算对外 API**（它是本体登记"需要按键的技能"的形状，`mxt:active` / `mxt:flight` / `mxt:storage` 三个技能类型实现它）。哪些东西**不**进 `api` 见 `AGENTS.md` §3：只有"别的模组会实现或调用"的契约才进去，服务类的静态代理是明确的推迟项。
+本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；同一天这一族又多了三个生物侧契约（`Contractable`、`ContractOperations`、`CaptureListener`，见文末三节）。该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`Toggable` 留在 `data/ability`——它不算对外 API**（它是本体登记"需要按键的技能"的形状，`mxt:active` / `mxt:flight_control` / `mxt:storage` 三个技能类型实现它）。哪些东西**不**进 `api` 见 `AGENTS.md` §3：只有"别的模组会实现或调用"的契约才进去，服务类的静态代理是明确的推迟项。
 
 ### `AuraAccess`
 
@@ -42,7 +42,7 @@ title: 特殊公开接口
 
 ### `Toggable`
 
-**需要按键才能发动的技能**（2026-09-22 作为 `ToggableArtifactAbility` 诞生，2026-09-23 合并后升格为与宿主无关的 `Toggable`，同日内联技能取消后删掉了它的 `key()` 与 `displayName()`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））：判据是一句话——**凡是要按键才发动的都算技能、都进轮盘**。它是**数据层**的接口，不是 `api` 包里的对外契约，任何 `mxt:ability_type` 都能实现它。接口把三件事交给实现自己回答：`state(ctx)`（有没有开关状态、现在是哪一边；**空 = 一次性**，如储物）、`activate(ctx)`（按下了；只有服务端调，返回 `Result(changed, failure, failedResource)`，`Failure` 的 15 个取值与 `AbilityService.Failure` 同名同义，会被轮盘翻译成动作栏那一句——按压与施放共用 `actionbar.mxt.ability.failure.*` 一份文案表，见 [`docs/guide/java/wheel.md`](wheel.md)），以及一个有默认实现的 `gated(ctx)`（这次按压要不要先过共用的"条件 + 冷却 + 消耗"闸门；开关在**关**的那一下返回 false，因为落地不该收费）。**这一格叫什么用技能自己的 `name`**，接口不再另给一个名字；`type` 也不需要报一个"宿主内的 key"——轮盘条目的身份就是这条技能的注册表 id。**状态归实现自己管**（飞行读**承载者**的 `FlightAttachment`，储物没有状态），轮盘不认识"这件事是什么"，只认识这几件事，所以加一个新技能类型不需要动轮盘。今天三个实现是 `mxt:active`（原本就按一下施放——它 `gated` 返回 false，因为施放事务自己付款）、`mxt:flight`（开关）与 `mxt:storage`（一次性——打开承载物的储物箱，容器菜单与窗口都复用原版箱子那一套，见 `docs/guide/java/screens.md`）。字段与玩家侧表现见 `docs/数据包格式.md` 的 `ability` / `artifact` 两节。
+**需要按键才能发动的技能**（2026-09-22 作为 `ToggableArtifactAbility` 诞生，2026-09-23 合并后升格为与宿主无关的 `Toggable`，同日内联技能取消后删掉了它的 `key()` 与 `displayName()`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））：判据是一句话——**凡是要按键才发动的都算技能、都进轮盘**。它是**数据层**的接口，不是 `api` 包里的对外契约，任何 `mxt:ability_type` 都能实现它。接口把三件事交给实现自己回答：`state(ctx)`（有没有开关状态、现在是哪一边；**空 = 一次性**，如储物）、`activate(ctx)`（按下了；只有服务端调，返回 `Result(changed, failure, failedResource)`，`Failure` 的 16 个取值（多一个 `NO_VEHICLE`：御器之术在主手与副手都没找到飞行法器）与 `AbilityService.Failure` 同名同义，会被轮盘翻译成动作栏那一句——按压与施放共用 `actionbar.mxt.ability.failure.*` 一份文案表，见 [`docs/guide/java/wheel.md`](wheel.md)），以及一个有默认实现的 `gated(ctx)`（这次按压要不要先过共用的"条件 + 冷却 + 消耗"闸门；开关在**关**的那一下返回 false，因为落地不该收费）。**这一格叫什么用技能自己的 `name`**，接口不再另给一个名字；`type` 也不需要报一个"宿主内的 key"——轮盘条目的身份就是这条技能的注册表 id。**状态归实现自己管**（飞行读**驾驶者**的 `FlightAttachment`——记着飞的是哪条术、哪辆车，储物没有状态），轮盘不认识"这件事是什么"，只认识这几件事，所以加一个新技能类型不需要动轮盘。今天三个实现是 `mxt:active`（原本就按一下施放——它 `gated` 返回 false，因为施放事务自己付款）、`mxt:flight_control`（开关：起剑 / 落剑；它从主手、其次副手取那件飞行法器，落地时原样归还）与 `mxt:storage`（一次性——打开承载物的储物箱，容器菜单与窗口都复用原版箱子那一套，见 `docs/guide/java/screens.md`）。字段与玩家侧表现见 `docs/数据包格式.md` 的 `ability` / `artifact` 两节。
 
 ### `Contractable`
 

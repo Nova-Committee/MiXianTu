@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
+import com.iafenvoy.mxt.network.payload.FlightDescendC2SPayload;
+import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.screen.hud.HudManager;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
 import com.iafenvoy.mxt.screen.information.TechniquePanelScreen;
@@ -14,6 +16,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -41,8 +44,11 @@ public final class MxtKeyMappings {
     public static final KeyMappingHolder WHEEL_CONFIGURATION = new KeyMappingHolder("key.mxt.wheel_configuration", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder WHEEL_PREVIOUS = new KeyMappingHolder("key.mxt.wheel_previous", Type.KEYSYM, InputConstants.KEY_LEFT, CATEGORY);
     public static final KeyMappingHolder WHEEL_NEXT = new KeyMappingHolder("key.mxt.wheel_next", Type.KEYSYM, InputConstants.KEY_RIGHT, CATEGORY);
+    // Descending cannot be vanilla's sneak: sneaking is how a rider gets off a mount, so the flight has its own key.
+    public static final KeyMappingHolder FLIGHT_DESCEND = new KeyMappingHolder("key.mxt.flight_descend", Type.KEYSYM, InputConstants.KEY_X, CATEGORY);
 
     public static final List<KeyMappingHolder> WHEEL_SLOTS = new ArrayList<>(WheelGeometry.SECTORS);
+    private static boolean wasRiding;
 
     static {
         SWAP_BACK.onStateChange(pressed -> {
@@ -65,6 +71,8 @@ public final class MxtKeyMappings {
         WHEEL_CONFIGURATION.onStateChange(pressed -> {
             if (pressed && Minecraft.getInstance().screen == null) WheelConfigurationScreen.open();
         });
+        // Both edges are sent: the server reads this as "the key is held", not as "the key was pressed".
+        FLIGHT_DESCEND.onStateChange(pressed -> ClientPacketDistributor.sendToServer(new FlightDescendC2SPayload(pressed)));
 
         // The sector is the key's own sort order inside the category: KeyMapping#compareTo compares the order
         // before the translated name, so the twelve are listed 1..12 in every language.
@@ -82,6 +90,12 @@ public final class MxtKeyMappings {
     @SubscribeEvent
     public static void tick(Post event) {
         KeyMappingHolder.HOLDERS.forEach(KeyMappingHolder::tick);
+        // A key already held when the flight starts never changes, so boarding has to report it once by itself.
+        Player player = Minecraft.getInstance().player;
+        boolean riding = player != null && player.getVehicle() instanceof FlyingSwordEntity;
+        if (riding && !wasRiding)
+            ClientPacketDistributor.sendToServer(new FlightDescendC2SPayload(FLIGHT_DESCEND.isDown()));
+        wasRiding = riding;
     }
 
     public static final class KeyMappingHolder {

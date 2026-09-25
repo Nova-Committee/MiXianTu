@@ -63,7 +63,15 @@ public final class WheelService {
     // are still re-checked by the pipeline behind the entry. A dropped request and a refused ability both say so,
     // because neither the client nor the log could otherwise tell either from "the key did nothing".
     public static boolean trigger(ServerPlayer player, @Nullable WheelSource source, @Nullable WheelEntryKind kind, @Nullable Identifier id) {
+        return trigger(player, source, kind, id, Optional.empty());
+    }
+
+    // A filled-in direction is the same request asked the other way round: it names the state it wants, so there is
+    // no cell behind it and the page it came from is not what decides - the ability's own gate still is.
+    public static boolean trigger(ServerPlayer player, @Nullable WheelSource source, @Nullable WheelEntryKind kind,
+                                  @Nullable Identifier id, Optional<Boolean> enabled) {
         if (source == null || kind == null || id == null) return false;
+        if (enabled.isPresent()) return directed(player, source, kind, id, enabled.get());
         if (!WheelSources.offers(player, source, kind, id)) {
             MiXianTu.LOGGER.info("Dropping the wheel trigger {} {} from {} sent by {}: that source does not hold it",
                     source.getSerializedName(), id, kind.getSerializedName(), player.getGameProfile().name());
@@ -76,6 +84,26 @@ public final class WheelService {
             case BEHAVIOR -> order(player, id);
             case EMPTY -> false;
         };
+    }
+
+    // Asking for a state a switch is already in is a no-op rather than a take-off followed by a landing, which is
+    // what lets a screen re-send its intent without watching the state.
+    private static boolean directed(ServerPlayer player, WheelSource source, WheelEntryKind kind, Identifier id, boolean wanted) {
+        if (kind != WheelEntryKind.ABILITY) return false;
+        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
+        if (ability == null) {
+            MiXianTu.LOGGER.info("Dropping the directed wheel request {} from {}: the ability is no longer registered",
+                    id, player.getGameProfile().name());
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
+            return false;
+        }
+        // Only a switch has a state to ask for; a one-shot keeps the press channel, which carries no direction.
+        Optional<Boolean> state = AbilityActivationService.state(player, ability);
+        if (state.isEmpty())
+            return refuse(player, id, Togglable.Failure.UNAVAILABLE, null, "directed", "actionbar.mxt.wheel.use_failed");
+        if (state.get() == wanted) return true;
+        ItemStack carrier = WheelSources.carrier(player, source, id).orElse(null);
+        return activate(player, ability, carrier, id, "directed");
     }
 
     // The number is a place, not an entry, so it stays valid - and finds the same slot again - while whatever used
@@ -103,10 +131,14 @@ public final class WheelService {
             return false;
         }
         if (!AbilityActivationService.togglable(ability)) return use(player, ability);
-        ItemStack carrier = WheelSources.carrier(player, source, id).orElse(null);
+        return activate(player, ability, WheelSources.carrier(player, source, id).orElse(null), id, "press");
+    }
+
+    private static boolean activate(ServerPlayer player, Holder<Ability> ability, @Nullable ItemStack carrier,
+                                    Identifier id, String verb) {
         Togglable.Result result = AbilityActivationService.activate(player, ability, carrier);
         if (result.failure() == null) return true;
-        return refuse(player, id, result.failure(), result.failedResource(), "press", "actionbar.mxt.wheel.use_failed");
+        return refuse(player, id, result.failure(), result.failedResource(), verb, "actionbar.mxt.wheel.use_failed");
     }
 
     // The fallback for an entry whose ability is not pressable at all, which a saved layout can name even though

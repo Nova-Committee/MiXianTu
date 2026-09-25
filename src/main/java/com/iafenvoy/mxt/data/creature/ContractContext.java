@@ -14,7 +14,8 @@ import java.util.UUID;
  *
  * <p>Lives here rather than in {@code api} because that package holds interfaces only.</p>
  */
-public record ContractContext(Mob self, @Nullable UUID owner, @Nullable ServerPlayer player, Holder<ContractType> type) {
+public record ContractContext(Mob self, @Nullable UUID owner, @Nullable ServerPlayer player,
+                              Holder<ContractType> type) {
     public static ContractContext of(Mob self, @Nullable UUID owner, @Nullable ServerPlayer player, Holder<ContractType> type) {
         return new ContractContext(self, owner, player, type);
     }

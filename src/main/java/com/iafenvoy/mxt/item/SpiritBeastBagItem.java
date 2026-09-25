@@ -88,7 +88,8 @@ public final class SpiritBeastBagItem extends Item {
         BlockPos pos = context.getClickedPos().relative(context.getClickedFace());
         restored.snapTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, player.getYRot(), 0.0F);
         if (!serverLevel.addFreshEntity(restored)) return failed(player);
-        if (restored instanceof Mob mob) Contracts.captureListener(mob).ifPresent(listener -> listener.onReleased(player));
+        if (restored instanceof Mob mob)
+            Contracts.captureListener(mob).ifPresent(listener -> listener.onReleased(player));
         stack.set(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
         ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.released"));
         return InteractionResult.SUCCESS_SERVER;

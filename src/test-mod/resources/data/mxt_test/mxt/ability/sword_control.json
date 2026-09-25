@@ -1,0 +1,6 @@
+{
+  "type": "mxt:flight_control",
+  "hand": "either",
+  "speed_multiplier": 1.5,
+  "costs": [{ "id": "mxt_test:qi", "amount": 5 }]
+}

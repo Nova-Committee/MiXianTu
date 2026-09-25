@@ -21,6 +21,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Talisman talisman = new Talisman();
     public final Aura aura = new Aura();
     public final Formations formations = new Formations();
+    public final Flight flight = new Flight();
     public final Commands commands = new Commands();
     public final Compat compat = new Compat();
 
@@ -149,6 +150,21 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     }
 
     /**
+     * How an artifact mount answers its rider's movement input. Jump still climbs and the descend key still sinks
+     * whichever way this is set; what changes is whether forward and backward follow the look or stay level.
+     */
+    public static final class Flight extends AutoInitConfigCategoryBase {
+        public final BooleanEntry followLook = BooleanEntry.builder("config.mxt.server.flight.follow_look", true)
+                .key("follow_look")
+                .tooltip("config.mxt.server.flight.follow_look.tooltip")
+                .build();
+
+        private Flight() {
+            super("flight", "config.mxt.server.flight");
+        }
+    }
+
+    /**
      * The command switches: whether a subtree may also be reached at the command root instead of under
      * {@code /mxt}. One entry per subtree, all the same rule.
      */
@@ -158,6 +174,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry contract = BooleanEntry.builder("config.mxt.server.commands.contract", true).key("contract").tooltip("config.mxt.server.commands.contract.tooltip").build();
         public final BooleanEntry curse = BooleanEntry.builder("config.mxt.server.commands.curse", true).key("curse").tooltip("config.mxt.server.commands.curse.tooltip").build();
         public final BooleanEntry display = BooleanEntry.builder("config.mxt.server.commands.display", true).key("display").tooltip("config.mxt.server.commands.display.tooltip").build();
+        public final BooleanEntry flight = BooleanEntry.builder("config.mxt.server.commands.flight", true).key("flight").tooltip("config.mxt.server.commands.flight.tooltip").build();
         public final BooleanEntry formation = BooleanEntry.builder("config.mxt.server.commands.formation", true).key("formation").tooltip("config.mxt.server.commands.formation.tooltip").build();
         public final BooleanEntry friend = BooleanEntry.builder("config.mxt.server.commands.friend", true).key("friend").tooltip("config.mxt.server.commands.friend.tooltip").build();
         public final BooleanEntry lightning = BooleanEntry.builder("config.mxt.server.commands.lightning", true).key("lightning").tooltip("config.mxt.server.commands.lightning.tooltip").build();

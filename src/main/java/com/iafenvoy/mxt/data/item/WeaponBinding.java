@@ -33,7 +33,8 @@ public record WeaponBinding(List<Entry> entries, NumberProvider attackDamage, Nu
                             List<AttributeEntry> attributes, EntityAction useAction, BiEntityAction attackAction,
                             EntityAction tickAction, Optional<Holder<QualityChain>> qualityChain,
                             List<DescribedEntry<EntityCondition>> conditions,
-                            List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier) implements ItemMatcher {
+                            List<Either<Holder<Element>, TagKey<Element>>> element,
+                            double attachmentMultiplier) implements ItemMatcher {
     public static final Codec<WeaponBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(WeaponBinding::entries),
             NumberProvider.CODEC.optionalFieldOf("attack_damage", new Constant(0.0D)).forGetter(WeaponBinding::attackDamage),
@@ -45,5 +46,5 @@ public record WeaponBinding(List<Entry> entries, NumberProvider attackDamage, Nu
             QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(WeaponBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(WeaponBinding::conditions),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(WeaponBinding::element),
-            MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(WeaponBinding::attachmentMultiplier)    ).apply(i, WeaponBinding::new));
+            MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(WeaponBinding::attachmentMultiplier)).apply(i, WeaponBinding::new));
 }

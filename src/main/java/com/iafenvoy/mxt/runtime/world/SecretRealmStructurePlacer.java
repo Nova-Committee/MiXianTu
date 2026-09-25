@@ -46,7 +46,8 @@ public final class SecretRealmStructurePlacer {
                     .setMirror(mirror(placement.mirror()))
                     .setIgnoreEntities(placement.ignoreEntities())
                     .setLiquidSettings(placement.keepLiquids() ? LiquidSettings.APPLY_WATERLOGGING : LiquidSettings.IGNORE_WATERLOGGING);
-            if (placement.integrity() < 1.0D) settings.addProcessor(new BlockRotProcessor((float) placement.integrity()));
+            if (placement.integrity() < 1.0D)
+                settings.addProcessor(new BlockRotProcessor((float) placement.integrity()));
             level.getChunkAt(pos);
             template.get().placeInWorld(level, pos, pos, settings, random, Block.UPDATE_CLIENTS);
         }

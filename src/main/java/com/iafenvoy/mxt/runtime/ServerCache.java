@@ -57,7 +57,9 @@ public final class ServerCache {
         return this.server;
     }
 
-    /** Every problem the last rebuild found, each naming the file to fix; reported instead of aborting. */
+    /**
+     * Every problem the last rebuild found, each naming the file to fix; reported instead of aborting.
+     */
     public List<String> problems() {
         return this.problems;
     }
@@ -131,7 +133,9 @@ public final class ServerCache {
         return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
     }
 
-    /** Indexed by signal, so publishing one never walks the whole trigger registry. */
+    /**
+     * Indexed by signal, so publishing one never walks the whole trigger registry.
+     */
     private void rebuildTriggerRules(List<String> problems) {
         Map<Identifier, List<Reference<TriggerRule>>> rules = new LinkedHashMap<>();
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TRIGGER).forEach(rule -> {
@@ -183,12 +187,16 @@ public final class ServerCache {
         return this.triggerRulesBySignal.getOrDefault(signal, List.of());
     }
 
-    /** Every signal at least one rule reacts to, sorted, for command completion. */
+    /**
+     * Every signal at least one rule reacts to, sorted, for command completion.
+     */
     public List<Identifier> triggerSignals() {
         return this.triggerRulesBySignal.keySet().stream().sorted(Comparator.comparing(Identifier::toString)).toList();
     }
 
-    /** The aura profile owning a validated realm; the stored value is reached through it. */
+    /**
+     * The aura profile owning a validated realm; the stored value is reached through it.
+     */
     public Optional<Identifier> cultivationForRealm(Identifier realm) {
         return Optional.ofNullable(this.cultivationByRealm.get(realm));
     }
@@ -197,7 +205,9 @@ public final class ServerCache {
         return this.cultivationByRealm.containsKey(realm);
     }
 
-    /** Zero-based, counted from the first realm of the validated chain. */
+    /**
+     * Zero-based, counted from the first realm of the validated chain.
+     */
     public Optional<Integer> rankForRealm(Identifier realm) {
         return Optional.ofNullable(this.rankByRealm.get(realm));
     }
@@ -220,7 +230,9 @@ public final class ServerCache {
         return Optional.ofNullable(this.rankByStage.get(stage));
     }
 
-    /** The comparison every stage-gated rule uses. */
+    /**
+     * The comparison every stage-gated rule uses.
+     */
     public boolean isStageAtLeast(Identifier current, Identifier required) {
         Identifier currentSkill = this.skillByStage.get(current);
         return currentSkill != null && currentSkill.equals(this.skillByStage.get(required))

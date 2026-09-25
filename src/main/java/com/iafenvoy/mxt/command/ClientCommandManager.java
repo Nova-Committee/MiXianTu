@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.command;
 
 import com.iafenvoy.mxt.command.client.HudCommand;
+import com.iafenvoy.mxt.command.client.WheelCommand;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -18,8 +19,9 @@ import java.util.function.Function;
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class ClientCommandManager {
-    private static final List<Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>> NODES =
-            List.of(_ -> HudCommand.build());
+    private static final List<Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>> NODES = List.of(
+            _ -> HudCommand.build(),
+            _ -> WheelCommand.build());
 
     @SubscribeEvent
     public static void registerClientCommands(RegisterClientCommandsEvent event) {

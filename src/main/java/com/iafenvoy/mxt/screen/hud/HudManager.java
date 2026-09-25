@@ -60,7 +60,8 @@ public final class HudManager {
             if (!entry.visible()) continue;
             List<RenderBlock> blocks = entry.renderBlocks();
             if (blocks.isEmpty()) entry.render(graphics, deltaTracker);
-            else if (entry.anchor().bottom()) HudRenderer.renderStanding(graphics, blocks, entry.x(), entry.y() + entry.layoutHeight());
+            else if (entry.anchor().bottom())
+                HudRenderer.renderStanding(graphics, blocks, entry.x(), entry.y() + entry.layoutHeight());
             else HudRenderer.renderColumn(graphics, blocks, entry.x(), entry.y());
         }
     }

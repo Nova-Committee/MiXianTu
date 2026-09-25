@@ -26,7 +26,8 @@ public final class WeightedList implements NumberProvider {
         this.distribution = List.copyOf(distribution);
         long sum = 0L;
         try {
-            for (Weighted<NumberProvider> entry : this.distribution) sum = Math.addExact(sum, Math.max(0, entry.weight()));
+            for (Weighted<NumberProvider> entry : this.distribution)
+                sum = Math.addExact(sum, Math.max(0, entry.weight()));
         } catch (ArithmeticException exception) {
             sum = -1L;
         }

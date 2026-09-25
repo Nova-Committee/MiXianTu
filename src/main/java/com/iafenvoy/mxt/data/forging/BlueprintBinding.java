@@ -11,7 +11,9 @@ import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
 
-/** Datapack-defined set of blueprints provided by one blueprint item or book, referenced through a data component. */
+/**
+ * Datapack-defined set of blueprints provided by one blueprint item or book, referenced through a data component.
+ */
 public record BlueprintBinding(List<Holder<ForgingBlueprint>> blueprints) {
     public static final Codec<Holder<BlueprintBinding>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.BLUEPRINT_BINDING);
     public static final Codec<BlueprintBinding> DIRECT_CODEC = RecordCodecBuilder.<BlueprintBinding>create(i -> i.group(

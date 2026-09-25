@@ -87,7 +87,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         if (component == null) return capacity;
 
-        int stored = Math.min(capacity, component.get(aura));
+        int stored = (int) Math.min(capacity, Math.floor(component.get(aura)));
         if (!simulate && stored != component.get(aura))
             stack.set(MxtDataComponents.SPIRIT_STORAGE, component.with(aura, stored));
         return stored;

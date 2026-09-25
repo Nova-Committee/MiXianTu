@@ -48,13 +48,13 @@ record WheelRingRenderState(RenderPipeline pipeline, TextureSetup textureSetup, 
 
     private void vertex(VertexConsumer vertexConsumer, double angleDegrees, double radius, int color) {
         vertexConsumer.addVertexWith2DPose(this.pose(),
-                (float) this.ring.x(angleDegrees, radius), (float) this.ring.y(angleDegrees, radius))
+                        (float) this.ring.x(angleDegrees, radius), (float) this.ring.y(angleDegrees, radius))
                 .setColor(color);
     }
 
     // The area the ring can touch: the widest radius plus the pop, since any sector may be selected.
     private static @Nullable ScreenRectangle boundsOf(WheelGeometry.Ring ring, Matrix3x2fc pose,
-                                                     @Nullable ScreenRectangle scissorArea) {
+                                                      @Nullable ScreenRectangle scissorArea) {
         double reach = ring.outerRadius() + ring.grow();
         int x0 = (int) Math.floor(ring.centreX() - reach);
         int y0 = (int) Math.floor(ring.centreY() - reach);

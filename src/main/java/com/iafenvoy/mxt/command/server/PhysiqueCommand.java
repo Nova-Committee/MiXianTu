@@ -177,7 +177,8 @@ public final class PhysiqueCommand {
     }
 
     private static Holder<Physique> find(SpiritIdentityAttachment identity, Identifier id) {
-        for (Holder<Physique> physique : identity.physiques()) if (HolderHelper.id(physique).equals(id)) return physique;
+        for (Holder<Physique> physique : identity.physiques())
+            if (HolderHelper.id(physique).equals(id)) return physique;
         return null;
     }
 

@@ -23,8 +23,8 @@ import java.util.UUID;
  * is loaded: after a restart nobody is standing inside.
  */
 public record SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension, long seed,
-                          Optional<UUID> owner, long startedAt, long expiresAt, Optional<Vec3> anchor,
-                          boolean prepared, List<UUID> members) {
+                                Optional<UUID> owner, long startedAt, long expiresAt, Optional<Vec3> anchor,
+                                boolean prepared, List<UUID> members) {
     public static final Codec<UUID> UUID_CODEC = Codec.STRING.xmap(UUID::fromString, UUID::toString);
     public static final Codec<SecretRealmRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).fieldOf("definition").forGetter(SecretRealmRecord::definition),

@@ -28,7 +28,9 @@ public final class TooltipText {
         return (value >= 0.0D ? "+" : "") + number(value);
     }
 
-    /** One tooltip line out of its parts. An empty list gives an empty line. */
+    /**
+     * One tooltip line out of its parts. An empty list gives an empty line.
+     */
     public static MutableComponent join(List<? extends Component> parts) {
         MutableComponent joined = Component.empty();
         for (int index = 0; index < parts.size(); index++) {

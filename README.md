@@ -84,10 +84,6 @@ datapacks or content packs; installing the mod alone does not give you a complet
 - **🚧 In Progress**: only part of the feature set is done, the rest is still being developed.
 - **🔲 Planned**: only data structures or assets exist, or there is only a development plan.
 
-The **status** column says how far along a module is (it follows the code, and the two READMEs and the documentation
-site are kept in step);
-the **description** column only says what it provides.
-
 | Module                        | Status | Description                                                                                                                                                                                                                                               |
 |-------------------------------|:------:|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Datapack Core                 |   ✅    | Gameplay rules are described by datapacks: conditions, effects, number calculation, item matching and trigger timing can all be freely combined, and a single entry can be disabled at any time.                                                          |
@@ -110,7 +106,7 @@ the **description** column only says what it provides.
 | Item Binding                  |   🚧   | Brings existing items into gameplay: attach passive behavior, weapon damage and attack speed to any item, or bind abilities that fire on right-click use and on attack.                                                                                   |
 | Talismans                     |   🚧   | A Talisman Brush inscribes ability definitions onto a carrier (one carrier can hold several); holding right-click until it is full fires every inscribed ability and spends one carrier, then starts the item cooldown.                                   |
 | Quality                       |   ✅    | Items carry a quality shown in their tooltip; a quality chain fixes the ladder, its default tier and each step's price, definitions declare a default and a stack component overrides it.                                                                 |
-| Artifacts                     |   🚧   | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants by ability id or tag. Flight and storage are ordinary ability types, and both are wheel cells.       |
+| Artifacts                     |   🚧   | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact may declare a mount (speed, seats, pose) that a technique-granted flying skill picks up from either hand, while storage and upkeep stay ordinary ability types.       |
 | Economy                       |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                      |
 | Curios Slots                  |   ✅    | Players have Curios slots for a back weapon, a belt item and four artifacts, rendered on the character and swappable with the main hand by keybind.                                                                                                       |
 | Friend and Foe Identification |   ✅    | Every player keeps a list of the players they treat as their own, for the session or saved with the world; other mods or scripts can answer the same question through a TriState event asked by player id.                                                |

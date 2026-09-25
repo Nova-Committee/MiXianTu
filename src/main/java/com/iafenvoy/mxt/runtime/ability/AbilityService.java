@@ -69,8 +69,10 @@ public final class AbilityService {
     private static PrepareResult prepare(Holder<Ability> ability, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                          FormulaContext context, LivingEntity payer, boolean requiresGrant, @Nullable ItemCostDraft itemDraft) {
         Ability definition = ability.value();
-        if (requiresGrant && !abilities.has(HolderHelper.id(ability))) return PrepareResult.rejected(Failure.NOT_GRANTED, null);
-        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime)) return PrepareResult.rejected(Failure.COOLDOWN, null);
+        if (requiresGrant && !abilities.has(HolderHelper.id(ability)))
+            return PrepareResult.rejected(Failure.NOT_GRANTED, null);
+        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime))
+            return PrepareResult.rejected(Failure.COOLDOWN, null);
         double castTime = definition.castTime().evaluate(context);
         double cooldown = cooldownOf(ability, abilities, context);
         if (!Double.isFinite(castTime) || castTime < 0.0D || !Double.isFinite(cooldown) || cooldown < 0.0D) {
@@ -103,7 +105,8 @@ public final class AbilityService {
     }
 
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime, LivingEntity payer) {
-        if (abilities.isOnCooldown(HolderHelper.id(use.ability()), gameTime)) return CommitResult.rejected(Failure.COOLDOWN, null);
+        if (abilities.isOnCooldown(HolderHelper.id(use.ability()), gameTime))
+            return CommitResult.rejected(Failure.COOLDOWN, null);
         CostTransaction.PayResult payment = CostTransaction.commit(use.costPlan(),
                 CostContext.of(payer, CostOrigin.ABILITY), resources);
         if (!payment.paid()) return CommitResult.rejected(costFailure(payment.failure()), payment.failedResource());
@@ -230,7 +233,8 @@ public final class AbilityService {
         FormulaContext formula = context.formula();
         Ability definition = ability.value();
         if (!abilities.has(HolderHelper.id(ability))) return GateResult.rejected(Failure.NOT_GRANTED, null);
-        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime)) return GateResult.rejected(Failure.COOLDOWN, null);
+        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime))
+            return GateResult.rejected(Failure.COOLDOWN, null);
         if (!definition.condition().test(holder, formula)) return GateResult.rejected(Failure.CONDITION_FAILED, null);
         double cooldown = cooldownOf(ability, abilities, formula);
         if (!Double.isFinite(cooldown) || cooldown < 0.0D) return GateResult.rejected(Failure.INVALID_FORMULA, null);

@@ -14,19 +14,27 @@ import java.util.Map;
  * checking and spending can never disagree about what is owed.
  */
 public sealed interface Charge {
-    /** A resource amount, taken from a payer's resource attachment. */
+    /**
+     * A resource amount, taken from a payer's resource attachment.
+     */
     record Resources(Map<Identifier, Double> amounts) implements Charge {
     }
 
-    /** Whole-aura amounts, taken from the shared pool at the context position or from the context's bank. */
+    /**
+     * Whole-aura amounts, taken from the shared pool at the context position or from the context's bank.
+     */
     record Auras(Map<Holder<Aura>, Double> amounts) implements Charge {
     }
 
-    /** Matching items, taken from a player's inventory. */
+    /**
+     * Matching items, taken from a player's inventory.
+     */
     record Items(ItemMatcher matcher, int count) implements Charge {
     }
 
-    /** A server script that answers both halves itself. */
+    /**
+     * A server script that answers both halves itself.
+     */
     record Script(JsCost cost) implements Charge {
     }
 }

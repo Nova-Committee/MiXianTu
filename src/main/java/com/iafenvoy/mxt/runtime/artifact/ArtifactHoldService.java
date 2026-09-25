@@ -174,8 +174,8 @@ public final class ArtifactHoldService {
         // empty pool, and asking must not create one on a player who never touched a resource.
         ResourceHolderAttachment resources = holder.getExistingData(MxtAttachments.RESOURCE_HOLDER).orElse(null);
         for (Holder<Aura> aura : artifact.spiritCapacity().keySet()) {
-            int room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
-            if (room <= 0) continue;
+            double room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
+            if (room <= 0.0D) continue;
             double pool = resources == null ? 0.0D : resources.get(aura.value().resource());
             // The first aura with room decides: if it can be paid the tick above would have moved something, so a
             // shortfall can only be somebody else's - and if it cannot, it is this one.
@@ -223,9 +223,10 @@ public final class ArtifactHoldService {
         ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
         int moved = 0;
         for (Holder<Aura> aura : artifact.spiritCapacity().keySet()) {
-            int room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
-            if (room <= 0) continue;
-            int units = Math.min(POUR_INTAKE_PER_TICK, room);
+            double room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
+            if (room <= 0.0D) continue;
+            // The gesture pours whole units; only the store it writes into holds fractions.
+            int units = (int) Math.min(POUR_INTAKE_PER_TICK, room);
             Holder<Resource> resource = aura.value().resource();
             FormulaContext pool = ResourceService.formulaContext(holder, resource, formula);
             double before = resources.get(resource);
@@ -235,7 +236,7 @@ public final class ArtifactHoldService {
             if (!paid.valid()) continue;
             units = Math.min(units, (int) Math.floor(Math.max(0.0D, before - paid.value()) / POUR_COST_PER_UNIT));
             if (units <= 0) continue;
-            moved += ArtifactService.addEnergy(access, stack, aura, units, 0.0D, formula);
+            moved += (int) Math.floor(ArtifactService.addEnergy(access, stack, aura, units, 0.0D, formula));
         }
         return moved;
     }
@@ -254,8 +255,10 @@ public final class ArtifactHoldService {
                         ? Component.translatable("actionbar.mxt.artifact.claimed", name, TooltipText.number(cost))
                         : Component.translatable("actionbar.mxt.artifact.claimed_free", name), "claimed");
             }
-            case CONDITION_FAILED -> show(holder, Component.translatable("actionbar.mxt.artifact.claim_condition"), "condition");
-            case OWNED_BY_OTHER -> show(holder, Component.translatable("actionbar.mxt.artifact.claimed_by_other"), "other");
+            case CONDITION_FAILED ->
+                    show(holder, Component.translatable("actionbar.mxt.artifact.claim_condition"), "condition");
+            case OWNED_BY_OTHER ->
+                    show(holder, Component.translatable("actionbar.mxt.artifact.claimed_by_other"), "other");
             // Nothing to say: either the client asked, or somebody else owns this ending.
             case CANCELLED, CLIENT_SIDE -> {
             }

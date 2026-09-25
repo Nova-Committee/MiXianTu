@@ -31,7 +31,9 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
         return HolderHelper.id(this.resource);
     }
 
-    /** The evaluated amount, or {@link Double#NaN} when the formula cannot produce a finite positive one. */
+    /**
+     * The evaluated amount, or {@link Double#NaN} when the formula cannot produce a finite positive one.
+     */
     public double evaluate(FormulaContext context) {
         double value = this.amount.evaluate(context);
         return Double.isFinite(value) && value > 0.0D ? value : Double.NaN;

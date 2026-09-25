@@ -117,7 +117,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
 
     private static LocalPlayer player() {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null) throw new IllegalStateException("The item picker can only be built while a player is in a world");
+        if (player == null)
+            throw new IllegalStateException("The item picker can only be built while a player is in a world");
         return player;
     }
 
@@ -339,7 +340,8 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, this.leftPos, this.topPos, 0.0F, 0.0F,
                 this.imageWidth, this.imageHeight, 256, 256);
         if (this.insideScrollbar(mouseX, mouseY)) {
-            if (this.canScroll()) graphics.requestCursor(this.scrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
+            if (this.canScroll())
+                graphics.requestCursor(this.scrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
             else graphics.requestCursor(CursorTypes.NOT_ALLOWED);
         }
         this.searchBox.extractRenderState(graphics, mouseX, mouseY, partialTick);
@@ -550,7 +552,9 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         }
     }
 
-    /** One row of the grid: the stack to draw, and the pre-lowered text a search term is matched against. */
+    /**
+     * One row of the grid: the stack to draw, and the pre-lowered text a search term is matched against.
+     */
     private record Candidate(ItemStack stack, String haystack) {
     }
 }

@@ -42,10 +42,8 @@ public final class CurseLedger {
         int minStacks = Math.min(definition.maxStacks(), current.stacks() + requestedStacks);
         CurseInstance updated = switch (definition.stackingMode()) {
             case IGNORE -> current;
-            case REFRESH_DURATION ->
-                    new CurseInstance(curse, current.stacks(), current.appliedAt(), expiresAt);
-            case ADD_STACKS_REFRESH_DURATION ->
-                    new CurseInstance(curse, minStacks, current.appliedAt(), expiresAt);
+            case REFRESH_DURATION -> new CurseInstance(curse, current.stacks(), current.appliedAt(), expiresAt);
+            case ADD_STACKS_REFRESH_DURATION -> new CurseInstance(curse, minStacks, current.appliedAt(), expiresAt);
             case ADD_STACKS_KEEP_DURATION ->
                     new CurseInstance(curse, minStacks, current.appliedAt(), current.expiresAt());
             case REPLACE -> throw new IllegalStateException("Handled above");

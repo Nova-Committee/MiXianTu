@@ -88,7 +88,8 @@ public final class ColoredLightningBolt extends LightningBolt {
         if (palette.size() > MAX_PALETTE)
             throw new IllegalArgumentException("Lightning palette must hold at most " + MAX_PALETTE + " colours");
         for (int color : palette)
-            if (color < 0 || color > 0xFFFFFF) throw new IllegalArgumentException("Lightning colours must be RGB values");
+            if (color < 0 || color > 0xFFFFFF)
+                throw new IllegalArgumentException("Lightning colours must be RGB values");
         this.getEntityData().set(PALETTE, List.copyOf(palette));
     }
 }

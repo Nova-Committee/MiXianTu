@@ -96,7 +96,8 @@ public final class CurseHolderAttachment extends ShouldSyncAttachment {
     }
 
     // One applied curse. Who keeps it alive is the attachment's source ledger, not part of this payload.
-    public record State(int stacks, long appliedAt, long expiresAt, boolean unknownDefinition, Optional<String> legacySource) {
+    public record State(int stacks, long appliedAt, long expiresAt, boolean unknownDefinition,
+                        Optional<String> legacySource) {
         public static final Codec<State> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(1, 256).fieldOf("stacks").forGetter(State::stacks),
                 Codec.LONG.fieldOf("applied_at").forGetter(State::appliedAt),

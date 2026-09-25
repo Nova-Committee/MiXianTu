@@ -20,7 +20,8 @@ import java.util.Map;
  * Reads how much of an element has built up on an entity. An element disabled by {@code mxt:disabled} answers no
  * however much has built up, and an empty table is refused at load rather than read as "always true".
  */
-public record ElementAttachmentEntityCondition(Map<Holder<Element>, AuraRequirement> elements) implements EntityCondition {
+public record ElementAttachmentEntityCondition(
+        Map<Holder<Element>, AuraRequirement> elements) implements EntityCondition {
     public static final MapCodec<ElementAttachmentEntityCondition> CODEC = CollectionCodecs.map(Element.CODEC, AuraRequirement.CODEC)
             .fieldOf("elements").xmap(ElementAttachmentEntityCondition::new, ElementAttachmentEntityCondition::elements)
             .validate(ElementAttachmentEntityCondition::validate);

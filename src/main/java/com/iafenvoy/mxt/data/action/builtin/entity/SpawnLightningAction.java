@@ -25,7 +25,8 @@ import java.util.List;
  * bolt then does — damage, fire, rods, copper, thunder — stays the vanilla bolt's own behaviour.
  */
 public record SpawnLightningAction(NumberProvider offsetX, NumberProvider offsetY, NumberProvider offsetZ,
-                                   int color, float alpha, float thickness, List<Integer> palette, NumberProvider damage,
+                                   int color, float alpha, float thickness, List<Integer> palette,
+                                   NumberProvider damage,
                                    boolean visualOnly, boolean cause) implements EntityAction {
     public static final MapCodec<SpawnLightningAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.optionalFieldOf("offset_x", new Constant(0.0D)).forGetter(SpawnLightningAction::offsetX),

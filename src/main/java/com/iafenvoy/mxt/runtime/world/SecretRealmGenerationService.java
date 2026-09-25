@@ -96,8 +96,7 @@ public final class SecretRealmGenerationService {
         try {
             return switch (generation) {
                 case Existing ignored -> null;
-                case Stem stem ->
-                        registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(stem.stem()).value();
+                case Stem stem -> registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(stem.stem()).value();
                 case Template template ->
                         registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(template.stem()).value();
                 case Flat flat -> {

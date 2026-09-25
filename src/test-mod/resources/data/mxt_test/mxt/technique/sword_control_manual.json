@@ -1,0 +1,6 @@
+{
+  "quality": "mxt_test:normal",
+  "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
+  "exclusive_tags": ["mxt_test:technique/sword_control"],
+  "granted_abilities": ["mxt_test:sword_control"]
+}

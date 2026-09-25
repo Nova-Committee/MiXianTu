@@ -28,7 +28,9 @@ public record JsCost(String id, JsonObject params) implements Cost {
             MxtJsCodecs.PARAMS.optionalFieldOf("params", new JsonObject()).forGetter(JsCost::params)
     ).apply(i, JsCost::new));
 
-    /** True when the script accepted the payment. Only ever false for an absent or failing callback. */
+    /**
+     * True when the script accepted the payment. Only ever false for an absent or failing callback.
+     */
     public boolean consume(CostContext context) {
         Player player = context.player();
         return player != null && MxtJsCostCallbacks.consume(this.id, player, this.params);

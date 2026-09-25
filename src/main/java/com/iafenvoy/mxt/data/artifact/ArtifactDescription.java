@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.artifact;
 
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
-import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
+import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -104,7 +104,7 @@ public final class ArtifactDescription {
                                     FormulaContext formula) {
         artifact.spiritCapacity().keySet().forEach(aura -> {
             int capacity = ArtifactService.capacity(registries, stack, aura, 0.0D, formula);
-            int stored = ArtifactService.stored(stack, aura);
+            double stored = ArtifactService.stored(stack, aura);
             int percentage = capacity <= 0 ? 0 : Math.clamp(Math.round(stored * 100.0D / capacity), 0, 100);
             Component amount = Component.literal(TooltipText.number(stored) + " / " + TooltipText.number(capacity))
                     .withColor(SpiritChargeService.color(percentage));
@@ -124,8 +124,8 @@ public final class ArtifactDescription {
         for (Holder<Ability> entry : ArtifactService.abilities(registries, stack)) {
             Ability ability = entry.value();
             if (ability.hidden()) continue;
-            if (ability.type() instanceof FlightAbilityType flight) {
-                appendFlight(lines, flight, ability.costs(), formula);
+            if (ability.type() instanceof MountAbilityType mount) {
+                appendMount(lines, mount, ability.costs(), formula);
                 continue;
             }
             if (ability.type() instanceof StorageAbilityType) {
@@ -176,16 +176,17 @@ public final class ArtifactDescription {
         return TooltipText.join(parts);
     }
 
-    private static void appendFlight(List<Component> lines, FlightAbilityType flight, List<Cost> costs,
-                                     FormulaContext formula) {
-        double speed = flight.speed().evaluate(formula);
+    private static void appendMount(List<Component> lines, MountAbilityType mount, List<Cost> costs,
+                                    FormulaContext formula) {
+        double speed = mount.speed().evaluate(formula);
+        Component pose = Component.translatable(mount.sit() ? "tooltip.mxt.artifact.pose_sit" : "tooltip.mxt.artifact.pose_stand");
         if (costs.isEmpty()) {
-            lines.add(Component.translatable("tooltip.mxt.artifact.flight", TooltipText.number(speed))
+            lines.add(Component.translatable("tooltip.mxt.artifact.mount", TooltipText.number(speed), mount.seats(), pose)
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
             return;
         }
-        lines.add(Component.translatable("tooltip.mxt.artifact.flight_costs",
-                        TooltipText.number(speed), costs(costs, formula))
+        lines.add(Component.translatable("tooltip.mxt.artifact.mount_costs",
+                        TooltipText.number(speed), mount.seats(), pose, costs(costs, formula))
                 .withStyle(ChatFormatting.LIGHT_PURPLE));
     }
 

@@ -44,11 +44,17 @@ public final class CurseService {
 
     // Where one held instance stands relative to the definitions loaded now.
     public enum DefinitionState {
-        /** The definition is loaded and enabled. */
+        /**
+         * The definition is loaded and enabled.
+         */
         ACTIVE,
-        /** The definition is loaded but carries the {@code #mxt:disabled} tag. */
+        /**
+         * The definition is loaded but carries the {@code #mxt:disabled} tag.
+         */
         DISABLED,
-        /** The definition is not in the registry at all any more. */
+        /**
+         * The definition is not in the registry at all any more.
+         */
         UNKNOWN
     }
 
@@ -91,7 +97,8 @@ public final class CurseService {
         // The shared rule with ability grants: a source leaving cannot remove another source's curse.
         data.sources().grant(curse, event.source());
         data.markKnown(curse);
-        if (displaced != null) eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
+        if (displaced != null)
+            eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
         eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result));
         return ApplyResult.applied(result);
     }
@@ -312,19 +319,33 @@ public final class CurseService {
     }
 
     public enum ApplyFailure {
-        /** The application condition rejected the entity. */
+        /**
+         * The application condition rejected the entity.
+         */
         CONDITION,
-        /** A listener cancelled the apply event. */
+        /**
+         * A listener cancelled the apply event.
+         */
         CANCELLED,
-        /** The caller is a client; curses are server-authoritative. */
+        /**
+         * The caller is a client; curses are server-authoritative.
+         */
         SERVER_ONLY,
-        /** The definition carries the {@code #mxt:disabled} tag. */
+        /**
+         * The definition carries the {@code #mxt:disabled} tag.
+         */
         DISABLED,
-        /** The definition is not in the registry any more. */
+        /**
+         * The definition is not in the registry any more.
+         */
         UNKNOWN,
-        /** The same curse is already mid-transaction for this entity. */
+        /**
+         * The same curse is already mid-transaction for this entity.
+         */
         REENTRANT,
-        /** The resolved duration cannot be honoured, so nothing was written. */
+        /**
+         * The resolved duration cannot be honoured, so nothing was written.
+         */
         INVALID_DURATION
     }
 

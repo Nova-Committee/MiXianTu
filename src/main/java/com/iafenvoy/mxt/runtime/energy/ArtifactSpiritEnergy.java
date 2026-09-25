@@ -8,7 +8,8 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * ISpiritEnergy view of one aura an artifact holds; the capacity stays the caller's, so the definition decides
- * it once in {@link ArtifactService}. Amounts are whole units in the shared spirit store, so a write floors.
+ * it once in {@link ArtifactService}. The store holds doubles, so a write is only clamped, never rounded: this is
+ * the access a fuel drawn a fraction a tick pays through.
  */
 public final class ArtifactSpiritEnergy implements ISpiritEnergy {
     private final ItemStack stack;
@@ -36,6 +37,6 @@ public final class ArtifactSpiritEnergy implements ISpiritEnergy {
     @Override
     public void setEnergy(double value) {
         if (!Double.isFinite(value)) throw new IllegalArgumentException("Artifact energy must be finite");
-        ArtifactService.setEnergy(this.stack, this.aura, (int) Math.floor(Math.max(0.0D, Math.min(this.capacity, value))));
+        ArtifactService.setEnergy(this.stack, this.aura, Math.max(0.0D, Math.min(this.capacity, value)));
     }
 }

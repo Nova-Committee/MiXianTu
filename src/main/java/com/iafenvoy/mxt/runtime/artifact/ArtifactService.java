@@ -10,7 +10,7 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.AbilityType;
-import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
+import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -144,7 +144,9 @@ public final class ArtifactService {
                 .orElse(false);
     }
 
-    /** The periodic price this stack charges whoever carries it, with the id that price is stored under. */
+    /**
+     * The periodic price this stack charges whoever carries it, with the id that price is stored under.
+     */
     public static Optional<Upkeep> upkeep(Provider access, ItemStack stack) {
         return abilities(access, stack).stream()
                 .filter(ref -> ref.value().type() instanceof UpkeepAbilityType)
@@ -180,9 +182,17 @@ public final class ArtifactService {
         return abilities(access, stack).stream().map(HolderHelper::id).toList();
     }
 
-    // How this stack's mount is drawn; empty for a stack whose definition declares no flight at all.
-    public static Optional<FlightAbilityType> flight(Provider access, ItemStack stack) {
-        return first(access, stack, FlightAbilityType.class);
+    // The mount entry this stack declares, empty for an artifact that is not a vehicle: "which one" is a question
+    // about the ability's own registry id, since a definition may name several abilities.
+    public static Optional<Holder<Ability>> mountAbility(Provider access, ItemStack stack) {
+        return abilities(access, stack).stream()
+                .filter(ref -> ref.value().type() instanceof MountAbilityType)
+                .findFirst();
+    }
+
+    // How this stack's mount flies and carries; empty for a stack whose definition declares no mount at all.
+    public static Optional<MountAbilityType> mount(Provider access, ItemStack stack) {
+        return mountAbility(access, stack).map(ref -> (MountAbilityType) ref.value().type());
     }
 
     // Rounded up to a whole row and cut at the six rows a chest-shaped screen can draw, which is what lets one
@@ -255,33 +265,45 @@ public final class ArtifactService {
         return Double.isFinite(resolved) ? (int) Math.clamp(Math.floor(resolved), 0.0D, Integer.MAX_VALUE) : Integer.MAX_VALUE;
     }
 
-    public static int stored(ItemStack stack, Holder<Aura> aura) {
+    public static double stored(ItemStack stack, Holder<Aura> aura) {
         return store(stack).get(aura);
     }
 
-    public static void setEnergy(ItemStack stack, Holder<Aura> aura, int value) {
-        stack.set(MxtDataComponents.SPIRIT_STORAGE, store(stack).with(aura, Math.max(0, value)));
+    public static void setEnergy(ItemStack stack, Holder<Aura> aura, double value) {
+        stack.set(MxtDataComponents.SPIRIT_STORAGE, store(stack).with(aura, Math.max(0.0D, value)));
+    }
+
+    // The auras this stack's store carries that are counted in the given resource: how a price written as a
+    // resource finds the aura an artifact can actually pay it in. Ordered by id so a store holding several
+    // answers the same way every tick.
+    public static List<Holder<Aura>> aurasFor(ItemStack stack, Identifier resource) {
+        List<Holder<Aura>> found = new ArrayList<>();
+        store(stack).amounts().keySet().stream()
+                .filter(aura -> HolderHelper.id(aura.value().resource()).equals(resource))
+                .sorted(Comparator.comparing(aura -> HolderHelper.id(aura).toString()))
+                .forEach(found::add);
+        return found;
     }
 
     // What was accepted also feeds the artifact, so nourishment is only ever earned by a charge the server
-    // performed.
-    public static int addEnergy(Provider access, ItemStack stack, Holder<Aura> aura, double amount,
-                                double fallbackCapacity, FormulaContext context) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0;
-        int capacity = capacity(access, stack, aura, fallbackCapacity, context);
-        int stored = stored(stack, aura);
-        int accepted = (int) Math.min(Math.floor(amount), Math.max(0, capacity - stored));
-        if (accepted <= 0) return 0;
+    // performed. Amounts are fractions, not whole units: the store is a double and a formula may price a part.
+    public static double addEnergy(Provider access, ItemStack stack, Holder<Aura> aura, double amount,
+                                   double fallbackCapacity, FormulaContext context) {
+        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        double capacity = capacity(access, stack, aura, fallbackCapacity, context);
+        double stored = stored(stack, aura);
+        double accepted = Math.min(amount, Math.max(0.0D, capacity - stored));
+        if (accepted <= 0.0D) return 0.0D;
         setEnergy(stack, aura, stored + accepted);
-        if (capacity > 0) feed(stack, (double) accepted / (double) capacity);
+        if (capacity > 0.0D) feed(stack, accepted / capacity);
         return accepted;
     }
 
-    public static int consumeEnergy(ItemStack stack, Holder<Aura> aura, double amount) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0;
-        int stored = stored(stack, aura);
-        int extracted = (int) Math.min(Math.floor(amount), Math.max(0, stored));
-        if (extracted > 0) setEnergy(stack, aura, stored - extracted);
+    public static double consumeEnergy(ItemStack stack, Holder<Aura> aura, double amount) {
+        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        double stored = stored(stack, aura);
+        double extracted = Math.min(amount, Math.max(0.0D, stored));
+        if (extracted > 0.0D) setEnergy(stack, aura, stored - extracted);
         return extracted;
     }
 

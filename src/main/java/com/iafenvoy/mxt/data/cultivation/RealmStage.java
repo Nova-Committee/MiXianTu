@@ -72,12 +72,12 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
             // Eighteen components; two pairs keep the group at sixteen.
             MiscCodecs.pair(
-                    Tribulation.CODEC.optionalFieldOf("tribulation"),
-                    ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle"))
+                            Tribulation.CODEC.optionalFieldOf("tribulation"),
+                            ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle"))
                     .forGetter(stage -> Pair.of(stage.tribulation(), stage.breakthroughParticle())),
             MiscCodecs.pair(
-                    EntityAction.optionalCodec("success_action"),
-                    EntityAction.optionalCodec("fail_action"))
+                            EntityAction.optionalCodec("success_action"),
+                            EntityAction.optionalCodec("fail_action"))
                     .forGetter(stage -> Pair.of(stage.successAction(), stage.failAction()))
     ).apply(i, (name, description, aura, auraShareWeight, cultivateCondition, nextRealm, breakthroughExp,
                 maxExperience, minorStages, breakthrough, autoBreakthrough, passiveModifiers, breakthroughCosts,

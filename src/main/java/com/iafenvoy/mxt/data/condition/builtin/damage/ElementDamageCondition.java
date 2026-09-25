@@ -21,7 +21,8 @@ import java.util.Set;
  * True when any element the strike is made of - {@link DamageElements#strike}: the damage type's claimants, or the
  * attacker's spirit roots when nobody claims it - is one of the listed entries or tags.
  */
-public record ElementDamageCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements DamageCondition {
+public record ElementDamageCondition(
+        List<Either<Holder<Element>, TagKey<Element>>> elements) implements DamageCondition {
     public static final MapCodec<ElementDamageCondition> CODEC = RecordCodecBuilder.<ElementDamageCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(ElementDamageCondition::elements)
     ).apply(i, ElementDamageCondition::new)).validate(ElementDamageCondition::validate);

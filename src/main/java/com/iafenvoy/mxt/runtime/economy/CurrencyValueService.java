@@ -79,7 +79,8 @@ public final class CurrencyValueService {
         double multiplier = ItemQualityService.modifier(access, stack, ItemQuality::valueMultiplier, context);
         if (multiplier == ItemQualityService.DEFAULT_MODIFIER) return OptionalLong.of(definition.value());
         double scaled = definition.value() * multiplier;
-        if (!Double.isFinite(scaled) || scaled < 1.0D || scaled >= Long.MAX_VALUE) return OptionalLong.of(definition.value());
+        if (!Double.isFinite(scaled) || scaled < 1.0D || scaled >= Long.MAX_VALUE)
+            return OptionalLong.of(definition.value());
         return OptionalLong.of(Math.round(scaled));
     }
 

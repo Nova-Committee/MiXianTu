@@ -21,8 +21,8 @@ import java.util.Optional;
  * id), and the first whose demand and condition are met is the one that fires.
  */
 public record ElementReaction(Map<Holder<Element>, NumberProvider> amounts,
-                             Optional<Map<Holder<Element>, NumberProvider>> consume,
-                             EntityCondition condition, Optional<EntityAction> action, int priority) {
+                              Optional<Map<Holder<Element>, NumberProvider>> consume,
+                              EntityCondition condition, Optional<EntityAction> action, int priority) {
     public static final Codec<Holder<ElementReaction>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ELEMENT_REACTION);
     public static final Codec<ElementReaction> DIRECT_CODEC = RecordCodecBuilder.<ElementReaction>create(i -> i.group(
             CollectionCodecs.map(Element.CODEC, NumberProvider.CODEC).fieldOf("amounts").forGetter(ElementReaction::amounts),

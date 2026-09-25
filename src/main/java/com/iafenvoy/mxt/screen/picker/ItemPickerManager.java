@@ -196,7 +196,8 @@ public final class ItemPickerManager {
         return null;
     }
 
-    public record ItemProvider<T>(ResourceKey<Registry<T>> key, BiFunction<Holder<T>, Provider, List<PickerItem>> items) {
+    public record ItemProvider<T>(ResourceKey<Registry<T>> key,
+                                  BiFunction<Holder<T>, Provider, List<PickerItem>> items) {
         private List<PickerItem> collectItems(Provider provider) {
             List<PickerItem> collected = new ArrayList<>();
             provider.lookup(this.key).stream().flatMap(HolderLookup::listElements).forEach(holder -> {

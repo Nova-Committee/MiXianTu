@@ -1,0 +1,7 @@
+{
+  "items": "minecraft:heart_of_the_sea",
+  "spirit_capacity": { "mxt_test:qi": 100 },
+  "abilities": [
+    "mxt_test:cloud_skiff_mount"
+  ]
+}

@@ -9,9 +9,13 @@ import net.minecraft.network.chat.Component;
  * is what lets a written name win over the generated one.
  */
 public interface NamedDefinition {
-    /** The definition's own name: written out in the pack, or the generated key when the field is absent. */
+    /**
+     * The definition's own name: written out in the pack, or the generated key when the field is absent.
+     */
     Component name();
 
-    /** The definition's own description, generated as {@code <name key>.description} when the field is absent. */
+    /**
+     * The definition's own description, generated as {@code <name key>.description} when the field is absent.
+     */
     Component description();
 }

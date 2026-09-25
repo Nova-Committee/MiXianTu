@@ -286,7 +286,8 @@ public final class WheelConfigurationScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (mouseY < this.poolsTop || mouseY >= this.poolsBottom) return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        if (mouseY < this.poolsTop || mouseY >= this.poolsBottom)
+            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         int pool = mouseX >= this.poolLeft[ABILITY_POOL] ? ABILITY_POOL : AURA_POOL;
         if (pool == AURA_POOL && mouseX >= this.poolLeft[AURA_POOL] + POOL_WIDTH)
             return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);

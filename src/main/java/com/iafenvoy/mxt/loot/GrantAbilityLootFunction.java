@@ -18,6 +18,7 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+
 import com.iafenvoy.mxt.util.HolderHelper;
 
 public final class GrantAbilityLootFunction extends LootItemConditionalFunction {

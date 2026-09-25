@@ -1,0 +1,7 @@
+{
+  "type": "mxt:flight_control",
+  "hand": "off",
+  "speed_multiplier": 0.8,
+  "costs": [{ "id": "mxt_test:qi", "amount": 3 }],
+  "cooldown": 40
+}

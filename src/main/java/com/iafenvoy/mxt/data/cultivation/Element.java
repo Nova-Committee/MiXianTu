@@ -128,7 +128,10 @@ public record Element(Component name, Component description, List<Relation> over
                 + ", adaptedTo=" + this.adaptedTo.size()
                 + ", damageTypes=" + this.damageTypes.size() + "]";
     }
-    /** One relation edge: the elements it points at (ids, tags, or both) and what the edge is worth. */
+
+    /**
+     * One relation edge: the elements it points at (ids, tags, or both) and what the edge is worth.
+     */
     public record Relation(List<Either<Holder<Element>, TagKey<Element>>> elements, double multiplier) {
         public static final Codec<Relation> CODEC = RecordCodecBuilder.create(i -> i.group(
                 RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(Relation::elements),

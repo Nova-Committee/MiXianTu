@@ -167,7 +167,7 @@ public final class SpiritChargeService {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         Holder<Aura> aura = (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
                 .orElse(definition.value().type());
-        int stored = component == null ? capacity : Mth.clamp(component.get(aura), 0, capacity);
+        int stored = component == null ? capacity : (int) Math.clamp(Math.floor(component.get(aura)), 0.0D, capacity);
         // What one whole unit costs: the ratio of the two speeds, the same for one item and for a stack.
         double unitCost = !Double.isFinite(costSpeed) || costSpeed <= 0.0D ? 0.0D : costSpeed / intakeSpeed;
         return new Charge(aura, stored, capacity,

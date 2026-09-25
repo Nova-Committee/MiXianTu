@@ -34,7 +34,8 @@ import java.util.Optional;
  * is configured; {@code mastery_resource} names the stored value that measures mastery. {@code quality} is the
  * technique's own tier: what the panel shows as its 品阶 and the tier its carrier item starts on.
  */
-public record Technique(Component name, Component description, Optional<Holder<ItemQuality>> quality, Optional<IconReference> icon,
+public record Technique(Component name, Component description, Optional<Holder<ItemQuality>> quality,
+                        Optional<IconReference> icon,
                         EntityCondition learnCondition,
                         List<Identifier> exclusiveTags,
                         NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,

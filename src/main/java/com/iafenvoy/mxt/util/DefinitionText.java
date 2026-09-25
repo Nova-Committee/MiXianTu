@@ -67,13 +67,17 @@ public final class DefinitionText {
         return Component.translatable(key(category, MiXianTu.MOD_ID, id));
     }
 
-    /** Whether a definition's text reads as something rather than a bare key: a literal, or a defined key. */
+    /**
+     * Whether a definition's text reads as something rather than a bare key: a literal, or a defined key.
+     */
     public static boolean resolved(Component text) {
         return !(text.getContents() instanceof TranslatableContents contents)
                 || Language.getInstance().has(contents.getKey());
     }
 
-    /** A free-form pack value, shown verbatim unless the language file translates {@code mxt.rarity.<value>}. */
+    /**
+     * A free-form pack value, shown verbatim unless the language file translates {@code mxt.rarity.<value>}.
+     */
     public static MutableComponent rarity(String rarity) {
         String key = "mxt.rarity." + rarity;
         return Language.getInstance().has(key) ? Component.translatable(key) : Component.literal(rarity);

@@ -14,6 +14,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
 import java.util.Comparator;
 import java.util.Optional;
@@ -54,7 +55,7 @@ public final class CreatureProfileService {
         MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id)
                 .ifPresent(profile -> {
                     creature.getData(MxtAttachments.CREATURE_SPIRIT)
-                            .apply(profile, intelligence, definition.innerCore().orElse(ItemStack.EMPTY));
+                            .apply(profile, intelligence, definition.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
                     // The profile is written once per creature, so its spawn action runs once: after the write, so
                     // the action can already read the profile it belongs to.
                     definition.spawnAction().execute(creature, context);

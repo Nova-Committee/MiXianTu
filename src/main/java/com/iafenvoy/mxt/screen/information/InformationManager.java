@@ -229,4 +229,5 @@ public final class InformationManager {
     }
 
     private record RegisteredInformation(Side side, Consumer<InformationCollector> collector) {
-    }}
+    }
+}

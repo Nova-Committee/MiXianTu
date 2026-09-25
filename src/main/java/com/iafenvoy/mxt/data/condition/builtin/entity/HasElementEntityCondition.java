@@ -21,7 +21,8 @@ import java.util.Set;
  * True when any element the entity's spirit roots name is one of the listed ones. An element a pack disabled is
  * not part of the answer, exactly as everywhere else.
  */
-public record HasElementEntityCondition(List<Either<Holder<Element>, TagKey<Element>>> elements) implements EntityCondition {
+public record HasElementEntityCondition(
+        List<Either<Holder<Element>, TagKey<Element>>> elements) implements EntityCondition {
     public static final MapCodec<HasElementEntityCondition> CODEC = RecordCodecBuilder.<HasElementEntityCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).fieldOf("elements").forGetter(HasElementEntityCondition::elements)
     ).apply(i, HasElementEntityCondition::new)).validate(HasElementEntityCondition::validate);

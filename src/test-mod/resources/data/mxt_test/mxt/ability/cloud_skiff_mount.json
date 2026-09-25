@@ -1,0 +1,21 @@
+{
+  "type": "mxt:mount",
+  "speed": 0.1,
+  "seats": 3,
+  "sit": true,
+  "width": 0.9,
+  "height": 0.3,
+  "step_height": 0.6,
+  "seat_offsets": [[0, 0.45, 0.5], [0, 0.45, -0.7], [0, 0.45, -1.9]],
+  "display": { "rotation": [90, 0, 0], "scale": [1.5, 1.5, 1.5] },
+  "costs": [{ "id": "mxt_test:qi", "amount": 0.15 }],
+  "mount_action": {
+    "tick": { "type": "mxt:spawn_particles", "particle": { "type": "minecraft:bubble" }, "count": 1, "spread": [0.5, 0.2, 0.5] }
+  },
+  "trail": {
+    "particle": { "type": "minecraft:cloud" },
+    "count": 1,
+    "spread": [0.35, 0.1, 0.35],
+    "offset_y": 0.15
+  }
+}

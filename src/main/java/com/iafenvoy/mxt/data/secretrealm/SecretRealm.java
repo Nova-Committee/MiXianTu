@@ -29,12 +29,12 @@ import java.util.Optional;
  * keeping its terrain, while an unclaimed one is destroyed with its region data.
  */
 public record SecretRealm(Component name, Component description, SecretRealmGeneration generation, long seed,
-                            Optional<Border> border, int maxInstances,
-                            Optional<Integer> maxMembers, boolean owned, long durationTicks,
-                            List<StructurePlacement> structures, List<EntryPoint> entry,
-                            EntityCondition enterCondition, EntityCondition exitCondition,
-                            Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
-                            EntityAction enterAction, EntityAction exitAction) implements NamedDefinition {
+                          Optional<Border> border, int maxInstances,
+                          Optional<Integer> maxMembers, boolean owned, long durationTicks,
+                          List<StructurePlacement> structures, List<EntryPoint> entry,
+                          EntityCondition enterCondition, EntityCondition exitCondition,
+                          Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
+                          EntityAction enterAction, EntityAction exitAction) implements NamedDefinition {
     // Written explicitly onto an instance without a border instead of inheriting the overworld border that derived
     // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
@@ -56,8 +56,8 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
             EntryPoint.LIST_CODEC.optionalFieldOf("entry", List.of()).forGetter(SecretRealm::entry),
             // Seventeen components; one pair keeps the group at sixteen.
             MiscCodecs.pair(
-                    EntityCondition.optionalCodec("enter_condition"),
-                    EntityCondition.optionalCodec("exit_condition"))
+                            EntityCondition.optionalCodec("enter_condition"),
+                            EntityCondition.optionalCodec("exit_condition"))
                     .forGetter(realm -> Pair.of(realm.enterCondition(), realm.exitCondition())),
             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("enter_denied_message").forGetter(SecretRealm::enterDeniedMessage),
             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("exit_denied_message").forGetter(SecretRealm::exitDeniedMessage),
@@ -124,7 +124,9 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
         return Math.abs(pos.getX() + 0.5D - border.center().x) <= half && Math.abs(pos.getZ() + 0.5D - border.center().y) <= half;
     }
 
-    /** How an instance dimension is bounded; empty means the vanilla default, never the overworld's border. */
+    /**
+     * How an instance dimension is bounded; empty means the vanilla default, never the overworld's border.
+     */
     public record Border(Vec2 center, double size, int warningBlocks, int warningTime, double damagePerBlock,
                          double safeZone) {
         public static final Border VANILLA_DEFAULT = new Border(new Vec2(0.0F, 0.0F), DEFAULT_BORDER_SIZE, 5, 15, 0.2D, 5.0D);
@@ -140,7 +142,8 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
 
     // chance is rolled per instance, so the same definition can furnish a secret realm differently on every visit.
     public record StructurePlacement(Identifier nbt, BlockPos pos, Rotation rotation, Mirror mirror, double integrity,
-                                     double chance, boolean relativeToEntry, boolean ignoreEntities, boolean keepLiquids) {
+                                     double chance, boolean relativeToEntry, boolean ignoreEntities,
+                                     boolean keepLiquids) {
         public static final Codec<StructurePlacement> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Identifier.CODEC.fieldOf("nbt").forGetter(StructurePlacement::nbt),
                 BlockPos.CODEC.fieldOf("pos").forGetter(StructurePlacement::pos),

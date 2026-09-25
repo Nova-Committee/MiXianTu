@@ -242,7 +242,7 @@ public final class TalismanService {
         SpiritStorageComponent charge = stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
         List<Entry> entries = new ArrayList<>(bill.size());
         bill.forEach((aura, capacity) -> entries.add(new Entry(aura,
-                Math.min(capacity, Math.max(0, charge.get(aura))), capacity)));
+                (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity), capacity)));
         return List.copyOf(entries);
     }
 

@@ -10,9 +10,12 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
+import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
+import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.PlaySoundAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.SetNoGravityAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
@@ -60,6 +63,7 @@ import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
@@ -134,6 +138,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -157,8 +162,11 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.animal.wolf.Wolf;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
@@ -242,8 +250,7 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_TECHNIQUE_STAGE = id("sword_art_2");
     private static final Identifier PROBE_ABILITY = id("artifact_guard");
     private static final Identifier SWORD_FOCUS = id("sword_focus");
-    // The flight and storage entries the fixture artifacts name; both are ordinary mxt:ability entries.
-    private static final Identifier PROBE_BOUND_FLIGHT = id("bound_flight");
+    // The storage entry the fixture artifacts name; it is an ordinary mxt:ability entry.
     private static final Identifier PROBE_BOUND_STORAGE = id("bound_storage");
     // An id of the right shape that nothing registers, so the kind check has a negative that is not an artifact.
     private static final Identifier PROBE_ABSENT_ABILITY = id("absent_storage");
@@ -1232,7 +1239,9 @@ public final class MxtTestCommands {
                 new ArtifactRow(Items.PRISMARINE_SHARD, "ward_jade_talisman", 40, 0, 0, 0, true, false, false),
                 // The second item of the same definition, reached through the item tag its `items` list names.
                 new ArtifactRow(Items.QUARTZ, "ward_jade_talisman", 40, 0, 0, 0, true, false, false),
-                new ArtifactRow(Items.BELL, "cloud_beast_bell", 60, 0, 0, 18, true, false, false))) {
+                new ArtifactRow(Items.BELL, "cloud_beast_bell", 60, 0, 0, 18, true, false, false),
+                // The three-seat vehicle, so the roster also covers a mount whose seats are more than the default.
+                new ArtifactRow(Items.HEART_OF_THE_SEA, "cloud_skiff", 100, 0, 0, 0, false, true, false))) {
             ItemStack stack = new ItemStack(row.item());
             Reference<Artifact> holder = ArtifactService.definition(access, stack).orElse(null);
             Artifact definition = holder == null ? null : holder.value();
@@ -1240,7 +1249,7 @@ public final class MxtTestCommands {
             boolean matches = holder != null && HolderHelper.id(holder).equals(id(row.definition()))
                     && row.curiosEquipable() == ArtifactService.curiosEquipable(access, stack)
                     && row.requireOwner() == definition.requireOwner()
-                    && row.flight() == ArtifactService.flight(access, stack).isPresent()
+                    && row.mount() == ArtifactService.mount(access, stack).isPresent()
                     && ArtifactService.storageSlots(access, stack, context) == row.slots()
                     && ArtifactService.capacity(access, stack, qi, 0.0D, context) == row.qi()
                     && ArtifactService.capacity(access, stack, waterPower, 0.0D, context) == row.waterPower()
@@ -1249,21 +1258,49 @@ public final class MxtTestCommands {
                     + (holder == null ? "unclaimed" : HolderHelper.id(holder)), matches);
         }
 
+        // What the artifact declares about itself: the vehicle entry and its own numbers, plus the skill that flies it.
         ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
-        FlightAbilityType flight = ArtifactService.flight(access, flightStack).orElse(null);
-        List<Cost> flightCosts = flightStack.isEmpty() ? List.of()
-                : ArtifactService.abilities(access, flightStack).stream()
-                .filter(ref -> ref.value().type() instanceof FlightAbilityType)
-                .findFirst().map(ref -> ref.value().costs()).orElse(List.of());
-        boolean flightEntry = flight != null && close(flight.speed().evaluate(context), 0.12D)
-                && flightCosts.size() == 1 && flightCosts.getFirst() instanceof ResourceCost cost
-                && cost.id().equals(QI)
-                && close(cost.amount().evaluate(context), 2.0D)
-                && flight.display().equals(FlightDisplay.DEFAULT);
-        ok &= check(source, "artifact roster flight entry speed=0.12 costs=2 qi display=default", flightEntry);
+        Holder<Resource> qiResource = require(MxtResourceKeys.RESOURCE, QI);
+        MountAbilityType mountEntry = ArtifactService.mount(access, flightStack).orElse(null);
+        List<Cost> mountCosts = ArtifactService.mountAbility(access, flightStack)
+                .map(ref -> ref.value().costs()).orElse(List.of());
+        boolean mount = mountEntry != null && close(mountEntry.speed().evaluate(context), 0.12D)
+                && mountEntry.seats() == 2 && !mountEntry.sit()
+                && mountCosts.size() == 1 && mountCosts.getFirst() instanceof ResourceCost cost
+                && cost.id().equals(QI) && close(cost.amount().evaluate(context), 0.1D)
+                && mountEntry.display().equals(FlightDisplay.DEFAULT)
+                && mountEntry.actions().onMount() instanceof PlaySoundAction
+                && mountEntry.actions().onDismount() instanceof PlaySoundAction
+                && mountEntry.actions().tick() == NoOpAction.INSTANCE
+                && mountEntry.trail().filter(trail -> trail.movingOnly() && trail.interval() == 1
+                && trail.particle() == ParticleTypes.END_ROD).isPresent();
+        ok &= check(source, "artifact roster mount speed=0.12 seats=2 costs=0.1 qi display=default mount_action=2sounds tick=none trail=end_rod", mount);
+
+        Holder<Ability> controlAbility = require(MxtResourceKeys.ABILITY, id("sword_control"));
+        Holder<Ability> mountAbility = require(MxtResourceKeys.ABILITY, id("azure_sword_mount"));
+        FlightControlAbilityType control = controlAbility.value().type() instanceof FlightControlAbilityType value ? value : null;
+        boolean controlEntry = control != null && control.hand() == FlightControlAbilityType.Hand.EITHER
+                && close(control.speedMultiplier().evaluate(context), 1.5D);
+        ok &= check(source, "artifact roster flight_control hand=either multiplier=1.5", controlEntry);
+
+        // The second technique, which only ever looks in the off hand and carries its own take-off cooldown.
+        FlightControlAbilityType offhand = require(MxtResourceKeys.ABILITY, id("offhand_flight")).value().type()
+                instanceof FlightControlAbilityType value ? value : null;
+        boolean offhandEntry = offhand != null && offhand.hand() == FlightControlAbilityType.Hand.OFF
+                && close(offhand.speedMultiplier().evaluate(context), 0.8D)
+                && close(require(MxtResourceKeys.ABILITY, id("offhand_flight")).value().cooldown().evaluate(context), 40.0D);
+        ok &= check(source, "artifact roster offhand flight hand=off multiplier=0.8 cooldown=40", offhandEntry);
+
+        // The three-seat vehicle: what the geometry fields do once they are written out.
+        MountAbilityType skiff = ArtifactService.mount(access, new ItemStack(Items.HEART_OF_THE_SEA)).orElse(null);
+        boolean skiffEntry = skiff != null && skiff.seats() == 3 && skiff.sit()
+                && close(skiff.width(), 0.9D) && close(skiff.height(), 0.3D) && close(skiff.stepHeight(), 0.6D)
+                && close(skiff.seatOffset(0).z(), 0.5D) && close(skiff.seatOffset(2).z(), -1.9D)
+                && close(skiff.speed().evaluate(context), 0.1D);
+        ok &= check(source, "artifact roster skiff seats=3 sit=true box=0.9x0.3 step=0.6 seats=3 offsets", skiffEntry);
 
         // A written display is read the way a vanilla model's is: translation in sixteenths of a block, rotation in
-        // degrees, scale as a multiplier.
+        // degrees, scale as a multiplier. A written vehicle adds seats, pose, the box and the seat layout on top.
         JsonObject written = new JsonObject();
         written.add("translation", numbers(0.0D, 4.0D, 0.0D));
         written.add("rotation", numbers(90.0D, 0.0D, -45.0D));
@@ -1273,29 +1310,190 @@ public final class MxtTestCommands {
                 .isPresent();
         ok &= check(source, "artifact roster flight display reads 4/16 as 0.25", displayRead);
 
-        // The same flight with a holder that is not a player: the mount, the carrier lookup and the stored state
-        // all read off the entity, and only a player's own flight permission has nothing to restore. The carrier is
-        // claimed first because the definition asks for an owner, and the tick is driven with the qi to pay for it.
-        LivingEntity mobRider = spawnProbe(source.getLevel(), player.blockPosition().above(5), null);
-        Holder<Ability> mobFlightAbility = require(MxtResourceKeys.ABILITY, id("azure_flight"));
-        boolean mobFlight = false;
-        if (mobRider != null) {
-            ItemStack mobCarrier = flightStack.copy();
-            mobRider.setItemInHand(InteractionHand.MAIN_HAND, mobCarrier);
-            ensureResource(mobRider, mobRider.getData(MxtAttachments.RESOURCE_HOLDER), require(MxtResourceKeys.RESOURCE, QI), 10.0D);
-            boolean sighted = ArtifactService.refine(mobCarrier, mobRider) == RefineResult.REFINED
-                    && ArtifactService.carried(access, mobRider, HolderHelper.id(mobFlightAbility)).isPresent();
-            FlightService.Result mounted = FlightService.mount(mobRider, mobCarrier, mobFlightAbility, FormulaContext.of(mobRider));
-            boolean riding = mounted.state() == FlightService.Result.State.MOUNTED
-                    && mobRider.getVehicle() instanceof FlyingSwordEntity
-                    && mobRider.getData(MxtAttachments.FLIGHT).active()
-                    && FlightService.tick(mobRider, mobFlightAbility, FormulaContext.of(mobRider)).state() == FlightService.Result.State.FLYING;
-            boolean landed = FlightService.dismount(mobRider, FlightService.Failure.STOPPED).state() == FlightService.Result.State.STOPPED
-                    && mobRider.getVehicle() == null && !mobRider.getData(MxtAttachments.FLIGHT).active();
-            mobFlight = sighted && riding && landed;
+        JsonObject writtenMount = new JsonObject();
+        writtenMount.addProperty("speed", 0.2D);
+        writtenMount.addProperty("seats", 3);
+        writtenMount.addProperty("sit", true);
+        writtenMount.addProperty("step_height", 0.6D);
+        JsonArray offsets = new JsonArray();
+        offsets.add(numbers(0.0D, 1.0D, 0.0D));
+        offsets.add(numbers(0.0D, 1.0D, -1.0D));
+        writtenMount.add("seat_offsets", offsets);
+        JsonObject mountAction = new JsonObject();
+        JsonObject onMountSound = new JsonObject();
+        onMountSound.addProperty("type", "mxt:play_sound");
+        onMountSound.addProperty("sound", "minecraft:block.beacon.activate");
+        onMountSound.addProperty("volume", 0.25D);
+        mountAction.add("on_mount", onMountSound);
+        writtenMount.add("mount_action", mountAction);
+        JsonObject writtenTrail = new JsonObject();
+        JsonObject writtenTrailParticle = new JsonObject();
+        writtenTrailParticle.addProperty("type", "minecraft:cloud");
+        writtenTrail.add("particle", writtenTrailParticle);
+        writtenTrail.addProperty("interval", 4);
+        writtenTrail.addProperty("moving_only", true);
+        writtenMount.add("trail", writtenTrail);
+        MountAbilityType readMount = MountAbilityType.CODEC.codec().parse(JsonOps.INSTANCE, writtenMount).result().orElse(null);
+        JsonObject bareMount = new JsonObject();
+        bareMount.addProperty("speed", 0.2D);
+        MountAbilityType defaultMount = MountAbilityType.CODEC.codec().parse(JsonOps.INSTANCE, bareMount).result().orElse(null);
+        boolean mountFields = readMount != null && defaultMount != null
+                && readMount.seats() == 3 && readMount.sit() && close(readMount.stepHeight(), 0.6D)
+                && close(readMount.seatOffset(0).y(), 1.0D) && close(readMount.seatOffset(1).z(), -1.0D)
+                // Past the last written offset the last one is reused rather than the whole list being dropped.
+                && close(readMount.seatOffset(2).z(), -1.0D)
+                && defaultMount.seats() == 1 && !defaultMount.sit()
+                && close(defaultMount.width(), MountAbilityType.DEFAULT_WIDTH)
+                && close(defaultMount.height(), MountAbilityType.DEFAULT_HEIGHT)
+                && close(defaultMount.seatOffset(0).y(), MountAbilityType.DEFAULT_SEAT_HEIGHT)
+                && close(defaultMount.seatOffset(1).z(), -MountAbilityType.DEFAULT_SEAT_SPACING)
+                && defaultMount.actions().onMount() == NoOpAction.INSTANCE && defaultMount.trail().isEmpty();
+        ok &= check(source, "artifact roster mount reads seats/pose/step/offsets and defaults them", mountFields);
+
+        // The mount's own hooks and its trail: three hooks, of which the written one is the one that is read, and a
+        // trail whose interval/flag are written while its geometry falls back to the defaults.
+        boolean mountHooks = readMount != null && readMount.actions().onMount() instanceof PlaySoundAction sound
+                && close(sound.volume(), 0.25F) && readMount.actions().onDismount() == NoOpAction.INSTANCE
+                && readMount.trail().filter(trail -> trail.interval() == 4 && trail.movingOnly() && trail.count() == 1
+                && trail.spread().equals(MountAbilityType.MountTrail.DEFAULT_SPREAD)
+                && close(trail.offsetY(), MountAbilityType.MountTrail.DEFAULT_OFFSET_Y)).isPresent();
+        ok &= check(source, "artifact roster mount reads mount_action=on_mount sound and trail interval=4 moving_only", mountHooks);
+
+        // Flight is a skill and the artifact is what it spends: with no skill the press is refused, and the mount
+        // leaves the hand the moment it becomes an entity - which is why the press cannot live on the artifact.
+        LivingEntity pilot = spawnProbe(source.getLevel(), player.blockPosition().above(5), null);
+        boolean flight = false;
+        if (pilot != null) {
+            ResourceHolderAttachment pilotResources = pilot.getData(MxtAttachments.RESOURCE_HOLDER);
+            ensureResource(pilot, pilotResources, qiResource, 40.0D);
+            ItemStack pilotMount = new ItemStack(Items.IRON_SWORD);
+            ArtifactService.refine(pilotMount, pilot);
+            pilot.setItemInHand(InteractionHand.MAIN_HAND, pilotMount);
+            Togglable.Result refused = AbilityActivationService.activate(pilot, controlAbility, null);
+            boolean ungranted = refused.failure() == Togglable.Failure.NOT_GRANTED
+                    && !pilot.getData(MxtAttachments.FLIGHT).active() && !pilot.getMainHandItem().isEmpty();
+            // A technique is the ordinary way in: learning it grants the skill through the same ledger as any grant.
+            SpiritIdentityAttachment spirit = pilot.getData(MxtAttachments.SPIRIT_IDENTITY);
+            spirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
+            CultivationGrantService.recalculate(spirit, pilot.getData(MxtAttachments.ABILITY_HOLDER));
+            boolean granted = pilot.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(controlAbility));
+            double qiBeforePress = pilotResources.get(qiResource);
+            Togglable.Result pressed = AbilityActivationService.activate(pilot, controlAbility, null);
+            FlyingSwordEntity sword = pilot.getVehicle() instanceof FlyingSwordEntity value ? value : null;
+            boolean riding = pressed.failure() == null && sword != null && mountEntry != null
+                    && pilot.getData(MxtAttachments.FLIGHT).active()
+                    && pilot.getData(MxtAttachments.FLIGHT).vehicle().filter(id("azure_sword_mount")::equals).isPresent()
+                    && pilot.getData(MxtAttachments.FLIGHT).archetype().filter(archetype -> archetype.is(HolderHelper.id(controlAbility))).isPresent()
+                    // Custody: the artifact left the hand, and it is what the mount is made of.
+                    && pilot.getMainHandItem().isEmpty() && sword.visual().is(Items.IRON_SWORD)
+                    && ArtifactService.isOwner(sword.visual(), pilot.getUUID())
+                    // The definition, not a registered constant, decides the box, the pose and who is driving.
+                    && close(sword.getDimensions(Pose.STANDING).width(), mountEntry.width())
+                    && close(sword.getDimensions(Pose.STANDING).height(), mountEntry.height())
+                    && close(sword.maxUpStep(), 0.0D) && !sword.shouldRiderSit()
+                    && sword.getControllingPassenger() == pilot
+                    // One take-off price, and it is the skill's own, charged by the shared gate.
+                    && close(qiBeforePress - pilotResources.get(qiResource), 5.0D);
+            LivingEntity passenger = spawnProbe(source.getLevel(), player.blockPosition().above(6), null);
+            LivingEntity third = spawnProbe(source.getLevel(), player.blockPosition().above(7), null);
+            boolean seats = sword != null && passenger != null && third != null
+                    && passenger.startRiding(sword) && sword.getPassengers().size() == 2
+                    && !third.startRiding(sword) && sword.getPassengers().size() == 2;
+            double qiBeforeTick = pilotResources.get(qiResource);
+            boolean flying = sword != null
+                    && FlightService.tick(pilot, controlAbility, mountAbility, FormulaContext.of(pilot)).state() == FlightService.Result.State.FLYING
+                    // The fuel of a tick is the mount's own price. This sword was refined empty, so the first
+                    // tick has nothing in the artifact to burn and the pilot pays it.
+                    && close(qiBeforeTick - pilotResources.get(qiResource), 0.1D);
+            // Once the artifact is charged, the same tick comes out of it instead: the mount carries the aura it
+            // burns, and only what the artifact cannot cover falls back on the pilot.
+            if (sword != null) ArtifactService.addEnergy(access, sword.visual(), qi, 5.0D, 0.0D, FormulaContext.of(pilot));
+            double artifactBefore = sword == null ? 0.0D : ArtifactService.stored(sword.visual(), qi);
+            double poolBefore = pilotResources.get(qiResource);
+            boolean artifactFuel = sword != null
+                    && FlightService.tick(pilot, controlAbility, mountAbility, FormulaContext.of(pilot)).state() == FlightService.Result.State.FLYING
+                    && close(artifactBefore - ArtifactService.stored(sword.visual(), qi), 0.1D)
+                    && close(poolBefore - pilotResources.get(qiResource), 0.0D)
+                    && artifactBefore > 0.0D;
+            flying = flying && artifactFuel;
+            boolean landed = FlightService.dismount(pilot, FlightService.Failure.STOPPED).state() == FlightService.Result.State.STOPPED
+                    && pilot.getVehicle() == null && !pilot.getData(MxtAttachments.FLIGHT).active()
+                    && sword != null && sword.isRemoved() && sword.visual().isEmpty()
+                    // Nobody is there to take it back, so it lands where the mount was instead of going with it.
+                    && !source.getLevel().getEntitiesOfClass(ItemEntity.class, pilot.getBoundingBox().inflate(8.0D),
+                    item -> item.getItem().is(Items.IRON_SWORD) && ArtifactService.isOwner(item.getItem(), pilot.getUUID())).isEmpty();
+            flight = ungranted && granted && riding && seats && flying && landed;
+            if (passenger != null) passenger.discard();
+            if (third != null) third.discard();
         }
-        if (mobRider != null) mobRider.discard();
-        ok &= check(source, "artifact roster mob flight carried=in-hand mounted=on-sword tick=flying landed=off-sword", mobFlight);
+        if (pilot != null) pilot.discard();
+        ok &= check(source, "artifact roster flight ungranted=refused granted=by-technique custody=hand-empty seats=2 third=refused tick=fuel=0.1 artifact=burned-first landed=item-back", flight);
+
+        // A field a vehicle never reads is refused at load time rather than stored: the same document without it
+        // parses, so the rejection is the field and not the shape.
+        JsonObject legalMount = new JsonObject();
+        legalMount.addProperty("type", "mxt:mount");
+        legalMount.addProperty("speed", 0.1D);
+        legalMount.addProperty("name", "probe mount");
+        legalMount.addProperty("description", "probe mount");
+        JsonObject illegalMount = legalMount.deepCopy();
+        illegalMount.add("entity_action", JsonParser.parseString("{\"type\": \"mxt:no_op\"}"));
+        boolean inertFields = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, legalMount).result().isPresent()
+                && Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, illegalMount).result().isEmpty();
+        ok &= check(source, "artifact roster mount refuses a field it never reads", inertFields);
+
+        // The same flight with a player, asked the directed way: the merged payload names the state it wants, and a
+        // request for the state it is already in changes nothing. The hand is put back afterwards, since the rest of
+        // this probe reads stacks of its own rather than what the player holds.
+        ItemStack heldBefore = player.getMainHandItem().copy();
+        ensureResource(player, player.getData(MxtAttachments.RESOURCE_HOLDER), qiResource, 40.0D);
+        SpiritIdentityAttachment playerSpirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        playerSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
+        CultivationGrantService.recalculate(playerSpirit, player.getData(MxtAttachments.ABILITY_HOLDER));
+        int ownedBefore = ownedSwords(player);
+        ItemStack playerMount = new ItemStack(Items.IRON_SWORD);
+        ArtifactService.refine(playerMount, player);
+        player.setItemInHand(InteractionHand.MAIN_HAND, playerMount);
+        Identifier controlId = HolderHelper.id(controlAbility);
+        boolean playerRiding = WheelService.trigger(player, WheelSource.MAIN_HAND, WheelEntryKind.ABILITY, controlId, Optional.of(true))
+                && player.getVehicle() instanceof FlyingSwordEntity;
+        boolean playerIdle = WheelService.trigger(player, WheelSource.MAIN_HAND, WheelEntryKind.ABILITY, controlId, Optional.of(true))
+                && player.getVehicle() instanceof FlyingSwordEntity;
+        boolean playerLanded = WheelService.trigger(player, WheelSource.MAIN_HAND, WheelEntryKind.ABILITY, controlId, Optional.of(false))
+                && player.getVehicle() == null && ownedSwords(player) == ownedBefore + 1;
+        player.setItemInHand(InteractionHand.MAIN_HAND, heldBefore);
+        ok &= check(source, "artifact roster flight directed=payload idle=same-state giveback=into-owner inventory",
+                playerRiding && playerIdle && playerLanded);
+
+        // Hitting something ends the flight. The probe cannot press a movement key, so the mount is moved into a
+        // wall by hand: what the leg is really about is that a real move leaves the flag the landing reads.
+        LivingEntity crasher = spawnProbe(source.getLevel(), player.blockPosition().above(9), null);
+        boolean collision = false;
+        if (crasher != null) {
+            ensureResource(crasher, crasher.getData(MxtAttachments.RESOURCE_HOLDER), qiResource, 20.0D);
+            ItemStack crashMount = new ItemStack(Items.IRON_SWORD);
+            ArtifactService.refine(crashMount, crasher);
+            crasher.setItemInHand(InteractionHand.MAIN_HAND, crashMount);
+            SpiritIdentityAttachment crashSpirit = crasher.getData(MxtAttachments.SPIRIT_IDENTITY);
+            crashSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
+            CultivationGrantService.recalculate(crashSpirit, crasher.getData(MxtAttachments.ABILITY_HOLDER));
+            FlyingSwordEntity crashSword = AbilityActivationService.activate(crasher, controlAbility, null).failure() == null
+                    && crasher.getVehicle() instanceof FlyingSwordEntity value ? value : null;
+            if (crashSword != null) {
+                crashSword.setYRot(0.0F);
+                BlockPos wall = crashSword.blockPosition().relative(Direction.SOUTH);
+                source.getLevel().setBlockAndUpdate(wall, Blocks.STONE.defaultBlockState());
+                crashSword.move(MoverType.SELF, new Vec3(0.0D, 0.0D, 1.0D));
+                FlightService.Result crashed = FlightService.tick(crasher, controlAbility, mountAbility, FormulaContext.of(crasher));
+                collision = crashSword.horizontalCollision
+                        && crashed.state() == FlightService.Result.State.STOPPED
+                        && crashed.failure() == FlightService.Failure.COLLISION
+                        && crasher.getVehicle() == null;
+                source.getLevel().setBlockAndUpdate(wall, Blocks.AIR.defaultBlockState());
+            }
+        }
+        if (crasher != null) crasher.discard();
+        ok &= check(source, "artifact roster flight crash=lands", collision);
 
         ItemStack wardStack = new ItemStack(Items.PRISMARINE_SHARD);
         // Two written entries - one id and one ability tag - reaching the two ids the definition grants: the tag
@@ -1308,7 +1506,7 @@ public final class MxtTestCommands {
         // The refine action charges 40 of a 200 ceiling, so that feeding raises the ceiling to floor(200 * 1.1).
         ItemStack jadeStack = new ItemStack(Items.AMETHYST_SHARD);
         boolean refined = ArtifactService.refine(jadeStack, player) == RefineResult.REFINED;
-        int jadeStored = ArtifactService.stored(jadeStack, qi);
+        double jadeStored = ArtifactService.stored(jadeStack, qi);
         int jadeCeiling = ArtifactService.capacity(access, jadeStack, qi, 0.0D, context);
         ok &= check(source, "artifact roster claim_action stored=" + jadeStored + " ceiling=" + jadeCeiling,
                 refined && ArtifactService.isOwner(jadeStack, player.getUUID()) && jadeStored == 40 && jadeCeiling == 220);
@@ -1355,7 +1553,7 @@ public final class MxtTestCommands {
         boolean tooltip = flightLines.equals(List.of(tooltipKey("header"), tooltipKey("unowned"),
                         // One entry, one line: the speed and what riding costs share a line, so a definition with
                         // four abilities produces four lines rather than a paragraph.
-                        tooltipKey("aura"), tooltipKey("flight_costs"), tooltipKey("hold_claim")))
+                        tooltipKey("aura"), tooltipKey("mount_costs"), tooltipKey("hold_claim")))
                 // The jade does not require an owner, so a fresh one says nothing about ownership at all, and its
                 // action charges aura rather than health, so its claim is free.
                 && jadeLines.equals(List.of(tooltipKey("header"),
@@ -1541,9 +1739,9 @@ public final class MxtTestCommands {
 
         // The two gesture-shaped actions: pour_action settles every tick that really moved aura, use_action
         // closes a gesture that ran to its end. Driven through the methods the event handlers call.
-        int beforePourAction = ArtifactService.stored(pourStack, qi);
+        double beforePourAction = ArtifactService.stored(pourStack, qi);
         ArtifactHoldService.runPourAction(player, pourStack);
-        int beforeUseAction = ArtifactService.stored(pourStack, qi);
+        double beforeUseAction = ArtifactService.stored(pourStack, qi);
         ArtifactHoldService.runUseAction(player, pourStack);
         boolean gestureActions = beforeUseAction == beforePourAction + 1
                 && ArtifactService.stored(pourStack, qi) == beforeUseAction + 2;
@@ -1584,12 +1782,22 @@ public final class MxtTestCommands {
 
     // One roster row: an item, and what every consumer must answer about the definition claiming it.
     private record ArtifactRow(Item item, String definition, int qi, int waterPower, int soulPower, int slots,
-                               boolean curiosEquipable, boolean flight, boolean requireOwner) {
+                               boolean curiosEquipable, boolean mount, boolean requireOwner) {
     }
 
     // One artifact tooltip key, so the roster can spell out the lines a definition must produce for a stack.
     private static String tooltipKey(String path) {
         return "tooltip.mxt.artifact." + path;
+    }
+
+    // The owner-bound iron swords one holder carries: what a flight gives back must add exactly one of them.
+    private static int ownedSwords(ServerPlayer player) {
+        int found = 0;
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.is(Items.IRON_SWORD) && ArtifactService.isOwner(stack, player.getUUID())) found++;
+        }
+        return found;
     }
 
     // The rendered words belong to a language file, so the check reads the component's own argument. The line is
@@ -2406,7 +2614,7 @@ public final class MxtTestCommands {
             return 0;
         }
         spirit.setCultivationProgress(requireProfile(QI), 80.0D);
-        ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, QI), 80.0D);
+        ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, QI), 200.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, WATER_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SOUL_POWER), 20.0D);
@@ -2429,8 +2637,21 @@ public final class MxtTestCommands {
         giveArtifact(player, Items.AMETHYST_SHARD);
         giveArtifact(player, Items.PRISMARINE_SHARD);
         giveArtifact(player, Items.BELL);
+        // The second vehicle, which is the three-seat sitting one: it is only claimable by an artifact nobody else
+        // names, so it needs its own item.
+        giveArtifact(player, Items.HEART_OF_THE_SEA);
+        // Learning a manual is the only in-game way to a skill, and a blank jade slip teaches nothing: these carry
+        // the two flight techniques, so holding one down for two seconds grants the skill.
+        give(player, techniqueCarrier(player, "sword_control_manual"));
+        give(player, techniqueCarrier(player, "offhand_flight_manual"));
         source.sendSuccess(() -> Component.translatable("command.mxt_test.kit.success"), true);
         return 1;
+    }
+
+    // The carrier the mod offers for a technique, which is what actually teaches it.
+    private static ItemStack techniqueCarrier(ServerPlayer player, String path) {
+        return ItemBindingService.techniqueCarrier(player.level().registryAccess(),
+                require(MxtResourceKeys.TECHNIQUE, id(path)));
     }
 
     private static void grantIdentity(ServerPlayer player, SpiritIdentityAttachment spirit, FormulaContext context) {

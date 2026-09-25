@@ -25,7 +25,6 @@ public final class NetworkManager {
         PayloadRegistrar registrar = event.registrar("1")
                 .playToServer(WheelActionC2SPayload.TYPE, WheelActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelAction))
                 .playToServer(ForgingActionC2SPayload.TYPE, ForgingActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onForgingAction))
-                .playToServer(FlightToggleC2SPayload.TYPE, FlightToggleC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onFlightToggle))
                 .playToServer(ChequeActionC2SPayload.TYPE, ChequeActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onChequeAction))
                 .playToServer(StationTradeC2SPayload.TYPE, StationTradeC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onStationTrade))
                 .playToServer(PlayerTradeActionC2SPayload.TYPE, PlayerTradeActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onPlayerTradeAction))
@@ -33,7 +32,8 @@ public final class NetworkManager {
                 .playToServer(CultivationToggleC2SPayload.TYPE, CultivationToggleC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onCultivationToggle))
                 .playToServer(WheelLayoutC2SPayload.TYPE, WheelLayoutC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelLayout))
                 .playToServer(WheelSelectionC2SPayload.TYPE, WheelSelectionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelSelection))
-                .playToServer(OwnerNameC2SPayload.TYPE, OwnerNameC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onOwnerNameRequest));
+                .playToServer(OwnerNameC2SPayload.TYPE, OwnerNameC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onOwnerNameRequest))
+                .playToServer(FlightDescendC2SPayload.TYPE, FlightDescendC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onFlightDescend));
         // A dedicated server never runs one of these, so it registers the codec and nothing else.
         if (FMLEnvironment.getDist() != Dist.CLIENT) {
             registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC)

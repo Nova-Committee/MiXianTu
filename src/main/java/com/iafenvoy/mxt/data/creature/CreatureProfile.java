@@ -17,7 +17,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -25,11 +25,11 @@ import java.util.Optional;
 
 /**
  * Datapack profile applied to tagged creature types; it does not create an entity type. Extra drops are vanilla
- * loot tables, so the profile only contributes the inner core stack and the single action run when it is written.
+ * loot tables, and the core is a {@link ItemStackTemplate} because registries parse before item components bind.
  */
 public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityType<?>>>> entities,
                               EntityAction spawnAction, NumberProvider intelligence,
-                              EntityCondition condition, Optional<ItemStack> innerCore,
+                              EntityCondition condition, Optional<ItemStackTemplate> innerCore,
                               List<Either<Holder<Element>, TagKey<Element>>> preferredAuraElements,
                               Map<Holder<Aura>, NumberProvider> minimumAura) {
     public static final Codec<CreatureProfile> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -37,7 +37,7 @@ public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityTy
             EntityAction.SINGLE_CODEC.optionalFieldOf("spawn_action", NoOpAction.INSTANCE).forGetter(CreatureProfile::spawnAction),
             NumberProvider.CODEC.optionalFieldOf("intelligence", new Constant(0.0D)).forGetter(CreatureProfile::intelligence),
             EntityCondition.optionalCodec("condition").forGetter(CreatureProfile::condition),
-            ItemStack.CODEC.optionalFieldOf("inner_core").forGetter(CreatureProfile::innerCore),
+            ItemStackTemplate.CODEC.optionalFieldOf("inner_core").forGetter(CreatureProfile::innerCore),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("preferred_aura_elements", List.of()).forGetter(CreatureProfile::preferredAuraElements),
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(CreatureProfile::minimumAura)
     ).apply(i, CreatureProfile::new));

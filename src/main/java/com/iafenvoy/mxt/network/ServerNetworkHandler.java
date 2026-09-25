@@ -2,12 +2,9 @@ package com.iafenvoy.mxt.network;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
@@ -16,10 +13,8 @@ import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.mojang.logging.LogUtils;
-import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,10 +34,11 @@ public final class ServerNetworkHandler {
     public static final Logger MXT_DEBUG = LogUtils.getLogger();
 
     // The payload carries what was chosen and off which page, and nothing else: whether the player may use it is
-    // decided here and by the pipeline behind it, never by the screen that sent this.
+    // decided here and by the pipeline behind it, never by the screen that sent this. A filled-in direction asks for
+    // one named state instead of a flip.
     static void onWheelAction(WheelActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        WheelService.trigger(player, payload.source(), payload.kind(), payload.id());
+        WheelService.trigger(player, payload.source(), payload.kind(), payload.id(), payload.enabled());
     }
 
     // Forced to twelve sectors with every id resolved, so it can only contain things this server could trigger.
@@ -87,17 +83,6 @@ public final class ServerNetworkHandler {
         }
     }
 
-    static void onFlightToggle(FlightToggleC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
-        Holder<Ability> ability = payload.ability();
-        // A request names the state it wants; a press is the same thing with the state read first, so a request
-        // that already holds is a no-op rather than a take-off followed by a landing.
-        boolean on = AbilityActivationService.state(player, ability).orElse(false);
-        if (on == payload.enabled()) return;
-        AbilityActivationService.activate(player, ability, ArtifactService.carried(
-                player.level().registryAccess(), player, HolderHelper.id(ability)).orElse(player.getMainHandItem()));
-    }
-
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (!(player.containerMenu instanceof ChequeTableMenu menu))
@@ -134,6 +119,13 @@ public final class ServerNetworkHandler {
         if (!(context.player() instanceof ServerPlayer player)) return;
         Result result = CultivationModeService.toggle(player);
         if (!result.started() && !result.stopped()) CultivationModeService.notifyFailure(player, result);
+    }
+
+    // The key is a held state, so it is written where the flight reads it and nowhere else: a player who is not
+    // flying has no attachment to write it to, and the key does nothing until a flight is up.
+    static void onFlightDescend(FlightDescendC2SPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        player.getExistingData(MxtAttachments.FLIGHT).ifPresent(data -> data.setDescend(payload.pressed()));
     }
 
     // Answered out of what the server already knows - the online player, or the name its profile cache kept from a

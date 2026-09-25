@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render;
 
-import com.iafenvoy.mxt.data.ability.type.FlightAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
+import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -48,8 +48,8 @@ public final class FlyingSwordRenderer extends EntityRenderer<FlyingSwordEntity,
         ItemStack visual = entity.visual();
         if (visual.isEmpty()) return;
         this.itemModelResolver.updateForTopItem(state.item, visual, ItemDisplayContext.FIXED, entity.level(), entity, entity.getId());
-        state.display = ArtifactService.flight(entity.level().registryAccess(), visual)
-                .map(FlightAbilityType::display).orElse(FlightDisplay.DEFAULT);
+        state.display = ArtifactService.mount(entity.level().registryAccess(), visual)
+                .map(MountAbilityType::display).orElse(FlightDisplay.DEFAULT);
     }
 
     @Override

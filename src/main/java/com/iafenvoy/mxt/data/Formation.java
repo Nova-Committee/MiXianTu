@@ -92,7 +92,9 @@ public record Formation(Component name, Component description, Optional<Identifi
         return DataResult.success(formation);
     }
 
-    /** One block an inline structure requires, at an offset from the controller. */
+    /**
+     * One block an inline structure requires, at an offset from the controller.
+     */
     public record RequiredBlock(BlockPos offset, BlockState state) {
         /**
          * Accepts a bare block id, falling back to vanilla's {@code {"Name": ..., "Properties": ...}} object only

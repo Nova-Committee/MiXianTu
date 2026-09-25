@@ -113,7 +113,9 @@ public final class AuraChunkAttachment {
         return true;
     }
 
-    /** Read-only availability test; {@link #consume} asks it again before spending anything. */
+    /**
+     * Read-only availability test; {@link #consume} asks it again before spending anything.
+     */
     public boolean canConsume(Map<Holder<Aura>, Double> costs) {
         for (Entry<Holder<Aura>, Double> entry : costs.entrySet()) {
             double cost = entry.getValue();

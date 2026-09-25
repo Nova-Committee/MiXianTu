@@ -17,15 +17,25 @@ import java.util.Optional;
  * sides resolve it here.</p>
  */
 public final class ContractBehaviors {
-    /** Walk to the owner and keep up with them. The order every contract starts under. */
+    /**
+     * Walk to the owner and keep up with them. The order every contract starts under.
+     */
     public static final ContractBehavior FOLLOW = new ContractBehavior(id("follow"), false);
-    /** Stroll around the owner without following them step for step. */
+    /**
+     * Stroll around the owner without following them step for step.
+     */
     public static final ContractBehavior WANDER = new ContractBehavior(id("wander"), false);
-    /** Hold position: no path, no quarry. */
+    /**
+     * Hold position: no path, no quarry.
+     */
     public static final ContractBehavior STAY = new ContractBehavior(id("stay"), false);
-    /** Come back to the owner once; the record keeps the order that was in force. */
+    /**
+     * Come back to the owner once; the record keeps the order that was in force.
+     */
     public static final ContractBehavior RECALL = new ContractBehavior(id("recall"), true);
-    /** What a creature takes when it declares nothing of its own. */
+    /**
+     * What a creature takes when it declares nothing of its own.
+     */
     public static final List<ContractBehavior> BUILT_IN = List.of(FOLLOW, WANDER, STAY, RECALL);
     // Registered during mod setup and only read from the game thread afterwards, so it needs no lock; the first
     // registration of an id wins, which keeps what an id means stable across a reload.
