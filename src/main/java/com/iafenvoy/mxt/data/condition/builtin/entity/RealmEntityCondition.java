@@ -22,11 +22,18 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+/**
+ * Asks what realm the entity stands in, and optionally how far it has got inside that realm. The minor stage is
+ * read from the body's own record rather than from live progress, so a layer that was reached stays reached -
+ * that is what makes a threshold on it usable as a gate.
+ */
 public record RealmEntityCondition(Holder<RealmStage> realm,
-                                   Comparison comparison) implements EntityCondition {
+                                   Comparison comparison,
+                                   Optional<Integer> minMinorStage) implements EntityCondition {
     public static final MapCodec<RealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RealmStage.CODEC.fieldOf("realm").forGetter(RealmEntityCondition::realm),
-            Comparison.CODEC.optionalFieldOf("comparison", Comparison.EXACT).forGetter(RealmEntityCondition::comparison)
+            Comparison.CODEC.optionalFieldOf("comparison", Comparison.EXACT).forGetter(RealmEntityCondition::comparison),
+            Codec.INT.optionalFieldOf("min_minor_stage").forGetter(RealmEntityCondition::minMinorStage)
     ).apply(i, RealmEntityCondition::new));
 
     @Override
@@ -41,13 +48,18 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
         stages = Stream.concat(stages,
                 profiles.map(Aura::firstRealm).flatMap(Optional::stream)
                         .filter(first -> cultivation.realmStage(first.value().aura()) == null));
-        return stages.anyMatch(current -> switch (this.comparison) {
+        boolean inRealm = stages.anyMatch(current -> switch (this.comparison) {
             case EXACT -> current.equals(this.realm);
             case AT_LEAST ->
                     ServerCache.get().map(cache -> cache.isRealmAtLeast(HolderHelper.id(current), required)).orElse(false);
             case AT_MOST ->
                     ServerCache.get().map(cache -> cache.isRealmAtLeast(required, HolderHelper.id(current))).orElse(false);
         });
+        if (!inRealm || this.minMinorStage.isEmpty()) return inRealm;
+        // -1 for a realm the body never entered, so a threshold is never met by a realm it has not stood in.
+        return entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY)
+                .map(identity -> identity.minorStageRecord(this.realm) >= this.minMinorStage.get())
+                .orElse(false);
     }
 
     @Override

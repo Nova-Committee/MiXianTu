@@ -7,8 +7,11 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
+import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -57,6 +60,10 @@ public final class RealmCommand {
             source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.name(realm, "realm_stage")));
             return 0;
         }
+        // Arriving by command is arriving: the new stage's first minor stage is recorded like any other, so its
+        // own unlocks apply without waiting for the next point of progress.
+        MinorStageService.refresh(player, realm.value().aura(),
+                ResourceService.formulaContext(player, realm.value().aura().value().resource(), FormulaContext.of(player)));
         source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", DefinitionText.name(realm, "realm_stage")), true);
         return 1;
     }

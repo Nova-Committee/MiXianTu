@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  * nothing else answers either for itself. A disabled element ({@code mxt:disabled}) must stop holding
  * relations, colouring text, satisfying a spirit root's binding and matching an affinity, and a
  * {@link Holder} cannot show that - its {@code value()} is the definition as written - so every read goes
- * through {@link #enabled(Holder)}. Roots are read through the registry and contribute their element only
+ * through {@link #enabled(Holder)}. Roots are read through the registry and contribute their elements only
  * while the root is switched on and that element is enabled; an entity with no roots has no elements, which
  * callers read as "no element relation applies" rather than as an error.
  */
@@ -52,7 +52,7 @@ public final class Elements {
     public static Set<Holder<Element>> of(SpiritIdentityAttachment spirit, Provider access) {
         return spirit.activeSpiritRoots().stream()
                 .flatMap(root -> MxtDatapackRegistries.get(access, MxtResourceKeys.SPIRIT_ROOT, root).stream())
-                .map(SpiritRoot::element)
+                .flatMap(root -> root.elementHolders().stream())
                 .filter(Elements::enabled)
                 .collect(Collectors.toUnmodifiableSet());
     }

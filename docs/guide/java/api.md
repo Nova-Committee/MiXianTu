@@ -234,14 +234,15 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 | `pendingConditionsForChain(LivingEntity, Holder<Aura>)` | 还差哪些条件 | |
 | `setRealm(CultivationAttachment spirit, Identifier target)` | 直接设置境界（管理员用） | 返回是否真的改了；**它没有实体参数，因此没有服务端检查** |
 
-结果类型：`BreakthroughResult(advanced, failure, failedResource, costs)`、`BreakthroughStatus(reached, conditionsMet, automatic, minimumExperience, maximumExperience)`、`enum Failure {DISABLED, WRONG_AURA, NO_NEXT_REALM, INSUFFICIENT_PROGRESS, MAX_PROGRESS, CONDITIONS, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CANCELLED, SERVER_ONLY}`。
+结果类型：`BreakthroughResult(advanced, failure, failedResource, costs)`、`BreakthroughStatus(reached, conditionsMet, automatic, minimumExperience, maximumExperience)`、`enum Failure {DISABLED, WRONG_AURA, NO_NEXT_REALM, INSUFFICIENT_PROGRESS, CONDITIONS, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CANCELLED, SERVER_ONLY}`。
 
 要点：
 
 - **边界不一致**：只有 `attempt` 挡客户端；`addProgress*` / `setRealm` / `minorStage` 都不检查，在客户端调会真的写附件。
 - 内容自己声明的条件在**扣费之前**评估，所以条件不满足不会白花资源。
 - `INVALID_FORMULA` 同时兼任"一切非资源不足的扣费失败"的归一化出口；`failedResource` 只在扣费阶段资源不足时非空。
-- `Failure.DISABLED` 只有脚本桥会产出（`MxtKubeJsApi.tryBreakthrough` 在灵气 id 解析不到时），`attempt` 自己不产出它；`Failure.MAX_PROGRESS` 目前**没有任何产生路径**（保留值，lang 里备着提示但暂时用不上）——别把它写进你自己的判分支逻辑里当作会发生的情况。
+- `Failure.DISABLED` 只有脚本桥会产出（`MxtKubeJsApi.tryBreakthrough` 在灵气 id 解析不到时），`attempt` 自己不产出它。
+- `Failure.MAX_PROGRESS` 已于 2026-09-25 **删除**：进度上限不可能成为拒绝突破的理由——`threshold()` 要求某一段的 `max_experience ≥ breakthrough_exp`，所以进度被顶在 `max_experience` 时必然已经满足 `progress ≥ breakthrough_exp`，此时只会因条件、代价或取消而失败。内联的 `Failure` 分支若写了它，编译期就会报错。
 
 ## 技能
 

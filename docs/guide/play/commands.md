@@ -53,8 +53,11 @@ title: 命令
 | `/mxt trigger list [<entity>]` | 列出该实体当前的运行时触发器订阅：模块/标识/信号/状态。订阅从不存档，这是运行中的服务器里唯一能看见它们的地方；不填实体时用自己。 |
 | `/mxt trigger rules <signal>` | 按执行顺序列出响应某个信号的数据包规则，以及每条规则的行为类型。 |
 | `/mxt trigger publish <signal> [<entity>]` | 手动发布一个信号（需要 gamemaster 权限），不必等待真实事件就能检查规则或订阅；既没有订阅也没有规则监听时会明确提示。 |
-| `/mxt formation list`（= `/formation list`） | 列出当前维度所有已激活阵法：ID、阵心坐标、半径、阵主与已付费的维持次数。 |
+| `/mxt formation list`（= `/formation list`） | 列出当前维度所有已激活阵法：ID、阵心坐标、半径、阵主与已付费的维持次数。2026-09-25 起阵主可以有多位，列出来的是**逗号分隔的一整组**。 |
 | `/mxt formation info`（= `/formation info`） | 列出覆盖玩家所在位置的阵法；重叠时全部列出，不做取舍。 |
+| `/mxt formation upkeep` | 列出覆盖玩家所在位置的阵法**下一期还差的份额**：把地脉供给与阵法存量扣掉之后，真正要向阵主账户收的那部分，写法是 `数量 资源id`。它是维护账单的预告口，与真正扣费走的是同一份计划（`FormationService.MaintainRule.remaining`），所以看到的数就是要收的数；`owed=-` 表示这一期已经付得出来。 |
+| `/mxt formation owners <pos>` | 打印该阵心上的**归属名单**（一组 UUID）。 |
+| `/mxt formation owners <pos> add\|remove <player>` | 加 / 减一位阵主（需要 gamemaster 权限）。归属是一组 UUID：名单上的人都算阵主，因此 `mxt:formation_owner`、拆除权限、逐实体行为的"给阵主"与"给队友"都按这一组判定；好友系统也改成问**每一位**阵主（任一位认得你就算队友）。加一位已经在名单上的、或减一位不在名单上的，会照实回答且不改动。 |
 | `/mxt formation bind <formation>`（= `/formation bind`） | 把指定阵法写入**主手**的阵盘（需要 gamemaster 权限）。阵盘是唯一能把阵法带进世界的物品，而它的绑定存在物品组件里；这条命令是生存流程里取得可用阵盘的入口。Tab 补全列出注册表里的全部阵法（不再只列白名单内那些），但**白名单仍在写盘之前把关**：不在名单里的会被拒绝且不修改阵盘；重复绑定会覆盖原值，ID 写错时连解析都过不去，阵盘自然保持原样。 |
 | `/spirit_root list [<target>]`（= `/mxt spirit_root list`） | 列出该实体持有的灵根：名字、稀有度、绑定元素与是否生效。读附件而不是注册表，所以定义被停用/删除的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
 | `/spirit_root grant\|remove <targets> <root>`（= `/mxt spirit_root …`） | 授予或移除灵根（需要 gamemaster 权限）。授予走实体行为 `mxt:grant_spirit_root` 的同一套服务，因此 `conflicting_elements` 与「已持有」都会拒绝并逐个目标报出原因；移除按 `spirit_identity` 附件里**持有的那条引用**去找，所以被 `mxt:disabled` 停用的灵根照样摘得掉。 |
@@ -152,7 +155,7 @@ title: 命令
 
 | 子命令 | 行为 |
 | --- | --- |
-| `info <pos>` | 打印这个裂隙通往哪里、颜色（自己设的还是随目标维度），以及**连线数、三角形数、连成一片的格数** —— 一眼看出它会画成什么样、为什么没有连上邻居。 |
+| `info <pos>` | 打印这个裂隙通往哪里、颜色（自己设的还是随目标维度），以及**连线数、三角形数、连成一片的格数**与**是否孤立**（周围 3×3×3 内没有第二个裂隙）—— 一眼看出它会画成什么样、为什么没有连上邻居。 |
 | `target <pos> <dimension>` | 改它通往哪个维度（有 Tab 补全，列出服务端所有维度）。 |
 | `color <pos> <color>` | 设颜色覆盖，写 `RRGGBB`（可带 `#`）或 `auto`。 |
 | `place <pos> <dimension>` | 直接在某个可替换的位置放一个通往该维度的裂隙。 |

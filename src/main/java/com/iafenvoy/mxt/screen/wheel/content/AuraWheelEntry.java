@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
 import com.iafenvoy.mxt.data.IconReference;
@@ -8,7 +9,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -31,7 +32,7 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
 
     @Override
     public WheelEntryKind kind() {
-        return WheelEntryKind.AURA;
+        return WheelEntryKinds.AURA;
     }
 
     @Override

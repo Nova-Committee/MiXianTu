@@ -1,11 +1,13 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -27,7 +29,8 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
             CollectionCodecs.list(Technique.CODEC).lenientOptionalFieldOf("learned_techniques", List.of()).forGetter(SpiritIdentityAttachment::learnedTechniques),
             CollectionCodecs.map(Technique.CODEC, SkillStage.CODEC).lenientOptionalFieldOf("technique_stages", Map.of()).forGetter(SpiritIdentityAttachment::techniqueStages),
             CollectionCodecs.set(SpiritRoot.CODEC).lenientOptionalFieldOf("disabled_spirit_roots", Set.of()).forGetter(SpiritIdentityAttachment::disabledSpiritRoots),
-            CollectionCodecs.set(Physique.CODEC).lenientOptionalFieldOf("disabled_physiques", Set.of()).forGetter(SpiritIdentityAttachment::disabledPhysiques)
+            CollectionCodecs.set(Physique.CODEC).lenientOptionalFieldOf("disabled_physiques", Set.of()).forGetter(SpiritIdentityAttachment::disabledPhysiques),
+            CollectionCodecs.map(RealmStage.CODEC, Codec.INT).lenientOptionalFieldOf("minor_stage_records", Map.of()).forGetter(SpiritIdentityAttachment::minorStageRecords)
     ).apply(i, SpiritIdentityAttachment::new));
 
     private final List<Holder<SpiritRoot>> spiritRoots;
@@ -36,22 +39,25 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     private final Map<Holder<Technique>, Holder<SkillStage>> techniqueStages;
     private final Set<Holder<SpiritRoot>> disabledSpiritRoots;
     private final Set<Holder<Physique>> disabledPhysiques;
+    private final Map<Holder<RealmStage>, Integer> minorStageRecords;
 
     public SpiritIdentityAttachment() {
-        this(List.of(), List.of(), List.of(), Map.of(), Set.of(), Set.of());
+        this(List.of(), List.of(), List.of(), Map.of(), Set.of(), Set.of(), Map.of());
     }
 
     private SpiritIdentityAttachment(List<Holder<SpiritRoot>> spiritRoots, List<Holder<Physique>> physiques,
                                      List<Holder<Technique>> learnedTechniques,
                                      Map<Holder<Technique>, Holder<SkillStage>> techniqueStages,
                                      Set<Holder<SpiritRoot>> disabledSpiritRoots,
-                                     Set<Holder<Physique>> disabledPhysiques) {
+                                     Set<Holder<Physique>> disabledPhysiques,
+                                     Map<Holder<RealmStage>, Integer> minorStageRecords) {
         this.spiritRoots = new LinkedList<>(spiritRoots);
         this.physiques = new LinkedList<>(physiques);
         this.learnedTechniques = new LinkedList<>(learnedTechniques);
         this.techniqueStages = new LinkedHashMap<>(techniqueStages);
         this.disabledSpiritRoots = new LinkedHashSet<>(disabledSpiritRoots);
         this.disabledPhysiques = new LinkedHashSet<>(disabledPhysiques);
+        this.minorStageRecords = new LinkedHashMap<>(minorStageRecords);
     }
 
     public List<Holder<SpiritRoot>> spiritRoots() {
@@ -153,5 +159,25 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
             this.learnedTechniques.add(value);
             this.markDirty();
         }
+    }
+
+    // Highest minor stage reached inside each realm stage, 0-based. A key means "this body has stood in that
+    // realm at all", and a value only ever grows, so a breakthrough never takes an unlock back with it.
+    public Map<Holder<RealmStage>, Integer> minorStageRecords() {
+        return this.minorStageRecords;
+    }
+
+    // -1 for a realm the body never entered, which is below every legal index.
+    public int minorStageRecord(Holder<RealmStage> stage) {
+        return this.minorStageRecords.getOrDefault(stage, -1);
+    }
+
+    public boolean raiseMinorStageRecord(Holder<RealmStage> stage, int index) {
+        if (stage == null || index < 0) return false;
+        Integer recorded = this.minorStageRecords.get(stage);
+        if (recorded != null && recorded >= index) return false;
+        this.minorStageRecords.put(stage, index);
+        this.markDirty();
+        return true;
     }
 }

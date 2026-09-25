@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.screen.wheel;
 
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.runtime.wheel.WheelSource;
+import com.iafenvoy.mxt.api.WheelSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;
@@ -49,7 +50,7 @@ public final class WheelSelectionState {
     }
 
     public static WheelSource pageSource() {
-        return page < pages.size() ? pages.get(page).source() : WheelSource.PAGES.getFirst();
+        return page < pages.size() ? pages.get(page).source() : WheelSourceTypes.first();
     }
 
     public static WheelSource selectedSource() {

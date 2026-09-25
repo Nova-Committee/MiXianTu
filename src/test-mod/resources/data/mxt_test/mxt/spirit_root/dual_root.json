@@ -1,0 +1,11 @@
+{
+  "elements": [
+    { "element": "mxt_test:fire", "weight": 0.7 },
+    { "element": "mxt_test:water", "weight": 0.3 }
+  ],
+  "cultivation_multiplier": 1.1,
+  "element_ability_modifier": 1.1,
+  "rarity": "rare",
+  "granted_abilities": ["mxt_test:firebolt"],
+  "conflicting_elements": ["mxt_test:inert"]
+}

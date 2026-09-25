@@ -12,30 +12,33 @@ import net.minecraft.core.Holder;
 import java.util.*;
 
 /**
- * The running tribulation: which definition accepted the attempt, the wind-up left and the beats still to consume.
- * The queue is the cursor - a run copies the definition's timeline, which is also what stops a datapack reload from
- * changing a run already under way - and an empty {@link #state()} is what makes the head beat's start fire once.
+ * The running tribulation: which definition accepted the attempt, the wind-up left, the beats of the run and the
+ * cursor standing on the one being consumed. The cursor is stored rather than derived, because a branch beat can
+ * send the run backwards; an empty {@link #state()} is what makes the head beat's start fire once.
  */
 public final class TribulationAttachment extends ShouldSyncAttachment {
     public static final MapCodec<TribulationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Tribulation.CODEC.lenientOptionalFieldOf("tribulation").forGetter(TribulationAttachment::tribulation),
             TimelineEntry.CODEC.listOf().lenientOptionalFieldOf("timeline", List.of()).forGetter(TribulationAttachment::beats),
+            Codec.INT.lenientOptionalFieldOf("cursor", 0).forGetter(TribulationAttachment::cursor),
             DataStorage.CODEC.lenientOptionalFieldOf("state").forGetter(TribulationAttachment::state),
             Codec.LONG.lenientOptionalFieldOf("windup", 0L).forGetter(TribulationAttachment::windup)
     ).apply(i, TribulationAttachment::new));
     private Optional<Holder<Tribulation>> tribulation;
-    private final Deque<TimelineEntry> queue;
+    private final List<TimelineEntry> timeline;
+    private int cursor;
     private Optional<DataStorage> state;
     private long windup;
 
     public TribulationAttachment() {
-        this(Optional.empty(), List.of(), Optional.empty(), 0L);
+        this(Optional.empty(), List.of(), 0, Optional.empty(), 0L);
     }
 
-    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline,
+    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline, int cursor,
                                   Optional<DataStorage> state, long windup) {
         this.tribulation = tribulation;
-        this.queue = new ArrayDeque<>(timeline);
+        this.timeline = new ArrayList<>(timeline);
+        this.cursor = cursor;
         this.state = state;
         this.windup = windup;
     }
@@ -49,7 +52,7 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
         return this.windup;
     }
 
-    // Called instead of touching the queue, so nothing is consumed and no beat begins while counting in.
+    // Called instead of touching the cursor, so nothing is consumed and no beat begins while counting in.
     public void tickWindup() {
         if (this.windup <= 0L) return;
         this.windup--;
@@ -57,24 +60,33 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
     }
 
     public TimelineEntry peek() {
-        return this.queue.peek();
+        return this.cursor < this.timeline.size() ? this.timeline.get(this.cursor) : null;
     }
 
-    // Finishing, failing or skipping the head beat all come through here: the next beat brings a state of its own,
-    // and an empty state is what makes it begin.
-    public void poll() {
-        this.queue.poll();
+    // The beat being consumed; also how many beats of the run have already been consumed.
+    public int cursor() {
+        return this.cursor;
+    }
+
+    public int length() {
+        return this.timeline.size();
+    }
+
+    // Finishing, failing, skipping and jumping all come through here: the next beat brings a state of its own, and
+    // an empty state is what makes it begin. A target of {@link TimelineJump#NEXT} moves on by one beat.
+    public void advance(int target) {
+        this.cursor = target < 0 ? this.cursor + 1 : Math.min(target, this.timeline.size());
         this.state = Optional.empty();
         this.markDirty();
     }
 
     public int remaining() {
-        return this.queue.size();
+        return Math.max(0, this.timeline.size() - this.cursor);
     }
 
-    // Derived rather than stored: a reload that changes the definition's length shifts this number, and only this one.
+    // Derived rather than stored: a reload that changes the definition's length shifts this number, and only this.
     public int consumed() {
-        return this.tribulation.map(holder -> holder.value().timeline().size() - this.queue.size()).orElse(0);
+        return this.cursor;
     }
 
     // The consumer works on a draft of this and commits it back once the beat has answered its tick.
@@ -91,8 +103,9 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
     // The definition's timeline is copied in, and the first beat begins the tick after the wind-up reaches zero.
     public void start(Holder<Tribulation> tribulation, List<TimelineEntry> timeline, long windup) {
         this.tribulation = Optional.of(tribulation);
-        this.queue.clear();
-        this.queue.addAll(timeline);
+        this.timeline.clear();
+        this.timeline.addAll(timeline);
+        this.cursor = 0;
         this.state = Optional.empty();
         this.windup = Math.max(0L, windup);
         this.markDirty();
@@ -100,13 +113,14 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
 
     public void clear() {
         this.tribulation = Optional.empty();
-        this.queue.clear();
+        this.timeline.clear();
+        this.cursor = 0;
         this.state = Optional.empty();
         this.windup = 0L;
         this.markDirty();
     }
 
     private List<TimelineEntry> beats() {
-        return List.copyOf(this.queue);
+        return List.copyOf(this.timeline);
     }
 }

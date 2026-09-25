@@ -37,8 +37,6 @@ import java.util.Map.Entry;
 public final class FormationWorldTicker {
     public static final long PERIOD = 20L;
 
-    private static final FormationStructureValidator VALIDATOR = FormationStructureValidator.STRUCTURE;
-
     private FormationWorldTicker() {
     }
 
@@ -60,7 +58,7 @@ public final class FormationWorldTicker {
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
             Optional<Formation> definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation());
-            if (definition.isEmpty() || !VALIDATOR.matches(level, entry.getKey(), definition.get())) {
+            if (definition.isEmpty() || !FormationStructureValidator.of(definition.get()).matches(level, entry.getKey(), definition.get())) {
                 FormationWorldService.deactivate(level, entry.getKey());
                 continue;
             }
@@ -85,7 +83,7 @@ public final class FormationWorldTicker {
     // Returns whether the period may continue; false means the formation was taken down, or a listener cancelled
     // UpkeepFailed to let it stand through a period it could not pay for.
     private static boolean chargeUpkeep(ServerLevel level, BlockPos controller, FormationInstance instance, Formation definition) {
-        Entity payer = instance.owner().map(level.getEntities()::get).orElse(null);
+        Entity payer = instance.owners().primaryEntity(level);
         // A formation with a store can pay while its owner is absent, which is most of what storing aura is
         // for; whatever the store cannot cover still fails the period.
         FormulaContext context = payer == null ? FormulaContext.of(level) : FormulaContext.of(payer);
@@ -107,8 +105,9 @@ public final class FormationWorldTicker {
     }
 
     // What the formation's own ground supplies this period: the emitters inside it plus, when the server option
-    // allows it, the ambient aura of the position it stands on, summed per resource.
-    private static Map<Holder<Aura>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
+    // allows it, the ambient aura of the position it stands on, summed per resource. Also what the upkeep report
+    // subtracts, so the number a player is shown is the number the next period will ask for.
+    public static Map<Holder<Aura>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
         return combine(
                 FormationAbsorption.absorbedFor(level, controller, radius),
                 FormationAbsorption.environmentSupply(level, controller),
@@ -133,12 +132,11 @@ public final class FormationWorldTicker {
         double radius = instance.radius();
         double radiusSquared = radius * radius;
         Vec3 center = controller.getCenter();
-        FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owner());
+        FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owners());
         Identifier source = FormationSources.of(instance.formation());
         // Resolved once per formation rather than per entity: the id outlives the owner logging out and the
         // entity does not, so a manager-level source can still answer for an absent owner.
-        UUID ownerId = instance.owner().orElse(null);
-        Entity owner = ownerId == null ? null : level.getEntities().get(ownerId);
+        FormationOwners owners = instance.owners();
         Set<UUID> previous = FormationEntityActions.tracked(level, controller);
         Set<UUID> present = new HashSet<>();
         for (Entity entity : level.getEntities(null, AABB.ofSize(center, radius * 2.0D, radius * 2.0D, radius * 2.0D))) {
@@ -146,7 +144,7 @@ public final class FormationWorldTicker {
             if (distanceSquared > radiusSquared) continue;
             // An entity the formation does not affect is not tracked either: the exit is where a
             // formation-scoped grant is released, and a spared entity must not keep one.
-            if (!FormationRelations.affects(definition, ownerId, owner, entity)) continue;
+            if (!FormationRelations.affects(definition, owners, level, entity)) continue;
             present.add(entity.getUUID());
             EntityActionContext context = FormationEntityActions.context(entity, carrier, radius, distanceSquared);
             // A freshly activated formation has no previous set, so everything already inside receives an
@@ -154,7 +152,7 @@ public final class FormationWorldTicker {
             if (!previous.contains(entity.getUUID())) definition.entityEnterAction().execute(context);
             // The function modules run before the definition's own hook, so a pack customising the tick
             // sees the state the array left behind rather than the state before it acted.
-            FormationActionRunner.perEntity(definition, instance, entity, context, owner, ownerId);
+            FormationActionRunner.perEntity(definition, instance, entity, context, owners);
             definition.entityTickAction().execute(context);
         }
         FormationEntityActions.remember(level, controller, present);

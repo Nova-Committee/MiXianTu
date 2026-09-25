@@ -27,7 +27,7 @@ public final class FormationCenters {
                     BlockPos candidate = clicked.offset(x, y, z);
                     // Reading through the level keeps a candidate in an unloaded chunk from throwing or
                     // generating terrain; it simply reads as air and fails the structure check.
-                    if (!FormationStructureValidator.STRUCTURE.matches(level, candidate, definition)) continue;
+                    if (!FormationStructureValidator.of(definition).matches(level, candidate, definition)) continue;
                     double distance = distanceSquared(candidate, clicked);
                     if (distance >= bestDistance) continue;
                     best = candidate;
@@ -58,7 +58,7 @@ public final class FormationCenters {
                     double distance = distanceSquared(candidate, clicked);
                     if (distance >= bestDistance) continue;
                     for (Holder<Formation> formation : candidates) {
-                        if (!FormationStructureValidator.STRUCTURE.matches(level, candidate, formation.value()))
+                        if (!FormationStructureValidator.of(formation.value()).matches(level, candidate, formation.value()))
                             continue;
                         best = new Match(candidate, formation);
                         bestDistance = distance;

@@ -5,10 +5,26 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TribulationAttachment;
+import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
+import com.iafenvoy.mxt.api.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelSource;
+import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.SpriteIcon;
+import com.iafenvoy.mxt.data.Tribulation;
+import com.iafenvoy.mxt.data.ability.TargetSelector;
+import com.iafenvoy.mxt.data.ability.target.AreaTargetSelector;
+import com.iafenvoy.mxt.data.ability.target.ConeTargetSelector;
+import com.iafenvoy.mxt.data.ability.target.RayTargetSelector;
+import com.iafenvoy.mxt.data.ability.target.TargetOrder;
+import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
@@ -17,19 +33,40 @@ import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.PlaySoundAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.SetNoGravityAction;
+import com.iafenvoy.mxt.data.action.builtin.item.AddAbilityAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
 import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
+import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
+import com.iafenvoy.mxt.data.condition.builtin.entity.meta.ChanceCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
+import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
+import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
+import com.iafenvoy.mxt.data.timeline.TimelineContext;
+import com.iafenvoy.mxt.data.timeline.TimelineEntry;
+import com.iafenvoy.mxt.data.timeline.TimelineJump;
+import com.iafenvoy.mxt.data.timeline.TimelineState;
+import com.iafenvoy.mxt.data.timeline.builtin.BranchEntry;
+import com.iafenvoy.mxt.data.timeline.builtin.WaitForEntry;
+import com.iafenvoy.mxt.data.trigger.TriggerContext;
+import com.iafenvoy.mxt.data.trigger.TriggerSignals;
+import com.iafenvoy.mxt.runtime.formation.FormationInstance;
+import com.iafenvoy.mxt.runtime.formation.FormationOwners;
+import com.iafenvoy.mxt.runtime.formation.FormationService;
+import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
+import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractContext;
@@ -78,12 +115,14 @@ import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
+import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
 import com.iafenvoy.mxt.runtime.creature.BoundBeastService;
 import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractEventBridge;
@@ -104,12 +143,14 @@ import com.iafenvoy.mxt.runtime.rift.RiftConnections;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
 import com.iafenvoy.mxt.runtime.rift.RiftMesh;
 import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
-import com.iafenvoy.mxt.runtime.wheel.WheelSource;
+import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
+import java.util.stream.Collectors;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
+import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
@@ -136,6 +177,7 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.particles.ParticleTypes;
@@ -186,12 +228,14 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
+
 import static net.minecraft.commands.Commands.literal;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.ISlotType;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -234,6 +278,8 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_METAL_ROOT = id("metal_root");
     private static final Identifier PROBE_WOOD_ROOT = id("wood_root");
     private static final Identifier PROBE_EARTH_ROOT = id("earth_root");
+    private static final Identifier PROBE_DUAL_ROOT = id("dual_root");
+    private static final Identifier PROBE_DUAL_EVEN_ROOT = id("dual_even_root");
     private static final Identifier PROBE_METAL_ELEMENT = id("metal");
     private static final Identifier PROBE_WOOD_ELEMENT = id("wood");
     private static final Identifier PROBE_EARTH_ELEMENT = id("earth");
@@ -332,7 +378,440 @@ public final class MxtTestCommands {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.cost_ok"), false);
+        String targetFailure = verifyTargetSelectors(player);
+        if (targetFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.targets_failed", targetFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.targets_ok"), false);
+        String wheelFailure = verifyWheelExtension(player);
+        if (wheelFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.wheel_failed", wheelFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.wheel_ok"), false);
+        String closureFailure = verifyClosureItems(player);
+        if (closureFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.closure_failed", closureFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.closure_ok"), false);
         return 1;
+    }
+
+    // The selectors a cast can name: the cap and order every capped selector shares, the cone's angle, and the ray
+    // stopping at a block. Every being stands on a patch of its own, spawned in the order the legs need, and the
+    // actor's own rotation is written down, so none of the numbers depend on where the player happens to look.
+    private static String verifyTargetSelectors(ServerPlayer player) {
+        if (!(player.level() instanceof ServerLevel level)) return "the selector probe needs a server level";
+        BlockPos base = player.blockPosition().offset(30, 20, 30);
+        LivingEntity actor = spawnProbe(level, base, null);
+        LivingEntity closest = spawnProbe(level, base.offset(2, 0, 0), null);
+        LivingEntity middle = spawnProbe(level, base.offset(4, 0, 0), null);
+        LivingEntity outside = spawnProbe(level, base.offset(8, 0, 0), null);
+        if (actor == null || closest == null || middle == null || outside == null)
+            return "the selector probe could not spawn its beings";
+        // Yaw 0 faces +Z, which is the direction every ray and cone leg below is measured along.
+        actor.setYRot(0.0F);
+        actor.setXRot(0.0F);
+        LivingEntity ahead = null, beside = null, inCone = null, beyondWall = null;
+        try {
+            Set<UUID> capped = selected(new AreaTargetSelector(new Constant(5.0D), false, 1, TargetOrder.NEAREST), actor);
+            if (!capped.equals(Set.of(closest.getUUID())))
+                return "an area capped at one nearest took " + capped.size() + " beings instead of the closest one";
+            if (!selected(new AreaTargetSelector(new Constant(5.0D), false, 1, TargetOrder.FARTHEST), actor)
+                    .equals(Set.of(middle.getUUID())))
+                return "an area capped at one farthest did not take the farther being";
+            if (selected(new AreaTargetSelector(new Constant(5.0D), false, 0, TargetOrder.NEAREST), actor).size() != 2)
+                return "an uncapped area did not hold both beings inside it";
+            // The cone: an angle either side of the look, and nothing outside it.
+            ahead = spawnProbe(level, base.offset(0, 0, 2), null);
+            beside = spawnProbe(level, base.offset(2, 0, 0), null);
+            inCone = spawnProbe(level, base.offset(1, 0, 4), null);
+            beyondWall = spawnProbe(level, base.offset(0, 0, 6), null);
+            if (ahead == null || beside == null || inCone == null || beyondWall == null)
+                return "the selector probe could not spawn the beings its ray and cone legs need";
+            Set<UUID> cone = selected(new ConeTargetSelector(new Constant(8.0D), new Constant(30.0D), false, 0, TargetOrder.NEAREST), actor);
+            if (!cone.contains(ahead.getUUID())) return "the cone missed the being straight ahead";
+            if (!cone.contains(inCone.getUUID())) return "the cone missed a being inside its angle";
+            if (cone.contains(beside.getUUID())) return "the cone caught a being ninety degrees off its look";
+            // The ray: a cylinder along the look, stopped by a block in the way.
+            if (!level.setBlockAndUpdate(base.offset(0, 0, 3), Blocks.STONE.defaultBlockState()))
+                return "the selector probe could not place the wall its ray leg needs";
+            Set<UUID> ray = selected(new RayTargetSelector(new Constant(8.0D), new Constant(0.6D), false, 0, TargetOrder.NEAREST), actor);
+            if (!ray.contains(ahead.getUUID())) return "the ray missed the being in front of it";
+            if (ray.contains(beside.getUUID())) return "the ray caught a being beside it";
+            if (ray.contains(beyondWall.getUUID())) return "the ray reached past the block in its way";
+            return null;
+        } finally {
+            for (LivingEntity being : new LivingEntity[]{actor, closest, middle, outside, ahead, beside, inCone, beyondWall})
+                if (being != null) being.discard();
+        }
+    }
+
+    private static Set<UUID> selected(TargetSelector selector, Entity actor) {
+        return selector.select(actor, FormulaContext.of(actor)).map(Entity::getUUID).collect(Collectors.toSet());
+    }
+
+    // A page and a kind a content mod registers: they are looked up by id, take part in the page numbering, keep
+    // their id in a stored cell, and the request that names them travels as ids for the server to resolve.
+    private static String verifyWheelExtension(ServerPlayer player) {
+        Identifier sourceId = id("probe_source");
+        Identifier kindId = id("probe_kind");
+        Identifier entry = id("probe_entry");
+        WheelSourceTypes.register(new ProbeWheelSource(sourceId, entry));
+        WheelEntryKinds.register(new ProbeWheelKind(kindId, entry));
+        WheelSource source = WheelSourceTypes.byId(sourceId).orElse(null);
+        WheelEntryKind kind = WheelEntryKinds.byId(kindId).orElse(null);
+        if (source == null || kind == null) return "a registered page or kind could not be read back by id";
+        if (WheelSourceTypes.pages().indexOf(source) != WheelSourceTypes.BUILT_IN.size())
+            return "a registered page did not land after the built-in ones";
+        if (WheelSourceTypes.pageNumber(WheelSourceTypes.CONFIGURED) != 1)
+            return "the configured page is not page one";
+        if (!WheelSourceTypes.step(WheelSourceTypes.first(), -1).id().equals(sourceId))
+            return "turning back from the first page did not wrap onto the registered one";
+        if (!WheelSources.offers(player, source, kind, entry) || WheelSources.offers(player, source, kind, id("elsewhere")))
+            return "the registered page did not answer for its own entry and only it";
+        if (WheelEntryKinds.parse("artifact") != WheelEntryKinds.ABILITY || WheelEntryKinds.parse("ability") != WheelEntryKinds.ABILITY)
+            return "a cell written before the ability merge no longer reads as an ability";
+        if (WheelEntryKinds.parse("no_such_kind") != WheelEntryKinds.EMPTY)
+            return "an unknown kind id did not read as an empty cell";
+        JsonElement written = WheelEntryKinds.CODEC.encodeStart(JsonOps.INSTANCE, kind).result().orElse(null);
+        if (written == null || !written.getAsString().equals(kindId.toString()))
+            return "a cell did not store the kind's id: " + written;
+        WheelActionC2SPayload payload = WheelActionC2SPayload.press(source.id(), kind.id(), entry);
+        if (!payload.source().equals(sourceId) || !payload.kind().equals(kindId) || payload.enabled().isPresent())
+            return "the press request did not carry the ids it was given";
+        return null;
+    }
+
+    // The behaviours the C-group audit closed. Each one is asserted through the codec or the runtime a pack really
+    // goes through: the field a skill may no longer write, the sprite type the resource bars now use, the chance and
+    // cooldown of an event rule, the item-ability producer, a formation that may skip its structure, a timeline
+    // beat that can send a run backwards or time a wait out, and a formation's set of owners.
+    private static String verifyClosureItems(ServerPlayer player) {
+        if (!(player.level() instanceof ServerLevel level)) return "the closure probe needs a server level";
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, level.registryAccess());
+        String slotFailure = verifyActiveSlot(ops);
+        if (slotFailure != null) return slotFailure;
+        String spriteFailure = verifySpriteIcons();
+        if (spriteFailure != null) return spriteFailure;
+        String triggerFailure = verifyTriggerGates(player, level);
+        if (triggerFailure != null) return triggerFailure;
+        String abilityFailure = verifyItemAbilityProducer(player, level);
+        if (abilityFailure != null) return abilityFailure;
+        String structureFailure = verifyStructureCheck(ops);
+        if (structureFailure != null) return structureFailure;
+        String upkeepFailure = verifyUpkeepBill(player, level);
+        if (upkeepFailure != null) return upkeepFailure;
+        String timelineFailure = verifyTimelineControl(player, level);
+        if (timelineFailure != null) return timelineFailure;
+        return verifyOwnerSet();
+    }
+
+    // mxt:active no longer carries a slot, and a pack that still writes one hears about it rather than losing the
+    // key: which cell a skill sits in is the player's own wheel layout.
+    private static String verifyActiveSlot(RegistryOps<JsonElement> ops) {
+        JsonObject plain = new JsonObject();
+        plain.addProperty("type", "mxt:active");
+        plain.addProperty("name", "probe");
+        plain.addProperty("description", "probe");
+        JsonObject slotted = plain.deepCopy();
+        slotted.addProperty("slot", "utility");
+        if (Ability.DIRECT_CODEC.parse(ops, plain).result().isEmpty())
+            return "mxt:active without a slot no longer decodes";
+        if (Ability.DIRECT_CODEC.parse(ops, slotted).result().isPresent())
+            return "mxt:active still accepts the removed slot field";
+        return null;
+    }
+
+    // The bar sprites: a bare id keeps whatever the field always meant, a texture states its sheet and the size it
+    // is drawn at, and the combinations that cannot be drawn are refused at load time.
+    private static String verifySpriteIcons() {
+        Identifier atlas = id("bar/fill");
+        Identifier sheet = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/sheet.png");
+        SpriteIcon bare = SpriteIcon.SPRITE_CODEC.parse(JsonOps.INSTANCE,
+                JsonOps.INSTANCE.createString(atlas.toString())).result().orElse(null);
+        if (bare == null || !bare.isSprite() || !atlas.equals(bare.id().orElse(null)))
+            return "a bare sprite id no longer reads as a GUI sprite";
+        SpriteIcon bareTexture = SpriteIcon.TEXTURE_CODEC.parse(JsonOps.INSTANCE,
+                JsonOps.INSTANCE.createString(sheet.toString())).result().orElse(null);
+        if (bareTexture == null || bareTexture.isSprite() || !sheet.equals(bareTexture.id().orElse(null)))
+            return "a bare id no longer reads as a texture where that is what the field meant";
+
+        JsonObject region = new JsonObject();
+        region.addProperty("texture", sheet.toString());
+        JsonObject box = new JsonObject();
+        box.addProperty("u", 8);
+        box.addProperty("v", 16);
+        box.addProperty("texture_width", 512);
+        box.addProperty("texture_height", 512);
+        region.add("region", box);
+        region.addProperty("width", 20);
+        region.addProperty("height", 5);
+        SpriteIcon sized = SpriteIcon.TEXTURE_CODEC.parse(JsonOps.INSTANCE, region).result().orElse(null);
+        if (sized == null || sized.regionU() != 8 || sized.regionV() != 16 || sized.textureWidth() != 512
+                || sized.resolvedWidth(71) != 20 || sized.resolvedHeight(8) != 5)
+            return "a texture region with a declared size did not read back as it was written";
+
+        JsonObject halfSized = region.deepCopy();
+        halfSized.remove("height");
+        if (SpriteIcon.TEXTURE_CODEC.parse(JsonOps.INSTANCE, halfSized).result().isPresent())
+            return "a sprite icon accepted a width without a height";
+        JsonObject atlasWithRegion = region.deepCopy();
+        atlasWithRegion.addProperty("sprite", atlas.toString());
+        atlasWithRegion.remove("texture");
+        if (SpriteIcon.SPRITE_CODEC.parse(JsonOps.INSTANCE, atlasWithRegion).result().isPresent())
+            return "a GUI sprite accepted a region, which its atlas already answers";
+        if (SpriteIcon.SPRITE_CODEC.parse(JsonOps.INSTANCE, new JsonObject()).result().isPresent())
+            return "a sprite icon with neither an id nor a region decoded";
+
+        JsonObject textured = new JsonObject();
+        textured.addProperty("background_sprite", atlas.toString());
+        textured.add("fill_sprite", region);
+        textured.addProperty("width", 71);
+        textured.addProperty("height", 5);
+        if (TexturedRenderData.CODEC.codec().parse(JsonOps.INSTANCE, textured).result().isEmpty())
+            return "a textured bar no longer accepts a sprite pair";
+        JsonObject origins = new JsonObject();
+        origins.addProperty("sprite_location", sheet.toString());
+        origins.addProperty("bar_index", 3);
+        if (OriginsRenderData.CODEC.codec().parse(JsonOps.INSTANCE, origins).result().isEmpty())
+            return "a boss bar no longer accepts its sheet";
+        if (OriginsRenderData.CODEC.codec().parse(JsonOps.INSTANCE, textured).result().isPresent())
+            return "a boss bar accepted a GUI sprite where it cuts cells out of a texture";
+        return null;
+    }
+
+    // A rule's chance and cooldown, driven through the real dispatcher on two fixtures on the block-break signal:
+    // one fires once and is then held back by its own cooldown, and one never fires at all.
+    private static String verifyTriggerGates(ServerPlayer player, ServerLevel level) {
+        Holder<Resource> probe = require(MxtResourceKeys.RESOURCE, id("trigger_probe"));
+        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        double previous = resources.get(probe);
+        resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+        TriggerContext context = new TriggerContext().actor(player).level(level).formula(FormulaContext.of(player));
+        long now = level.getGameTime();
+        try {
+            TriggerDispatcher.publish(TriggerSignals.BLOCK_BREAK, context, now);
+            double first = resources.get(probe);
+            if (!close(first, 1.0D))
+                return "a rule whose cooldown had not started added " + first + " instead of 1";
+            TriggerDispatcher.publish(TriggerSignals.BLOCK_BREAK, context, now);
+            if (!close(resources.get(probe), first))
+                return "a rule fired again inside its own cooldown";
+            // The chance-0 fixture is held back by its own chance and not by the cooldown, which is what the third
+            // publish proves: it lands after the 200-tick cooldown has run out, and still adds nothing.
+            TriggerDispatcher.publish(TriggerSignals.BLOCK_BREAK, context, now + 200L);
+            double third = resources.get(probe) - first;
+            if (!close(third, 1.0D))
+                return "a publish past the cooldown added " + third + " instead of the 1 the cooldowned rule owes";
+            TriggerCooldownAttachment cooldowns = player.getExistingData(MxtAttachments.TRIGGER_COOLDOWNS).orElse(null);
+            if (cooldowns == null || !cooldowns.isOnCooldown(id("cooldown_probe"), now + 200L))
+                return "the cooldown the last publish armed was not recorded against its own rule";
+            if (cooldowns.isOnCooldown(id("chance_probe"), now + 200L))
+                return "a rule that never fired was charged a cooldown anyway";
+        } finally {
+            resources.set(probe, previous, 0.0D, 100_000.0D, -1L, "probe");
+        }
+        return null;
+    }
+
+    // The component's dedicated producer: it adds to what the stack already carries, and adding the same ability
+    // twice leaves one entry.
+    private static String verifyItemAbilityProducer(ServerPlayer player, ServerLevel level) {
+        Holder<Ability> ability = require(MxtResourceKeys.ABILITY, id("firebolt"));
+        ItemStack stack = new ItemStack(Items.DIAMOND_SWORD);
+        AddAbilityAction action = new AddAbilityAction(List.of(ability));
+        action.execute(new ItemActionContext(player, stack, FormulaContext.of(player)));
+        action.execute(new ItemActionContext(player, stack, FormulaContext.of(player)));
+        ItemAbilitiesComponent component = stack.get(MxtDataComponents.ITEM_ABILITIES.get());
+        if (component == null || component.abilities().size() != 1
+                || !component.abilities().getFirst().equals(HolderHelper.id(ability)))
+            return "the item-ability action wrote " + (component == null ? "nothing" : component.abilities().size() + " entries");
+        if (!ArtifactService.abilities(level.registryAccess(), stack).contains(ability))
+            return "the ability the action wrote is not granted by the artifact runtime";
+        return null;
+    }
+
+    // A formation may declare that its structure is not checked, and then it may not declare one at all.
+    private static String verifyStructureCheck(RegistryOps<JsonElement> ops) {
+        JsonObject always = new JsonObject();
+        always.addProperty("radius", 8);
+        always.addProperty("structure_check", "always");
+        if (Formation.DIRECT_CODEC.parse(ops, always).result().isEmpty())
+            return "structure_check always was refused without a structure";
+        JsonObject declared = always.deepCopy();
+        JsonArray structure = new JsonArray();
+        JsonObject block = new JsonObject();
+        block.add("offset", JsonParser.parseString("[0, 0, 0]"));
+        block.addProperty("state", "minecraft:stone");
+        structure.add(block);
+        declared.add("structure", structure);
+        if (Formation.DIRECT_CODEC.parse(ops, declared).result().isPresent())
+            return "structure_check always accepted a declared structure it would never check";
+        JsonObject neither = new JsonObject();
+        neither.addProperty("radius", 8);
+        if (Formation.DIRECT_CODEC.parse(ops, neither).result().isPresent())
+            return "a formation with no structure and no structure_check decoded";
+        return null;
+    }
+
+    // The bill a period will ask for, as the upkeep report prints it: the whole charge with nothing supplied, and
+    // what the formation's own ground leaves once it has supplied some of it.
+    private static String verifyUpkeepBill(ServerPlayer player, ServerLevel level) {
+        JsonObject json = new JsonObject();
+        json.addProperty("radius", 8);
+        json.addProperty("structure_check", "always");
+        json.add("maintenance_costs", JsonParser.parseString("[{\"id\": \"mxt_test:qi\", \"amount\": 4}]"));
+        Formation definition = Formation.DIRECT_CODEC.parse(JsonOps.INSTANCE, json).result()
+                .orElseThrow(() -> new IllegalStateException("The upkeep fixture does not decode"));
+        Holder<Aura> qi = require(MxtResourceKeys.AURA, id("qi"));
+        CostContext context = CostContext.account(new ResourceHolderAttachment(), null, FormulaContext.of(player),
+                CostOrigin.FORMATION_MAINTENANCE);
+        Map<Identifier, Double> owed = FormationService.MaintainRule.remaining(definition, context, Map.of());
+        if (owed.size() != 1 || !close(owed.getOrDefault(id("qi"), -1.0D), 4.0D))
+            return "the upkeep bill with nothing supplied read " + owed;
+        Map<Identifier, Double> covered = FormationService.MaintainRule.remaining(definition, context, Map.of(qi, 1.5D));
+        if (!close(covered.getOrDefault(id("qi"), -1.0D), 2.5D))
+            return "1.5 of supplied aura left the bill at " + covered;
+        return null;
+    }
+
+    // Two timelines through the real service: one whose second beat branches over the third, and one whose wait
+    // runs out on a deadline the difficulty scale is not allowed to stretch.
+    private static String verifyTimelineControl(ServerPlayer player, ServerLevel level) {
+        Holder<Resource> probe = require(MxtResourceKeys.RESOURCE, id("trigger_probe"));
+        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        TribulationAttachment data = player.getData(MxtAttachments.TRIBULATION);
+        double previous = resources.get(probe);
+        data.clear();
+        resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+        try {
+            Holder<Tribulation> branch = require(MxtResourceKeys.TRIBULATION, id("probe_branch"));
+            if (!TribulationService.start(player, data, branch, level.getGameTime(), FormulaContext.of(player)).started())
+                return "the branching timeline was refused";
+            TribulationService.TickResult branchTick = TribulationService.tick(player, data, branch, level.getGameTime(), FormulaContext.of(player));
+            if (branchTick.state() != TribulationService.State.COMPLETED)
+                return "the branching timeline ended as " + branchTick.state();
+            double branched = resources.get(probe);
+            if (!close(branched, 1001.0D))
+                return "the branch added " + branched + " instead of skipping the 100 it jumped over";
+
+            data.clear();
+            resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+            Holder<Tribulation> timeout = require(MxtResourceKeys.TRIBULATION, id("probe_wait_timeout"));
+            if (!TribulationService.start(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).started())
+                return "the timed-wait timeline was refused";
+            if (TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).state()
+                    != TribulationService.State.RUNNING)
+                return "a wait with a two-tick timeout did not hold the run on its first tick";
+            TribulationService.TickResult waitTick = TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player));
+            if (waitTick.state() != TribulationService.State.COMPLETED)
+                return "a wait that ran out finished as " + waitTick.state();
+            if (!close(resources.get(probe), 10.0D))
+                return "the beat after a timed-out wait added " + resources.get(probe) + " instead of 10";
+
+            // A branch that jumps back onto itself is a cycle: one tick may only consume so many beats, so the
+            // run is parked instead of hanging the server thread, and the beat it never reaches adds nothing.
+            data.clear();
+            resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+            Holder<Tribulation> cycle = require(MxtResourceKeys.TRIBULATION, id("probe_branch_cycle"));
+            if (!TribulationService.start(player, data, cycle, level.getGameTime(), FormulaContext.of(player)).started())
+                return "the cycling timeline was refused";
+            TribulationService.TickResult cycleTick = TribulationService.tick(player, data, cycle, level.getGameTime(), FormulaContext.of(player));
+            if (cycleTick.state() != TribulationService.State.RUNNING)
+                return "a cycling branch ended as " + cycleTick.state() + " instead of parking the run";
+            if (!close(resources.get(probe), 0.0D))
+                return "a cycling branch reached the beat it loops over, adding " + resources.get(probe);
+        } finally {
+            data.clear();
+            resources.set(probe, previous, 0.0D, 100_000.0D, -1L, "probe");
+        }
+        return null;
+    }
+
+    // A formation's owners are a set, and an instance saved by the version that allowed one owner still reads its
+    // owner back. The instance itself cannot be built outside the runtime, so it is read through its own codec.
+    private static String verifyOwnerSet() {
+        UUID first = UUID.nameUUIDFromBytes("mxt-probe-owner-one".getBytes(StandardCharsets.UTF_8));
+        UUID second = UUID.nameUUIDFromBytes("mxt-probe-owner-two".getBytes(StandardCharsets.UTF_8));
+        JsonElement shared = FormationOwners.CODEC.encodeStart(JsonOps.INSTANCE, new FormationOwners(List.of(first, second)))
+                .result().orElse(null);
+        if (shared == null) return "a two-owner set could not be written";
+        FormationOwners read = FormationOwners.CODEC.parse(JsonOps.INSTANCE, shared).result().orElse(null);
+        if (read == null || read.ids().size() != 2 || !read.primary().orElseThrow().equals(first))
+            return "a two-owner set did not read back";
+        // The single-owner form is the one UUID vanilla writes everywhere (a four-int array), not a list of one.
+        JsonElement single = FormationOwners.CODEC.encodeStart(JsonOps.INSTANCE, FormationOwners.of(first)).result().orElse(null);
+        if (single == null || !single.isJsonArray() || single.getAsJsonArray().size() != 4
+                || single.getAsJsonArray().get(0).isJsonArray())
+            return "a single owner is no longer written as one UUID: " + single;
+
+        JsonObject legacy = new JsonObject();
+        legacy.addProperty("formation", id("formation_owner_probe").toString());
+        legacy.addProperty("radius", 8);
+        legacy.add("owner", UUIDUtil.CODEC.encodeStart(JsonOps.INSTANCE, first).result().orElseThrow());
+        FormationInstance instance = FormationInstance.CODEC.parse(JsonOps.INSTANCE, legacy).result().orElse(null);
+        if (instance == null || instance.owners().ids().size() != 1 || !instance.owners().ids().getFirst().equals(first))
+            return "an instance saved with one owner did not read that owner back";
+        if (!instance.addOwner(second) || instance.owners().ids().size() != 2)
+            return "adding a second owner did not change the set";
+        if (instance.addOwner(second)) return "adding the same owner twice changed the set again";
+        if (!instance.removeOwner(first) || instance.owners().ids().size() != 1)
+            return "removing an owner did not change the set";
+        if (instance.removeOwner(first)) return "removing an owner that is not listed changed the set";
+        return null;
+    }
+
+    // A page that answers for exactly one entry, so what the shared check does with the page's own answer is what
+    // the leg measures rather than anything a real page reads.
+    private record ProbeWheelSource(Identifier id, Identifier entry) implements WheelSource {        @Override
+        public Component displayName() {
+            return Component.literal("Probe Page");
+        }
+
+        @Override
+        public boolean configured() {
+            return false;
+        }
+
+        @Override
+        public List<Identifier> grantSources(LivingEntity entity) {
+            return List.of();
+        }
+
+        @Override
+        public List<ItemStack> equipment(LivingEntity entity) {
+            return List.of();
+        }
+
+        @Override
+        public boolean offers(LivingEntity entity, WheelEntryKind kind, Identifier id) {
+            return this.entry.equals(id);
+        }
+    }
+
+    private record ProbeWheelKind(Identifier id, Identifier entry) implements WheelEntryKind {
+        @Override
+        public Component displayName() {
+            return Component.literal("Probe Kind");
+        }
+
+        @Override
+        public boolean holdsEntry() {
+            return true;
+        }
+
+        @Override
+        public boolean exists(RegistryAccess access, Identifier id) {
+            return this.entry.equals(id);
+        }
+
+        @Override
+        public boolean trigger(ServerPlayer player, WheelSource source, Identifier id) {
+            return this.entry.equals(id);
+        }
     }
 
     // One costs shape for every channel: the same array can name a resource and an aura, both are charged in the
@@ -495,7 +974,65 @@ public final class MxtTestCommands {
         if (!Double.isNaN(mortal)) return "a mortal reads minor_stage as " + mortal + " instead of NaN";
         spirit.setRealmStage(qiRefining);
         spirit.setCultivationProgress(requireProfile(QI), 80.0D);
+        // The record only grows and the refresh writes what the progress says, so at 80/100 of a nine-stage realm
+        // the body stands on stage 7; a realm that declares no minor stages can never be recorded by the runtime.
+        MinorStageService.refresh(player, requireProfile(QI), context);
+        SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        int reached = identity.minorStageRecord(qiRefining);
+        if (reached != 7) return "the minor stage record reads " + reached + " at 80/100 instead of 7";
+        if (identity.raiseMinorStageRecord(qiRefining, 3)) return "the minor stage record went backwards";
+        Holder<RealmStage> noStages = require(MxtResourceKeys.REALM_STAGE, FOUNDATION);
+        identity.raiseMinorStageRecord(noStages, 5);
+        if (identity.raiseMinorStageRecord(noStages, 3) || identity.minorStageRecord(noStages) != 5)
+            return "a realm without minor stages did not keep its own record";
+        // The two thresholds the fixture writes: stage 2 grants the first, stage 5 adds the second, and a body
+        // that never stood in the realm unlocks nothing from it.
+        List<Identifier> atOne = unlockedMinorStageAbilities(qiRefining, 1);
+        List<Identifier> atTwo = unlockedMinorStageAbilities(qiRefining, 2);
+        List<Identifier> atFive = unlockedMinorStageAbilities(qiRefining, 5);
+        if (!atOne.isEmpty()) return "minor stage 1 unlocks " + atOne;
+        if (atTwo.size() != 1 || !atTwo.contains(id("awaken_divine_sense")))
+            return "minor stage 2 unlocks " + atTwo + " instead of only the first threshold";
+        if (atFive.size() != 2 || !atFive.containsAll(List.of(id("awaken_divine_sense"), id("sword_focus"))))
+            return "minor stage 5 unlocks " + atFive + " instead of both thresholds";
+        if (!unlockedMinorStageAbilities(qiRefining, -1).isEmpty())
+            return "a realm the body never entered unlocks something";
+        // The condition reads that record rather than live progress, so a threshold above it is not met even
+        // while the realm itself matches.
+        if (!realmCondition(player, qiRefining, 7).test(player, FormulaContext.EMPTY))
+            return "min_minor_stage 7 is not met by a record of 7";
+        if (realmCondition(player, qiRefining, 8).test(player, FormulaContext.EMPTY))
+            return "min_minor_stage 8 was met by a record of 7";
+        // A threshold outside the realm's own minor stages could never be reached, so it is a load error.
+        JsonObject invalid = new JsonObject();
+        invalid.addProperty("aura", QI.toString());
+        JsonArray names = new JsonArray();
+        names.add("first");
+        names.add("second");
+        invalid.add("minor_stages", names);
+        JsonArray entries = new JsonArray();
+        JsonObject entry = new JsonObject();
+        entry.addProperty("stage", 5);
+        entries.add(entry);
+        invalid.add("minor_stage_abilities", entries);
+        if (RealmStage.DIRECT_CODEC.parse(JsonOps.INSTANCE, invalid).result().isPresent())
+            return "minor_stage_abilities accepted stage 5 of a two-stage realm";
         return null;
+    }
+
+    private static List<Identifier> unlockedMinorStageAbilities(Holder<RealmStage> stage, int reached) {
+        return MinorStageService.unlockedAbilities(stage, reached).stream().map(HolderHelper::id).toList();
+    }
+
+    // Built through the codec the loader uses, so the field is proven to decode as well as to judge.
+    private static EntityCondition realmCondition(ServerPlayer player, Holder<RealmStage> stage, int minMinorStage) {
+        JsonObject json = new JsonObject();
+        json.addProperty("type", "mxt:realm");
+        json.addProperty("realm", HolderHelper.id(stage).toString());
+        json.addProperty("min_minor_stage", minMinorStage);
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, player.level().registryAccess());
+        return EntityCondition.CODEC.parse(ops, json).result()
+                .orElseThrow(() -> new IllegalStateException("mxt:realm with min_minor_stage does not decode"));
     }
 
     // The generated text of a definition comes from the id it was decoded as, which only the loader knows: an
@@ -1088,11 +1625,11 @@ public final class MxtTestCommands {
 
             // The wheel is the owner's input: it sends the order, the creature is asked, and the order that stays in
             // force lands on the creature's own record. A creature that refuses is left with what it had.
-            boolean ordered = WheelService.trigger(player, WheelSource.CONTRACT, WheelEntryKind.BEHAVIOR,
+            boolean ordered = WheelService.trigger(player, WheelSourceTypes.CONTRACT, WheelEntryKinds.BEHAVIOR,
                     ContractBehaviors.WANDER.id())
                     && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
             ProbeBeast.refuseBehavior(true);
-            boolean refusedOrder = !WheelService.trigger(player, WheelSource.CONTRACT, WheelEntryKind.BEHAVIOR,
+            boolean refusedOrder = !WheelService.trigger(player, WheelSourceTypes.CONTRACT, WheelEntryKinds.BEHAVIOR,
                     ContractBehaviors.STAY.id())
                     && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
             ProbeBeast.refuseBehavior(false);
@@ -1455,11 +1992,11 @@ public final class MxtTestCommands {
         ArtifactService.refine(playerMount, player);
         player.setItemInHand(InteractionHand.MAIN_HAND, playerMount);
         Identifier controlId = HolderHelper.id(controlAbility);
-        boolean playerRiding = WheelService.trigger(player, WheelSource.MAIN_HAND, WheelEntryKind.ABILITY, controlId, Optional.of(true))
+        boolean playerRiding = WheelService.trigger(player, WheelSourceTypes.MAIN_HAND, WheelEntryKinds.ABILITY, controlId, Optional.of(true))
                 && player.getVehicle() instanceof FlyingSwordEntity;
-        boolean playerIdle = WheelService.trigger(player, WheelSource.MAIN_HAND, WheelEntryKind.ABILITY, controlId, Optional.of(true))
+        boolean playerIdle = WheelService.trigger(player, WheelSourceTypes.MAIN_HAND, WheelEntryKinds.ABILITY, controlId, Optional.of(true))
                 && player.getVehicle() instanceof FlyingSwordEntity;
-        boolean playerLanded = WheelService.trigger(player, WheelSource.MAIN_HAND, WheelEntryKind.ABILITY, controlId, Optional.of(false))
+        boolean playerLanded = WheelService.trigger(player, WheelSourceTypes.MAIN_HAND, WheelEntryKinds.ABILITY, controlId, Optional.of(false))
                 && player.getVehicle() == null && ownedSwords(player) == ownedBefore + 1;
         player.setItemInHand(InteractionHand.MAIN_HAND, heldBefore);
         ok &= check(source, "artifact roster flight directed=payload idle=same-state giveback=into-owner inventory",
@@ -1954,6 +2491,45 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: toggle off=" + off + " on=" + on
                     + " unchanged=" + unchanged + " not_held=" + notHeld + (toggle ? " OK" : " MISMATCH")), false);
 
+            // 6b. A root that binds two elements. The body carries both (the single-element shape would have had
+            //     to pick one), the conflict rule is asked as a set from both sides, and an element affinity no
+            //     single-element reading could answer is now answered by whichever element the casting names.
+            Holder<SpiritRoot> dualRoot = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_DUAL_ROOT);
+            Holder<SpiritRoot> dualAntiWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_ANTI_WATER_ROOT);
+            Holder<SpiritRoot> dualInert = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_INERT_ROOT);
+            Holder<SpiritRoot> dualMetal = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_METAL_ROOT);
+            boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, PROBE_DUAL_ROOT, dualRoot.value()).changed();
+            SpiritIdentityAttachment dualIdentity = toggleProbe.getData(MxtAttachments.SPIRIT_IDENTITY);
+            FormulaContext affinityContext = FormulaContext.EMPTY;
+            double onWater = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(water)), affinityContext, Ability.AffinityMode.AVERAGE);
+            double onEarth = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(earth)), affinityContext, Ability.AffinityMode.AVERAGE);
+            boolean dualConflicts = dualRoot.value().conflictsWith(dualAntiWater.value()) && dualRoot.value().conflictsWith(dualInert.value());
+            boolean multiElement = dualGranted && Elements.of(toggleProbe).equals(Set.of(fire, water))
+                    && close(onWater, 1.1D) && close(onEarth, 0.0D)
+                    && dualConflicts && !dualRoot.value().conflictsWith(dualMetal.value());
+            source.sendSuccess(() -> Component.literal("element probe: multi element water=" + onWater
+                    + " earth=" + onEarth + " conflicts=" + dualConflicts
+                    + (multiElement ? " OK" : " MISMATCH")), false);
+
+            // 6c. Weights are proportions, not multipliers: against the same fire-only place a 70/30 root draws a
+            //     0.7 share of the pool and a 1/1 root draws 0.5, so the same element is worth less to the mixed
+            //     root however the numbers are scaled. The aura result is built here so the numbers do not depend
+            //     on what this world happens to hold, and a bare entry id is asserted to read as the full share.
+            Holder<SpiritRoot> dualEvenRoot = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_DUAL_EVEN_ROOT);
+            SpiritIdentityAttachment heavyFire = new SpiritIdentityAttachment();
+            heavyFire.setSpiritRoots(List.of(dualRoot));
+            SpiritIdentityAttachment evenRoots = new SpiritIdentityAttachment();
+            evenRoots.setSpiritRoots(List.of(dualEvenRoot));
+            AuraResult fireOnly = new AuraResult(Map.of(require(MxtResourceKeys.AURA, SPIRIT_POWER), AuraPool.natural(1.0D, 1.0D, 0.0D)),
+                    AuraZone.Rules.DEFAULT, 0.0D, 0.0D, AlwaysTrueCondition.INSTANCE, AuraZone.Distribution.EQUAL,
+                    id("probe"), AuraResult.SourceKind.CHUNK);
+            double heavy = CultivationAffinity.multiplier(heavyFire, fireOnly, FormulaContext.EMPTY);
+            double even = CultivationAffinity.multiplier(evenRoots, fireOnly, FormulaContext.EMPTY);
+            double bareWeight = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().elements().getFirst().weight();
+            boolean weighted = close(heavy, 1.87D) && close(even, 1.65D) && close(bareWeight, 1.0D);
+            source.sendSuccess(() -> Component.literal("element probe: weights 70/30=" + heavy + " 1/1=" + even
+                    + " bare=" + bareWeight + (weighted ? " OK" : " MISMATCH")), false);
+
             // 7. A reaction whose own action applies the element it just consumed feeds itself, which would have
             //    no floor without the reentrancy guard: the nested application joins the chain already running
             //    for this body instead of opening another. Every pass takes the demand away and puts it straight
@@ -2073,7 +2649,7 @@ public final class MxtTestCommands {
 
     // One page's answer to "would a trigger for this ability from this page be honoured".
     private static boolean offers(LivingEntity probe, WheelSource source, Identifier ability) {
-        return WheelSources.offers(probe, source, WheelEntryKind.ABILITY, ability);
+        return WheelSources.offers(probe, source, WheelEntryKinds.ABILITY, ability);
     }
 
     // Sends one storage component through the registered network codec and reads it back - the very codec the

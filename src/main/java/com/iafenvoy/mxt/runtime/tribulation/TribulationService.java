@@ -1,14 +1,17 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.runtime.EntryBegan;
 import com.iafenvoy.mxt.data.timeline.TimelineContext;
 import com.iafenvoy.mxt.data.timeline.TimelineEntry;
 import com.iafenvoy.mxt.data.timeline.TimelineEntry.Outcome;
+import com.iafenvoy.mxt.data.timeline.TimelineJump;
 import com.iafenvoy.mxt.data.timeline.TimelineState;
 import com.iafenvoy.mxt.event.TribulationEvent.*;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,6 +28,11 @@ import java.util.List;
  * the beat works on as a draft and commits once it has answered.
  */
 public final class TribulationService {
+    // How many beats one tick may consume. A branch that jumps backwards can describe a cycle, and without a
+    // budget a mis-authored timeline would never give the server thread back; a real run waits somewhere long
+    // before this, and a cycling one is reported and picked up again next tick.
+    public static final int MAX_BEATS_PER_TICK = 1024;
+
     private TribulationService() {
     }
 
@@ -44,7 +52,7 @@ public final class TribulationService {
         // can be reported as a refusal instead of a failure halfway through a committed timeline.
         FormulaContext runContext = tribulationContext(entity, context);
         TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
-                definition.difficultyScale().evaluate(runContext), new TimelineState());
+                definition.difficultyScale().evaluate(runContext), timeline.size(), new TimelineState(), new TimelineJump());
         for (TimelineEntry entry : timeline) {
             if (!entry.validate(probe)) return StartResult.rejected(Failure.INVALID_ENTRY);
         }
@@ -76,8 +84,9 @@ public final class TribulationService {
         Tribulation definition = tribulation.value();
         FormulaContext runContext = tribulationContext(entity, context);
         double scale = definition.difficultyScale().evaluate(runContext);
-        // The head of the queue is the beat being consumed, so this only ever moves forward: beats that finish
-        // on their first tick are consumed in the same tick that reaches them.
+        // The head of the cursor is the beat being consumed. A beat that finishes moves on by one; a branch beat
+        // leaves a target behind, which is the only thing that can send the run backwards.
+        int consumed = 0;
         while (true) {
             TimelineEntry entry = data.peek();
             if (entry == null) {
@@ -86,13 +95,19 @@ public final class TribulationService {
                 NeoForge.EVENT_BUS.post(new Complete(data, tribulation));
                 return TickResult.completed();
             }
+            if (++consumed > MAX_BEATS_PER_TICK) {
+                MiXianTu.LOGGER.warn("Tribulation {} consumed {} beats in one tick without waiting: a branch is "
+                        + "probably cycling", HolderHelper.id(tribulation), consumed - 1);
+                return TickResult.running();
+            }
             // The beat reads and writes a draft of the run's state and commits it once it has answered: a beat
             // that changes nothing leaves the stored value untouched, so nothing has to be saved or synced.
             TimelineState state = new TimelineState(data.state().orElse(null));
-            TimelineContext entryContext = new TimelineContext(entity, runContext, gameTime, scale, state);
+            TimelineJump jump = new TimelineJump();
+            TimelineContext entryContext = new TimelineContext(entity, runContext, gameTime, scale, data.length(), state, jump);
             if (!state.isPresent()) {
                 if (NeoForge.EVENT_BUS.post(new EntryPre(data, tribulation, data.consumed(), entry)).isCanceled()) {
-                    data.poll();
+                    data.advance(TimelineJump.NEXT);
                     continue;
                 }
                 // "This beat began" is stored before the beat itself runs, so a restart cannot consume the start
@@ -109,7 +124,7 @@ public final class TribulationService {
                 return TickResult.failed(Failure.INVALID_ENTRY);
             }
             NeoForge.EVENT_BUS.post(new EntryPost(data, tribulation, data.consumed(), entry));
-            data.poll();
+            data.advance(jump.target());
         }
     }
 

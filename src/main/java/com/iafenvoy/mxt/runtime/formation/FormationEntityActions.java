@@ -66,7 +66,7 @@ final class FormationEntityActions {
         Set<UUID> tracked = forget(level, controller);
         if (tracked.isEmpty()) return;
         double radius = instance.radius();
-        FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owner());
+        FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owners());
         Identifier source = FormationSources.of(instance.formation());
         EntityAction exit = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, instance.formation())
                 .map(Formation::entityExitAction).orElse(NoOpAction.INSTANCE);

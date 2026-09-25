@@ -23,6 +23,11 @@ public interface FormationStructureValidator {
 
     FormationStructureValidator ALWAYS = (level, controller, definition) -> true;
 
+    // The definition chooses: a formation may declare that standing on the right blocks is not part of raising it.
+    static FormationStructureValidator of(Formation definition) {
+        return definition.structureCheck() == Formation.StructureCheck.ALWAYS ? ALWAYS : STRUCTURE;
+    }
+
     // Matches whichever shape the definition declares. An inline structure is the cheap path, since it is
     // already parsed and immutable; a structure_template is re-fetched and re-parsed every period.
     FormationStructureValidator STRUCTURE = (level, controller, definition) -> {

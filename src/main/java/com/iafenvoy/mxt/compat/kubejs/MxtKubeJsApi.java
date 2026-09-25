@@ -298,8 +298,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The held roots that count, sorted: a root switched off, or whose element is not live, is left out. The
-     * element is resolved against the entity's level registry, so an unresolvable or disabled definition answers
+     * The held roots that count, sorted: a root switched off, or whose elements are all not live, is left out. The
+     * elements are resolved against the entity's level registry, so an unresolvable or disabled definition answers
      * false instead of throwing, on either side.
      */
     public static List<String> activeSpiritRoots(@NotNull Entity entity) {
@@ -308,7 +308,7 @@ public final class MxtKubeJsApi {
         return spirit.activeSpiritRoots().stream()
                 .filter(root -> MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT,
                                 HolderHelper.id(root))
-                        .map(value -> Elements.enabled(value.element())).orElse(false))
+                        .map(value -> value.elementHolders().stream().anyMatch(Elements::enabled)).orElse(false))
                 .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
     }
 

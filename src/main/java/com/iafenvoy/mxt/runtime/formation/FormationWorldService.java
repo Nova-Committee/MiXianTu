@@ -35,7 +35,7 @@ public final class FormationWorldService {
                                   ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         if (world.get(controller).isPresent()) return Result.rejected(Failure.OCCUPIED, null);
-        if (!FormationStructureValidator.STRUCTURE.matches(level, controller, definition))
+        if (!FormationStructureValidator.of(definition).matches(level, controller, definition))
             return Result.rejected(Failure.INVALID_STRUCTURE, null);
         // Jurisdiction before payment: a ward this server will not allow here must not charge for the
         // attempt. Both rules apply only to formations that carry a ward at all.

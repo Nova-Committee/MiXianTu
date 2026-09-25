@@ -1,6 +1,5 @@
 {
   "type": "mxt:active",
-  "slot": "primary",
   "costs": [
     { "id": "mxt_test:spirit_power", "amount": "8 + level" },
     { "id": "mxt_test:soul_power", "amount": 2 }

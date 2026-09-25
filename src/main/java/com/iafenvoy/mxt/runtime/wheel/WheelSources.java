@@ -1,21 +1,20 @@
 package com.iafenvoy.mxt.runtime.wheel;
 
+import com.iafenvoy.mxt.api.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
-import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -27,9 +26,10 @@ import java.util.Optional;
  * What one wheel page holds, read the same way on both sides: the configured page answers from the player's saved
  * layout, a derived page from the abilities the equipment it names grants right now.
  *
- * <p>A derived page is never stored - its entries are the grants in force at this moment, which is what makes an
- * item's page follow the item. Which item an ability came from is answered here too, because a press has to hand
- * the carrier to the ability that acts on it.
+ * <p>The page itself says which stacks it is read from and whether one of its entries is reachable
+ * ({@link WheelSource}), so this class is the shared arithmetic behind those answers rather than a list of pages:
+ * resolving a definition walks the artifact registry, and that is the walk worth doing once per page rather than
+ * once per cell.
  */
 public final class WheelSources {
     private WheelSources() {
@@ -75,7 +75,7 @@ public final class WheelSources {
     // every cell of the page.
     public static Map<Identifier, ItemStack> carriers(LivingEntity entity, WheelSource source) {
         Map<Identifier, ItemStack> found = new LinkedHashMap<>();
-        for (ItemStack stack : equipment(entity, source)) {
+        for (ItemStack stack : source.equipment(entity)) {
             if (stack.isEmpty()) continue;
             for (Holder<Ability> ability : ArtifactService.abilities(entity.level().registryAccess(), stack))
                 found.putIfAbsent(HolderHelper.id(ability), stack);
@@ -83,35 +83,15 @@ public final class WheelSources {
         return found;
     }
 
-    // These stacks are what an item-side ability is read from; the ability list is read from the grant ledger.
-    public static List<ItemStack> equipment(LivingEntity entity, WheelSource source) {
-        return switch (source) {
-            case CONFIGURED -> {
-                List<ItemStack> carried = new ArrayList<>();
-                carried.add(entity.getMainHandItem());
-                carried.add(entity.getOffhandItem());
-                carried.addAll(CuriosIntegration.equipped(entity));
-                yield List.copyOf(carried);
-            }
-            case MAIN_HAND -> List.of(entity.getMainHandItem());
-            case OFF_HAND -> List.of(entity.getOffhandItem());
-            case CURIOS -> CuriosIntegration.equipped(entity);
-            // The bell itself, which is what the contract page is read from; it grants no abilities.
-            case CONTRACT -> List.of(entity.getMainHandItem(), entity.getOffhandItem());
-        };
-    }
-
     // The check behind every trigger: the id alone is not enough, because the same ability can come from something
-    // the player no longer has. An order is checked against the bell's tuned beast the same way - the creature it
-    // names is what decides whether the order is still reachable, and the service behind it checks the record.
+    // the player no longer has. Which page answers that question is the page's own business.
     public static boolean offers(LivingEntity entity, WheelSource source, WheelEntryKind kind, Identifier id) {
         if (kind == null || id == null || !kind.holdsEntry()) return false;
-        if (source == WheelSource.CONTRACT)
-            return kind == WheelEntryKind.BEHAVIOR
-                    && ContractBells.selection(entity).map(selection -> selection.offers(id)).orElse(false);
-        if (!source.configured())
-            return kind == WheelEntryKind.ABILITY
-                    && abilities(entity, source).stream().anyMatch(ability -> HolderHelper.id(ability).equals(id));
+        return source.offers(entity, kind, id);
+    }
+
+    // Whether the player's saved layout holds that cell, which is what the configured page answers with.
+    static boolean inLayout(LivingEntity entity, WheelEntryKind kind, Identifier id) {
         WheelLayout layout = entity.getExistingData(MxtAttachments.WHEEL_LAYOUT)
                 .flatMap(WheelLayoutAttachment::layout).orElse(WheelLayout.EMPTY);
         for (int sector = 0; sector < WheelLayout.SLOTS; sector++) {
@@ -119,5 +99,12 @@ public final class WheelSources {
             if (slot.kind() == kind && slot.id().equals(id)) return true;
         }
         return false;
+    }
+
+    // Whether a derived page's own grants currently offer that ability, which is the answer every equipment page
+    // and the Curios page give.
+    static boolean granted(LivingEntity entity, WheelSource source, WheelEntryKind kind, Identifier id) {
+        return kind == WheelEntryKinds.ABILITY
+                && abilities(entity, source).stream().anyMatch(ability -> HolderHelper.id(ability).equals(id));
     }
 }

@@ -5,6 +5,10 @@
   "breakthrough_exp": 100,
   "max_experience": 100,
   "minor_stages": 9,
+  "minor_stage_abilities": [
+    { "stage": 2, "ability": ["mxt_test:awaken_divine_sense"] },
+    { "stage": 5, "ability": ["mxt_test:sword_focus"] }
+  ],
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
   "breakthrough_particle": {
     "particle": { "type": "minecraft:enchant" },

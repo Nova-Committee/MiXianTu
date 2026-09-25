@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.screen.wheel;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.runtime.wheel.WheelSource;
+import com.iafenvoy.mxt.api.WheelSource;
 
 /**
  * What was used, and how: {@code source} is what the server re-reads before honouring the cell, and the two

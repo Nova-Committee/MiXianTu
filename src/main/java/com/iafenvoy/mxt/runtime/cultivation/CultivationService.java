@@ -100,6 +100,8 @@ public final class CultivationService {
             // phase that starts at breakthrough.
             target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
+            // The new realm starts on its own first minor stage, which is itself an unlock threshold.
+            MinorStageService.refresh(entity, transition.aura(), resourceContext);
         } else {
             target.failAction().execute(entity, context);
         }
@@ -164,8 +166,12 @@ public final class CultivationService {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         Transition transition = next(aura, spirit).orElse(null);
         if (transition == null) return 0.0D;
-        return addProgress(spirit, aura, amount, transition,
-                ResourceService.formulaContext(entity, aura.value().resource(), context));
+        FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
+        double accepted = addProgress(spirit, aura, amount, transition, resourceContext);
+        // Crossing into a new minor stage is what unlocks that stage's abilities, so the record is refreshed with
+        // the progress that moved it; nothing is rebuilt unless the record actually grew.
+        if (accepted > 0.0D) MinorStageService.refresh(entity, aura, resourceContext);
+        return accepted;
     }
 
     public static double addProgressForChain(CultivationAttachment spirit, Holder<Aura> aura, double amount, FormulaContext context) {
@@ -313,8 +319,10 @@ public final class CultivationService {
         private static final BreakthroughStatus UNAVAILABLE = new BreakthroughStatus(false, false, false, 0.0D, 0.0D);
     }
 
+    // Everything here is reachable: a stage may not require less progress than its own cap (see threshold()), so
+    // "the cap is holding the progress back" can never be the reason a breakthrough was refused.
     public enum Failure {
-        DISABLED, WRONG_AURA, NO_NEXT_REALM, INSUFFICIENT_PROGRESS, MAX_PROGRESS, CONDITIONS, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CANCELLED, SERVER_ONLY
+        DISABLED, WRONG_AURA, NO_NEXT_REALM, INSUFFICIENT_PROGRESS, CONDITIONS, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CANCELLED, SERVER_ONLY
     }
 
     public record BreakthroughResult(boolean advanced, Failure failure, Identifier failedResource,

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -51,6 +52,12 @@ public final class CultivationGrantService {
             granted += SkillStageService.currentStage(spirit, technique)
                     .map(current -> grantResolved(abilities, SkillStageService.unlockedAbilities(technique.value(), current), source))
                     .orElse(0);
+        }
+        // A realm stage's unlocks are keyed by how far the body got inside it, so the record is the whole answer:
+        // no record means the body never stood in that realm, and a realm it has left keeps granting.
+        for (Entry<Holder<RealmStage>, Integer> record : spirit.minorStageRecords().entrySet()) {
+            Identifier source = source("realm_stage", HolderHelper.id(record.getKey()));
+            granted += grantResolved(abilities, MinorStageService.unlockedAbilities(record.getKey(), record.getValue()), source);
         }
         return new Result(granted, revoked);
     }

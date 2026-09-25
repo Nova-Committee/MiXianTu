@@ -50,6 +50,8 @@
 | `38_定义文本字段全量应用.md`  | 把这套字段应用到 18 张注册表，并把 id 派生键统一成生成键那一条四段式（`<类别>.mxt.<命名空间>.<路径>`，破坏性迁移）；`api/NamedDefinition` 让显示路径直接读字段；`RecordCodecBuilder.group` 的 16 组件上限用 `MiscCodecs.pair` 绕开                                                                                                                                                                                  | 已落地（2026-09-23）                                      |
 | `39_全局消耗定义设计.md`    | **使用消耗**（技能 / 突破 / 修炼 / 阵法 / 锻造 / 法器维护 / 飞行 / 灵气合成，共 11 个字段）的三套形状收编成一个元素形状（`mxt:resource` / `mxt:aura` / `mxt:item` / `mxt:js` + 简写）：付款者是 `LivingEntity`（不是 `Player`）＋支付通道、`charge` 一个方法 + `CostTransaction` 的 `plan`/`commit`、整组原子（草稿优先、回退兜底）；文首 §0 标明**货币（`currency` 的 `cost`、`value_multiplier`）与本稿无关**，§13 是落地记录（含第二轮把两处灵气 map 并进 `Cost` 的结果） | 已落地（2026-09-23；只编译，探针未实跑）                            |
 | `46_品质链条与升级设计.md` | 品质系统整合：链条要有载体（新注册表 `mxt:quality_chain`：`tiers` 顺序 + `default` + 每步 `upgrades{costs,condition}`）、升级服务复用 `CostTransaction` 原子付款、入口给命令与 KubeJS，并把 4 张绑定表的 `quality_group` 标签**合并成链引用**；附带收尾零调用的 `tooltip_order`/`ordered()` 与 `technique.grade` 的并入选项 | **已落地**（2026-09-23；§7 记了六项拍板结果与两处补充；`compileJava`/`compileTestModJava`/`processTestModResources` 通过；**探针未实跑、升级界面与跳档未做**） |
+| `49_灵根多元素与子境界条件设计.md` | 三件事一件一形状：**灵根多元素**（`SpiritRoot.element` 删除 → `elements` 列表，每项裸 id 或带 `weight`；权重是**占比**、读取时归一化，只进亲和与对立惩罚——其余读法一次定死为并集 / 能力加成只算一次 / 集合互斥 / 关系倍率不看权重）、**子境界条件**（不新增类型，给 `mxt:realm` 加 `min_minor_stage`，读只增不减的层数记录）、**境界按子境界解锁 ability**（`minor_stage_abilities`，累计且永久保留，与功法的 `configuration` 同一口径） | **已落地**（2026-09-25；三处编译通过、lang 键未变、文档站中英同步、编辑器 schema 重新生成；**探针未实跑**；`SpiritRoot.element` 是破坏性改名） |
+| `50_目标选择器与轮盘扩展点设计.md` | 两个扩展点：**目标选择器**（新增 `mxt:ray` / `mxt:cone` 两个几何选择器，`limit` / `order` 作为三种范围选择器共用的筛选，射线与锥形沿中心线做方块裁剪、不穿墙）、**轮盘**（`api/WheelSource` / `api/WheelEntryKind` 从枚举改成接口 + `WheelSourceTypes` / `WheelEntryKinds` 代码注册表，kind 自己拥有 `trigger`，provider 按来源 id 多槽位注册，请求与存档传 id 并容错解析） | **已落地**（2026-09-25；三处编译通过、lang 键一致、文档站中英同步、编辑器 schema 重新生成；**两条新探针腿未实跑**；删除了两个 runtime 枚举） |
 
 ### C. 玩法模块
 
@@ -99,7 +101,7 @@
 | 文件                                    | 一句话                                                                          |
 |---------------------------------------|------------------------------------------------------------------------------|
 | `audit/生产系统审计.md`                     | 锻造 / 炼丹 / 灵草 / 灵材合成 / 符箓的实现与缺口；文末"文档与代码不一致"还标了**研究稿自身**的过时点                  |
-| `audit/content-coverage-gaps.md`      | 内容表对照基座的缺口清单（逐条编号，多数已标"已于 <日期> 关闭"）                                          |
+| `audit/基座缺口审计.md`                  | **对着 HEAD `2ecbccd` 复核过的基座缺口清单（合计 20 项，已关闭 15 项，**仍开放 5 项**：A2 + B3–B6，🔴 0 · 🟠 3；2026-09-25 关闭了 A1 / A3 / B2 / B9 与 C 组 11 项）**：外部承载能力审计（12 个内容模组 × 19 个功能域）的 `incomplete.md` 逐条重核后的落地版，含每一条的 HEAD 证据、**需要补全的内容**、影响与替代，以及原 3 项"未确认"的复核结论（1 项转为事实、1 项被推翻）；只登记、不实现 |
 | `audit/formation.md`                  | 阵法落地设计：对照 `18` 与当前代码，修订 3 处过时判断并重写缺口方案                                       |
 | `audit/resource-cultivation-split.md` | `resource` / `cultivation` 拆分的破坏性变更记要                                        |
 | `audit/spirit.md`                     | 灵石灌注（`AuraItemAccess` 反向使用 `item_aura`）审计                                    |
@@ -144,7 +146,7 @@
 |-----------------------|-------------|-------------------------------------------------------|
 | 设计稿 / 方案 / 改版         | 本目录根下       | `NN_<主题>设计.md`，`NN` 取当前最大编号加一                         |
 | 实现说明（已经落地的机制怎么跑）      | 本目录根下       | `<模块>实现.md`（如 `裂缝渲染实现.md`；`方块灵气实现.md` 沿用这个名字，内容是提案留档） |
-| 审计与差距清单               | `audit/`    | 按模块或主题命名（`content-coverage-gaps.md`、`technique.md`…）  |
+| 审计与差距清单               | `audit/`    | 按模块或主题命名（`technique.md`、`formation.md`、`基座缺口审计.md`…） |
 | 测试设定参考                | `测试设定参考/`   | 场景矩阵、常见设定与来源记录                                        |
 | 研究用的脚本与配图             | 本目录根下       | 与它服务的文档同名（`aura_subchunk_value.py` / `.png`）          |
 | 外部工程阅读（Immortal 等）    | `immortal/` | `<主题>.md`（如 `傀儡与符文编程.md`），**不占编号**                    |
@@ -165,7 +167,8 @@
 | `TriggerSystem.md`、`list.txt` | 编号制度之前写的稿与清单                                                                     | 2026-09-22 **改名**为 `33_Trigger系统设计.md`、`原始需求清单.txt`（正文未改；编号为补发）                                                                                        |
 | `34_对外API包设计.md`              | 对外 Java API 的包边界：哪些契约搬进 `com.iafenvoy.mxt.api`、服务类代理为什么推迟                        | 2026-09-22 在注释整理提交里**被删除**；结论并入 `AGENTS.md` §3 与 [`docs/guide/java/interfaces.md`](../docs/guide/java/interfaces.md)。编号 `34_` 现由 `34_功法载体物品组件设计.md` 使用 |
 | `35_注释口径与全仓瘦身.md`             | 注释三律、保留与删除判定表、全仓瘦身结果                                                             | 2026-09-22 **从未进过 git，现已不在工作树**；权威表述在 `AGENTS.md` §4「注释三律」与 `docs/SKILL.md`。该号现由 `35_御剑飞行系统设计.md` 使用                                                   |
-| `42`–`45`（命令参数 / 附件 codec / 身份命令 / 命令分包 四篇重构稿） | 2026-09-23 四轮改动的设计稿：命令注册表参数改用 `ResourceArgument`、附件 codec 改宽容读取 + 注册表引用存 `Holder`/`ResourceKey`、`/identity` 拆成 `/spirit_root` + `/physique`（附带 `remove` 对停用条目失效的修正）、命令包按侧分包 + 双端管理器（`mayChange` 唯一化） | **2026-09-23 按要求删除**：这类改动不必逐次留档，结论已落在 `AGENTS.md` §4 房规、`docs/模块实现审计.md` 与代码注释里。四篇**从未进过提交**（只在本轮变更索引里存在过）；**编号 42–45 视为已用**，新稿从 `46_` 起排 |
+| `42`–`45`（命令参数 / 附件 codec / 身份命令 / 命令分包 四篇重构稿） | 2026-09-23 四轮改动的设计稿：命令注册表参数改用 `ResourceArgument`、附件 codec 改宽容读取 + 注册表引用存 `Holder`/`ResourceKey`、`/identity` 拆成 `/spirit_root` + `/physique`（附带 `remove` 对停用条目失效的修正）、命令包按侧分包 + 双端管理器（`mayChange` 唯一化） | **2026-09-23 按要求删除**：这类改动不必逐次留档，结论已落在 `AGENTS.md` §4 房规、`docs/模块实现审计.md`（该文档已于 2026-09-25 一并删除，见 [`docs/README.md`](../docs/README.md) 的退役记录）与代码注释里。四篇**从未进过提交**（只在本轮变更索引里存在过）；**编号 42–45 视为已用**，新稿从 `46_` 起排 |
+| `audit/content-coverage-gaps.md`  | 内容表对照基座的**缺口清单**（逐条编号，多数已标"已于 <日期> 关闭"；516 行）                                   | **2026-09-25 按要求删除**，由 `audit/基座缺口审计.md` 取代（那篇是对着 HEAD `2ecbccd` 逐条重核、并写清"需要补什么"的版本）。git 历史可取回：`git show HEAD:research/audit/content-coverage-gaps.md`。`18`/`21`/`23`/`46`/`47` 等设计稿与 `audit/` 各篇里对它的引用**按本目录既有约定保留不改**（那是当时的证据） |
 
 > `audit/` 里的旧结论常引用 `docs/通用物品.md:23`、`docs/灵气环境数据包.md:84` 这类**当时**的文档行号作证据；也有的引用上面退役的稿。那
 > 5 篇迁移前的散篇已于 2026-09-21 从 `docs/` 删除（内容并入 `docs/数据包格式.md`、`docs/guide/**` 与文档站，清单见 [

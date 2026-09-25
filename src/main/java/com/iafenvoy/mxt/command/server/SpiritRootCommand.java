@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -24,6 +25,7 @@ import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -89,17 +91,35 @@ public final class SpiritRootCommand {
         }
         for (Holder<SpiritRoot> root : distinct) {
             SpiritRoot definition = definition(root).orElse(null);
-            // A root whose definition is gone has neither an element to name nor a rarity to read.
-            Component element = definition == null || !Elements.enabled(definition.element()) ? null
-                    : DefinitionText.name(definition.element(), "element");
+            // A root whose definition is gone has neither elements to name nor a rarity to read.
+            Component elements = definition == null ? null : elements(definition);
             Component rarity = DefinitionText.rarity(definition == null ? "?" : definition.rarity());
             Component state = Component.translatable(identity.isSpiritRootEnabled(root)
                     ? "command.mxt.identity.on" : "command.mxt.identity.off");
-            Component bound = element == null ? Component.empty() : Component.literal(" · ").append(element);
+            Component bound = elements == null ? Component.empty() : Component.literal(" · ").append(elements);
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
                     DefinitionText.name(root, "spirit_root"), rarity, bound, state), false);
         }
         return distinct.size();
+    }
+
+    // A root of several elements names every live one, with its share when the share is not the whole of it; a
+    // root whose elements are all switched off names none.
+    private static @Nullable Component elements(SpiritRoot definition) {
+        List<MutableComponent> live = definition.elements().stream().filter(entry -> Elements.enabled(entry.element()))
+                .map(SpiritRootCommand::elementName).toList();
+        if (live.isEmpty()) return null;
+        MutableComponent joined = Component.empty();
+        for (int index = 0; index < live.size(); index++) {
+            if (index > 0) joined.append("/");
+            joined.append(live.get(index));
+        }
+        return joined;
+    }
+
+    private static MutableComponent elementName(SpiritRoot.ElementWeight entry) {
+        MutableComponent name = Component.empty().append(DefinitionText.name(entry.element(), "element"));
+        return entry.weight() == 1.0D ? name : name.append(Component.literal(" " + TooltipText.number(entry.weight())));
     }
 
     private static int grant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

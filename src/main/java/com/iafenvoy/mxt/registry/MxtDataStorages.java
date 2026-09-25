@@ -29,6 +29,7 @@ public final class MxtDataStorages {
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<AuraPulse>> AURA_PULSE = REGISTRY.register("aura_pulse", () -> AuraPulse.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<EntryBegan>> ENTRY_BEGAN = REGISTRY.register("entry_began", () -> EntryBegan.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<IdleCountdown>> IDLE_COUNTDOWN = REGISTRY.register("idle_countdown", () -> IdleCountdown.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<WaitCountdown>> WAIT_COUNTDOWN = REGISTRY.register("wait_countdown", () -> WaitCountdown.CODEC);
 
     private MxtDataStorages() {
     }

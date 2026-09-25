@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.render.IconRenderer;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
 import net.minecraft.client.Minecraft;
@@ -315,7 +316,7 @@ public final class WheelConfigurationScreen extends Screen {
     // Resolved the same way the wheel does, so a cell shows what that sector will actually draw.
     private @Nullable WheelMenuEntry entryOf(WheelSlot slot) {
         if (slot.isEmpty()) return null;
-        for (WheelMenuEntry entry : this.pool(slot.kind() == WheelEntryKind.AURA ? AURA_POOL : ABILITY_POOL))
+        for (WheelMenuEntry entry : this.pool(slot.kind() == WheelEntryKinds.AURA ? AURA_POOL : ABILITY_POOL))
             if (entry.id().equals(slot.id())) return entry;
         return null;
     }

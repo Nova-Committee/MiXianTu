@@ -1,5 +1,5 @@
 {
-  "element": "mxt_test:earth",
+  "elements": ["mxt_test:earth"],
   "cultivation_multiplier": 1.2,
   "element_ability_modifier": 1.08,
   "rarity": "uncommon"

@@ -17,6 +17,7 @@ import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap.Entry;
@@ -120,10 +121,20 @@ public final class InformationManager {
             if (index > 0) line.append(", ");
             boolean active = identity.isSpiritRootEnabled(root);
             line.append(heldName(DefinitionText.name(root, "spirit_root"), active));
-            Holder<Element> element = root.value().element();
-            if (Elements.enabled(element))
-                line.append(Component.literal("(").append(DefinitionText.name(element, "element")).append(")")
-                        .withColor(active ? element.value().color() : SWITCHED_OFF_COLOR));
+            List<SpiritRoot.ElementWeight> elements = root.value().elements().stream()
+                    .filter(entry -> Elements.enabled(entry.element())).toList();
+            if (!elements.isEmpty()) {
+                MutableComponent names = Component.empty();
+                for (int elementIndex = 0; elementIndex < elements.size(); elementIndex++) {
+                    SpiritRoot.ElementWeight entry = elements.get(elementIndex);
+                    if (elementIndex > 0) names.append("/");
+                    names.append(Component.empty().append(DefinitionText.name(entry.element(), "element"))
+                            .append(entry.weight() == 1.0D ? Component.empty()
+                                    : Component.literal(" " + TooltipText.number(entry.weight())))
+                            .withColor(active ? entry.element().value().color() : SWITCHED_OFF_COLOR));
+                }
+                line.append(Component.literal("(").append(names).append(")"));
+            }
             notes.add(identityNote(root, "spirit_root", root.value().rarity(), active));
         }
         collector.add(Component.translatable("info.mxt.spirit_roots"), line, VALUE_COLOR, joined(notes));

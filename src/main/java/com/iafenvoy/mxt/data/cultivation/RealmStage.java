@@ -43,15 +43,37 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
                          boolean autoBreakthrough,
                          List<AttributeEntry> passiveModifiers, List<Cost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
+                         List<MinorStageAbilities> minorStageAbilities,
                          Optional<Holder<Tribulation>> tribulation, Optional<ParticleEffect> breakthroughParticle,
                          EntityAction successAction, EntityAction failAction) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.REALM_STAGE.identifier());
+
+    /**
+     * What standing on one minor stage of this realm unlocks: an entry is active from its own {@code stage}
+     * onwards (0-based, the same index {@code minor_stage} reports), and the unlock stays once reached.
+     */
+    public record MinorStageAbilities(int stage,
+                                      List<Either<Holder<Ability>, TagKey<Ability>>> abilities) {
+        public static final Codec<MinorStageAbilities> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.INT.fieldOf("stage").forGetter(MinorStageAbilities::stage),
+                RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability", List.of()).forGetter(MinorStageAbilities::abilities)
+        ).apply(i, MinorStageAbilities::new));
+    }
 
     public RealmStage {
         if (breakthroughExp instanceof Constant(double value) && maxExperience instanceof Constant(
                 double value1
         ) && value > value1)
             throw new IllegalArgumentException("Realm breakthrough minimum experience cannot exceed maximum experience");
+        // An unlock whose stage is not one of this realm's minor stages could never be reached, and two entries
+        // on one stage would be the same threshold written twice.
+        int count = minorStages.size();
+        for (MinorStageAbilities entry : minorStageAbilities)
+            if (entry.stage() < 0 || entry.stage() >= count)
+                throw new IllegalArgumentException("minor_stage_abilities names stage " + entry.stage()
+                        + " but this realm declares " + count + " minor stages");
+        if (minorStageAbilities.stream().map(MinorStageAbilities::stage).distinct().count() != minorStageAbilities.size())
+            throw new IllegalArgumentException("minor_stage_abilities must not name the same stage twice");
     }
 
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
@@ -69,8 +91,11 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
             Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
             AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(RealmStage::passiveModifiers),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()).forGetter(RealmStage::abilityRequirements),
-            // Eighteen components; two pairs keep the group at sixteen.
+            // Eighteen components; three pairs keep the group at sixteen.
+            MiscCodecs.pair(
+                            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()),
+                            MinorStageAbilities.CODEC.listOf().optionalFieldOf("minor_stage_abilities", List.of()))
+                    .forGetter(stage -> Pair.of(stage.abilityRequirements(), stage.minorStageAbilities())),
             MiscCodecs.pair(
                             Tribulation.CODEC.optionalFieldOf("tribulation"),
                             ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle"))
@@ -83,7 +108,8 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
                 maxExperience, minorStages, breakthrough, autoBreakthrough, passiveModifiers, breakthroughCosts,
                 abilityRequirements, tribulation, actions) -> new RealmStage(name, description, aura,
             auraShareWeight, cultivateCondition, nextRealm, breakthroughExp, maxExperience, minorStages, breakthrough,
-            autoBreakthrough, passiveModifiers, breakthroughCosts, abilityRequirements,
+            autoBreakthrough, passiveModifiers, breakthroughCosts,
+            abilityRequirements.getFirst(), abilityRequirements.getSecond(),
             tribulation.getFirst(), tribulation.getSecond(), actions.getFirst(), actions.getSecond())));
 
     // Next-realm links are holder references, so diagnostic output must remain shallow.
@@ -92,6 +118,8 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
         return "RealmStage[aura=" + HolderHelper.id(this.aura) + ", hasNextRealm=" + this.nextRealm.isPresent()
                 + ", breakthroughConditions=" + this.breakthrough.conditions().size() + ", costs=" + this.breakthroughCosts.size()
                 + ", minorStages=" + this.minorStages.size()
-                + ", abilityRequirements=" + this.abilityRequirements.size() + ", hasTribulation=" + this.tribulation.isPresent() + "]";
+                + ", abilityRequirements=" + this.abilityRequirements.size()
+                + ", minorStageAbilities=" + this.minorStageAbilities.size()
+                + ", hasTribulation=" + this.tribulation.isPresent() + "]";
     }
 }

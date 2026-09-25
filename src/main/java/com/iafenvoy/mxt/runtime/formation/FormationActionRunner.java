@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.data.formation.builtin.RangeDisplayFormationAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
-import com.iafenvoy.mxt.runtime.friend.FriendService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -23,8 +22,6 @@ import net.minecraft.util.TriState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.UUID;
 
 /**
  * Runs a formation's function modules against one entity, called from the periodic pass once per entity the
@@ -50,12 +47,11 @@ public final class FormationActionRunner {
     }
 
     public static void perEntity(Formation definition, FormationInstance instance,
-                                 Entity entity, EntityActionContext context,
-                                 @Nullable Entity owner, @Nullable UUID ownerId) {
+                                 Entity entity, EntityActionContext context, FormationOwners owners) {
         for (FormationActionType module : definition.actions()) {
             switch (module) {
-                case AttackFormationAction attack -> attack(attack, entity, context, owner);
-                case BuffFormationAction buff -> buff(buff, entity, context, instance, owner, ownerId);
+                case AttackFormationAction attack -> attack(attack, entity, context, owners.primaryEntity(entity.level()));
+                case BuffFormationAction buff -> buff(buff, entity, context, instance, owners);
                 // The terrain ward is not per-entity work: it answers block events instead, and there is
                 // no entity to act on. The default module declares nothing at all.
                 case null, default -> {
@@ -77,9 +73,9 @@ public final class FormationActionRunner {
     // Grants under the source convention, which is also what releases them: nothing here does, because the
     // ticker drops every ability of that source for an entity that leaves.
     private static void buff(BuffFormationAction buff, Entity entity, EntityActionContext context,
-                             FormationInstance instance, @Nullable Entity owner, @Nullable UUID ownerId) {
+                             FormationInstance instance, FormationOwners owners) {
         Identifier source = FormationSources.of(instance.formation());
-        if (!targets(buff.target(), entity, owner, ownerId)) {
+        if (!targets(buff.target(), entity, owners)) {
             // An entity the module no longer has anything for must not keep the formation's grant, or losing
             // friend status while standing still leaves the gift behind. Releasing an unused source is cheap.
             FormationEntityActions.release(entity, source);
@@ -94,12 +90,11 @@ public final class FormationActionRunner {
 
     // ALLIES asks the friend system and leaves out an unidentifiable entity, because handing a stranger the
     // owner's bonus is the failure this avoids.
-    private static boolean targets(TargetMode mode, Entity entity,
-                                   @Nullable Entity owner, @Nullable UUID ownerId) {
+    private static boolean targets(TargetMode mode, Entity entity, FormationOwners owners) {
         return switch (mode) {
             case ALL -> true;
-            case OWNER -> ownerId != null && ownerId.equals(entity.getUUID());
-            case ALLIES -> ownerId != null && FriendService.identify(ownerId, owner, entity) == TriState.TRUE;
+            case OWNER -> owners.contains(entity);
+            case ALLIES -> owners.identify(entity.level(), entity) == TriState.TRUE;
         };
     }
 }

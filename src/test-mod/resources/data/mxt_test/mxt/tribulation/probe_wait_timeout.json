@@ -1,0 +1,13 @@
+{
+  "timeline": [
+    {
+      "type": "mxt:wait_for",
+      "condition": { "type": "mxt:chance", "chance": 0 },
+      "timeout": 2,
+      "on_timeout": "finish"
+    },
+    { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 10 } }
+  ],
+  "difficulty_scale": 100,
+  "fail_action": { "type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 100000 }
+}

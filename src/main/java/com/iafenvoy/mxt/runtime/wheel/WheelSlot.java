@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.wheel;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -18,13 +19,13 @@ import java.util.List;
 public record WheelSlot(WheelEntryKind kind, Identifier id) {
     // Never looked up, and the server forces it onto empty slots.
     public static final Identifier EMPTY_ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
-    public static final WheelSlot EMPTY = new WheelSlot(WheelEntryKind.EMPTY, EMPTY_ID);
+    public static final WheelSlot EMPTY = new WheelSlot(WheelEntryKinds.EMPTY, EMPTY_ID);
     public static final Codec<WheelSlot> CODEC = RecordCodecBuilder.create(i -> i.group(
-            WheelEntryKind.CODEC.fieldOf("kind").forGetter(WheelSlot::kind),
+            WheelEntryKinds.CODEC.fieldOf("kind").forGetter(WheelSlot::kind),
             Identifier.CODEC.fieldOf("id").forGetter(WheelSlot::id)
     ).apply(i, WheelSlot::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, WheelSlot> STREAM_CODEC = StreamCodec.composite(
-            WheelEntryKind.STREAM_CODEC, WheelSlot::kind,
+            WheelEntryKinds.STREAM_CODEC, WheelSlot::kind,
             Identifier.STREAM_CODEC, WheelSlot::id,
             WheelSlot::new);
     public static final Codec<List<WheelSlot>> LIST_CODEC = CODEC.listOf();
@@ -41,6 +42,6 @@ public record WheelSlot(WheelEntryKind kind, Identifier id) {
 
     @Override
     public @NonNull String toString() {
-        return "WheelSlot[" + this.kind.getSerializedName() + " " + this.id + "]";
+        return "WheelSlot[" + this.kind.id() + " " + this.id + "]";
     }
 }

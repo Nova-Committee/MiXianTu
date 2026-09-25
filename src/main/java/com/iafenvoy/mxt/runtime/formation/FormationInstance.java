@@ -25,7 +25,9 @@ public final class FormationInstance {
     public static final Codec<FormationInstance> CODEC = RecordCodecBuilder.<FormationInstance>create(i -> i.group(
             Identifier.CODEC.fieldOf("formation").forGetter(FormationInstance::formation),
             Codec.DOUBLE.fieldOf("radius").forGetter(FormationInstance::radius),
-            UUIDUtil.CODEC.lenientOptionalFieldOf("owner").forGetter(FormationInstance::owner),
+            FormationOwners.CODEC.lenientOptionalFieldOf("owners", FormationOwners.NONE).forGetter(FormationInstance::owners),
+            // The shape of the one field an older save has; read so an existing array keeps its owner.
+            UUIDUtil.CODEC.lenientOptionalFieldOf("owner").forGetter(instance -> Optional.empty()),
             Codec.LONG.lenientOptionalFieldOf("maintenance_count", 0L).forGetter(FormationInstance::maintenanceCount),
             // Written only when something is banked, so a save of the common case does not grow a field. Strict
             // rather than tolerant: this map is written by the mod itself, so a row that does not read back is a
@@ -52,28 +54,30 @@ public final class FormationInstance {
 
     private final Identifier formation;
     private final double radius;
-    private final Optional<UUID> owner;
+    private FormationOwners owners;
     private long maintenanceCount;
     private final Map<Holder<Aura>, Double> stored;
 
     FormationInstance(Identifier formation, double radius) {
-        this(formation, radius, Optional.empty(), 0L, Map.of());
+        this(formation, radius, FormationOwners.NONE, 0L, Map.of());
     }
 
     FormationInstance(Identifier formation, double radius, UUID owner) {
-        this(formation, radius, Optional.of(owner), 0L, Map.of());
+        this(formation, radius, FormationOwners.of(owner), 0L, Map.of());
     }
 
-    private FormationInstance(@NotNull Identifier formation, double radius, @NotNull Optional<UUID> owner,
-                              long maintenanceCount, @NotNull Optional<Map<Holder<Aura>, Double>> stored) {
-        this(formation, radius, owner, maintenanceCount, stored.orElse(Map.of()));
+    private FormationInstance(@NotNull Identifier formation, double radius, @NotNull FormationOwners owners,
+                              @NotNull Optional<UUID> legacyOwner, long maintenanceCount,
+                              @NotNull Optional<Map<Holder<Aura>, Double>> stored) {
+        this(formation, radius, owners.isEmpty() && legacyOwner.isPresent() ? FormationOwners.of(legacyOwner.get()) : owners,
+                maintenanceCount, stored.orElse(Map.of()));
     }
 
-    private FormationInstance(@NotNull Identifier formation, double radius, @NotNull Optional<UUID> owner,
+    private FormationInstance(@NotNull Identifier formation, double radius, @NotNull FormationOwners owners,
                               long maintenanceCount, @NotNull Map<Holder<Aura>, Double> stored) {
         this.formation = formation;
         this.radius = radius;
-        this.owner = owner;
+        this.owners = owners;
         this.maintenanceCount = maintenanceCount;
         this.stored = new LinkedHashMap<>(stored);
     }
@@ -86,8 +90,30 @@ public final class FormationInstance {
         return this.radius;
     }
 
+    // The whole set: being on it is what makes somebody an owner, and it is what every ownership question reads.
+    public FormationOwners owners() {
+        return this.owners;
+    }
+
+    // The first listed owner, for the questions that need one answer: whose account pays, and whose friend list
+    // the conditions that predate shared ownership ask. Use {@link #owners()} for "is this an owner".
     public Optional<UUID> owner() {
-        return this.owner;
+        return this.owners.primary();
+    }
+
+    // Mutated in place, like the upkeep counter: the index holds this object, so there is nothing to write back.
+    public boolean addOwner(UUID id) {
+        FormationOwners updated = this.owners.with(id);
+        if (updated == this.owners) return false;
+        this.owners = updated;
+        return true;
+    }
+
+    public boolean removeOwner(UUID id) {
+        FormationOwners updated = this.owners.without(id);
+        if (updated == this.owners) return false;
+        this.owners = updated;
+        return true;
     }
 
     public long maintenanceCount() {

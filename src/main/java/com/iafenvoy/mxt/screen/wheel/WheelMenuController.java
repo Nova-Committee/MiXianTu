@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.screen.wheel;
 
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
-import com.iafenvoy.mxt.runtime.wheel.WheelSource;
+import com.iafenvoy.mxt.api.WheelSource;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -67,7 +68,7 @@ public final class WheelMenuController {
         if (minecraft.screen != null) return;
         // The pages are read before the page is chosen, so the page the wheel opens on is the first that has one.
         WheelSelectionState.refresh(minecraft.player);
-        WheelSelectionState.firstPageOf(WheelSource.PAGES.getFirst());
+        WheelSelectionState.firstPageOf(WheelSourceTypes.first());
         show(minecraft);
     }
 

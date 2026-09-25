@@ -1,6 +1,9 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
+import com.iafenvoy.mxt.api.WheelSource;
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
@@ -43,8 +46,10 @@ public final class WheelContent implements WheelMenuProvider {
     private WheelContent() {
     }
 
+    // One provider for the built-in pages: each is registered under its own source, so a content mod registering a
+    // page of its own adds to the wheel instead of replacing what is here.
     public static void register() {
-        WheelMenuContent.register(INSTANCE);
+        for (WheelSource source : WheelSourceTypes.BUILT_IN) WheelMenuContent.register(source, INSTANCE);
     }
 
     @Override
@@ -78,7 +83,7 @@ public final class WheelContent implements WheelMenuProvider {
         List<WheelMenuEntry> options = new ArrayList<>();
         // One pass over what the player carries, rather than a lookup per ability: resolving a definition walks
         // the artifact registry, and this list is rebuilt every client tick.
-        Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, WheelSource.CONFIGURED);
+        Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, WheelSourceTypes.CONFIGURED);
         for (Holder<Ability> ability : WheelSources.abilities(player))
             options.add(entry(player, ability, carriers.get(HolderHelper.id(ability))));
         return List.copyOf(options);
@@ -87,7 +92,7 @@ public final class WheelContent implements WheelMenuProvider {
     // One derived page: what the named equipment grants and declares right now, never stored, so the page follows
     // the gear; a source with more entries than a page gets more pages rather than being cut.
     private static List<WheelMenuEntry> derived(Player player, WheelSource source) {
-        if (source == WheelSource.CONTRACT) return orders(player);
+        if (source == WheelSourceTypes.CONTRACT) return orders(player);
         List<WheelMenuEntry> entries = new ArrayList<>();
         Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, source);
         for (Holder<Ability> ability : WheelSources.abilities(player, source))
@@ -131,7 +136,7 @@ public final class WheelContent implements WheelMenuProvider {
     private static @Nullable WheelMenuEntry find(WheelSlot slot, List<WheelMenuEntry> auras,
                                                  List<WheelMenuEntry> options) {
         if (slot.isEmpty()) return null;
-        List<WheelMenuEntry> pool = slot.kind() == WheelEntryKind.AURA ? auras : options;
+        List<WheelMenuEntry> pool = slot.kind() == WheelEntryKinds.AURA ? auras : options;
         for (WheelMenuEntry entry : pool) if (entry.id().equals(slot.id())) return entry;
         return null;
     }

@@ -10,8 +10,10 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -25,6 +27,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -37,6 +40,7 @@ import java.util.function.Function;
  * those its owner does not recognise; what the array is for is its actions, not this field.
  */
 public record Formation(Component name, Component description, Optional<Identifier> structureTemplate,
+                        StructureCheck structureCheck,
                         List<RequiredBlock> structure,
                         NumberProvider radius, List<Cost> activationCosts,
                         List<Cost> maintenanceCosts, Optional<Storage> storage,
@@ -47,10 +51,15 @@ public record Formation(Component name, Component description, Optional<Identifi
                         EntityAction entityExitAction) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.FORMATION.identifier());
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
+    // The template and the check policy share one group slot, which keeps the group inside RecordCodecBuilder's
+    // component limit; the JSON keys are unchanged by it.
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(Formation::name),
             ContextNameCodec.description(CATEGORY).forGetter(Formation::description),
-            Identifier.CODEC.optionalFieldOf("structure_template").forGetter(Formation::structureTemplate),
+            MiscCodecs.pair(
+                            Identifier.CODEC.optionalFieldOf("structure_template"),
+                            StructureCheck.CODEC.optionalFieldOf("structure_check", StructureCheck.STRUCTURE))
+                    .forGetter(formation -> Pair.of(formation.structureTemplate(), formation.structureCheck())),
             // Strict, unlike the action and cost lists: dropping a mistyped required block would quietly make
             // the structure easier to satisfy, and a formation standing on half its flags is worse.
             RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
@@ -68,7 +77,30 @@ public record Formation(Component name, Component description, Optional<Identifi
             EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
             EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
             EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
-    ).apply(i, Formation::new)).flatXmap(Formation::validate, Formation::validate);
+    ).apply(i, (name, description, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
+                spareFriends, activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
+                entityExitAction) ->
+            new Formation(name, description, structure.getFirst(), structure.getSecond(), blocks, radius,
+                    activationCosts, maintenanceCosts, storage, actions, spareFriends, activateAction, tickAction,
+                    deactivateAction, entityTickAction, entityEnterAction, entityExitAction)))
+            .flatXmap(Formation::validate, Formation::validate);
+
+    /**
+     * Whether standing on the right blocks is part of raising this array at all. {@code always} is for an array
+     * that is meant to stand anywhere, and it refuses a declared structure rather than ignoring one.
+     */
+    public enum StructureCheck {
+        STRUCTURE,
+        ALWAYS;
+
+        public static final Codec<StructureCheck> CODEC = Codec.STRING.comapFlatMap(value -> {
+            try {
+                return DataResult.success(valueOf(value.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException exception) {
+                return DataResult.error(() -> "Unknown structure check " + value);
+            }
+        }, value -> value.name().toLowerCase(Locale.ROOT));
+    }
 
     /**
      * What the array may keep of the aura its own ground supplies; without it the formation is a pass-through.
@@ -85,10 +117,17 @@ public record Formation(Component name, Component description, Optional<Identifi
     private static DataResult<Formation> validate(Formation formation) {
         boolean template = formation.structureTemplate().isPresent();
         boolean inline = !formation.structure().isEmpty();
+        if (formation.structureCheck() == StructureCheck.ALWAYS) {
+            if (template || inline)
+                return DataResult.error(() -> "structure_check always means no structure is checked, so a formation "
+                        + "must not declare structure_template or structure");
+            return DataResult.success(formation);
+        }
         if (template && inline)
             return DataResult.error(() -> "A formation declares both structure_template and structure; keep exactly one");
         if (!template && !inline)
-            return DataResult.error(() -> "A formation needs either structure_template or a non-empty structure");
+            return DataResult.error(() -> "A formation needs either structure_template or a non-empty structure, "
+                    + "or structure_check always");
         return DataResult.success(formation);
     }
 

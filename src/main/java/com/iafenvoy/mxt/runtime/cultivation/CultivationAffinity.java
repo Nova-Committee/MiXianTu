@@ -15,6 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.tags.TagKey;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
@@ -34,11 +35,7 @@ public final class CultivationAffinity {
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
-            AuraPool pool = aura.auras().entrySet().stream()
-                    .filter(entry -> Elements.enabled(entry.getKey().value().auraType())
-                            && entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
-                    .map(Entry::getValue).findFirst().orElse(AuraPool.empty());
-            double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
+            double concentration = concentration(root, aura.auras());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
             total += base * Math.max(0.0D, 1.0D + concentration);
             count++;
@@ -52,22 +49,45 @@ public final class CultivationAffinity {
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
             SpiritRoot root = rootHolder.value();
             double base = root.cultivationMultiplier().evaluate(context);
-            AuraPool pool = aura.aura().entrySet().stream()
-                    .filter(entry -> Elements.enabled(entry.getKey().value().auraType())
-                            && entry.getKey().value().auraType().filter(root.element()::equals).isPresent())
-                    .map(Entry::getValue).findFirst().orElse(AuraPool.empty());
-            double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
+            double concentration = concentration(root, aura.aura());
             if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
             // A place opposes a root to the degree that it is made of elements that root has a relation to, so
             // an empty place is not a hostile one. The fit bonus still needs the pool itself, because it is
             // about this root's aura being here at all.
             double modifier = Math.max(0.0D, 1.0D + concentration
-                    + (pool.amount() > 0.0D ? aura.elementFitBonus() : 0.0D)
-                    - aura.elementConflictPenalty() * opposition(root.element(), aura));
+                    + (present(root, aura.aura()) ? aura.elementFitBonus() : 0.0D)
+                    - aura.elementConflictPenalty() * opposition(root, aura));
             total += base * modifier;
             count++;
         }
         return combine(spirit, context, total, count);
+    }
+
+    // A root that binds several elements draws on every pool it is bound to, in proportion: each element's
+    // concentration counts for its weight's share, and the shares are normalised, so [1, 1] and [0.5, 0.5] read
+    // the same. A place with none of them reads as the empty pool used to.
+    private static double concentration(SpiritRoot root, Map<Holder<Aura>, AuraPool> auras) {
+        double total = root.totalWeight();
+        if (total <= 0.0D) return 0.0D;
+        double weighted = 0.0D;
+        for (SpiritRoot.ElementWeight entry : root.elements()) {
+            AuraPool pool = pool(entry.element(), auras);
+            weighted += entry.weight() * (pool.amount() / Math.max(1.0D, pool.maximum()));
+        }
+        return weighted / total;
+    }
+
+    private static boolean present(SpiritRoot root, Map<Holder<Aura>, AuraPool> auras) {
+        return root.elements().stream().anyMatch(entry -> pool(entry.element(), auras).amount() > 0.0D);
+    }
+
+    // The first pool whose aura is one of this element's, which is the same reading the single-element version
+    // had; several auras may name one element and only the first is taken.
+    private static AuraPool pool(Holder<Element> element, Map<Holder<Aura>, AuraPool> auras) {
+        for (Entry<Holder<Aura>, AuraPool> entry : auras.entrySet())
+            if (entry.getKey().value().auraType().filter(Elements::enabled).filter(element::equals).isPresent())
+                return entry.getValue();
+        return AuraPool.empty();
     }
 
     // No root means no root-side multiplier at all, which is 1 rather than zero: a body without a spirit root
@@ -99,6 +119,17 @@ public final class CultivationAffinity {
         return total;
     }
 
+    // Weighted like the affinity: a root is as opposed to a place as its shares say, so a mostly-water root is
+    // barely hurt by fire where a pure one is hurt in full. One element reads the same as it did unweighted.
+    private static double opposition(SpiritRoot root, AuraResult aura) {
+        double total = root.totalWeight();
+        if (total <= 0.0D) return 0.0D;
+        double weighted = 0.0D;
+        for (SpiritRoot.ElementWeight entry : root.elements())
+            weighted += entry.weight() * opposition(entry.element(), aura);
+        return weighted / total;
+    }
+
     // A casting with no matching live root is worth nothing, which is the same answer the cast gate reads: an
     // ability with an affinity nobody in this body has is not cast at all.
     public static double abilityMultiplier(SpiritIdentityAttachment spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements,
@@ -109,7 +140,8 @@ public final class CultivationAffinity {
         int count = 0;
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
             SpiritRoot root = rootHolder.value();
-            if (!Elements.matches(elements, root.element())) continue;
+            // One root contributes once however many of its elements the casting asks for.
+            if (root.elementHolders().stream().noneMatch(element -> Elements.matches(elements, element))) continue;
             double modifier = root.elementAbilityModifier().evaluate(context);
             if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
             total += modifier;

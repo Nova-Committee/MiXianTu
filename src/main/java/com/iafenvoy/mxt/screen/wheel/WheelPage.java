@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.screen.wheel;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.runtime.wheel.WheelSource;
+import com.iafenvoy.mxt.api.WheelSource;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;

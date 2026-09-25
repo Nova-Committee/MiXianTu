@@ -1,6 +1,5 @@
 {
   "type": "mxt:active",
-  "slot": "primary",
   "costs": [{ "id": "mxt_test:spirit_power", "amount": 8 }],
   "cooldown": 20,
   "entity_action": {

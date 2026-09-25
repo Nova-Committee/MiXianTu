@@ -467,6 +467,9 @@ public final class MxtCommand {
                         ? "command.mxt.rift.color.auto" : "command.mxt.rift.color.override")), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.shape", links.size(), triangles,
                 links.isEmpty() ? 1 : RiftConnections.componentSize(level, pos)), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.isolated",
+                Component.translatable(RiftConnections.isolated(level, pos)
+                        ? "command.mxt.rift.info.isolated.yes" : "command.mxt.rift.info.isolated.no")), false);
         return 1;
     }
 

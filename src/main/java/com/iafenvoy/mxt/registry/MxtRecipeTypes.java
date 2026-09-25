@@ -13,8 +13,6 @@ public final class MxtRecipeTypes {
     public static final DeferredRegister<RecipeType<?>> REGISTRY = DeferredRegister.create(Registries.RECIPE_TYPE, MiXianTu.MOD_ID);
 
     public static final DeferredHolder<RecipeType<?>, RecipeType<AlchemyRecipe>> ALCHEMY = register("alchemy");
-    public static final DeferredHolder<RecipeType<?>, RecipeType<FormationRecipe>> FORMATION = register("formation");
-    public static final DeferredHolder<RecipeType<?>, RecipeType<RefiningRecipe>> REFINING = register("refining");
     public static final DeferredHolder<RecipeType<?>, RecipeType<SpiritShapedRecipe>> SPIRIT_SHAPED = register("spirit_shaped");
     public static final DeferredHolder<RecipeType<?>, RecipeType<SpiritShapelessRecipe>> SPIRIT_SHAPELESS = register("spirit_shapeless");
 

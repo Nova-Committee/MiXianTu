@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.screen.wheel.content;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
-import com.iafenvoy.mxt.runtime.wheel.WheelSource;
+import com.iafenvoy.mxt.api.WheelSource;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**
@@ -13,6 +13,6 @@ final class WheelTrigger {
     }
 
     static void send(WheelMenuEntry entry, WheelSource source) {
-        ClientPacketDistributor.sendToServer(WheelActionC2SPayload.press(source, entry.kind(), entry.id()));
+        ClientPacketDistributor.sendToServer(WheelActionC2SPayload.press(source.id(), entry.kind().id(), entry.id()));
     }
 }

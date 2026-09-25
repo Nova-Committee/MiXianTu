@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.network;
 
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
@@ -38,7 +40,10 @@ public final class ServerNetworkHandler {
     // one named state instead of a flip.
     static void onWheelAction(WheelActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        WheelService.trigger(player, payload.source(), payload.kind(), payload.id(), payload.enabled());
+        // The page and the kind travel as ids, so a request naming one this side does not know is refused here
+        // rather than failing the packet: a content mod may add either without a protocol of its own.
+        WheelService.trigger(player, WheelSourceTypes.byId(payload.source()).orElse(null),
+                WheelEntryKinds.byId(payload.kind()).orElse(null), payload.id(), payload.enabled());
     }
 
     // Forced to twelve sectors with every id resolved, so it can only contain things this server could trigger.

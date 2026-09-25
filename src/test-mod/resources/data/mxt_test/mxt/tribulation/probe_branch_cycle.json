@@ -1,0 +1,6 @@
+{
+  "timeline": [
+    { "type": "mxt:branch", "condition": { "type": "mxt:always_true" }, "if_true": 0 },
+    { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 1 } }
+  ]
+}

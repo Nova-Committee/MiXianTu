@@ -1,6 +1,5 @@
 {
   "type": "mxt:active",
-  "slot": "utility",
   "cooldown": 0,
   "condition": {
     "type": "mxt:has_curse",

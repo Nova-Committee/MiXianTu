@@ -155,16 +155,16 @@ public final class FormationProtection {
         return position != null && controller.distSqr(position) <= radius * radius;
     }
 
-    // The owner always passes, and friends only while the ward declares spare_friends and the server option
-    // respect_friends is on. Everyone else is stopped, including an entity no friend source can identify, and an
-    // ownerless ward exempts nobody.
+    // Every owner always passes, and friends of any owner only while the ward declares spare_friends and the
+    // server option respect_friends is on. Everyone else is stopped, including an entity no friend source can
+    // identify, and an ownerless ward exempts nobody.
     private static boolean exempt(ServerLevel level, FormationInstance instance, boolean spareFriends,
                                   @Nullable Entity actor) {
         if (actor == null) return false;
-        UUID ownerId = instance.owner().orElse(null);
-        if (ownerId == null) return false;
-        if (ownerId.equals(actor.getUUID())) return true;
+        FormationOwners owners = instance.owners();
+        if (owners.isEmpty()) return false;
+        if (owners.contains(actor)) return true;
         if (!spareFriends || !MxtServerConfig.INSTANCE.formations.respectFriends.getValue()) return false;
-        return FriendService.identify(ownerId, level.getEntities().get(ownerId), actor) == TriState.TRUE;
+        return owners.identify(level, actor) == TriState.TRUE;
     }
 }

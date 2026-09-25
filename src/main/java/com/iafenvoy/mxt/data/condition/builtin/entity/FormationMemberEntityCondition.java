@@ -19,7 +19,7 @@ public enum FormationMemberEntityCondition implements EntityCondition {
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
         return entity.level().getData(MxtAttachments.FORMATION_WORLD).formations().values().stream()
-                .anyMatch(formation -> formation.owner().filter(entity.getUUID()::equals).isPresent());
+                .anyMatch(formation -> formation.owners().contains(entity));
     }
 
     @Override

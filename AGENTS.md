@@ -57,7 +57,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | 数据包定义（字段 / Codec / 加载期校验） | `src/main/java/com/iafenvoy/mxt/data/<模块>/` |
 | 动态注册表声明 | `registry/MxtDatapackRegistries.java` + `registry/MxtResourceKeys.java`（35 张表，原版 datapack registry） |
 | 固有分派类型（条件 / 行为 / 触发器 …） | `data/condition/builtin/`、`data/action/builtin/`、`registry/Mxt*Conditions.java`、`registry/Mxt*Actions.java` |
-| 原版配方类型 | `registry/MxtRecipeTypes.java`（`mxt:alchemy`、`mxt:spirit_shaped`、`mxt:spirit_shapeless`、`mxt:formation`、`mxt:refining`） |
+| 原版配方类型 | `registry/MxtRecipeTypes.java`（`mxt:alchemy`、`mxt:spirit_shaped`、`mxt:spirit_shapeless`）。`mxt:formation` 与 `mxt:refining` 已于 2026-09-25 删除（两个从未有过执行者的死配方：产物恒为空、全仓无人查它们；法器的产出走蓝图锻造、阵法按定义落地） |
 | 运行时服务（结算、事务、调度） | `runtime/<模块>/` |
 | 附件（存档 / 同步状态） | `attachment/` + `registry/MxtAttachments.java` |
 | 伤害结算 | `runtime/damage/DamageCalculationService.java`（唯一出口）、`DamageElements.java`、`DamageEventBridge.java` |
@@ -79,7 +79,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
   3. **不重复解释，一处两行内**：单处注释（对外 API 的 Javadoc 除外）不超过两行；同一条解释不要在类、构造器、方法上各写一遍。
   - 长解释属于文档：设计动机、方案对比、历史与移植来源写进 `research/` 或 `docs/`，代码里只留结论与约束（别让注释成为某段设计说明的唯一一份）。
 - **Definition 的两个 Codec**：`CODEC` 是 Holder Codec，`DIRECT_CODEC` 是直接对象 Codec，注册表注册后者。
-- **`RecordCodecBuilder` 不认识未知字段，会静默丢掉**：一份写着 `element` 的体质会被当成"没有元素"照常跑。这是刻意的口径（`util/codec/DefinitionCodecs` 的点名拒绝已于 2026-09-21 按用户要求删除）：**改字段名 / 删字段时老文件不会报错，只是那个键不再生效**，所以字段变动必须同步 `docs/数据包格式.md`、测试包与文档站，别指望加载期替你发现。**一种例外：某个类型永远读不到的已知字段按类型拒收**（2026-09-25 起，`Ability` 的类型级校验）：`mxt:mount` / `mxt:flight_control` 这类"从不被发动"的类型写了 `entity_action` / `modifiers` / `cast_time` 之类会在**加载期报错并逐个点名**——那不是"未知键"，是"这个类型永远不读的键"，静默存下来只会让作者以为它生效。空表 / 空列表仍然用 `.validate(...)` 拒绝（否则会静默变成恒真或恒假）；字段**值**的校验（有限性、非负、区间）同样走 `.validate(...)`。
+- **`RecordCodecBuilder` 不认识未知字段，会静默丢掉**：一份写着 `element` 的体质会被当成"没有元素"照常跑。这是刻意的口径（`util/codec/DefinitionCodecs` 的点名拒绝已于 2026-09-21 按用户要求删除）：**改字段名 / 删字段时老文件不会报错，只是那个键不再生效**，所以字段变动必须同步 `docs/数据包格式.md`、测试包与文档站，别指望加载期替你发现。**一种例外：某个类型永远读不到的已知字段按类型拒收**（2026-09-25 起，`Ability` 的类型级校验）：`mxt:mount` / `mxt:flight_control` 这类"从不被发动"的类型写了 `entity_action` / `modifiers` / `cast_time` 之类会在**加载期报错并逐个点名**——那不是"未知键"，是"这个类型永远不读的键"，静默存下来只会让作者以为它生效。`mxt:active` 删掉 `slot` 后走的是同一条口径，但实现在**类型自己的 codec** 里（`ActiveAbilityType.CODEC` 读到 `slot` 就返回 `DataResult.error`），因为那个键从来没进过 `Ability` 的字段表、`Ability.validate` 看不见它。空表 / 空列表仍然用 `.validate(...)` 拒绝（否则会静默变成恒真或恒假）；字段**值**的校验（有限性、非负、区间）同样走 `.validate(...)`。
 - **链式 `.validate(...)` 会打断类型推断**：尾部接了 `.validate` 之后要写显式见证 `RecordCodecBuilder.<X>create(...)` / `RecordCodecBuilder.<X>mapCodec(...)`（参见 `Element`、`Physique`）。
 - **集合 Codec 是容错的**：`CollectionCodecs` / `AutoIgnoreMapCodec` / `AutoIgnoreListCodec` 会把坏条目打一条日志后**丢弃**。所以"定义写错"往往表现为"这一项不存在"，排查时先看日志里的 `Ignoring invalid list element`。
 - **列表里的空堆要用 `ItemStack.OPTIONAL_CODEC`**：`ItemStack.CODEC` / `STREAM_CODEC` 都拒绝空堆（`count` 必须 1..99、物品不能是 `minecraft:air`），而**组件与附件是要落盘、要同步给客户端的**——只要列表里出现一个空堆，整包就编码失败（`clientbound/minecraft:container_set_slot` 报 `Failed to encode`，2026-09-22 的储物窗口就是这么炸的：它用空堆表示"这一格是空的"）。所以凡是用空堆占位的列表一律 `ItemStack.OPTIONAL_CODEC.listOf()`（方块实体的库存 NBT 一直是这么写的）；单个可选堆用 `.optionalFieldOf(name, ItemStack.EMPTY)` 能兜住，因为值等于默认值时字段会被整个省掉。列表里根本不会出现空堆时（例如 `copyStacks` 已经过滤），`ItemStack.CODEC` 没问题。

@@ -7,10 +7,7 @@ import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.screen.resourcebar.ResourceBarRenderState;
 import com.iafenvoy.mxt.screen.resourcebar.ResourceBarRenderer.Context;
-import it.unimi.dsi.fastutil.objects.ObjectIntPair;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 
 import java.util.Locale;
 import java.util.Optional;
@@ -37,14 +34,13 @@ final class ResourceBarRendererHelper {
                 contentY(context), color, true);
     }
 
-    private static void renderIcon(Context context, ObjectIntPair<Identifier> icon) {
+    private static void renderIcon(Context context, OriginsRenderData data) {
         ResourceBarRenderState state = context.state();
         boolean center = MxtClientConfig.INSTANCE.resourceBars.iconLayout.getValue() == ResourceBarIconLayout.CENTER;
         int x = state.anchor() == Anchor.LEFT
                 ? center ? context.x() + state.renderData().width() + 3 : context.x() - 11
                 : center ? context.x() - 11 : context.x() + state.renderData().width() + 3;
-        context.graphics().blit(RenderPipelines.GUI_TEXTURED, icon.left(), x, context.y() - 2,
-                73.0F, 8 + icon.rightInt() * 10, 8, 8, 256, 256);
+        OriginsResourceBarRenderer.renderIconAt(data, context.graphics(), x, context.y() - 2);
     }
 
     private static void renderName(Context context, Component name) {
@@ -79,10 +75,8 @@ final class ResourceBarRendererHelper {
         return barY + (context.state().renderData().height() - context.minecraft().font.lineHeight) / 2;
     }
 
-    private static Optional<ObjectIntPair<Identifier>> icon(ResourceBarRenderState state) {
-        if (state.renderData() instanceof OriginsRenderData origins)
-            return Optional.of(ObjectIntPair.of(origins.texture(), origins.resolvedIconIndex()));
-        return Optional.empty();
+    private static Optional<OriginsRenderData> icon(ResourceBarRenderState state) {
+        return state.renderData() instanceof OriginsRenderData origins ? Optional.of(origins) : Optional.empty();
     }
 
     static String format(double value) {

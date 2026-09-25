@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.api;
 
 import com.iafenvoy.mxt.data.IconReference;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;

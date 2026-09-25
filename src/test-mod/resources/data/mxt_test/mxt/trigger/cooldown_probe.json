@@ -1,0 +1,5 @@
+{
+  "trigger": {"type": "mxt:block_break"},
+  "action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 1},
+  "cooldown": 200
+}

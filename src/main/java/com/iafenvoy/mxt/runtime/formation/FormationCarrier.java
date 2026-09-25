@@ -12,7 +12,7 @@ import java.util.UUID;
  * The formation currently being evaluated, handed to every per-entity action as {@link Context} extension data:
  * which formation it is, where its centre is and who owns it. Numbers go into the formula's explicit value map.
  */
-public record FormationCarrier(Identifier id, BlockPos controller, double radius, Optional<UUID> owner) {
+public record FormationCarrier(Identifier id, BlockPos controller, double radius, FormationOwners owners) {
     // Read it through of(Context) rather than directly: the extension map is untyped.
     public static final String KEY = "mxt:formation";
 
@@ -20,6 +20,11 @@ public record FormationCarrier(Identifier id, BlockPos controller, double radius
     // never disagree.
     public Vec3 center() {
         return this.controller.getCenter();
+    }
+
+    // The first listed owner: what a per-entity action that can only take one owner reads.
+    public Optional<UUID> owner() {
+        return this.owners.primary();
     }
 
     public static Optional<FormationCarrier> of(Context context) {

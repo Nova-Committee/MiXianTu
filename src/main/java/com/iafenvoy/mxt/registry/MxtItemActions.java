@@ -32,4 +32,5 @@ public final class MxtItemActions {
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<RemoveEnchantmentAction>> REMOVE_ENCHANTMENT = REGISTRY.register("remove_enchantment", () -> RemoveEnchantmentAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<AddEnchantmentAction>> ADD_ENCHANTMENT = REGISTRY.register("add_enchantment", () -> AddEnchantmentAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<MergeComponentsAction>> MERGE_COMPONENTS = REGISTRY.register("merge_components", () -> MergeComponentsAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<AddAbilityAction>> ADD_ABILITY = REGISTRY.register("add_ability", () -> AddAbilityAction.CODEC);
 }

@@ -1,6 +1,5 @@
 {
   "type": "mxt:active",
-  "slot": "utility",
   "cooldown": 0,
   "entity_action": {
     "type": "mxt:remove_curses_by_tag",

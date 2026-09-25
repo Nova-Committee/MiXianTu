@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.IconReference;
@@ -10,7 +11,7 @@ import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -42,7 +43,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
 
     @Override
     public WheelEntryKind kind() {
-        return WheelEntryKind.ABILITY;
+        return WheelEntryKinds.ABILITY;
     }
 
     @Override

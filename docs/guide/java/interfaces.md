@@ -38,7 +38,16 @@ title: 特殊公开接口
 
 ### `WheelMenuEntry`
 
-轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 契约行为）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider`（唯一实现 `WheelContent`）给出——它的入参是 `(player, source)`，`source` 是 `WheelSource`（主盘 / 主手物品 / 副手物品 / 法器 / 契约灵兽），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
+轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 契约行为，以及内容模组自己注册的类型）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider` 给出——它的入参是 `(player, source)`，`source` 是 `api/WheelSource`（内置五页：主盘 / 主手物品 / 副手物品 / 法器 / 契约灵兽），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
+
+### `WheelSource` / `WheelEntryKind`
+
+轮盘的两个扩展点（2026-09-25，见 [`research/50`](../../../research/50_目标选择器与轮盘扩展点设计.md)）：**一页**与**一类格子**。两者都是 `api` 里的接口，实例由内容模组自己实现并在 mod setup 里注册（`runtime/wheel/WheelSourceTypes#register` / `WheelEntryKinds#register`，先注册者胜、只在游戏线程读），页顺序就是注册顺序。
+
+- `WheelSource`：`id()`、`displayName()`、`configured()`（是不是玩家自己摆的那一盘）、`grantSources(entity)`（这一页由哪些授予来源拼成）、`equipment(entity)`（从哪几件栈上读承载物）、`offers(entity, kind, id)`（这一项此刻能不能从这一页触发——服务端每次触发都要先问它）。
+- `WheelEntryKind`：`id()`、`displayName()`、`holdsEntry()`（`mxt:empty` 是唯一答否的那个，空格子也得有类型）、`exists(access, id)`（这一格还算不算数，读不出来的会在存盘时被清掉）、`trigger(player, source, id)`（**按下这一格做什么**，只有服务端调）、以及默认返回 `false` 的 `directed(player, source, id, wanted)`（点名一个状态；只有开关那类实现它）。
+
+客户端把某个 provider 注册到**某一页的 id** 上（`WheelMenuContent.register(source, provider)`，多槽位），所以加一页不会覆盖内置页；配置界面仍按内置 kind 分池，第三方 kind 的条目暂时进不了那两个池子。
 
 ### `Toggable`
 
@@ -60,7 +69,7 @@ title: 特殊公开接口
 
 **行为本身是类，不是枚举**（`data/creature/ContractBehavior` + `ContractBehaviors`，用户点名要求）：`new ContractBehavior(id, momentary)` 一把就是一条命令，`ContractBehaviors.register(...)` 让它能被 id 读回来，内容方因此**不用改框架的清单**就能加一条（"停手""回窝""盘旋"都行）；框架只保证自己的四个内置项一定在。`momentary` 区分"常驻"与"只此一次"（召回的闩与冷却归框架，所以它走 `ContractService.requestRecall`，不写记录）。**当前命令只有一份**，在 `mxt:contract` 附件上（存 id；读不出来的 id 与旧存档一律退回跟随）。**输入端唯一出口**是 `runtime/creature/ContractBehaviorService.request(...)`：御兽铃的轮盘与 `/contract behavior` 都走它，检查顺序是"已绑定 → 主人 → 实现了接口 → 这条命令在它的清单里 → 生物的 `onBehaviorSelected` → 写入或执行一次"。
 
-**御兽铃是指针**：右键生物＝把这只兽对准（服务端把"生物 UUID + 显示名 + 它自己答的命令"写进物品组件 `mxt:contract_bell`），右键空处＝在客户端打开轮盘并停在「契约灵兽」那一页——页面读的正是铃上那份快照，所以不需要在客户端解析一只可能没加载的灵兽。下命令（含召回）是轮盘里的一格，走 `WheelService` 与 `WheelEntryKind.BEHAVIOR`。
+**御兽铃是指针**：右键生物＝把这只兽对准（服务端把"生物 UUID + 显示名 + 它自己答的命令"写进物品组件 `mxt:contract_bell`），右键空处＝在客户端打开轮盘并停在「契约灵兽」那一页——页面读的正是铃上那份快照，所以不需要在客户端解析一只可能没加载的灵兽。下命令（含召回）是轮盘里的一格，走 `WheelService` 与 `WheelEntryKinds.BEHAVIOR`。
 
 ### `CaptureListener`
 

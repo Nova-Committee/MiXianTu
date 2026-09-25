@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.SpriteIcon;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Bar;
@@ -141,7 +142,7 @@ public final class ResourceBarOverlay {
         result.add(new ResourceBarRenderState(SelfHudContext.INSTANCE, definition.anchor(),
                 definition.order(), identifier, index, current, 0.0D, maximum,
                 new OriginsRenderData(
-                        OriginsRenderData.DEFAULT_TEXTURE,
+                        SpriteIcon.of(OriginsRenderData.DEFAULT_TEXTURE, false),
                         definition.barIndex(), Optional.of(definition.barIndex()), definition.inverted()),
                 0, 0, Optional.of(Component.translatable(key)), ValueDisplay.NONE));
     }

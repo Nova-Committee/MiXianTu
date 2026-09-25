@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.wheel;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.api.WheelEntryKind;
+import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.ability.Abilities;
@@ -71,25 +73,21 @@ public final class WheelService {
     public static boolean trigger(ServerPlayer player, @Nullable WheelSource source, @Nullable WheelEntryKind kind,
                                   @Nullable Identifier id, Optional<Boolean> enabled) {
         if (source == null || kind == null || id == null) return false;
-        if (enabled.isPresent()) return directed(player, source, kind, id, enabled.get());
+        if (enabled.isPresent()) return kind.directed(player, source, id, enabled.get());
         if (!WheelSources.offers(player, source, kind, id)) {
             MiXianTu.LOGGER.info("Dropping the wheel trigger {} {} from {} sent by {}: that source does not hold it",
-                    source.getSerializedName(), id, kind.getSerializedName(), player.getGameProfile().name());
+                    source.id(), id, kind.id(), player.getGameProfile().name());
             player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
             return false;
         }
-        return switch (kind) {
-            case ABILITY -> press(player, source, id);
-            case AURA -> burst(player, id);
-            case BEHAVIOR -> order(player, id);
-            case EMPTY -> false;
-        };
+        // What a press does belongs to the kind, so a kind a content mod registered is served by its own code
+        // rather than by a branch here.
+        return kind.trigger(player, source, id);
     }
 
     // Asking for a state a switch is already in is a no-op rather than a take-off followed by a landing, which is
     // what lets a screen re-send its intent without watching the state.
-    private static boolean directed(ServerPlayer player, WheelSource source, WheelEntryKind kind, Identifier id, boolean wanted) {
-        if (kind != WheelEntryKind.ABILITY) return false;
+    static boolean directed(ServerPlayer player, WheelSource source, Identifier id, boolean wanted) {
         Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
         if (ability == null) {
             MiXianTu.LOGGER.info("Dropping the directed wheel request {} from {}: the ability is no longer registered",
@@ -120,13 +118,13 @@ public final class WheelService {
 
     // One press. An ability that says it can be pressed goes through the shared entry point, which is where a
     // switch, a container and a cast are told apart; anything else keeps the plain cast path.
-    private static boolean press(ServerPlayer player, WheelSource source, Identifier id) {
+    static boolean press(ServerPlayer player, WheelSource source, Identifier id) {
         Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
         if (ability == null) {
             // The same race WheelSources#offers exists for, one step later: registered when the source was read
             // and gone by the time the press arrived, which is rare enough to be worth saying rather than dropping.
             MiXianTu.LOGGER.info("Dropping the wheel press {} on {} from {}: the ability is no longer registered",
-                    id, source.getSerializedName(), player.getGameProfile().name());
+                    id, source.id(), player.getGameProfile().name());
             player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
             return false;
         }
@@ -154,7 +152,7 @@ public final class WheelService {
     }
 
     // A burst the player cannot pay for is refused the same way an ability is.
-    private static boolean burst(ServerPlayer player, Identifier id) {
+    static boolean burst(ServerPlayer player, Identifier id) {
         if (SpiritBurstService.fireOnce(player, id)) return true;
         MiXianTu.LOGGER.info("Refusing the wheel burst {} for {}: the burst did not go off",
                 id, player.getGameProfile().name());
@@ -164,7 +162,7 @@ public final class WheelService {
 
     // An order for the beast the player's bell is tuned to. The creature is re-read from the bell here, and the
     // record, the owner and the order itself are all re-checked behind that, so a stale bell orders nothing.
-    private static boolean order(ServerPlayer player, Identifier id) {
+    static boolean order(ServerPlayer player, Identifier id) {
         ContractBehavior behavior = ContractBehaviors.byId(id).orElse(null);
         if (behavior == null) {
             // A layout or a hand-edited stack can name an order whose provider is gone; the same race the ability
