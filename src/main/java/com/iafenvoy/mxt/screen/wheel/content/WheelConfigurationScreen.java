@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.screen.wheel.content;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
@@ -37,12 +36,11 @@ public final class WheelConfigurationScreen extends Screen {
     private static final int PANEL_MARGIN = 12;
     private static final int HEADER_HEIGHT = 30;
     private static final int POOL_HEADING_HEIGHT = 12;
-    // Divider, heading, hint, numbers and cells each get a line: the heading and hint would overlap.
+    // Divider, numbers and cells at the top of this band; the rest of it is deliberately left blank for the
+    // per-sector key cells (MxtKeyMappings.WHEEL_SLOTS), which are not drawn yet.
     private static final int SLOT_ROW_HEIGHT = 67;
-    private static final int SLOT_HEADING_OFFSET = 7;
-    private static final int SLOT_HINT_OFFSET = 18;
-    private static final int SLOT_NUMBER_OFFSET = 29;
-    private static final int SLOT_TOP_OFFSET = 41;
+    private static final int SLOT_NUMBER_OFFSET = 4;
+    private static final int SLOT_TOP_OFFSET = 15;
     private static final int PANEL_HEIGHT = 268;
     private static final int SCROLL_BAR_WIDTH = 3;
     private static final int TITLE_COLOR = 0xFF404040;
@@ -125,15 +123,6 @@ public final class WheelConfigurationScreen extends Screen {
         this.extractTransparentBackground(graphics);
         this.extractPanel(graphics);
         graphics.text(this.font, this.title, this.panelLeft + 10, this.panelTop + 10, TITLE_COLOR, false);
-        Component save = Component.translatable("wheel.mxt.config.save");
-        graphics.text(this.font, save, this.panelLeft + this.panelWidth - 10 - this.font.width(save),
-                this.panelTop + 10, HINT_COLOR, false);
-        // The header line that says why the pages behind the first are not editable here.
-        Component derived = Component.translatable("wheel.mxt.config.derived",
-                MxtKeyMappings.WHEEL_PREVIOUS.get().getTranslatedKeyMessage(),
-                MxtKeyMappings.WHEEL_NEXT.get().getTranslatedKeyMessage());
-        graphics.text(this.font, derived, this.panelLeft + this.panelWidth - 10 - this.font.width(derived),
-                this.panelTop + 20, HINT_COLOR, false);
         graphics.text(this.font, Component.translatable("wheel.mxt.pool.aura"),
                 this.poolLeft[AURA_POOL], this.panelTop + HEADER_HEIGHT, TITLE_COLOR, false);
         graphics.text(this.font, Component.translatable("wheel.mxt.pool.ability"),
@@ -143,10 +132,6 @@ public final class WheelConfigurationScreen extends Screen {
         int dividerY = this.poolsBottom + 1;
         graphics.fill(this.panelLeft + 6, dividerY, this.panelLeft + this.panelWidth - 6, dividerY + 1, DIVIDER_DARK);
         graphics.fill(this.panelLeft + 6, dividerY + 1, this.panelLeft + this.panelWidth - 6, dividerY + 2, DIVIDER_LIGHT);
-        graphics.text(this.font, Component.translatable("wheel.mxt.config.sectors"),
-                this.slotRowLeft, this.poolsBottom + SLOT_HEADING_OFFSET, TITLE_COLOR, false);
-        graphics.text(this.font, Component.translatable("wheel.mxt.config.hint"),
-                this.slotRowLeft, this.poolsBottom + SLOT_HINT_OFFSET, HINT_COLOR, false);
         for (int sector = 0; sector < WheelLayout.SLOTS; sector++) {
             int x = this.slotRowLeft + sector * GRID_STEP;
             graphics.blit(RenderPipelines.GUI_TEXTURED, SLOT, x, this.slotRowTop, 0.0F, 0.0F,

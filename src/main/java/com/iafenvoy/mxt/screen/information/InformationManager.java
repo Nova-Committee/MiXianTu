@@ -52,7 +52,6 @@ public final class InformationManager {
         register("realm", Side.CULTIVATION, InformationManager::realmLines);
         register("lifespan", Side.CULTIVATION, InformationManager::lifespanLine);
         register("cultivation_progress", Side.CULTIVATION, InformationManager::progressLines);
-        register("cultivating", Side.CULTIVATION, c -> c.add("info.mxt.cultivating", Component.translatable(c.getData(MxtAttachments.CULTIVATION).cultivating() ? "info.mxt.yes" : "info.mxt.no")));
         register("spirit_roots", Side.CULTIVATION, InformationManager::spiritRootLines);
         register("physiques", Side.CULTIVATION, InformationManager::physiqueLines);
         register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques(), "technique"));
@@ -97,7 +96,8 @@ public final class InformationManager {
                 LifeSpanService.total(player), settings.ticksPerYear.getValue()));
     }
 
-    private static void progressLines(InformationCollector collector) {        CultivationAttachment cultivation = collector.getData(MxtAttachments.CULTIVATION);
+    private static void progressLines(InformationCollector collector) {
+        CultivationAttachment cultivation = collector.getData(MxtAttachments.CULTIVATION);
         if (cultivation.cultivationProgresses().isEmpty()) {
             collector.add("info.mxt.cultivation_progress", "-");
             return;
