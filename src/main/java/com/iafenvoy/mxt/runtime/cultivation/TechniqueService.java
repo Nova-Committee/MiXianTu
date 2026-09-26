@@ -25,6 +25,14 @@ public final class TechniqueService {
     private TechniqueService() {
     }
 
+    // What a technique query sees: a sealed definition is not learned as far as every condition is concerned,
+    // the way a disabled spirit root is not held. The runtime's own readers keep reading the raw list.
+    public static List<Holder<Technique>> known(SpiritIdentityAttachment spirit) {
+        return spirit.learnedTechniques().stream()
+                .filter(technique -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.TECHNIQUE, technique))
+                .toList();
+    }
+
     public static Result learn(SpiritIdentityAttachment spirit, Holder<Technique> technique) {
         if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.TECHNIQUE, technique))
             return Result.rejected(Failure.DISABLED);

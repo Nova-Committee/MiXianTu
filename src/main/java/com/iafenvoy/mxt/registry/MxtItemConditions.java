@@ -42,4 +42,7 @@ public final class MxtItemConditions {
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ComponentCondition>> COMPONENT = REGISTRY.register("component", () -> ComponentCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<SpiritStorageNotFullCondition>> SPIRIT_STORAGE_NOT_FULL = REGISTRY.register("spirit_storage_not_full", () -> SpiritStorageNotFullCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemElementCondition>> ELEMENT = REGISTRY.register("item_element", () -> ItemElementCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<CurseContainerItemCondition>> CURSE_CONTAINER = REGISTRY.register("curse_container", () -> CurseContainerItemCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemQualityCondition>> ITEM_QUALITY = REGISTRY.register("item_quality", () -> ItemQualityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemAbilitiesItemCondition>> ITEM_ABILITIES = REGISTRY.register("item_abilities", () -> ItemAbilitiesItemCondition.CODEC);
 }
