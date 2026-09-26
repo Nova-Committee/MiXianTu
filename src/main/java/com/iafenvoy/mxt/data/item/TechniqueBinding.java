@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.quality.QualityChain;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -18,18 +19,21 @@ import java.util.Optional;
 
 /**
  * How one technique is read: the length, pose and sound of the gesture, the ladder its carrier starts on and the
- * conditions that gate an attempt. Which technique a stack teaches is the stack's own {@code mxt:technique}
- * component, so a technique with no declaration of its own still reads - it reads with the defaults
- * {@link #defaults(Holder)} builds. {@code carrier_item} names the item the mod generates for the picker and the
- * creative tab, and absent means the jade slip.
+ * conditions that gate an attempt. Which technique a stack teaches is its own {@code mxt:technique} component, so
+ * a technique with no declaration of its own still reads - it reads with the defaults {@link #defaults(Holder)}
+ * builds. A declaration may also claim items itself through {@code items}, and those items teach the technique it
+ * names without carrying any component. {@code carrier_item} names the item the mod generates for the picker and
+ * the creative tab, and absent means the jade slip.
  */
-public record TechniqueBinding(Holder<Technique> technique, Optional<Item> carrierItem,
-                               Optional<Holder<QualityChain>> qualityChain,
+public record TechniqueBinding(Holder<Technique> technique, List<Entry> entries, int priority,
+                               Optional<Item> carrierItem, Optional<Holder<QualityChain>> qualityChain,
                                List<DescribedEntry<EntityCondition>> conditions,
                                int learnTime, ItemUseAnimation holdAnimation,
-                               Holder<SoundEvent> holdSound) {
+                               Holder<SoundEvent> holdSound) implements ItemMatcher {
     public static final Codec<TechniqueBinding> CODEC = RecordCodecBuilder.<TechniqueBinding>create(i -> i.group(
             Technique.CODEC.fieldOf("technique").forGetter(TechniqueBinding::technique),
+            ENTRIES_CODEC.optionalFieldOf("items", List.of()).forGetter(TechniqueBinding::entries),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(TechniqueBinding::priority),
             BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("carrier_item").forGetter(TechniqueBinding::carrierItem),
             QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(TechniqueBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(TechniqueBinding::conditions),
@@ -41,7 +45,7 @@ public record TechniqueBinding(Holder<Technique> technique, Optional<Item> carri
     ).apply(i, TechniqueBinding::new)).validate(TechniqueBinding::validate);
 
     public static TechniqueBinding defaults(Holder<Technique> technique) {
-        return new TechniqueBinding(technique, Optional.empty(), Optional.empty(), List.of(),
+        return new TechniqueBinding(technique, List.of(), DEFAULT_PRIORITY, Optional.empty(), Optional.empty(), List.of(),
                 HoldBinding.NO_HOLD, HoldBinding.DEFAULT_HOLD_ANIMATION, HoldBinding.DEFAULT_HOLD_SOUND);
     }
 

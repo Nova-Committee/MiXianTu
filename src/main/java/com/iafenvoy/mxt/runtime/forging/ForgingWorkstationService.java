@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -42,34 +43,30 @@ public final class ForgingWorkstationService {
 
     // Takes the container rather than a ForgingSurface, because the client half of the menu has its own copy
     // of the slot contents.
-    public static List<Identifier> selectableBlueprintIds(Container container) {
+    public static List<Identifier> selectableBlueprintIds(Container container, Provider access) {
         Set<Identifier> provided = new LinkedHashSet<>();
-        for (int index = ForgingSurface.BLUEPRINT_START; index < ForgingSurface.BLUEPRINT_START + ForgingSurface.BLUEPRINT_SLOTS; index++) {
-            Holder<BlueprintBinding> binding = container.getItem(index).get(MxtDataComponents.BLUEPRINT_BINDING.get());
-            if (binding == null) continue;
-            binding.value().blueprints().forEach(blueprint -> provided.add(HolderHelper.id(blueprint)));
-        }
+        for (int index = ForgingSurface.BLUEPRINT_START; index < ForgingSurface.BLUEPRINT_START + ForgingSurface.BLUEPRINT_SLOTS; index++)
+            ForgingBindingService.blueprints(access, container.getItem(index))
+                    .forEach(blueprint -> provided.add(HolderHelper.id(blueprint)));
         return List.copyOf(provided);
     }
 
     // In the tool slots' order and then each tool's own declaration order, deduplicated: a second tool can
     // only ever append, never reorder or remove.
-    private static List<Identifier> toolMethodIds(Container container) {
+    private static List<Identifier> toolMethodIds(Container container, Provider access) {
         Set<Identifier> unlocked = new LinkedHashSet<>();
-        for (int index = ForgingSurface.TOOL_START; index < ForgingSurface.TOOL_START + ForgingSurface.TOOL_SLOTS; index++) {
-            Holder<ToolBinding> binding = container.getItem(index).get(MxtDataComponents.TOOL_BINDING.get());
-            if (binding == null) continue;
-            binding.value().methods().forEach(method -> unlocked.add(HolderHelper.id(method)));
-        }
+        for (int index = ForgingSurface.TOOL_START; index < ForgingSurface.TOOL_START + ForgingSurface.TOOL_SLOTS; index++)
+            ForgingBindingService.methods(access, container.getItem(index))
+                    .forEach(method -> unlocked.add(HolderHelper.id(method)));
         return List.copyOf(unlocked);
     }
 
     // This blueprint's allowed_methods intersected with the placed tools' methods; the tools' union alone when
     // the blueprint declares nothing or no id is selected.
-    public static List<Identifier> availableMethodIds(Container container, RegistryAccess registries, Identifier blueprintId) {
-        List<Identifier> unlocked = toolMethodIds(container);
+    public static List<Identifier> availableMethodIds(Container container, Provider access, Identifier blueprintId) {
+        List<Identifier> unlocked = toolMethodIds(container, access);
         ForgingBlueprint blueprint = blueprintId == null ? null
-                : MxtDatapackRegistries.get(registries, MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
+                : MxtDatapackRegistries.get(access, MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
         if (blueprint == null || !blueprint.restrictsMethods()) return unlocked;
         Set<Identifier> allowed = new LinkedHashSet<>();
         blueprint.allowedMethods().stream().forEach(method -> allowed.add(HolderHelper.id(method)));
@@ -117,7 +114,7 @@ public final class ForgingWorkstationService {
         Holder<ForgingBlueprint> holder = MxtDatapackRegistries.holder(MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
         if (holder == null) return new StartOutcome(Failure.DISABLED, false);
         ForgingBlueprint blueprint = holder.value();
-        if (!selectableBlueprintIds(surface.forgingContainer()).contains(blueprintId))
+        if (!selectableBlueprintIds(surface.forgingContainer(), player.level().registryAccess()).contains(blueprintId))
             return new StartOutcome(Failure.BLUEPRINT_NOT_HELD, false);
         if (!outputEmpty(surface)) return new StartOutcome(Failure.OUTPUT_BLOCKED, false);
 

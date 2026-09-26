@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.storage;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.resources.Identifier;
 
 import java.util.function.Function;
 
@@ -15,4 +16,10 @@ public interface DataStorage {
     Codec<DataStorage> CODEC = MxtRegistries.DATA_STORAGE_TYPE.byNameCodec().dispatch("type", DataStorage::codec, Function.identity());
 
     MapCodec<? extends DataStorage> codec();
+
+    // The kind's registered id, for the messages that turn a duplicate down; a kind nothing registered falls back
+    // to its class name.
+    static String name(DataStorage value) {
+        return MxtRegistries.DATA_STORAGE_TYPE.getKey(value.codec()).toString();
+    }
 }

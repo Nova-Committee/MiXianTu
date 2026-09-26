@@ -157,7 +157,7 @@ public final class ForgingMenu extends AbstractContainerMenu {
     // different rules.
     public boolean accepts(int index, ItemStack stack) {
         return ForgingSurface.canPlace(index, stack, this.active(),
-                this.fromTable(ForgingTableBlockEntity::selectedBlueprint, null));
+                this.fromTable(ForgingTableBlockEntity::selectedBlueprint, null), this.player.level().registryAccess());
     }
 
     // Reads the synced flag so both sides answer alike: a slot that allowed a pickup the server would refuse
@@ -170,7 +170,7 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     // Derived through the same rule the server validates against.
     public List<Identifier> blueprints() {
-        return ForgingWorkstationService.selectableBlueprintIds(this.machine);
+        return ForgingWorkstationService.selectableBlueprintIds(this.machine, this.player.level().registryAccess());
     }
 
     // The blueprint is passed in so the list exists before a session does.

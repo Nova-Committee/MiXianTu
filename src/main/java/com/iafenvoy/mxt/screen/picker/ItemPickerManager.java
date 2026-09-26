@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.ItemAura;
+import com.iafenvoy.mxt.data.forging.BlueprintBinding;
+import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -56,6 +58,8 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.ITEM_BINDING, ItemBinding::entries);
         registerMatcher(MxtResourceKeys.WEAPON_BINDING, WeaponBinding::entries);
         registerMatcher(MxtResourceKeys.PILL_BINDING, PillBinding::entries);
+        registerMatcher(MxtResourceKeys.TOOL_BINDING, ToolBinding::entries);
+        registerMatcher(MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding::entries);
         registerMatcher(MxtResourceKeys.ARTIFACT, Artifact::entries);
 
         // Definitions carried by a dedicated item: written onto the stack, and the definition's own name wins.

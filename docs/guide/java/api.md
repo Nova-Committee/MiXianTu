@@ -135,9 +135,10 @@ title: Java 公开 API
 | `List<Entry> entries()` | 匹配项列表 | 实现必须给全 |
 | `int priority()` | 排序权重 | **没有默认实现**：每个实现返回自己在 JSON 里声明的 `priority`；没有那个字段的匹配器返回 `DEFAULT_PRIORITY` |
 | `find(Registry<T> registry, ItemStack stack)` / `find(Stream<T> matchers, ItemStack stack)` | 第一个命中 | 无命中给 `Optional.empty()` |
+| `find(Stream<H> entries, Function<H, T> unwrap, ItemStack stack)` | 同上，但把 Holder 原样返回 | 调用方要留住 Holder 才能用时走这条（`ArtifactService`、`ItemAuraService`），`unwrap` 写 `Holder::value` |
 | `findAll(...)`（注册表版与流版） | 全部命中 | 按 `ItemMatcher.ORDER`（`priority` **降序**）排序 |
 | `DEFAULT_PRIORITY` | 定义没写 `priority` 时的值（`0`） | 三个物品条件、消耗 `mxt:item` 与框架内置的两个长按声明没有这个字段，也用它；**档位不按 Entry 类型分** |
-| `ORDER` | 唯一的排序比较器（`priority` 降序） | 需要 Holder、不能用 `findAll` 的调用方（`HoldLookup`、`ItemAuraService`）按它自己排，别各写一份 |
+| `ORDER` | 唯一的排序比较器（`priority` 降序） | 要自己合并多个来源、不能走 `find` 的调用方（`HoldLookup`）按它排，别各写一份 |
 | `ENTRIES_CODEC` | entry 列表的 Codec | 同时认单个对象与数组两种写法 |
 
 `ItemMatcher.Entry` 的成员：`matches(ItemStack)`、`default boolean itemLevel()`、`codec()`，以及两个 codec 常量 `SHORTCUT_CODEC`（简写：裸物品 id → `item`、物品标签 → `tag`）与 `CODEC`（先试简写，再试带 `type` 的对象）。**Entry 不带优先级**：谁赢由定义自己的 `priority` 决定。
@@ -147,7 +148,8 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 要点：
 
 - `find` 的"第一个"是 `priority` **数值最大**的那个定义（与 `aura_zone`、`element_reaction` 同一个方向），不是注册顺序，也不是"匹配得最具体"的那个；`priority` 相同的才取决于传入流的顺序。
-- `priority` 是**七张定义表自己的字段**（`artifact`、`item`/`weapon`/`pill` 三种 binding、`spirit_herb`、`item_aura`、`currency`，默认 `0`，加载期不校验范围），所以"通用定义 + 特地点名定义"共存时由数据包写死谁先；点名的条目**不会**因此更靠前。`ArtifactHold` 直接回读它那件法器的字段；消耗 `mxt:item`、三个物品条件与两个框架内置的长按声明（功法阅读、灌注）没有这个字段，恒为 `DEFAULT_PRIORITY`。
+- `priority` 是**十张定义表自己的字段**（`artifact`、`item`/`weapon`/`pill`/`tool`/`blueprint`/`technique` 六种 binding、`spirit_herb`、`item_aura`、`currency`，默认 `0`，加载期不校验范围），所以"通用定义 + 特地点名定义"共存时由数据包写死谁先；点名的条目**不会**因此更靠前。`technique_binding` 的 `items` 是可选的，但 `priority` 一样有。`ArtifactHold` 直接回读它那件法器的字段；消耗 `mxt:item`、三个物品条件与两个框架内置的长按声明（功法阅读、灌注）没有这个字段，恒为 `DEFAULT_PRIORITY`。
+- **两类表读同一个匹配器，分工不同**：binding 表（`item` / `weapon` / `pill`）把本模组的规则接到一件**已经存在**的物品上，内容表（`artifact`、`spirit_herb`、`item_aura`、`currency`）本身就是被物品选中的定义。匹配器只回答"哪一条适用"，不决定那条定义是什么，也不替它执行。
 - **`itemLevel()` 是缓存安全的分界线**：它返回 `true` 表示"命中与否只由物品本身决定"，按物品开缓存的调用方**只能**缓存这类项；会读堆上的组件 / NBT 的项，以及答案来自另一条定义的项（`mxt:herb_tag` 问的是哪条 `spirit_herb` 认领这件物品）必须每个堆都问一次。
 - 简写只覆盖 `item` 与 `tag`；其它实现走简写编码会抛 `IllegalArgumentException`。
 
@@ -326,7 +328,7 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 | `incoming(LivingEntity target, DamageSource source, double amount)` / `incoming(LivingEntity target, @Nullable Entity attacker, double amount)` | 从伤害来源或攻击者反推元素再减免 | 上面那个主重载的两个简写 |
 | `adaptationMultiplier(LivingEntity target, Set<Holder<Element>> attacking)` | 受击方的 `adapted_to` | 被克制是攻击方的便宜，受击侧不再加一次 |
 | `overcomeMultiplier(Set<Holder<Element>> attacking, Entity target)` | 攻击方元素对目标灵根的 `overcomes` | 每一对匹配都相乘（两个元素都克制就都算） |
-| `attachmentMultiplier(LivingEntity target)` | 受击者携带物的 `attachment_multiplier` 连乘 | 只缩放这一击留下的**元素附着量**，不影响元素反应的效果 |
+| `attachmentMultiplier(LivingEntity target)` | 受击者携带的**法器**的 `attachment_multiplier` 连乘 | 只缩放这一击留下的**元素附着量**，不影响元素反应的效果 |
 | `bypasses(DamageSource source)` | 这个伤害类型在不在 `mxt:no_bonus` 里 | 直通＝不乘任何因子、不留元素，但**原版自己的减免照旧**——它是"不归本模组加成口径管"，不是免疫 |
 | `source(Level level, @Nullable Entity attacker, Optional<Holder<DamageType>> damageType)` | 造这一击的 `DamageSource` | **归因在这里定**（玩家 → `playerAttack`、生物 → `mobAttack`、都没有 → `generic`）；调用方自己建 source 会丢击杀归属 |
 

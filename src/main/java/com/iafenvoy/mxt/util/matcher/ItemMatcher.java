@@ -26,6 +26,10 @@ import java.util.stream.Stream;
  *
  * <p>Overlapping declarations resolve by {@link #priority()}, which each definition declares in its own file: the
  * highest priority wins, and only a tie falls back to registry order.
+ *
+ * <p>Both kinds of table read it: the binding tables that attach this mod's systems to an existing item, and the
+ * content registries that are themselves selected by item. It decides only which definition applies, never what
+ * that definition means.
  */
 public interface ItemMatcher {
     int DEFAULT_PRIORITY = 0;
@@ -41,7 +45,17 @@ public interface ItemMatcher {
     }
 
     static <T extends ItemMatcher> Optional<T> find(Stream<T> matchers, @NotNull ItemStack stack) {
-        return findAll(matchers, stack).findFirst();
+        return find(matchers, Function.identity(), stack);
+    }
+
+    // The same reading for a caller that holds registry holders and needs them back: the holder is what it has to
+    // keep, and only the definition behind it answers the question. ORDER puts the winner first, so the winner is
+    // the smallest element and not the largest.
+    static <M extends ItemMatcher, H> Optional<H> find(Stream<? extends H> candidates, Function<? super H, M> unwrap,
+                                                       @NotNull ItemStack stack) {
+        Comparator<H> winner = Comparator.comparing(unwrap, ORDER);
+        Optional<? extends H> best = candidates.filter(candidate -> matches(unwrap.apply(candidate), stack)).min(winner);
+        return best.map(candidate -> (H) candidate);
     }
 
     static <T extends ItemMatcher> Stream<T> findAll(Registry<T> registry, @NotNull ItemStack stack) {
@@ -49,7 +63,12 @@ public interface ItemMatcher {
     }
 
     static <T extends ItemMatcher> Stream<T> findAll(Stream<T> matchers, @NotNull ItemStack stack) {
-        return matchers.filter(matcher -> matcher.entries().stream().anyMatch(entry -> entry.matches(stack))).sorted(ORDER);
+        return matchers.filter(matcher -> matches(matcher, stack)).sorted(ORDER);
+    }
+
+    // Any one entry matching is a match, which is the only thing every caller of this interface has in common.
+    private static boolean matches(ItemMatcher matcher, ItemStack stack) {
+        return matcher.entries().stream().anyMatch(entry -> entry.matches(stack));
     }
 
     interface Entry {

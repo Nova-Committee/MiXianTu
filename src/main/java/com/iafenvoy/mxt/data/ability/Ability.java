@@ -117,9 +117,14 @@ public record Ability(Component name, Component description, AbilityType type, L
             default -> List.of();
         };
         List<String> written = inert.stream().filter(key -> isWritten(key, ability)).toList();
-        if (written.isEmpty()) return DataResult.success(ability);
-        String name = ability.type() instanceof MountAbilityType ? "mxt:mount" : "mxt:flight_control";
-        return DataResult.error(() -> name + " is never activated, so it cannot declare " + String.join(", ", written));
+        if (!written.isEmpty()) {
+            String name = ability.type() instanceof MountAbilityType ? "mxt:mount" : "mxt:flight_control";
+            return DataResult.error(() -> name + " is never activated, so it cannot declare " + String.join(", ", written));
+        }
+        // A host keeps one value per kind, so declaring a kind twice can only mean the pack expected two slots.
+        Optional<DataStorage> duplicate = ability.duplicateKind();
+        return duplicate.<DataResult<Ability>>map(dataStorage -> DataResult.error(() -> "components declares " + DataStorage.name(dataStorage)
+                + " twice: one ability keeps one value per kind")).orElseGet(() -> DataResult.success(ability));
     }
 
     private static boolean isWritten(String key, Ability ability) {

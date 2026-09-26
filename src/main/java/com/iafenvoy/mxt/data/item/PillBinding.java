@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -32,4 +33,11 @@ public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberPro
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(PillBinding::conditions),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(PillBinding::priority)
     ).apply(i, PillBinding::new));
+
+    // What a stack that carries only a mxt:pill component reads as: no declaration claimed it, so every field is
+    // the one the codec would have supplied.
+    public static PillBinding defaults() {
+        return new PillBinding(List.of(), NoOpAction.INSTANCE, new Constant(0.0D), new Constant(Double.MAX_VALUE),
+                NoOpAction.INSTANCE, new Constant(0.0D), Optional.empty(), List.of(), DEFAULT_PRIORITY);
+    }
 }

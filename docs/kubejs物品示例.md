@@ -41,8 +41,10 @@ StartupEvents.registry('item', event => {
 // kubejs/data/example/mxt/weapon_binding/firebound_sword.json
 {
   "items": ["kubejs:firebound_sword", "#example:fire_weapons"],
-  "attack_damage": 8,
-  "attack_speed": -2.4,
+  "attributes": [
+    {"attribute": "minecraft:attack_damage", "id": "example:firebound_sword/damage", "amount": 8, "operation": "add_value"},
+    {"attribute": "minecraft:attack_speed", "id": "example:firebound_sword/speed", "amount": -2.4, "operation": "add_value"}
+  ],
   "quality_chain": "example:firebound_weapon"
 }
 ```

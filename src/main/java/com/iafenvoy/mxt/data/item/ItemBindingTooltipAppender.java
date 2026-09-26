@@ -84,10 +84,6 @@ public final class ItemBindingTooltipAppender {
 
     private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon) {
         builder.accept(Component.translatable("tooltip.mxt.item.weapon").withStyle(ChatFormatting.GOLD));
-        builder.accept(Component.translatable("tooltip.mxt.weapon.attack_damage",
-                TooltipText.number(weapon.attackDamage().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
-        builder.accept(Component.translatable("tooltip.mxt.weapon.attack_speed",
-                TooltipText.number(weapon.attackSpeed().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
         for (AttributeEntry attribute : weapon.attributes()) {
             Attribute value = attribute.attribute().value();
             double amount = attribute.amount(FormulaContext.EMPTY);

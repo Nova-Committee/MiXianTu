@@ -23,9 +23,10 @@ import java.util.Set;
 
 /**
  * Which elements one item stack carries - the item-side counterpart of {@link Elements}, which answers the same
- * question for an entity. Two readings, and the first that answers wins: what the stack's own definitions
- * declare (the {@code element} field of the weapon binding, item binding or artifact claiming it, expanded so a
- * tag stands for every element it holds and unioned across the three), and failing that what the aura in it
+ * question for an entity. Two readings, and the first that answers wins: what the stack itself carries (its
+ * {@code mxt:element} component) plus what the definitions claiming it declare (the {@code element} field of the
+ * weapon binding, item binding or artifact, expanded so a tag stands for every element it holds and unioned
+ * across all four), and failing that what the aura in it
  * names (the sole aura in its {@code mxt:spirit_storage}, or for a store that is empty or names several, the
  * {@code aura_type} of the aura its {@code mxt:item_aura} definition declares; an artifact's
  * {@code spirit_capacity} is deliberately not a source, since it says what a stack can hold, not what it is).
@@ -51,6 +52,8 @@ public final class ItemElements {
     private static Set<Holder<Element>> declared(RegistryAccess access, ItemStack stack) {
         Registry<Element> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT);
         Set<Holder<Element>> result = new LinkedHashSet<>();
+        List<Either<Holder<Element>, TagKey<Element>>> carried = stack.get(MxtDataComponents.ELEMENT.get());
+        if (carried != null) collect(registry, carried, result);
         ItemBindingService.weapon(access, stack).ifPresent(binding -> collect(registry, binding.element(), result));
         ItemBindingService.binding(access, stack).ifPresent(binding -> collect(registry, binding.element(), result));
         ArtifactService.definition(access, stack)

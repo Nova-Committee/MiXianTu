@@ -59,8 +59,8 @@ import java.util.*;
  * child of a composite is validated first and paid before any of them runs.
  *
  * <p>Everything here takes the ability as its registry holder: however it was granted - a book, a command, a
- * script or a carried artifact - it takes the same path, and the holder's id is what the grant ledger, the
- * cooldowns and the stored state are keyed by.
+ * script or a carried artifact - it takes the same path, and the holder's id is what the grant ledger and the
+ * stored state are keyed by.
  */
 public final class AbilityService {
     private AbilityService() {
@@ -71,7 +71,7 @@ public final class AbilityService {
         Ability definition = ability.value();
         if (requiresGrant && !abilities.has(HolderHelper.id(ability)))
             return PrepareResult.rejected(Failure.NOT_GRANTED, null);
-        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime))
+        if (AbilityStorage.onCooldown(abilities, HolderHelper.id(ability), gameTime))
             return PrepareResult.rejected(Failure.COOLDOWN, null);
         double castTime = definition.castTime().evaluate(context);
         double cooldown = cooldownOf(ability, abilities, context);
@@ -105,7 +105,7 @@ public final class AbilityService {
     }
 
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime, LivingEntity payer) {
-        if (abilities.isOnCooldown(HolderHelper.id(use.ability()), gameTime))
+        if (AbilityStorage.onCooldown(abilities, HolderHelper.id(use.ability()), gameTime))
             return CommitResult.rejected(Failure.COOLDOWN, null);
         CostTransaction.PayResult payment = CostTransaction.commit(use.costPlan(),
                 CostContext.of(payer, CostOrigin.ABILITY), resources);
@@ -233,7 +233,7 @@ public final class AbilityService {
         FormulaContext formula = context.formula();
         Ability definition = ability.value();
         if (!abilities.has(HolderHelper.id(ability))) return GateResult.rejected(Failure.NOT_GRANTED, null);
-        if (abilities.isOnCooldown(HolderHelper.id(ability), gameTime))
+        if (AbilityStorage.onCooldown(abilities, HolderHelper.id(ability), gameTime))
             return GateResult.rejected(Failure.COOLDOWN, null);
         if (!definition.condition().test(holder, formula)) return GateResult.rejected(Failure.CONDITION_FAILED, null);
         double cooldown = cooldownOf(ability, abilities, formula);
@@ -244,10 +244,8 @@ public final class AbilityService {
         if (!plan.ok()) return GateResult.rejected(costFailure(plan.failure()), null);
         CostTransaction.PayResult payment = CostTransaction.commit(plan, CostContext.of(holder, CostOrigin.ABILITY), resources);
         if (!payment.paid()) return GateResult.rejected(costFailure(payment.failure()), payment.failedResource());
-        if (cooldown > 0.0D) {
-            abilities.setCooldownUntil(HolderHelper.id(ability), Math.addExact(gameTime, Math.round(cooldown)));
+        if (cooldown > 0.0D)
             AbilityStorage.set(abilities, HolderHelper.id(ability), AbilityStorage.cooldown(abilities, HolderHelper.id(ability), cooldown), gameTime);
-        }
         return GateResult.ok();
     }
 
@@ -448,7 +446,6 @@ public final class AbilityService {
     }
 
     private static void applyAbilityState(PreparedUse use, AbilityAttachment abilities, long gameTime) {
-        abilities.setCooldownUntil(HolderHelper.id(use.ability()), Math.addExact(gameTime, use.cooldownTicks()));
         AbilityStorage.set(abilities, HolderHelper.id(use.ability()), AbilityStorage.cooldown(abilities, HolderHelper.id(use.ability()), use.cooldownTicks()), gameTime);
         if (use.consumeCharge())
             AbilityStorage.set(abilities, HolderHelper.id(use.ability()), AbilityStorage.charges(abilities, HolderHelper.id(use.ability()), Math.max(0.0D, use.chargeBefore() - 1.0D)), gameTime);

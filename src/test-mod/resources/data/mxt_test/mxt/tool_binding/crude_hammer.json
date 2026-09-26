@@ -1,3 +1,4 @@
 {
+  "items": "mxt_test:crude_hammer",
   "methods": ["mxt_test:heavy_strike", "mxt_test:light_strike"]
 }

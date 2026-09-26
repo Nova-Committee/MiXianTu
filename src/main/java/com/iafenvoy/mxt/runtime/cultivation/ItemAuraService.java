@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.MinecraftServer;
@@ -26,7 +27,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-import java.util.Comparator;
 import java.util.Optional;
 
 /**
@@ -42,11 +42,8 @@ public final class ItemAuraService {
 
     public static Optional<Holder<ItemAura>> find(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        // The highest priority wins; registry order only breaks a tie.
-        return MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_AURA)
-                .filter(holder -> holder.value().entries().stream().anyMatch(entry -> entry.matches(stack)))
-                .max(Comparator.comparingInt(holder -> holder.value().priority()))
-                .map(holder -> holder);
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_AURA),
+                Holder::value, stack);
     }
 
     public static Optional<Holder<ItemAura>> find(LivingEntity entity, ItemStack stack) {

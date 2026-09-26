@@ -814,8 +814,6 @@
   "tooltip.mxt.talisman.empty": "No talisman inscribed",
   "tooltip.mxt.talisman.entry": "Inscribed talisman: %s",
   "tooltip.mxt.token": "%s: %s",
-  "tooltip.mxt.weapon.attack_damage": "Damage: %s",
-  "tooltip.mxt.weapon.attack_speed": "Attack Speed: %s",
   "tooltip.mxt.weapon.attribute.add": "%s %s",
   "tooltip.mxt.weapon.attribute.multiply_base": "%s%% Base %s",
   "tooltip.mxt.weapon.attribute.multiply_total": "%s%% Total %s",

@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
@@ -32,6 +33,7 @@ import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
+import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.ModifyLifespanAction;
@@ -40,7 +42,6 @@ import com.iafenvoy.mxt.data.action.builtin.entity.SetNoGravityAction;
 import com.iafenvoy.mxt.data.action.builtin.item.AddAbilityAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
-import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
@@ -57,6 +58,8 @@ import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
+import com.iafenvoy.mxt.data.storage.DataStorageHolder;
+import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
@@ -111,6 +114,7 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
@@ -141,6 +145,7 @@ import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.ItemStorageService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
@@ -1745,11 +1750,20 @@ public final class MxtTestCommands {
             boolean profiled = beast.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()
                     && close(beast.getData(MxtAttachments.CREATURE_SPIRIT).intelligence(), 20.0D)
                     && probeCore.is(Items.AMETHYST_SHARD) && probeCore.getCount() == 2 && spawnAction && idleAction;
+            // Writing a profile onto an attachment that already exists has to mark it for sync too, not only its
+            // construction: the flag is consumed here first, the same way the server tick consumes it.
+            CreatureSpiritAttachment spirit = beast.getData(MxtAttachments.CREATURE_SPIRIT);
+            Holder<CreatureProfile> beastHolder = MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id("probe_beast")).orElse(null);
+            if (beastHolder != null) {
+                spirit.checkDirty();
+                spirit.apply(beastHolder, 20.0D, probeCore.copy());
+            }
+            boolean synced = beastHolder != null && spirit.checkDirty();
             boolean twice = ContractService.bind(tagged, player, beast, false).failure()
                     == ContractService.Failure.ALREADY_BOUND;
-            boolean record = priceRefused && bound && profiled && twice;
+            boolean record = priceRefused && bound && profiled && synced && twice;
             source.sendSuccess(() -> Component.literal("contract probe: price_refused=" + priceRefused
-                    + " bound=" + bound + " profiled=" + profiled + " twice=" + twice
+                    + " bound=" + bound + " profiled=" + profiled + " synced=" + synced + " twice=" + twice
                     + (record ? " OK" : " MISMATCH")), false);
 
             // The owner's list is what a limit counts, and releasing frees the slot it held.
@@ -1968,7 +1982,7 @@ public final class MxtTestCommands {
                     && row.curiosEquipable() == ArtifactService.curiosEquipable(access, stack)
                     && row.requireOwner() == definition.requireOwner()
                     && row.mount() == ArtifactService.mount(access, stack).isPresent()
-                    && ArtifactService.storageSlots(access, stack, context) == row.slots()
+                    && containerSlots(access, stack, context) == row.slots()
                     && ArtifactService.capacity(access, stack, qi, 0.0D, context) == row.qi()
                     && ArtifactService.capacity(access, stack, waterPower, 0.0D, context) == row.waterPower()
                     && ArtifactService.capacity(access, stack, soulPower, 0.0D, context) == row.soulPower();
@@ -2255,6 +2269,56 @@ public final class MxtTestCommands {
                 && !ArtifactService.mayUse(jadeStack, jadeHolder, stranger)
                 && !ArtifactService.hasOwner(plainJade) && ArtifactService.hasOwner(jadeStack);
         ok &= check(source, "artifact roster ownership gate require_owner=true refuses, =false binds", ownershipGate);
+
+        // The container an ability declares is one entry of the carrier's own ability storage, addressed by that
+        // ability's id: slot 1 of 27, the untouched slots left as holes, and one round trip of the synced component.
+        Holder<Ability> storageAbility = ArtifactService.abilities(access, jadeStack).stream()
+                .filter(ref -> ref.value().type() instanceof StorageAbilityType).findFirst().orElse(null);
+        Holder<Ability> foreignStorage = require(MxtResourceKeys.ABILITY, PROBE_BOUND_STORAGE);
+        boolean stored = storageAbility != null
+                && ArtifactStorageService.INSTANCE.set(access, jadeStack, storageAbility, 1, new ItemStack(Items.STONE, 3), player)
+                // A second write of the same kind replaces that ability's one entry instead of adding a second.
+                && ArtifactStorageService.INSTANCE.set(access, jadeStack, storageAbility, 2, new ItemStack(Items.DIRT), player);
+        DataStorageHolder jadeStorage = jadeStack.get(MxtDataComponents.STORAGE);
+        boolean container = stored
+                && jadeStorage != null && jadeStorage.count(ContainerDataStorage.class) == 1
+                && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 1, player).is(Items.STONE)
+                && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 1, player).getCount() == 3
+                // The capacity is the definition's, so the slot one past it is not there.
+                && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 27, player).isEmpty()
+                && ItemStorageService.get(jadeStack, HolderHelper.id(storageAbility), ContainerDataStorage.class)
+                .filter(value -> value.contents().size() == 27 && value.get(0).isEmpty()
+                        && value.get(1).is(Items.STONE) && value.get(2).is(Items.DIRT)).isPresent()
+                // Another ability's id is a different slot: two storage abilities on one carrier never share a box.
+                && ItemStorageService.get(jadeStack, HolderHelper.id(foreignStorage), ContainerDataStorage.class).isEmpty()
+                && roundTripsStorage(jadeStorage, HolderHelper.id(storageAbility),
+                source.getLevel().registryAccess());
+        ok &= check(source, "artifact roster container 27 slots, slot 1 = stone x3, slot 2 = dirt, one entry per (ability, kind), codec round-trip", container);
+
+        // One value per (id, kind), on both sides of the pipe: a kind declared twice is a pack mistake, and two
+        // entries claiming one address are malformed saved bytes - each document with a single one parses, so what
+        // is refused is the duplicate rather than the shape.
+        JsonObject declaredState = new JsonObject();
+        declaredState.addProperty("type", "mxt:active");
+        declaredState.addProperty("name", "probe storage");
+        declaredState.addProperty("description", "probe storage");
+        declaredState.add("components", JsonParser.parseString(
+                "[{\"type\": \"mxt:cooldown\", \"ticks\": 20}, {\"type\": \"mxt:charges\", \"maximum\": 2, \"recharge_ticks\": 40}]"));
+        JsonObject duplicatedState = declaredState.deepCopy();
+        duplicatedState.add("components", JsonParser.parseString(
+                "[{\"type\": \"mxt:cooldown\", \"ticks\": 20}, {\"type\": \"mxt:cooldown\", \"ticks\": 40}]"));
+        boolean oneKindOnce = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, declaredState).result().isPresent()
+                && Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, duplicatedState).result().isEmpty();
+        ok &= check(source, "artifact roster ability declares each state kind once", oneKindOnce);
+
+        JsonElement oneEntry = JsonParser.parseString(
+                "[{\"id\": \"mxt_test:probe\", \"data\": {\"value\": {\"type\": \"mxt:cooldown\", \"ticks\": 20}, \"changed_at\": 1}}]");
+        JsonElement twoEntries = JsonParser.parseString(
+                "[{\"id\": \"mxt_test:probe\", \"data\": {\"value\": {\"type\": \"mxt:cooldown\", \"ticks\": 20}, \"changed_at\": 1}},"
+                        + "{\"id\": \"mxt_test:probe\", \"data\": {\"value\": {\"type\": \"mxt:cooldown\", \"ticks\": 40}, \"changed_at\": 2}}]");
+        boolean oneEntryPerAddress = DataStorageHolder.CODEC.parse(JsonOps.INSTANCE, oneEntry).result().isPresent()
+                && DataStorageHolder.CODEC.parse(JsonOps.INSTANCE, twoEntries).result().isEmpty();
+        ok &= check(source, "artifact roster storage refuses two entries for one (id, kind)", oneEntryPerAddress);
 
         // ArtifactDescription builds the tooltip so the same list is readable here without a client: the rendered
         // words belong to a language file, but how many lines a definition earns belongs to this module.
@@ -2829,27 +2893,36 @@ public final class MxtTestCommands {
         return TagKey.create(MxtResourceKeys.ELEMENT, PROBE_ELEMENT_TAG);
     }
 
+    // The container a stack declares, as the roster rows state it: the slots of the first storage ability it offers.
+    private static int containerSlots(Provider access, ItemStack stack, FormulaContext context) {
+        return ArtifactService.abilities(access, stack).stream()
+                .filter(ref -> ref.value().type() instanceof StorageAbilityType)
+                .findFirst()
+                .map(ref -> ArtifactService.storageSlots(stack, ref, context))
+                .orElse(0);
+    }
+
     // One page's answer to "would a trigger for this ability from this page be honoured".
     private static boolean offers(LivingEntity probe, WheelSource source, Identifier ability) {
         return WheelSources.offers(probe, source, WheelEntryKinds.ABILITY, ability);
     }
 
-    // Sends one storage component through the registered network codec and reads it back - the very codec the
-    // server uses when handing a container slot to a client. This is the only way a probe reaches that failure:
-    // it happens while encoding a packet, not while opening the window, so the window looks healthy right up to
-    // the moment the stack is synced.
-    private static boolean roundTripsStorage(ArtifactStorageComponent component, RegistryAccess registries) {
-        DataComponentType<ArtifactStorageComponent> type = MxtDataComponents.ARTIFACT_STORAGE.get();
+    // Sends the ability storage component through the registered network codec and reads it back - the very codec
+    // the server uses when handing a container slot to a client, and the one place an empty stack in the list could
+    // take the whole packet down. Reached from the container leg above, which is what keeps it from rotting.
+    private static boolean roundTripsStorage(DataStorageHolder holder, Identifier id, RegistryAccess registries) {
+        if (holder == null) return false;
+        DataComponentType<DataStorageHolder> type = MxtDataComponents.STORAGE.get();
         // The connection type only tells NeoForge what the other end is; NEOFORGE is what this server's own
         // client is, which is who the codec under test would be encoding for.
         RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries, ConnectionType.NEOFORGE);
         try {
-            type.streamCodec().encode(buffer, component);
-            ArtifactStorageComponent decoded = type.streamCodec().decode(buffer);
-            return decoded.contents().size() == component.contents().size()
-                    && decoded.get(0).isEmpty()
-                    && decoded.get(1).is(Items.STONE)
-                    && decoded.get(1).getCount() == 3;
+            type.streamCodec().encode(buffer, holder);
+            DataStorageHolder decoded = type.streamCodec().decode(buffer);
+            return decoded.get(id, ContainerDataStorage.class)
+                    .filter(value -> value.contents().size() == 27 && value.get(0).isEmpty()
+                            && value.get(1).is(Items.STONE) && value.get(1).getCount() == 3)
+                    .isPresent();
         } catch (RuntimeException error) {
             return false;
         }

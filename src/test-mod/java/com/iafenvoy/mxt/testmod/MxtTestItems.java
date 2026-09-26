@@ -1,15 +1,10 @@
 package com.iafenvoy.mxt.testmod;
 
-import com.iafenvoy.mxt.data.forging.BlueprintBinding;
-import com.iafenvoy.mxt.data.forging.ToolBinding;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredRegister.Items;
@@ -21,27 +16,12 @@ public final class MxtTestItems {
     public static final Items REGISTRY = DeferredRegister.createItems(MxtTestMod.MOD_ID);
     public static final DeferredItem<Item> QINGXIAO_SPIRIT_CRYSTAL = register("qingxiao_spirit_crystal", Item::new);
 
-    // Nothing else puts mxt:tool_binding / mxt:blueprint_binding on an item, and the forge table's slots accept
-    // only stacks carrying them, so without these the gated path and both selector lists are unreachable.
+    // The forge table's slots accept only what a binding entry claims, and both of these items are claimed by
+    // their own file, so without them the gated path and both selector lists are unreachable.
     public static final DeferredItem<Item> TEST_HAMMER = register("test_hammer", Item::new);
     public static final DeferredItem<Item> TEST_MANUAL = register("test_manual", Item::new);
 
     private MxtTestItems() {
-    }
-
-    // Empty when the binding is absent.
-    public static ItemStack hammer(Holder<ToolBinding> binding) {
-        if (binding == null) return ItemStack.EMPTY;
-        ItemStack stack = new ItemStack(TEST_HAMMER.get());
-        stack.set(MxtDataComponents.TOOL_BINDING.get(), binding);
-        return stack;
-    }
-
-    public static ItemStack manual(Holder<BlueprintBinding> binding) {
-        if (binding == null) return ItemStack.EMPTY;
-        ItemStack stack = new ItemStack(TEST_MANUAL.get());
-        stack.set(MxtDataComponents.BLUEPRINT_BINDING.get(), binding);
-        return stack;
     }
 
     private static <T extends Item> DeferredItem<T> register(String path, Function<Properties, T> factory) {

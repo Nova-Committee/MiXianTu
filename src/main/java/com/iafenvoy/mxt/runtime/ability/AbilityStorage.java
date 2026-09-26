@@ -29,6 +29,19 @@ public final class AbilityStorage {
         attachment.storage().set(ability, value, gameTime);
     }
 
+    // The one cooldown there is: the length the last payment wrote, counted from the tick it was written. A length
+    // that was never written, or one that has already run out, reads as nothing remaining.
+    public static long remaining(AbilityAttachment attachment, Identifier ability, long gameTime) {
+        Optional<CooldownDataStorage> stored = get(attachment, ability, CooldownDataStorage.class);
+        long changedAt = changedAt(attachment, ability, CooldownDataStorage.class);
+        if (stored.isEmpty() || changedAt < 0L) return 0L;
+        return Math.max(0L, Math.round(stored.get().duration().orElse(0.0D)) - (gameTime - changedAt));
+    }
+
+    public static boolean onCooldown(AbilityAttachment attachment, Identifier ability, long gameTime) {
+        return remaining(attachment, ability, gameTime) > 0L;
+    }
+
     // Keeps whatever declaration was already stored.
     public static CooldownDataStorage cooldown(AbilityAttachment attachment, Identifier ability, double duration) {
         return get(attachment, ability, CooldownDataStorage.class).orElse(CooldownDataStorage.INSTANCE).withDuration(duration);

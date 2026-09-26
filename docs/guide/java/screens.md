@@ -73,7 +73,7 @@ MyBar bar = HudManager.register(new MyBar());
 
 轮盘上「储物」那一格按下去打开的就是它（2026-09-22 新增，见 `research/32_法器开关与轮盘接线设计.md`）：**没有自己的菜单类，也没有自己的界面类**——它就是原版箱子那一套，注册的是 `ChestMenu`，客户端注册的是 `ContainerScreen`（`generic_54.png` 那张贴图本来就支持 1..6 行），所以 176 宽、行数由 `getRowCount()` 决定，标题由开窗包带过去（`screen.mxt.artifact_storage` = 「储物 · 法器名」）。行数走 `IMenuTypeExtension`，由服务端在开窗时写进附加数据：`capacity / 9`，客户端据此重建一个同样大小的 `SimpleContainer` 镜像，格子内容照常走菜单同步。
 
-内容那一侧是 `runtime/artifact/ArtifactStorageContainer`（扩展 `SimpleContainer`）：开窗时从法器的 `mxt:artifact_storage` 组件读进来，之后**每一次改动都在 `setChanged()` 里整份写回**（`ArtifactStorageService#replace`，一次组件更新而不是每格一次）。它**故意不持有那个物品堆**：法器的位置是会变的，往一个没人拿着的栈里写就是物品消失的经典成因——所以每次读写都按"这件法器还在不在玩家身上"重新解析（`ArtifactService#carried` 扫双手、背包与 Curios），`stillValid` 一旦为假，服务端每刻的菜单检查就会把窗口关掉。储物格数由定义决定：**按 9 向上取整、最多 6 行（54 格）**，容量与窗口永远是同一个数。
+内容那一侧是 `runtime/artifact/ArtifactStorageContainer`（扩展 `SimpleContainer`）：开窗时按**这条技能自己的 id** 从承载物的 `mxt:storage` 组件里读出容器（类型 `mxt:container`），之后**每一次改动都在 `setChanged()` 里整份写回**（`ArtifactStorageService#replace`，一次组件更新而不是每格一次）。它**故意不持有那个物品堆**：法器的位置是会变的，往一个没人拿着的栈里写就是物品消失的经典成因——所以每次读写都按"这件法器还在不在玩家身上"重新解析（`ArtifactService#carried` 扫双手、背包与 Curios），`stillValid` 一旦为假，服务端每刻的菜单检查就会把窗口关掉。储物格数由定义决定：**按 9 向上取整、最多 6 行（54 格）**，容量与窗口永远是同一个数。
 
 
 ## 物品选择界面 `ItemPickerScreen`

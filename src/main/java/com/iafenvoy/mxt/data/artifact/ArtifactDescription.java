@@ -10,8 +10,9 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.runtime.item.ItemStorageService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -195,7 +196,7 @@ public final class ArtifactDescription {
         int slots = ArtifactService.storageSlots(stack, ability, formula);
         // A slot count that evaluates to nothing declares no inventory, so there is nothing to announce.
         if (slots <= 0) return;
-        ArtifactStorageComponent contents = stack.get(MxtDataComponents.ARTIFACT_STORAGE);
+        ContainerDataStorage contents = ItemStorageService.get(stack, HolderHelper.id(ability), ContainerDataStorage.class).orElse(null);
         int used = contents == null ? 0 : (int) contents.contents().stream().filter(value -> !value.isEmpty()).count();
         lines.add(Component.translatable("tooltip.mxt.artifact.storage", used, slots).withStyle(ChatFormatting.GOLD));
     }

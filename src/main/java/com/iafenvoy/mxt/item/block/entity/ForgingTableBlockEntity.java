@@ -85,7 +85,8 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
     }
 
     public List<Identifier> selectableBlueprintIds() {
-        return ForgingWorkstationService.selectableBlueprintIds(this.inventory);
+        return this.level == null ? List.of()
+                : ForgingWorkstationService.selectableBlueprintIds(this.inventory, this.level.registryAccess());
     }
 
     // The session's blueprint narrowed by the tools, or every unlocked method when no session is running.
@@ -155,7 +156,8 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
 
     @Override
     public boolean canPlaceItem(int index, @NonNull ItemStack stack) {
-        return ForgingSurface.canPlace(index, stack, this.forging.active(), this.selectedBlueprint());
+        return ForgingSurface.canPlace(index, stack, this.forging.active(), this.selectedBlueprint(),
+                this.level == null ? null : this.level.registryAccess());
     }
 
     @Override

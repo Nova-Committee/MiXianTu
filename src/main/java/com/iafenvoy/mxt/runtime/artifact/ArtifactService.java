@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.ability.Abilities;
-import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
@@ -27,6 +26,7 @@ import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -63,9 +63,8 @@ public final class ArtifactService {
     // reported by ServerCache while the pack loads.
     public static Optional<Reference<Artifact>> definition(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        return MxtDatapackRegistries.holders(access, MxtResourceKeys.ARTIFACT)
-                .filter(holder -> holder.value().entries().stream().anyMatch(entry -> entry.matches(stack)))
-                .max(Comparator.comparingInt(holder -> holder.value().priority()));
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ARTIFACT),
+                Holder::value, stack);
     }
 
     // The owner's name is written here because this is the only moment the owner is in hand: a tooltip is drawn
@@ -144,9 +143,7 @@ public final class ArtifactService {
                 .orElse(false);
     }
 
-    /**
-     * The periodic price this stack charges whoever carries it, with the id that price is stored under.
-     */
+    // The entry that prices this stack, when it declares one.
     public static Optional<Upkeep> upkeep(Provider access, ItemStack stack) {
         return abilities(access, stack).stream()
                 .filter(ref -> ref.value().type() instanceof UpkeepAbilityType)
@@ -168,7 +165,7 @@ public final class ArtifactService {
 
     // The definition's grants plus whatever the component was written with, so an artifact, a scripted stack and
     // a plain stack all reach the ability runtime the same way. Every entry is addressed by the id the runtime
-    // keys its grant, its cooldowns and its state by, and a tag stands for the abilities it lists.
+    // keys its grant and its stored state by, and a tag stands for the abilities it lists.
     public static List<Holder<Ability>> abilities(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return List.of();
         LinkedHashSet<Holder<Ability>> granted = new LinkedHashSet<>();
@@ -195,28 +192,14 @@ public final class ArtifactService {
         return mountAbility(access, stack).map(ref -> (MountAbilityType) ref.value().type());
     }
 
-    // Rounded up to a whole row and cut at the six rows a chest-shaped screen can draw, which is what lets one
-    // number serve as both the capacity and the screen's size: a declaration of ten slots would otherwise show
-    // eighteen cells of which eight silently refuse to hold anything.
-    public static int storageSlots(Provider access, ItemStack stack, FormulaContext context) {
-        return first(access, stack, StorageAbilityType.class).map(storage -> slotsOf(storage, context)).orElse(0);
-    }
-
-    // The first declared ability of a kind: a definition may name several, so "the storage" is a question about
-    // the type rather than about a dedicated field. A tag contributes its members in registry order.
-    private static <T extends AbilityType> Optional<T> first(Provider access, ItemStack stack, Class<T> kind) {
-        return abilities(access, stack).stream()
-                .map(ref -> ref.value().type())
-                .filter(kind::isInstance)
-                .map(kind::cast)
-                .findFirst();
-    }
-
-    // The entry's own slot count, for a caller that already knows which ability it is holding.
+    // The entry's own slot count: the container belongs to the ability that declares it, so the caller names it.
     public static int storageSlots(ItemStack stack, Holder<Ability> ability, FormulaContext context) {
         return ability.value().type() instanceof StorageAbilityType storage ? slotsOf(storage, context) : 0;
     }
 
+    // Rounded up to a whole row and cut at the six rows a chest-shaped screen can draw, which is what lets one
+    // number serve as both the capacity and the screen's size: a declaration of ten slots would otherwise show
+    // eighteen cells of which eight silently refuse to hold anything.
     private static int slotsOf(StorageAbilityType storage, FormulaContext context) {
         int declared = (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, Integer.MAX_VALUE);
         if (declared <= 0) return 0;

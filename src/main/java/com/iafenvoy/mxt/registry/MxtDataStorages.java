@@ -24,6 +24,7 @@ public final class MxtDataStorages {
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<TimerDataStorage>> TIMER = REGISTRY.register("timer", () -> TimerDataStorage.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<ResourceDataStorage>> RESOURCE = REGISTRY.register("resource", () -> ResourceDataStorage.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<TargetLockDataStorage>> TARGET_LOCK = REGISTRY.register("target_lock", () -> TargetLockDataStorage.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<ContainerDataStorage>> CONTAINER = REGISTRY.register("container", () -> ContainerDataStorage.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<CastDeadline>> CAST_DEADLINE = REGISTRY.register("cast_deadline", () -> CastDeadline.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<ChannelPulse>> CHANNEL_PULSE = REGISTRY.register("channel_pulse", () -> ChannelPulse.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<AuraPulse>> AURA_PULSE = REGISTRY.register("aura_pulse", () -> AuraPulse.CODEC);

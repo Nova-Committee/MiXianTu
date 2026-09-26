@@ -813,8 +813,6 @@
   "tooltip.mxt.talisman.empty": "未铭刻符箓",
   "tooltip.mxt.talisman.entry": "已铭刻符箓：%s",
   "tooltip.mxt.token": "%s：%s",
-  "tooltip.mxt.weapon.attack_damage": "伤害：%s",
-  "tooltip.mxt.weapon.attack_speed": "攻击速度：%s",
   "tooltip.mxt.weapon.attribute.add": "%s %s",
   "tooltip.mxt.weapon.attribute.multiply_base": "%s%% 基础 %s",
   "tooltip.mxt.weapon.attribute.multiply_total": "%s%% 总计 %s",

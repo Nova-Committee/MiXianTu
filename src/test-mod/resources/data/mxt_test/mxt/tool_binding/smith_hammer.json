@@ -1,3 +1,4 @@
 {
+  "items": "mxt_test:smith_hammer",
   "methods": ["mxt_test:heavy_strike", "mxt_test:light_strike", "mxt_test:draw_out", "mxt_test:flatten", "mxt_test:quench"]
 }

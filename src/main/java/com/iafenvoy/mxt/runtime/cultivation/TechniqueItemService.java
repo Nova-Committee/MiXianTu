@@ -3,8 +3,11 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
@@ -16,6 +19,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -71,9 +75,18 @@ public final class TechniqueItemService {
     }
 
     // The whole wiring between the two modules, done once at construction: the hold module drives the gesture
-    // and never learns what a technique is, and this module never touches the use cycle.
+    // and never learns what a technique is, and this module never touches the use cycle. A declaration that claims
+    // items is registered as a second hold over them, so those items are read without carrying any component.
     public static void initialize() {
-        HoldLookup.register(registries -> List.of(TechniqueHold.INSTANCE));
+        HoldLookup.register(registries -> {
+            List<HoldBinding> holds = new ArrayList<>();
+            holds.add(TechniqueHold.INSTANCE);
+            MxtDatapackRegistries.holders(registries, MxtResourceKeys.TECHNIQUE_BINDING)
+                    .map(Reference::value)
+                    .filter(binding -> !binding.entries().isEmpty())
+                    .forEach(binding -> holds.add(new TechniqueHold(binding.entries())));
+            return List.copyOf(holds);
+        });
     }
 
     // A binding that asks for a hold answers false, so the click falls through to the hold module, which arms

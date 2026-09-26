@@ -44,8 +44,7 @@ the changelog.**
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Cultivation Jade Slip, Blank Talisman
   Paper with Talisman Brush and Ink, Talisman (written with a sigil, poured full of aura, and spent the moment it
   fires), Contract Scroll, Beast Taming Bell, Spirit Beast Bag, Formation Plate, Wooden and Stone Tokens, Secret Realm
-  Token
-  and Recall Talisman.
+  Token and Recall Talisman.
 - **Talismans**: a Talisman Brush writes ability definitions onto a carrier, and pouring aura in loads it; the
   moment the bill is full every inscribed ability fires and one carrier is spent. A carrier that would not fire -
   or one billed nothing at all - fires from a right-click instead, and a definition may declare durability for its
@@ -71,10 +70,11 @@ datapacks or content packs; installing the mod alone does not give you a complet
   datapacks.
 - **Numbers**: constants, exp4j expressions or structured number providers, able to read context variables such as level
   and resources.
-- **Item integration**: binding tables hook **existing** items into weapons, pills, resources and aura fuel (technique
-  manuals use the `mxt:technique` item component instead),
+- **Item integration**: binding tables hook **existing** items into weapons, pills, resources and aura fuel,
   which makes integration with other mods easy; items implementing `AuraItemAccess` (spirit stones) can additionally be
-  charged by holding them down and pouring the holder's own aura into them.
+  charged by holding them down and pouring the holder's own aura into them. Per-stack additions carry no binding
+  object: the quality chain, element, pill data, technique reading, forging methods and blueprints are components
+  written onto the stack itself, layered on top of whatever a definition grants.
 - **KubeJS**: extension points such as action, condition, cost, number provider, target selector, trigger matcher and
   loot callbacks, the `MxtEvents` server lifecycle events, and the `MxtTriggers` custom trigger signals a script can
   publish and subscribe to; register items from a script first and let the binding tables handle them.
@@ -105,7 +105,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Forging                       |   ✅    | At a Forge Table, several materials are hammered into a result following a blueprint; different tools unlock different methods, and the quality of the result depends on the process and the number of steps.                                                                                                                     |
 | Alchemy                       |   🔲   | An alchemy recipe describes the inputs, aura, temperature, furnace tier and duration that settle into a result or a failure; pills apply their effect, and too many accumulate toxicity.                                                                                                                                          |
 | Spirit Herbs                  |   🔲   | Defines binding and quality for spirit herb items, which serve as materials for alchemy and gathering gameplay.                                                                                                                                                                                                                   |
-| Item Binding                  |   🚧   | Brings existing items into gameplay: attach passive behavior, weapon damage and attack speed to any item, or bind abilities that fire on right-click use and on attack.                                                                                                                                                           |
+| Item Binding                  |   🚧   | Brings existing items into gameplay: attach passive behavior and vanilla attribute modifiers to any item, or bind abilities that fire on right-click use and on attack.                                                                                                                                                           |
 | Talismans                     |   🚧   | A Talisman Brush inscribes ability definitions onto a carrier (one carrier can hold several); holding right-click until it is full fires them, spends a carrier or the wear a definition declares, and starts the item cooldown. A definition may also declare a price and a tier.                                                |
 | Quality                       |   ✅    | Items carry a quality shown in their tooltip; a quality chain fixes the ladder, its default tier and each step's price, definitions declare a default and a stack component overrides it.                                                                                                                                         |
 | Artifacts                     |   🚧   | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact may declare a mount (speed, seats, pose) that a technique-granted flying skill picks up from either hand, while storage and upkeep stay ordinary ability types. |

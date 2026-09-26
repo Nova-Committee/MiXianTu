@@ -117,8 +117,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Drops one source's claim; the ability goes only with its last source, and its cooldowns and stored values
-     * go with it. An unknown ability answers {@code false}.
+     * Drops one source's claim; the ability goes only with its last source, and the state it kept - its cooldown
+     * included - goes with it. An unknown ability answers {@code false}.
      */
     public static boolean revokeAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;

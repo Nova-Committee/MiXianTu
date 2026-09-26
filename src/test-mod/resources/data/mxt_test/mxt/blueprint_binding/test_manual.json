@@ -1,3 +1,4 @@
 {
+  "items": "mxt_test:test_manual",
   "blueprints": ["mxt_test:iron_sword"]
 }

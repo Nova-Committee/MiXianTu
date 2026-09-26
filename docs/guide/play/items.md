@@ -13,11 +13,14 @@ MiXianTu 不为每个玩法预设具体数值，但提供少量通用承载物�
 | 注册表 | 用途 |
 | --- | --- |
 | `item_binding` | 给现有物品附加行为、条件、灵根或通用显示。 |
-| `weapon_binding` | 配置伤害、攻击速度、属性和攻击/使用/Tick 行为。 |
+| `weapon_binding` | 给武器附加原版属性修正（攻击力与攻速也写在这里）与攻击/使用/Tick 行为。 |
 | `pill_binding` | 配置丹药消耗和行为。 |
-| `technique_binding` | 一条功法怎么被读（长按时长、姿势、音效、品质链、条件），以及本体替它生成的载体物品；**手册是堆上的 `mxt:technique` 组件**，不是物品 id。 |
+| `technique_binding` | 一条功法怎么被读（长按时长、姿势、音效、品质链、条件），以及本体替它生成的载体物品；**手册的身份是堆上的 `mxt:technique` 组件**，它自己的 `items` 是可选的第二条路。 |
+| `tool_binding` / `blueprint_binding` | 认领工具与图纸物品，给出它们解锁的锻打方式与提供的蓝图。 |
 
 物品匹配支持单个物品、原版物品标签、通配符、正则和混合数组。
+
+**逐件附加走组件，不走"绑定对象"**：品质链、元素、丹药数据、功法阅读、锻打方式、图纸都可以直接写在那一堆物品上（`mxt:quality_chain`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`），与定义给的那一份叠加；条件与武器属性仍只由定义给。字段与合成规则见[数据包格式](../../数据包格式.md)的「物品组件」。
 
 ## 灵气物品
 

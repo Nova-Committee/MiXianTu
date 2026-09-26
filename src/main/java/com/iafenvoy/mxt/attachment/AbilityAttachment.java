@@ -4,12 +4,8 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.SourceLedger;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.Object2LongMaps;
-import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
@@ -24,30 +20,27 @@ import java.util.Optional;
  * belong to this attachment, so they are saved and synced with it. Revoking the last source drops that state with
  * it, so a re-granted ability does not come back with the charges it had before.
  *
- * <p>Grants, cooldowns and stored state address an ability by id and keep an id that no longer resolves rather than
+ * <p>Grants and stored state both address an ability by id and keep an id that no longer resolves rather than
  * dropping it, so revoking a definition that was deleted still takes it off. The channelled ability is the one
  * running right now, so it is kept as a holder instead: a definition that was deleted stops the channel on load.
  */
 public final class AbilityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<AbilityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             SourceLedger.codec(Identifier.CODEC).lenientOptionalFieldOf("sources", new SourceLedger<>()).forGetter(AbilityAttachment::sources),
-            CollectionCodecs.longMap(Identifier.CODEC).lenientOptionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(AbilityAttachment::cooldowns),
             Ability.CODEC.lenientOptionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility),
             DataStorageHolder.CODEC.lenientOptionalFieldOf("storage").forGetter(attachment -> Optional.of(attachment.storage))
     ).apply(i, AbilityAttachment::new));
     private final SourceLedger<Identifier> sources;
-    private final Object2LongMap<Identifier> cooldowns;
     private final DataStorageHolder storage;
     private Optional<Holder<Ability>> channelledAbility;
 
     public AbilityAttachment() {
-        this(new SourceLedger<>(), Object2LongMaps.emptyMap(), Optional.empty(), Optional.empty());
+        this(new SourceLedger<>(), Optional.empty(), Optional.empty());
     }
 
-    private AbilityAttachment(SourceLedger<Identifier> sources, Object2LongMap<Identifier> cooldowns,
-                              Optional<Holder<Ability>> channelledAbility, Optional<DataStorageHolder> storage) {
+    private AbilityAttachment(SourceLedger<Identifier> sources, Optional<Holder<Ability>> channelledAbility,
+                              Optional<DataStorageHolder> storage) {
         this.sources = sources.copy();
-        this.cooldowns = new Object2LongOpenHashMap<>(cooldowns);
         this.channelledAbility = channelledAbility;
         this.storage = storage.orElseGet(DataStorageHolder::new);
         this.storage.ownedBy(this);
@@ -55,10 +48,6 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
 
     public SourceLedger<Identifier> sources() {
         return this.sources;
-    }
-
-    public Object2LongMap<Identifier> cooldowns() {
-        return this.cooldowns;
     }
 
     public DataStorageHolder storage() {
@@ -88,10 +77,7 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
     // When the revoked source was the last one, the state the ability owned goes with it.
     public boolean revoke(Identifier ability, Identifier source) {
         if (!this.sources.revoke(ability, source)) return false;
-        if (!this.sources.holds(ability)) {
-            this.cooldowns.removeLong(ability);
-            this.storage.clear(ability);
-        }
+        if (!this.sources.holds(ability)) this.storage.clear(ability);
         this.markDirty();
         return true;
     }
@@ -104,15 +90,6 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return true;
     }
 
-    public boolean isOnCooldown(Identifier ability, long gameTime) {
-        return this.cooldowns.getOrDefault(ability, -1L) > gameTime;
-    }
-
-    public void setCooldownUntil(Identifier ability, long gameTime) {
-        this.cooldowns.put(ability, gameTime);
-        this.markDirty();
-    }
-
     public void setChannelledAbility(@Nullable Holder<Ability> ability) {
         this.channelledAbility = Optional.ofNullable(ability);
         this.markDirty();
@@ -121,6 +98,6 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
     // A detached draft for validation: never installed on an entity or synchronised, and its storage is a copy as
     // well, so a rejected sequence of writes leaves the real values alone.
     public AbilityAttachment copy() {
-        return new AbilityAttachment(this.sources, this.cooldowns, this.channelledAbility, Optional.of(this.storage.copy()));
+        return new AbilityAttachment(this.sources, this.channelledAbility, Optional.of(this.storage.copy()));
     }
 }

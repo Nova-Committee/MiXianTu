@@ -12,17 +12,13 @@ import net.minecraft.world.item.ItemUseAnimation;
 import java.util.List;
 
 /**
- * Drives the reading gesture for any stack carrying a technique. Which technique the stack teaches is its own
- * component and how reading one feels is that technique's declaration, so nothing here is decided by the item: a
- * stack teaching a technique with no declaration is still read, with the defaults.
+ * Drives the reading gesture for a stack carrying a technique, and for the items a declaration claims itself.
+ * Which technique a stack teaches is its own component and how reading one feels is that technique's declaration,
+ * so nothing here is decided by the item; a declaration that claims items is the same gesture over those items.
  */
-public record TechniqueHold() implements HoldBinding {
-    public static final TechniqueHold INSTANCE = new TechniqueHold();
-
-    @Override
-    public List<Entry> entries() {
-        return List.of(TechniqueEntry.INSTANCE);
-    }
+public record TechniqueHold(List<Entry> entries) implements HoldBinding {
+    // The component's own hold: any stack carrying mxt:technique is read.
+    public static final TechniqueHold INSTANCE = new TechniqueHold(List.of(TechniqueEntry.INSTANCE));
 
     @Override
     public int priority() {

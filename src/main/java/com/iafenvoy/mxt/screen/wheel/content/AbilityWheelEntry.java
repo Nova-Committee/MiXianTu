@@ -79,7 +79,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         if (player == null) return 0L;
         AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return 0L;
-        return Math.max(0L, holder.cooldowns().getOrDefault(HolderHelper.id(this.ability), 0L) - player.level().getGameTime());
+        return AbilityStorage.remaining(holder, HolderHelper.id(this.ability), player.level().getGameTime());
     }
 
     // The length the last use actually got: the declared cooldown field can be overridden by a stored
