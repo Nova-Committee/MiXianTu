@@ -45,7 +45,7 @@ public final class SecretRealmTokenItem extends Item {
             return InteractionResult.FAIL;
         }
         Holder<SecretRealm> realm = token.realm().orElseThrow();
-        Result result = SecretRealmService.enter(serverPlayer, realm);
+        Result result = SecretRealmService.enter(serverPlayer, serverPlayer.level().getServer(), realm);
         ItemFeedback.send(player, result.changed()
                 ? Component.translatable("item.mxt.secret_realm_token.entered")
                 : result.message().orElseGet(() -> Component.translatable("item.mxt.secret_realm_token.enter_failed", result.failure().name())));

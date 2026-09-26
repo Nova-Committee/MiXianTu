@@ -402,7 +402,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", HolderHelper.id(definition).toString()));
             return 0;
         }
-        Result result = SecretRealmService.enter(player, definition);
+        Result result = SecretRealmService.enter(player, source.getServer(), definition);
         if (!result.changed()) {
             source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.enter_failed",
                     result.failure().name())));

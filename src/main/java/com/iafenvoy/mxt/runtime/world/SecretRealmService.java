@@ -37,14 +37,13 @@ public final class SecretRealmService {
     private SecretRealmService() {
     }
 
-    public static Result enter(LivingEntity traveller, Holder<SecretRealm> definition) {
+    public static Result enter(LivingEntity traveller, MinecraftServer server, Holder<SecretRealm> definition) {
         Identifier id = HolderHelper.id(definition);
         if (MxtDatapackRegistries.holder(MxtResourceKeys.SECRET_REALM, id).isEmpty())
             return Result.rejected(Failure.DISABLED);
         SecretRealmTravelAttachment travel = traveller.getData(MxtAttachments.SECRET_REALM_TRAVEL);
         if (travel.active()) return Result.rejected(Failure.ALREADY_TRAVELLING);
 
-        MinecraftServer server = traveller.level().getServer();
         UUID member = traveller.getUUID();
         long gameTime = traveller.level().getGameTime();
         SecretRealm value = definition.value();

@@ -89,28 +89,25 @@ public final class ResourceBarEntry extends AbstractHudEntry {
         return super.bounds();
     }
 
-    // Centred on the bottom edge: the centre marks where the column is and that edge where it ends, so the
-    // default position does not depend on how many bars the column holds right now.
+    // Centred on the bottom edge of the window: the centre marks where the column is and that edge where it ends,
+    // so the default position does not depend on how many bars the column holds right now.
     @Override
-    public HudAnchor anchor() {
+    public HudAnchor defaultAnchor() {
         return HudAnchor.CENTER_BOTTOM;
     }
 
     @Override
-    public int defaultX() {
-        int[] window = HudLayout.window();
-        if (window == null) return 0;
-        int centre = window[0] / 2;
-        // The value handed here is the anchor point - the centre of the column - because the anchor is centred
-        // horizontally. The left column's right edge used to sit 20 pixels left of centre; the right mirrors it.
+    public int defaultOffsetX() {
+        // What is handed here is the distance from the middle of the screen, because the anchor is centred
+        // horizontally. The left column's centre sits this far left of it; the right column mirrors it.
         int offset = CENTRE_GAP + this.layout.width() / 2;
-        return this.side == Anchor.LEFT ? centre - offset : centre + offset;
+        return this.side == Anchor.LEFT ? -offset : offset;
     }
 
     @Override
-    public int defaultY() {
-        int[] window = HudLayout.window();
-        return window == null ? 0 : window[1] - BOTTOM_MARGIN;
+    public int defaultOffsetY() {
+        // Upward from the bottom edge: the sign the anchor's offset is measured with.
+        return -BOTTOM_MARGIN;
     }
 
     // Size and drawing come from one list built in one place: measuring from the render data instead would

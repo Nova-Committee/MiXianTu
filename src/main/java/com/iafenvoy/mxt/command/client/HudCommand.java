@@ -44,8 +44,8 @@ public final class HudCommand {
         for (HudEntry entry : entries) {
             ScreenBounds bounds = entry.bounds();
             context.getSource().sendSuccess(() -> Component.translatable("command.mxt.hud.line",
-                    entry.layoutKey(), entry.displayName(), bounds.x(), bounds.y(), bounds.width(), bounds.height(),
-                    entry.renderBlocks().size(), entry.visible(), entry.moveable()), false);
+                    entry.layoutKey(), entry.displayName(), entry.anchor().key(), bounds.x(), bounds.y(),
+                    bounds.width(), bounds.height(), entry.renderBlocks().size(), entry.visible(), entry.moveable()), false);
         }
         return entries.size();
     }

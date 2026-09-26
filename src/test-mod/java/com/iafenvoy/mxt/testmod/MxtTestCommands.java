@@ -154,7 +154,9 @@ import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
+
 import java.util.stream.Collectors;
+
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -239,6 +241,7 @@ import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
 
 import static net.minecraft.commands.Commands.literal;
+
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
 import top.theillusivec4.curios.api.SlotContext;
@@ -255,7 +258,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-/** Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario. */
+/**
+ * Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario.
+ */
 public final class MxtTestCommands {
     private static final Identifier QI = id("qi");
     private static final Identifier QI_REFINING = id("qi_refining");
@@ -940,7 +945,8 @@ public final class MxtTestCommands {
 
     // A page that answers for exactly one entry, so what the shared check does with the page's own answer is what
     // the leg measures rather than anything a real page reads.
-    private record ProbeWheelSource(Identifier id, Identifier entry) implements WheelSource {        @Override
+    private record ProbeWheelSource(Identifier id, Identifier entry) implements WheelSource {
+        @Override
         public Component displayName() {
             return Component.literal("Probe Page");
         }
@@ -1026,7 +1032,7 @@ public final class MxtTestCommands {
             return "a refused payment still took " + (before - account.get(probe)) + " off the first entry";
 
         CostTransaction.PayResult item = CostTransaction.pay(decodeCosts(registries,
-                        "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), context);
+                "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), context);
         if (item.paid() || item.failure() != CostFailure.NO_CHANNEL)
             return "an item cost without a player channel read as " + item.failure();
 
@@ -1138,7 +1144,8 @@ public final class MxtTestCommands {
         if (!Double.isNaN(undefined))
             return "a stage without minor_stages reads as " + undefined + " instead of NaN";
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        if (!CultivationService.setRealm(spirit, QI_REFINING)) return "the realm cache could not resolve " + QI_REFINING;
+        if (!CultivationService.setRealm(spirit, QI_REFINING))
+            return "the realm cache could not resolve " + QI_REFINING;
         spirit.setCultivationProgress(requireProfile(QI), 80.0D);
         FormulaContext context = ResourceService.formulaContext(player, require(MxtResourceKeys.RESOURCE, QI), FormulaContext.of(player));
         double read = context.value("minor_stage");
@@ -2118,7 +2125,8 @@ public final class MxtTestCommands {
                     && close(qiBeforeTick - pilotResources.get(qiResource), 0.1D);
             // Once the artifact is charged, the same tick comes out of it instead: the mount carries the aura it
             // burns, and only what the artifact cannot cover falls back on the pilot.
-            if (sword != null) ArtifactService.addEnergy(access, sword.visual(), qi, 5.0D, 0.0D, FormulaContext.of(pilot));
+            if (sword != null)
+                ArtifactService.addEnergy(access, sword.visual(), qi, 5.0D, 0.0D, FormulaContext.of(pilot));
             double artifactBefore = sword == null ? 0.0D : ArtifactService.stored(sword.visual(), qi);
             double poolBefore = pilotResources.get(qiResource);
             boolean artifactFuel = sword != null
@@ -2262,24 +2270,24 @@ public final class MxtTestCommands {
         // The long press closes every tooltip with a gesture, and an unowned artifact is offered the claim while
         // one the reader owns is offered the pour - the two halves never appear together.
         boolean tooltip = flightLines.equals(List.of(tooltipKey("header"), tooltipKey("unowned"),
-                        // One entry, one line: the speed and what riding costs share a line, so a definition with
-                        // four abilities produces four lines rather than a paragraph.
-                        tooltipKey("aura"), tooltipKey("mount_costs"), tooltipKey("hold_claim")))
+                // One entry, one line: the speed and what riding costs share a line, so a definition with
+                // four abilities produces four lines rather than a paragraph.
+                tooltipKey("aura"), tooltipKey("mount_costs"), tooltipKey("hold_claim")))
                 // The jade does not require an owner, so a fresh one says nothing about ownership at all, and its
                 // action charges aura rather than health, so its claim is free.
                 && jadeLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("storage"), tooltipKey("hold_claim_free")))
+                tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("storage"), tooltipKey("hold_claim_free")))
                 && fedLines.equals(List.of(tooltipKey("header"), tooltipKey("owned"),
-                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("nourishment"),
-                        tooltipKey("storage"), tooltipKey("hold_pour")))
+                tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("nourishment"),
+                tooltipKey("storage"), tooltipKey("hold_pour")))
                 // The ward says nothing about a price, so the default two hearts are what it reports.
                 && wardLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("passive"), tooltipKey("passive"), tooltipKey("hold_claim")))
+                tooltipKey("aura"), tooltipKey("passive"), tooltipKey("passive"), tooltipKey("hold_claim")))
                 && bloodLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("hold_claim")))
+                tooltipKey("aura"), tooltipKey("hold_claim")))
                 // An upkeep entry is a line of its own, and the fixture's free price keeps its claim line free.
                 && upkeepLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("upkeep"), tooltipKey("hold_claim_free")))
+                tooltipKey("aura"), tooltipKey("upkeep"), tooltipKey("hold_claim_free")))
                 // A stack no definition claims gets nothing at all, and advanced tooltips add the id under the name.
                 && ArtifactDescription.describe(access, new ItemStack(Items.DIAMOND), player, false).isEmpty()
                 && ArtifactDescription.keys(ArtifactDescription.describe(access, flightStack, player, true)).size() == flightLines.size() + 1;
@@ -2380,7 +2388,7 @@ public final class MxtTestCommands {
                 && (player.isInvulnerable() || close(healthBeforeScript - player.getHealth(), 3.0D));
         player.setHealth(healthBeforeClaim);
         ok &= check(source, "artifact hold claim paid=" + pricePaid + " free=" + freeClaim + " unguarded=" + unguarded
-                + " condition=" + sealedRefused + " script=" + scriptPaid,
+                        + " condition=" + sealedRefused + " script=" + scriptPaid,
                 pricePaid && freeClaim && unguarded && sealedRefused && scriptPaid);
 
         // Whose a stack is is reported by name: the claim above wrote this player's name next to their UUID and
@@ -2990,7 +2998,7 @@ public final class MxtTestCommands {
             //     membership row and the teleport are keyed on the entity, not on a connection.
             LivingEntity mobTraveller = spawnProbe(overworld, overworld.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO).above(4), null);
             probes.add(mobTraveller);
-            SecretRealmService.Result mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, mirror);
+            SecretRealmService.Result mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, source.getServer(), mirror);
             SecretRealmRecord mobHome = mobTraveller == null ? null : SecretRealmRegistry.ofMember(mobTraveller.getUUID()).orElse(null);
             if (mobHome != null) opened.add(mobHome.dimension());
             boolean mobIn = mobTraveller != null && mobEntered != null && mobEntered.changed() && mobHome != null
@@ -3174,7 +3182,7 @@ public final class MxtTestCommands {
             LifeSpanService.add(plain, 40L);
             boolean fromZero = LifeSpanService.remaining(plain) == 40L && LifeSpanService.total(plain) == 40L;
             ok &= check(source, "lifespan probe: seed base=" + LifeSpanService.remaining(seeded)
-                            + " zero=" + LifeSpanService.remaining(plain), fromBase && fromZero);
+                    + " zero=" + LifeSpanService.remaining(plain), fromBase && fromZero);
 
             // 5. Settlement and the NONE outcome: 25 spends down to 5 and then closes the account at 0.
             settings.onExpire.setValue(LifespanOutcome.NONE);
@@ -3410,7 +3418,8 @@ public final class MxtTestCommands {
         return 0;
     }
 
-    private static int probeRift(CommandSourceStack source) {        double thickness = RiftMesh.DEFAULT_THICKNESS;
+    private static int probeRift(CommandSourceStack source) {
+        double thickness = RiftMesh.DEFAULT_THICKNESS;
         MinecraftServer server = source.getServer();
         ServerLevel level = server.overworld();
         Identifier here = level.dimension().identifier();
@@ -3577,7 +3586,8 @@ public final class MxtTestCommands {
         } finally {
             for (BlockPos pos : touched) level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             ServerLevel end_ = server.getLevel(Level.END);
-            if (end_ != null) for (BlockPos pos : touchedInEnd) end_.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            if (end_ != null)
+                for (BlockPos pos : touchedInEnd) end_.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         }
         if (ok) {
             source.sendSuccess(() -> Component.literal("rift probe: OK"), false);
@@ -3694,7 +3704,7 @@ public final class MxtTestCommands {
     }
 
     private static SecretRealmRecord openInstance(MinecraftServer server, Holder<SecretRealm> definition, int index,
-                                            long seed, List<ResourceKey<Level>> opened) {
+                                                  long seed, List<ResourceKey<Level>> opened) {
         SecretRealmRecord record = SecretRealmService.open(server, planned(definition, index, seed)).orElse(null);
         if (record != null) opened.add(record.dimension());
         return record;

@@ -252,6 +252,7 @@ public final class TechniquePanelScreen extends Screen {
             // share one line, so both are measured before either is drawn.
             private Component levelText() {
                 if (!this.row.hasStage()) return Component.translatable("screen.mxt.technique_panel.level_unknown");
+                assert this.row.stage() != null;
                 Component name = DefinitionText.name(this.row.stage(), "skill_stage");
                 Component label = DefinitionText.resolved(name)
                         ? name : Component.literal(Integer.toString(this.row.rank() + 1));
