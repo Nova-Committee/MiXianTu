@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.data.storage.DataStorageDeclaration;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
-import com.iafenvoy.mxt.data.storage.RuntimeStorage;
 import com.iafenvoy.mxt.registry.MxtDataStorageHosts;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -16,7 +15,7 @@ import org.jspecify.annotations.NonNull;
 
 /**
  * Writes one storage value of one host, named by its family (the data-pack registry it lives in) and its id.
- * Only a kind the host declares can be written; a runtime-owned kind is refused too.
+ * Only a kind the host declares can be written.
  */
 public record ModifyStorageAction(Identifier family, Identifier id, DataStorage value) implements EntityAction {
     public static final MapCodec<ModifyStorageAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -29,10 +28,6 @@ public record ModifyStorageAction(Identifier family, Identifier id, DataStorage 
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         if (entity.level().isClientSide()) return;
-        if (this.value instanceof RuntimeStorage) {
-            MiXianTu.LOGGER.warn("{} is a runtime-owned kind; nothing was written", this.value.getClass().getSimpleName());
-            return;
-        }
         DataStorageDeclaration definition = MxtDataStorageHosts.definition(this.family, this.id).orElse(null);
         if (definition == null) {
             MiXianTu.LOGGER.warn("{} is not a host family that keeps storage; nothing was written", this.family);

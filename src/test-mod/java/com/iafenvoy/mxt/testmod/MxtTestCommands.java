@@ -29,7 +29,9 @@ import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.AbilityEffect;
 import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
@@ -54,12 +56,13 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
-import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
+import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
 import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
@@ -307,6 +310,7 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_WATER_ELEMENT = id("water");
     private static final Identifier PROBE_INERT_ELEMENT = id("inert");
     private static final Identifier PROBE_ELEMENT_ABILITY = id("elemental_probe");
+    private static final Identifier PROBE_ELEMENTAL = id("elemental_probe");
     private static final Identifier PROBE_ELEMENT_TAG = id("basic");
     private static final Identifier PROBE_PHYSIQUE = id("probe_body");
     private static final Identifier PROBE_AFFINITY_ABILITY = id("firebolt");
@@ -536,8 +540,8 @@ public final class MxtTestCommands {
         return verifyOwnerSet();
     }
 
-    // mxt:active no longer carries a slot, and a pack that still writes one hears about it rather than losing the
-    // key: which cell a skill sits in is the player's own wheel layout.
+    // mxt:active no longer carries a slot, and a pack that still writes one keeps loading: which cell a skill sits
+    // in is the player's own wheel layout, so the key is an unread field like any other.
     private static String verifyActiveSlot(RegistryOps<JsonElement> ops) {
         JsonObject plain = new JsonObject();
         plain.addProperty("type", "mxt:active");
@@ -545,10 +549,11 @@ public final class MxtTestCommands {
         plain.addProperty("description", "probe");
         JsonObject slotted = plain.deepCopy();
         slotted.addProperty("slot", "utility");
-        if (Ability.DIRECT_CODEC.parse(ops, plain).result().isEmpty())
-            return "mxt:active without a slot no longer decodes";
-        if (Ability.DIRECT_CODEC.parse(ops, slotted).result().isPresent())
-            return "mxt:active still accepts the removed slot field";
+        Ability plainAbility = Ability.DIRECT_CODEC.parse(ops, plain).result().orElse(null);
+        Ability slottedAbility = Ability.DIRECT_CODEC.parse(ops, slotted).result().orElse(null);
+        if (plainAbility == null) return "mxt:active without a slot no longer decodes";
+        if (slottedAbility == null) return "mxt:active no longer ignores a slot the wheel layout owns";
+        if (!slottedAbility.equals(plainAbility)) return "an ignored slot changed what mxt:active decoded to";
         return null;
     }
 
@@ -661,7 +666,8 @@ public final class MxtTestCommands {
         return null;
     }
 
-    // A formation may declare that its structure is not checked, and then it may not declare one at all.
+    // A formation may declare that its structure is not checked; a structure written beside that is then a field
+    // this definition never reads, which is ignored rather than refused.
     private static String verifyStructureCheck(RegistryOps<JsonElement> ops) {
         JsonObject always = new JsonObject();
         always.addProperty("radius", 8);
@@ -675,8 +681,8 @@ public final class MxtTestCommands {
         block.addProperty("state", "minecraft:stone");
         structure.add(block);
         declared.add("structure", structure);
-        if (Formation.DIRECT_CODEC.parse(ops, declared).result().isPresent())
-            return "structure_check always accepted a declared structure it would never check";
+        if (Formation.DIRECT_CODEC.parse(ops, declared).result().isEmpty())
+            return "structure_check always no longer tolerates a structure it would never check";
         JsonObject neither = new JsonObject();
         neither.addProperty("radius", 8);
         if (Formation.DIRECT_CODEC.parse(ops, neither).result().isPresent())
@@ -2020,7 +2026,7 @@ public final class MxtTestCommands {
                 instanceof FlightControlAbilityType value ? value : null;
         boolean offhandEntry = offhand != null && offhand.hand() == FlightControlAbilityType.Hand.OFF
                 && close(offhand.speedMultiplier().evaluate(context), 0.8D)
-                && close(require(MxtResourceKeys.ABILITY, id("offhand_flight")).value().cooldown().evaluate(context), 40.0D);
+                && close(offhand.cooldown().evaluate(context), 40.0D);
         ok &= check(source, "artifact roster offhand flight hand=off multiplier=0.8 cooldown=40", offhandEntry);
 
         // The three-seat vehicle: what the geometry fields do once they are written out.
@@ -2162,8 +2168,8 @@ public final class MxtTestCommands {
         if (pilot != null) pilot.discard();
         ok &= check(source, "artifact roster flight ungranted=refused granted=by-technique custody=hand-empty seats=2 third=refused tick=fuel=0.1 artifact=burned-first landed=item-back", flight);
 
-        // A field a vehicle never reads is refused at load time rather than stored: the same document without it
-        // parses, so the rejection is the field and not the shape.
+        // A field a vehicle never reads is ignored rather than refused: the same document with it decodes to the
+        // very definition the one without it does.
         JsonObject legalMount = new JsonObject();
         legalMount.addProperty("type", "mxt:mount");
         legalMount.addProperty("speed", 0.1D);
@@ -2171,9 +2177,10 @@ public final class MxtTestCommands {
         legalMount.addProperty("description", "probe mount");
         JsonObject illegalMount = legalMount.deepCopy();
         illegalMount.add("entity_action", JsonParser.parseString("{\"type\": \"mxt:no_op\"}"));
-        boolean inertFields = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, legalMount).result().isPresent()
-                && Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, illegalMount).result().isEmpty();
-        ok &= check(source, "artifact roster mount refuses a field it never reads", inertFields);
+        Ability legalMountAbility = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, legalMount).result().orElse(null);
+        Ability inertMountAbility = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, illegalMount).result().orElse(null);
+        boolean inertFields = legalMountAbility != null && legalMountAbility.equals(inertMountAbility);
+        ok &= check(source, "artifact roster mount ignores a field it never reads", inertFields);
 
         // The same flight with a player, asked the directed way: the merged payload names the state it wants, and a
         // request for the state it is already in changes nothing. The hand is put back afterwards, since the rest of
@@ -2295,27 +2302,45 @@ public final class MxtTestCommands {
                 source.getLevel().registryAccess());
         ok &= check(source, "artifact roster container 27 slots, slot 1 = stone x3, slot 2 = dirt, one entry per (ability, kind), codec round-trip", container);
 
-        // One value per (id, kind), on both sides of the pipe: a kind declared twice is a pack mistake, and two
-        // entries claiming one address are malformed saved bytes - each document with a single one parses, so what
-        // is refused is the duplicate rather than the shape.
-        JsonObject declaredState = new JsonObject();
-        declaredState.addProperty("type", "mxt:active");
-        declaredState.addProperty("name", "probe storage");
-        declaredState.addProperty("description", "probe storage");
-        declaredState.add("components", JsonParser.parseString(
-                "[{\"type\": \"mxt:cooldown\", \"ticks\": 20}, {\"type\": \"mxt:charges\", \"maximum\": 2, \"recharge_ticks\": 40}]"));
-        JsonObject duplicatedState = declaredState.deepCopy();
-        duplicatedState.add("components", JsonParser.parseString(
+        // The state kinds belong to the type now: the removed `components` key is ignored like any other unread
+        // field, a type that keeps a cursor of its own says so without the pack writing anything, and the one pool
+        // a type cannot know (charges) is the ability's own field.
+        JsonObject removedComponents = new JsonObject();
+        removedComponents.addProperty("type", "mxt:active");
+        removedComponents.add("components", JsonParser.parseString(
                 "[{\"type\": \"mxt:cooldown\", \"ticks\": 20}, {\"type\": \"mxt:cooldown\", \"ticks\": 40}]"));
-        boolean oneKindOnce = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, declaredState).result().isPresent()
-                && Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, duplicatedState).result().isEmpty();
-        ok &= check(source, "artifact roster ability declares each state kind once", oneKindOnce);
+        JsonObject chargedChannel = new JsonObject();
+        chargedChannel.addProperty("type", "mxt:channelled");
+        chargedChannel.add("charges", JsonParser.parseString("{\"maximum\": 2, \"recharge_ticks\": 40}"));
+        Ability byType = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, removedComponents).result().orElse(null);
+        Ability declaredOnce = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, chargedChannel).result().orElse(null);
+        boolean stateByType = byType != null && declaredOnce != null
+                && byType.storages().stream().filter(CooldownDataStorage.class::isInstance).count() == 1
+                && byType.charges().isEmpty()
+                && declaredOnce.charges().isPresent()
+                && declaredOnce.storages().stream().filter(ChargesDataStorage.class::isInstance).count() == 1;
+        ok &= check(source, "artifact roster ability declares its state by type, removed components ignored", stateByType);
+
+        // Every type that runs actions carries the four fields itself, so one skill is one definition: the fields
+        // decode straight onto the acting type.
+        JsonObject timed = new JsonObject();
+        timed.addProperty("type", "mxt:active");
+        timed.add("target_selector", JsonParser.parseString("{\"type\": \"mxt:area\", \"radius\": 3}"));
+        timed.add("bi_entity_action", JsonParser.parseString("{\"type\": \"mxt:send_message\", \"message\": \"probe\"}"));
+        Ability timedAbility = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, timed).result().orElse(null);
+        Ability elemental = require(MxtResourceKeys.ABILITY, PROBE_ELEMENTAL).value();
+        boolean actionsByType = timedAbility != null && timedAbility.type() instanceof ActiveAbilityType active
+                && active.targetSelector() instanceof AreaTargetSelector
+                && !(active.biEntityAction() instanceof NoOpAction)
+                && elemental.type() instanceof ActiveAbilityType carried
+                && !(carried.biEntityAction() instanceof NoOpAction);
+        ok &= check(source, "artifact roster action fields live on the acting type", actionsByType);
 
         JsonElement oneEntry = JsonParser.parseString(
-                "[{\"id\": \"mxt_test:probe\", \"data\": {\"value\": {\"type\": \"mxt:cooldown\", \"ticks\": 20}, \"changed_at\": 1}}]");
+                "[{\"id\": \"mxt_test:probe\", \"value\": {\"type\": \"mxt:cooldown\", \"duration\": 20, \"started_at\": 1}}]");
         JsonElement twoEntries = JsonParser.parseString(
-                "[{\"id\": \"mxt_test:probe\", \"data\": {\"value\": {\"type\": \"mxt:cooldown\", \"ticks\": 20}, \"changed_at\": 1}},"
-                        + "{\"id\": \"mxt_test:probe\", \"data\": {\"value\": {\"type\": \"mxt:cooldown\", \"ticks\": 40}, \"changed_at\": 2}}]");
+                "[{\"id\": \"mxt_test:probe\", \"value\": {\"type\": \"mxt:cooldown\", \"duration\": 20, \"started_at\": 1}},"
+                        + "{\"id\": \"mxt_test:probe\", \"value\": {\"type\": \"mxt:cooldown\", \"duration\": 40, \"started_at\": 2}}]");
         boolean oneEntryPerAddress = DataStorageHolder.CODEC.parse(JsonOps.INSTANCE, oneEntry).result().isPresent()
                 && DataStorageHolder.CODEC.parse(JsonOps.INSTANCE, twoEntries).result().isEmpty();
         ok &= check(source, "artifact roster storage refuses two entries for one (id, kind)", oneEntryPerAddress);
@@ -2660,12 +2685,12 @@ public final class MxtTestCommands {
                     + (claimed ? " OK" : " MISMATCH")), false);
 
             // 2. An action that declares an element is read as that element, not as the caster's roots: a water
-            //    caster would otherwise land 10 * 1.0 * 0.5 = 5 on a water body.
-            Ability declaration = require(MxtResourceKeys.ABILITY, PROBE_ELEMENT_ABILITY).value();
+            //    caster would otherwise land 10 * 1.0 * 0.5 = 5 on a water body. The action lives on the probe skill
+            //    itself, which is the type that carries these fields.
+            Ability declaration = require(MxtResourceKeys.ABILITY, PROBE_ELEMENTAL).value();
             FormulaContext casterContext = FormulaContext.of(waterCaster);
             double beforeDeclared = declaredVictim.getHealth();
-            declaration.biEntityAction().execute(waterCaster, declaredVictim,
-                    new BiEntityActionContext(waterCaster, declaredVictim, casterContext, null));
+            AbilityEffect.runOn(declaration.type(), waterCaster, declaredVictim, casterContext, null);
             double declaredLost = beforeDeclared - declaredVictim.getHealth();
             boolean declared = close(declaredLost, 7.5D);
             source.sendSuccess(() -> Component.literal("element probe: declared element on a water caster, health_lost="

@@ -63,11 +63,11 @@ public final class ArtifactStorageService implements ISpiritStorage {
     }
 
     private static void write(ItemStack stack, Holder<Ability> ability, ContainerDataStorage contents, Player viewer) {
-        ItemStorageService.set(stack, HolderHelper.id(ability), contents, viewer.level().getGameTime());
+        ItemStorageService.set(stack, HolderHelper.id(ability), contents);
     }
 
     private static ContainerDataStorage storage(ItemStack stack, Holder<Ability> ability) {
         return ItemStorageService.get(stack, HolderHelper.id(ability), ContainerDataStorage.class)
-                .orElseGet(() -> new ContainerDataStorage(List.of()));
+                .orElseGet(() -> ContainerDataStorage.of(0, List.of()));
     }
 }

@@ -25,7 +25,7 @@ title: 客户端轮盘
 
 从盘读的是**技能授予账**（`AbilityAttachment` 的 `SourceLedger`），而它本来就是按来源记的（`AbilityEventBridge#onEquipmentChange` 记 `mxt:equipment/<槽位>/<物品>`，Curios 记 `mxt:curios_equipment`）。来源 id 的写法为此收进 `runtime/ability/AbilitySources`（`equipment(slot, stack)` / `CURIOS`），授予侧与轮盘侧共用一份定义。读取统一在 `runtime/wheel/WheelSources`：`abilities(entity, source)` 给出来源现在的全部**可按技能**（凡实现 `Toggable` 的，按 id 排序、**不截断**——分页是客户端的事），`abilities(entity)` 给出玩家**持有的全部**可按技能（主盘那个池子读它），`equipment(entity, source)` 给出这一页该读哪几件装备的栈（主盘给双手 + Curios），`carrier(entity, source, id)` 给出这一项此刻的**承载物**（这一页上提供它的那件栈），`offers(entity, source, kind, id)` 回答"这个来源现在认不认这一项"。**从盘没有任何存储**：撤销授予（把物品换掉、摘掉法器）那一刻它自己就空了——技能本身记在账本上，而"哪件物品提供它"是每刻现读的。
 
-**需要按键的技能（`Toggable`）。** 判据只有一句：**凡是要按键才发动的都算技能，都进轮盘**。技能的 `type` 实现了 `Toggable` 就是这样的东西——实现这个接口等于声明"把我放进轮盘"。它既包括**一次性**（`mxt:active`：施放一次；`mxt:storage`：按一下打开承载物的储物箱，没有任何状态留下），也包括**开关**（`mxt:flight_control`：开＝起剑、关＝落剑）。接口把三件事交给实现回答：
+**需要按键的技能（`Toggable`）。** 判据只有一句：**凡是要按键才发动的都算技能，都进轮盘**。技能的 `type` 实现了 `Toggable` 就是这样的东西——实现这个接口等于声明"把我放进轮盘"。它既包括**一次性**（`mxt:active`：施放一次；`mxt:storage`：按一下打开承载物的储物箱，没有任何状态留下），也包括**开关**（`mxt:flight_control`：开＝起剑、关＝落剑），而 `mxt:channelled` 也在其中（按一下开始引导；**引导没有"再按一下释放"这个入口**，它在维持费付不出 / `condition` 不成立 / 不再持有 / 元素亲和失效时由 `tickChannel` 自己停）。接口把三件事交给实现回答：
 
 | 方法 | 谁问、问什么 |
 | --- | --- |
@@ -34,7 +34,7 @@ title: 客户端轮盘
 
 （2026-09-23 起接口只有这两件必答的事**加上**一个有默认实现的 `gated`：早先的 `key()` 与 `displayName()` 是"内联技能"那套身份的遗留，内联取消后一并删除——这一格的名字用技能自己的 `name`。同日 `Result` 多了第三个分量、`Failure` 也不再是自己那一套小枚举。）
 
-**`Togglable.Failure` 的 15 个取值与 `AbilityService.Failure` 同名同义**（`NOT_OWNED` / `ALREADY_SET` / `UNAVAILABLE` / `NO_CARRIER` / `CANNOT_MOUNT` 是按压独有的五个：所有权、状态已经是这样、说不清、没有承载物、骑不上去；其余十个两边共有）。`AbilityActivationService.failureOf(...)` 只做名字搬运，**不再把管线区分得出来的原因折叠成 `UNAVAILABLE`**——2026-09-23 之前它只映射冷却 / 代价 / 未持有三种，`CONDITION_FAILED`、`ELEMENT_AFFINITY`、`NO_CHARGES`、`INVALID_FORMULA` 全被压成「现在用不了」，玩家和日志都查不出所以然。今天轮盘的动作栏文案只有一份表 `actionbar.mxt.ability.failure.*`，日志里的原因也是真的；`UNAVAILABLE` 是兜底：拿不到服务端玩家、按下的东西根本不是 `Toggable`、飞行 `startRiding` 失败。`INVALID_FORMULA` 兼管"实现自己的数算不出来"——储物 `slots` 公式算出 ≤ 0 报的就是它。
+**`Togglable.Failure` 的 16 个取值与 `AbilityService.Failure` 同名同义**（`NOT_OWNED` / `ALREADY_SET` / `UNAVAILABLE` / `NO_CARRIER` / `NO_VEHICLE` / `CANNOT_MOUNT` 是按压独有的六个：所有权、状态已经是这样、说不清、没有承载物、双手都没有飞行法器、骑不上去；其余十个两边共有）。`AbilityActivationService.failureOf(...)` 只做名字搬运，**不再把管线区分得出来的原因折叠成 `UNAVAILABLE`**——2026-09-23 之前它只映射冷却 / 代价 / 未持有三种，`CONDITION_FAILED`、`ELEMENT_AFFINITY`、`NO_CHARGES`、`INVALID_FORMULA` 全被压成「现在用不了」，玩家和日志都查不出所以然。今天轮盘的动作栏文案只有一份表 `actionbar.mxt.ability.failure.*`，日志里的原因也是真的；`UNAVAILABLE` 是兜底：拿不到服务端玩家、按下的东西根本不是 `Toggable`、飞行 `startRiding` 失败。`INVALID_FORMULA` 兼管"实现自己的数算不出来"——储物 `slots` 公式算出 ≤ 0 报的就是它。
 
 付费与冷却走一处：`gated(ctx)` 默认 `true` 时，`AbilityActivationService` 先过一遍共用闸门（条件 + 冷却 + 技能自己的 `costs`，整组全有或全无），过了才调 `activate`；**开关往"关"的那一下 `gated` 返回 false**（落地不该收费），`mxt:active` / `mxt:channelled` 也返回 false——它们的施放事务自己付款，重复收一次就错了。因此：
 

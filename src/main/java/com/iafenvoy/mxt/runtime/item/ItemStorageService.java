@@ -21,9 +21,9 @@ public final class ItemStorageService {
         return holder(stack).flatMap(value -> value.get(id, kind));
     }
 
-    public static void set(ItemStack stack, Identifier id, DataStorage value, long gameTime) {
+    public static void set(ItemStack stack, Identifier id, DataStorage value) {
         if (stack.isEmpty()) return;
-        stack.set(MxtDataComponents.STORAGE, holder(stack).orElseGet(DataStorageHolder::new).with(id, value, gameTime));
+        stack.set(MxtDataComponents.STORAGE, holder(stack).orElseGet(DataStorageHolder::new).with(id, value));
     }
 
     private static Optional<DataStorageHolder> holder(ItemStack stack) {

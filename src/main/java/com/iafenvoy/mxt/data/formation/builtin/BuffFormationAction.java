@@ -20,7 +20,7 @@ import java.util.Optional;
 
 /**
  * The benefit module: what the array hands to the entities it covers, and what it does to the ground. No field for
- * attribute modifiers, because a granted {@link Ability} already carries its own {@code modifiers}. Under
+ * attribute modifiers, because a granted {@link Ability} already carries its own. Under
  * {@link TargetMode#ALLIES} an unidentifiable entity is not given the benefit.
  */
 public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode target,

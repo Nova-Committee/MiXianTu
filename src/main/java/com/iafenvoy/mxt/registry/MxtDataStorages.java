@@ -9,9 +9,9 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
- * The built-in kinds: a data pack selects one by writing its id in an entry of a host's {@code components}
- * list, and the kind's class is then the slot its value lives in. The runtime's own kinds are registered here
- * too, so their values save and sync like any other, but no content declares any of them.
+ * The built-in kinds: an ability type lists the ones its host keeps, and the kind's class is then the slot its
+ * value lives in. The runtime's own kinds are registered here too, so their values save and sync like any other,
+ * but no content declares any of them.
  */
 @SuppressWarnings("unused")
 public final class MxtDataStorages {
@@ -28,6 +28,7 @@ public final class MxtDataStorages {
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<CastDeadline>> CAST_DEADLINE = REGISTRY.register("cast_deadline", () -> CastDeadline.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<ChannelPulse>> CHANNEL_PULSE = REGISTRY.register("channel_pulse", () -> ChannelPulse.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<AuraPulse>> AURA_PULSE = REGISTRY.register("aura_pulse", () -> AuraPulse.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<ActiveState>> ACTIVE_STATE = REGISTRY.register("active_state", () -> ActiveState.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<EntryBegan>> ENTRY_BEGAN = REGISTRY.register("entry_began", () -> EntryBegan.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<IdleCountdown>> IDLE_COUNTDOWN = REGISTRY.register("idle_countdown", () -> IdleCountdown.CODEC);
     public static final DeferredHolder<MapCodec<? extends DataStorage>, MapCodec<WaitCountdown>> WAIT_COUNTDOWN = REGISTRY.register("wait_countdown", () -> WaitCountdown.CODEC);

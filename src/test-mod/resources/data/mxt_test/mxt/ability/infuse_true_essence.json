@@ -1,5 +1,9 @@
 {
   "type": "mxt:active",
   "cooldown": 20,
-  "entity_action": { "type": "mxt:add_resource", "resource": "mxt_test:true_essence", "amount": 5 }
+  "entity_action": {
+    "type": "mxt:add_resource",
+    "resource": "mxt_test:true_essence",
+    "amount": 5
+  }
 }

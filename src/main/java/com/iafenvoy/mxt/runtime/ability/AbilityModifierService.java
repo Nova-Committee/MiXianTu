@@ -31,10 +31,10 @@ public final class AbilityModifierService {
         for (Identifier id : holder.sources().keys()) {
             Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), id).orElse(null);
             if (ability == null) continue;
-            if (!(ability.value().type() instanceof ModifierAbilityType)) continue;
+            if (!(ability.value().type() instanceof ModifierAbilityType(List<AttributeEntry> modifiers))) continue;
             if (!ability.value().condition().test(entity, context)) continue;
-            for (AttributeEntry modifier : ability.value().modifiers())
-                result.add(new ResolvedModifier(id, modifier));
+            for (AttributeEntry entry : modifiers)
+                result.add(new ResolvedModifier(id, entry));
         }
         return result;
     }

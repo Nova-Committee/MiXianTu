@@ -5,6 +5,9 @@
     "type": "mxt:modify_storage",
     "family": "mxt:ability",
     "id": "probe:storage_probe",
-    "value": {"type": "mxt:toggle", "state": true}
+    "value": {
+      "type": "mxt:toggle",
+      "state": true
+    }
   }
 }

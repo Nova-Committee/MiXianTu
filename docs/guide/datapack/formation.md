@@ -7,7 +7,7 @@ title: 阵法、锻造与炼丹
 | 字段                       | 类型                              | 默认          | 说明                            |
 |--------------------------|---------------------------------|-------------|-------------------------------|
 | `structure_template`     | Identifier                      | 见下          | 结构模板；controller 即模板原点          |
-| `structure_check`        | `structure` / `always`          | `structure` | **立阵时是否校验结构**（2026-09-25 新增）。`always` 表示这座阵法哪里都能立，此时**不允许**再写 `structure_template` 或 `structure`（写了是加载错误，不是被忽略） |
+| `structure_check`        | `structure` / `always`          | `structure` | **立阵时是否校验结构**（2026-09-25 新增）。`always` 表示这座阵法哪里都能立，此时 `structure_template` / `structure` 写了也**不会被读**（静默忽略，2026-09-27 起不再报错） |
 | `structure`              | `List<RequiredBlock>`           | 见下          | 内联结构；controller 即偏移原点          |
 | `radius`                 | NumberProvider                  | **必填**      | 球形作用半径                        |
 | `activation_costs`       | `List<Cost>`                    | `[]`        | 激活消耗，从激活者账上扣；条目见 [`Cost`](../../数据包格式.md#cost) |
@@ -78,7 +78,7 @@ title: 阵法、锻造与炼丹
 三档 `target` 是同一条规则的不同宽度：`all` 不筛；`allies` 要求好友判定给出 `true`，而**归属名单上的人在好友判定里算自己的好友**，
 所以 `allies` 包含他们；`owner` 只认归属名单，是同样效果的更窄写法（名单上**任何一位**都算）。
 
-**属性加成不在这里找字段。** `ability` 自带 `modifiers`，授予一个能力就等于授予它的属性修饰符；基座不再开第二个入口，
+**属性加成不在这里找字段。** 授予一个 `mxt:modifier` 能力就等于授予它的属性修饰符（`modifiers` 在那个类型上），基座不再开第二个入口，
 否则同一件事会有两套规则，包括"修饰符活过了授予它的那座阵法"这类最容易出错的部分。
 
 **不再被选中的实体会被收回授予**：站在阵里而好友关系消失时，这个 source 会被对账清空，不必等它走出去。

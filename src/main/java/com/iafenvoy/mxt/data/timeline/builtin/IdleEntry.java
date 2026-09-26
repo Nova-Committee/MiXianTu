@@ -34,7 +34,7 @@ public record IdleEntry(NumberProvider duration) implements TimelineEntry {
         // decides per tick, and this one never does.
         if (countdown == null || countdown.remaining() <= 0L) return Outcome.FAILED;
         if (countdown.remaining() == 1L) return Outcome.FINISHED;
-        context.state().set(new IdleCountdown(countdown.remaining() - 1L));
+        countdown.set(countdown.remaining() - 1L);
         return Outcome.RUNNING;
     }
 

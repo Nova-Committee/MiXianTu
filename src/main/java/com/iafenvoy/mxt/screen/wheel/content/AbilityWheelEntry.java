@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.CooldownSource;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -79,7 +80,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         if (player == null) return 0L;
         AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return 0L;
-        return AbilityStorage.remaining(holder, HolderHelper.id(this.ability), player.level().getGameTime());
+        return AbilityStorage.cooldownRemaining(holder, HolderHelper.id(this.ability), player.level().getGameTime());
     }
 
     // The length the last use actually got: the declared cooldown field can be overridden by a stored
@@ -107,7 +108,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
                 on ? "wheel.mxt.tooltip.state_on" : "wheel.mxt.tooltip.state_off")));
         if (player == null) return lines;
         FormulaContext context = FormulaContext.of(player);
-        double cooldown = this.ability.value().cooldown().evaluate(context);
+        double cooldown = this.ability.value().type() instanceof CooldownSource source ? source.cooldown().evaluate(context) : 0.0D;
         if (cooldown > 0.0D)
             lines.add(Component.translatable("wheel.mxt.tooltip.cooldown", WheelDuration.seconds(cooldown)));
         double castTime = this.ability.value().castTime().evaluate(context);

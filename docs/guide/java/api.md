@@ -286,15 +286,17 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 | `tickChannel(Holder<Ability>, Entity, AbilityAttachment, ResourceHolderAttachment, long gameTime, FormulaContext)` | 引导每 tick 结算 | 只有服务端实体 tick 桥会调；任何失败都停止引导 |
 | `stopChannel(AbilityAttachment)` | 停止引导 | |
 | `cancelCast(Holder<Ability>, AbilityAttachment, long gameTime)` | 中断蓄力 | **不退费** |
-| `executeTargetAction(Ability definition, Entity actor, Entity target, FormulaContext context)` | 执行技能的目标行为 | 给事件桥复用，`origin` 为空 |
 
 返回类型：`UseResult(committed, casting, failure, failedResource, amounts)`（**三态**：已提交 / 引导中 / 失败）、`GateResult(approved, failure, failedResource)`、`PrepareResult`（`approved()` 即 `use != null`）、`PreparedUse`、`CommitResult`、`ChannelResult(state, failure, nextTick, amounts)`、`enum State {INACTIVE, WAITING, PULSED, STOPPED}`、`enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY, CARRIED_NOT_INSTANT}`。
 
 要点：
 
 - 凡是"按下某个开关"，服务端一律先经 `runtime/ability/AbilityActivationService`——轮盘、命令、KubeJS 与符箓都走它，**别在别处再写一套"按下某个开关"的分派**。实现了 `Toggable` 且 `gated(ctx)` 为真时它才回头调这里的 `gate`。
-- **冷却与消耗全由这条路负责**：`cooldown` 字段自己会写 `mxt:cooldown` 状态，内容不需要再声明一遍冷却。
+- **"强制施放一条任何类型的技能"只有 `use` 这一条路**：`AbilityActivationService.activate` 对不实现 `Toggable` 的技能直接 `UNAVAILABLE`，而 `/mxt ability cast`、KubeJS 的施放入口与轮盘按下时对非按键型的回落（`WheelService.press`）都直接调 `use`（`requiresGrant = true`）；物品承载的那条是 `useCarried`（`requiresGrant = false`，`cast_time > 0` 或 ChannelSource 会被 `CARRIED_NOT_INSTANT` 拒）。
+- **冷却与消耗全由这条路负责**：`cooldown` 字段自己会写 `mxt:cooldown` 状态，长度也只有这一个来源（旧的可声明的 `ticks` 已随 `components` 删除）。
 - 世界动作永不回滚，所以复合技能先 `prepare` 校验、再统一 `commit`。
+- **生效时做什么由类型回答**（2026-09-27 重设计起）：这条链在钱付完之后只调 `AbilityEffect.run(definition.type(), actor, context, origin)`（`AbilityEffect` 是额外能力接口，`data/ability/AbilityEffect.java`；另一个静态入口 `runOn(...)` 只对一个目标生效）。实现 `ActionCarrier` 的五个类型（`mxt:active` / `triggered` / `channelled` / `aura` / `interval`）各自带四个动作字段并在自己的时机跑它们，`mxt:word` 直接实现 `AbilityEffect` 跑自己的效果枚举。根接口 `AbilityType` 只剩九个方法且**只处理 active**（`createComponents` / `isActive` / `grant` / `revoke` / `active` / `inactive` / `tick` / `activeTick` / `tickInterval`）；`triggers()` / `rolls(...)` / `damageCondition()` 属于额外接口 `TriggerSource`（只有 `mxt:triggered`），通道的 `channelInterval()` / `upkeepCosts()` 属于 `ChannelSource`（`mxt:channelled`），冷却长度 `cooldown()` 属于 `CooldownSource`（会付款的七个类型；`AbilityService` 的施放管线与共用闸门都从它取长度，取不到按 `0`）。类型的 `tick` / `tickInterval` / `active` / `inactive` / `activeTick` 由 `AbilityEventBridge.tickAbilities` 每 tick 那一趟统一驱动，**别在这里再插一套按类分派**。
+- `grant` / `revoke` 两个钩子已在 `AbilityType` 上就位，但**运行时尚未回调**（把实体穿到台账的 8 个授予 / 撤销调用点还没做）。
 - 这个类**自己不检查客户端**，也从不产生 `Failure.SERVER_ONLY`——客户端那道 `SERVER_ONLY` 是调用方（例如 KubeJS 桥 `MxtKubeJsApi`）自己返回的。直接调 `use` 在客户端会真的动手。
 - 所有结果里的 `amounts` / `costs` 只用于展示与记录；**别拿它当回滚依据**。
 

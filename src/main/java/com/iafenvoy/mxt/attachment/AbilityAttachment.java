@@ -43,7 +43,6 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         this.sources = sources.copy();
         this.channelledAbility = channelledAbility;
         this.storage = storage.orElseGet(DataStorageHolder::new);
-        this.storage.ownedBy(this);
     }
 
     public SourceLedger<Identifier> sources() {

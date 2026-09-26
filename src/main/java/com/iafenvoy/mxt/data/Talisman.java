@@ -58,9 +58,6 @@ public record Talisman(Component name, Component description,
     private static DataResult<Talisman> validate(Talisman talisman) {
         if (talisman.durability < 0)
             return DataResult.error(() -> "A talisman's durability cannot be negative");
-        if (talisman.durability == 0 && talisman.consume != 1)
-            return DataResult.error(() -> "A talisman spends consume only where it declares a durability; "
-                    + "write durability or drop the consume");
         return DataResult.success(talisman);
     }
 }

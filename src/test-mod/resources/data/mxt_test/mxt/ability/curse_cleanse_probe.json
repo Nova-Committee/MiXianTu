@@ -3,6 +3,8 @@
   "cooldown": 0,
   "entity_action": {
     "type": "mxt:remove_curses_by_tag",
-    "tags": ["#mxt_test:cleanse/probe"]
+    "tags": [
+      "#mxt_test:cleanse/probe"
+    ]
   }
 }

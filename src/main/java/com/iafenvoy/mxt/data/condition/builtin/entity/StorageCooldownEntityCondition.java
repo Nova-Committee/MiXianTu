@@ -32,14 +32,13 @@ public record StorageCooldownEntityCondition(Identifier family, Identifier id, O
     public boolean test(@NonNull EntityConditionContext ctx) {
         StorageConditionReading reading = StorageConditionReading.of(ctx.entity(), this.family, this.id).orElse(null);
         if (reading == null) return false;
-        CooldownDataStorage declaration = reading.declared(CooldownDataStorage.class).orElse(CooldownDataStorage.INSTANCE);
-        Optional<CooldownDataStorage> stored = reading.stored(CooldownDataStorage.class);
         double left = 0.0D;
+        Optional<CooldownDataStorage> stored = reading.stored(CooldownDataStorage.class);
+        // A value written without a length is a cooldown of no length, which is how a pack states "ready at once".
         if (stored.isPresent()) {
-            double length = stored.get().duration().orElseGet(() -> declaration.ticks().evaluate(ctx.formula()));
+            double length = stored.get().duration().orElse(0.0D);
             if (!Double.isFinite(length)) return false;
-            long elapsed = Math.max(0L, ctx.entity().level().getGameTime() - reading.changedAt(CooldownDataStorage.class));
-            left = Math.max(0.0D, length - elapsed);
+            left = stored.get().remaining(ctx.entity().level().getGameTime());
         }
         if (this.remaining.isPresent() && !this.remaining.get().test(left, ctx.formula())) return false;
         return this.ready.isEmpty() || this.ready.get() == (left <= 0.0D);

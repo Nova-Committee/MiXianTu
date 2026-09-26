@@ -6,12 +6,11 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Content that declares storage: the definition lists the kinds it keeps, and each kind's class is the value it
+ * Content that declares storage: a definition lists the kinds it keeps, and each kind's class is the value it
  * fills. The values themselves live with the instance that owns them, in a {@link DataStorageHolder} carried by
  * that family's attachment.
  */
 public interface DataStorageDeclaration {
-    // The data-pack key of this list stays "components".
     List<DataStorage> storages();
 
     default boolean declares(DataStorage value) {

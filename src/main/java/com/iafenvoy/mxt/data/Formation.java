@@ -115,14 +115,10 @@ public record Formation(Component name, Component description, Optional<Identifi
 
     // Reported as a decode error rather than thrown from the constructor, so a bad definition can be named.
     private static DataResult<Formation> validate(Formation formation) {
+        // With nothing checked, a declared template or inline structure is a field this definition never reads.
+        if (formation.structureCheck() == StructureCheck.ALWAYS) return DataResult.success(formation);
         boolean template = formation.structureTemplate().isPresent();
         boolean inline = !formation.structure().isEmpty();
-        if (formation.structureCheck() == StructureCheck.ALWAYS) {
-            if (template || inline)
-                return DataResult.error(() -> "structure_check always means no structure is checked, so a formation "
-                        + "must not declare structure_template or structure");
-            return DataResult.success(formation);
-        }
         if (template && inline)
             return DataResult.error(() -> "A formation declares both structure_template and structure; keep exactly one");
         if (!template && !inline)

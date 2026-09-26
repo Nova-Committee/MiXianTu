@@ -1,9 +1,13 @@
 package com.iafenvoy.mxt.data.ability.type;
 
 import com.iafenvoy.mxt.attachment.FlightAttachment;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityType;
+import com.iafenvoy.mxt.data.ability.CooldownSource;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.ToggleContext;
+import com.iafenvoy.mxt.data.storage.DataStorageCollector;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -23,10 +27,12 @@ import java.util.Optional;
  * command of the art adds to its speed. This is the pressable half - the wheel draws this entry, and what it summons
  * is data the artifact declares.
  */
-public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier) implements AbilityType, Togglable {
+public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier,
+                                       NumberProvider cooldown) implements AbilityType, Togglable, CooldownSource {
     public static final MapCodec<FlightControlAbilityType> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Hand.CODEC.optionalFieldOf("hand", Hand.EITHER).forGetter(FlightControlAbilityType::hand),
-            NumberProvider.CODEC.optionalFieldOf("speed_multiplier", new Constant(1.0D)).forGetter(FlightControlAbilityType::speedMultiplier)
+            NumberProvider.CODEC.optionalFieldOf("speed_multiplier", new Constant(1.0D)).forGetter(FlightControlAbilityType::speedMultiplier),
+            NumberProvider.CODEC.optionalFieldOf("cooldown", new Constant(0.0D)).forGetter(FlightControlAbilityType::cooldown)
     ).apply(i, FlightControlAbilityType::new));
 
     // Which hand a flight may start from. Either is main hand first, so a pack that wants a sword fought with keeps
@@ -45,6 +51,13 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     @Override
     public MapCodec<FlightControlAbilityType> codec() {
         return CODEC;
+    }
+
+    // Taking off is charged through the shared gate, so the one kind it keeps is the cooldown that gate writes.
+    @Override
+    public void createComponents(Ability ability, DataStorageCollector collector) {
+        AbilityType.super.createComponents(ability, collector);
+        collector.add(CooldownDataStorage.INSTANCE);
     }
 
     // A second artifact that also declares a mount must not read as "on" while another flight is up, hence the skill

@@ -4,13 +4,13 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.AbilityContext;
 import com.iafenvoy.mxt.data.ability.Abilities;
-import com.iafenvoy.mxt.data.ability.type.AuraAbilityType;
-import com.iafenvoy.mxt.data.ability.type.TriggeredAbilityType;
+import com.iafenvoy.mxt.data.ability.AbilityType;
+import com.iafenvoy.mxt.data.ability.TriggerSource;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
-import com.iafenvoy.mxt.data.storage.runtime.AuraPulse;
+import com.iafenvoy.mxt.data.storage.runtime.ActiveState;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
@@ -28,8 +28,6 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.trigger.*;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -110,7 +108,6 @@ public final class AbilityEventBridge {
         }
         dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity));
         PassiveAttributeService.tick(entity);
-        rechargeCharges(entity, abilities, entity.level().getGameTime());
         if (entity.level().getGameTime() % 20L == 0L) {
             // Curios is reconciled on a slow cadence, so the index has to follow it here: it is no longer
             // rebuilt as a side effect of the next publication.
@@ -118,7 +115,7 @@ public final class AbilityEventBridge {
             // Mastery is measured by a stored value, so it is re-read on the same slow cadence.
             TechniqueMasteryService.tick(entity);
         }
-        tickAuras(entity, abilities, entity.level().getGameTime());
+        tickAbilities(entity, abilities, resourceHolder, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
         // The disabled check the id lookup used to apply: a channel must stop ticking once its ability is disabled.
         abilities.channelledAbility().filter(ability -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, ability)).ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities, resourceHolder, entity.level().getGameTime(), FormulaContext.of(entity)));
@@ -234,52 +231,34 @@ public final class AbilityEventBridge {
                 ResourceService.formulaContext(entity, id, FormulaContext.EMPTY)).changed()).orElse(false);
     }
 
-    // Only an ability that declares mxt:charges is looked at, and AbilityStorage.recharge writes only when a step
-    // is actually due, so an entity holding no such ability costs one scan of its grants per tick.
-    private static void rechargeCharges(LivingEntity actor, AbilityAttachment abilities, long gameTime) {
+    // One pass for every granted ability. Every stored value ticks itself first and reports what it changed, then the
+    // type is asked whether it is active: the loop owns the cadence and the edges, and the type only answers what it
+    // means and what to do at each moment.
+    private static void tickAbilities(LivingEntity entity, AbilityAttachment abilities,
+                                      ResourceHolderAttachment resources, long gameTime) {
+        FormulaContext formula = FormulaContext.of(entity);
         for (Identifier id : abilities.sources().keys()) {
-            ChargesDataStorage declaration = Abilities.resolve(actor.level().registryAccess(), id)
-                    .flatMap(ability -> ability.value().storages().stream()
-                            .filter(ChargesDataStorage.class::isInstance)
-                            .map(ChargesDataStorage.class::cast)
-                            .findFirst())
-                    .orElse(null);
-            if (declaration == null) continue;
-            AbilityStorage.recharge(abilities, id, declaration, gameTime, FormulaContext.of(actor));
-        }
-    }
-
-    private static boolean tickAuras(LivingEntity actor, AbilityAttachment abilities, long gameTime) {
-        boolean changed = false;
-        for (Identifier id : abilities.sources().keys()) {
-            Holder<Ability> ability = Abilities.resolve(actor.level().registryAccess(), id).orElse(null);
+            Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), id).orElse(null);
             if (ability == null) continue;
-            Ability definition = ability.value();
-            if (!(definition.type() instanceof AuraAbilityType(
-                    NumberProvider interval1,
-                    NumberProvider radius1
-            )) || !definition.condition().test(actor, FormulaContext.of(actor)))
-                continue;
-            long dueAt = Math.round(AbilityStorage.get(abilities, id, AuraPulse.class).map(AuraPulse::nextTick).orElse((double) gameTime));
-            if (gameTime < dueAt) continue;
-            FormulaContext actorContext = FormulaContext.of(actor);
-            double interval = interval1.evaluate(actorContext);
-            double radius = radius1.evaluate(actorContext);
-            if (!Double.isFinite(interval) || interval <= 0.0D || !Double.isFinite(radius) || radius < 0.0D) continue;
-            double radiusSquared = radius * radius;
-            for (Entity target : actor.level().getEntities(actor, actor.getBoundingBox().inflate(radius))) {
-                double distanceSquared = actor.distanceToSqr(target);
-                FormulaContext context = FormulaContext.of(actor, Map.of("aura_radius", radius, "distance", Math.sqrt(distanceSquared)));
-                if (distanceSquared <= radiusSquared) {
-                    FormulaContext targetContext = target instanceof LivingEntity livingTarget ? FormulaContexts.forEntities(actor, livingTarget, context) : context;
-                    AbilityService.executeTargetAction(definition, actor, target, targetContext);
-                }
+            AbilityContext context = new AbilityContext(entity, ability, abilities, resources, formula, gameTime);
+            AbilityType type = ability.value().type();
+            abilities.storage().tick(id, context);
+            // A value that changed while ticking only recorded it: that flag, not a callback, is what decides
+            // whether this attachment has to be synced.
+            if (abilities.storage().isDirty(id)) abilities.markDirty();
+            int interval = type.tickInterval(context);
+            if (interval <= 0 || gameTime % interval != 0L) continue;
+            type.tick(context);
+            boolean active = type.isActive(context);
+            // Only an edge is written, so an ability that never becomes active keeps no entry at all.
+            boolean was = AbilityStorage.get(abilities, id, ActiveState.class).map(ActiveState::active).orElse(false);
+            if (active != was) {
+                AbilityStorage.value(abilities, id, ActiveState.class, ActiveState.NONE, gameTime).set(active);
+                if (active) type.active(context);
+                else type.inactive(context);
             }
-            AbilityStorage.set(abilities, id,
-                    new AuraPulse(Math.addExact(gameTime, Math.max(1L, Math.round(interval)))), gameTime);
-            changed = true;
+            if (active) type.activeTick(context);
         }
-        return changed;
     }
 
     private static boolean finishDueCasts(LivingEntity actor, AbilityAttachment abilities,
@@ -318,8 +297,9 @@ public final class AbilityEventBridge {
             Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), abilityId).orElse(null);
             if (ability == null) continue;
             Ability definition = ability.value();
+            if (!(definition.type() instanceof TriggerSource source)) continue;
             int triggerIndex = 0;
-            for (Trigger trigger : definition.triggers()) {
+            for (Trigger trigger : source.triggers()) {
                 String identity = abilityId + "/" + triggerIndex++;
                 TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), "ability", identity,
                         trigger, signal -> true,
@@ -328,10 +308,10 @@ public final class AbilityEventBridge {
                             // A damage condition belongs to the hurt signal that carries it, so it is read from
                             // the signal instead of being baked into the subscription by the publisher.
                             if (TriggerSignals.HURT.equals(signal.type())
-                                    && !definition.damageCondition().test(signal.context().damageSource(),
+                                    && !source.damageCondition().test(signal.context().damageSource(),
                                     (float) formula.value("damage"), signal.context()))
                                 return;
-                            if (!passesTriggerChance(entity, definition, formula)) return;
+                            if (!source.rolls(entity, formula)) return;
                             Set<DispatchKey> active = DISPATCHING.get();
                             DispatchKey key = new DispatchKey(entity.getUUID(), abilityId);
                             if (!active.add(key)) return;
@@ -347,19 +327,6 @@ public final class AbilityEventBridge {
                         }, false));
             }
         }
-    }
-
-    // A triggered ability's chance is evaluated by the server immediately before dispatch.
-    private static boolean passesTriggerChance(LivingEntity entity, Ability definition, FormulaContext context) {
-        if (!(definition.type() instanceof TriggeredAbilityType triggered)) return true;
-        final double chance;
-        try {
-            chance = triggered.chance().evaluate(context);
-        } catch (RuntimeException exception) {
-            return false;
-        }
-        if (!Double.isFinite(chance) || chance <= 0.0D) return false;
-        return chance >= 1.0D || entity.getRandom().nextDouble() < chance;
     }
 
     private record DispatchKey(UUID entity, Identifier ability) {

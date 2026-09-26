@@ -50,8 +50,7 @@ public record TechniqueBinding(Holder<Technique> technique, List<Entry> entries,
     }
 
     private static DataResult<TechniqueBinding> validate(TechniqueBinding binding) {
-        return HoldBinding.validate(binding.holdAnimation(), binding.holdSound(), binding.requiresHold())
-                .map(ignored -> binding);
+        return HoldBinding.validate(binding.holdAnimation()).map(ignored -> binding);
     }
 
     public boolean requiresHold() {
