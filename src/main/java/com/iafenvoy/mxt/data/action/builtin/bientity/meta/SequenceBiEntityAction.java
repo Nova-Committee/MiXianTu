@@ -2,9 +2,7 @@ package com.iafenvoy.mxt.data.action.builtin.bientity.meta;
 
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -14,10 +12,7 @@ public record SequenceBiEntityAction(List<BiEntityAction> actions) implements Bi
 
     @Override
     public void execute(@NonNull BiEntityActionContext ctx) {
-        Entity actor = ctx.actor();
-        Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
-        this.actions.forEach(action -> action.execute(actor, target, ctx));
+        this.actions.forEach(action -> action.execute(ctx.actor(), ctx.target(), ctx));
     }
 
     @Override

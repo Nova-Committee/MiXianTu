@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.jspecify.annotations.NonNull;
@@ -18,11 +17,10 @@ public enum LightUpAction implements BlockAction {
 
     @Override
     public void execute(@NonNull BlockActionContext ctx) {
-        Level level = ctx.level();
         BlockPos pos = ctx.pos();
-        BlockState state = level.getBlockState(pos);
+        BlockState state = ctx.level().getBlockState(pos);
         if (state.hasProperty(BlockStateProperties.LIT) && !state.getValue(BlockStateProperties.LIT))
-            level.setBlock(pos, state.setValue(BlockStateProperties.LIT, true), 3);
+            ctx.level().setBlock(pos, state.setValue(BlockStateProperties.LIT, true), 3);
     }
 
     @Override

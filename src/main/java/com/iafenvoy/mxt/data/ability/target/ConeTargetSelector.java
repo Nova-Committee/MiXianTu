@@ -38,7 +38,9 @@ public record ConeTargetSelector(NumberProvider length, NumberProvider angle, bo
             return DataResult.error(() -> "A target limit must not be negative: " + selector.limit);
         if (selector.length instanceof Constant(double value) && (!Double.isFinite(value) || value <= 0.0D))
             return DataResult.error(() -> "A cone length must be finite and positive: " + value);
-        if (selector.angle instanceof Constant(double value) && (!Double.isFinite(value) || value < 0.0D || value > 180.0D))
+        if (selector.angle instanceof Constant(
+                double value
+        ) && (!Double.isFinite(value) || value < 0.0D || value > 180.0D))
             return DataResult.error(() -> "A cone half-angle must be between 0 and 180 degrees: " + value);
         return DataResult.success(selector);
     }

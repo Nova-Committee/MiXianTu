@@ -177,7 +177,8 @@ public final class MxtFormulaVariables {
     // The state of the secret realm the subject is inside. The names carry the {@code secret_realm_} prefix
     // because {@code realm} already means a cultivation stage and both can be read in one expression; every name
     // answers NaN outside a secret realm, so a condition can tell "not in a secret realm" from "in an empty one".
-    private static final class SecretRealmVariable implements FormulaVariable {        private static final Set<String> NAMES = Set.of("secret_realm_members", "secret_realm_limit",
+    private static final class SecretRealmVariable implements FormulaVariable {
+        private static final Set<String> NAMES = Set.of("secret_realm_members", "secret_realm_limit",
                 "secret_realm_elapsed", "secret_realm_duration", "secret_realm_index", "secret_realm_is_owner");
 
         @Override

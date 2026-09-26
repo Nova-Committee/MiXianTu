@@ -43,8 +43,8 @@ public record Artifact(Component name, Component description, Optional<Holder<It
                        List<Either<Holder<Ability>, TagKey<Ability>>> abilities, boolean curiosEquipable,
                        boolean requireOwner, ItemAction claimAction, EntityCondition claimCondition,
                        ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks,
-                       List<Either<Holder<Element>, TagKey<Element>>> element,
-                       double attachmentMultiplier, int priority) implements ItemMatcher, NamedDefinition {
+                       List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier,
+                       int priority) implements ItemMatcher, NamedDefinition {
     // Two hearts.
     public static final double DEFAULT_CLAIM_HEALTH = 4.0D;
     // One second.

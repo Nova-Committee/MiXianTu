@@ -2,11 +2,9 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.NonNull;
 
@@ -15,10 +13,8 @@ public record HealAction(NumberProvider amount) implements EntityAction {
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
-        if (entity instanceof LivingEntity living) {
-            double value = this.amount.evaluate(context);
+        if (ctx.entity() instanceof LivingEntity living) {
+            double value = this.amount.evaluate(ctx.formula());
             if (Double.isFinite(value) && value > 0.0D) living.heal((float) value);
         }
     }

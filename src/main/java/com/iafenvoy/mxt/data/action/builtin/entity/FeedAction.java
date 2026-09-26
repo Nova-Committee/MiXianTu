@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.jspecify.annotations.NonNull;
 
@@ -17,8 +16,7 @@ public record FeedAction(int food, float saturation) implements EntityAction {
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        if (entity instanceof Player player) player.getFoodData().eat(this.food, this.saturation);
+        if (ctx.entity() instanceof Player player) player.getFoodData().eat(this.food, this.saturation);
     }
 
     @Override

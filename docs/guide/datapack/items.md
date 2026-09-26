@@ -9,7 +9,7 @@ title: 物品绑定、品质与经济
   "items": ["minecraft:iron_sword", "#minecraft:swords"],
   "actions": [{"type": "mxt:grant_spirit_root", "spirit_root": "mxt:fire_root"}],
   "conditions": [
-    {"type": "mxt:always_true"},
+    {"type": "mxt:always"},
     {
       "condition": {"type": "mxt:realm", "realm": "example:foundation"},
       "description": "condition.example.foundation_required"

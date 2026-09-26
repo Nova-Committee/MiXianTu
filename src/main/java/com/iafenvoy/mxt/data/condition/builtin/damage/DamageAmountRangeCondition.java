@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.damagesource.DamageSource;
 import org.jspecify.annotations.NonNull;
 
 public record DamageAmountRangeCondition(NumberProvider min, NumberProvider max) implements DamageCondition {
@@ -17,12 +16,10 @@ public record DamageAmountRangeCondition(NumberProvider min, NumberProvider max)
 
     @Override
     public boolean test(@NonNull DamageConditionContext ctx) {
-        DamageSource source = ctx.source();
-        float amount = ctx.amount();
         FormulaContext context = ctx.formula();
         double min = this.min.evaluate(context);
         double max = this.max.evaluate(context);
-        return Double.isFinite(min) && Double.isFinite(max) && min <= max && amount >= min && amount <= max;
+        return Double.isFinite(min) && Double.isFinite(max) && min <= max && ctx.amount() >= min && ctx.amount() <= max;
     }
 
     @Override

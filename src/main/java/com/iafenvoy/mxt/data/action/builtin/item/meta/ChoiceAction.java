@@ -3,10 +3,8 @@ package com.iafenvoy.mxt.data.action.builtin.item.meta;
 import com.iafenvoy.mxt.data.Weighted;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -17,10 +15,8 @@ public record ChoiceAction(List<Weighted<ItemAction>> actions) implements ItemAc
     @Override
     public void execute(@NonNull ItemActionContext ctx) {
         Entity holder = ctx.holder();
-        ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
         Weighted<ItemAction> entry = Weighted.select(this.actions, holder.getRandom());
-        if (entry != null) entry.value().execute(holder, stack, ctx);
+        if (entry != null) entry.value().execute(holder, ctx.stack(), ctx);
     }
 
     @Override

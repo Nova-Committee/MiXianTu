@@ -3,10 +3,7 @@ package com.iafenvoy.mxt.data.condition.builtin.item;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 public enum OwnedByItemCondition implements ItemCondition {
@@ -15,10 +12,7 @@ public enum OwnedByItemCondition implements ItemCondition {
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        Entity holder = ctx.holder();
-        ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
-        return ArtifactService.state(stack).ownerUuid().filter(value -> value.equals(holder.getUUID().toString())).isPresent();
+        return ArtifactService.state(ctx.stack()).ownerUuid().filter(value -> value.equals(ctx.holder().getUUID().toString())).isPresent();
     }
 
     @Override

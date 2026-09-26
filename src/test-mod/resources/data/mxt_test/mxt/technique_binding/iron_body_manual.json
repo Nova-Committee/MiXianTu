@@ -2,6 +2,6 @@
   "technique": "mxt_test:iron_body_manual",
   "carrier_item": "mxt_test:iron_body_manual",
   "conditions": [
-    {"type": "mxt:always_true"}
+    {"type": "mxt:always"}
   ]
 }

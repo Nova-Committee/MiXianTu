@@ -2,10 +2,8 @@ package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 public record DistanceBiEntityCondition(NumberProvider maximum) implements BiEntityCondition {
@@ -13,11 +11,8 @@ public record DistanceBiEntityCondition(NumberProvider maximum) implements BiEnt
 
     @Override
     public boolean test(@NonNull BiEntityConditionContext ctx) {
-        Entity actor = ctx.actor();
-        Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
-        double maximum = this.maximum.evaluate(context);
-        return Double.isFinite(maximum) && maximum >= 0.0D && actor.distanceToSqr(target) <= maximum * maximum;
+        double maximum = this.maximum.evaluate(ctx.formula());
+        return Double.isFinite(maximum) && maximum >= 0.0D && ctx.actor().distanceToSqr(ctx.target()) <= maximum * maximum;
     }
 
     @Override

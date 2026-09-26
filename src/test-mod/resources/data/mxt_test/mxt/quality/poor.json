@@ -1,6 +1,6 @@
 {
   "color": "#808080",
   "condition": {
-    "type": "mxt:always_true"
+    "type": "mxt:always"
   }
 }

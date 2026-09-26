@@ -2,8 +2,9 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.kubejs.type.condition.JsDamageCondition;
-import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
+import com.iafenvoy.mxt.data.condition.NeverCondition;
 import com.iafenvoy.mxt.data.condition.builtin.damage.*;
 import com.iafenvoy.mxt.data.condition.builtin.damage.meta.*;
 import com.mojang.serialization.MapCodec;
@@ -14,7 +15,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtDamageConditions {
     public static final DeferredRegister<MapCodec<? extends DamageCondition>> REGISTRY = DeferredRegister.create(MxtRegistries.DAMAGE_CONDITION_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<AlwaysTrueCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<AlwaysCondition>> ALWAYS = REGISTRY.register("always", () -> AlwaysCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<NeverCondition>> NEVER = REGISTRY.register("never", () -> NeverCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<JsDamageCondition>> JS = REGISTRY.register("js", () -> JsDamageCondition.CODEC);
 
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<DamageAmountRangeCondition>> AMOUNT_RANGE = REGISTRY.register("amount_range", () -> DamageAmountRangeCondition.CODEC);
@@ -27,7 +29,6 @@ public final class MxtDamageConditions {
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ElementDamageCondition>> ELEMENT = REGISTRY.register("element", () -> ElementDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<AndDamageCondition>> AND = REGISTRY.register("and", () -> AndDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ChanceDamageCondition>> CHANCE = REGISTRY.register("chance", () -> ChanceDamageCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<ConstantDamageCondition>> CONSTANT = REGISTRY.register("constant", () -> ConstantDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<NotDamageCondition>> NOT = REGISTRY.register("not", () -> NotDamageCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends DamageCondition>, MapCodec<OrDamageCondition>> OR = REGISTRY.register("or", () -> OrDamageCondition.CODEC);
 }

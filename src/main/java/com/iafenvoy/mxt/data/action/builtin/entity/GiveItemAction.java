@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -28,8 +27,7 @@ public record GiveItemAction(ItemStackTemplate stack, ItemAction itemAction,
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        if (!(entity instanceof Player player)) return;
+        if (!(ctx.entity() instanceof Player player)) return;
         ItemStack result = this.stack.create();
         this.itemAction.execute(player, result, ctx);
         if (result.isEmpty()) return;

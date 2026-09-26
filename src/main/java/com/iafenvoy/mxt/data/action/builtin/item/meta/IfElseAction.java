@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.action.builtin.item.meta;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
@@ -22,7 +21,6 @@ public record IfElseAction(ItemCondition condition, ItemAction ifAction,
     public void execute(@NonNull ItemActionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
         if (this.condition.test(holder, stack, ctx)) this.ifAction.execute(holder, stack, ctx);
         else this.elseAction.execute(holder, stack, ctx);
     }

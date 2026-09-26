@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -22,11 +21,9 @@ public record PassengerRecursiveCondition(BiEntityCondition bientityCondition,
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
-        long matches = entity.getPassengers().stream()
+        long matches = ctx.entity().getPassengers().stream()
                 .flatMap(Entity::getPassengersAndSelf)
-                .filter(passenger -> this.bientityCondition.test(passenger, entity, ctx))
+                .filter(passenger -> this.bientityCondition.test(passenger, ctx.entity(), ctx))
                 .count();
         return this.comparison.compare(matches);
     }

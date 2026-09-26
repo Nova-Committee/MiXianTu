@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -24,11 +23,10 @@ public record AttachElementAction(Holder<Element> element, NumberProvider amount
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double amount = this.amount.evaluate(context);
         if (!Double.isFinite(amount) || amount == 0.0D) return;
-        ElementReactionService.apply(entity, this.element, amount, context);
+        ElementReactionService.apply(ctx.entity(), this.element, amount, context);
     }
 
     @Override

@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -17,7 +16,6 @@ public record BrightnessCondition(Comparison comparison) implements EntityCondit
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         BlockPos pos = BlockPos.containing(entity.getX(), entity.getEyeY(), entity.getZ());
         if (!entity.level().getChunkSource().hasChunk(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ())))
             return this.comparison.compare(0.0D);

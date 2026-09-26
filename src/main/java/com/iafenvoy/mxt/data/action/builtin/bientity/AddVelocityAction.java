@@ -48,7 +48,7 @@ public record AddVelocityAction(float x, float y, float z, Reference reference, 
 
     public enum Reference implements StringRepresentable {
         POSITION((actor, target) -> target.position().subtract(actor.position())),
-        ROTATION((actor, target) -> {
+        ROTATION((actor, _) -> {
             float pitch = actor.getXRot() * Mth.DEG_TO_RAD;
             float yaw = actor.getYRot() * Mth.DEG_TO_RAD;
             return new Vec3(-Mth.sin(yaw) * Mth.cos(pitch), -Mth.sin(pitch), Mth.cos(yaw) * Mth.cos(pitch));

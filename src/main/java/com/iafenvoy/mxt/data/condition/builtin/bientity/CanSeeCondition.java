@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -29,7 +28,6 @@ public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements B
     public boolean test(@NonNull BiEntityConditionContext ctx) {
         Entity actor = ctx.actor();
         Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
         if (actor.level() != target.level()) return false;
         Vec3 from = actor.getEyePosition(), to = target.getEyePosition();
         // Past 128 blocks this answers false without raycasting, so a long-range check stays cheap.

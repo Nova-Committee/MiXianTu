@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
@@ -39,10 +38,8 @@ public record AuraElementEntityCondition(Map<Holder<Element>, AuraRequirement> e
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         AuraResult resolved = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        return this.elements.entrySet().stream()
-                .allMatch(entry -> entry.getValue().test(concentration(resolved, entry.getKey()), context));
+        return this.elements.entrySet().stream().allMatch(entry -> entry.getValue().test(concentration(resolved, entry.getKey()), ctx.formula()));
     }
 
     // All live auras of one element at this position, summed.

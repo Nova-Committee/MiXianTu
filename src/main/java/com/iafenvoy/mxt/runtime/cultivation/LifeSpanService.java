@@ -226,8 +226,10 @@ public final class LifeSpanService {
         MxtServerConfig.Reincarnation settings = MxtServerConfig.INSTANCE.reincarnation;
         if (settings.kills.getValue()) kill(entity);
         if (settings.resetCultivation.getValue()) entity.getData(MxtAttachments.CULTIVATION).resetCultivation();
-        if (settings.clearMinorStages.getValue()) entity.getData(MxtAttachments.SPIRIT_IDENTITY).clearMinorStageRecords();
-        if (settings.cancelTribulation.getValue()) TribulationService.cancel(entity.getData(MxtAttachments.TRIBULATION));
+        if (settings.clearMinorStages.getValue())
+            entity.getData(MxtAttachments.SPIRIT_IDENTITY).clearMinorStageRecords();
+        if (settings.cancelTribulation.getValue())
+            TribulationService.cancel(entity.getData(MxtAttachments.TRIBULATION));
         if (settings.clearResources.getValue()) entity.getData(MxtAttachments.RESOURCE_HOLDER).clear();
         if (!settings.keepSpiritRoots.getValue()) {
             entity.getData(MxtAttachments.SPIRIT_IDENTITY).setSpiritRoots(List.of());

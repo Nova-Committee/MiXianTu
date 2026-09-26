@@ -4,7 +4,7 @@
   "attack_speed": -2.4,
   "quality_chain": "mxt_test:forged",
   "conditions": [
-    {"type": "mxt:always_true"}
+    {"type": "mxt:always"}
   ],
   "element": ["mxt_test:fire"],
   "attributes": [],

@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -21,10 +20,9 @@ public record TeleportAction(NumberProvider x, NumberProvider y, NumberProvider 
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
         double x = this.x.evaluate(context), y = this.y.evaluate(context), z = this.z.evaluate(context);
-        if (Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z)) entity.teleportTo(x, y, z);
+        if (Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z)) ctx.entity().teleportTo(x, y, z);
     }
 
     @Override

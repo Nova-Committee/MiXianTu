@@ -2,10 +2,7 @@ package com.iafenvoy.mxt.data.condition.builtin.block.meta;
 
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -15,10 +12,7 @@ public record AndBlockCondition(List<BlockCondition> conditions) implements Bloc
 
     @Override
     public boolean test(@NonNull BlockConditionContext ctx) {
-        Level level = ctx.level();
-        BlockPos pos = ctx.pos();
-        FormulaContext context = ctx.formula();
-        return this.conditions.stream().allMatch(condition -> condition.test(level, pos, ctx));
+        return this.conditions.stream().allMatch(condition -> condition.test(ctx.level(), ctx.pos(), ctx));
     }
 
     @Override

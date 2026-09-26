@@ -69,7 +69,7 @@ public record Technique(Component name, Component description, Optional<Holder<I
         return DataResult.success(technique);
     }
 
-    // condition is required - a level that needs nothing writes mxt:always_true - and ability may be omitted by a
+    // condition is required - a level that needs nothing writes mxt:always - and ability may be omitted by a
     // level that grants nothing.
     public record StageConfiguration(EntityCondition condition,
                                      List<Either<Holder<Ability>, TagKey<Ability>>> abilities) {

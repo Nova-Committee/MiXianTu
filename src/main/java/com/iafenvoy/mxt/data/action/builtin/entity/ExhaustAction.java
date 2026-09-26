@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.jspecify.annotations.NonNull;
 
@@ -13,8 +12,7 @@ public record ExhaustAction(float amount) implements EntityAction {
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        if (entity instanceof Player player && this.amount > 0.0F) player.causeFoodExhaustion(this.amount);
+        if (ctx.entity() instanceof Player player && this.amount > 0.0F) player.causeFoodExhaustion(this.amount);
     }
 
     @Override

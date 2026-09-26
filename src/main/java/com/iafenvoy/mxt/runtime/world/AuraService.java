@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.*;
-import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -484,6 +484,6 @@ public final class AuraService {
 
     private static final AuraZone EMPTY_ZONE = new AuraZone(Map.of(),
             List.of(), List.of(),
-            Fluctuation.NONE, Rules.DEFAULT, AlwaysTrueCondition.INSTANCE, Distribution.EQUAL,
+            Fluctuation.NONE, Rules.DEFAULT, AlwaysCondition.INSTANCE, Distribution.EQUAL,
             0, 0, Noise.NONE, Optional.empty(), ClientRender.DEFAULT, ClientHud.NONE, Integer.MIN_VALUE);
 }

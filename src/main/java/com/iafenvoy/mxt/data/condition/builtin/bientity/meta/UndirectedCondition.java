@@ -2,10 +2,8 @@ package com.iafenvoy.mxt.data.condition.builtin.bientity.meta;
 
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -18,10 +16,7 @@ public record UndirectedCondition(BiEntityCondition condition) implements BiEnti
 
     @Override
     public boolean test(@NonNull BiEntityConditionContext ctx) {
-        Entity actor = ctx.actor();
-        Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
-        return this.condition.test(actor, target, ctx) || this.condition.test(target, actor, ctx);
+        return this.condition.test(ctx.actor(), ctx.target(), ctx) || this.condition.test(ctx.target(), ctx.actor(), ctx);
     }
 
     @Override

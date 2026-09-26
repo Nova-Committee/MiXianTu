@@ -54,35 +54,35 @@ public record Formation(Component name, Component description, Optional<Identifi
     // The template and the check policy share one group slot, which keeps the group inside RecordCodecBuilder's
     // component limit; the JSON keys are unchanged by it.
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(Formation::name),
-            ContextNameCodec.description(CATEGORY).forGetter(Formation::description),
-            MiscCodecs.pair(
-                            Identifier.CODEC.optionalFieldOf("structure_template"),
-                            StructureCheck.CODEC.optionalFieldOf("structure_check", StructureCheck.STRUCTURE))
-                    .forGetter(formation -> Pair.of(formation.structureTemplate(), formation.structureCheck())),
-            // Strict, unlike the action and cost lists: dropping a mistyped required block would quietly make
-            // the structure easier to satisfy, and a formation standing on half its flags is worse.
-            RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
-            NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
-            Cost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
-            Cost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
-            // A framework field rather than a module: what an array keeps is a question about its own upkeep,
-            // and absent is the answer most arrays give, so this is one field rather than a module.
-            Storage.CODEC.optionalFieldOf("storage").forGetter(Formation::storage),
-            FormationActionType.CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(Formation::actions),
-            Codec.BOOL.optionalFieldOf("spare_friends", false).forGetter(Formation::spareFriends),
-            BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
-            BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
-            BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
-            EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
-            EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
-            EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
-    ).apply(i, (name, description, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
-                spareFriends, activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
-                entityExitAction) ->
-            new Formation(name, description, structure.getFirst(), structure.getSecond(), blocks, radius,
-                    activationCosts, maintenanceCosts, storage, actions, spareFriends, activateAction, tickAction,
-                    deactivateAction, entityTickAction, entityEnterAction, entityExitAction)))
+                    ContextNameCodec.name(CATEGORY).forGetter(Formation::name),
+                    ContextNameCodec.description(CATEGORY).forGetter(Formation::description),
+                    MiscCodecs.pair(
+                                    Identifier.CODEC.optionalFieldOf("structure_template"),
+                                    StructureCheck.CODEC.optionalFieldOf("structure_check", StructureCheck.STRUCTURE))
+                            .forGetter(formation -> Pair.of(formation.structureTemplate(), formation.structureCheck())),
+                    // Strict, unlike the action and cost lists: dropping a mistyped required block would quietly make
+                    // the structure easier to satisfy, and a formation standing on half its flags is worse.
+                    RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
+                    NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
+                    Cost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
+                    Cost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
+                    // A framework field rather than a module: what an array keeps is a question about its own upkeep,
+                    // and absent is the answer most arrays give, so this is one field rather than a module.
+                    Storage.CODEC.optionalFieldOf("storage").forGetter(Formation::storage),
+                    FormationActionType.CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(Formation::actions),
+                    Codec.BOOL.optionalFieldOf("spare_friends", false).forGetter(Formation::spareFriends),
+                    BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
+                    BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
+                    BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
+                    EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
+                    EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
+                    EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
+            ).apply(i, (name, description, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
+                        spareFriends, activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
+                        entityExitAction) ->
+                    new Formation(name, description, structure.getFirst(), structure.getSecond(), blocks, radius,
+                            activationCosts, maintenanceCosts, storage, actions, spareFriends, activateAction, tickAction,
+                            deactivateAction, entityTickAction, entityEnterAction, entityExitAction)))
             .flatXmap(Formation::validate, Formation::validate);
 
     /**

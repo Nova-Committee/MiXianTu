@@ -2,10 +2,8 @@ package com.iafenvoy.mxt.data.condition.builtin.damage;
 
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.world.damagesource.DamageSource;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -20,10 +18,7 @@ public final class MagicDamageCondition implements DamageCondition {
 
     @Override
     public boolean test(@NonNull DamageConditionContext ctx) {
-        DamageSource source = ctx.source();
-        float amount = ctx.amount();
-        FormulaContext context = ctx.formula();
-        return source.is(DamageTypeTags.AVOIDS_GUARDIAN_THORNS) && source.is(DamageTypeTags.WITCH_RESISTANT_TO);
+        return ctx.source().is(DamageTypeTags.AVOIDS_GUARDIAN_THORNS) && ctx.source().is(DamageTypeTags.WITCH_RESISTANT_TO);
     }
 
     @Override

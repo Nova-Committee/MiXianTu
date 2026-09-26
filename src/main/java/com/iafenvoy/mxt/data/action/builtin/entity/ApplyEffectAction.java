@@ -10,7 +10,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.NonNull;
 
@@ -27,9 +26,8 @@ public record ApplyEffectAction(MobEffect effect, NumberProvider durationTicks,
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
-        if (!(entity instanceof LivingEntity living)) return;
+        if (!(ctx.entity() instanceof LivingEntity living)) return;
         double duration = this.durationTicks.evaluate(context);
         double amplifier = this.amplifier.evaluate(context);
         if (!Double.isFinite(duration) || !Double.isFinite(amplifier) || duration < 1.0D || duration > Integer.MAX_VALUE || amplifier < 0.0D || amplifier > 255.0D)

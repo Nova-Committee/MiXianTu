@@ -4,8 +4,6 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
 public record BreakBlockAction(boolean drop) implements BlockAction {
@@ -13,9 +11,7 @@ public record BreakBlockAction(boolean drop) implements BlockAction {
 
     @Override
     public void execute(@NonNull BlockActionContext ctx) {
-        Level level = ctx.level();
-        BlockPos pos = ctx.pos();
-        level.destroyBlock(pos, this.drop);
+        ctx.level().destroyBlock(ctx.pos(), this.drop);
     }
 
     @Override

@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -17,8 +16,7 @@ public record BlockActionAction(BlockAction action) implements EntityAction {
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        this.action.execute(entity.level(), BlockPos.containing(ctx.position()), ctx);
+        this.action.execute(ctx.entity().level(), BlockPos.containing(ctx.position()), ctx);
     }
 
     @Override

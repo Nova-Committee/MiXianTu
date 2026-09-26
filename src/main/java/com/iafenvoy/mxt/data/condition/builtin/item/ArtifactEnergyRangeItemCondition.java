@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -26,11 +25,10 @@ public record ArtifactEnergyRangeItemCondition(Holder<Aura> aura, NumberProvider
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        ItemStack stack = ctx.stack();
         FormulaContext context = ctx.formula();
         double min = this.min.evaluate(context);
         double max = this.max.evaluate(context);
-        double energy = ArtifactService.stored(stack, this.aura);
+        double energy = ArtifactService.stored(ctx.stack(), this.aura);
         return Double.isFinite(min) && Double.isFinite(max) && min <= max && energy >= min && energy <= max;
     }
 

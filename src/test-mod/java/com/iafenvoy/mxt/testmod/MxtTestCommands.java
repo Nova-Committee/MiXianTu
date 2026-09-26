@@ -45,7 +45,7 @@ import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
-import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
@@ -2695,7 +2695,7 @@ public final class MxtTestCommands {
             SpiritIdentityAttachment evenRoots = new SpiritIdentityAttachment();
             evenRoots.setSpiritRoots(List.of(dualEvenRoot));
             AuraResult fireOnly = new AuraResult(Map.of(require(MxtResourceKeys.AURA, SPIRIT_POWER), AuraPool.natural(1.0D, 1.0D, 0.0D)),
-                    AuraZone.Rules.DEFAULT, 0.0D, 0.0D, AlwaysTrueCondition.INSTANCE, AuraZone.Distribution.EQUAL,
+                    AuraZone.Rules.DEFAULT, 0.0D, 0.0D, AlwaysCondition.INSTANCE, AuraZone.Distribution.EQUAL,
                     id("probe"), AuraResult.SourceKind.CHUNK);
             double heavy = CultivationAffinity.multiplier(heavyFire, fireOnly, FormulaContext.EMPTY);
             double even = CultivationAffinity.multiplier(evenRoots, fireOnly, FormulaContext.EMPTY);

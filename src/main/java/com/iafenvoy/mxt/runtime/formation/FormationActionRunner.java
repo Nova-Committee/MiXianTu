@@ -50,7 +50,8 @@ public final class FormationActionRunner {
                                  Entity entity, EntityActionContext context, FormationOwners owners) {
         for (FormationActionType module : definition.actions()) {
             switch (module) {
-                case AttackFormationAction attack -> attack(attack, entity, context, owners.primaryEntity(entity.level()));
+                case AttackFormationAction attack ->
+                        attack(attack, entity, context, owners.primaryEntity(entity.level()));
                 case BuffFormationAction buff -> buff(buff, entity, context, instance, owners);
                 // The terrain ward is not per-entity work: it answers block events instead, and there is
                 // no entity to act on. The default module declares nothing at all.

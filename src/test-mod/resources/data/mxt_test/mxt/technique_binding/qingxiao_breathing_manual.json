@@ -3,6 +3,6 @@
   "quality_chain": "mxt_test:forged",
   "learn_time": 40,
   "conditions": [
-    {"type": "mxt:always_true"}
+    {"type": "mxt:always"}
   ]
 }

@@ -216,7 +216,7 @@ public final class FormationCommand {
                 + " @ " + controller.getX() + " " + controller.getY() + " " + controller.getZ()
                 + " r=" + formation.radius()
                 + " owner=" + (formation.owners().ids().isEmpty() ? "-"
-                        : formation.owners().ids().stream().map(UUID::toString).collect(Collectors.joining(",")))
+                : formation.owners().ids().stream().map(UUID::toString).collect(Collectors.joining(",")))
                 + " upkeep=" + formation.maintenanceCount()
                 + (formation.stored().isEmpty() ? "" : " stored=" + formation.stored());
     }

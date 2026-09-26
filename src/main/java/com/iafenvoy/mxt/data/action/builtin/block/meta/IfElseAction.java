@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.action.builtin.block.meta;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.context.action.BlockActionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -22,7 +21,6 @@ public record IfElseAction(BlockCondition condition, BlockAction ifAction,
     public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
-        FormulaContext context = ctx.formula();
         if (this.condition.test(level, pos, ctx)) this.ifAction.execute(level, pos, ctx);
         else this.elseAction.execute(level, pos, ctx);
     }

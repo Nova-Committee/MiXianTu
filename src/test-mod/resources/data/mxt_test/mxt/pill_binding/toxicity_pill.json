@@ -4,7 +4,7 @@
   "quality_chain": "mxt_test:forged",
   "conditions": [
     {
-      "condition": {"type": "mxt:always_true"},
+      "condition": {"type": "mxt:always"},
       "description": "condition.mxt_test.toxicity_pill"
     }
   ],

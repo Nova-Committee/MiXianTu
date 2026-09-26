@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.condition.builtin.item;
 
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -13,7 +12,6 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.RegistryFixedCodec;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
@@ -28,9 +26,7 @@ public record ComponentCondition(Holder<DataComponentType<?>> component, Compoun
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
         if (!stack.has(this.component.value())) return false;
         return NbtUtils.compareNbt(this.nbt, serialize(this.component.value(), stack), true);
     }

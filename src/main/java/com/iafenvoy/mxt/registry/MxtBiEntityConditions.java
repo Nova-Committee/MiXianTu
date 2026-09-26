@@ -2,8 +2,9 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.kubejs.type.condition.JsBiEntityCondition;
-import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
+import com.iafenvoy.mxt.data.condition.NeverCondition;
 import com.iafenvoy.mxt.data.condition.builtin.bientity.*;
 import com.iafenvoy.mxt.data.condition.builtin.bientity.meta.*;
 import com.iafenvoy.mxt.runtime.friend.FriendService;
@@ -17,7 +18,8 @@ import static com.iafenvoy.mxt.data.condition.SimpleConditions.createBiEntity;
 public final class MxtBiEntityConditions {
     public static final DeferredRegister<MapCodec<? extends BiEntityCondition>> REGISTRY = DeferredRegister.create(MxtRegistries.BI_ENTITY_CONDITION_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<AlwaysTrueCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<AlwaysCondition>> ALWAYS = REGISTRY.register("always", () -> AlwaysCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<NeverCondition>> NEVER = REGISTRY.register("never", () -> NeverCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<JsBiEntityCondition>> JS = REGISTRY.register("js", () -> JsBiEntityCondition.CODEC);
 
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<AndBiEntityCondition>> AND = REGISTRY.register("and", () -> AndBiEntityCondition.CODEC);
@@ -29,7 +31,6 @@ public final class MxtBiEntityConditions {
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ElementAdaptedToBiEntityCondition>> ELEMENT_ADAPTED_TO = REGISTRY.register("element_adapted_to", () -> ElementAdaptedToBiEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<CanSeeCondition>> CAN_SEE = REGISTRY.register("can_see", () -> CanSeeCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ChanceCondition>> CHANCE = REGISTRY.register("chance", () -> ChanceCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ConstantCondition>> CONSTANT = REGISTRY.register("constant", () -> ConstantCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<NotCondition>> NOT = REGISTRY.register("not", () -> NotCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<OrCondition>> OR = REGISTRY.register("or", () -> OrCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<ActorCondition>> ACTOR_CONDITION = REGISTRY.register("actor_condition", () -> ActorCondition.CODEC);

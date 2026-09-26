@@ -2,12 +2,10 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import org.jspecify.annotations.NonNull;
@@ -20,9 +18,7 @@ public record AttributeCondition(Holder<Attribute> attribute, Comparison compari
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
-        return entity instanceof LivingEntity living && this.comparison.compare(living.getAttributeValue(this.attribute));
+        return ctx.entity() instanceof LivingEntity living && this.comparison.compare(living.getAttributeValue(this.attribute));
     }
 
     @Override

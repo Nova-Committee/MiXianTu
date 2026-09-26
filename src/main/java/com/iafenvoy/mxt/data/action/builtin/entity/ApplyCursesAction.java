@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -23,8 +22,7 @@ public record ApplyCursesAction(List<ApplyCurseAction> curses) implements Entity
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        this.curses.forEach(curse -> curse.execute(entity, ctx));
+        this.curses.forEach(curse -> curse.execute(ctx.entity(), ctx));
     }
 
     @Override

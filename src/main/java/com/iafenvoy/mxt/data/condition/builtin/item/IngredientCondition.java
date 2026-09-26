@@ -2,10 +2,7 @@ package com.iafenvoy.mxt.data.condition.builtin.item;
 
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jspecify.annotations.NonNull;
 
@@ -14,10 +11,7 @@ public record IngredientCondition(Ingredient ingredient) implements ItemConditio
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        Entity holder = ctx.holder();
-        ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
-        return this.ingredient.test(stack);
+        return this.ingredient.test(ctx.stack());
     }
 
     @Override

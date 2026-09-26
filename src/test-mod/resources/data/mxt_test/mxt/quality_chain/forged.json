@@ -4,11 +4,11 @@
   "upgrades": [
     {
       "costs": [{ "id": "mxt_test:qi", "amount": 5 }],
-      "condition": { "type": "mxt:always_true" }
+      "condition": { "type": "mxt:always" }
     },
     {
       "costs": [{ "id": "mxt_test:qi", "amount": 10 }],
-      "condition": { "type": "mxt:always_true" }
+      "condition": { "type": "mxt:always" }
     }
   ]
 }

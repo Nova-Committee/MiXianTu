@@ -2,9 +2,7 @@ package com.iafenvoy.mxt.data.condition.builtin.damage.meta;
 
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.damagesource.DamageSource;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -17,10 +15,7 @@ public record AndDamageCondition(List<DamageCondition> conditions) implements Da
 
     @Override
     public boolean test(@NonNull DamageConditionContext ctx) {
-        DamageSource source = ctx.source();
-        float amount = ctx.amount();
-        FormulaContext context = ctx.formula();
-        return this.conditions.stream().allMatch(condition -> condition.test(source, amount, ctx));
+        return this.conditions.stream().allMatch(condition -> condition.test(ctx.source(), ctx.amount(), ctx));
     }
 
     @Override

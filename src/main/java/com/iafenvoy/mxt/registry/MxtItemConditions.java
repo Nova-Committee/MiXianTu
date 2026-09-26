@@ -2,8 +2,9 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.kubejs.type.condition.JsItemCondition;
-import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
+import com.iafenvoy.mxt.data.condition.NeverCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.*;
 import com.iafenvoy.mxt.data.condition.builtin.item.meta.*;
 import com.mojang.serialization.MapCodec;
@@ -14,7 +15,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtItemConditions {
     public static final DeferredRegister<MapCodec<? extends ItemCondition>> REGISTRY = DeferredRegister.create(MxtRegistries.ITEM_CONDITION_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<AlwaysTrueCondition>> ALWAYS_TRUE = REGISTRY.register("always_true", () -> AlwaysTrueCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<AlwaysCondition>> ALWAYS = REGISTRY.register("always", () -> AlwaysCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<NeverCondition>> NEVER = REGISTRY.register("never", () -> NeverCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<JsItemCondition>> JS = REGISTRY.register("js", () -> JsItemCondition.CODEC);
 
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<AndItemCondition>> AND = REGISTRY.register("and", () -> AndItemCondition.CODEC);
@@ -28,7 +30,6 @@ public final class MxtItemConditions {
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<IsEquipableCondition>> IS_EQUIPABLE = REGISTRY.register("is_equipable", () -> IsEquipableCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<RelativeDurabilityCondition>> RELATIVE_DURABILITY = REGISTRY.register("relative_durability", () -> RelativeDurabilityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ChanceCondition>> CHANCE = REGISTRY.register("chance", () -> ChanceCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ConstantCondition>> CONSTANT = REGISTRY.register("constant", () -> ConstantCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<NotCondition>> NOT = REGISTRY.register("not", () -> NotCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<OrCondition>> OR = REGISTRY.register("or", () -> OrCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ArmorValueCondition>> ARMOR_VALUE = REGISTRY.register("armor_value", () -> ArmorValueCondition.CODEC);
