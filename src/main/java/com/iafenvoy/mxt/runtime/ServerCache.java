@@ -153,29 +153,35 @@ public final class ServerCache {
     }
 
     /**
-     * The two artifact checks a definition cannot make about itself, because both need the other registries: a
-     * granted ability whose kind is the opposite of the intent it was granted under, and two definitions
-     * claiming the same item (the winner would be decided by registry order).
+     * The one artifact check a definition cannot make about itself, because it needs the other registry entries:
+     * two definitions claiming the same item on the same priority, which registry order then decides.
      */
     private void rebuildArtifacts(List<String> problems) {
-        Map<Item, Identifier> claimed = new LinkedHashMap<>();
+        Map<Item, Reference<Artifact>> claimed = new LinkedHashMap<>();
         for (Reference<Artifact> holder : MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.ARTIFACT).toList()) {
             Artifact definition = holder.value();
             Identifier previous = this.claimItems(holder, definition, claimed);
             if (previous != null)
                 problems.add(problem(MxtResourceKeys.ARTIFACT, holder.key().identifier(),
-                        "claims an item that " + previous + " already claims as its artifact"));
+                        "claims an item that " + previous + " already claims as its artifact on the same priority"));
         }
     }
 
-    // Reserves every item the definition matches; returns the definition holding the first item it could not
-    // take, or null when it took them all.
-    private Identifier claimItems(Reference<Artifact> holder, Artifact definition, Map<Item, Identifier> claimed) {
+    // Reserves every item the definition matches, keeping the highest priority claim. Returns the definition
+    // holding the first item that could not be taken on equal terms, or null when it took everything it asked for.
+    private Identifier claimItems(Reference<Artifact> holder, Artifact definition, Map<Item, Reference<Artifact>> claimed) {
         for (Reference<Item> item : BuiltInRegistries.ITEM.listElements().toList()) {
             ItemStack stack = new ItemStack(item.value());
             if (definition.entries().stream().noneMatch(entry -> entry.matches(stack))) continue;
-            Identifier owner = claimed.putIfAbsent(item.value(), holder.key().identifier());
-            if (owner != null) return owner;
+            Reference<Artifact> owner = claimed.get(item.value());
+            if (owner == null) {
+                claimed.put(item.value(), holder);
+                continue;
+            }
+            int priority = definition.priority();
+            int claimedPriority = owner.value().priority();
+            if (priority == claimedPriority) return owner.key().identifier();
+            if (priority > claimedPriority) claimed.put(item.value(), holder);
         }
         return null;
     }

@@ -11,7 +11,6 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +31,8 @@ public final class HoldLookup {
     // Keyed by item, and only ever holding the declarations that match on the item's identity.
     private static final Map<Item, List<HoldBinding>> ITEM_MATCHED = new ConcurrentHashMap<>();
     private static final List<HoldSource> SOURCES = new CopyOnWriteArrayList<>();
-    // Sorted by priority, then by the order the sources registered in, which is who drives a stack two of them claim.
+    // Sorted by the priority each declaration carries, then by the order the sources registered in, which is who
+    // drives a stack two of them claim.
     private static volatile List<HoldBinding> holds = List.of();
 
     private HoldLookup() {
@@ -72,7 +72,7 @@ public final class HoldLookup {
     public static void rebuild(Provider access) {
         holds = SOURCES.stream().flatMap(source -> source.holds(access).stream())
                 .filter(HoldBinding::requiresHold)
-                .sorted(Comparator.comparingInt(ItemMatcher::priority))
+                .sorted(ItemMatcher.ORDER)
                 .toList();
         ITEM_MATCHED.clear();
     }

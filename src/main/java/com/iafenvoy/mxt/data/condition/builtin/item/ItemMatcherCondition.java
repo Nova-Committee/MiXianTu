@@ -33,6 +33,11 @@ public record ItemMatcherCondition(List<Entry> entries) implements ItemCondition
     }
 
     @Override
+    public int priority() {
+        return DEFAULT_PRIORITY;
+    }
+
+    @Override
     public @NonNull MapCodec<ItemMatcherCondition> codec() {
         return CODEC;
     }

@@ -21,14 +21,20 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+/**
+ * "Which definition applies to this stack": a declaration lists entries and any one of them matching is a match.
+ *
+ * <p>Overlapping declarations resolve by {@link #priority()}, which each definition declares in its own file: the
+ * highest priority wins, and only a tie falls back to registry order.
+ */
 public interface ItemMatcher {
+    int DEFAULT_PRIORITY = 0;
     Codec<List<Entry>> ENTRIES_CODEC = CombinedCodecs.combineCodec(Entry.CODEC);
+    Comparator<ItemMatcher> ORDER = Comparator.comparingInt(ItemMatcher::priority).reversed();
 
     List<Entry> entries();
 
-    default int priority() {
-        return 0;
-    }
+    int priority();
 
     static <T extends ItemMatcher> Optional<T> find(Registry<T> registry, @NotNull ItemStack stack) {
         return find(registry.stream(), stack);
@@ -43,7 +49,7 @@ public interface ItemMatcher {
     }
 
     static <T extends ItemMatcher> Stream<T> findAll(Stream<T> matchers, @NotNull ItemStack stack) {
-        return matchers.filter(matcher -> matcher.entries().stream().anyMatch(entry -> entry.matches(stack))).sorted(Comparator.comparingInt(ItemMatcher::priority));
+        return matchers.filter(matcher -> matcher.entries().stream().anyMatch(entry -> entry.matches(stack))).sorted(ORDER);
     }
 
     interface Entry {

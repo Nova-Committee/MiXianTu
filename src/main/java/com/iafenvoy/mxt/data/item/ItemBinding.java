@@ -27,13 +27,14 @@ import java.util.Optional;
 public record ItemBinding(List<Entry> entries, List<EntityAction> actions, Optional<Holder<QualityChain>> qualityChain,
                           List<DescribedEntry<EntityCondition>> conditions,
                           List<Either<Holder<Element>, TagKey<Element>>> element,
-                          double attachmentMultiplier) implements ItemMatcher {
+                          double attachmentMultiplier, int priority) implements ItemMatcher {
     public static final Codec<ItemBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(ItemBinding::entries),
             EntityAction.SINGLE_CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(ItemBinding::actions),
             QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(ItemBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(ItemBinding::conditions),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(ItemBinding::element),
-            MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(ItemBinding::attachmentMultiplier)
+            MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(ItemBinding::attachmentMultiplier),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(ItemBinding::priority)
     ).apply(i, ItemBinding::new));
 }

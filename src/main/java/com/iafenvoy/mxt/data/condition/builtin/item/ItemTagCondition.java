@@ -35,6 +35,11 @@ public record ItemTagCondition(TagKey<Item> tag) implements ItemCondition, ItemM
     }
 
     @Override
+    public int priority() {
+        return DEFAULT_PRIORITY;
+    }
+
+    @Override
     public @NonNull MapCodec<ItemTagCondition> codec() {
         return CODEC;
     }

@@ -26,6 +26,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import java.util.Comparator;
 import java.util.Optional;
 
 /**
@@ -41,10 +42,11 @@ public final class ItemAuraService {
 
     public static Optional<Holder<ItemAura>> find(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
+        // The highest priority wins; registry order only breaks a tie.
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_AURA)
                 .filter(holder -> holder.value().entries().stream().anyMatch(entry -> entry.matches(stack)))
-                .map(holder -> (Holder<ItemAura>) holder)
-                .findFirst();
+                .max(Comparator.comparingInt(holder -> holder.value().priority()))
+                .map(holder -> holder);
     }
 
     public static Optional<Holder<ItemAura>> find(LivingEntity entity, ItemStack stack) {

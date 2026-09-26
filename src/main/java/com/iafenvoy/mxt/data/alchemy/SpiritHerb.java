@@ -23,12 +23,13 @@ import java.util.List;
  */
 public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, NumberProvider age,
                          List<Either<Holder<Element>, TagKey<Element>>> elementTags, List<Identifier> materialTags,
-                         NumberProvider growthRate, NumberProvider dropChance) implements ItemMatcher {
+                         NumberProvider growthRate, NumberProvider dropChance, int priority) implements ItemMatcher {
     public static final Codec<SpiritHerb> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(SpiritHerb::entries),
             ItemQuality.CODEC.fieldOf("quality").forGetter(SpiritHerb::quality), NumberProvider.CODEC.optionalFieldOf("age", new Constant(0.0D)).forGetter(SpiritHerb::age),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_tags", List.of()).forGetter(SpiritHerb::elementTags),
             Identifier.CODEC.listOf().optionalFieldOf("material_tags", List.of()).forGetter(SpiritHerb::materialTags),
-            NumberProvider.CODEC.optionalFieldOf("growth_rate", new Constant(0.0D)).forGetter(SpiritHerb::growthRate), NumberProvider.CODEC.optionalFieldOf("drop_chance", new Constant(1.0D)).forGetter(SpiritHerb::dropChance)
+            NumberProvider.CODEC.optionalFieldOf("growth_rate", new Constant(0.0D)).forGetter(SpiritHerb::growthRate), NumberProvider.CODEC.optionalFieldOf("drop_chance", new Constant(1.0D)).forGetter(SpiritHerb::dropChance),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(SpiritHerb::priority)
     ).apply(i, SpiritHerb::new));
 }

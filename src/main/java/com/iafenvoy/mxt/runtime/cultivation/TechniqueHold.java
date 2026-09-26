@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.sounds.SoundEvent;
@@ -22,6 +23,11 @@ public record TechniqueHold() implements HoldBinding {
     @Override
     public List<Entry> entries() {
         return List.of(TechniqueEntry.INSTANCE);
+    }
+
+    @Override
+    public int priority() {
+        return DEFAULT_PRIORITY;
     }
 
     // The length is the stack's, so the item-level answer says "not this stack" while requiresHold says otherwise.

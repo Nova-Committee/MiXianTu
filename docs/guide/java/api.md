@@ -133,18 +133,21 @@ title: Java 公开 API
 | 成员 | 作用 | 备注 |
 | --- | --- | --- |
 | `List<Entry> entries()` | 匹配项列表 | 实现必须给全 |
-| `default int priority()` | 排序权重 | 默认 `0` |
+| `int priority()` | 排序权重 | **没有默认实现**：每个实现返回自己在 JSON 里声明的 `priority`；没有那个字段的匹配器返回 `DEFAULT_PRIORITY` |
 | `find(Registry<T> registry, ItemStack stack)` / `find(Stream<T> matchers, ItemStack stack)` | 第一个命中 | 无命中给 `Optional.empty()` |
-| `findAll(...)`（注册表版与流版） | 全部命中 | 按 `priority` **升序**排序 |
+| `findAll(...)`（注册表版与流版） | 全部命中 | 按 `ItemMatcher.ORDER`（`priority` **降序**）排序 |
+| `DEFAULT_PRIORITY` | 定义没写 `priority` 时的值（`0`） | 三个物品条件、消耗 `mxt:item` 与框架内置的两个长按声明没有这个字段，也用它；**档位不按 Entry 类型分** |
+| `ORDER` | 唯一的排序比较器（`priority` 降序） | 需要 Holder、不能用 `findAll` 的调用方（`HoldLookup`、`ItemAuraService`）按它自己排，别各写一份 |
 | `ENTRIES_CODEC` | entry 列表的 Codec | 同时认单个对象与数组两种写法 |
 
-`ItemMatcher.Entry` 的成员：`matches(ItemStack)`、`default boolean itemLevel()`、`codec()`，以及两个 codec 常量 `SHORTCUT_CODEC`（简写：裸物品 id → `item`、物品标签 → `tag`）与 `CODEC`（先试简写，再试带 `type` 的对象）。
+`ItemMatcher.Entry` 的成员：`matches(ItemStack)`、`default boolean itemLevel()`、`codec()`，以及两个 codec 常量 `SHORTCUT_CODEC`（简写：裸物品 id → `item`、物品标签 → `tag`）与 `CODEC`（先试简写，再试带 `type` 的对象）。**Entry 不带优先级**：谁赢由定义自己的 `priority` 决定。
 
 Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`、`wildcard`、`regex`；运行期的模块另外注册了 `spirit_storage`、`herb_tag`、`technique`。
 
 要点：
 
-- `find` 的"第一个"是**优先级数值最小**的那个，不是注册顺序；优先级相同时取决于传入流的顺序。
+- `find` 的"第一个"是 `priority` **数值最大**的那个定义（与 `aura_zone`、`element_reaction` 同一个方向），不是注册顺序，也不是"匹配得最具体"的那个；`priority` 相同的才取决于传入流的顺序。
+- `priority` 是**七张定义表自己的字段**（`artifact`、`item`/`weapon`/`pill` 三种 binding、`spirit_herb`、`item_aura`、`currency`，默认 `0`，加载期不校验范围），所以"通用定义 + 特地点名定义"共存时由数据包写死谁先；点名的条目**不会**因此更靠前。`ArtifactHold` 直接回读它那件法器的字段；消耗 `mxt:item`、三个物品条件与两个框架内置的长按声明（功法阅读、灌注）没有这个字段，恒为 `DEFAULT_PRIORITY`。
 - **`itemLevel()` 是缓存安全的分界线**：它返回 `true` 表示"命中与否只由物品本身决定"，按物品开缓存的调用方**只能**缓存这类项；会读堆上的组件 / NBT 的项必须每个堆都问一次。
 - 简写只覆盖 `item` 与 `tag`；其它实现走简写编码会抛 `IllegalArgumentException`。
 

@@ -44,7 +44,7 @@ public record Artifact(Component name, Component description, Optional<Holder<It
                        boolean requireOwner, ItemAction claimAction, EntityCondition claimCondition,
                        ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks,
                        List<Either<Holder<Element>, TagKey<Element>>> element,
-                       double attachmentMultiplier) implements ItemMatcher, NamedDefinition {
+                       double attachmentMultiplier, int priority) implements ItemMatcher, NamedDefinition {
     // Two hearts.
     public static final double DEFAULT_CLAIM_HEALTH = 4.0D;
     // One second.
@@ -69,7 +69,8 @@ public record Artifact(Component name, Component description, Optional<Holder<It
             ItemAction.optionalCodec("use_action").forGetter(Artifact::useAction),
             NumberProvider.CODEC.optionalFieldOf("hold_ticks", new Constant(DEFAULT_HOLD_TICKS)).forGetter(Artifact::holdTicks),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(Artifact::element),
-            MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier)
+            MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(Artifact::priority)
     ).apply(i, Artifact::new));
     // Unknown keys are dropped, so the keys this record used to carry are not read any more: a pack still writing
     // item_type, or an ability written inside this file instead of named by id, loads and names nothing.

@@ -31,6 +31,11 @@ public record ItemIdCondition(Item item) implements ItemCondition, ItemMatcher {
     }
 
     @Override
+    public int priority() {
+        return DEFAULT_PRIORITY;
+    }
+
+    @Override
     public @NonNull MapCodec<ItemIdCondition> codec() {
         return CODEC;
     }

@@ -20,7 +20,7 @@ import java.util.Optional;
 public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberProvider toxicityGain,
                           NumberProvider toxicityThreshold, EntityAction onOverdose,
                           NumberProvider toxicityAfterOverdose, Optional<Holder<QualityChain>> qualityChain,
-                          List<DescribedEntry<EntityCondition>> conditions) implements ItemMatcher {
+                          List<DescribedEntry<EntityCondition>> conditions, int priority) implements ItemMatcher {
     public static final Codec<PillBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(PillBinding::entries),
             EntityAction.optionalCodec("on_consume").forGetter(PillBinding::onConsume),
@@ -29,6 +29,7 @@ public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberPro
             EntityAction.optionalCodec("on_overdose").forGetter(PillBinding::onOverdose),
             NumberProvider.CODEC.optionalFieldOf("toxicity_after_overdose", new Constant(0.0D)).forGetter(PillBinding::toxicityAfterOverdose),
             QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(PillBinding::qualityChain),
-            DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(PillBinding::conditions)
+            DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(PillBinding::conditions),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(PillBinding::priority)
     ).apply(i, PillBinding::new));
 }

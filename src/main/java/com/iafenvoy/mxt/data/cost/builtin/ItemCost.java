@@ -19,19 +19,11 @@ import java.util.List;
 /**
  * Takes matching items out of the payer's inventory.
  */
-public record ItemCost(ItemMatcher matcher, NumberProvider amount) implements Cost {
+public record ItemCost(List<Entry> entries, NumberProvider amount) implements ItemMatcher, Cost {
     public static final MapCodec<ItemCost> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemMatcher.ENTRIES_CODEC.fieldOf("items").xmap(ItemCost::newMatcher, ItemCost::entries).forGetter(ItemCost::matcher),
+            ENTRIES_CODEC.fieldOf("items").forGetter(ItemMatcher::entries),
             NumberProvider.CODEC.fieldOf("amount").forGetter(ItemCost::amount)
     ).apply(i, ItemCost::new));
-
-    private static ItemMatcher newMatcher(List<Entry> entries) {
-        return () -> entries;
-    }
-
-    private static List<Entry> entries(ItemMatcher matcher) {
-        return matcher.entries();
-    }
 
     // A non-positive or non-finite amount means the cost cannot be paid at all.
     public int required(LivingEntity payer) {
@@ -44,11 +36,17 @@ public record ItemCost(ItemMatcher matcher, NumberProvider amount) implements Co
         if (!context.hasChannel(CostChannel.PLAYER_INVENTORY)) return Either.right(CostFailure.NO_CHANNEL);
         int required = this.required(context.payer());
         if (required <= 0) return Either.right(CostFailure.INVALID_AMOUNT);
-        return Either.left(new Charge.Items(this.matcher, required));
+        return Either.left(new Charge.Items(this, required));
     }
 
     @Override
     public MapCodec<ItemCost> codec() {
         return CODEC;
+    }
+
+    // Costs are matched, never ranked: the entries come from the record component, and the priority is the default.
+    @Override
+    public int priority() {
+        return DEFAULT_PRIORITY;
     }
 }

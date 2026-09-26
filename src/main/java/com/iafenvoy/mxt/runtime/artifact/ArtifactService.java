@@ -59,13 +59,13 @@ public final class ArtifactService {
     private ArtifactService() {
     }
 
-    // Highest priority wins, registry order breaks ties. Two definitions claiming one item is reported by
-    // ServerCache while the pack loads.
+    // Highest priority wins, registry order breaks ties. Two definitions claiming one item on the same priority is
+    // reported by ServerCache while the pack loads.
     public static Optional<Reference<Artifact>> definition(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.ARTIFACT)
                 .filter(holder -> holder.value().entries().stream().anyMatch(entry -> entry.matches(stack)))
-                .min(Comparator.comparingInt(holder -> holder.value().priority()));
+                .max(Comparator.comparingInt(holder -> holder.value().priority()));
     }
 
     // The owner's name is written here because this is the only moment the owner is in hand: a tooltip is drawn
