@@ -73,17 +73,29 @@ public final class WheelContent implements WheelMenuProvider {
                 .toList();
     }
 
-    // Everything the player could put on the wheel right now, whoever granted it: the pool a player drags cells
-    // from, which reads the grant ledger rather than the equipment so a pinned cell keeps working wherever the
-    // thing that grants it happens to be.
+    // Everything that can resolve a saved cell, whoever granted it: this is read from the grant ledger rather than
+    // from the equipment, so a cell pinned before a rule changed still draws.
     public static List<WheelMenuEntry> pool(@Nullable Player player) {
         if (player == null) return List.of();
-        List<WheelMenuEntry> options = new ArrayList<>();
+        List<WheelMenuEntry> entries = new ArrayList<>();
         // One pass over what the player carries, rather than a lookup per ability: resolving a definition walks
         // the artifact registry, and this list is rebuilt every client tick.
         Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, WheelSourceTypes.CONFIGURED);
         for (Holder<Ability> ability : WheelSources.abilities(player))
-            options.add(entry(player, ability, carriers.get(HolderHelper.id(ability))));
+            entries.add(entry(player, ability, carriers.get(HolderHelper.id(ability))));
+        return List.copyOf(entries);
+    }
+
+    // What the editor offers to put on the main wheel: the skills the body was taught, plus the ones its Curios
+    // charms declare. A skill only a hand declares is left out - that item has a page of its own, and a hand is
+    // whatever is held next - so its carrier is read from the Curios slots too.
+    public static List<WheelMenuEntry> options(@Nullable Player player) {
+        if (player == null) return List.of();
+        List<WheelMenuEntry> options = new ArrayList<>();
+        Map<Identifier, ItemStack> carriers = WheelSources.carriers(player, WheelSourceTypes.CURIOS);
+        for (Holder<Ability> ability : WheelSources.abilities(player))
+            if (!WheelSources.handOnly(player, ability))
+                options.add(entry(player, ability, carriers.get(HolderHelper.id(ability))));
         return List.copyOf(options);
     }
 

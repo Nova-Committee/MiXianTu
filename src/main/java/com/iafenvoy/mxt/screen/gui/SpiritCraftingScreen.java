@@ -20,11 +20,8 @@ public final class SpiritCraftingScreen extends AbstractContainerScreen<SpiritCr
     private static final Identifier BACKGROUND = Identifier.withDefaultNamespace("textures/gui/container/crafting_table.png");
     private static final Identifier PROGRESS_BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/spirit_crafting_progress.png");
     private static final Identifier PROGRESS_BAR = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/progress_bar.png");
-    private static final int PANEL_WIDTH = 132;
-    private static final int PANEL_HEIGHT = 122;
-    private static final int PANEL_PADDING = 10;
-    private static final int BAR_WIDTH = PANEL_WIDTH - PANEL_PADDING * 2;
-    private static final int BAR_HEIGHT = 7;
+    private static final int PANEL_WIDTH = 132, PANEL_HEIGHT = 122, PANEL_PADDING = 10;
+    private static final int BAR_WIDTH = PANEL_WIDTH - PANEL_PADDING * 2, BAR_HEIGHT = 7;
 
     public SpiritCraftingScreen(SpiritCraftingMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, 176 + PANEL_WIDTH, 166);

@@ -3,9 +3,11 @@ package com.iafenvoy.mxt.screen.wheel.content;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
+import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -36,52 +38,35 @@ public final class WheelConfigurationScreen extends Screen {
     private static final int PANEL_MARGIN = 12;
     private static final int HEADER_HEIGHT = 30;
     private static final int POOL_HEADING_HEIGHT = 12;
-    // Divider, numbers and cells at the top of this band; the rest of it is deliberately left blank for the
-    // per-sector key cells (MxtKeyMappings.WHEEL_SLOTS), which are not drawn yet.
-    private static final int SLOT_ROW_HEIGHT = 67;
-    private static final int SLOT_NUMBER_OFFSET = 4;
-    private static final int SLOT_TOP_OFFSET = 15;
+    // Divider, numbers, cells and the key line under them: the band stops just below the keys, so nothing is
+    // left empty under the row and the pools get the rest of the panel. The divider is what anchors the band,
+    // so the three offsets below it are the only way to nudge the row without moving the line.
+    private static final int SLOT_ROW_HEIGHT = 56, SLOT_NUMBER_OFFSET = 6, SLOT_TOP_OFFSET = 17, SLOT_KEY_OFFSET = 42;
     private static final int PANEL_HEIGHT = 268;
     private static final int SCROLL_BAR_WIDTH = 3;
-    private static final int TITLE_COLOR = 0xFF404040;
-    private static final int HINT_COLOR = 0xFF6A6A6A;
-    private static final int DIVIDER_DARK = 0xFF555555;
-    private static final int DIVIDER_LIGHT = 0xFFFFFFFF;
-    private static final int SCROLL_TRACK = 0xFF555555;
-    private static final int SCROLL_THUMB = 0xFF8B8B8B;
+    private static final int TITLE_COLOR = 0xFF404040, HINT_COLOR = 0xFF6A6A6A;
+    private static final int DIVIDER_DARK = 0xFF555555, DIVIDER_LIGHT = 0xFFFFFFFF;
+    private static final int SCROLL_TRACK = 0xFF555555, SCROLL_THUMB = 0xFF8B8B8B;
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/wheel_configuration.png");
     private static final Identifier SLOT = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/slot_22.png");
     private static final Identifier SELECTED_SLOT = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/classic/slot_22_selected.png");
     // The panel texture is drawn as nine slices so its 3px border and title band keep their authored size.
-    private static final int BACKGROUND_WIDTH = 232;
-    private static final int BACKGROUND_HEIGHT = 260;
-    private static final int BACKGROUND_BORDER = 3;
-    private static final int BACKGROUND_HEADER = 26;
-    private static final int AURA_POOL = 0;
-    private static final int ABILITY_POOL = 1;
+    private static final int BACKGROUND_WIDTH = 232, BACKGROUND_HEIGHT = 260, BACKGROUND_BORDER = 3, BACKGROUND_HEADER = 26;
+    private static final int AURA_POOL = 0, ABILITY_POOL = 1;
 
-    private final List<WheelMenuEntry> auras;
-    // The right-hand pool: the skills the player holds and the artifact capabilities they carry, in one grid
-    // because a sector holds either.
-    private final List<WheelMenuEntry> options;
+    private final List<WheelMenuEntry> auras, options;
     private final double[] scroll = new double[2];
     private final int[] poolLeft = new int[2];
     private WheelLayout draft;
-    private int selectedPool = -1;
-    private int selectedOption = -1;
-    private int panelLeft;
-    private int panelTop;
-    private int panelWidth;
-    private int panelHeight;
-    private int poolsTop;
-    private int poolsBottom;
-    private int slotRowLeft;
-    private int slotRowTop;
+    private int selectedPool = -1, selectedOption = -1;
+    private int panelLeft, panelTop, panelWidth, panelHeight;
+    private int poolsTop, poolsBottom;
+    private int slotRowLeft, slotRowTop;
 
     private WheelConfigurationScreen(Player player) {
         super(Component.translatable("screen.mxt.wheel_configuration"));
         this.auras = WheelContent.auras(player);
-        this.options = WheelContent.pool(player);
+        this.options = WheelContent.options(player);
         this.draft = WheelContent.layoutFor(player);
     }
 
@@ -139,6 +124,9 @@ public final class WheelConfigurationScreen extends Screen {
             String number = Integer.toString(sector + 1);
             graphics.text(this.font, number, x + (SLOT_SIZE - this.font.width(number)) / 2,
                     this.poolsBottom + SLOT_NUMBER_OFFSET, HINT_COLOR, false);
+            Component key = this.slotKey(sector);
+            if (key != null) graphics.text(this.font, key, x + (SLOT_SIZE - this.font.width(key)) / 2,
+                    this.poolsBottom + SLOT_KEY_OFFSET, TITLE_COLOR, false);
         }
     }
 
@@ -295,6 +283,15 @@ public final class WheelConfigurationScreen extends Screen {
         if (this.selectedPool < 0 || this.selectedOption < 0) return null;
         List<WheelMenuEntry> options = this.pool(this.selectedPool);
         return this.selectedOption < options.size() ? options.get(this.selectedOption) : null;
+    }
+
+    // The key bound to one sector, drawn under its cell as [Z]; an unbound slot shows nothing, since vanilla's
+    // "unknown" placeholder would read as a binding that is not there. A name longer than the 24px step is cut.
+    private @Nullable Component slotKey(int sector) {
+        KeyMapping key = MxtKeyMappings.WHEEL_SLOTS.get(sector).get();
+        if (key.isUnbound()) return null;
+        String label = "[" + key.getTranslatedKeyMessage().getString() + "]";
+        return Component.literal(this.font.plainSubstrByWidth(label, GRID_STEP - 2));
     }
 
     // Resolved the same way the wheel does, so a cell shows what that sector will actually draw.

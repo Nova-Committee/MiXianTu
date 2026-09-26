@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.runtime.ability.AbilitySources;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
@@ -26,7 +27,7 @@ import java.util.Map.Entry;
  * Rebuilds only the abilities owned by cultivation identity sources.
  */
 public final class CultivationGrantService {
-    private static final String SOURCE_PREFIX = "grant/";
+    private static final String SOURCE_PREFIX = AbilitySources.GRANT_PREFIX;
 
     private CultivationGrantService() {
     }

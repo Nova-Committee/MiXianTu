@@ -38,57 +38,36 @@ import java.util.function.Function;
 public final class ForgingMenu extends AbstractContainerMenu {
     public static final int MACHINE_SLOTS = ForgingSurface.TOTAL_SLOTS;
     public static final int PLAYER_START = MACHINE_SLOTS;
-
     // Fixed six: a session keeps at most six history entries and a finish pattern is empty or exactly six long.
     public static final int SUFFIX_STEPS = 6;
-
     // Sentinel for "no entry"; registry ids are never negative.
     public static final int NONE = -1;
-
     // ---- synced indices
-    private static final int IDX_ACTIVE = 0;
-    private static final int IDX_VALUE = 1;
-    private static final int IDX_STEPS = 2;
-
+    private static final int IDX_ACTIVE = 0, IDX_VALUE = 1, IDX_STEPS = 2;
     // The plan's optimal_steps, which the quality formula subtracts from the player's step count.
     // Reserved, but deleting it would renumber every index the finish-pattern rows read from.
     private static final int IDX_OPTIMAL = 3;
-
-    private static final int IDX_METER_MIN = 4;
-    private static final int IDX_METER_MAX = 5;
-    private static final int IDX_TARGET_MIN = 6;
-    private static final int IDX_TARGET_MAX = 7;
+    private static final int IDX_METER_MIN = 4, IDX_METER_MAX = 5;
+    private static final int IDX_TARGET_MIN = 6, IDX_TARGET_MAX = 7;
     private static final int IDX_REQUIRED = 8;
     private static final int IDX_TARGET_START = 9;
     private static final int IDX_HISTORY_START = IDX_TARGET_START + SUFFIX_STEPS;
     private static final int SYNCED = IDX_HISTORY_START + SUFFIX_STEPS;
-
     // ---- frame geometry, shared with ForgingScreen
     // Every number here is a pixel in assets/mxt/textures/gui/forging_table.png: a slot's hitbox has to land
     // on the cell already drawn for it, so the screen reads these instead of repeating them.
     public static final int CELLS = 3;
-    public static final int CELL = 18;
-    public static final int CELL_PITCH = 19;
-    public static final int BLUEPRINT_GRID_X = 7;
-    public static final int METHOD_GRID_X = 250;
+    public static final int CELL = 18, CELL_PITCH = 19;
+    public static final int BLUEPRINT_GRID_X = 7, METHOD_GRID_X = 250;
     public static final int GRID_Y = 17;
-
-    public static final int RECESS_Y = 17;
-    public static final int RECESS_W = 49;
-    public static final int RECESS_H = 76;
-
+    public static final int RECESS_Y = 17, RECESS_W = 49, RECESS_H = 76;
     // Where the scrollbar sprite's top-left corner goes: the texture draws the bar in the gutter right of
     // the recess, so these are not derived from it.
-    public static final int SCROLLBAR_X = 58;
-    public static final int SCROLLBAR_X_RIGHT = 301;
-
+    public static final int SCROLLBAR_X = 58, SCROLLBAR_X_RIGHT = 301;
     public static final int MACHINE_PITCH = 18;
     public static final int SLOT_TOP = 18;
-
     public static final int INPUT_X = 81;
-
-    public static final int INVENTORY_X = 81;
-    public static final int INVENTORY_Y = 152;
+    public static final int INVENTORY_X = 81, INVENTORY_Y = 152;
     public static final int HOTBAR_Y = 210;
 
     private final Container machine;

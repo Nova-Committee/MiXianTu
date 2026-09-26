@@ -38,7 +38,7 @@ title: 特殊公开接口
 
 ### `WheelMenuEntry`
 
-轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 契约行为，以及内容模组自己注册的类型）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider` 给出——它的入参是 `(player, source)`，`source` 是 `api/WheelSource`（内置五页：主盘 / 主手物品 / 副手物品 / 法器 / 契约灵兽），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
+轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 契约行为，以及内容模组自己注册的类型）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值，技能那一条的**最后一行写来源**：学习的技能 / X的技能（X = 承载物品名，按品质上色）/ 其它来源）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider` 给出——它的入参是 `(player, source)`，`source` 是 `api/WheelSource`（内置五页：主盘 / 主手物品 / 副手物品 / 法器 / 契约灵兽），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
 
 ### `WheelSource` / `WheelEntryKind`
 

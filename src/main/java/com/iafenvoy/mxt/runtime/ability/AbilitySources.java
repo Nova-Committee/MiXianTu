@@ -14,6 +14,12 @@ import net.minecraft.world.item.ItemStack;
 public final class AbilitySources {
     // One shared source, so equipping a second charm cannot release the first one's abilities.
     public static final Identifier CURIOS = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "curios_equipment");
+    /**
+     * The learning pipeline's prefix ({@code mxt:grant/<kind>/<namespace>/<path>}): what a body was taught, as
+     * opposed to what an item declares. It lives here so the shape has one home rather than one per granter.
+     */
+    public static final String GRANT_PREFIX = "grant/";
+    private static final String EQUIPMENT_PREFIX = "equipment/";
 
     private AbilitySources() {
     }
@@ -21,6 +27,17 @@ public final class AbilitySources {
     // An empty slot names air.
     public static Identifier equipment(EquipmentSlot slot, ItemStack stack) {
         Identifier item = stack.isEmpty() ? Identifier.fromNamespaceAndPath("minecraft", "air") : BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "equipment/" + slot.getName() + "/" + item.getNamespace() + "/" + item.getPath());
+        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, EQUIPMENT_PREFIX + slot.getName() + "/" + item.getNamespace() + "/" + item.getPath());
+    }
+
+    // Held in a hand, so the grant leaves with the item; a charm in a Curios slot has its own source and counts as
+    // part of the body instead.
+    public static boolean isEquipment(Identifier source) {
+        return source.getNamespace().equals(MiXianTu.MOD_ID) && source.getPath().startsWith(EQUIPMENT_PREFIX);
+    }
+
+    // Taught by the cultivation pipeline: a technique, a spirit root, a physique or a reached minor stage.
+    public static boolean isLearned(Identifier source) {
+        return source.getNamespace().equals(MiXianTu.MOD_ID) && source.getPath().startsWith(GRANT_PREFIX);
     }
 }

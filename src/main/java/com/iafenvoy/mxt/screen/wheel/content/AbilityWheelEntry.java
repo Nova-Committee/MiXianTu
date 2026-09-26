@@ -6,12 +6,17 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.api.WheelEntryKind;
+import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -19,6 +24,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -28,6 +34,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * One pressable ability as a wheel entry: the wheel sees a name, icon, cooldown and trigger, and an ability that
@@ -93,12 +100,6 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         List<Component> lines = new ArrayList<>(6);
         lines.add(this.kind().displayName().copy().withStyle(ChatFormatting.GRAY));
         lines.add(this.title().copy().withStyle(ChatFormatting.WHITE));
-        // Which thing this ability came from, when it came from one: the same ability granted by a book says
-        // nothing here rather than naming a random item.
-        if (player != null && this.carrier != null && !this.carrier.isEmpty())
-            ArtifactService.definition(player.level().registryAccess(), this.carrier)
-                    .ifPresent(definition -> lines.add(Component.translatable("wheel.mxt.tooltip.artifact",
-                            DefinitionText.name(definition))));
         List<Cost> costs = this.ability.value().costs();
         if (player != null && !costs.isEmpty())
             lines.add(Component.translatable("wheel.mxt.tooltip.cost", WheelTooltips.costs(costs, player)));
@@ -115,7 +116,35 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         if (!this.ability.value().elementAffinity().isEmpty())
             lines.add(Component.translatable("wheel.mxt.tooltip.element",
                     WheelTooltips.elements(this.ability.value().elementAffinity())));
+        // Last, because it answers "where did this come from": the thing that keeps it, not the thing that happens
+        // to declare it as well.
+        Component origin = this.origin(player);
+        if (origin != null) lines.add(origin);
         return lines;
+    }
+
+    // A taught skill says so even when a carried item declares it too, since learning is what survives putting the
+    // item down. An item's own page then reads as that item, and anything else stays unclaimed rather than guessed.
+    private @Nullable Component origin(Player player) {
+        Set<Identifier> sources = WheelSources.sources(player, HolderHelper.id(this.ability));
+        if (sources.stream().anyMatch(AbilitySources::isLearned))
+            return Component.translatable("wheel.mxt.tooltip.source.learned");
+        ItemStack carrier = this.carrier;
+        if (carrier != null && !carrier.isEmpty())
+            return Component.translatable("wheel.mxt.tooltip.source.item", itemName(player, carrier));
+        return sources.isEmpty() ? null : Component.translatable("wheel.mxt.tooltip.source.other");
+    }
+
+    // The artifact's own name when the stack declares one, so the line names the artifact rather than the item it
+    // happens to be made of. It carries the tier's colour when the pack gave one, and gold otherwise, because a
+    // name that is not tinted reads as part of the sentence rather than as the name.
+    private static Component itemName(Player player, ItemStack carrier) {
+        RegistryAccess registries = player.level().registryAccess();
+        Holder<Artifact> definition = ArtifactService.definition(registries, carrier).orElse(null);
+        Component name = definition == null ? carrier.getHoverName() : DefinitionText.name(definition);
+        Holder<ItemQuality> quality = ItemQualityService.find(registries, carrier)
+                .filter(holder -> holder.value().color().isPresent()).orElse(null);
+        return quality == null ? name.copy().withStyle(ChatFormatting.GOLD) : ItemQualityService.coloredName(quality, name);
     }
 
     @Override
