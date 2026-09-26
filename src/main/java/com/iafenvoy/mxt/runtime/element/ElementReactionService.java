@@ -42,8 +42,8 @@ public final class ElementReactionService {
     private static final ThreadLocal<Set<Entity>> IN_CHAIN =
             ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
 
-    // The walk order is cached per reaction registry instance: a reloaded pack makes a new instance rather than
-    // changing the old one, so this is bounded the same way the damage-type index is.
+    // The walk order is cached per reaction registry instance, which a reloaded pack may keep: ServerCache drops
+    // it on every datapack load, so an edited priority is never served from the previous pack.
     private static final int MAX_CACHED_REGISTRIES = 4;
     private static final Object LOCK = new Object();
     private static volatile Map<Registry<ElementReaction>, List<Reference<ElementReaction>>> orders = Map.of();
@@ -105,7 +105,7 @@ public final class ElementReactionService {
     }
 
     // Asked once per element per strike and once per link of a chain, and the answer only changes when the
-    // registry does, so the registry instance is the cache key (a reload replaces it; /reload does not).
+    // registry does, so the registry instance is the cache key.
     private static List<Reference<ElementReaction>> ordered() {
         Registry<ElementReaction> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ELEMENT_REACTION);
         List<Reference<ElementReaction>> cached = orders.get(registry);
@@ -122,6 +122,13 @@ public final class ElementReactionService {
             updated.put(registry, built);
             orders = Map.copyOf(updated);
             return built;
+        }
+    }
+
+    // Called on every datapack load, before anything can rebuild the order.
+    public static void invalidate() {
+        synchronized (LOCK) {
+            orders = Map.of();
         }
     }
 

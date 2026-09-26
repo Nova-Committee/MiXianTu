@@ -158,10 +158,10 @@ public final class CurrencyValueService {
         return definition.unavailableWhen().isEmpty();
     }
 
+    // The winner only: a stack's exchange quotes come from the same definition its value does, so a losing
+    // declaration contributes neither a value nor exchanges.
     private static Stream<CurrencyValue> matching(RegistryAccess access, ItemStack stack) {
-        return MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY)
-                .map(Reference::value)
-                .filter(definition -> definition.entries().stream().anyMatch(entry -> entry.matches(stack)));
+        return find(access, stack).stream();
     }
 
     private static Optional<CurrencyValue> find(Provider access, ItemStack stack) {

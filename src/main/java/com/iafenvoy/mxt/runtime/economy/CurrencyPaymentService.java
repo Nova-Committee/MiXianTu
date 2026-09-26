@@ -1,8 +1,5 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
@@ -53,16 +50,13 @@ public final class CurrencyPaymentService {
         return OptionalLong.of(total);
     }
 
+    // One entry per item: an item two definitions both claim is worth what the winner says, exactly as
+    // value() reads it. Listing a losing definition would let this table mint a value the same stack is not
+    // valued at.
     public static List<Denomination> denominations() {
-        return MxtDatapackRegistries.holders(MxtResourceKeys.CURRENCY)
-                .map(Reference::value)
-                .flatMap(definition -> BuiltInRegistries.ITEM.stream()
-                        .filter(item -> {
-                            ItemStack stack = new ItemStack(item);
-                            return definition.entries().stream().anyMatch(entry -> entry.matches(stack));
-                        })
-                        .map(item -> new Denomination(item, definition.value())))
-                .distinct()
+        return BuiltInRegistries.ITEM.stream()
+                .map(item -> new Denomination(item, CurrencyValueService.unitValue(item).orElse(0L)))
+                .filter(denomination -> denomination.value() > 0L)
                 .sorted(Comparator.comparingLong(Denomination::value).reversed())
                 .toList();
     }

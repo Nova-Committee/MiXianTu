@@ -80,7 +80,8 @@ public enum AccessoryRenderManager implements ResourceManagerReloadListener {
                 LOGGER.warn("Failed to load {} accessory render definition {}: {}", folder, resourceId, exception.getMessage());
             }
         });
-        return result.stream().sorted(Comparator.comparingInt(Rule::priority)).toList();
+        // Left in load order: resolve() takes the highest priority itself, so sorting here would be wasted work.
+        return List.copyOf(result);
     }
 
     private static AccessoryRenderDefinition resolve(ItemStack stack, List<Rule> rules, Map<Identifier, AccessoryRenderDefinition> cache, AccessoryRenderDefinition fallback) {

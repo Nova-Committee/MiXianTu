@@ -10,7 +10,10 @@ import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.damage.DamageElements;
+import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.formula.FormulaNames;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
@@ -72,7 +75,12 @@ public final class ServerCache {
 
     @SubscribeEvent
     public static void onDatapackLoaded(ServerDataLoad event) {
-        // Rebuild only after a server datapack load or /reload, not for every player sync.
+        // Rebuild only after a server datapack load or /reload, not for every player sync. The three indexes
+        // below are keyed by registry instance, which a reloaded pack may keep, so they are dropped here rather
+        // than left to notice the reload by themselves.
+        DamageElements.invalidate();
+        ElementReactionService.invalidate();
+        FormulaNames.invalidate();
         get().ifPresent(ServerCache::rebuild);
     }
 

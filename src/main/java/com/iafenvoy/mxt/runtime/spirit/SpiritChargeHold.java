@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.spirit;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService.Charge;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;

@@ -53,7 +53,7 @@ public interface ItemMatcher {
     }
 
     interface Entry {
-        MapCodec<Entry> TYPED_CODEC = MxtRegistries.ITEM_MATCHER_ENTRY_TYPE.byNameCodec().dispatchMap("type", Entry::codec, Function.identity());
+        Codec<Entry> TYPED_CODEC = MxtRegistries.ITEM_MATCHER_ENTRY_TYPE.byNameCodec().dispatch("type", Entry::codec, Function.identity());
         Codec<Entry> SHORTCUT_CODEC = Codec.either(BuiltInRegistries.ITEM.byNameCodec(), TagKey.hashedCodec(Registries.ITEM)).xmap(
                 e -> e.map(ItemEntry::new, TagEntry::new),
                 entry -> switch (entry) {
@@ -62,7 +62,7 @@ public interface ItemMatcher {
                     default ->
                             throw new IllegalArgumentException("Only item and tag matchers support shorthand encoding");
                 });
-        Codec<Entry> CODEC = Codec.either(SHORTCUT_CODEC, TYPED_CODEC.codec()).xmap(e -> e.map(Function.identity(), Function.identity()), Either::right);
+        Codec<Entry> CODEC = Codec.either(SHORTCUT_CODEC, TYPED_CODEC).xmap(e -> e.map(Function.identity(), Function.identity()), Either::right);
 
         boolean matches(ItemStack stack);
 

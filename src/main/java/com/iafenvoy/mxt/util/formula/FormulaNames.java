@@ -20,8 +20,8 @@ import java.util.Map;
 /**
  * Turns registry ids into the flat identifiers a formula can name, and keeps the indexes behind
  * {@code caster_<resource>}, {@code caster_<attribute>} and {@code caster_<element>}. The attribute registry is
- * static so its index is built once; the other two are keyed by registry instance and hold registry keys, so no
- * old world stays reachable.
+ * static so its index is built once; the other two are keyed by registry instance and hold registry keys, and
+ * ServerCache drops them on every datapack load, so a reloaded pack is never answered out of the old index.
  */
 public final class FormulaNames {
     private static final int MAX_CACHED_REGISTRIES = 4;
@@ -72,8 +72,8 @@ public final class FormulaNames {
                 put(built, id, ResourceKey.create(MxtResourceKeys.RESOURCE, id), "resource");
             });
             Map<String, ResourceKey<Resource>> index = Map.copyOf(built);
-            // A reloaded world brings a new registry; a handful of indexes covers a client and a
-            // server in one process and stops retired registries from piling up.
+            // A handful of indexes covers a client and a server in one process; invalidate() drops them on a
+            // datapack load, so the bound only ever covers retired instances between loads.
             Map<Registry<?>, Map<String, ResourceKey<Resource>>> updated =
                     cached.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(cached);
             updated.put(registry, index);
@@ -109,6 +109,17 @@ public final class FormulaNames {
             updated.put(registry, index);
             elementNames = Map.copyOf(updated);
             return index;
+        }
+    }
+
+    // Called on every datapack load: both indexes are keyed by registry instance, which a reloaded pack may
+    // keep, so they are dropped rather than trusted to miss on their own.
+    public static void invalidate() {
+        synchronized (RESOURCE_LOCK) {
+            resourceNames = Map.of();
+        }
+        synchronized (ELEMENT_LOCK) {
+            elementNames = Map.of();
         }
     }
 
