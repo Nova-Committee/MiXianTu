@@ -146,7 +146,9 @@
   `actionbar.mxt.cultivation.*` 语言键、PAL 层 `cultivation`、`cultivate_action` 注册表。其中 `cultivate_action` 随后被用户要求
   **标记为将来可能移除**（`CultivateAction`、`MxtResourceKeys.CULTIVATE_ACTION`、`CultivationModeService`、
   `CultivationActionService` 四处 `//TODO::May be removed`，`docs/数据包格式.md` 的该节与注册表行、`docs/模块实现审计.md`
-  与 `research/02_动态注册表清单.md` 同步标注）：它把"当前怎么修炼"放进了数据包注册表，而这件事将来可能整体收回状态附件；标记只是留痕，现在声明它仍然完全受支持。同一批里
+  与 `research/02_动态注册表清单.md` 同步标注）：它把"当前怎么修炼"放进了数据包注册表，而这件事将来可能整体收回状态附件；标记只是留痕，现在声明它仍然完全受支持。
+  **该标记已于 2026-09-27 按用户要求取消**（四处 `//TODO::May be removed`、`docs/数据包格式.md` 的该节与注册表行、
+  `research/02_动态注册表清单.md` 的这条标注一并删除，`cultivate_action` 按普通注册表对待）。同一批里
   `Holder<Aura> cultivation` 这类**形参/局部变量**全部改成 `aura`（
   `CultivationAttachment.cultivationProgress(Holder<Aura> aura)`、`ResourceService.realmRank(..., Holder<Aura> aura)`、
   `Transition.aura`、`CultivationService` 的整条链、`CultivationActionService` 的 `ActiveCultivation.aura` 等）；而

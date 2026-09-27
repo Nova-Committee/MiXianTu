@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.ItemQualityTags;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
@@ -470,8 +471,7 @@ public final class MxtKubeJsApi {
         if (entity.level().isClientSide()) return null;
         Provider access = entity.level().registryAccess();
         return ItemQualityService.find(access, stack)
-                .flatMap(quality -> ItemQualityService.ladder(access, quality))
-                .map(QualityLadders.Ladder::quality).orElse(null);
+                .flatMap(quality -> QualityLadders.cache(access).keyOf(HolderHelper.id(quality))).orElse(null);
     }
 
     /**

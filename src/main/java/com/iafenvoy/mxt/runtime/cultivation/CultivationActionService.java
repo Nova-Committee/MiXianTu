@@ -46,7 +46,6 @@ import java.util.function.BooleanSupplier;
  * Authoritative lifecycle for the selected cultivation action; each realm resource chain is processed
  * independently while the action runs.
  */
-//TODO::May be removed together with CultivateAction - see that record for the cluster it lives in.
 public final class CultivationActionService {
     private CultivationActionService() {
     }

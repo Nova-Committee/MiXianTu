@@ -411,7 +411,7 @@ const active = MxtSpiritRoots.active(player)
 | `clear(entity, stack)` | `Entity`、`ItemStack` | `boolean` | 摘掉组件，回到定义默认档；本来就没有组件时返回 `false`。 |
 | `upgrade(entity, stack)` | `LivingEntity`、`ItemStack` | `{changed, failure, from, to}` | 在链条上**推一档**：先过**下一档**的 `upgrade_condition`，再用全局消耗事务付清它的 `upgrade_costs`（原子），付不出就一点不动、也不写档。 |
 
-`failure` 取值：`SERVER_ONLY`、`EMPTY`（手上没有物品）、`NO_QUALITY`、`NO_CHAIN`（不属于任何链条，或声明的链当前包走不出来）、`NOT_MEMBER`（这一档不在所属链条上）、`AT_TOP`、`CONDITION_FAILED`、`INSUFFICIENT_RESOURCE`、`INSUFFICIENT_COST`。成功时 `from` / `to` 是升级前后的品质 ID（失败时都是 `null`）。
+`failure` 取值：`SERVER_ONLY`、`EMPTY`（手上没有物品）、`NO_QUALITY`、`NO_CHAIN`（不属于任何链条，或声明的链当前包走不出来）、`AT_TOP`、`CONDITION_FAILED`、`INSUFFICIENT_RESOURCE`、`INSUFFICIENT_COST`。成功时 `from` / `to` 是升级前后的品质 ID（失败时都是 `null`）。
 
 ```js
 // kubejs/server_scripts/mxt_quality.js

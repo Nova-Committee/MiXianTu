@@ -67,6 +67,7 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PassengerCondition>> PASSENGER = REGISTRY.register("passenger", () -> PassengerCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AttackCooldownCondition>> ATTACK_COOLDOWN = REGISTRY.register("attack_cooldown", () -> AttackCooldownCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<EquippedItemCondition>> EQUIPPED_ITEM = REGISTRY.register("equipped_item", () -> EquippedItemCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<MainHandItemCondition>> MAIN_HAND_ITEM = REGISTRY.register("main_hand_item", () -> MainHandItemCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<InBlockCondition>> IN_BLOCK = REGISTRY.register("in_block", () -> InBlockCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<InBlockAnywhereCondition>> IN_BLOCK_ANYWHERE = REGISTRY.register("in_block_anywhere", () -> InBlockAnywhereCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ScoreboardCondition>> SCOREBOARD = REGISTRY.register("scoreboard", () -> ScoreboardCondition.CODEC);

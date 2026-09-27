@@ -26,14 +26,11 @@ import java.util.List;
 
 /**
  * A named cultivation activity with entity conditions and an interval action. Where it may be practised is said
- * with {@code start_condition} and {@code condition} like every other requirement: the environment is part of the
- * condition context, so a pack asks for the place it wants instead of naming a kind of aura.
+ * with {@code start_condition} and {@code tick_condition} like every other requirement: the environment is part of
+ * the condition context, so a pack asks for the place it wants instead of naming a kind of aura.
  */
-// TODO: may be removed. What it holds is "how an entity cultivates right now", which the rest of the system could
-// keep in the state attachment rather than a datapack registry; CultivationModeService, CultivationActionService,
-// AuraDistributionService and the registry key below would go with it. Marked, not scheduled.
-public record CultivateAction(Component name, Component description, boolean defaultAction,
-                              EntityCondition startCondition, EntityCondition condition,
+public record CultivateAction(Component name, Component description, int priority,
+                              EntityCondition startCondition, EntityCondition tickCondition,
                               int tickInterval,
                               List<Cost> costs, NumberProvider absorbAmount,
                               List<Cost> auraCosts, List<AuraGain> auraGains,
@@ -50,9 +47,9 @@ public record CultivateAction(Component name, Component description, boolean def
     public static final Codec<CultivateAction> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(CultivateAction::name),
             ContextNameCodec.description(CATEGORY).forGetter(CultivateAction::description),
-            Codec.BOOL.optionalFieldOf("default", false).forGetter(CultivateAction::defaultAction),
+            Codec.INT.optionalFieldOf("priority", 0).forGetter(CultivateAction::priority),
             EntityCondition.optionalCodec("start_condition").forGetter(CultivateAction::startCondition),
-            EntityCondition.optionalCodec("condition").forGetter(CultivateAction::condition),
+            EntityCondition.optionalCodec("tick_condition").forGetter(CultivateAction::tickCondition),
             Codec.intRange(1, 72_000).optionalFieldOf("tick_interval", 20).forGetter(CultivateAction::tickInterval),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(CultivateAction::costs),
             NumberProvider.CODEC.optionalFieldOf("absorb_amount", new Constant(1.0D)).forGetter(CultivateAction::absorbAmount),

@@ -139,8 +139,8 @@
 
 - **功法 = `technique`**：玩家学会后常驻生效的修炼法门。
 - **手法 = `forging_method`**：锻造单步效果，与功法无关（`ForgingBlueprint.allowed_methods`、`ToolBinding` 那一套）。
-- **修炼行为 = `cultivate_action`**：与功法**无关联**。`CultivationModeService.resolveAction`（
-  `runtime/cultivation/CultivationModeService.java:71-77`）只按 `default` 标记 / 玩家已选 / 注册表第一个来解析，不读
+- **修炼行为 = `cultivate_action`**：与功法**无关联**。`CultivationModeService.resolveAction`
+  （`runtime/cultivation/CultivationModeService.java`）只按 玩家已选（附件里存的那条）/ `priority` 最大（同分按注册表顺序）来解析，不读
   `learnedTechniques`。
 - 功法自身只有两个数据驱动注册表：`technique`（定义）与 `technique_binding`（一条功法**怎么被读**
   ：长按时长、姿势、音效、品质组与条件，外加本体替它生成的载体物品），载体本身是堆上的 `mxt:technique` 组件。掌握程度由第三张表
@@ -458,7 +458,7 @@
 | 0  | 未匹配 `technique_binding`                      | `TechniqueItemService.use`         | —— 不接管右键，返回 `false`，物品走原版行为 |
 | 1  | `bindings.conditionsMet`（四类绑定的 `conditions`） | `ItemQualityService.check`         | `BINDING_CONDITIONS`        |
 | 2  | 解析出的 `item_quality` 自身 `condition`           | `ItemQualityService.check`         | `QUALITY_CONDITIONS`        |
-| 3  | `quality_group` 成员资格（品质缺失或不属于该组）             | `ItemQualityService.check`         | `QUALITY_GROUP`（**2026-09-23 起为 `QUALITY_CHAIN`**，判据改成"在不在所属链条的 `tiers` 上"）             |
+| 3  | `quality_group` 成员资格（品质缺失或不属于该组）             | `ItemQualityService.check`         | `QUALITY_GROUP`（**2026-09-23 起为 `QUALITY_CHAIN`**，判据改成"在不在所属链条的 `tiers` 上"）。**已于 2026-09-27 删除**：阶梯改由档位自己的 `next` 反推之后，"这一档在不在它所属的链上"是同义反复，`check` 只剩前两条 |
 | 4  | `technique.learn_condition`                  | `TechniqueService.learn(entity,…)` | `CONDITIONS`                |
 | 5  | `#mxt:disabled` 标签                           | `TechniqueService.learn(spirit,…)` | `DISABLED`                  |
 | 6  | 已学会                                          | 同上                                 | `ALREADY_LEARNED`           |
@@ -480,7 +480,7 @@
 | 键                                                                                                            | 形状                                                                             |
 |--------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 | `actionbar.mxt.item.cannot_use`                                                                              | `"This item cannot be used right now: %s"`，参数是下一条                              |
-| `actionbar.mxt.item.cannot_use.binding_conditions` / `.quality_conditions` / `.quality_group`                | 三条门槛原因（**2026-09-23 起第三条的键是 `.quality_chain`**）                                         |
+| `actionbar.mxt.item.cannot_use.binding_conditions` / `.quality_conditions` / `.quality_group`                | 三条门槛原因（**2026-09-23 起第三条的键是 `.quality_chain`**；**2026-09-27 起第三条整体删除**——判据成了同义反复，见上表第 3 行）                                         |
 | `actionbar.mxt.technique.failed`                                                                             | `"Cannot learn %s: %s"`，参数为功法名（`DefinitionText.name(holder, "technique")`）与下一条 |
 | `actionbar.mxt.technique.failure.disabled` / `.already_learned` / `.conflict` / `.conditions` / `.cancelled` | 五条事务原因                                                                         |
 

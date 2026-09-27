@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -141,15 +142,10 @@ public final class ItemQualityService {
     // The entry tier of the ladder the stack's own tier sits on, which is where a stack with no tier of its own
     // starts. A stack carrying nothing, or carrying a tier on no ladder, has no such slot.
     private static Optional<Holder<ItemQuality>> ladderDefault(Provider access, @Nullable Holder<ItemQuality> tier) {
-        return ladder(access, tier).flatMap(ladder -> Optional.of(ladder.first()));
+        return tier == null ? Optional.empty() : QualityLadders.cache(access).firstOf(HolderHelper.id(tier));
     }
 
-    // The ladder a tier sits on, which is also the ladder a stack carrying it is read on.
-    public static Optional<QualityLadders.Ladder> ladder(Provider access, @Nullable Holder<ItemQuality> tier) {
-        return QualityLadders.of(access, tier);
-    }
-
-    // Why an entity may not use an item: the gate is the union of three independent data-driven checks, so it
+    // Why an entity may not use an item: the gate is the union of two independent data-driven checks, so it
     // reports which one refused instead of only that the item is unusable.
     public enum Failure {
         /**
@@ -159,11 +155,7 @@ public final class ItemQualityService {
         /**
          * The condition of the item's resolved quality did not pass.
          */
-        QUALITY_CONDITIONS,
-        /**
-         * The item's resolved quality is missing, or is not a tier of the ladder the stack reads.
-         */
-        QUALITY_CHAIN
+        QUALITY_CONDITIONS
     }
 
     public static boolean canUse(LivingEntity user, ItemStack stack) {
@@ -195,11 +187,9 @@ public final class ItemQualityService {
         Optional<Holder<ItemQuality>> quality = find(registry.orElse(null), stack, bindings, access);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
             return Optional.of(Failure.QUALITY_CONDITIONS);
-        // The ladder this stack's tier sits on is a membership gate: a tier that does not walk into it cannot be
-        // used.
-        return QualityLadders.of(access, quality.orElse(null))
-                .filter(ladder -> !ladder.isMember(quality.orElse(null)))
-                .map(ladder -> Failure.QUALITY_CHAIN);
+        // Nothing left to refuse: the ladder is derived from the tier itself, so a tier that resolves one is a
+        // member of it by construction, and a tier on no ladder is still usable.
+        return Optional.empty();
     }
 
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {

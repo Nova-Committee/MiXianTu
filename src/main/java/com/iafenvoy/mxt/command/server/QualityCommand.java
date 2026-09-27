@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
+import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -153,15 +154,15 @@ public final class QualityCommand {
         CommandSourceStack source = ctx.getSource();
         Reference<ItemQuality> quality = ResourceArgument.getResource(ctx, "quality", MxtResourceKeys.ITEM_QUALITY);
         // A tier sits on exactly one ladder, the one its own chain walks into.
-        QualityLadders.Ladder ladder = QualityLadders.of(source.getServer().registryAccess(), quality).orElse(null);
+        ChainCache.Chain<ItemQuality> ladder = QualityLadders.of(source.getServer().registryAccess(), quality).orElse(null);
         if (ladder == null) {
             source.sendFailure(Component.translatable("command.mxt.quality.chain.none", HolderHelper.id(quality).toString()));
             return 0;
         }
-        Component line = ChainReport.line(ladder.tiers().stream().map(DefinitionText::name).toList(),
-                ladder.indexOf(quality));
+        Component line = ChainReport.line(ladder.nodes().stream().map(DefinitionText::name).toList(),
+                ladder.indexOf(HolderHelper.id(quality)));
         source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain",
-                String.valueOf(ladder.quality()), line), false);
+                String.valueOf(ladder.key()), line), false);
         return 1;
     }
 }

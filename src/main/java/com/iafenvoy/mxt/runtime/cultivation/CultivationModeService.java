@@ -16,13 +16,13 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Optional;
 
 /**
  * Owns the player-controlled cultivation mode around a selected cultivation action.
  */
-//TODO::May be removed together with CultivateAction - see that record for the cluster it lives in.
 public final class CultivationModeService {
     private CultivationModeService() {
     }
@@ -63,12 +63,12 @@ public final class CultivationModeService {
         player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
     }
 
+    // The attachment's own selection wins; only without one does the highest priority decide, and a tie there
+    // falls back to registry order.
     public static Optional<Holder<CultivateAction>> resolveAction(CultivationAttachment spirit) {
-        Optional<Holder<CultivateAction>> configured = MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATE_ACTION)
-                .filter(action -> action.value().defaultAction())
-                .map(action -> (Holder<CultivateAction>) action).findFirst();
-        return configured.or(spirit::cultivateAction).or(() -> MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATE_ACTION)
-                .map(action -> (Holder<CultivateAction>) action).findFirst());
+        return spirit.cultivateAction().or(() -> MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATE_ACTION)
+                .max(Comparator.comparingInt(action -> action.value().priority()))
+                .map(action -> (Holder<CultivateAction>) action));
     }
 
     private static Result stop(ServerPlayer player, CultivationAttachment spirit, Holder<CultivateAction> action) {

@@ -6,12 +6,13 @@ import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
+import com.iafenvoy.mxt.util.ChainCache;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -33,12 +34,11 @@ public final class QualityUpgradeService {
         Provider access = actor.level().registryAccess();
         Holder<ItemQuality> current = ItemQualityService.find(access, stack).orElse(null);
         if (current == null) return Result.rejected(Failure.NO_QUALITY);
-        QualityLadders.Ladder ladder = ItemQualityService.ladder(access, current).orElse(null);
-        if (ladder == null) return Result.rejected(Failure.NO_CHAIN);
-        // Not being a member means the item's tier did not come from this ladder at all, which is a different
-        // answer from "already at the top".
-        if (!ladder.isMember(current)) return Result.rejected(Failure.NOT_MEMBER);
-        Holder<ItemQuality> next = ladder.nextTier(current).orElse(null);
+        ChainCache<ItemQuality> ladders = QualityLadders.cache(access);
+        // A tier no ladder holds has nothing to climb, and a ladder the walk refused whole leaves all of its tiers
+        // out, so a broken ladder lands here too.
+        if (!ladders.contains(HolderHelper.id(current))) return Result.rejected(Failure.NO_CHAIN);
+        Holder<ItemQuality> next = ladders.next(HolderHelper.id(current)).orElse(null);
         if (next == null) return Result.rejected(Failure.AT_TOP);
         ItemQuality step = next.value();
         FormulaContext formula = FormulaContext.of(actor);
@@ -56,23 +56,13 @@ public final class QualityUpgradeService {
     public static boolean canUpgrade(LivingEntity actor, ItemStack stack) {
         Provider access = actor.level().registryAccess();
         Holder<ItemQuality> current = ItemQualityService.find(access, stack).orElse(null);
-        if (current == null) return false;
-        QualityLadders.Ladder ladder = ladder(access, stack);
-        return ladder != null && ladder.nextTier(current).isPresent();
+        return current != null && QualityLadders.cache(access).next(HolderHelper.id(current)).isPresent();
     }
 
     // The tier the ladder would move to, for a caller that wants to show it before anything is paid.
     public static Optional<Holder<ItemQuality>> nextTier(Provider access, ItemStack stack) {
         return ItemQualityService.find(access, stack)
-                .flatMap(current -> Optional.ofNullable(ladder(access, stack))
-                        .flatMap(ladder -> ladder.nextTier(current)));
-    }
-
-    // The ladder to climb when the caller only wants to know whether one exists. A tier sits on exactly one
-    // ladder, so a preview has nothing to guess between.
-    private static QualityLadders.@Nullable Ladder ladder(Provider access, ItemStack stack) {
-        return ItemQualityService.find(access, stack)
-                .flatMap(quality -> ItemQualityService.ladder(access, quality)).orElse(null);
+                .flatMap(current -> QualityLadders.cache(access).next(HolderHelper.id(current)));
     }
 
     // Every cost failure ends the same way for the caller: a resource that ran out is named, anything else is
@@ -82,7 +72,7 @@ public final class QualityUpgradeService {
     }
 
     public enum Failure {
-        SERVER_ONLY, EMPTY, NO_QUALITY, NO_CHAIN, NOT_MEMBER, AT_TOP,
+        SERVER_ONLY, EMPTY, NO_QUALITY, NO_CHAIN, AT_TOP,
         CONDITION_FAILED, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST
     }
 
