@@ -5,13 +5,11 @@ import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService.Failure;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService.StartResult;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -69,10 +67,6 @@ public final class TribulationCommand {
     private static int start(CommandSourceStack source, Reference<Tribulation> tribulation, @Nullable Entity target) {
         LivingEntity entity = target(source, target);
         if (entity == null) return 0;
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.TRIBULATION, tribulation)) {
-            source.sendFailure(Component.translatable("command.mxt.tribulation.unknown", HolderHelper.id(tribulation).toString()));
-            return 0;
-        }
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
         StartResult result = TribulationService.start(entity, data, tribulation, entity.level().getGameTime(),
                 FormulaContexts.forEntity(entity));

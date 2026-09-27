@@ -73,8 +73,8 @@ public final class RealmCommand {
         Reference<RealmStage> target = ResourceArgument.getResource(ctx, "realm", MxtResourceKeys.REALM_STAGE);
         Identifier start = HolderHelper.id(target);
         Identifier aura = HolderHelper.id(target.value().aura());
-        // The ladder in use is the enabled one, so a disabled stage breaks the chain here for the same reason the
-        // server cache refuses to index such a chain.
+        // The ladder in use is the loaded one, so a stage the pack no longer provides breaks the chain here for the
+        // same reason the server cache refuses to index such a chain.
         Map<Identifier, Reference<RealmStage>> stages = new LinkedHashMap<>();
         MxtDatapackRegistries.holders(source.getServer().registryAccess(), MxtResourceKeys.REALM_STAGE)
                 .forEach(stage -> stages.put(HolderHelper.id(stage), stage));

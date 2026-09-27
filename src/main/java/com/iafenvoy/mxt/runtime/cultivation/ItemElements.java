@@ -30,7 +30,7 @@ import java.util.Set;
  * names (the sole aura in its {@code mxt:spirit_storage}, or for a store that is empty or names several, the
  * {@code aura_type} of the aura its {@code mxt:item_aura} definition declares; an artifact's
  * {@code spirit_capacity} is deliberately not a source, since it says what a stack can hold, not what it is).
- * A disabled element contributes nothing, as everywhere else. Nothing is memoised: the reading walks the
+ * Nothing is memoised: the reading walks the
  * item-binding registries, so a hot path asks once per strike rather than once per element compared.
  */
 public final class ItemElements {
@@ -71,6 +71,6 @@ public final class ItemElements {
         Optional<Holder<Aura>> aura = storage == null ? Optional.empty() : storage.soleAura();
         if (aura.isEmpty()) aura = ItemAuraService.type(access, stack);
         Optional<Holder<Element>> element = aura.flatMap(holder -> holder.value().auraType());
-        return element.filter(Elements::enabled).map(Set::of).orElseGet(Set::of);
+        return element.map(Set::of).orElseGet(Set::of);
     }
 }

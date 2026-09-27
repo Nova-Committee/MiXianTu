@@ -6,17 +6,15 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import net.minecraft.core.Holder;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -104,18 +102,16 @@ public final class DamageCalculationService {
         if (roots.isEmpty()) return 1.0D;
         double result = 1.0D;
         for (Holder<Element> element : wielded) {
-            if (Double.isFinite(result) && conflicts(holder.level().registryAccess(), roots, element))
+            if (Double.isFinite(result) && conflicts(roots, element))
                 result *= element.value().conflictMultiplier();
         }
         return Double.isFinite(result) ? result : 1.0D;
     }
 
-    // Read the same way every other conflicting_elements reader reads it, so a disabled element matches nothing.
-    private static boolean conflicts(RegistryAccess access, List<Holder<SpiritRoot>> roots, Holder<Element> element) {
-        for (Holder<SpiritRoot> root : roots) {
-            SpiritRoot definition = MxtDatapackRegistries.get(access, MxtResourceKeys.SPIRIT_ROOT, root).orElse(null);
-            if (definition != null && Elements.matches(definition.conflictingElements(), element)) return true;
-        }
+    // Read the same way every other conflicting_elements reader reads it.
+    private static boolean conflicts(List<Holder<SpiritRoot>> roots, Holder<Element> element) {
+        for (Holder<SpiritRoot> root : roots)
+            if (RegistryCodecs.matches(root.value().conflictingElements(), element)) return true;
         return false;
     }
 

@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -35,7 +34,7 @@ public record SkillStageEntityCondition(Holder<SkillStage> stage, RealmEntityCon
         SpiritIdentityAttachment spirit = ctx.entity().getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
         if (spirit == null) return false;
         Identifier wanted = this.technique.map(HolderHelper::id).orElse(null);
-        for (Holder<Technique> learned : TechniqueService.known(spirit)) {
+        for (Holder<Technique> learned : spirit.learnedTechniques()) {
             if (wanted != null && !HolderHelper.id(learned).equals(wanted)) continue;
             Holder<SkillStage> current = SkillStageService.currentStage(spirit, learned).orElse(null);
             if (current != null && this.reached(current)) return true;

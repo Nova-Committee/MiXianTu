@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.command.ChainReport;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityChain;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.QualityChainService;
@@ -86,8 +85,6 @@ public final class QualityCommand {
 
     private static int set(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        // The raw entry, not an enabled-only lookup: a disabled tier may still be written, and the gate that
-        // refuses to *use* such an item reads the flag itself.
         Reference<ItemQuality> quality = ResourceArgument.getResource(ctx, "quality", MxtResourceKeys.ITEM_QUALITY);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int changed = 0;
@@ -156,12 +153,6 @@ public final class QualityCommand {
     private static int chain(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Reference<ItemQuality> quality = ResourceArgument.getResource(ctx, "quality", MxtResourceKeys.ITEM_QUALITY);
-        // A disabled tier is no more usable than a missing one, which is the rule every other registry argument
-        // follows; the chains themselves are the enabled ones, exactly as the upgrade service reads them.
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ITEM_QUALITY, quality)) {
-            source.sendFailure(Component.translatable("command.mxt.quality.chain.disabled", HolderHelper.id(quality).toString()));
-            return 0;
-        }
         List<Holder<QualityChain>> chains = QualityChainService.chainsOf(source.getServer().registryAccess(), quality);
         if (chains.isEmpty()) {
             source.sendFailure(Component.translatable("command.mxt.quality.chain.none", HolderHelper.id(quality).toString()));

@@ -6,8 +6,6 @@ import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityChain;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -50,8 +48,6 @@ public final class QualityUpgradeService {
         // Not being a member means the item's tier did not come from this ladder at all, which is a different
         // answer from "already at the top".
         if (next == null) return Result.rejected(ladder.isMember(current) ? Failure.AT_TOP : Failure.NOT_MEMBER);
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ITEM_QUALITY, next))
-            return Result.rejected(Failure.DISABLED);
         QualityChain.Step step = ladder.stepUp(current).orElse(null);
         if (step == null) return Result.rejected(Failure.NO_STEP);
         FormulaContext formula = FormulaContext.of(actor);
@@ -97,7 +93,7 @@ public final class QualityUpgradeService {
     }
 
     public enum Failure {
-        SERVER_ONLY, EMPTY, NO_QUALITY, NO_CHAIN, AMBIGUOUS_CHAIN, NOT_MEMBER, AT_TOP, NO_STEP, DISABLED,
+        SERVER_ONLY, EMPTY, NO_QUALITY, NO_CHAIN, AMBIGUOUS_CHAIN, NOT_MEMBER, AT_TOP, NO_STEP,
         CONDITION_FAILED, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST
     }
 

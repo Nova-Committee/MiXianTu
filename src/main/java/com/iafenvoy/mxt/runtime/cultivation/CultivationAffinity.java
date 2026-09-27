@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
@@ -85,7 +86,7 @@ public final class CultivationAffinity {
     // had; several auras may name one element and only the first is taken.
     private static AuraPool pool(Holder<Element> element, Map<Holder<Aura>, AuraPool> auras) {
         for (Entry<Holder<Aura>, AuraPool> entry : auras.entrySet())
-            if (entry.getKey().value().auraType().filter(Elements::enabled).filter(element::equals).isPresent())
+            if (entry.getKey().value().auraType().filter(element::equals).isPresent())
                 return entry.getValue();
         return AuraPool.empty();
     }
@@ -103,14 +104,14 @@ public final class CultivationAffinity {
     }
 
     // How much of a place is made of elements this one has a relation to, each weighted by its concentration.
-    // Only live auras count, and the element's own pools are never its opposition; this is what a zone's
-    // element_conflict_penalty is multiplied by.
+    // Only auras that name an element count, and the element's own pools are never its opposition; this is what a
+    // zone's element_conflict_penalty is multiplied by.
     private static double opposition(Holder<Element> element, AuraResult aura) {
         double total = 0.0D;
         for (Entry<Holder<Aura>, AuraPool> entry : aura.aura().entrySet()) {
             AuraPool pool = entry.getValue();
             if (pool.amount() <= 0.0D) continue;
-            Optional<Holder<Element>> other = entry.getKey().value().auraType().filter(Elements::enabled);
+            Optional<Holder<Element>> other = entry.getKey().value().auraType();
             if (other.isEmpty() || other.get().equals(element)) continue;
             if (!element.value().overcomes(other.get()) && !element.value().adapts(other.get())) continue;
             double concentration = pool.amount() / Math.max(1.0D, pool.maximum());
@@ -130,7 +131,7 @@ public final class CultivationAffinity {
         return weighted / total;
     }
 
-    // A casting with no matching live root is worth nothing, which is the same answer the cast gate reads: an
+    // A casting with no matching root is worth nothing, which is the same answer the cast gate reads: an
     // ability with an affinity nobody in this body has is not cast at all.
     public static double abilityMultiplier(SpiritIdentityAttachment spirit, Collection<Either<Holder<Element>, TagKey<Element>>> elements,
                                            FormulaContext context, AffinityMode mode) {
@@ -141,7 +142,7 @@ public final class CultivationAffinity {
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
             SpiritRoot root = rootHolder.value();
             // One root contributes once however many of its elements the casting asks for.
-            if (root.elementHolders().stream().noneMatch(element -> Elements.matches(elements, element))) continue;
+            if (root.elementHolders().stream().noneMatch(element -> RegistryCodecs.matches(elements, element))) continue;
             double modifier = root.elementAbilityModifier().evaluate(context);
             if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
             total += modifier;

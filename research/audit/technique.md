@@ -157,6 +157,8 @@
 两者都支持 `#mxt:disabled` 标签禁用：`MxtDatapackRegistries.java:52,100-109,152-174`；功法侧入口检查在
 `TechniqueService.java:29-30`。
 
+> **2026-09-27 更正**：`#mxt:disabled` 整套机制已删除（改用加载期 `neoforge:conditions`，见 [`disabled-tag.md`](disabled-tag.md)），`TechniqueService.known(...)` 与 `Failure.DISABLED` 随之一并删除；本文其余关于"被停用的功法不算学过"的描述按当时证据保留。
+
 ## 2. `technique` 字段与真实消费者
 
 | 字段                     | 类型 / 默认                                             | 实际功能                                                                                                                                                                                                                                                                                                          | 消费点                                                                                                              |

@@ -7,12 +7,10 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -93,10 +91,6 @@ public final class TalismanCommand {
             return 0;
         }
         Reference<Talisman> inscribed = ResourceArgument.getResource(ctx, "talisman", MxtResourceKeys.TALISMAN);
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.TALISMAN, inscribed)) {
-            source.sendFailure(Component.translatable("command.mxt.talisman.unknown", HolderHelper.id(inscribed).toString()));
-            return 0;
-        }
         int count = count(ctx);
         ItemStack template = new ItemStack(MxtItems.TALISMAN.get());
         template.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), mode));
@@ -125,11 +119,11 @@ public final class TalismanCommand {
         player.getInventory().placeItemBackInInventory(stack);
     }
 
-    // The capacity comes from the inscriptions themselves, so the carrier is filled to exactly what its
-    // invocation costs and nothing has to be configured twice.
+    // The capacity comes from the inscriptions themselves, so the carrier is filled to exactly what it was
+    // written to hold and nothing has to be configured twice.
     private static void charge(ServerPlayer player, ItemStack stack) {
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
-        for (Entry<Holder<Aura>, Integer> entry : TalismanService.bill(stack).entrySet()) {
+        for (Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet()) {
             int units = entry.getValue();
             if (units > 0) access.insert(player, stack, entry.getKey(), units, false);
         }

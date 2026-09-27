@@ -12,7 +12,6 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.wheel.*;
@@ -153,7 +152,7 @@ public final class WheelContent implements WheelMenuProvider {
 
     private static boolean canBurst(Player player, Holder<Aura> aura) {
         Aura profile = aura.value();
-        if (!Elements.enabled(profile.auraType()) || !ResourceUseService.canUse(player, aura)) return false;
+        if (!ResourceUseService.canUse(player, aura)) return false;
         double amount = profile.burstAmount().evaluate(
                 ResourceService.formulaContext(player, profile.resource(), FormulaContext.of(player)));
         return Double.isFinite(amount) && amount >= 1.0D;

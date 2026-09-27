@@ -48,6 +48,7 @@ import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
@@ -309,6 +310,7 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_FIRE_ELEMENT = id("fire");
     private static final Identifier PROBE_WATER_ELEMENT = id("water");
     private static final Identifier PROBE_INERT_ELEMENT = id("inert");
+    private static final Identifier PROBE_GATED_ELEMENT = id("condition_gated");
     private static final Identifier PROBE_ELEMENT_ABILITY = id("elemental_probe");
     private static final Identifier PROBE_ELEMENTAL = id("elemental_probe");
     private static final Identifier PROBE_ELEMENT_TAG = id("basic");
@@ -774,6 +776,8 @@ public final class MxtTestCommands {
         if (wearFailure != null) return wearFailure;
         String ledgerFailure = verifyTalismanLedger(level, actor);
         if (ledgerFailure != null) return ledgerFailure;
+        String bufferFailure = verifyTalismanBuffer(level, actor);
+        if (bufferFailure != null) return bufferFailure;
         return verifyTalismanRefund(level, actor);
     }
 
@@ -874,11 +878,47 @@ public final class MxtTestCommands {
         return null;
     }
 
-    // What a carrier was holding when the wear burned it out goes back to whoever set that invocation off: the
-    // pour charged one unit of the aura's own resource per unit, so that is what returns. A carrier that survives
-    // its invocation still burns what it holds, which is what the first of the two legs below pins down. The
-    // fixture pours an aura whose resource has a flat ceiling, because one whose ceiling depends on a realm can
-    // only take the refund for a being that has one.
+    // The capacity is a multiplier of what one invocation costs, so a carrier written with room for more than one
+    // invocation fires again without being poured - and what the carrier can still spend caps it, so the fixture
+    // writes five while its wear leaves three and is poured for three. Every invocation takes its own share off the
+    // store rather than the whole pour. An empty carrier is not a firing one, which is the gate a click runs into.
+    private static String verifyTalismanBuffer(ServerLevel level, LivingEntity actor) {
+        ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("buffer_sigil")));
+        if (!(stack.getItem() instanceof ItemAuraAccess access)) return "a talisman carrier no longer stores aura";
+        Holder<Aura> aura = require(MxtResourceKeys.AURA, SPIRIT_POWER);
+        Holder<Resource> resource = require(MxtResourceKeys.RESOURCE, SPIRIT_POWER);
+        ResourceHolderAttachment resources = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        double before = resources.get(resource);
+        try {
+            resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+            Map<Holder<Aura>, Integer> capacity = TalismanService.capacity(stack);
+            if (capacity.getOrDefault(aura, 0) != 9)
+                return "a carrier written for five invocations over three of wear read " + capacity + " instead of 9";
+            if (TalismanService.ready(stack)) return "an empty carrier was ready to fire";
+            access.insert(actor, stack, aura, 9, false);
+            if (!TalismanService.ready(stack)) return "a filled carrier was not ready to fire";
+            SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
+            for (int shot = 1; shot <= 3; shot++) {
+                if (!TalismanService.invokeOnUse(placed, stack))
+                    return "invocation " + shot + " of a carrier holding three did not fire";
+                double left = stored(stack, aura);
+                if (!close(left, 9.0D - 3.0D * shot))
+                    return "invocation " + shot + " left " + left + " units in the carrier instead of " + (9 - 3 * shot);
+                if (!close(resources.get(resource), 0.0D))
+                    return "an invocation out of a poured carrier still charged its holder " + resources.get(resource);
+            }
+            if (!stack.isEmpty()) return "a carrier worn out by three invocations survived";
+        } finally {
+            resources.set(resource, before);
+        }
+        return null;
+    }
+
+    // What a carrier was still holding when it was spent goes back to whoever set that invocation off: the pour
+    // charged one unit of the aura's own resource per unit, so that is what returns. The fixture holds four
+    // invocations of wear and is poured full; damaging it twice drops what it can still spend to two, so the two
+    // invocations it fires leave two invocations of aura behind, and the wear that destroys it hands them back.
+    // A carrier that survives its invocation is not handed anything back, which is what the first half pins down.
     private static String verifyTalismanRefund(ServerLevel level, LivingEntity actor) {
         ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("refund_sigil")));
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return "a talisman carrier no longer stores aura";
@@ -889,26 +929,39 @@ public final class MxtTestCommands {
         try {
             resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
-            // One invocation of the two points of wear the fixture declares: the carrier survives, so what was
-            // poured into it is spent on the invocation exactly as it always was.
-            access.insert(actor, stack, aura, 2, false);
+            access.insert(actor, stack, aura, 8, false);
+            if (!close(stored(stack, aura), 8.0D)) return "a full carrier of four invocations did not hold eight units";
+            // Wear the carrier down without firing it: what it can still spend decides what it may hold, so being
+            // damaged past the point the store was sized for is what leaves aura behind when it finally breaks.
+            TalismanService.applyDurability(stack);
+            stack.setDamageValue(2);
+            if (TalismanService.capacity(stack).getOrDefault(aura, 0) != 4)
+                return "a carrier with two invocations of wear left read a capacity of "
+                        + TalismanService.capacity(stack) + " instead of 4";
+            // One invocation of the two points of wear the fixture declares: the carrier survives, so what it spent
+            // is not handed back, while what it has not spent stays in the store for the invocation after it.
             if (!TalismanService.invokeOnUse(placed, stack))
                 return "the first invocation of a refundable carrier did not fire";
-            if (stack.getCount() != 1 || stack.getDamageValue() != 1)
-                return "a carrier with wear left was not left standing at one point of wear";
+            if (stack.getCount() != 1 || stack.getDamageValue() != 3)
+                return "a carrier with wear left was not left standing at three points of wear";
             if (!close(resources.get(resource), 0.0D))
                 return "a carrier that survived its invocation handed its charge back instead of spending it";
-            // The second invocation is the one the wear destroys, and the charge it never spent comes back.
-            access.insert(actor, stack, aura, 2, false);
+            if (!close(stored(stack, aura), 6.0D))
+                return "a carrier that survived its invocation kept " + stored(stack, aura) + " units instead of 6";
+            // The second invocation is the one the wear destroys, and what it never spent comes back with the paper.
             if (!TalismanService.invokeOnUse(placed, stack))
                 return "the invocation that burns the carrier out did not fire";
             if (!stack.isEmpty()) return "a carrier worn past its cap survived";
-            if (!close(resources.get(resource), 2.0D))
-                return "a carrier burned out by wear returned " + resources.get(resource) + " instead of the 2 it held";
+            if (!close(resources.get(resource), 4.0D))
+                return "a carrier burned out by wear returned " + resources.get(resource) + " instead of the 4 it held";
         } finally {
             resources.set(resource, before);
         }
         return null;
+    }
+
+    private static double stored(ItemStack stack, Holder<Aura> aura) {
+        return stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY).get(aura);
     }
 
     private static ItemStack carrier(Holder<Talisman> inscribed) {
@@ -2708,14 +2761,18 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: attachment built=" + built
                     + " reaction damage=" + reactionLost + " left=" + leftOver + (reaction ? " OK" : " MISMATCH")), false);
 
-            // 4. A disabled element stops applying: its own root contributes nothing and the condition asking
-            //    about it says no. The fixture element is fetched raw, because the enabled accessor is exactly
-            //    what this leg is here to prove is empty.
-            Holder<Element> inert = MxtDatapackRegistries.rawHolder(MxtResourceKeys.ELEMENT, PROBE_INERT_ELEMENT)
-                    .orElseThrow(() -> new IllegalStateException("Missing disabled element fixture " + PROBE_INERT_ELEMENT));
-            boolean disabled = !Elements.enabled(inert) && Elements.of(inertHolder).isEmpty() && Elements.enabled(fire);
-            source.sendSuccess(() -> Component.literal("element probe: disabled element inert=" + disabled
-                    + (disabled ? " OK" : " MISMATCH")), false);
+            // 4. A definition is taken out of the world while the pack loads, not by a query-time tag: the fixture
+            //    element whose file carries a false `neoforge:conditions` block never enters the registry, while an
+            //    ordinary one does. The file itself is still shipped, which is what tells a skipped entry apart from
+            //    a typo in the id. This is what replaced the mxt:disabled tag.
+            boolean gatedFile = level.getServer().getResourceManager()
+                    .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/element/condition_gated.json")).isPresent();
+            boolean gated = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, PROBE_GATED_ELEMENT).isEmpty();
+            boolean plain = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, PROBE_INERT_ELEMENT).isPresent();
+            boolean gatedOut = gatedFile && gated && plain;
+            source.sendSuccess(() -> Component.literal("element probe: condition-gated file=" + gatedFile
+                    + " element absent=" + gated + " plain element present=" + plain
+                    + (gatedOut ? " OK" : " MISMATCH")), false);
 
             // 5. The conditions that read elements: by element, by element tag, and by what has built up.
             boolean hasElement = new HasElementEntityCondition(List.of(Either.left(fire)))
@@ -2811,9 +2868,8 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: self-feeding reaction left=" + loopLeft
                     + (loop ? " OK" : " MISMATCH")), false);
 
-            // 8. Who a spirit root rules out. The fixture root carries fire and declares both water and the
-            //    disabled inert element, so one body answers all three rules: a live element is refused, a
-            //    disabled element is not an element as far as the declaration goes, and once the declaring root
+            // 8. Who a spirit root rules out. The fixture root carries fire and declares both water and the inert
+            //    element, so one body answers all three rules: either element is refused, and once the declaring root
             //    itself is switched off its declaration is not in force either.
             Holder<SpiritRoot> antiWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_ANTI_WATER_ROOT);
             Holder<SpiritRoot> probeWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_WATER_ROOT);
@@ -2821,12 +2877,13 @@ public final class MxtTestCommands {
             boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_ANTI_WATER_ROOT, antiWater.value()).changed()
                     && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).failure()
                     == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
-            boolean inertFree = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_INERT_ROOT, probeInert.value()).changed();
+            boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_INERT_ROOT, probeInert.value()).failure()
+                    == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
             boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).changed()
                     && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).changed();
-            boolean conflict = blocked && inertFree && reopened;
+            boolean conflict = blocked && inertBlocked && reopened;
             source.sendSuccess(() -> Component.literal("element probe: conflict blocked=" + blocked
-                    + " inert_free=" + inertFree + " reopened=" + reopened
+                    + " inert_blocked=" + inertBlocked + " reopened=" + reopened
                     + (conflict ? " OK" : " MISMATCH")), false);
 
             // 9. The five-phase set the test package ships: metal beats wood in the shaping layer and wood is
@@ -2898,7 +2955,7 @@ public final class MxtTestCommands {
                     + " jade=" + elementIds(jadeElements) + " crystal=" + elementIds(crystalElements)
                     + " plain=" + plainElements.size() + (itemElement ? " OK" : " MISMATCH")), false);
 
-            if (claimed && declared && reaction && disabled && hasElement && auraElement && attachment && toggle
+            if (claimed && declared && reaction && gatedOut && hasElement && auraElement && attachment && toggle
                     && loop && conflict && fivePhases && bloom && settle && itemElement) {
                 source.sendSuccess(() -> Component.literal("element probe: OK"), false);
                 return 1;

@@ -226,7 +226,7 @@ public final class MxtCommand {
 
     private static int queryResource(CommandSourceStack source, Reference<Resource> resource) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, resource)) return 0;
+        if (player == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
         source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(resource, "resource"), value), false);
         return 1;
@@ -234,7 +234,7 @@ public final class MxtCommand {
 
     private static int setResource(CommandSourceStack source, Reference<Resource> resource, double value) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, resource)) return 0;
+        if (player == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
         source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(resource, "resource"), value), true);
         return 1;
@@ -244,11 +244,6 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
-        // A disabled definition is no more usable here than a missing one, which is what the old lookup said.
-        if (selection != null && MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, selection)) {
-            source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_resource", HolderHelper.id(selection).toString()));
             return 0;
         }
         List<Reference<Resource>> resources = selection != null ? List.of(selection)
@@ -344,7 +339,7 @@ public final class MxtCommand {
 
     private static int attemptBreakthrough(CommandSourceStack source, Reference<Aura> aura) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.AURA, aura)) return 0;
+        if (player == null) return 0;
         BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), HolderHelper.id(aura), FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
             Component reason = result == null || result.failure() == null
@@ -397,10 +392,6 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.SECRET_REALM, definition)) {
-            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", HolderHelper.id(definition).toString()));
             return 0;
         }
         Result result = SecretRealmService.enter(player, source.getServer(), definition);

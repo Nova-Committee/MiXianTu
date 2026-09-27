@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.item;
 
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityChain;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -28,11 +27,10 @@ public final class QualityChainService {
                 .map(holder -> holder);
     }
 
-    // Every enabled chain holding this tier. More than one means the tier alone does not say where it climbs.
+    // Every chain holding this tier. More than one means the tier alone does not say where it climbs.
     public static List<Holder<QualityChain>> chainsOf(Provider access, @Nullable Holder<ItemQuality> quality) {
         if (quality == null) return List.of();
         return lookup(access).map(registry -> registry.listElements()
-                .filter(chain -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.QUALITY_CHAIN, chain))
                 .filter(chain -> chain.value().isMember(quality))
                 .map(chain -> (Holder<QualityChain>) chain)
                 .toList()).orElse(List.of());

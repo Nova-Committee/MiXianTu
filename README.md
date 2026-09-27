@@ -126,11 +126,6 @@ Jupiter is a required dependency, and every other required dependency is bundled
 if you want to register content from scripts. JEI and Jade are optional compatibility mods, and the game works fine
 without them.
 
-### How do I disable a piece of content temporarily?
-
-Add the entry to the `mxt:disabled` tag; disabled definitions stop taking part in gameplay, and you do not have to
-delete any datapack files.
-
 ### Can I make my own content pack and distribute it?
 
 You can build content packs on this framework, and distributing them is not restricted in any way.

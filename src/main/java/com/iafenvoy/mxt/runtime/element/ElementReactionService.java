@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
@@ -51,11 +50,11 @@ public final class ElementReactionService {
     private ElementReactionService() {
     }
 
-    // A negative amount takes away. Zero, non-finite and a disabled element are silent no-ops: applying an
-    // element is not a transaction that can fail.
+    // A negative amount takes away. Zero and non-finite are silent no-ops: applying an element is not a
+    // transaction that can fail.
     public static double apply(Entity entity, Holder<Element> element, double amount, FormulaContext context) {
         if (!(entity.level() instanceof ServerLevel)) return 0.0D;
-        if (!Double.isFinite(amount) || amount == 0.0D || !Elements.enabled(element)) return 0.0D;
+        if (!Double.isFinite(amount) || amount == 0.0D) return 0.0D;
         ElementAttachment attachment = entity.getData(MxtAttachments.ELEMENT_ATTACHMENT);
         double total = attachment.add(element, amount);
         trigger(entity, context);
@@ -175,7 +174,6 @@ public final class ElementReactionService {
 
     private static boolean satisfied(ElementReaction reaction, ElementAttachment attachment, Entity entity, FormulaContext context) {
         for (Entry<Holder<Element>, NumberProvider> entry : reaction.amounts().entrySet()) {
-            if (!Elements.enabled(entry.getKey())) return false;
             double required = entry.getValue().evaluate(context);
             if (!Double.isFinite(required) || required < 0.0D) return false;
             if (attachment.amount(entry.getKey()) < required) return false;

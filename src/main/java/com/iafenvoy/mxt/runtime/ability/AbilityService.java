@@ -4,8 +4,10 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.AbilityApplier;
 import com.iafenvoy.mxt.data.ability.ToggleContext;
 import com.iafenvoy.mxt.data.ability.AbilityEffect;
+import com.iafenvoy.mxt.data.ability.ActionCarrier;
 import com.iafenvoy.mxt.data.ability.ChannelSource;
 import com.iafenvoy.mxt.data.ability.CooldownSource;
 import com.iafenvoy.mxt.data.ability.type.CompositeAbilityType;
@@ -192,6 +194,9 @@ public final class AbilityService {
     private static UseResult finishPreparedUse(PreparedUse preparedUse, Ability definition, Entity actor,
                                                AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                                FormulaContext context, @Nullable Vec3 origin) {
+        // Decided before the press pays for anything: a reach that lands on nobody is a refusal, not a paid silence.
+        Failure unreached = applierFailure(definition, actor, context, origin);
+        if (unreached != null) return UseResult.rejected(unreached, null);
         Pre resourceEvent = new Pre(resources, preparedUse.costPlan().resources());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
         // The event owns the price from here on: the plan being paid is the one it handed back.
@@ -339,6 +344,21 @@ public final class AbilityService {
         AbilityEffect.run(definition.type(), actor, context, origin);
     }
 
+    // What an applier activation would land on, asked before it is paid for. A payload with no one-target half would
+    // do nothing at all, which is a different refusal from a reach that found nobody.
+    private static @Nullable Failure applierFailure(Ability definition, Entity actor, FormulaContext context,
+                                                    @Nullable Vec3 origin) {
+        if (!(definition.type() instanceof AbilityApplier applier)) return null;
+        if (!(applier.payload().value().type() instanceof ActionCarrier)) return Failure.NOT_APPLICABLE;
+        try {
+            return applier.reach(actor, context, origin).findAny().isPresent() ? null : Failure.NO_TARGET;
+        } catch (RuntimeException exception) {
+            // A selector or condition that cannot be evaluated is a broken definition, not an empty reach.
+            MiXianTu.LOGGER.error("Ability target selection failed", exception);
+            return Failure.INVALID_FORMULA;
+        }
+    }
+
     // Every required child is validated against detached drafts and all costs are committed before any action
     // runs, because world actions are deliberately never rolled back.
     private static UseResult useComposite(Holder<Ability> composite, Entity actor,
@@ -377,6 +397,9 @@ public final class AbilityService {
             if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
             if (prepared.use().castTimeTicks() > 0L)
                 return UseResult.rejected(Failure.INVALID_FORMULA, null);
+            // A child that reaches nobody refuses the whole composite, before any child has been paid for.
+            Failure unreached = applierFailure(child, actor, childContext, origin);
+            if (unreached != null) return UseResult.rejected(unreached, null);
             Pre resourceEvent = new Pre(resources, prepared.use().costPlan().resources());
             if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
             prepared.use().costPlan().resources().clear();
@@ -439,7 +462,7 @@ public final class AbilityService {
     private record CompositeStep(Holder<Ability> ability, PreparedUse use, FormulaContext context) {
     }
 
-    public enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY, CARRIED_NOT_INSTANT}
+    public enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY, CARRIED_NOT_INSTANT, NO_TARGET, NOT_APPLICABLE}
 
     public record PreparedUse(Holder<Ability> ability, CostTransaction.Planning costPlan, long castTimeTicks,
                               long cooldownTicks, long channelIntervalTicks,

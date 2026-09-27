@@ -113,26 +113,24 @@ public final class ItemQualityService {
         return intrinsic(stack)
                 .or(() -> definitionDefault(access, stack))
                 .or(() -> chainDefault(bindings))
-                .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality).filter(ItemQualityService::enabled));
+                .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality));
     }
 
     // What the definition claiming this stack says its own tier is: an artifact, the sigil written on a talisman
     // carrier, or the technique it teaches.
     private static Optional<Holder<ItemQuality>> definitionDefault(Provider access, ItemStack stack) {
         Optional<Holder<ItemQuality>> artifact = ArtifactService.definition(access, stack)
-                .flatMap(holder -> holder.value().quality()).filter(ItemQualityService::enabled);
+                .flatMap(holder -> holder.value().quality());
         if (artifact.isPresent()) return artifact;
-        Optional<Holder<ItemQuality>> talisman = TalismanService.quality(stack).filter(ItemQualityService::enabled);
+        Optional<Holder<ItemQuality>> talisman = TalismanService.quality(stack);
         if (talisman.isPresent()) return talisman;
         return ItemBindingService.technique(access, stack)
-                .flatMap(binding -> binding.technique().value().quality())
-                .filter(ItemQualityService::enabled);
+                .flatMap(binding -> binding.technique().value().quality());
     }
 
-    // The tier the item's own ladder starts at. A ladder whose starting tier is disabled has no default: silently
-    // picking another one would make the item's tier depend on which entries happen to be switched off.
+    // The tier the item's own ladder starts at.
     private static Optional<Holder<ItemQuality>> chainDefault(ResolvedBindings bindings) {
-        return bindings.qualityChain().map(chain -> chain.value().first()).filter(ItemQualityService::enabled);
+        return bindings.qualityChain().map(chain -> chain.value().first());
     }
 
     // Why an entity may not use an item: the gate is the union of three independent data-driven checks, so it
@@ -222,7 +220,7 @@ public final class ItemQualityService {
     }
 
     /**
-     * Returns enabled qualities in the explicit tooltip-order tag, then all remaining entries.
+     * Returns the qualities in the explicit tooltip-order tag, then all remaining entries.
      */
     // The colour the pack gave this tier, applied to whatever text names it. A quality without one leaves the
     // text exactly as it was, because a tint is something a pack opts into rather than a default to fall back to.
@@ -245,24 +243,16 @@ public final class ItemQualityService {
 
     private static List<Holder<ItemQuality>> ordered(RegistryLookup<ItemQuality> registry) {
         Set<Holder<ItemQuality>> values = new LinkedHashSet<>();
-        registry.get(ItemQualityTags.TOOLTIP_ORDER).ifPresent(tag -> tag.forEach(quality -> addEnabled(values, quality)));
-        registry.listElements().forEach(quality -> addEnabled(values, quality));
+        registry.get(ItemQualityTags.TOOLTIP_ORDER).ifPresent(tag -> tag.forEach(values::add));
+        registry.listElements().forEach(values::add);
         return List.copyOf(values);
     }
 
     private static Optional<Holder<ItemQuality>> intrinsic(ItemStack stack) {
         Holder<ItemQuality> direct = stack.get(MxtDataComponents.ITEM_QUALITY.get());
-        if (enabled(direct)) return Optional.of(direct);
+        if (direct != null) return Optional.of(direct);
         ForgingResultComponent forged = stack.get(MxtDataComponents.FORGING_RESULT);
-        if (forged != null && enabled(forged.quality())) return Optional.of(forged.quality());
+        if (forged != null) return Optional.of(forged.quality());
         return Optional.empty();
-    }
-
-    private static void addEnabled(Set<Holder<ItemQuality>> values, Holder<ItemQuality> quality) {
-        if (enabled(quality)) values.add(quality);
-    }
-
-    private static boolean enabled(Holder<ItemQuality> quality) {
-        return quality != null && !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ITEM_QUALITY, quality);
     }
 }

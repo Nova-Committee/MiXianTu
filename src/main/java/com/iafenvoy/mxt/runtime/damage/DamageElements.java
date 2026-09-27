@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.damage;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.cultivation.DamageTypeClaim;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -233,7 +232,6 @@ public final class DamageElements {
             if (cached != null) return cached;
             Map<Holder<DamageType>, List<Claim>> built = new HashMap<>();
             for (Reference<Element> element : elements.listElements().toList()) {
-                if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element)) continue;
                 claimAll(built, types, element);
             }
             Map<Holder<DamageType>, List<Claim>> frozen = new HashMap<>();

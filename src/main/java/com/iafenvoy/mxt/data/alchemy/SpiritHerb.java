@@ -18,8 +18,8 @@ import java.util.List;
 
 /**
  * Metadata attached to existing items selected by {@code items}; the framework never registers a dedicated herb
- * Item for a datapack entry. {@code element_tags} is the herb's affinity, written with the element registry, so
- * elements a pack disabled are not part of it - see {@code mxt:herb_tag}, the matcher that reads this field.
+ * Item for a datapack entry. {@code element_tags} is the herb's affinity, written with the element registry - see
+ * {@code mxt:herb_tag}, the matcher that reads this field.
  */
 public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, NumberProvider age,
                          List<Either<Holder<Element>, TagKey<Element>>> elementTags, List<Identifier> materialTags,

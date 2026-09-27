@@ -12,11 +12,8 @@ import java.util.Optional;
 /**
  * The one place a stored ability id becomes its holder: the caller passes the registry access it has, so both sides
  * of the connection read the same registry. The holder is an ability's whole address, since the id is the registry
- * id of {@code mxt:ability} and nothing else names one. A missing holder reads as "no such ability", which is how a
- * deleted definition and a disabled one look the same to every caller.
- *
- * <p>That last half is the part a stored {@code Holder} does not carry: whoever keeps a holder instead of an id
- * loses the {@code mxt:disabled} filter and has to ask {@code MxtDatapackRegistries.isDisabled} before acting.
+ * id of {@code mxt:ability} and nothing else names one. A missing holder reads as "no such ability", so an id whose
+ * definition left the pack resolves to nothing.
  */
 public final class Abilities {
     private Abilities() {

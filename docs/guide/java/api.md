@@ -42,32 +42,31 @@ title: Java 公开 API
 
 | 方法 | 作用 | 备注 |
 | --- | --- | --- |
-| `get(ResourceKey<? extends Registry<T>> key, Identifier id)` | 按 id 取定义值 | 已过掉被 `mxt:disabled` 停用的条目；条目不存在给 `Optional.empty()` |
-| `get(key, Holder<T> holder)` | 从 holder 取值 | 只看 holder 自己挂的停用标签，不回查注册表 |
+| `get(ResourceKey<? extends Registry<T>> key, Identifier id)` | 按 id 取定义值 | 条目不存在给 `Optional.empty()` |
 | `holder(key, Identifier id)` | 按 id 取 holder | 读的是**服务端**注册表 |
-| `holders(key)` | 遍历整表的全部 holder | 已过滤停用条目 |
+| `holders(key)` | 遍历整表的全部 holder | |
 
 显式传入注册表访问器（**客户端用这几个**）：
 
 | 方法 | 作用 | 备注 |
 | --- | --- | --- |
 | `holder(HolderLookup.Provider access, key, Identifier id)` | 客户端按 id 取 holder 的**唯一正确入口** | 不碰 `ServerLifecycleHooks` |
-| `holders(Provider access, key)` / `holders(RegistryAccess access, key)` | 遍历整表 | 已过滤停用条目 |
-| `get(Provider access, key, Identifier id)` / `get(Provider access, key, Holder<T> holder)` | 取值 | 同上 |
+| `holders(Provider access, key)` / `holders(RegistryAccess access, key)` | 遍历整表 | |
+| `get(Provider access, key, Identifier id)` | 取值 | 同上 |
 
-停用（`mxt:disabled`）与标签：
+**这一层不过滤任何东西**：条目在不在注册表里就是全部答案，而"停用一条定义"是加载期的事（`neoforge:conditions`，见 [`docs/数据包格式.md`](../../数据包格式)），被挡掉的条目根本不在表里。所以读了 holder 就能直接动用，没有"读到了一条被关掉的定义"这种状态。
+
+标签查询：
 
 | 方法 | 作用 | 备注 |
 | --- | --- | --- |
-| `isDisabled(key, Identifier id)` | 这个 id 是否被停用 | **条目不存在也返回 `false`**——它回答"是不是被关掉了"，不是"在不在" |
-| `isDisabled(key, Holder<T> holder)` | holder 是否被停用 | 纯标签判断，不查注册表 |
-| `isTagged(key, Identifier id, Identifier tagId)` / `isTagged(key, Holder<T> holder, Identifier tagId)` | 在不在某个标签里 | 同样有"条目不存在返回 `false`"的口径 |
+| `isTagged(key, Identifier id, Identifier tagId)` / `isTagged(key, Holder<T> holder, Identifier tagId)` | 在不在某个标签里 | 条目不存在返回 `false` |
 
 裸查与规模：
 
 | 方法 | 作用 | 备注 |
 | --- | --- | --- |
-| `rawHolder(key, Identifier id)` | **不看停用标签**的裸查 | 唯一用途是区分"被停用"与"已删除"；没有服务端时给空，不抛 |
+| `holderOrEmpty(key, Identifier id)` | 与 `holder(key, id)` 同义，但**没有服务端时不抛**，给空 | 给同时在客户端跑的读者用（例如 `CurseService.definitionState`） |
 | `registry(key)` | 拿到原版 `Registry<T>` 本体 | 没有运行中的服务端时抛 `IllegalStateException` |
 | `size(key)` | 该表的条目数 | 与 `registry(...)` 同一条服务端断言 |
 | `registries()` | 本类登记过的全部注册表 key | |
@@ -75,8 +74,7 @@ title: Java 公开 API
 要点：
 
 - 类里**不缓存注册表实例**。要缓存就按**注册表实例**开键（`/reload` 不换实例，世界加载才换），参考 `DamageElements`。
-- 除了 `rawHolder`，**每一个读取都过滤 `mxt:disabled`**。
-- 附件里存 `Holder` 会绕过这层过滤（`RegistryFixedCodec` 不认识标签），读了 holder 再动手的地方要自己补 `isDisabled(...)`。
+- 附件里存着、而当前包已经不提供的 `Holder`（条目被 `neoforge:conditions` 挡掉，或直接删了文件）**在两次世界加载之间不会自己消失**：附件只在**世界加载**时解码，那一刻缺失的那一条会被容错列表丢掉、重新进一次世界就干净了；而 `/reload` 不重解附件。所以要问"现在还在不在"就按 id 回查注册表（`Elements.of` / `activeSpiritRoots` / `SecretRealmService.enter` 都是这么做的），别拿手里这枚 holder 当它还存在的证据。
 - `newDatapackRegistries(NewRegistry)` 由启动事件调用，**不是给业务代码用的**；表与 codec 的登记在 `MxtResourceKeys`。
 
 ### `DefinitionText`
@@ -207,7 +205,7 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 要点：
 
 - 三个写入方法**只改传进来的那个附件**，自己不取、也不创建附件；唯一会隐式创建附件的是收 `LivingEntity` 的 `formulaContext(...)`。
-- 按 id 的重载（`initialize(holder, id, context)`、`change(holder, id, amount, context)` 与一对 `formulaContext(..., id, base)`）每次都**自己按 id 去注册表取定义**，所以被 `mxt:disabled` 停用的条目会自动跳过；id 解析不到时**静默失败**：写入给 `invalid`，两个 `formulaContext` 原样返回 `base`。
+- 按 id 的重载（`initialize(holder, id, context)`、`change(holder, id, amount, context)` 与一对 `formulaContext(..., id, base)`）每次都**自己按 id 去注册表取定义**，所以条目不在当前包里时会跳过；id 解析不到时**静默失败**：写入给 `invalid`，两个 `formulaContext` 原样返回 `base`。
 - 这个类和 `AuraService` 都**没有自己的服务端检查**，是否只在服务端调用靠调用点自律。
 
 ## 修炼与境界
@@ -287,7 +285,7 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 | `stopChannel(AbilityAttachment)` | 停止引导 | |
 | `cancelCast(Holder<Ability>, AbilityAttachment, long gameTime)` | 中断蓄力 | **不退费** |
 
-返回类型：`UseResult(committed, casting, failure, failedResource, amounts)`（**三态**：已提交 / 引导中 / 失败）、`GateResult(approved, failure, failedResource)`、`PrepareResult`（`approved()` 即 `use != null`）、`PreparedUse`、`CommitResult`、`ChannelResult(state, failure, nextTick, amounts)`、`enum State {INACTIVE, WAITING, PULSED, STOPPED}`、`enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY, CARRIED_NOT_INSTANT}`。
+返回类型：`UseResult(committed, casting, failure, failedResource, amounts)`（**三态**：已提交 / 引导中 / 失败）、`GateResult(approved, failure, failedResource)`、`PrepareResult`（`approved()` 即 `use != null`）、`PreparedUse`、`CommitResult`、`ChannelResult(state, failure, nextTick, amounts)`、`enum State {INACTIVE, WAITING, PULSED, STOPPED}`、`enum Failure {DISABLED, NOT_GRANTED, COOLDOWN, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, CONDITION_FAILED, NO_CHARGES, CANCELLED, PERMISSION_DENIED, ELEMENT_AFFINITY, SERVER_ONLY, CARRIED_NOT_INSTANT, NO_TARGET, NOT_APPLICABLE}`。
 
 要点：
 
@@ -295,7 +293,7 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 - **"强制施放一条任何类型的技能"只有 `use` 这一条路**：`AbilityActivationService.activate` 对不实现 `Toggable` 的技能直接 `UNAVAILABLE`，而 `/mxt ability cast`、KubeJS 的施放入口与轮盘按下时对非按键型的回落（`WheelService.press`）都直接调 `use`（`requiresGrant = true`）；物品承载的那条是 `useCarried`（`requiresGrant = false`，`cast_time > 0` 或 ChannelSource 会被 `CARRIED_NOT_INSTANT` 拒）。
 - **冷却与消耗全由这条路负责**：`cooldown` 字段自己会写 `mxt:cooldown` 状态，长度也只有这一个来源（旧的可声明的 `ticks` 已随 `components` 删除）。
 - 世界动作永不回滚，所以复合技能先 `prepare` 校验、再统一 `commit`。
-- **生效时做什么由类型回答**（2026-09-27 重设计起）：这条链在钱付完之后只调 `AbilityEffect.run(definition.type(), actor, context, origin)`（`AbilityEffect` 是额外能力接口，`data/ability/AbilityEffect.java`；另一个静态入口 `runOn(...)` 只对一个目标生效）。实现 `ActionCarrier` 的五个类型（`mxt:active` / `triggered` / `channelled` / `aura` / `interval`）各自带四个动作字段并在自己的时机跑它们，`mxt:word` 直接实现 `AbilityEffect` 跑自己的效果枚举。根接口 `AbilityType` 只剩九个方法且**只处理 active**（`createComponents` / `isActive` / `grant` / `revoke` / `active` / `inactive` / `tick` / `activeTick` / `tickInterval`）；`triggers()` / `rolls(...)` / `damageCondition()` 属于额外接口 `TriggerSource`（只有 `mxt:triggered`），通道的 `channelInterval()` / `upkeepCosts()` 属于 `ChannelSource`（`mxt:channelled`），冷却长度 `cooldown()` 属于 `CooldownSource`（会付款的七个类型；`AbilityService` 的施放管线与共用闸门都从它取长度，取不到按 `0`）。类型的 `tick` / `tickInterval` / `active` / `inactive` / `activeTick` 由 `AbilityEventBridge.tickAbilities` 每 tick 那一趟统一驱动，**别在这里再插一套按类分派**。
+- **生效时做什么由类型回答**（2026-09-27 重设计起）：这条链在钱付完之后只调 `AbilityEffect.run(definition.type(), actor, context, origin)`（`AbilityEffect` 是额外能力接口，`data/ability/AbilityEffect.java`；另一个静态入口 `runOn(...)` 只对一个目标生效）。实现 `ActionCarrier` 的五个类型（`mxt:active` / `triggered` / `channelled` / `aura` / `interval`）各自带四个动作字段并在自己的时机跑它们，`mxt:word` 直接实现 `AbilityEffect` 跑自己的效果枚举。根接口 `AbilityType` 只剩九个方法且**只处理 active**（`createComponents` / `isActive` / `grant` / `revoke` / `active` / `inactive` / `tick` / `activeTick` / `tickInterval`）；`triggers()` / `rolls(...)` / `damageCondition()` 属于额外接口 `TriggerSource`（只有 `mxt:triggered`），通道的 `channelInterval()` / `upkeepCosts()` 属于 `ChannelSource`（`mxt:channelled`），冷却长度 `cooldown()` 属于 `CooldownSource`（会付款的八个类型；`AbilityService` 的施放管线与共用闸门都从它取长度，取不到按 `0`），“挑一批实体、在它们身上各跑一次另一条技能”属于额外接口 `AbilityApplier`（`data/ability/AbilityApplier.java`：`reach(...)` + `payload()`，只有 `mxt:targeted`；它的 `reach` 在**付款之前**被问一次，问不到目标就以 `NO_TARGET` / `NOT_APPLICABLE` 拒掉整次发动）。类型的 `tick` / `tickInterval` / `active` / `inactive` / `activeTick` 由 `AbilityEventBridge.tickAbilities` 每 tick 那一趟统一驱动，**别在这里再插一套按类分派**。
 - `grant` / `revoke` 两个钩子已在 `AbilityType` 上就位，但**运行时尚未回调**（把实体穿到台账的 8 个授予 / 撤销调用点还没做）。
 - 这个类**自己不检查客户端**，也从不产生 `Failure.SERVER_ONLY`——客户端那道 `SERVER_ONLY` 是调用方（例如 KubeJS 桥 `MxtKubeJsApi`）自己返回的。直接调 `use` 在客户端会真的动手。
 - 所有结果里的 `amounts` / `costs` 只用于展示与记录；**别拿它当回滚依据**。
@@ -344,7 +342,7 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 | --- | --- | --- |
 | `strike(Level level, Optional<Holder<DamageType>> type, @Nullable Entity attacker)` / `strike(DamageSource source)` | 这一击的元素集合 | **管线与伤害条件共用的唯一规则**：伤害类型被元素认领就是那些元素，没人认领就回落到攻击者灵根 |
 | `reading(Level level, ...)` / `reading(DamageSource source)` | 元素 + 来源 + 每个元素会留多少附着量 | 三个字段来自**同一次**注册表查询；减免与元素附着必须共用这一次读取，否则两个数不同步 |
-| `of(RegistryAccess access, Holder<DamageType> type)` / `of(DamageSource source)` | **谁认领了这个伤害类型**（不含回落） | 没人认领给**空集**；被 `mxt:disabled` 停用的元素在建索引时就跳过 |
+| `of(RegistryAccess access, Holder<DamageType> type)` / `of(DamageSource source)` | **谁认领了这个伤害类型**（不含回落） | 没人认领给**空集** |
 | `typeOf(RegistryAccess access, Holder<Element> element)` | 取该元素 `damage_types` 里第一条能解析出来的类型 | 标签形式会展开成第一个匹配元素 |
 | `resolveType(RegistryAccess access, List<Either<Holder<Element>, TagKey<Element>>> elements, Optional<Holder<DamageType>> damageType)` | 决定一次声明式打击该以什么类型出行 | 空结果 = 保持它原本的读取（攻击者灵根）；声明失败只警告，**绝不让加载失败** |
 | `checkDeclaration(RegistryAccess access, ...)` | 校验声明的元素确实认领了这个类型 | **首次使用时检查**，不在加载期（注册表是并行解码的，加载期检查会让同一个包时过时不过） |

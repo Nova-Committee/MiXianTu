@@ -128,7 +128,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Read from the attachment, not the registry: a definition that was disabled or deleted still answers.
+     * Read from the attachment, not the registry: a definition the pack no longer provides still answers.
      */
     public static boolean hasAbility(@NotNull Entity entity, Identifier id) {
         return findAbility(entity, id).isPresent();
@@ -213,7 +213,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Read from the attachment, not the registry: a definition that was disabled or deleted still answers.
+     * Read from the attachment, not the registry: a definition the pack no longer provides still answers.
      */
     public static boolean hasCurse(@NotNull Entity target, Identifier id) {
         return findCurse(target, id).isPresent();
@@ -252,7 +252,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The live elements the entity's spirit roots name, sorted. Asked of the body, not the registry, so it works
+     * The elements the entity's spirit roots name, sorted. Asked of the body, not the registry, so it works
      * without knowing which roots exist.
      */
     public static List<String> elements(@NotNull Entity entity) {
@@ -265,7 +265,7 @@ public final class MxtKubeJsApi {
 
     /**
      * How much of one element has built up on the entity, readable on either side because the accumulation is a
-     * synchronised attachment. A disabled or unknown element answers {@code 0}, the same rule the
+     * synchronised attachment. An unknown element answers {@code 0}, the same rule the
      * {@code mxt:element_attachment} condition follows.
      */
     public static double elementAmount(@NotNull Entity entity, Identifier id) {
@@ -275,7 +275,7 @@ public final class MxtKubeJsApi {
 
     /**
      * Builds one element up on the entity and answers the new total, through the pipeline a strike uses, so a
-     * reaction can fire here. A negative amount wears the buildup off; a disabled or unknown element changes
+     * reaction can fire here. A negative amount wears the buildup off; an unknown element changes
      * nothing.
      */
     public static double attachElement(@NotNull Entity entity, Identifier id, double amount) {
@@ -287,10 +287,9 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Every spirit root the entity holds, sorted. Read off the body, so a root a pack disabled is still reported,
-     * and {@link #removeSpiritRoot} by that name still takes it off: both work off the held list, never the
-     * registry. A deleted one cannot be held at all, because the attachment decodes its holders. This is the held
-     * list; the roots that count right now are {@link #activeSpiritRoots}.
+     * Every spirit root the entity holds, sorted. Read off the body, so a root the current pack no longer provides
+     * is still reported, and {@link #removeSpiritRoot} by that name still takes it off: both work off the held
+     * list, never the registry. This is the held list; the roots that count right now are {@link #activeSpiritRoots}.
      */
     public static List<String> spiritRoots(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);
@@ -299,17 +298,16 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The held roots that count, sorted: a root switched off, or whose elements are all not live, is left out. The
-     * elements are resolved against the entity's level registry, so an unresolvable or disabled definition answers
-     * false instead of throwing, on either side.
+     * The held roots that count, sorted: a root switched off, or whose definition the current pack no longer
+     * provides, is left out. The definition is resolved against the entity's level registry, so the reading works
+     * on either side instead of throwing.
      */
     public static List<String> activeSpiritRoots(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);
         if (spirit == null) return List.of();
         return spirit.activeSpiritRoots().stream()
                 .filter(root -> MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT,
-                                HolderHelper.id(root))
-                        .map(value -> value.elementHolders().stream().anyMatch(Elements::enabled)).orElse(false))
+                        HolderHelper.id(root)).isPresent())
                 .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
     }
 
@@ -329,7 +327,7 @@ public final class MxtKubeJsApi {
 
     /**
      * Grants one spirit root through the service the data pack action uses, so conflict rules and granted
-     * abilities behave identically. Unknown or disabled definitions are refused, not granted by name.
+     * abilities behave identically. Unknown definitions are refused, not granted by name.
      */
     public static CultivationIdentityService.Result grantSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())

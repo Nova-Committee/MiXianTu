@@ -21,17 +21,23 @@ data/<namespace>/mxt/<registry>/<path>.json
 - 物品匹配使用 `ItemMatcher`，支持 ID、标签、通配符、正则和混合数组。
 - 原版标签是唯一的标签系统；不要在 JSON 里重复定义 `tags` 字段。
 
-## 禁用标签
+## 停用一条定义
 
-每个动态注册表都支持固定的 `mxt:disabled` 标签（标签 ID 自带 `mxt` 命名空间，文件位置不随数据包命名空间变化）：
+把 NeoForge 的资源条件写在定义文件里即可：条件不成立的条目**不会进注册表**，也就不会被任何服务读到。数据包注册表在加载期由 `ConditionalOps` 解码，所以所有表用的是同一套条件：
 
-```text
-data/mxt/tags/mxt/<registry>/disabled.json
+```json
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:never" }
+  ]
+}
 ```
 
-被列入 `mxt:disabled` 的条目不会参与运行时查询——**元素也不例外**：被停用的元素不再参与克制/适应、不再作为灵根的元素、不再染色、不再匹配任何元素字段。标签值顺序不作为玩法顺序；**品质的顺序由 `quality_chain` 自己声明**（链条的 `tiers` 数组，2026-09-23 起不再依赖标签顺序）。
+可用的条件有 `never` / `always`、`mod_loaded`（`modid`）、`registered`（`registry`、`value`）、`and` / `or`（`values`）、`not`（`value`）与 `feature_flags_enabled`（`flags`）；按标签判断的 `tag_empty` **不能**用在这里（这一层标签还没绑定，会直接抛异常）。条件成立时 `neoforge:conditions` 在解码前被剥掉，正常字段照常读。
 
-> 灵根与体质另有一个**开关**（`spirit_identity` 附件里的 `disabled_spirit_roots` / `disabled_physiques`）：关闭是"仍然持有但不生效"，与这里的停用标签不是一回事。操作用脚本的 `MxtSpiritRoots.setEnabled` / `MxtPhysiques.setEnabled`，或管理员命令 `/mxt spirit_root enable|disable`、`/mxt physique enable|disable`；本模组不为它提供玩家界面。
+代价是"不存在"就是不存在：指向它的 Holder 引用会一起解码失败，所以没有"留着这条定义但让它不生效"的中间状态。完整说明见 [`docs/数据包格式.md`](../../数据包格式) 的「文件位置」。
+
+> 灵根与体质另有一个**开关**（`spirit_identity` 附件里的 `disabled_spirit_roots` / `disabled_physiques`）：关闭是"仍然持有但不生效"。操作用脚本的 `MxtSpiritRoots.setEnabled` / `MxtPhysiques.setEnabled`，或管理员命令 `/mxt spirit_root enable|disable`、`/mxt physique enable|disable`；本模组不为它提供玩家界面。品质的顺序由 `quality_chain` 自己声明（链条的 `tiers` 数组，2026-09-23 起不再依赖标签顺序）。
 
 ## 数值字段
 

@@ -39,6 +39,8 @@ public final class SecretRealmService {
 
     public static Result enter(LivingEntity traveller, MinecraftServer server, Holder<SecretRealm> definition) {
         Identifier id = HolderHelper.id(definition);
+        // The token can outlive the definition it names, so the current registry is the last word on whether it
+        // still exists.
         if (MxtDatapackRegistries.holder(MxtResourceKeys.SECRET_REALM, id).isEmpty())
             return Result.rejected(Failure.DISABLED);
         SecretRealmTravelAttachment travel = traveller.getData(MxtAttachments.SECRET_REALM_TRAVEL);

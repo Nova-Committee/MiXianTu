@@ -117,8 +117,7 @@ public final class AbilityEventBridge {
         }
         tickAbilities(entity, abilities, resourceHolder, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
-        // The disabled check the id lookup used to apply: a channel must stop ticking once its ability is disabled.
-        abilities.channelledAbility().filter(ability -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, ability)).ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities, resourceHolder, entity.level().getGameTime(), FormulaContext.of(entity)));
+        abilities.channelledAbility().ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities, resourceHolder, entity.level().getGameTime(), FormulaContext.of(entity)));
     }
 
     @SubscribeEvent
@@ -266,8 +265,10 @@ public final class AbilityEventBridge {
         boolean changed = false;
         for (Identifier id : abilities.sources().keys()) {
             if (!AbilityStorage.castDue(abilities, id, gameTime)) continue;
-            Abilities.resolve(actor.level().registryAccess(), id).ifPresent(ability ->
-                    AbilityService.finishCast(ability, actor, abilities, resources, gameTime, FormulaContext.of(actor)));
+            Abilities.resolve(actor.level().registryAccess(), id).ifPresent(ability -> {
+                UseResult result = AbilityService.finishCast(ability, actor, abilities, resources, gameTime, FormulaContext.of(actor));
+                AbilityFeedback.reportFailedCast(actor, result.failure(), result.failedResource());
+            });
             changed = true;
         }
         return changed;

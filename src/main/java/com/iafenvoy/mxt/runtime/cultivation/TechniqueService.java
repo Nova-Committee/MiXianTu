@@ -5,8 +5,6 @@ import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -25,17 +23,7 @@ public final class TechniqueService {
     private TechniqueService() {
     }
 
-    // What a technique query sees: a sealed definition is not learned as far as every condition is concerned,
-    // the way a disabled spirit root is not held. The runtime's own readers keep reading the raw list.
-    public static List<Holder<Technique>> known(SpiritIdentityAttachment spirit) {
-        return spirit.learnedTechniques().stream()
-                .filter(technique -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.TECHNIQUE, technique))
-                .toList();
-    }
-
     public static Result learn(SpiritIdentityAttachment spirit, Holder<Technique> technique) {
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.TECHNIQUE, technique))
-            return Result.rejected(Failure.DISABLED);
         Technique definition = technique.value();
         if (spirit.learnedTechniques().contains(technique)) return Result.rejected(Failure.ALREADY_LEARNED);
         Set<Identifier> existing = new HashSet<>();
@@ -61,7 +49,7 @@ public final class TechniqueService {
         return result;
     }
 
-    public enum Failure {DISABLED, ALREADY_LEARNED, CONFLICT, CONDITIONS, CANCELLED}
+    public enum Failure {ALREADY_LEARNED, CONFLICT, CONDITIONS, CANCELLED}
 
     public record Result(boolean learned, Failure failure) {
         static Result learnedResult() {

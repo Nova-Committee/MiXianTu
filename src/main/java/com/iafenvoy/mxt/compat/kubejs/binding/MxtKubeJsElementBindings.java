@@ -13,7 +13,7 @@ import java.util.List;
  * body is, and how much of one is sitting on it. State changes go through the services the data pack path uses.
  */
 public final class MxtKubeJsElementBindings {
-    @Info("Every element the entity's spirit roots name right now, sorted. Disabled elements and disabled roots contribute nothing.")
+    @Info("Every element the entity's spirit roots name right now, sorted. A root that is switched off contributes nothing.")
     public List<String> list(Entity entity) {
         return MxtKubeJsApi.elements(entity);
     }
@@ -23,7 +23,7 @@ public final class MxtKubeJsElementBindings {
         return MxtKubeJsApi.hasElement(entity, id(element));
     }
 
-    @Info("How much of that element has built up on the entity; 0 when none has, and 0 for a disabled or unknown element.")
+    @Info("How much of that element has built up on the entity; 0 when none has, and 0 for an unknown element.")
     public double amount(Entity entity, String element) {
         return MxtKubeJsApi.elementAmount(entity, id(element));
     }

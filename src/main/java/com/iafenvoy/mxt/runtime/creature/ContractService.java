@@ -11,8 +11,6 @@ import com.iafenvoy.mxt.event.SpiritContractEvent.Action;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Post;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -43,8 +41,6 @@ public final class ContractService {
         if (data.bound()) return Result.rejected(Failure.ALREADY_BOUND);
         Contractable contractable = Contracts.of(creature).orElse(null);
         if (contractable == null) return Result.rejected(Failure.NOT_CONTRACTABLE);
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.CONTRACT_TYPE, type))
-            return Result.rejected(Failure.DISABLED);
         ContractContext context = Contracts.context(creature, owner, type);
         if (!contractable.acceptsContract(context)) return Result.rejected(Failure.CREATURE_CONDITIONS);
         ContractType definition = type.value();
@@ -140,7 +136,7 @@ public final class ContractService {
     }
 
     public enum Failure {
-        ALREADY_BOUND, DISABLED, NOT_CONTRACTABLE, OWNER_CONDITIONS, CREATURE_CONDITIONS, LIMIT_REACHED,
+        ALREADY_BOUND, NOT_CONTRACTABLE, OWNER_CONDITIONS, CREATURE_CONDITIONS, LIMIT_REACHED,
         INSUFFICIENT_COST, NOT_BOUND, NOT_OWNER, RECALL_COOLDOWN, CANCELLED, UNSUPPORTED_BEHAVIOR, BEHAVIOR_REFUSED
     }
 

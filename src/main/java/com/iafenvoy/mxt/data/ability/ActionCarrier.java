@@ -45,11 +45,17 @@ public interface ActionCarrier extends AbilityEffect {
 
     // The place travels with the activation: a bi-entity action that moves an endpoint to "the actor" moves it to
     // where the ability happened - a stand's ward pulls to the stand.
+    // What both sides of a bi-entity test see: both named when both are living, the caster's own context otherwise.
+    // Shared so a type that filters its targets before paying tests exactly what this does.
+    static FormulaContext targetContext(Entity actor, Entity target, FormulaContext context) {
+        return actor instanceof LivingEntity caster && target instanceof LivingEntity livingTarget
+                ? FormulaContexts.forEntities(caster, livingTarget, context) : context;
+    }
+
     @Override
     default void executeOn(Entity actor, Entity target, FormulaContext context, @Nullable Vec3 origin) {
         try {
-            FormulaContext targetContext = actor instanceof LivingEntity caster && target instanceof LivingEntity livingTarget
-                    ? FormulaContexts.forEntities(caster, livingTarget, context) : context;
+            FormulaContext targetContext = targetContext(actor, target, context);
             if (this.targetCondition().test(actor, target, targetContext))
                 this.biEntityAction().execute(actor, target, new BiEntityActionContext(actor, target, targetContext, origin));
         } catch (RuntimeException exception) {

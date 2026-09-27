@@ -105,8 +105,6 @@ public final class CurseCommand {
 
     private static int apply(CommandContext<CommandSourceStack> ctx, int stacks, OptionalLong durationTicks) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        // The raw entry, not an enabled-only lookup: a disabled definition must reach the service so it can answer
-        // DISABLED and say why it refused.
         Reference<Curse> curse = ResourceArgument.getResource(ctx, "curse", MxtResourceKeys.CURSE);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         Optional<Long> duration = durationTicks.isPresent() ? Optional.of(durationTicks.getAsLong()) : Optional.empty();
@@ -176,10 +174,10 @@ public final class CurseCommand {
         return cleansed;
     }
 
-    // The raw registry entry, which even a disabled definition still has, or failing that an instance already
-    // held - the only trace a deleted definition leaves behind.
+    // The registry entry the pack loads now, or failing that an instance already held - the only trace a definition
+    // the pack no longer provides leaves behind.
     private static Optional<Holder<Curse>> resolve(Collection<? extends Entity> targets, Identifier id) {
-        Optional<Holder<Curse>> registered = MxtDatapackRegistries.rawHolder(MxtResourceKeys.CURSE, id).map(holder -> holder);
+        Optional<Holder<Curse>> registered = MxtDatapackRegistries.holderOrEmpty(MxtResourceKeys.CURSE, id).map(holder -> holder);
         return registered.isPresent() ? registered : heldByName(targets, id);
     }
 

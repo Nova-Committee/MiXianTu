@@ -17,8 +17,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * True when any element the entity's spirit roots name is one of the listed ones. An element a pack disabled is
- * not part of the answer, exactly as everywhere else.
+ * True when any element the entity's spirit roots name is one of the listed ones.
  */
 public record HasElementEntityCondition(
         List<Either<Holder<Element>, TagKey<Element>>> elements) implements EntityCondition {

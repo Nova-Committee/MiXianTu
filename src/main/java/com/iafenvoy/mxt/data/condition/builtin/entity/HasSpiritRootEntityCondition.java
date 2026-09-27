@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
@@ -17,8 +16,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * True when the entity holds a spirit root the field names, as an entry or as a tag; a root a pack disabled is
- * not held as far as this condition is concerned.
+ * True when the entity holds a spirit root the field names, as an entry or as a tag.
  */
 public record HasSpiritRootEntityCondition(
         List<Either<Holder<SpiritRoot>, TagKey<SpiritRoot>>> spiritRoots) implements EntityCondition {
@@ -29,7 +27,6 @@ public record HasSpiritRootEntityCondition(
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         return ctx.entity().getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().stream()
-                .filter(held -> !MxtDatapackRegistries.isDisabled(MxtResourceKeys.SPIRIT_ROOT, held))
                 .anyMatch(held -> RegistryCodecs.matches(this.spiritRoots, held));
     }
 

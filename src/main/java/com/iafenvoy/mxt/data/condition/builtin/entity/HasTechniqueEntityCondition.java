@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -22,8 +21,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Asks which techniques the entity has learned, or whether it has learned any when the list is empty. A disabled
- * definition does not count, the way a disabled spirit root is not held; there is no per-technique enable switch.
+ * Asks which techniques the entity has learned, or whether it has learned any when the list is empty. There is no
+ * per-technique enable switch, so the learned list is the whole answer.
  */
 public record HasTechniqueEntityCondition(List<Either<Holder<Technique>, TagKey<Technique>>> techniques,
                                           Match match) implements EntityCondition {
@@ -41,7 +40,7 @@ public record HasTechniqueEntityCondition(List<Either<Holder<Technique>, TagKey<
 
     // Shared with the loot condition of the same name, so both answer the question the same way.
     public static boolean learned(SpiritIdentityAttachment spirit, List<Either<Holder<Technique>, TagKey<Technique>>> techniques, Match match) {
-        List<Holder<Technique>> known = TechniqueService.known(spirit);
+        List<Holder<Technique>> known = spirit.learnedTechniques();
         if (techniques.isEmpty()) return !known.isEmpty();
         return match == Match.ALL
                 ? techniques.stream().allMatch(asked -> holds(known, asked))
