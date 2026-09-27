@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
@@ -23,19 +24,24 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
- * A named cultivation activity with entity conditions and an interval action. Where it may be practised is said
- * with {@code start_condition} and {@code tick_condition} like every other requirement: the environment is part of
- * the condition context, so a pack asks for the place it wants instead of naming a kind of aura.
+ * A named cultivation activity with entity conditions and an interval action. Requirements are said with
+ * {@code start_condition} (can a body begin), {@code cultivate_condition} (does this tick yield anything) and
+ * {@code tick_condition} (does the session carry on); the environment is part of the condition context, so a pack
+ * asks for the place it wants instead of naming a kind of aura. {@code abort_reason} names the upkeep abort: it
+ * replaces the generic message when this session ends because the tick condition went false, and nothing else.
  */
 public record CultivateAction(Component name, Component description, int priority,
-                              EntityCondition startCondition, EntityCondition tickCondition,
+                              EntityCondition startCondition, EntityCondition cultivateCondition,
+                              EntityCondition tickCondition,
                               int tickInterval,
                               List<Cost> costs, NumberProvider absorbAmount,
                               List<Cost> auraCosts, List<AuraGain> auraGains,
                               int cooldownTicks,
-                              EntityAction tickAction) implements NamedDefinition {
+                              EntityAction tickAction,
+                              Optional<Component> abortReason) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.CULTIVATE_ACTION.identifier());
     // The pre-Cost aura map is still read as a list of mxt:aura entries; writing always emits the list form.
     private static final Codec<List<Cost>> AURA_COSTS = Codec.either(
@@ -49,6 +55,7 @@ public record CultivateAction(Component name, Component description, int priorit
             ContextNameCodec.description(CATEGORY).forGetter(CultivateAction::description),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(CultivateAction::priority),
             EntityCondition.optionalCodec("start_condition").forGetter(CultivateAction::startCondition),
+            EntityCondition.optionalCodec("cultivate_condition").forGetter(CultivateAction::cultivateCondition),
             EntityCondition.optionalCodec("tick_condition").forGetter(CultivateAction::tickCondition),
             Codec.intRange(1, 72_000).optionalFieldOf("tick_interval", 20).forGetter(CultivateAction::tickInterval),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(CultivateAction::costs),
@@ -56,6 +63,7 @@ public record CultivateAction(Component name, Component description, int priorit
             AURA_COSTS.optionalFieldOf("aura_costs", List.of()).forGetter(CultivateAction::auraCosts),
             AutoIgnoreListCodec.create(AuraGain.CODEC).optionalFieldOf("aura_gains", List.of()).forGetter(CultivateAction::auraGains),
             Codec.intRange(0, 72_000).optionalFieldOf("cooldown", 0).forGetter(CultivateAction::cooldownTicks),
-            EntityAction.optionalCodec("tick_action").forGetter(CultivateAction::tickAction)
+            EntityAction.optionalCodec("tick_action").forGetter(CultivateAction::tickAction),
+            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("abort_reason").forGetter(CultivateAction::abortReason)
     ).apply(i, CultivateAction::new));
 }

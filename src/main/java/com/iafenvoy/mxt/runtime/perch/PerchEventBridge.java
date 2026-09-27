@@ -31,9 +31,10 @@ public final class PerchEventBridge {
         if (perch == null || !perch.perched()) return;
         Entity vehicle = passenger.getVehicle();
         // A vehicle that is gone is not a policy question: the record would otherwise outlive the ride and place
-        // the creature at a stale offset the moment it rode anything else.
+        // the creature at a stale offset the moment it rode anything else. It goes through the service like every
+        // other clearing, so the ride ends with it and a creature answering the contract is told.
         if (vehicle == null || !vehicle.isAlive()) {
-            perch.clear();
+            PerchService.release(passenger);
             return;
         }
         if (shouldRelease(vehicle)) PerchService.release(passenger);

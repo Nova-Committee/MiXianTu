@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -85,7 +86,7 @@ public final class CultivationActionEventBridge {
             if (result.failure() == null) {
                 LAST_FAILURES.remove(player.getUUID());
             } else {
-                FailureNotice notice = new FailureNotice(result.failure(), result.failedResource());
+                FailureNotice notice = new FailureNotice(result.failure(), result.failedResource(), result.abortReason());
                 FailureNotice previous = LAST_FAILURES.put(player.getUUID(), notice);
                 long gameTime = entity.level().getGameTime();
                 if (!notice.equals(previous) || gameTime % 20L == 0L)
@@ -110,6 +111,6 @@ public final class CultivationActionEventBridge {
         });
     }
 
-    private record FailureNotice(Failure failure, Identifier resource) {
+    private record FailureNotice(Failure failure, Identifier resource, Component abortReason) {
     }
 }

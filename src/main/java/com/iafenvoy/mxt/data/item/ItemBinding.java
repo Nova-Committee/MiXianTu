@@ -14,7 +14,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.tags.TagKey;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Attaches ordered entity actions to already registered physical items. {@code element} is what the item is made

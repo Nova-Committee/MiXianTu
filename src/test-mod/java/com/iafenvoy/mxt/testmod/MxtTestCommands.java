@@ -50,8 +50,10 @@ import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.condition.AlwaysCondition;
+import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.CultivatingEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
@@ -104,6 +106,7 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
+import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent;
 import com.iafenvoy.mxt.event.LifeSpanRebirthEvent;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
@@ -128,6 +131,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
@@ -184,6 +188,7 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
@@ -216,6 +221,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.TriState;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -263,6 +269,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -273,6 +280,7 @@ import java.util.function.Consumer;
 /**
  * Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario.
  */
+@SuppressWarnings("DataFlowIssue")
 public final class MxtTestCommands {
     private static final Identifier QI = id("qi");
     private static final Identifier QI_REFINING = id("qi_refining");
@@ -290,6 +298,14 @@ public final class MxtTestCommands {
     private static final Identifier PHYSIQUE = id("qingxiao_body");
     private static final Identifier TECHNIQUE = id("qingxiao_breathing_manual");
     private static final Identifier CULTIVATE = id("qingxiao_meditation");
+    private static final Identifier FREE_MEDITATION = id("free_meditation");
+    private static final Identifier TECHNIQUE_MEDITATION = id("technique_meditation");
+    private static final Identifier DUAL_MEDITATION = id("dual_meditation");
+    private static final Identifier NAMED_MEDITATION = id("named_meditation");
+    private static final Identifier STRICT_MEDITATION = id("strict_meditation");
+    private static final Identifier WORLDLY_MEDITATION = id("worldly_meditation");
+    private static final Identifier SWORD_MANUAL = id("sword_manual");
+    private static final Identifier SWORD_MASTERY = id("sword_mastery");
     private static final Identifier FORMATION = id("spirit_gathering");
     private static final Identifier TRIAL_REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
@@ -361,7 +377,9 @@ public final class MxtTestCommands {
         dispatcher.register(literal("mxt_test")
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                 .then(literal("kit").executes(context -> giveKit(context.getSource())))
-                .then(literal("cultivate").executes(context -> startCultivation(context.getSource())))
+                .then(literal("cultivate")
+                        .executes(context -> startCultivation(context.getSource()))
+                        .then(literal("probe").executes(context -> probeCultivation(context.getSource()))))
                 .then(literal("verify").executes(context -> verify(context.getSource())))
                 .then(literal("damage").executes(context -> probeDamage(context.getSource())))
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
@@ -2104,7 +2122,31 @@ public final class MxtTestCommands {
                     + " kept=" + kept + " fell=" + fell + " powder=" + powder + " stale=" + stale
                     + (policy ? " OK" : " MISMATCH")), false);
 
-            if (defaultSeat && declaredSeat && turned && released && followsHeight && capacity && policy) {
+            // A creature that answers for itself: the framework asks where it wants to sit, reports a refusal as
+            // one, and tells the creature once it is on - an addon therefore ships a creature, never a seat.
+            ProbeBeast host = spawnProbeBeast(level, origin.above(12));
+            ProbeBeast answerer = spawnProbeBeast(level, origin.above(15));
+            LivingEntity plain = spawnProbe(level, origin.above(18), null);
+            spawned.add(host);
+            spawned.add(answerer);
+            if (plain != null) spawned.add(plain);
+            ProbeBeast.reset();
+            ProbeBeast.perchAnswer(Optional.of(new Vec3(0.25D, -0.3D, 0.0D)));
+            boolean asked = PerchService.perch(answerer, host).changed()
+                    && PerchService.perchOffset(answerer)
+                    .filter(offset -> close(offset.x, 0.25D) && close(offset.y, -0.3D)).isPresent()
+                    && ProbeBeast.calls().contains("seat:0") && ProbeBeast.calls().contains("perched");
+            boolean unperched = PerchService.release(answerer).changed() && ProbeBeast.calls().contains("unperched");
+            ProbeBeast.perchAnswer(Optional.empty());
+            boolean notWilling = PerchService.perch(answerer, host).failure() == PerchService.Failure.NOT_WILLING;
+            boolean notPerchable = plain != null
+                    && PerchService.perch(plain, host).failure() == PerchService.Failure.NOT_WILLING;
+            boolean answers = asked && unperched && notWilling && notPerchable;
+            source.sendSuccess(() -> Component.literal("perch probe: answered=" + asked + " unperched=" + unperched
+                    + " not_willing=" + notWilling + " not_perchable=" + notPerchable
+                    + (answers ? " OK" : " MISMATCH")), false);
+
+            if (defaultSeat && declaredSeat && turned && released && followsHeight && capacity && policy && answers) {
                 source.sendSuccess(() -> Component.literal("perch probe: OK"), false);
                 return 1;
             }
@@ -4100,6 +4142,348 @@ public final class MxtTestCommands {
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.cultivate.success"), true);
         return 1;
+    }
+
+    // Drives the cultivation-method pick end to end: which method a body selects, what each of the three conditions
+    // answers, and what a settlement does when one of them says no. Every leg runs on disposable probe beings;
+    // friendship is answered by a listener, because only a player can keep a friend list.
+    private static int probeCultivation(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        long now = level.getGameTime();
+        Holder<CultivateAction> free = require(MxtResourceKeys.CULTIVATE_ACTION, FREE_MEDITATION);
+        Holder<CultivateAction> gated = require(MxtResourceKeys.CULTIVATE_ACTION, TECHNIQUE_MEDITATION);
+        Holder<CultivateAction> dual = require(MxtResourceKeys.CULTIVATE_ACTION, DUAL_MEDITATION);
+        Holder<CultivateAction> named = require(MxtResourceKeys.CULTIVATE_ACTION, NAMED_MEDITATION);
+        Holder<CultivateAction> strict = require(MxtResourceKeys.CULTIVATE_ACTION, STRICT_MEDITATION);
+        Holder<CultivateAction> worldly = require(MxtResourceKeys.CULTIVATE_ACTION, WORLDLY_MEDITATION);
+        Holder<CultivateAction> basic = require(MxtResourceKeys.CULTIVATE_ACTION, CULTIVATE);
+        Holder<Technique> breathing = require(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
+        Holder<Technique> sword = require(MxtResourceKeys.TECHNIQUE, SWORD_MANUAL);
+        Holder<Resource> waterPower = require(MxtResourceKeys.RESOURCE, WATER_POWER);
+        Holder<Resource> mastery = require(MxtResourceKeys.RESOURCE, SWORD_MASTERY);
+        // The manual the partner leg reads is the jade slip carrying the technique component: a declaration's
+        // claimed item is a manual by matching and would carry no component at all.
+        ItemStack carrier = new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get());
+        carrier.set(MxtDataComponents.TECHNIQUE.get(), breathing);
+
+        // The source's own position, so the probe runs both from a client and from the server console, whose
+        // position is the world spawn - the one place a server keeps loaded for a console run.
+        BlockPos base = BlockPos.containing(source.getPosition());
+        LivingEntity solo = spawnProbe(level, probeSpot(base, 0), null);
+        LivingEntity learner = spawnProbe(level, probeSpot(base, 1), null);
+        LivingEntity veteran = spawnProbe(level, probeSpot(base, 2), null);
+        LivingEntity seatA = spawnProbe(level, probeSpot(base, 3), null);
+        LivingEntity seatB = spawnProbe(level, probeSpot(base, 3).offset(3, 0, 0), null);
+        LivingEntity runA = spawnProbe(level, probeSpot(base, 4), null);
+        LivingEntity runB = spawnProbe(level, probeSpot(base, 4).offset(3, 0, 0), null);
+        LivingEntity bareA = spawnProbe(level, probeSpot(base, 5), null);
+        LivingEntity bareB = spawnProbe(level, probeSpot(base, 5).offset(3, 0, 0), null);
+        LivingEntity crowdA = spawnProbe(level, probeSpot(base, 6), null);
+        LivingEntity crowd1 = spawnProbe(level, probeSpot(base, 6).offset(3, 0, 0), null);
+        LivingEntity crowd2 = spawnProbe(level, probeSpot(base, 6).offset(0, 0, 3), null);
+        LivingEntity crowd3 = spawnProbe(level, probeSpot(base, 6).offset(3, 0, 3), null);
+        LivingEntity rangeA = spawnProbe(level, probeSpot(base, 7), null);
+        LivingEntity rangeFar = spawnProbe(level, probeSpot(base, 7).above(8), null);
+        LivingEntity lonely = spawnProbe(level, probeSpot(base, 8), null);
+        LivingEntity actor = spawnProbe(level, probeSpot(base, 9), null);
+        List<LivingEntity> probes = new ArrayList<>();
+        for (LivingEntity probe : Arrays.asList(solo, learner, veteran, seatA, seatB, runA, runB, bareA, bareB,
+                crowdA, crowd1, crowd2, crowd3, rangeA, rangeFar, lonely, actor))
+            if (probe != null) probes.add(probe);
+        if (probes.size() != 17) {
+            for (LivingEntity probe : probes) probe.discard();
+            source.sendFailure(Component.literal("cultivation probe: could not create the probe beings"));
+            return 0;
+        }
+        // Everyone holds the manual except where a leg takes it away, because what the partner holds is the whole
+        // yield test. The two extra crowd members join the friend pool only for the count leg.
+        for (LivingEntity probe : Arrays.asList(seatB, runA, runB, bareA, crowd1, crowd2, crowd3, rangeFar, actor))
+            probe.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
+        Set<UUID> friends = new HashSet<>();
+        for (LivingEntity probe : probes) friends.add(probe.getUUID());
+        friends.remove(crowd2.getUUID());
+        friends.remove(crowd3.getUUID());
+        // Ordered "judge>candidate" pairs that are not friends, so one leg can hold a friendship that only goes one
+        // way: FALSE overrides the friend pools below, which answer by pair and therefore always answer symmetrically.
+        Set<String> refused = new HashSet<>();
+        Consumer<FriendEvent.Relation> relation = event -> {
+            if (refused.contains(event.judgeId() + ">" + event.candidate().getUUID()))
+                event.setResult(TriState.FALSE);
+            else if (friends.contains(event.judgeId()) && friends.contains(event.candidate().getUUID()))
+                event.setResult(TriState.TRUE);
+        };
+        NeoForge.EVENT_BUS.addListener(relation);
+
+        boolean ok = true;
+        try {
+            // 1. Asking starts nothing, and the method that asks for nothing (requirement ②) answers for a body
+            //    with no technique at all. A joined body already carries an empty record - the trigger rehydration
+            //    reads the resources a formula context needs - so the claim is that no session was written, not
+            //    that the body has no record.
+            boolean pickedFree = picks(CultivationModeService.select(solo, contextOf(solo)), FREE_MEDITATION);
+            boolean untouched = solo.getExistingData(MxtAttachments.CULTIVATION)
+                    .map(spirit -> !spirit.cultivating() && spirit.cultivateAction().isEmpty()).orElse(true);
+            ok &= check(source, "cultivation probe: baseline pick=" + pickedFree + " attach=" + !untouched,
+                    pickedFree && untouched);
+
+            // 2. A method whose own condition says no is neither selectable nor usable.
+            boolean gatedOut = !asks(gated, solo) && !gated.value().startCondition().test(solo, contextOf(solo));
+            ok &= check(source, "cultivation probe: gated_out=" + gatedOut, gatedOut);
+
+            // 3. mxt:technique reads the learned list: the tag entry, the named entry, all of them, and none.
+            boolean noneLearned = !asks(named, learner) && !asks(strict, learner) && asks(worldly, learner);
+            boolean learnedBreathing = TechniqueService.learn(learner,
+                    learner.getData(MxtAttachments.SPIRIT_IDENTITY), breathing, contextOf(learner)).changed();
+            boolean tagOnly = asks(gated, learner) && !asks(named, learner) && !asks(strict, learner)
+                    && !asks(worldly, learner);
+            boolean learnedSword = TechniqueService.learn(learner,
+                    learner.getData(MxtAttachments.SPIRIT_IDENTITY), sword, contextOf(learner)).changed();
+            boolean allOf = asks(named, learner) && asks(strict, learner);
+            ok &= check(source, "cultivation probe: technique none=" + noneLearned + " learned="
+                            + (learnedBreathing && learnedSword) + " tag=" + tagOnly + " all=" + allOf,
+                    noneLearned && learnedBreathing && tagOnly && learnedSword && allOf);
+
+            // 4. What the attachment holds is a record, not a preference: the moment a higher-priority method
+            //    becomes applicable the pick moves, while the stored one is still the one running.
+            CultivationAttachment veteranSpirit = veteran.getData(MxtAttachments.CULTIVATION);
+            boolean seatedFree = CultivationModeService.start(veteran, veteranSpirit, free, contextOf(veteran)).started()
+                    && runs(veteranSpirit, FREE_MEDITATION);
+            TechniqueService.learn(veteran, veteran.getData(MxtAttachments.SPIRIT_IDENTITY), breathing,
+                    contextOf(veteran));
+            boolean movedOn = picks(CultivationModeService.select(veteran, contextOf(veteran)), TECHNIQUE_MEDITATION)
+                    && runs(veteranSpirit, FREE_MEDITATION);
+            CultivationModeService.stop(veteran, veteranSpirit, free);
+            ok &= check(source, "cultivation probe: attachment seated=" + seatedFree + " moved=" + movedOn
+                            + " still_running=" + veteranSpirit.cultivating(),
+                    seatedFree && movedOn && !veteranSpirit.cultivating());
+
+            // 5. What admits a body is start_condition plus the yield condition, never the upkeep one: A sits down
+            //    while B is not cultivating, and the first settlement aborts on that very upkeep condition.
+            CultivationAttachment seatSpirit = seatA.getData(MxtAttachments.CULTIVATION);
+            boolean yieldHolds = asks(dual, seatA);
+            boolean upkeepFalse = !dual.value().tickCondition().test(seatA, contextOf(seatA));
+            boolean seated = CultivationModeService.start(seatA, seatSpirit, dual, contextOf(seatA)).started();
+            Result upkeepTick = tickCultivation(seatA, seatSpirit, dual, now);
+            boolean aborted = !seatSpirit.cultivating()
+                    && upkeepTick.failure() == CultivationActionService.Failure.CONDITIONS
+                    && named(upkeepTick, "the partner is gone");
+            ok &= check(source, "cultivation probe: upkeep yield=" + yieldHolds + " false=" + upkeepFalse
+                            + " seated=" + seated + " failure=" + upkeepTick.failure()
+                            + " reason=" + (upkeepTick.abortReason() == null ? "none" : upkeepTick.abortReason().getString()),
+                    yieldHolds && upkeepFalse && seated && aborted);
+
+            // 6. Two bodies each hold a manual, so both sit down: the yield test asks what the partner holds, not
+            //    whether the partner is already seated. The two resources have flat maxima, so nothing here needs a
+            //    realm: water_power pays the cost and sword_mastery is what the tick action hands out.
+            CultivationAttachment runSpiritA = runA.getData(MxtAttachments.CULTIVATION);
+            CultivationAttachment runSpiritB = runB.getData(MxtAttachments.CULTIVATION);
+            ResourceHolderAttachment runResources = runA.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment otherResources = runB.getData(MxtAttachments.RESOURCE_HOLDER);
+            ensureResource(runA, runResources, waterPower, 10.0D);
+            ensureResource(runA, runResources, mastery, 0.0D);
+            ensureResource(runB, otherResources, waterPower, 10.0D);
+            boolean bothSeated = CultivationModeService.start(runA, runSpiritA, dual, contextOf(runA)).started()
+                    && CultivationModeService.start(runB, runSpiritB, dual, contextOf(runB)).started();
+            Result firstA = tickCultivation(runA, runSpiritA, dual, now);
+            Result firstB = tickCultivation(runB, runSpiritB, dual, now);
+            boolean bothPaid = firstA.progressed() && firstB.progressed()
+                    && close(runResources.get(waterPower), 9.0D) && close(runResources.get(mastery), 1.0D);
+            ok &= check(source, "cultivation probe: pair seated=" + bothSeated + " progressed=" + firstA.progressed()
+                            + "/" + firstB.progressed() + " power=" + runResources.get(waterPower)
+                            + " mastery=" + runResources.get(mastery),
+                    bothSeated && bothPaid);
+
+            // 7. Taking the manual away turns the due settlement into a no-op: nothing paid, nothing gained, no
+            //    reschedule, the session carries on - and the same settlement yields the moment it is back.
+            ItemStack held = runB.getMainHandItem().copy();
+            runB.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            long due = runSpiritA.nextCultivateTick();
+            double powerBefore = runResources.get(waterPower);
+            double masteryBefore = runResources.get(mastery);
+            Result skipped = tickCultivation(runA, runSpiritA, dual, due);
+            boolean noYield = skipped.waiting() && !skipped.progressed() && runSpiritA.cultivating()
+                    && close(runResources.get(waterPower), powerBefore) && close(runResources.get(mastery), masteryBefore)
+                    && runSpiritA.nextCultivateTick() == due;
+            runB.setItemInHand(InteractionHand.MAIN_HAND, held);
+            Result resumed = tickCultivation(runA, runSpiritA, dual, due);
+            boolean yieldsAgain = resumed.progressed() && close(runResources.get(waterPower), powerBefore - 1.0D)
+                    && close(runResources.get(mastery), masteryBefore + 1.0D) && runSpiritA.nextCultivateTick() == due + 20L;
+            ok &= check(source, "cultivation probe: skipped waiting=" + skipped.waiting() + " resumed=" + yieldsAgain
+                            + " power=" + runResources.get(waterPower) + " mastery=" + runResources.get(mastery)
+                            + " next_in=" + (runSpiritA.nextCultivateTick() - due),
+                    noYield && yieldsAgain);
+
+            // 8. mxt:partner asks about the candidate: the manual has to be in the partner's own hand, the partner
+            //    has to be inside the range, and count decides how many of them there may be.
+            boolean manualOnPartner = !asks(dual, bareA);
+            boolean outOfRange = !asks(dual, rangeA);
+            boolean noPartner = !asks(dual, lonely);
+            boolean onePartner = asks(dual, crowdA);
+            friends.add(crowd2.getUUID());
+            friends.add(crowd3.getUUID());
+            boolean tooMany = !asks(dual, crowdA);
+            ok &= check(source, "cultivation probe: partner manual=" + !manualOnPartner + " far=" + outOfRange
+                            + " none=" + noPartner + " one=" + onePartner + " crowd=" + tooMany,
+                    manualOnPartner && outOfRange && noPartner && onePartner && tooMany);
+
+            // 9. mxt:cultivating reads the run that is on the body, and can name one method.
+            boolean state = new CultivatingEntityCondition(Optional.empty()).test(runA, contextOf(runA))
+                    && new CultivatingEntityCondition(Optional.of(dual)).test(runB, contextOf(runB))
+                    && !new CultivatingEntityCondition(Optional.of(free)).test(runA, contextOf(runA))
+                    && !new CultivatingEntityCondition(Optional.empty()).test(lonely, contextOf(lonely));
+            ok &= check(source, "cultivation probe: state=" + state, state);
+
+            // 10. The two actions are the pack's own way in and out: the first picks, the second stops and writes
+            //     the method's own cooldown, which a restart inside it runs into and one after it does not.
+            CultivationAttachment actorSpirit = actor.getData(MxtAttachments.CULTIVATION);
+            entityAction(level, "{\"type\": \"mxt:cultivate\"}").execute(actor, contextOf(actor));
+            boolean actionStarted = runs(actorSpirit, FREE_MEDITATION);
+            entityAction(level, "{\"type\": \"mxt:stop_cultivating\"}").execute(actor, contextOf(actor));
+            boolean actionStopped = !actorSpirit.cultivating() && actorSpirit.isCultivateActionOnCooldown(free, now);
+            boolean coolingDown = !CultivationActionService.start(actorSpirit, free, free.value(), now, () -> true)
+                    .started();
+            boolean cooldownOver = CultivationActionService.start(actorSpirit, free, free.value(), now + 200L,
+                    () -> true).started();
+            // The named form starts that very method for a body that has the manual, and stays silent for one that
+            // does not: nothing in the data pack can hand a failure back.
+            entityAction(level, "{\"type\": \"mxt:cultivate\", \"action\": \"mxt_test:named_meditation\"}")
+                    .execute(learner, contextOf(learner));
+            boolean namedStarted = runs(learner.getData(MxtAttachments.CULTIVATION), NAMED_MEDITATION);
+            entityAction(level, "{\"type\": \"mxt:cultivate\", \"action\": \"mxt_test:named_meditation\"}")
+                    .execute(lonely, contextOf(lonely));
+            boolean namedSilent = lonely.getData(MxtAttachments.CULTIVATION).cultivateAction().isEmpty();
+            ok &= check(source, "cultivation probe: actions start=" + actionStarted + " stop=" + actionStopped
+                            + " cooling=" + coolingDown + " expired=" + cooldownOver + " named=" + namedStarted
+                            + " silent=" + namedSilent,
+                    actionStarted && actionStopped && coolingDown && cooldownOver && namedStarted && namedSilent);
+
+            // 11. Both sessions of the pair are put away by the stored method, and the method that asks for nothing
+            //     keeps answering for a body that has techniques (the regression baseline of requirement ②).
+            CultivationModeService.stop(runA, runSpiritA, dual);
+            CultivationModeService.stop(runB, runSpiritB, dual);
+            boolean baselineKept = asks(free, learner) && asks(free, solo);
+            ok &= check(source, "cultivation probe: stop runs=" + runSpiritA.cultivating() + "/"
+                            + runSpiritB.cultivating() + " baseline=" + baselineKept,
+                    !runSpiritA.cultivating() && !runSpiritB.cultivating() && baselineKept);
+
+            // 12. The explicit pick is one start, not a preference: the named method runs although the selector
+            //     would choose another, and a pick that does not apply is refused without disturbing the session
+            //     already running. The named one is the lowest-priority fixture, because the method the pair legs
+            //     started and stopped on is still on its own cooldown.
+            CultivationAttachment pickSpirit = veteran.getData(MxtAttachments.CULTIVATION);
+            Result namedPick = CultivationModeService.startNamed(veteran, basic);
+            boolean pickedAnyway = namedPick.started() && runs(pickSpirit, CULTIVATE)
+                    && picks(CultivationModeService.select(veteran, contextOf(veteran)), TECHNIQUE_MEDITATION);
+            boolean pickRefused = CultivationModeService.startNamed(actor, gated).failure()
+                    == CultivationActionService.Failure.NOT_APPLICABLE
+                    && runs(actorSpirit, FREE_MEDITATION);
+            boolean pickRunning = CultivationModeService.startNamed(learner, named).failure()
+                    == CultivationActionService.Failure.ALREADY_ACTIVE;
+            ok &= check(source, "cultivation probe: pick named=" + pickedAnyway + " refused=" + pickRefused
+                            + " running=" + pickRunning + " failure=" + namedPick.failure(),
+                    pickedAnyway && pickRefused && pickRunning);
+
+            // 13. Forgetting takes the technique and its own stage record, and rebuilds what it granted; the realm
+            //     stage and everything else in the body are other state and stay exactly where they were.
+            SpiritIdentityAttachment bareIdentity = bareA.getData(MxtAttachments.SPIRIT_IDENTITY);
+            CultivationAttachment bareSpirit = bareA.getData(MxtAttachments.CULTIVATION);
+            AbilityAttachment bareAbilities = bareA.getData(MxtAttachments.ABILITY_HOLDER);
+            bareSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, QI_REFINING));
+            boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
+            bareIdentity.setTechniqueStage(sword, require(MxtResourceKeys.SKILL_STAGE, PROBE_TECHNIQUE_STAGE));
+            boolean bareGranted = bareAbilities.has(id("artifact_guard"));
+            boolean forgotten = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).changed();
+            boolean gone = bareIdentity.learnedTechniques().stream()
+                    .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
+                    && bareIdentity.techniqueStages().keySet().stream()
+                    .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
+                    && !bareAbilities.has(id("artifact_guard"))
+                    && !bareSpirit.realmStages().isEmpty();
+            boolean absent = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).failure()
+                    == TechniqueService.Failure.ABSENT;
+            ok &= check(source, "cultivation probe: forget learned=" + bareLearned + " granted=" + bareGranted
+                            + " forgotten=" + forgotten + " gone=" + gone + " absent=" + absent,
+                    bareLearned && bareGranted && forgotten && gone && absent);
+
+            // 14. mxt:mutual is both directions where mxt:undirected is either: a friendship held one way only
+            //     passes mxt:friend and mxt:undirected in that direction and is refused by the both-ways form,
+            //     while a pair that trusts each other passes all three.
+            refused.add(seatB.getUUID() + ">" + bareB.getUUID());
+            BiEntityCondition trust = biEntityCondition(level, "{\"type\": \"mxt:friend\"}");
+            BiEntityCondition eitherWay = biEntityCondition(level,
+                    "{\"type\": \"mxt:undirected\", \"condition\": {\"type\": \"mxt:friend\"}}");
+            BiEntityCondition bothWays = biEntityCondition(level,
+                    "{\"type\": \"mxt:mutual\", \"condition\": {\"type\": \"mxt:friend\"}}");
+            boolean oneWay = trust.test(bareB, seatB, contextOf(bareB)) && !trust.test(seatB, bareB, contextOf(seatB));
+            boolean either = eitherWay.test(bareB, seatB, contextOf(bareB)) && eitherWay.test(seatB, bareB, contextOf(seatB));
+            boolean notMutual = !bothWays.test(bareB, seatB, contextOf(bareB)) && !bothWays.test(seatB, bareB, contextOf(seatB));
+            boolean mutualPair = bothWays.test(bareB, crowd1, contextOf(bareB));
+            ok &= check(source, "cultivation probe: mutual one_way=" + oneWay + " either=" + either
+                            + " refusing=" + notMutual + " pair=" + mutualPair,
+                    oneWay && either && notMutual && mutualPair);
+        } finally {
+            NeoForge.EVENT_BUS.unregister(relation);
+            for (LivingEntity probe : probes) probe.discard();
+        }
+        if (ok) {
+            source.sendSuccess(() -> Component.literal("cultivation probe: OK"), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("cultivation probe: MISMATCH"));
+        return 0;
+    }
+
+    // Beings are laid out on a twelve block grid: mxt:partner asks about a five block sphere, so a column of
+    // beings stacked above one another would count as each other's partners.
+    private static BlockPos probeSpot(BlockPos base, int index) {
+        return base.offset(16 + index % 4 * 12, 2, 16 + index / 4 * 12);
+    }
+
+    // One settlement of a running method, driven the way the runtime drives it: the place supplies the aura, the
+    // caller supplies the upkeep answer, and the time is whatever the caller says it is.
+    private static Result tickCultivation(LivingEntity entity, CultivationAttachment spirit,
+                                          Holder<CultivateAction> action, long gameTime) {
+        CultivateAction definition = action.value();
+        FormulaContext context = contextOf(entity);
+        AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
+        return CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura,
+                action, definition, gameTime, context, () -> definition.tickCondition().test(entity, context));
+    }
+
+    private static FormulaContext contextOf(LivingEntity entity) {
+        return FormulaContexts.forEntity(entity);
+    }
+
+    private static boolean asks(Holder<CultivateAction> action, LivingEntity entity) {
+        return CultivationModeService.applicable(entity, action, contextOf(entity));
+    }
+
+    private static boolean picks(Optional<Holder<CultivateAction>> chosen, Identifier expected) {
+        return chosen.map(action -> HolderHelper.id(action).equals(expected)).orElse(false);
+    }
+
+    private static boolean runs(CultivationAttachment spirit, Identifier expected) {
+        return spirit.cultivating()
+                && spirit.cultivateAction().map(action -> HolderHelper.id(action).equals(expected)).orElse(false);
+    }
+
+    // A pack-named abort carries its own text; every other failure carries none and is told by its enum.
+    private static boolean named(Result result, String expected) {
+        return result.abortReason() != null && result.abortReason().getString().equals(expected);
+    }
+
+    // Definitions name other definitions through registry holders, so the parse needs the level's registries: plain
+    // JsonOps cannot resolve an `mxt:cultivate` action that names its method.
+    private static EntityAction entityAction(ServerLevel level, String json) {
+        return EntityAction.SINGLE_CODEC
+                .parse(RegistryOps.create(JsonOps.INSTANCE, level.registryAccess()), JsonParser.parseString(json))
+                .getOrThrow();
+    }
+
+    private static BiEntityCondition biEntityCondition(ServerLevel level, String json) {
+        return BiEntityCondition.SINGLE_CODEC
+                .parse(RegistryOps.create(JsonOps.INSTANCE, level.registryAccess()), JsonParser.parseString(json))
+                .getOrThrow();
     }
 
     // Prints the character panel's own line model, so what the panel would show is readable from the server

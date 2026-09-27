@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
 
 import java.util.List;
 

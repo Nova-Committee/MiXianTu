@@ -6,6 +6,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -31,6 +32,7 @@ public abstract class EntityPerchMixin {
     // are so a smaller vehicle carries its perch proportionally. The rotation repeats the private
     // EntityAttachments.transformPoint the platform would otherwise apply; borrowing it would allocate an
     // EntityAttachments on every positioning tick.
+    @Unique
     private static Vec3 mxt$seat(Vec3 offset, EntityDimensions dimensions, float scale, float yRot) {
         return new Vec3(offset.x * scale, dimensions.height() + offset.y * scale, offset.z * scale)
                 .yRot(-yRot * (float) (Math.PI / 180.0));

@@ -41,4 +41,5 @@ public final class MxtBiEntityConditions {
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<SameTeamCondition>> SAME_TEAM = REGISTRY.register("same_team", () -> SameTeamCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<RelativeRotationCondition>> RELATIVE_ROTATION = REGISTRY.register("relative_rotation", () -> RelativeRotationCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<UndirectedCondition>> UNDIRECTED = REGISTRY.register("undirected", () -> UndirectedCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends BiEntityCondition>, MapCodec<MutualCondition>> MUTUAL = REGISTRY.register("mutual", () -> MutualCondition.CODEC);
 }

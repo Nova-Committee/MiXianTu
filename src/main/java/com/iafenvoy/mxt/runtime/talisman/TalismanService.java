@@ -33,6 +33,7 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
@@ -75,7 +76,7 @@ public final class TalismanService {
             // never poured for five, and one that is spent whole holds exactly one.
             double multiplier = Math.min(talisman.value().capacity(), uses);
             for (Cost cost : talisman.value().costs())
-                if (cost instanceof AuraCost(Holder<Aura> aura1, com.iafenvoy.mxt.util.formula.NumberProvider amount1)) {
+                if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
                     double amount = amount1.evaluate(FormulaContext.EMPTY);
                     if (Double.isFinite(amount) && amount > 0.0D)
                         totals.merge(aura1, amount * multiplier, Double::sum);
@@ -95,7 +96,7 @@ public final class TalismanService {
         Map<Holder<Aura>, Double> draw = new LinkedHashMap<>();
         for (Holder<Talisman> talisman : written)
             for (Cost cost : talisman.value().costs())
-                if (cost instanceof AuraCost(Holder<Aura> aura1, com.iafenvoy.mxt.util.formula.NumberProvider amount1)) {
+                if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
                     double amount = amount1.evaluate(FormulaContext.EMPTY);
                     if (Double.isFinite(amount) && amount > 0.0D) draw.merge(aura1, amount, Double::sum);
                 }

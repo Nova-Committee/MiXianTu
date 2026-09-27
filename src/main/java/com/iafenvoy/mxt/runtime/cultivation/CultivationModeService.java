@@ -15,13 +15,16 @@ import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Owns the player-controlled cultivation mode around a selected cultivation action.
+ * Owns the selected cultivation method: which one a body runs, plus the player-controlled start and stop around it.
+ * The pick is "the applicable one of the highest priority", so the attachment records what is running instead of
+ * holding a preference that outranks the pack's own ordering.
  */
 public final class CultivationModeService {
     private CultivationModeService() {
@@ -29,21 +32,69 @@ public final class CultivationModeService {
 
     public static Result toggle(ServerPlayer player) {
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        Holder<CultivateAction> action = resolveAction(spirit).orElse(null);
-        if (action == null)
-            return Result.rejected(Failure.NOT_ACTIVE, null);
-        if (spirit.cultivating()) return stop(player, spirit, action);
-
-        CultivateAction definition = action.value();
+        // Stopping goes by the stored method: once the running one no longer applies the selector picks another
+        // (or none at all), and stopping by that pick would leave the body cultivating.
+        Holder<CultivateAction> running = spirit.cultivateAction().orElse(null);
+        if (spirit.cultivating() && running != null) return stop(player, spirit, running);
         FormulaContext context = FormulaContexts.forEntity(player);
-        Result result = CultivationActionService.start(spirit, action, definition,
-                player.level().getGameTime(), () -> definition.startCondition().test(player, context)
-                        && CultivationActionService.canStartCultivation(player, context));
+        Holder<CultivateAction> action = select(player, context).orElse(null);
+        if (action == null) return Result.rejected(Failure.NOT_APPLICABLE, null);
+        return start(player, spirit, action, context);
+    }
+
+    // Applicability is the filter, priority is the order: an equal priority keeps registry order.
+    public static Optional<Holder<CultivateAction>> select(LivingEntity entity, FormulaContext context) {
+        return MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATE_ACTION)
+                .filter(action -> applicable(entity, action, context))
+                .max(Comparator.comparingInt(action -> action.value().priority()))
+                .map(action -> (Holder<CultivateAction>) action);
+    }
+
+    // The one ruler for "usable right now": what start checks, plus the yield condition. The upkeep condition stays
+    // out of it - it answers "is the session still on", which cannot hold before one has begun.
+    public static boolean applicable(LivingEntity entity, Holder<CultivateAction> action, FormulaContext context) {
+        CultivateAction definition = action.value();
+        return definition.startCondition().test(entity, context)
+                && definition.cultivateCondition().test(entity, context)
+                && CultivationActionService.canStartCultivation(entity, context);
+    }
+
+    public static Result start(LivingEntity entity, CultivationAttachment spirit, Holder<CultivateAction> action,
+                               FormulaContext context) {
+        CultivateAction definition = action.value();
+        Result result = CultivationActionService.start(spirit, action, definition, entity.level().getGameTime(),
+                () -> applicable(entity, action, context));
         if (result.started()) {
-            CultivationMovementService.reconcile(player);
-            player.refreshDimensions();
+            if (entity instanceof ServerPlayer player) CultivationMovementService.reconcile(player);
+            entity.refreshDimensions();
         }
         return result;
+    }
+
+    public static Result stop(LivingEntity entity, CultivationAttachment spirit, Holder<CultivateAction> action) {
+        Result result = CultivationActionService.stop(entity, spirit, HolderHelper.id(action), action.value(),
+                entity.level().getGameTime());
+        if (result.stopped()) {
+            if (entity instanceof ServerPlayer player) CultivationMovementService.clear(player);
+            entity.refreshDimensions();
+            CultivationTriggerService.clear(entity);
+        }
+        return result;
+    }
+
+    // The explicit pick behind {@code /mxt cultivate select}: a named method runs now even when the pack's ordering
+    // would choose another, but starting still goes through the same ruler, so one that does not apply is refused
+    // without disturbing the session already running. Nothing is remembered - the next press of the key picks again.
+    public static Result startNamed(LivingEntity entity, Holder<CultivateAction> action) {
+        CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
+        Holder<CultivateAction> running = spirit.cultivateAction().orElse(null);
+        boolean active = spirit.cultivating() && running != null;
+        if (active && HolderHelper.id(running).equals(HolderHelper.id(action)))
+            return Result.rejected(Failure.ALREADY_ACTIVE, null);
+        FormulaContext context = FormulaContexts.forEntity(entity);
+        if (!applicable(entity, action, context)) return Result.rejected(Failure.NOT_APPLICABLE, null);
+        if (active) stop(entity, spirit, running);
+        return start(entity, spirit, action, context);
     }
 
     public static boolean stopIfCultivating(ServerPlayer player) {
@@ -56,28 +107,13 @@ public final class CultivationModeService {
 
     public static void notifyFailure(ServerPlayer player, Result result) {
         if (result == null || result.failure() == null) return;
-        String reasonKey = "actionbar.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
-        Component reason = result.failure() == Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
-                ? Component.translatable(reasonKey, DefinitionText.name(result.failedResource(), "resource"))
-                : Component.translatable(reasonKey);
-        player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
-    }
-
-    // The attachment's own selection wins; only without one does the highest priority decide, and a tie there
-    // falls back to registry order.
-    public static Optional<Holder<CultivateAction>> resolveAction(CultivationAttachment spirit) {
-        return spirit.cultivateAction().or(() -> MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATE_ACTION)
-                .max(Comparator.comparingInt(action -> action.value().priority()))
-                .map(action -> (Holder<CultivateAction>) action));
-    }
-
-    private static Result stop(ServerPlayer player, CultivationAttachment spirit, Holder<CultivateAction> action) {
-        Result result = CultivationActionService.stop(player, spirit, HolderHelper.id(action), action.value(), player.level().getGameTime());
-        if (result.stopped()) {
-            CultivationMovementService.clear(player);
-            player.refreshDimensions();
-            CultivationTriggerService.clear(player);
+        Component reason = result.abortReason();
+        if (reason == null) {
+            String reasonKey = "actionbar.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
+            reason = result.failure() == Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
+                    ? Component.translatable(reasonKey, DefinitionText.name(result.failedResource(), "resource"))
+                    : Component.translatable(reasonKey);
         }
-        return result;
+        player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
     }
 }

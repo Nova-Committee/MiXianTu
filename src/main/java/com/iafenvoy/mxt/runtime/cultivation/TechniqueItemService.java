@@ -212,7 +212,7 @@ public final class TechniqueItemService {
         // Every completed read pays, not only the ones that teach: a refusal is still a read the player
         // spent the hold on. Charged before the outcome is looked at so the two cases cannot drift.
         applyCooldown(entity, stack);
-        if (!result.learned()) {
+        if (!result.changed()) {
             notifyLearnFailure(entity, binding.technique(), result);
             return;
         }

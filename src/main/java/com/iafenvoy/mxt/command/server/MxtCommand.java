@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
@@ -19,6 +20,8 @@ import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
@@ -94,7 +97,12 @@ public final class MxtCommand {
                                 .then(argument("index", IntegerArgumentType.integer(0, 255))
                                         .executes(ctx -> listResourceBars(ctx.getSource(), resource(ctx, "resource"),
                                                 IntegerArgumentType.getInteger(ctx, "index"))))))
-                .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
+                .then(literal("cultivate")
+                        .then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource())))
+                        .then(literal("select")
+                                .requires(ServerCommandManager::mayChange)
+                                .then(argument("action", ResourceArgument.resource(context, MxtResourceKeys.CULTIVATE_ACTION))
+                                        .executes(ctx -> selectCultivation(ctx.getSource(), cultivateAction(ctx))))))
                 .then(literal("breakthrough").requires(ServerCommandManager::mayChange)
                         .then(argument("aura", ResourceArgument.resource(context, MxtResourceKeys.AURA))
                                 .executes(ctx -> attemptBreakthrough(ctx.getSource(), aura(ctx)))))
@@ -166,6 +174,10 @@ public final class MxtCommand {
 
     private static Reference<Aura> aura(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         return ResourceArgument.getResource(ctx, "aura", MxtResourceKeys.AURA);
+    }
+
+    private static Reference<CultivateAction> cultivateAction(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "action", MxtResourceKeys.CULTIVATE_ACTION);
     }
 
     private static Reference<SecretRealm> secretRealm(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -334,6 +346,27 @@ public final class MxtCommand {
                         + String.format(Locale.ROOT, "%.2f", entry.getDoubleValue()))
                 .collect(Collectors.joining(", ")));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, progress, spirit.nextCultivateTick()), false);
+        return 1;
+    }
+
+    // The one-shot explicit pick: the named method runs now even when priority would choose another, and that
+    // body's own conditions still decide whether it runs at all.
+    private static int selectCultivation(CommandSourceStack source, Holder<CultivateAction> action) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        CultivationActionService.Result result = CultivationModeService.startNamed(player, action);
+        if (!result.started()) {
+            String failure = result.failure() == null ? "not_applicable" : result.failure().name().toLowerCase(Locale.ROOT);
+            source.sendFailure(Component.translatable("command.mxt.cultivate.select.failed",
+                    DefinitionText.name(action, "cultivate_action"),
+                    Component.translatable("actionbar.mxt.cultivation.failure." + failure)));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.select.done",
+                DefinitionText.name(action, "cultivate_action")), true);
         return 1;
     }
 

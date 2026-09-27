@@ -1,0 +1,6 @@
+{
+  "priority": -5,
+  "tick_interval": 20,
+  "start_condition": { "type": "mxt:not", "condition": { "type": "mxt:technique" } },
+  "absorb_amount": "2"
+}

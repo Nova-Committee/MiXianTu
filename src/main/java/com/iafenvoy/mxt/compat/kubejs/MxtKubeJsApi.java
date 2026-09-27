@@ -13,10 +13,11 @@ import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.ItemQualityTags;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
@@ -34,11 +35,11 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
@@ -408,6 +409,58 @@ public final class MxtKubeJsApi {
     // Read, never created: asking whether a body holds a root must not leave it holding an empty identity.
     private static SpiritIdentityAttachment identity(Entity entity) {
         return entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+    }
+
+    /**
+     * Every technique the entity has learned, sorted. Read off the body, so a technique the current pack no longer
+     * provides is still reported, and {@link #forgetTechnique} by that name still takes it off.
+     */
+    public static List<String> techniques(@NotNull Entity entity) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        return spirit == null ? List.of() : spirit.learnedTechniques().stream()
+                .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    public static boolean hasTechnique(@NotNull Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        if (spirit == null) return false;
+        return spirit.learnedTechniques().stream().anyMatch(technique -> HolderHelper.id(technique).equals(id));
+    }
+
+    /**
+     * The skill stage that technique is at, or {@code null} when it is not learned or carries no stage record yet.
+     */
+    public static @Nullable Identifier techniqueStage(@NotNull Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        if (spirit == null) return null;
+        for (Entry<Holder<Technique>, Holder<SkillStage>> entry : spirit.techniqueStages().entrySet())
+            if (HolderHelper.id(entry.getKey()).equals(id)) return HolderHelper.id(entry.getValue());
+        return null;
+    }
+
+    /**
+     * Learns a technique through the service the item and the data pack use, so the learn condition, the
+     * exclusive-tag conflict rules and both learn events apply. An unknown definition is refused, not learned by name.
+     */
+    public static TechniqueService.Result learnTechnique(@NotNull LivingEntity entity, Identifier id) {
+        if (entity.level().isClientSide())
+            return new TechniqueService.Result(false, TechniqueService.Failure.SERVER_ONLY);
+        Holder<Technique> technique = MxtDatapackRegistries.holder(MxtResourceKeys.TECHNIQUE, id).orElse(null);
+        return technique == null
+                ? new TechniqueService.Result(false, TechniqueService.Failure.DISABLED)
+                : TechniqueService.learn(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), technique,
+                FormulaContext.of(entity));
+    }
+
+    /**
+     * Forgets a technique and its own stage record, rebuilding what it granted; the realm, the progress, the
+     * resources and the running method live elsewhere and stay put. Asked by id, so a technique the current pack no
+     * longer provides can still be given up.
+     */
+    public static TechniqueService.Result forgetTechnique(@NotNull LivingEntity entity, Identifier id) {
+        if (entity.level().isClientSide())
+            return new TechniqueService.Result(false, TechniqueService.Failure.SERVER_ONLY);
+        return TechniqueService.forget(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), id);
     }
 
     private static Holder<SpiritRoot> foundSpiritRoot(Entity entity, Identifier id) {

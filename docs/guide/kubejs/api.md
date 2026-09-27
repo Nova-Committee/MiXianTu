@@ -22,6 +22,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtElements` | 查询实体身上的元素与元素附着，并施加附着。 |
 | `MxtSpiritRoots` | 查询、授予、移除与开关灵根。 |
 | `MxtPhysiques` | 查询、授予、移除与开关体质。 |
+| `MxtTechniques` | 查询、学习与遗忘功法，并读它的技能水平。 |
 | `MxtLifespan` | 读写成实体自己的寿元账本（剩余与上限），也能让实体当场转世。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
 | `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
@@ -398,6 +399,27 @@ if (result.changed) {
 const active = MxtSpiritRoots.active(player)
 ```
 
+### `MxtTechniques`
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `list(entity)` | `Entity` | `List<String>` | 该实体**学过**的功法 ID，按 ID 排序。定义已不在当前包里的功法仍会列出——它确实还学过。 |
+| `has(entity, technique)` | `Entity`、功法 ID | `boolean` | 是否学过（与 `mxt:technique` 同义）。 |
+| `stage(entity, technique)` | `Entity`、功法 ID | `String` 或 `null` | 这门功法当前的技能水平 ID；没学过、或还没写下水平记录时为 `null`。 |
+| `learn(entity, technique)` | `LivingEntity`、功法 ID | `{changed, failure}` | 走权威服务学习：`learn_condition`、`exclusive_tags` 与两个学习事件都照常处理。 |
+| `forget(entity, technique)` | `LivingEntity`、功法 ID | `{changed, failure}` | 遗忘这门功法**并删掉它自己的水平记录**，再重建它带来的属性与技能；境界 / 修为 / 资源 / 正在跑的法门都不动。没学过则为 `ABSENT`。 |
+
+`failure` 词表：`DISABLED`（注册表里没有这个 id，含被 `neoforge:conditions` 挡掉的定义）、`ALREADY_LEARNED`、`CONFLICT`（`exclusive_tags` 撞上已修习的功法）、`CONDITIONS`（`learn_condition` 不满足）、`CANCELLED`（监听方取消了本次学习）、`ABSENT`、`SERVER_ONLY`（在客户端调用）。三个读方法两侧都能用，`learn` / `forget` 是服务端操作。
+
+```js
+// kubejs/server_scripts/mxt_techniques.js
+const learned = MxtTechniques.learn(player, 'mxt_test:azure_water_manual')
+if (!learned.changed) console.warn(`learning refused: ${learned.failure}`)
+// 洗掉重来：功法和它自己的水平记录一起消失，境界与修为照旧。
+MxtTechniques.forget(player, 'mxt_test:qingxiao_breathing_manual')
+const stage = MxtTechniques.stage(player, 'mxt_test:azure_water_manual')
+```
+
 ### `MxtQuality`
 
 品质长在**物品堆**上，所以这几个方法都点名它们作用的那一栈；`entity` 只是注册表查询的起点。写操作只在服务端生效，客户端一律返回 `null` / `false`。
@@ -661,7 +683,7 @@ MxtEvents.cultivationBreak(event => {
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
 
-只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtLifespan`、`MxtSouls`、`MxtElements.attach`、`MxtSpiritRoots` 与 `MxtPhysiques` 的改变状态方法，以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` / `failure` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
+只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtLifespan`、`MxtSouls`、`MxtElements.attach`、`MxtSpiritRoots`、`MxtPhysiques` 与 `MxtTechniques` 的改变状态方法，以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` / `failure` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
 
 `MxtActions.execute*` 故意不设该保护，因为内置 Action 自己决定作用端：JSON 里声明了客户端执行的 Action（例如带 `client` 标志的速度 Action）本来就应当就地运行。
 

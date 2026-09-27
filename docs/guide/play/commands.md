@@ -25,6 +25,7 @@ title: 命令
 | `/mxt resource <id> set <value>` | 设置资源值。 |
 | `/mxt resourcebar [resource] [index]` | 查看资源条的原始当前值、上下限、未截断百分比、上下文、位置和顺序；不填参数时列出全部资源条。 |
 | `/mxt cultivate status` | 查看修炼状态。 |
+| `/mxt cultivate select <action>` | 手动点名一条法门（`mxt:cultivate_action` 的条目）**立刻开练**：正在修另一条就先停掉它，但照样要过"此刻适用"那把筛子，不适用就报「没有一门当下能修的法门」且不动正在跑的那条。它**不落盘**——下一次按修炼键仍然由"筛适用 + `priority`"决定，需要 gamemaster 权限。 |
 | `/lifespan [<targets>]`（= `/mxt lifespan`） | 查看目标（不填则自己）的寿元账本「剩余 / 上限」，没有账本时读作「未记账」。不需要权限，单位是刻。 |
 | `/lifespan set <targets> <ticks>`（= `/mxt lifespan set …`） | 把两个数一起重写成 `ticks`（必须 ≥ 0，需要 gamemaster 权限）。 |
 | `/lifespan add <targets> <ticks>`（= `/mxt lifespan add …`） | 加减寿元：正数延寿（两个数一起涨）、负数抽寿（只减剩余），需要 gamemaster 权限。 |
@@ -71,6 +72,7 @@ title: 命令
 | `/physique enable\|disable <targets> <physique>`（= `/mxt physique …`） | 与灵根同义的开关：关闭后属性修正、授予能力与两个伤害倍率全部不生效，但体质仍然被持有。 |
 | `/technique repair [dry-run]`（= `/mxt technique repair`） | 清理指向已删除功法定义的失效数据。 |
 | `/technique drop <id>`（= `/mxt technique drop <id>`） | 移除一项已习得功法并重建其带来的属性与能力。 |
+| `/technique forget <id>`（= `/mxt technique forget <id>`） | 遗忘一项功法：连同**这门功法自己的层数记录**一起删掉（重新学会从入口级开始），并重建它带来的属性与能力；境界、修为、资源与正在跑的法门都是别的状态，不受影响。与 `drop` 是同一件手术，只是说法对着"我要放弃这门功法"。 |
 | `/technique diagnose`（= `/mxt technique diagnose`） | 逐条检查手持功法物品为何无法使用。 |
 | `/display [player] [slot]`（= `/mxt display`） | 展示槽位物品。 |
 | `/trade <player>`（= `/mxt trade <player>`） | 向玩家发起交易请求。 |
@@ -119,7 +121,7 @@ title: 命令
 
 命令中的注册表 ID 使用原版 `ResourceArgument`：解析、Tab 补全与"没有这个条目"的报错都由它给出，补全来自服务端当前注册表。**补全里的一条就是能用的**：被 `neoforge:conditions` 挡掉的条目根本不进注册表，所以不会再出现"补全里有、执行时被拒"这种状态。
 
-少数参数**故意**仍然用 `IdentifierArgument`，它们的用途就是点名一个**当前数据包已经不提供**的引用：`/technique drop <id>`、`/spirit_root remove|enable|disable <targets> <id>`、`/physique remove|enable|disable <targets> <id>`、`/curse remove`、`/ability revoke`。换成 `ResourceArgument` 会在解析阶段就被拒绝。它们要救的是**身体里还存着、而当前包已经不提供的 `Holder`**：条目被条件挡掉或直接删了文件之后，同一次会话里附件里那份引用还在（附件只在**世界加载**时解码，`/reload` 不重解；下次进世界时缺失的那一条会被容错列表丢掉），所以这几条一律按身体持有的引用去找（不是查注册表），照样摘得掉、关得掉。它们的 Tab 补全来自当前注册表里**还在的**条目，所以那种条目要手打 ID。
+少数参数**故意**仍然用 `IdentifierArgument`，它们的用途就是点名一个**当前数据包已经不提供**的引用：`/technique drop <id>`、`/technique forget <id>`、`/spirit_root remove|enable|disable <targets> <id>`、`/physique remove|enable|disable <targets> <id>`、`/curse remove`、`/ability revoke`。换成 `ResourceArgument` 会在解析阶段就被拒绝。它们要救的是**身体里还存着、而当前包已经不提供的 `Holder`**：条目被条件挡掉或直接删了文件之后，同一次会话里附件里那份引用还在（附件只在**世界加载**时解码，`/reload` 不重解；下次进世界时缺失的那一条会被容错列表丢掉），所以这几条一律按身体持有的引用去找（不是查注册表），照样摘得掉、关得掉。它们的 Tab 补全来自当前注册表里**还在的**条目，所以那种条目要手打 ID。
 
 维度 ID（`/mxt secret_realm info|destroy`、`/mxt rift target|place|bind`）与触发器信号（`/mxt trigger …`）同样不是注册表条目，也留在 `IdentifierArgument`；`/picker <category>` 收的是**注册表自己的 ID**（如 `mxt:aura`）而不是某个条目，所以也留在它那里。
 

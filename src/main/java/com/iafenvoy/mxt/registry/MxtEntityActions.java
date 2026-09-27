@@ -78,4 +78,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<? extends EntityAction>> REINCARNATE = REGISTRY.register("reincarnate", () -> createEntity(ctx -> {
         if (ctx.entity() instanceof LivingEntity living) LifeSpanService.reincarnate(living);
     }));
+    // The data pack's own way in and out of cultivation: the only other entry point is the player's key.
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<StartCultivatingAction>> CULTIVATE = REGISTRY.register("cultivate", () -> StartCultivatingAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<StopCultivatingAction>> STOP_CULTIVATING = REGISTRY.register("stop_cultivating", () -> StopCultivatingAction.CODEC);
 }

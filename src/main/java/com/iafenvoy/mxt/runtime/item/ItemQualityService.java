@@ -117,7 +117,7 @@ public final class ItemQualityService {
         Optional<Holder<ItemQuality>> declared = intrinsic(registry, stack);
         return declared
                 .or(() -> definitionDefault(access, stack))
-                .or(() -> ladderDefault(access, declared.orElse(null)))
+                .or(() -> ladderDefault(access, null))
                 .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality));
     }
 

@@ -16,7 +16,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.tags.TagKey;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Weapon behaviour attached to an already registered physical item. {@code element} is what it is made of (falling

@@ -32,6 +32,8 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RealmEntityCondition>> REALM = REGISTRY.register("realm", () -> RealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasRealmEntityCondition>> HAS_REALM = REGISTRY.register("has_realm", () -> HasRealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasTechniqueEntityCondition>> TECHNIQUE = REGISTRY.register("technique", () -> HasTechniqueEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<CultivatingEntityCondition>> CULTIVATING = REGISTRY.register("cultivating", () -> CultivatingEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PartnerEntityCondition>> PARTNER = REGISTRY.register("partner", () -> PartnerEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<SkillStageEntityCondition>> SKILL_STAGE = REGISTRY.register("skill_stage", () -> SkillStageEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraRangeEntityCondition>> AURA_RANGE = REGISTRY.register("aura_range", () -> AuraRangeEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraElementEntityCondition>> AURA_ELEMENT = REGISTRY.register("aura_element", () -> AuraElementEntityCondition.CODEC);

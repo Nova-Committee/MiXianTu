@@ -1,0 +1,6 @@
+{
+  "priority": 10,
+  "tick_interval": 20,
+  "start_condition": { "type": "mxt:technique", "techniques": ["#mxt_test:meditation_arts"] },
+  "absorb_amount": "2"
+}
