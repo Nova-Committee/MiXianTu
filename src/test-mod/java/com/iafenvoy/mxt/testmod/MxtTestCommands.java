@@ -150,6 +150,8 @@ import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.ItemStorageService;
+import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
+import com.iafenvoy.mxt.runtime.perch.PerchService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
@@ -226,6 +228,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -364,6 +367,7 @@ public final class MxtTestCommands {
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
                 .then(literal("identity").executes(context -> probeIdentity(context.getSource())))
                 .then(literal("contract").executes(context -> probeContract(context.getSource())))
+                .then(literal("perch").executes(context -> probePerch(context.getSource())))
                 .then(literal("artifacts").executes(context -> probeArtifactRoster(context.getSource())))
                 .then(literal("secret_realm")
                         .executes(context -> probeSecretRealm(context.getSource()))
@@ -1965,6 +1969,153 @@ public final class MxtTestCommands {
         } finally {
             resources.set(qi, previousQi, 0.0D, 10_000.0D, -1L, "probe");
             for (Mob mob : spawned) mob.discard();
+        }
+    }
+
+    // Drives the perch facility between throwaway creatures, which is the shape a content mod's pet would use.
+    // Everything here is synchronous: the seat is what positionRider computes and the probe asks for it itself,
+    // and the release policy is driven by handing the bridge the very event the game hands it. A player's own half
+    // - a crouching body taking its perch down with it - is the same mechanism with a shorter vehicle, which is
+    // why one of the two vehicles below is a chicken.
+    private static int probePerch(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        MxtServerConfig.Perch settings = MxtServerConfig.INSTANCE.perch;
+        int wasMax = settings.maxPerches.getValue();
+        boolean wasSneak = settings.dropWhenSneaking.getValue();
+        boolean wasFall = settings.dropOnFall.getValue();
+        boolean wasPowder = settings.dropInPowderSnow.getValue();
+        settings.maxPerches.setValue(2);
+        // The two points a humanoid's shoulders are at, in the vehicle's own frame: x is the vehicle's left, z is
+        // the way it faces, and y counts down from the vehicle's top.
+        Vec3 left = new Vec3(0.5D, -0.4D, 0.0D);
+        Vec3 right = new Vec3(-0.5D, -0.4D, 0.0D);
+        BlockPos origin = source.getPlayer() != null
+                ? source.getPlayer().blockPosition()
+                : level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO);
+        List<Entity> spawned = new ArrayList<>();
+        try {
+            ProbeBeast vehicle = spawnProbeBeast(level, origin.above());
+            vehicle.setYRot(0.0F);
+            spawned.add(vehicle);
+            ProbeBeast first = spawnProbeBeast(level, origin.above(3));
+            ProbeBeast second = spawnProbeBeast(level, origin.above(6));
+            ProbeBeast third = spawnProbeBeast(level, origin.above(9));
+            spawned.add(first);
+            spawned.add(second);
+            spawned.add(third);
+            double tall = vehicle.getDimensions(vehicle.getPose()).height();
+
+            // A passenger nobody says anything about lands on the head, which is the baseline the audit recorded.
+            boolean ridden = first.startRiding(vehicle);
+            vehicle.positionRider(first);
+            boolean defaultSeat = ridden && close(first.getX(), vehicle.getX())
+                    && close(first.getY(), vehicle.getY() + tall) && close(first.getZ(), vehicle.getZ());
+            first.stopRiding();
+
+            // A declared offset replaces that seat, and it turns with the vehicle.
+            boolean seated = PerchService.perch(first, vehicle, left).changed();
+            vehicle.positionRider(first);
+            boolean declaredSeat = seated && PerchService.perchOffset(first).isPresent()
+                    && close(first.getX(), vehicle.getX() + left.x)
+                    && close(first.getY(), vehicle.getY() + tall + left.y)
+                    && close(first.getZ(), vehicle.getZ());
+            vehicle.setYRot(-90.0F);
+            vehicle.positionRider(first);
+            boolean turned = close(first.getX(), vehicle.getX())
+                    && close(first.getY(), vehicle.getY() + tall + left.y)
+                    && close(first.getZ(), vehicle.getZ() - left.x);
+            vehicle.setYRot(0.0F);
+            source.sendSuccess(() -> Component.literal("perch probe: default_seat=" + defaultSeat
+                    + " declared_seat=" + declaredSeat + " turned=" + turned
+                    + (defaultSeat && declaredSeat && turned ? " OK" : " MISMATCH")), false);
+
+            // y counts down from the vehicle's own top, so a shorter vehicle carries the same offset lower by
+            // exactly its own height difference rather than by a number baked into the seat.
+            Chicken chicken = EntityType.CHICKEN.create(level, EntitySpawnReason.COMMAND);
+            if (chicken == null) {
+                source.sendFailure(Component.literal("perch probe: could not create the shorter vehicle"));
+                return 0;
+            }
+            chicken.setNoAi(true);
+            BlockPos coop = origin.above(12);
+            chicken.setPos(coop.getX() + 0.5D, coop.getY(), coop.getZ() + 0.5D);
+            level.addFreshEntity(chicken);
+            spawned.add(chicken);
+            double shortVehicle = chicken.getDimensions(chicken.getPose()).height();
+            boolean released = PerchService.release(first).changed() && !first.isPassenger()
+                    && PerchService.perchOffset(first).isEmpty();
+            PerchService.perch(first, chicken, left);
+            chicken.positionRider(first);
+            boolean followsHeight = shortVehicle < tall
+                    && close(first.getY() - chicken.getY(), shortVehicle + left.y);
+            source.sendSuccess(() -> Component.literal("perch probe: released=" + released
+                    + " follows_height=" + followsHeight
+                    + (released && followsHeight ? " OK" : " MISMATCH")), false);
+
+            // The count is the service's own, since a forced boarding skips the vanilla one, and moving an already
+            // perched creature to its other side is a move rather than a second slot.
+            PerchService.release(first);
+            boolean firstTwo = PerchService.perch(first, vehicle, left).changed()
+                    && PerchService.perch(second, vehicle, right).changed();
+            boolean thirdRefused = PerchService.perch(third, vehicle, left).failure() == PerchService.Failure.FULL
+                    && !third.isPassenger();
+            boolean moved = PerchService.perch(first, vehicle, right).changed()
+                    && PerchService.perch(third, vehicle, left).failure() == PerchService.Failure.FULL;
+            vehicle.positionRider(first);
+            boolean otherSide = close(first.getX(), vehicle.getX() + right.x);
+            boolean capacity = firstTwo && thirdRefused && moved && otherSide;
+            source.sendSuccess(() -> Component.literal("perch probe: two_seated=" + firstTwo
+                    + " third_refused=" + thirdRefused + " moved=" + moved + " other_side=" + otherSide
+                    + (capacity ? " OK" : " MISMATCH")), false);
+
+            // The release policy, through the bridge: sneaking is the manual way down, a fall and powder snow are
+            // two of the automatic ones, a switch turned off leaves the perch alone, and a record whose ride ended
+            // behind its back is cleared instead of being applied to the next one.
+            PerchService.release(first);
+            PerchService.perch(first, vehicle, left);
+            vehicle.setShiftKeyDown(true);
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean manual = !first.isPassenger() && PerchService.perchOffset(first).isEmpty();
+            vehicle.setShiftKeyDown(false);
+            settings.dropWhenSneaking.setValue(false);
+            PerchService.perch(first, vehicle, left);
+            vehicle.setShiftKeyDown(true);
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean switchOff = PerchService.perchOffset(first).isPresent();
+            settings.dropWhenSneaking.setValue(true);
+            vehicle.setShiftKeyDown(false);
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean kept = PerchService.perchOffset(first).isPresent();
+            vehicle.fallDistance = 1.0D;
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean fell = PerchService.perchOffset(first).isEmpty();
+            vehicle.fallDistance = 0.0D;
+            PerchService.perch(first, vehicle, left);
+            vehicle.isInPowderSnow = true;
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean powder = PerchService.perchOffset(first).isEmpty();
+            vehicle.isInPowderSnow = false;
+            PerchService.perch(first, vehicle, left);
+            first.stopRiding();
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean stale = PerchService.perchOffset(first).isEmpty();
+            boolean policy = manual && switchOff && kept && fell && powder && stale;
+            source.sendSuccess(() -> Component.literal("perch probe: manual=" + manual + " switch_off=" + switchOff
+                    + " kept=" + kept + " fell=" + fell + " powder=" + powder + " stale=" + stale
+                    + (policy ? " OK" : " MISMATCH")), false);
+
+            if (defaultSeat && declaredSeat && turned && released && followsHeight && capacity && policy) {
+                source.sendSuccess(() -> Component.literal("perch probe: OK"), false);
+                return 1;
+            }
+            source.sendFailure(Component.literal("perch probe: MISMATCH"));
+            return 0;
+        } finally {
+            settings.maxPerches.setValue(wasMax);
+            settings.dropWhenSneaking.setValue(wasSneak);
+            settings.dropOnFall.setValue(wasFall);
+            settings.dropInPowderSnow.setValue(wasPowder);
+            for (Entity entity : spawned) entity.discard();
         }
     }
 

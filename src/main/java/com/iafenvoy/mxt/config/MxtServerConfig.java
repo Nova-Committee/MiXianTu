@@ -24,6 +24,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Reincarnation reincarnation = new Reincarnation();
     public final Talisman talisman = new Talisman();
     public final Aura aura = new Aura();
+    public final Perch perch = new Perch();
     public final Formations formations = new Formations();
     public final Flight flight = new Flight();
     public final Commands commands = new Commands();
@@ -203,6 +204,45 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
         private Aura() {
             super("aura", "config.mxt.server.aura");
+        }
+    }
+
+    /**
+     * How a server treats a creature perched on another. The offsets themselves belong to whoever writes the
+     * record, so this tab only answers how many may ride along and when the ride ends by itself.
+     */
+    public static final class Perch extends AutoInitConfigCategoryBase {
+        public final IntegerEntry maxPerches = IntegerEntry.builder("config.mxt.server.perch.max_perches", 2)
+                .key("max_perches")
+                .tooltip("config.mxt.server.perch.max_perches.tooltip")
+                .range(1, 8).build();
+        public final BooleanEntry dropWhenSneaking = BooleanEntry.builder("config.mxt.server.perch.drop_when_sneaking", true)
+                .key("drop_when_sneaking")
+                .tooltip("config.mxt.server.perch.drop_when_sneaking.tooltip")
+                .build();
+        public final BooleanEntry dropOnFall = BooleanEntry.builder("config.mxt.server.perch.drop_on_fall", true)
+                .key("drop_on_fall")
+                .tooltip("config.mxt.server.perch.drop_on_fall.tooltip")
+                .build();
+        public final BooleanEntry dropInWater = BooleanEntry.builder("config.mxt.server.perch.drop_in_water", true)
+                .key("drop_in_water")
+                .tooltip("config.mxt.server.perch.drop_in_water.tooltip")
+                .build();
+        public final BooleanEntry dropInPowderSnow = BooleanEntry.builder("config.mxt.server.perch.drop_in_powder_snow", true)
+                .key("drop_in_powder_snow")
+                .tooltip("config.mxt.server.perch.drop_in_powder_snow.tooltip")
+                .build();
+        public final BooleanEntry dropWhenFlying = BooleanEntry.builder("config.mxt.server.perch.drop_when_flying", true)
+                .key("drop_when_flying")
+                .tooltip("config.mxt.server.perch.drop_when_flying.tooltip")
+                .build();
+        public final BooleanEntry dropWhenSleeping = BooleanEntry.builder("config.mxt.server.perch.drop_when_sleeping", true)
+                .key("drop_when_sleeping")
+                .tooltip("config.mxt.server.perch.drop_when_sleeping.tooltip")
+                .build();
+
+        private Perch() {
+            super("perch", "config.mxt.server.perch");
         }
     }
 
