@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.action.builtin.item.meta;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -21,7 +20,6 @@ public record ChanceAction(ItemAction action, float chance, ItemAction failActio
     public void execute(@NonNull ItemActionContext ctx) {
         Entity holder = ctx.holder();
         ItemStack stack = ctx.stack();
-        FormulaContext context = ctx.formula();
         if (holder.getRandom().nextFloat() < this.chance) this.action.execute(holder, stack, ctx);
         else this.failAction.execute(holder, stack, ctx);
     }

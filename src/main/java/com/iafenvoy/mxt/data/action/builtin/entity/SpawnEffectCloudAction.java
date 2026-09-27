@@ -8,7 +8,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.AreaEffectCloud;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import org.jspecify.annotations.NonNull;
@@ -29,8 +28,7 @@ public record SpawnEffectCloudAction(float radius, float radiusOnUse, int waitTi
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        if (!(entity.level() instanceof ServerLevel level)) return;
+        if (!(ctx.entity().level() instanceof ServerLevel level)) return;
         AreaEffectCloud cloud = EntityType.AREA_EFFECT_CLOUD.create(level, EntitySpawnReason.TRIGGERED);
         if (cloud == null) return;
         cloud.setPos(ctx.position());

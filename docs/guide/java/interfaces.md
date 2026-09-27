@@ -44,7 +44,7 @@ title: 特殊公开接口
 
 ### `WheelMenuEntry`
 
-轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 契约行为，以及内容模组自己注册的类型）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider` 给出——它的入参是 `(player, source)`，`source` 是 `api/WheelSource`（内置五页：主盘 / 主手物品 / 副手物品 / 法器 / 契约灵兽），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
+轮盘条目的纯客户端接口：`kind()`（技能 / 灵气 / 契约行为，以及内容模组自己注册的类型）、`id()`、`title()`（轮盘中间显示的名字）、可选 `icon()`、强调色、`tooltip(Player)`（类型 + 具体数值，技能那一条的**最后一行写来源**：学习的技能 / X的技能（X = 承载物品名，按品质上色）/ 其它来源）、`cooldownTicks(Player)`（还剩几 tick，0 = 就绪）/ `usable(Player)` 两个可用性钩子，以及使用回调 `onSelected(WheelSelection)`（`WheelSelection` 带着它是在**哪一格的编号**上、以及那一格读自**哪个来源**）。一个来源贡献哪些条目由 `WheelMenuProvider` 给出——它的入参是 `(player, source)`，`source` 是 `api/WheelSource`（内置五页：主盘 / 主手物品 / 副手物品 / 法器 / 契约灵兽），返回值**可以比一页长**（一页 12 格，多出来的由 `WheelMenuContent` 开新页），条目本身既不知道自己落在第几格，也不知道自己属于哪一页。旧的两个 hotbar 条目接口（`HotbarEntry`）随快捷栏一起删除。
 
 ### `WheelSource` / `WheelEntryKind`
 
@@ -57,7 +57,7 @@ title: 特殊公开接口
 
 ### `Toggable`
 
-**需要按键才能发动的技能**（2026-09-22 作为 `ToggableArtifactAbility` 诞生，2026-09-23 合并后升格为与宿主无关的 `Toggable`，同日内联技能取消后删掉了它的 `key()` 与 `displayName()`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））：判据是一句话——**凡是要按键才发动的都算技能、都进轮盘**。它是**数据层**的接口，不是 `api` 包里的对外契约，任何 `mxt:ability_type` 都能实现它。接口把三件事交给实现自己回答：`state(ctx)`（有没有开关状态、现在是哪一边；**空 = 一次性**，如储物）、`activate(ctx)`（按下了；只有服务端调，返回 `Result(changed, failure, failedResource)`，`Failure` 的 16 个取值（多一个 `NO_VEHICLE`：御器之术在主手与副手都没找到飞行法器）与 `AbilityService.Failure` 同名同义，会被轮盘翻译成动作栏那一句——按压与施放共用 `actionbar.mxt.ability.failure.*` 一份文案表，见 [`docs/guide/java/wheel.md`](wheel.md)），以及一个有默认实现的 `gated(ctx)`（这次按压要不要先过共用的"条件 + 冷却 + 消耗"闸门；开关在**关**的那一下返回 false，因为落地不该收费）。**这一格叫什么用技能自己的 `name`**，接口不再另给一个名字；`type` 也不需要报一个"宿主内的 key"——轮盘条目的身份就是这条技能的注册表 id。**状态归实现自己管**（飞行读**驾驶者**的 `FlightAttachment`——记着飞的是哪条术、哪辆车，储物没有状态），轮盘不认识"这件事是什么"，只认识这几件事，所以加一个新技能类型不需要动轮盘。今天三个实现是 `mxt:active`（原本就按一下施放——它 `gated` 返回 false，因为施放事务自己付款）、`mxt:flight_control`（开关：起剑 / 落剑；它从主手、其次副手取那件飞行法器，落地时原样归还）与 `mxt:storage`（一次性——打开承载物的储物箱，容器菜单与窗口都复用原版箱子那一套，见 `docs/guide/java/screens.md`）。字段与玩家侧表现见 `docs/数据包格式.md` 的 `ability` / `artifact` 两节。
+**需要按键才能发动的技能**（2026-09-22 作为 `ToggableArtifactAbility` 诞生，2026-09-23 合并后升格为与宿主无关的 `Toggable`，同日内联技能取消后删掉了它的 `key()` 与 `displayName()`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））：判据是一句话——**凡是要按键才发动的都算技能、都进轮盘**。它是**数据层**的接口，不是 `api` 包里的对外契约，任何 `mxt:ability_type` 都能实现它。接口把三件事交给实现自己回答：`state(ctx)`（有没有开关状态、现在是哪一边；**空 = 一次性**，如储物）、`activate(ctx)`（按下了；只有服务端调，返回 `Result(changed, failure, failedResource)`，`Failure` 的 18 个取值（多一个 `NO_VEHICLE`：御器之术在主手与副手都没找到飞行法器）与 `AbilityService.Failure` 同名同义，会被轮盘翻译成动作栏那一句——按压与施放共用 `actionbar.mxt.ability.failure.*` 一份文案表，见 [`docs/guide/java/wheel.md`](wheel.md)），以及一个有默认实现的 `gated(ctx)`（这次按压要不要先过共用的"条件 + 冷却 + 消耗"闸门；开关在**关**的那一下返回 false，因为落地不该收费）。**这一格叫什么用技能自己的 `name`**，接口不再另给一个名字；`type` 也不需要报一个"宿主内的 key"——轮盘条目的身份就是这条技能的注册表 id。**状态归实现自己管**（飞行读**驾驶者**的 `FlightAttachment`——记着飞的是哪条术、哪辆车，储物没有状态），轮盘不认识"这件事是什么"，只认识这几件事，所以加一个新技能类型不需要动轮盘。今天**五个**实现是 `mxt:active`（原本就按一下施放——它 `gated` 返回 false，因为施放事务自己付款）、`mxt:channelled`（同上：一次完整施放开始引导，之后按 `tick_interval` 收维持费）、`mxt:targeted`（同上：一次完整施放，然后对选择器挑中的每个实体各跑一次子技能，见 `AbilityApplier`）、`mxt:flight_control`（开关：起剑 / 落剑；它从主手、其次副手取那件飞行法器，落地时原样归还）与 `mxt:storage`（一次性——打开承载物的储物箱，容器菜单与窗口都复用原版箱子那一套，见 `docs/guide/java/screens.md`）。字段与玩家侧表现见 `docs/数据包格式.md` 的 `ability` / `artifact` 两节。
 
 ### `Contractable`
 
@@ -82,3 +82,13 @@ title: 特殊公开接口
 **被捕捉与释放的通知接口**（2026-09-24；它前身 `Capturable` 的门槛已经取消）：捕捉**不是实体的资格**——任何生物都可能被捕捉，**怎么捕捉由物品决定**（能装什么、要不要契约、代价多少，全是那个物品自己的规则；灵兽袋自己的规则是"你自己的已契约灵兽、一次一只"）。所以这里只剩两个可选钩子：`onCaptured(captor)`（被收走之后，实体离开世界之前调用）与 `onReleased(captor)`（重新回到世界之后），默认什么都不做。**不实现它也照样能被捕捉**，只是收不到这两次通知；`captor` 在不是玩家动手时为空。运行时查找点同样是 `runtime/creature/Contracts`。
 
 这三个接口的查找只有一处（`runtime/creature/Contracts`），卷轴、御兽铃、灵兽袋、命令与两个事件桥都走它；契约类型的字段、代价与上限见 [`contract_type`](../../数据包格式.md#contract_type)，命令见[命令](../play/commands)。
+
+### `Perchable`
+
+让生物**能被"挂"在另一具身体上**（肩挂灵宠那一类）的契约（2026-09-27，见 [`research/56`](../../../research/56_肩挂与挂点设计.md)）：**实现它就是全部**——座位点、记录、容量与所有受理检查都在框架侧（`runtime/perch/PerchService`），所以附属只需要交出自己的生物与它的答案，**不需要为自己造一个座位**。
+
+`perchOffset(vehicle, claimed)` 回答"我想坐在那具身体的哪里"，坐标在**载具自己的坐标系**里：`x` 是载具的左侧、`z` 是车头方向、**`y` 从载具当前顶部往下量**（所以潜行或换姿势时挂着的生物自动跟着走，两边都不必知道姿势）；返回空＝**拒绝这具载具**（框架什么都不写，回一个拒绝结果）。`claimed` 是**已经在同一具载具上就座的**其他乘客声明过的偏移，所以有多种座位可给的生物可以自己挑一个空的（都满了就拒绝，也是合法答案）。偏移会按平台交给座位钩子的 `scale` 等比缩放，与 `AbstractHorse` / `Camel` 那些原版座位同口径。
+
+另外两个可选钩子是**时刻通知**（都有默认空实现）：`onPerched(vehicle)` 在记录写下之后（同一具载具上换个座位**不算**第二次就座、不会再通知），`onPerchReleased(vehicle)` 在记录被清、乘客关系也结束之后——自己下来的、被服务器策略放下的、被判定为失效的都走这一条（载具已经消失的那一种没有载具可传，所以钩子不触发：要精确判断状态就问 `PerchService.perchOffset(生物)`，记录才是唯一真相）。
+
+**为什么不是"接口 + 实体类"**：本体不为它提供任何实体——生物是附属的东西（铁律 9），基座只提供"挂"这件事本身与它要问的那两个问题。查找点就是 `PerchService`：附属在自己的代码里（右键、驯服、任务完成……随便哪个时刻）调 `PerchService.perch(生物, 载具)`，框架去问生物的 `perchOffset`；`PerchService.release(生物)` 是下来的唯一出口，`PerchService.perchOffset(生物)` 是只读查询。**数据包与脚本目前进不来**（没有 `mxt:perch` 动作、没有命令、没有脚本方法）：那是"玩法入口"的决定，与这条契约分开。

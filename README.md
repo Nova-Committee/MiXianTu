@@ -45,8 +45,7 @@ the changelog.**
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Cultivation Jade Slip, Blank Talisman
   Paper with Talisman Brush and Ink, Talisman (written with a sigil, poured full of aura, and spent the moment it
   fires), Contract Scroll, Beast Taming Bell, Spirit Beast Bag, Formation Plate, Wooden and Stone Tokens, Secret Realm
-  Token
-  and Recall Talisman.
+  Token and Recall Talisman.
 - **Talismans**: a Talisman Brush writes ability definitions onto a carrier, and pouring aura in loads it; the
   moment the bill is full every inscribed ability fires and one carrier is spent. A carrier that would not fire -
   or one billed nothing at all - fires from a right-click instead, and a definition may declare durability for its
@@ -72,10 +71,11 @@ datapacks or content packs; installing the mod alone does not give you a complet
   datapacks.
 - **Numbers**: constants, exp4j expressions or structured number providers, able to read context variables such as level
   and resources.
-- **Item integration**: binding tables hook **existing** items into weapons, pills, resources and aura fuel (technique
-  manuals use the `mxt:technique` item component instead),
+- **Item integration**: binding tables hook **existing** items into weapons, pills, resources and aura fuel,
   which makes integration with other mods easy; items implementing `AuraItemAccess` (spirit stones) can additionally be
-  charged by holding them down and pouring the holder's own aura into them.
+  charged by holding them down and pouring the holder's own aura into them. Per-stack additions carry no binding
+  object: quality (`mxt:quality`), element, pill data, technique reading, forging methods and blueprints are components
+  written onto the stack itself, layered on top of whatever a definition grants.
 - **KubeJS**: extension points such as action, condition, cost, number provider, target selector, trigger matcher and
   loot callbacks, the `MxtEvents` server lifecycle events, and the `MxtTriggers` custom trigger signals a script can
   publish and subscribe to; register items from a script first and let the binding tables handle them.
@@ -93,10 +93,10 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Wheel and Character UI        |   ✅    | Abilities (artifact skills included) and spirit power share one wheel: the main wheel's twelve cells are yours to arrange, the pages behind it follow what you carry and the Beast Taming Bell in hand, and holding `R` uses the cell you point at.                                                                               |
 | Resources                     |   ✅    | Numeric resources such as cultivation progress and spirit power can be defined; they regenerate by rule, are consumed by abilities and cultivation, and are drawn as resource bars on the HUD.                                                                                                                                    |
 | Aura                          |   ✅    | The world has different aura concentrations per dimension, biome and block, changing over time and with formations; players can query the concentration at their position and see the result through particles, fog and the HUD.                                                                                                  |
-| Cultivation and Realms        |   ✅    | Players meditate to gather cultivation progress, faster where aura is dense, and break through to the next realm once the datapack requirements are met; realms and packs grant lifespan, and running out means death or rebirth as configured.                                                                                                                                                                    |
+| Cultivation and Realms        |   ✅    | Players meditate to gather cultivation progress, faster where aura is dense, and break through to the next realm once the datapack requirements are met; realms and packs grant lifespan, and running out means death or rebirth as configured.                                                                                   |
 | Elements                      |   ✅    | Defines elements and the overcoming and adaptation relations between them, read by spirit roots, aura and other gameplay.                                                                                                                                                                                                         |
 | Spirit Roots and Physiques    |   ✅    | Spirit roots and physiques can be granted to players, affecting cultivation, ability strength or passive attributes; exclusions are defined by datapacks, and a held one can be switched off without being given up.                                                                                                              |
-| Techniques                    |   🚧   | Learning a cultivation technique grants active moves or passive bonuses, and exclusion tags stop certain techniques from being learned together; a manual is an item with the `mxt:technique` component, and the mod generates a jade slip per technique.                                                                         |
+| Techniques                    |   ✅    | Learning a cultivation technique grants active moves or passive bonuses, and exclusion tags stop certain techniques from being learned together; a manual is an item with the `mxt:technique` component, and the mod generates a jade slip per technique.                                                                         |
 | Abilities and Curses          |   ✅    | Abilities can be cast with a cost, cooldown, duration and target selection, and can also fire automatically on attacking, being hurt or killing; curses attach to a character, trigger periodically and can be removed by purification.                                                                                           |
 | Formations                    |   ✅    | Players build and activate formations; a formation keeps running by consuming resources, applies effects within its area and temporarily provides buffs/debuffs.                                                                                                                                                                  |
 | Tribulations                  |   ✅    | A tribulation can be triggered on a realm breakthrough: it consumes a timeline of beats (an action, an idle wait, or a wait for a condition), gets harder with the realm and the local aura, and success or failure each run their own outcome.                                                                                   |
@@ -105,10 +105,10 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Spirit Crafting Table         |   ✅    | Crafting with a spirit crafting recipe at the Spirit Crafting Table costs aura in addition to materials, deducted when the result is taken out.                                                                                                                                                                                   |
 | Forging                       |   ✅    | At a Forge Table, several materials are hammered into a result following a blueprint; different tools unlock different methods, and the quality of the result depends on the process and the number of steps.                                                                                                                     |
 | Alchemy                       |   🚧   | Hand-build a 3×3×3 furnace from a core, role bins and walls. When the player starts, it resolves the output from the actual properties and heats with an exotic fire. Pills keep use limits, cooldowns and toxicity. |
-| Spirit Herbs                  |   🚧   | One spirit-herb plot grows one plant. Harvest returns an aged crop plus the original seed; age is stored on the item and read as potency.                                                                                                                                                                                     |
-| Item Binding                  |   🚧   | Brings existing items into gameplay: attach passive behavior, weapon damage and attack speed to any item, or bind abilities that fire on right-click use and on attack.                                                                                                                                                           |
-| Talismans                     |   🚧   | A Talisman Brush inscribes ability definitions onto a carrier (one carrier can hold several); holding right-click until it is full fires them, spends a carrier or the wear a definition declares, and starts the item cooldown. A definition may also declare a price and a tier.                                                                                                           |
-| Quality                       |   ✅    | Items carry a quality shown in their tooltip; a quality chain fixes the ladder, its default tier and each step's price, definitions declare a default and a stack component overrides it.                                                                                                                                         |
+| Spirit Herbs                  |   🚧   | One spirit-herb plot grows one plant. Harvest returns an aged crop plus the original seed; age is stored on the item and read as potency. |
+| Item Binding                  |   🚧   | Brings existing items into gameplay: attach passive behavior and vanilla attribute modifiers to any item, or bind abilities that fire on right-click use and on attack. |
+| Talismans                     |   🚧   | A Talisman Brush inscribes ability definitions onto a carrier (one carrier can hold several); holding right-click until it is full fires them, spends a carrier or the wear a definition declares, and starts the item cooldown. A definition may also declare a price and a tier. |
+| Quality                       |   ✅    | Items show quality in tooltips; `quality` names a ladder and `next` links its upgrade tiers. Definitions set the default; `mxt:quality` overrides it. |
 | Artifacts                     |   🚧   | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact may declare a mount (speed, seats, pose) that a technique-granted flying skill picks up from either hand, while storage and upkeep stay ordinary ability types. |
 | Economy                       |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                                                                                              |
 | Curios Slots                  |   ✅    | Players have Curios slots for a back weapon, a belt item and four artifacts, rendered on the character and swappable with the main hand by keybind.                                                                                                                                                                               |
@@ -126,11 +126,6 @@ recipes. You need a datapack or content pack (including content written with Kub
 Jupiter is a required dependency, and every other required dependency is bundled inside the mod. KubeJS is only needed
 if you want to register content from scripts. JEI and Jade are optional compatibility mods, and the game works fine
 without them.
-
-### How do I disable a piece of content temporarily?
-
-Add the entry to the `mxt:disabled` tag; disabled definitions stop taking part in gameplay, and you do not have to
-delete any datapack files.
 
 ### Can I make my own content pack and distribute it?
 

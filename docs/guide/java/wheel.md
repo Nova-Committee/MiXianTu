@@ -25,7 +25,7 @@ title: 客户端轮盘
 
 从盘读的是**技能授予账**（`AbilityAttachment` 的 `SourceLedger`），而它本来就是按来源记的（`AbilityEventBridge#onEquipmentChange` 记 `mxt:equipment/<槽位>/<物品>`，Curios 记 `mxt:curios_equipment`）。来源 id 的写法为此收进 `runtime/ability/AbilitySources`（`equipment(slot, stack)` / `CURIOS`），授予侧与轮盘侧共用一份定义。读取统一在 `runtime/wheel/WheelSources`：`abilities(entity, source)` 给出来源现在的全部**可按技能**（凡实现 `Toggable` 的，按 id 排序、**不截断**——分页是客户端的事），`abilities(entity)` 给出玩家**持有的全部**可按技能（主盘那个池子读它），`equipment(entity, source)` 给出这一页该读哪几件装备的栈（主盘给双手 + Curios），`carrier(entity, source, id)` 给出这一项此刻的**承载物**（这一页上提供它的那件栈），`offers(entity, source, kind, id)` 回答"这个来源现在认不认这一项"。**从盘没有任何存储**：撤销授予（把物品换掉、摘掉法器）那一刻它自己就空了——技能本身记在账本上，而"哪件物品提供它"是每刻现读的。
 
-**需要按键的技能（`Toggable`）。** 判据只有一句：**凡是要按键才发动的都算技能，都进轮盘**。技能的 `type` 实现了 `Toggable` 就是这样的东西——实现这个接口等于声明"把我放进轮盘"。它既包括**一次性**（`mxt:active`：施放一次；`mxt:storage`：按一下打开承载物的储物箱，没有任何状态留下），也包括**开关**（`mxt:flight_control`：开＝起剑、关＝落剑）。接口把三件事交给实现回答：
+**需要按键的技能（`Toggable`）。** 判据只有一句：**凡是要按键才发动的都算技能，都进轮盘**。技能的 `type` 实现了 `Toggable` 就是这样的东西——实现这个接口等于声明"把我放进轮盘"。它既包括**一次性**（`mxt:active`：施放一次；`mxt:targeted`：施放一次，然后对选择器挑中的每个实体各跑一次子技能；`mxt:storage`：按一下打开承载物的储物箱，没有任何状态留下），也包括**开关**（`mxt:flight_control`：开＝起剑、关＝落剑），而 `mxt:channelled` 也在其中（按一下开始引导；**引导没有"再按一下释放"这个入口**，它在维持费付不出 / `condition` 不成立 / 不再持有 / 元素亲和失效时由 `tickChannel` 自己停）。接口把三件事交给实现回答：
 
 | 方法 | 谁问、问什么 |
 | --- | --- |
@@ -34,15 +34,15 @@ title: 客户端轮盘
 
 （2026-09-23 起接口只有这两件必答的事**加上**一个有默认实现的 `gated`：早先的 `key()` 与 `displayName()` 是"内联技能"那套身份的遗留，内联取消后一并删除——这一格的名字用技能自己的 `name`。同日 `Result` 多了第三个分量、`Failure` 也不再是自己那一套小枚举。）
 
-**`Togglable.Failure` 的 15 个取值与 `AbilityService.Failure` 同名同义**（`NOT_OWNED` / `ALREADY_SET` / `UNAVAILABLE` / `NO_CARRIER` / `CANNOT_MOUNT` 是按压独有的五个：所有权、状态已经是这样、说不清、没有承载物、骑不上去；其余十个两边共有）。`AbilityActivationService.failureOf(...)` 只做名字搬运，**不再把管线区分得出来的原因折叠成 `UNAVAILABLE`**——2026-09-23 之前它只映射冷却 / 代价 / 未持有三种，`CONDITION_FAILED`、`ELEMENT_AFFINITY`、`NO_CHARGES`、`INVALID_FORMULA` 全被压成「现在用不了」，玩家和日志都查不出所以然。今天轮盘的动作栏文案只有一份表 `actionbar.mxt.ability.failure.*`，日志里的原因也是真的；`UNAVAILABLE` 是兜底：拿不到服务端玩家、按下的东西根本不是 `Toggable`、飞行 `startRiding` 失败。`INVALID_FORMULA` 兼管"实现自己的数算不出来"——储物 `slots` 公式算出 ≤ 0 报的就是它。
+**`Togglable.Failure` 的 18 个取值与 `AbilityService.Failure` 同名同义**（`NOT_OWNED` / `ALREADY_SET` / `UNAVAILABLE` / `NO_CARRIER` / `NO_VEHICLE` / `CANNOT_MOUNT` 是按压独有的六个：所有权、状态已经是这样、说不清、没有承载物、双手都没有飞行法器、骑不上去；其余十二个两边共有）。`AbilityActivationService.failureOf(...)` 只做名字搬运，**不再把管线区分得出来的原因折叠成 `UNAVAILABLE`**——2026-09-23 之前它只映射冷却 / 代价 / 未持有三种，`CONDITION_FAILED`、`ELEMENT_AFFINITY`、`NO_CHARGES`、`INVALID_FORMULA` 全被压成「现在用不了」，玩家和日志都查不出所以然。今天轮盘的动作栏文案只有一份表 `actionbar.mxt.ability.failure.*`，日志里的原因也是真的；`UNAVAILABLE` 是兜底：拿不到服务端玩家、按下的东西根本不是 `Toggable`、飞行 `startRiding` 失败。`INVALID_FORMULA` 兼管"实现自己的数算不出来"——储物 `slots` 公式算出 ≤ 0 报的就是它。
 
-付费与冷却走一处：`gated(ctx)` 默认 `true` 时，`AbilityActivationService` 先过一遍共用闸门（条件 + 冷却 + 技能自己的 `costs`，整组全有或全无），过了才调 `activate`；**开关往"关"的那一下 `gated` 返回 false**（落地不该收费），`mxt:active` / `mxt:channelled` 也返回 false——它们的施放事务自己付款，重复收一次就错了。因此：
+付费与冷却走一处：`gated(ctx)` 默认 `true` 时，`AbilityActivationService` 先过一遍共用闸门（条件 + 冷却 + 技能自己的 `costs`，整组全有或全无），过了才调 `activate`；**开关往"关"的那一下 `gated` 返回 false**（落地不该收费），`mxt:active` / `mxt:channelled` / `mxt:targeted` 也返回 false——它们的施放事务自己付款，重复收一次就错了。因此：
 
-- 它出现在**提供它的那张从盘**上，也出现在主盘配置界面右侧那个池子里，可以钉到主盘任意一格。
+- 它出现在**提供它的那张从盘**上。**能不能钉到主盘看它在哪**：主手 / 副手物品声明的技能**不进配置界面右侧那个池子**（手里拿什么随时会换，那两张从盘页才是它的位置），**Curios 槽位上法器声明的技能**则和学到的技能一样可以钉；已经钉好的格子照旧解析、服务端照旧受理（2026-09-26 收紧，池子取自 `WheelContent#options`，`#pool` 仍是那 12 格的解析名单）。
 - **一件法器可以给出好几条**（同一把剑既能飞又能储物），每条都是 `mxt:ability` 里**自己的注册表条目**，轮盘格子的身份就是它自己的 id；所以一本书授予的主动技和一件法器给的开关在轮盘上是同一类格子。这类格子的类型是 `mxt:ability`，它的 `exists(access, id)` 只要求这个 id 能解析成一条技能（写法器 id 不算——那是定义，不是技能）。
 - **状态归实现自己管**：飞行读 `FlightAttachment`（**每个实体**一份、记着**是哪条技能**在飞，已同步给本人与追踪它的客户端；轮盘只对玩家开），储物与施放没有状态。没有通用开关存储。
-- 客户端画的是**报告**，不是指令：开着的开关绿、关着的灰、一次性的紫；tooltip 写承载物名（有的话）与开关状态，一次性没有状态那一行。**格子不画物品图标，画技能名**——一件法器的两个技能若都画同一把剑的图标就分不出谁是谁。
-- **储物那一格打开的是原版箱子菜单**（`MxtMenus.ARTIFACT_STORAGE` 是 `ChestMenu`，客户端注册 `ContainerScreen`），窗口标题是技能名，内容是承载物自己那份 `mxt:artifact_storage`。容器是 `ArtifactStorageContainer`：一个写入即回写的实时视图，**不持有栈**——每读每写都按"这件承载物还在不在玩家身上"重新解析，一离身 `stillValid` 就是假，服务端每刻检查菜单并把窗口关掉，所以不会往一个没人拿着的栈里写东西。
+- 客户端画的是**报告**，不是指令：开着的开关绿、关着的灰、一次性的紫；tooltip 的**最后一行写来源**（「学习的技能」/「X的技能」/「其它来源」，2026-09-26 由原来那行「法器：X」改成这一行并移到末尾；X 是承载物品名，按品质上色、没有品质就金色），另有开关状态，一次性没有状态那一行。**格子不画物品图标，画技能名**——一件法器的两个技能若都画同一把剑的图标就分不出谁是谁。
+- **储物那一格打开的是原版箱子菜单**（`MxtMenus.ARTIFACT_STORAGE` 是 `ChestMenu`，客户端注册 `ContainerScreen`），窗口标题是技能名，内容是承载物自己的 `mxt:container`——存在 `mxt:storage` 组件里、按**这条技能的 id** 寻址（一件承载物上两条储物技能因此各有各的箱子）。容器是 `ArtifactStorageContainer`：一个写入即回写的实时视图，**不持有栈**——每读每写都按"这件承载物还在不在玩家身上"重新解析，一离身 `stillValid` 就是假，服务端每刻检查菜单并把窗口关掉，所以不会往一个没人拿着的栈里写东西。
 
 **框架不决定轮盘上有什么。** `WheelMenuProvider` 回答"这个来源现在贡献哪些条目"（`entries(player, source)`，可以比一页长），唯一实现是 `WheelContent`，由 `MiXianTuClient#init` 里的 `WheelContent.register()` 登记。`WheelMenuEntry` 是条目契约：
 
@@ -96,4 +96,4 @@ public interface WheelMenuEntry {
 
 **格子里画什么。** 每个格子（环上的扇区与 HUD 轮盘格）先画条目的 `icon()`；**没有图标时改画名字**——`IconRenderer.renderName` 取 `title()` 里放得下的开头几个字，画在图标的位置上，所以一圈填满没有图标的条目也不会出现空格子。环上文字宽度按该半径上一扇的弧长减去留白算（`WheelMenuScreen#labelWidth`），因此相邻扇区的文字不会互相压；完整名字始终在轮盘中间与 tooltip 里。配置界面那一排 12 格同理（`IconRenderer.renderOrName`：有图标画图标，没有就画名字开头），22px 的格子只放得下两个汉字，全名看 tooltip。
 
-编辑界面是 `WheelConfigurationScreen`：左边 6 列灵气池、右边 6 列"技能"池（各自滚动、各自 tooltip，右池来自 `WheelContent#pool`：玩家**持有**的全部可按技能——谁授予的都算，包括法器给的那些），下面一排 12 格是**主盘**的 12 格（共用，任意放），`Esc` 保存并关闭。**界面里没有说明文字**（"Esc 保存并关闭"、从盘来源与切换键、扇区编号与放法这四句已于 2026-09-26 按用户要求从界面删除）：12 格紧贴分隔线、编号一行在格子上方，格子下方留出一段空白，预留给**每个扇区各自的槽位按键**（`MxtKeyMappings.WHEEL_SLOTS`，`key.mxt.wheel_slot.1` … `.12`）——那一排还没画。**只有主盘可编辑**：从盘的内容由随身物品（与手里的铃）决定，站在界面里预览的与战斗里看到的不是同一份，所以干脆不预览。两个入口都是**纯客户端**的（界面读的是同步过来的附件与注册表，服务端无事可做）：客户端命令 `/wheel`，以及按键 `key.mxt.wheel_configuration`（**默认未绑定**）。主盘上钉了一条只有某件法器才给的技能、而那件法器已经不在身上时，那一格与"技能被撤销"同一表现：配置界面画 `?`、轮盘上什么都不画，按下去由服务端拒绝并提示「这件法器不在身上」对应的那类原因。
+编辑界面是 `WheelConfigurationScreen`：左边 6 列灵气池、右边 6 列"技能"池（各自滚动、各自 tooltip，右池来自 `WheelContent#options`：**学到的技能**（功法 / 灵根 / 体质 / 境界授予）**+ Curios 槽位上法器声明的技能**；主手 / 副手物品声明的技能不进池，那两张从盘页才是它们的位置——2026-09-26 收紧），下面一排 12 格是**主盘**的 12 格（共用，任意放），`Esc` 保存并关闭。**界面里没有说明文字**（"Esc 保存并关闭"、从盘来源与切换键、扇区编号与放法这四句已于 2026-09-26 按用户要求从界面删除）：12 格紧贴分隔线、编号一行在格子上方，格子下方一行写**每个扇区各自的槽位按键**（`MxtKeyMappings.WHEEL_SLOTS`，`key.mxt.wheel_slot.1` … `.12`），形如 `[Z]`；**没绑定的格子什么都不写**（不显示原版的"未知"占位），名字比 24px 的格子宽还长时截断。**只有主盘可编辑**：从盘的内容由随身物品（与手里的铃）决定，站在界面里预览的与战斗里看到的不是同一份，所以干脆不预览。两个入口都是**纯客户端**的（界面读的是同步过来的附件与注册表，服务端无事可做）：客户端命令 `/wheel`，以及按键 `key.mxt.wheel_configuration`（**默认未绑定**）。主盘上钉了一条只有某件法器才给的技能、而那件法器已经不在身上时，那一格与"技能被撤销"同一表现：配置界面画 `?`、轮盘上什么都不画，按下去由服务端拒绝并提示「这件法器不在身上」对应的那类原因。

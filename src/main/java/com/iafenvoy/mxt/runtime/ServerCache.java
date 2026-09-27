@@ -4,14 +4,22 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.damage.DamageElements;
+import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.formula.FormulaNames;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -38,8 +46,7 @@ public final class ServerCache {
     private static ServerCache INSTANCE;
 
     private final MinecraftServer server;
-    private Map<Identifier, Identifier> cultivationByRealm = new LinkedHashMap<>();
-    private Map<Identifier, Integer> rankByRealm = new LinkedHashMap<>();
+    private ChainCache<RealmStage> realmChains = ChainCache.empty();
     private Map<Identifier, Identifier> skillByStage = new LinkedHashMap<>();
     private Map<Identifier, Integer> rankByStage = new LinkedHashMap<>();
     private Map<Identifier, List<Reference<TriggerRule>>> triggerRulesBySignal = Map.of();
@@ -72,7 +79,13 @@ public final class ServerCache {
 
     @SubscribeEvent
     public static void onDatapackLoaded(ServerDataLoad event) {
-        // Rebuild only after a server datapack load or /reload, not for every player sync.
+        // Rebuild only after a server datapack load or /reload, not for every player sync. The four indexes
+        // below are keyed by registry instance, which a reloaded pack may keep, so they are dropped here rather
+        // than left to notice the reload by themselves.
+        DamageElements.invalidate();
+        ElementReactionService.invalidate();
+        FormulaNames.invalidate();
+        ChainCache.invalidate();
         get().ifPresent(ServerCache::rebuild);
     }
 
@@ -85,36 +98,15 @@ public final class ServerCache {
     // so an author sees the whole list at once instead of one problem per restart.
     private void rebuild() {
         List<String> problems = new ArrayList<>();
-        Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
-        Map<Identifier, Integer> ranks = new LinkedHashMap<>();
-        Map<Identifier, Identifier> profiles = new LinkedHashMap<>();
-        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.AURA).forEach(profileHolder -> {
-            Aura profile = profileHolder.value();
-            Identifier resource = HolderHelper.id(profile.resource());
-            Identifier previous = profiles.putIfAbsent(resource, profileHolder.key().identifier());
-            if (previous != null) {
-                problems.add(problem(MxtResourceKeys.AURA, profileHolder.key().identifier(),
-                        "resource " + resource + " already has the cultivation profile " + previous));
-                return;
-            }
-            // The chain belongs to the profile: every stage reachable from its first realm must name it.
-            profile.firstRealm().ifPresent(first -> {
-                try {
-                    this.indexChain(profileHolder.key().identifier(), HolderHelper.id(first), resolved, ranks);
-                } catch (RuntimeException exception) {
-                    problems.add(problem(MxtResourceKeys.AURA, profileHolder.key().identifier(), message(exception)));
-                }
-            });
-        });
-        this.cultivationByRealm = resolved;
-        this.rankByRealm = ranks;
+        this.rebuildRealmChains(problems);
         this.rebuildTriggerRules(problems);
         this.rebuildSkillChains(problems);
+        this.validateQualityLadders(problems);
         this.rebuildArtifacts(problems);
         this.problems = List.copyOf(problems);
         if (problems.isEmpty()) {
             MiXianTu.LOGGER.info("Datapack validation passed: {} cultivation realms, {} skill stages, {} trigger rules",
-                    this.cultivationByRealm.size(), this.skillByStage.size(),
+                    this.realmChains.size(), this.skillByStage.size(),
                     this.triggerRulesBySignal.values().stream().mapToInt(List::size).sum());
         } else {
             MiXianTu.LOGGER.warn("Found {} datapack validation problem(s):\n{}", problems.size(), String.join("\n", problems));
@@ -126,11 +118,6 @@ public final class ServerCache {
         Identifier directory = registry.identifier();
         return "data/" + id.getNamespace() + "/" + directory.getNamespace() + "/" + directory.getPath()
                 + "/" + id.getPath() + ": " + message;
-    }
-
-    private static String message(RuntimeException exception) {
-        String message = exception.getMessage();
-        return message == null || message.isBlank() ? exception.getClass().getSimpleName() : message;
     }
 
     /**
@@ -153,29 +140,35 @@ public final class ServerCache {
     }
 
     /**
-     * The two artifact checks a definition cannot make about itself, because both need the other registries: a
-     * granted ability whose kind is the opposite of the intent it was granted under, and two definitions
-     * claiming the same item (the winner would be decided by registry order).
+     * The one artifact check a definition cannot make about itself, because it needs the other registry entries:
+     * two definitions claiming the same item on the same priority, which registry order then decides.
      */
     private void rebuildArtifacts(List<String> problems) {
-        Map<Item, Identifier> claimed = new LinkedHashMap<>();
+        Map<Item, Reference<Artifact>> claimed = new LinkedHashMap<>();
         for (Reference<Artifact> holder : MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.ARTIFACT).toList()) {
             Artifact definition = holder.value();
             Identifier previous = this.claimItems(holder, definition, claimed);
             if (previous != null)
                 problems.add(problem(MxtResourceKeys.ARTIFACT, holder.key().identifier(),
-                        "claims an item that " + previous + " already claims as its artifact"));
+                        "claims an item that " + previous + " already claims as its artifact on the same priority"));
         }
     }
 
-    // Reserves every item the definition matches; returns the definition holding the first item it could not
-    // take, or null when it took them all.
-    private Identifier claimItems(Reference<Artifact> holder, Artifact definition, Map<Item, Identifier> claimed) {
+    // Reserves every item the definition matches, keeping the highest priority claim. Returns the definition
+    // holding the first item that could not be taken on equal terms, or null when it took everything it asked for.
+    private Identifier claimItems(Reference<Artifact> holder, Artifact definition, Map<Item, Reference<Artifact>> claimed) {
         for (Reference<Item> item : BuiltInRegistries.ITEM.listElements().toList()) {
             ItemStack stack = new ItemStack(item.value());
             if (definition.entries().stream().noneMatch(entry -> entry.matches(stack))) continue;
-            Identifier owner = claimed.putIfAbsent(item.value(), holder.key().identifier());
-            if (owner != null) return owner;
+            Reference<Artifact> owner = claimed.get(item.value());
+            if (owner == null) {
+                claimed.put(item.value(), holder);
+                continue;
+            }
+            int priority = definition.priority();
+            int claimedPriority = owner.value().priority();
+            if (priority == claimedPriority) return owner.key().identifier();
+            if (priority > claimedPriority) claimed.put(item.value(), holder);
         }
         return null;
     }
@@ -198,24 +191,45 @@ public final class ServerCache {
      * The aura profile owning a validated realm; the stored value is reached through it.
      */
     public Optional<Identifier> cultivationForRealm(Identifier realm) {
-        return Optional.ofNullable(this.cultivationByRealm.get(realm));
+        return this.realmChains.keyOf(realm);
     }
 
     public boolean containsRealm(Identifier realm) {
-        return this.cultivationByRealm.containsKey(realm);
+        return this.realmChains.contains(realm);
     }
 
     /**
      * Zero-based, counted from the first realm of the validated chain.
      */
     public Optional<Integer> rankForRealm(Identifier realm) {
-        return Optional.ofNullable(this.rankByRealm.get(realm));
+        return this.realmChains.rankOf(realm);
+    }
+
+    /**
+     * One validated chain, low to high; empty for a profile the walk did not index.
+     */
+    public List<Identifier> realmsOf(Identifier cultivation) {
+        return this.realmChains.chain(cultivation).map(ChainCache.Chain::ids).orElse(List.of());
+    }
+
+    /**
+     * The realm one step above this one: empty at the top of its chain, and for a realm the walk did not index.
+     */
+    public Optional<Identifier> nextRealm(Identifier realm) {
+        return this.realmChains.next(realm).map(HolderHelper::id);
+    }
+
+    /**
+     * The realm one step below this one: empty at the first realm of its chain, and for one the walk did not index.
+     */
+    public Optional<Identifier> previousRealm(Identifier realm) {
+        return this.realmChains.previous(realm).map(HolderHelper::id);
     }
 
     public boolean isRealmAtLeast(Identifier current, Identifier required) {
-        Identifier currentCultivation = this.cultivationByRealm.get(current);
-        return currentCultivation != null && currentCultivation.equals(this.cultivationByRealm.get(required))
-                && this.rankByRealm.getOrDefault(current, -1) >= this.rankByRealm.getOrDefault(required, Integer.MAX_VALUE);
+        Optional<Identifier> cultivation = this.cultivationForRealm(current);
+        return cultivation.isPresent() && cultivation.equals(this.cultivationForRealm(required))
+                && this.rankForRealm(current).orElse(-1) >= this.rankForRealm(required).orElse(Integer.MAX_VALUE);
     }
 
     public Optional<Identifier> skillForStage(Identifier stage) {
@@ -239,30 +253,102 @@ public final class ServerCache {
                 && this.rankByStage.getOrDefault(current, -1) >= this.rankByStage.getOrDefault(required, Integer.MAX_VALUE);
     }
 
-    private void indexChain(Identifier cultivation, Identifier first, Map<Identifier, Identifier> resolved, Map<Identifier, Integer> ranks) {
-        Set<Identifier> visited = new HashSet<>();
-        Map<Identifier, Identifier> chain = new LinkedHashMap<>();
-        Map<Identifier, Integer> chainRanks = new LinkedHashMap<>();
-        Identifier current = first;
-        int rank = 0;
-        while (current != null) {
-            if (!visited.add(current)) {
-                throw new IllegalStateException("Cyclic cultivation realm chain for " + cultivation + " at realm " + current);
+    // The one thing a quality tier cannot check about itself, because it needs the whole registry: a next tier
+    // that does not exist, a ladder nothing can walk, or upgrade data on a tier that leads nowhere. The walk and
+    // the index behind it live in QualityLadders, over the shared ChainCache, so a report can never describe a
+    // different registry than the one the runtime reads.
+    private void validateQualityLadders(List<String> problems) {
+        Registry<ItemQuality> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY);
+        registry.listElements().forEach(holder -> {
+            ItemQuality tier = holder.value();
+            // Upgrade data on a tier that leads nowhere would be read by nobody, which is the forgotten-field
+            // mistake this check exists for - the codec itself cannot see the other tiers.
+            if (tier.next().isEmpty() && (!tier.upgradeCosts().isEmpty() || !(tier.upgradeCondition() instanceof AlwaysCondition)))
+                problems.add(problem(MxtResourceKeys.ITEM_QUALITY, holder.key().identifier(),
+                        "declares upgrade_costs or upgrade_condition but no next tier"));
+            tier.next().map(HolderHelper::id)
+                    .filter(next -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_QUALITY, next).isEmpty())
+                    .ifPresent(next -> problems.add(problem(MxtResourceKeys.ITEM_QUALITY, holder.key().identifier(),
+                            "next " + next + " is not a quality")));
+        });
+        for (ChainCache.Report report : QualityLadders.diagnose(registry).reports())
+            problems.add(problem(MxtResourceKeys.ITEM_QUALITY, report.node(), report.message()));
+    }
+
+    // A realm chain is one line over the stages' next_realm links, and the aura profile declares where its own line
+    // starts. A link that leaves the profile, and a profile starting at a stage that is not its own, refuse that
+    // line instead of ordering part of it.
+    private void rebuildRealmChains(List<String> problems) {
+        Map<Identifier, Holder<RealmStage>> stages = new LinkedHashMap<>();
+        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.REALM_STAGE)
+                .forEach(stage -> stages.put(stage.key().identifier(), stage));
+        ChainCache.Builder<RealmStage> chains = ChainCache.builder(stages);
+        for (Map.Entry<Identifier, Holder<RealmStage>> entry : stages.entrySet()) {
+            RealmStage stage = entry.getValue().value();
+            Identifier aura = HolderHelper.id(stage.aura());
+            Identifier next = stage.nextRealm().map(HolderHelper::id).orElse(null);
+            if (next == null) continue;
+            Holder<RealmStage> target = stages.get(next);
+            if (target == null) {
+                chains.refuse(entry.getKey(), "next_realm " + next + " is not a realm stage");
+                continue;
             }
-            RealmStage stage = MxtDatapackRegistries.get(MxtResourceKeys.REALM_STAGE, current).orElse(null);
-            if (stage == null || !HolderHelper.id(stage.aura()).equals(cultivation)) {
-                throw new IllegalStateException("Invalid cultivation realm chain for " + cultivation + " at realm " + current);
+            Identifier nextAura = HolderHelper.id(target.value().aura());
+            if (!nextAura.equals(aura)) {
+                chains.refuse(entry.getKey(), "next_realm " + next + " belongs to " + nextAura + " instead of " + aura);
+                continue;
             }
-            Identifier previous = resolved.get(current);
-            if (previous != null && !previous.equals(cultivation)) {
-                throw new IllegalStateException("Realm " + current + " belongs to both " + previous + " and " + cultivation);
-            }
-            chain.put(current, cultivation);
-            chainRanks.put(current, rank++);
-            current = stage.nextRealm().map(HolderHelper::id).orElse(null);
+            chains.link(entry.getKey(), next);
         }
-        resolved.putAll(chain);
-        ranks.putAll(chainRanks);
+        // The profile is what a chain is known by, and it declares where its own line starts.
+        Map<Identifier, Identifier> claimed = new LinkedHashMap<>();
+        Map<Identifier, Identifier> profiles = new LinkedHashMap<>();
+        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.AURA).forEach(profileHolder -> {
+            Aura profile = profileHolder.value();
+            Identifier cultivation = profileHolder.key().identifier();
+            Identifier resource = HolderHelper.id(profile.resource());
+            Identifier previous = profiles.putIfAbsent(resource, cultivation);
+            if (previous != null) {
+                problems.add(problem(MxtResourceKeys.AURA, cultivation,
+                        "resource " + resource + " already has the cultivation profile " + previous));
+                return;
+            }
+            // The chain belongs to the profile: its first realm has to be a stage naming it, and only one profile
+            // can start there.
+            profile.firstRealm().ifPresent(first -> {
+                Identifier head = HolderHelper.id(first);
+                Identifier owner = claimed.putIfAbsent(head, cultivation);
+                if (owner != null) {
+                    problems.add(problem(MxtResourceKeys.AURA, cultivation,
+                            "starts at the realm " + head + ", where " + owner + " also starts"));
+                    return;
+                }
+                Holder<RealmStage> stage = stages.get(head);
+                if (stage == null)
+                    chains.refuse(head, "the first realm " + head + " is not a realm stage");
+                else if (!HolderHelper.id(stage.value().aura()).equals(cultivation))
+                    chains.refuse(head, "is the first realm of " + cultivation + " but belongs to "
+                            + HolderHelper.id(stage.value().aura()));
+                chains.head(head, cultivation);
+            });
+        });
+        this.realmChains = chains.build();
+        for (ChainCache.Report report : this.realmChains.reports())
+            problems.add(problem(MxtResourceKeys.REALM_STAGE, report.node(), report.message()));
+        this.reportUnreachedRealms(stages, problems);
+    }
+
+    // Every stage of a chain that was walked has to be on it: one left out is a second line beside the first, and
+    // nothing would ever reach it. A chain the walk refused whole is reported once, at the stage that refused it.
+    private void reportUnreachedRealms(Map<Identifier, Holder<RealmStage>> stages, List<String> problems) {
+        for (Map.Entry<Identifier, Holder<RealmStage>> entry : stages.entrySet()) {
+            if (this.realmChains.contains(entry.getKey())) continue;
+            Identifier cultivation = HolderHelper.id(entry.getValue().value().aura());
+            Optional<Identifier> first = this.realmChains.first(cultivation).map(HolderHelper::id);
+            if (first.isEmpty()) continue;
+            problems.add(problem(MxtResourceKeys.REALM_STAGE, entry.getKey(),
+                    "cannot be reached from " + first.orElseThrow() + ", the first realm of " + cultivation));
+        }
     }
 
     // A chain is discovered from its next_stage links, not from the level a definition enters at, because

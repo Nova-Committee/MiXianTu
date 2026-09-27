@@ -5,6 +5,10 @@
     "type": "mxt:modify_storage",
     "family": "mxt:ability",
     "id": "probe:storage_probe",
-    "value": {"type": "mxt:target_lock", "range": 16, "target": "380df991-f603-344c-a090-369bad2a924a"}
+    "value": {
+      "type": "mxt:target_lock",
+      "range": 16,
+      "target": "380df991-f603-344c-a090-369bad2a924a"
+    }
   }
 }

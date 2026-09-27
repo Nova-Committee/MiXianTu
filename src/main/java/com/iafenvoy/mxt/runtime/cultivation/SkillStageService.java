@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.Technique;
@@ -62,7 +62,7 @@ public final class SkillStageService {
     // only the entry level, which none advances into.
     public static EntityCondition advanceCondition(Technique technique, Holder<SkillStage> target) {
         return Optional.ofNullable(technique.configuration().get(target))
-                .map(StageConfiguration::condition).orElse(AlwaysTrueCondition.INSTANCE);
+                .map(StageConfiguration::condition).orElse(AlwaysCondition.INSTANCE);
     }
 
     public static boolean canAdvance(LivingEntity entity, Technique technique, Holder<SkillStage> current,

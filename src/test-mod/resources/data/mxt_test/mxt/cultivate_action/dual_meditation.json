@@ -1,0 +1,33 @@
+{
+  "priority": 20,
+  "tick_interval": 20,
+  "cultivate_condition": {
+    "type": "mxt:partner",
+    "range": 5.0,
+    "count": { "min": 1, "max": 1 },
+    "bientity_condition": {
+      "type": "mxt:and",
+      "conditions": [
+        { "type": "mxt:friend" },
+        { "type": "mxt:target_condition", "condition": {
+            "type": "mxt:main_hand_item",
+            "item_condition": { "type": "mxt:has_component", "component": "mxt:technique" } } }
+      ]
+    }
+  },
+  "tick_condition": {
+    "type": "mxt:partner",
+    "range": 5.0,
+    "bientity_condition": {
+      "type": "mxt:and",
+      "conditions": [
+        { "type": "mxt:target_condition", "condition": { "type": "mxt:cultivating" } },
+        { "type": "mxt:friend" }
+      ]
+    }
+  },
+  "absorb_amount": "2",
+  "abort_reason": "the partner is gone",
+  "costs": [{ "id": "mxt_test:water_power", "amount": 1 }],
+  "tick_action": { "type": "mxt:add_resource", "resource": "mxt_test:sword_mastery", "amount": "1" }
+}

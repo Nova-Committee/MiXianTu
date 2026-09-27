@@ -22,6 +22,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtElements` | 查询实体身上的元素与元素附着，并施加附着。 |
 | `MxtSpiritRoots` | 查询、授予、移除与开关灵根。 |
 | `MxtPhysiques` | 查询、授予、移除与开关体质。 |
+| `MxtTechniques` | 查询、学习与遗忘功法，并读它的技能水平。 |
 | `MxtLifespan` | 读写成实体自己的寿元账本（剩余与上限），也能让实体当场转世。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
 | `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
@@ -267,7 +268,7 @@ if (result.committed()) {
 | `selector(id, callback)` | 回调 ID、`(actor, context, params) => Entity[]` | `void` | 注册数据包类型 `mxt:js` 的技能目标选择器。 |
 | `grant(entity, ability, source)` | `Entity`、技能 ID、来源 ID（`命名空间:路径`） | `boolean` | 以该来源授予技能；来源此前未持有该技能才返回 `true`。未知技能返回 `false`（不是错误），客户端不改动任何东西。 |
 | `revoke(entity, ability, source)` | `Entity`、技能 ID、来源 ID | `boolean` | 只撤这一份来源，成功时返回 `true`；**技能本身要等最后一份来源松手才消失**，那时它的冷却和按技能存储的状态一并丢弃。目标没有这一来源时返回 `false`。 |
-| `has(entity, ability)` | `Entity`、技能 ID | `boolean` | 是否持有；读的是附件，因此停用或已删除的定义也答得出来。 |
+| `has(entity, ability)` | `Entity`、技能 ID | `boolean` | 是否持有；读的是附件，因此定义已不在当前包里的技能也答得出来。 |
 | `list(entity)` | `Entity` | `List<String>` | 当前持有的全部技能 ID，按 ID 排序。 |
 | `sources(entity, ability)` | `Entity`、技能 ID | `List<String>` | 当前还在维持这项技能的来源，按 ID 排序；没持有则为空列表。 |
 
@@ -313,14 +314,14 @@ MxtAbilities.selector('example:nearest_three', (actor, context, params) => {
 | --- | --- | --- | --- |
 | `apply(entity, curse, stacks, source)` | `Entity`、诅咒 ID、正整数层数、来源 ID（`命名空间:路径`） | `CurseService.ApplyResult` | 走完整条件和合并逻辑；来源加入账本。 |
 | `applyFor(entity, curse, stacks, source, durationTicks)` | 同上，另加时长（tick） | `CurseService.ApplyResult` | 时长只能**收紧**：超过定义声明的时长会被定义本身的时长盖住。 |
-| `remove(entity, curse)` | `Entity`、诅咒 ID | `boolean` | 以 `EXPLICIT` 原因**整条**移除（所有来源一起抹掉）；触发移除事件。被停用/已删除的定义只有这条路能取下来。 |
+| `remove(entity, curse)` | `Entity`、诅咒 ID | `boolean` | 以 `EXPLICIT` 原因**整条**移除（所有来源一起抹掉）；触发移除事件。定义已不在当前包里的实例只有这条路能取下来。 |
 | `release(entity, curse, source)` | `Entity`、诅咒 ID、来源 ID | `boolean` | 只撤这一份来源；返回 `true` 表示正是这一撤把诅咒取了下来，`false` 则表示它还在（别的来源仍持有，或者这份来源本来就不在账上——两种情况都返回 `false`，想知道是谁在维持就读 `sources`）。 |
-| `has(entity, curse)` | `Entity`、诅咒 ID | `boolean` | 是否持有；读的是附件，因此停用或已删除的定义也答得出来。 |
+| `has(entity, curse)` | `Entity`、诅咒 ID | `boolean` | 是否持有；读的是附件，因此定义已不在当前包里的诅咒也答得出来。 |
 | `stacks(entity, curse)` | `Entity`、诅咒 ID | `int` | 层数，没持有为 `0`。 |
 | `remainingTicks(entity, curse)` | `Entity`、诅咒 ID | `long` | 剩余 tick；永不到期为 `-1`，没持有为 `0`。 |
 | `sources(entity, curse)` | `Entity`、诅咒 ID | `List<String>` | 当前还在维持这条诅咒的来源，按 ID 排序。 |
 
-诅咒和技能授予用的是同一套来源账本：**只要还有一份来源持有，它就存在**，最后一份松手才真的移除。`ApplyResult` 可调用 `applied()`、`cancelled()`、`failure()`、`instance()`；`failure()` 除 `CONDITION`/`CANCELLED`/`SERVER_ONLY` 外还有 `DISABLED`（定义被 `#mxt:disabled` 停用）、`UNKNOWN`（定义已不在注册表）、`REENTRANT`（同一实体的同一条诅咒正在事务中，自引用被拒）、`INVALID_DURATION`（时长无法兑现，未写入）。`source` 建议写稳定来源，如 `example:quest_reward`，以便数据和事件追踪。
+诅咒和技能授予用的是同一套来源账本：**只要还有一份来源持有，它就存在**，最后一份松手才真的移除。`ApplyResult` 可调用 `applied()`、`cancelled()`、`failure()`、`instance()`；`failure()` 除 `CONDITION`/`CANCELLED`/`SERVER_ONLY` 外还有 `UNKNOWN`（定义已不在注册表，含被 `neoforge:conditions` 挡掉）、`REENTRANT`（同一实体的同一条诅咒正在事务中，自引用被拒）、`INVALID_DURATION`（时长无法兑现，未写入）。`source` 建议写稳定来源，如 `example:quest_reward`，以便数据和事件追踪。
 
 ### `MxtAura`
 
@@ -336,12 +337,12 @@ MxtAbilities.selector('example:nearest_three', (actor, context, params) => {
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `list(entity)` | `Entity` | `List<String>` | 该实体**当前生效**的灵根所指的元素 ID，按 ID 排序。停用的元素与关闭的灵根都不算，没有灵根则为空列表。 |
+| `list(entity)` | `Entity` | `List<String>` | 该实体**当前生效**的灵根所指的元素 ID，按 ID 排序。关闭的灵根不算，没有灵根则为空列表。 |
 | `has(entity, element)` | `Entity`、元素 ID | `boolean` | 该实体的灵根是否指向这个元素。 |
-| `amount(entity, element)` | `Entity`、元素 ID | `double` | 这个元素在该实体身上的附着量；没有则为 `0`，元素被停用或不存在也返回 `0`。客户端读同步过来的副本。 |
+| `amount(entity, element)` | `Entity`、元素 ID | `double` | 这个元素在该实体身上的附着量；没有则为 `0`，元素不存在也返回 `0`。客户端读同步过来的副本。 |
 | `attach(entity, element, amount)` | `Entity`、元素 ID、有限数值 | `double` | 走与打击**同一条**管线给实体加上（负数则扣掉）该元素的附着，返回新的附着量。攒够时 `element_reaction` 照常触发。 |
 
-元素与附着是两件事：`list`/`has` 读的是灵根（这个身体"是什么"），`amount`/`attach` 读写的是一张按元素记数的附着表（这个身体"攒了多少"）。`attach` 与实体行为 `mxt:attach_element` 等价，因此"泡在岩浆里""服丹""诅咒持续喂火"这类来源用脚本写也一样；负数可以用来净化。三个读方法两侧都能用（附着表是同步过来的附件，客户端脚本读的是本地副本，物品悬浮提示那类逻辑正是这么用的）；只有 `attach` 是服务端操作，客户端、未知或被停用的元素、非有限值、`0` 一律返回 `0` 且不改动任何东西。
+元素与附着是两件事：`list`/`has` 读的是灵根（这个身体"是什么"），`amount`/`attach` 读写的是一张按元素记数的附着表（这个身体"攒了多少"）。`attach` 与实体行为 `mxt:attach_element` 等价，因此"泡在岩浆里""服丹""诅咒持续喂火"这类来源用脚本写也一样；负数可以用来净化。三个读方法两侧都能用（附着表是同步过来的附件，客户端脚本读的是本地副本，物品悬浮提示那类逻辑正是这么用的）；只有 `attach` 是服务端操作，客户端、未知的元素、非有限值、`0` 一律返回 `0` 且不改动任何东西。
 
 ```js
 // kubejs/server_scripts/mxt_element.js
@@ -362,8 +363,8 @@ MxtElements.attach(target, 'mxt_test:fire', 4)
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `list(entity)` | `Entity` | `List<String>` | 该实体**持有**的灵根 ID，按 ID 排序。关闭的灵根、定义已被停用或删除的灵根仍会列出——它确实还持有。 |
-| `active(entity)` | `Entity` | `List<String>` | 现在**生效**的灵根：关掉的、以及绑定元素被停用的都不算。 |
+| `list(entity)` | `Entity` | `List<String>` | 该实体**持有**的灵根 ID，按 ID 排序。关闭的灵根、定义已不在当前包里的灵根仍会列出——它确实还持有。 |
+| `active(entity)` | `Entity` | `List<String>` | 现在**生效**的灵根：关掉的、以及定义已不在当前包里的都不算。 |
 | `has(entity, root)` | `Entity`、灵根 ID | `boolean` | 是否持有（与 `mxt:has_spirit_root` 同义：关闭也算持有）。 |
 | `enabled(entity, root)` | `Entity`、灵根 ID | `boolean` | 该灵根是否处于开启状态；不持有则为 `false`。 |
 | `grant(entity, root)` | `LivingEntity`、灵根 ID | `{changed, failure}` | 走权威服务授予，冲突规则、授予的能力与关闭状态清理都照常。`failure` 见下。 |
@@ -382,7 +383,7 @@ MxtElements.attach(target, 'mxt_test:fire', 4)
 | `remove(entity, physique)` | `LivingEntity`、体质 ID | `boolean` | 移除该体质及其属性、能力与伤害倍率；本来没持有则为 `false`。 |
 | `setEnabled(entity, physique, enabled)` | `LivingEntity`、体质 ID、`boolean` | `{changed, failure}` | 与灵根同义的开关。 |
 
-两者的 `failure` 取值是同一套词表：`DISABLED`（定义不存在或被 `mxt:disabled` 停用）、`ALREADY_HELD`、`CONDITIONS`（体质 `holder_condition` 不满足）、`EXCLUSIVE_CONFLICT`、`ELEMENT_CONFLICT`（灵根 `conflicting_elements`）、`NOT_HELD`、`SERVER_ONLY`（在客户端调用）。四个读方法两侧都能用（`spirit_identity` 附件是同步的，物品悬浮提示问"你是不是火灵根"正是这个用途），`grant` / `remove` / `setEnabled` 这三个改变状态的方法是服务端操作。
+两者的 `failure` 取值是同一套词表：`DISABLED`（注册表里没有这个 id，含被 `neoforge:conditions` 挡掉的定义）、`ALREADY_HELD`、`CONDITIONS`（体质 `holder_condition` 不满足）、`EXCLUSIVE_CONFLICT`、`ELEMENT_CONFLICT`（灵根 `conflicting_elements`）、`NOT_HELD`、`SERVER_ONLY`（在客户端调用）。四个读方法两侧都能用（`spirit_identity` 附件是同步的，物品悬浮提示问"你是不是火灵根"正是这个用途），`grant` / `remove` / `setEnabled` 这三个改变状态的方法是服务端操作。
 
 ```js
 // kubejs/server_scripts/mxt_identity.js
@@ -398,20 +399,41 @@ if (result.changed) {
 const active = MxtSpiritRoots.active(player)
 ```
 
+### `MxtTechniques`
+
+| 方法 | 参数 | 返回值 | 说明 |
+| --- | --- | --- | --- |
+| `list(entity)` | `Entity` | `List<String>` | 该实体**学过**的功法 ID，按 ID 排序。定义已不在当前包里的功法仍会列出——它确实还学过。 |
+| `has(entity, technique)` | `Entity`、功法 ID | `boolean` | 是否学过（与 `mxt:technique` 同义）。 |
+| `stage(entity, technique)` | `Entity`、功法 ID | `String` 或 `null` | 这门功法当前的技能水平 ID；没学过、或还没写下水平记录时为 `null`。 |
+| `learn(entity, technique)` | `LivingEntity`、功法 ID | `{changed, failure}` | 走权威服务学习：`learn_condition`、`exclusive_tags` 与两个学习事件都照常处理。 |
+| `forget(entity, technique)` | `LivingEntity`、功法 ID | `{changed, failure}` | 遗忘这门功法**并删掉它自己的水平记录**，再重建它带来的属性与技能；境界 / 修为 / 资源 / 正在跑的法门都不动。没学过则为 `ABSENT`。 |
+
+`failure` 词表：`DISABLED`（注册表里没有这个 id，含被 `neoforge:conditions` 挡掉的定义）、`ALREADY_LEARNED`、`CONFLICT`（`exclusive_tags` 撞上已修习的功法）、`CONDITIONS`（`learn_condition` 不满足）、`CANCELLED`（监听方取消了本次学习）、`ABSENT`、`SERVER_ONLY`（在客户端调用）。三个读方法两侧都能用，`learn` / `forget` 是服务端操作。
+
+```js
+// kubejs/server_scripts/mxt_techniques.js
+const learned = MxtTechniques.learn(player, 'mxt_test:azure_water_manual')
+if (!learned.changed) console.warn(`learning refused: ${learned.failure}`)
+// 洗掉重来：功法和它自己的水平记录一起消失，境界与修为照旧。
+MxtTechniques.forget(player, 'mxt_test:qingxiao_breathing_manual')
+const stage = MxtTechniques.stage(player, 'mxt_test:azure_water_manual')
+```
+
 ### `MxtQuality`
 
 品质长在**物品堆**上，所以这几个方法都点名它们作用的那一栈；`entity` 只是注册表查询的起点。写操作只在服务端生效，客户端一律返回 `null` / `false`。
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `get(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈现在解析出的品质 ID（覆盖组件 → 锻造结果 → 定义默认 → 链条默认 → 灵植声明）；没有则为 `null`。 |
-| `chain(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈的品质所属的**链条** ID：绑定表声明的优先，否则取唯一持有该档的那条链；有多条时返回 `null`（不猜）。 |
+| `get(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈解析出的品质 ID（`mxt:quality` 组件 → 锻造结果 → 定义默认 → 灵植声明）；没有则为 `null`，不补链的入口档。 |
+| `chain(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈的品质所属的**链条** ID：就是这一档所在那条链的名字；它不在任何链上时返回 `null`。 |
 | `next(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 链条上的下一档 ID；已经在顶端或没有链条时为 `null`。 |
-| `set(entity, stack, quality)` | `Entity`、`ItemStack`、品质 ID | `boolean` | 把品质**覆盖组件**写到这一栈上，盖过定义默认档；ID 解析不出来或客户端调用返回 `false`。 |
-| `clear(entity, stack)` | `Entity`、`ItemStack` | `boolean` | 摘掉覆盖组件，回到定义默认档；本来就没有覆盖时返回 `false`。 |
-| `upgrade(entity, stack)` | `LivingEntity`、`ItemStack` | `{changed, failure, from, to}` | 在链条上**推一档**：先过那一步的 `condition`，再用全局消耗事务付清 `costs`（原子），付不出就一点不动、也不写档。 |
+| `set(entity, stack, quality)` | `Entity`、`ItemStack`、品质 ID | `boolean` | 把品质条目引用写入 `mxt:quality` **组件**，盖过定义默认档，也改变这一栈读的链；ID 解析不出来或客户端调用返回 `false`。 |
+| `clear(entity, stack)` | `Entity`、`ItemStack` | `boolean` | 摘掉组件，回到定义默认档；本来就没有组件时返回 `false`。 |
+| `upgrade(entity, stack)` | `LivingEntity`、`ItemStack` | `{changed, failure, from, to}` | 在链条上**推一档**：先过**下一档**的 `upgrade_condition`，再用全局消耗事务付清它的 `upgrade_costs`（原子），付不出就一点不动、也不写档。 |
 
-`failure` 取值：`SERVER_ONLY`、`EMPTY`（手上没有物品）、`NO_QUALITY`、`NO_CHAIN`（不属于任何链条）、`AMBIGUOUS_CHAIN`（这一档同时属于多条链，无法确定往哪升）、`NOT_MEMBER`（这一档不在所属链条上）、`AT_TOP`、`NO_STEP`（这一步没有声明代价，不能升）、`DISABLED`（下一档被 `mxt:disabled` 停用）、`CONDITION_FAILED`、`INSUFFICIENT_RESOURCE`、`INSUFFICIENT_COST`。成功时 `from` / `to` 是升级前后的品质 ID（失败时都是 `null`）。
+`failure` 取值：`SERVER_ONLY`、`EMPTY`（手上没有物品）、`NO_QUALITY`、`NO_CHAIN`（不属于任何链条，或声明的链当前包走不出来）、`AT_TOP`、`CONDITION_FAILED`、`INSUFFICIENT_RESOURCE`、`INSUFFICIENT_COST`。成功时 `from` / `to` 是升级前后的品质 ID（失败时都是 `null`）。
 
 ```js
 // kubejs/server_scripts/mxt_quality.js
@@ -422,7 +444,7 @@ if (result.changed) {
 } else {
   console.warn(`upgrade refused: ${result.failure}`)
 }
-// 直接覆盖某一档（无视链条默认），clear 之后回到定义默认。
+// 直接覆盖当前品质；clear 之后重新按默认顺序解析。
 MxtQuality.set(player, event.item, 'mxt_test:excellent')
 ```
 
@@ -661,7 +683,7 @@ MxtEvents.cultivationBreak(event => {
 
 服务 API 返回的 Java record 一律使用 Java accessor，例如 `result.committed()`，而非假设存在 JavaScript 字段。失败通常不会抛出：请检查 `failure()`、`committed()`、`advanced()`、`applied()` 等返回值。只有 API 参数非法、标识符非法、JSON 无法被对应 Codec 解码，或对错误事件阶段调用可变 setter 时才会抛异常。
 
-只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtLifespan`、`MxtSouls`、`MxtElements.attach`、`MxtSpiritRoots` 与 `MxtPhysiques` 的改变状态方法，以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` / `failure` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
+只在服务端才有意义的操作遇到客户端脚本时都不会改动玩家或世界：`MxtCosts.consume` 与 `MxtTriggers.subscribe` / `subscribeOnce` 会记录一次警告并返回 `false`；`MxtAbilities`、`MxtCultivation`、`MxtCurses`、`MxtLifespan`、`MxtSouls`、`MxtElements.attach`、`MxtSpiritRoots`、`MxtPhysiques` 与 `MxtTechniques` 的改变状态方法，以及 `MxtTriggers.publish` 直接返回 `false`（`MxtElements.attach` 返回 `0`），或把结果里的 `failure()` / `failure` 置为 `SERVER_ONLY`，不写日志。唯一的例外是 `MxtAura.addBox`：它在客户端会抛 `IllegalArgumentException`（只接受 `ServerLevel`）。
 
 `MxtActions.execute*` 故意不设该保护，因为内置 Action 自己决定作用端：JSON 里声明了客户端执行的 Action（例如带 `client` 标志的速度 Action）本来就应当就地运行。
 

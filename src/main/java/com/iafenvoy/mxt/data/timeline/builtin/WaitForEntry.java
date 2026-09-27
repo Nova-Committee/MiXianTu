@@ -49,7 +49,7 @@ public record WaitForEntry(EntityCondition condition, Optional<NumberProvider> t
         // own: it answers with a non-positive length for a beat that only fails on a later tick.
         if (countdown == null || countdown.remaining() <= 0L) return Outcome.FAILED;
         if (countdown.remaining() == 1L) return this.onTimeout.outcome();
-        context.state().set(new WaitCountdown(countdown.remaining() - 1L));
+        countdown.set(countdown.remaining() - 1L);
         return Outcome.RUNNING;
     }
 

@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -32,8 +31,7 @@ public record HasEquippedItemCondition(ItemCondition itemCondition, List<String>
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        Entity entity = ctx.entity();
-        if (!(entity instanceof LivingEntity living)) return false;
+        if (!(ctx.entity() instanceof LivingEntity living)) return false;
         if (this.slots.isEmpty()) {
             for (EquipmentSlot slot : EquipmentSlot.values())
                 if (this.matches(living, living.getItemBySlot(slot), ctx)) return true;

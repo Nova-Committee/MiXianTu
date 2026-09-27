@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
@@ -42,8 +41,8 @@ public final class ElementReactionService {
     private static final ThreadLocal<Set<Entity>> IN_CHAIN =
             ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
 
-    // The walk order is cached per reaction registry instance: a reloaded pack makes a new instance rather than
-    // changing the old one, so this is bounded the same way the damage-type index is.
+    // The walk order is cached per reaction registry instance, which a reloaded pack may keep: ServerCache drops
+    // it on every datapack load, so an edited priority is never served from the previous pack.
     private static final int MAX_CACHED_REGISTRIES = 4;
     private static final Object LOCK = new Object();
     private static volatile Map<Registry<ElementReaction>, List<Reference<ElementReaction>>> orders = Map.of();
@@ -51,11 +50,11 @@ public final class ElementReactionService {
     private ElementReactionService() {
     }
 
-    // A negative amount takes away. Zero, non-finite and a disabled element are silent no-ops: applying an
-    // element is not a transaction that can fail.
+    // A negative amount takes away. Zero and non-finite are silent no-ops: applying an element is not a
+    // transaction that can fail.
     public static double apply(Entity entity, Holder<Element> element, double amount, FormulaContext context) {
         if (!(entity.level() instanceof ServerLevel)) return 0.0D;
-        if (!Double.isFinite(amount) || amount == 0.0D || !Elements.enabled(element)) return 0.0D;
+        if (!Double.isFinite(amount) || amount == 0.0D) return 0.0D;
         ElementAttachment attachment = entity.getData(MxtAttachments.ELEMENT_ATTACHMENT);
         double total = attachment.add(element, amount);
         trigger(entity, context);
@@ -105,7 +104,7 @@ public final class ElementReactionService {
     }
 
     // Asked once per element per strike and once per link of a chain, and the answer only changes when the
-    // registry does, so the registry instance is the cache key (a reload replaces it; /reload does not).
+    // registry does, so the registry instance is the cache key.
     private static List<Reference<ElementReaction>> ordered() {
         Registry<ElementReaction> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ELEMENT_REACTION);
         List<Reference<ElementReaction>> cached = orders.get(registry);
@@ -122,6 +121,13 @@ public final class ElementReactionService {
             updated.put(registry, built);
             orders = Map.copyOf(updated);
             return built;
+        }
+    }
+
+    // Called on every datapack load, before anything can rebuild the order.
+    public static void invalidate() {
+        synchronized (LOCK) {
+            orders = Map.of();
         }
     }
 
@@ -168,7 +174,6 @@ public final class ElementReactionService {
 
     private static boolean satisfied(ElementReaction reaction, ElementAttachment attachment, Entity entity, FormulaContext context) {
         for (Entry<Holder<Element>, NumberProvider> entry : reaction.amounts().entrySet()) {
-            if (!Elements.enabled(entry.getKey())) return false;
             double required = entry.getValue().evaluate(context);
             if (!Double.isFinite(required) || required < 0.0D) return false;
             if (attachment.amount(entry.getKey()) < required) return false;

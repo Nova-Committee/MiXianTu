@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.forging;
 
-import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.forging.ForgingBindingService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -19,12 +19,13 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.tooltip.TooltipLocation;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Explains what a {@code mxt:tool_binding} or {@code mxt:blueprint_binding} grants: the forge table reads the two
- * components, but on an item they are invisible until it is placed on a table. Both are datapack holders, so the
- * tooltip is built from the registry the item was decoded against.
+ * Explains what a tool or a sheet offers: the forge table reads it the same way, but on an item it is invisible
+ * until it is placed on a table. The answer is a declaration claiming the stack plus whatever the stack carries
+ * itself, so it is the same one {@link ForgingBindingService} gives the table.
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class ForgingBindingTooltipAppender {
@@ -38,24 +39,22 @@ public final class ForgingBindingTooltipAppender {
 
     private static void appendBinding(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
-        if (registries == null) return;
+        if (registries == null || stack.isEmpty()) return;
 
-        Holder<ToolBinding> tool = stack.get(MxtDataComponents.TOOL_BINDING.get());
-        if (tool != null) {
-            ToolBinding binding = tool.value();
+        List<Holder<ForgingMethod>> methods = ForgingBindingService.methods(registries, stack);
+        if (!methods.isEmpty()) {
             header(builder, "tooltip.mxt.forging.tool");
-            for (Holder<ForgingMethod> method : binding.methods()) {
-                builder.accept(bullet(methodName(method)));
+            for (Holder<ForgingMethod> method : methods) {
+                builder.accept(bullet(method.value().displayName(HolderHelper.id(method))));
                 advancedId(builder, flag, HolderHelper.id(method));
             }
             return;
         }
 
-        Holder<BlueprintBinding> manual = stack.get(MxtDataComponents.BLUEPRINT_BINDING.get());
-        if (manual != null) {
-            BlueprintBinding binding = manual.value();
+        List<Holder<ForgingBlueprint>> blueprints = ForgingBindingService.blueprints(registries, stack);
+        if (!blueprints.isEmpty()) {
             header(builder, "tooltip.mxt.forging.blueprint");
-            for (Holder<ForgingBlueprint> blueprint : binding.blueprints()) {
+            for (Holder<ForgingBlueprint> blueprint : blueprints) {
                 builder.accept(bullet(blueprintName(blueprint)));
                 advancedId(builder, flag, HolderHelper.id(blueprint));
             }
@@ -74,11 +73,6 @@ public final class ForgingBindingTooltipAppender {
 
     private static Component bullet(Component name) {
         return Component.literal(" - ").append(name).withStyle(ChatFormatting.GRAY);
-    }
-
-    // ForgingMethod#displayName owns that rule, so this list and the selector grid cannot disagree.
-    private static Component methodName(Holder<ForgingMethod> method) {
-        return method.value().displayName(HolderHelper.id(method));
     }
 
     private static Component blueprintName(Holder<ForgingBlueprint> blueprint) {

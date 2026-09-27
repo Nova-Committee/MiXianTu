@@ -3,12 +3,11 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ChainReport;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.QualityChain;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.item.QualityChainService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
+import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -27,7 +26,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -38,8 +36,8 @@ import static net.minecraft.commands.Commands.literal;
  * The {@code /quality} command; also reachable as {@code /mxt quality}. It works on the item a target is holding,
  * which is where a quality actually lives: {@code set} writes the override component, {@code clear} takes that
  * override off so the item falls back to whatever its definition declares, {@code upgrade} climbs the ladder
- * its binding declares, paying that step's own costs through the shared transaction, and {@code chain} prints the
- * ladders a named tier is a rung of.
+ * its binding declares, paying the cost the next tier declares, and {@code chain} prints the ladder a named
+ * tier is a rung of.
  */
 public final class QualityCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
@@ -86,8 +84,6 @@ public final class QualityCommand {
 
     private static int set(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        // The raw entry, not an enabled-only lookup: a disabled tier may still be written, and the gate that
-        // refuses to *use* such an item reads the flag itself.
         Reference<ItemQuality> quality = ResourceArgument.getResource(ctx, "quality", MxtResourceKeys.ITEM_QUALITY);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int changed = 0;
@@ -156,24 +152,16 @@ public final class QualityCommand {
     private static int chain(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Reference<ItemQuality> quality = ResourceArgument.getResource(ctx, "quality", MxtResourceKeys.ITEM_QUALITY);
-        // A disabled tier is no more usable than a missing one, which is the rule every other registry argument
-        // follows; the chains themselves are the enabled ones, exactly as the upgrade service reads them.
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ITEM_QUALITY, quality)) {
-            source.sendFailure(Component.translatable("command.mxt.quality.chain.disabled", HolderHelper.id(quality).toString()));
-            return 0;
-        }
-        List<Holder<QualityChain>> chains = QualityChainService.chainsOf(source.getServer().registryAccess(), quality);
-        if (chains.isEmpty()) {
+        // A tier sits on exactly one ladder, the one its own chain walks into.
+        ChainCache.Chain<ItemQuality> ladder = QualityLadders.of(source.getServer().registryAccess(), quality).orElse(null);
+        if (ladder == null) {
             source.sendFailure(Component.translatable("command.mxt.quality.chain.none", HolderHelper.id(quality).toString()));
             return 0;
         }
-        // One tier may sit on several ladders, so every one of them gets a line instead of the command picking one.
-        for (Holder<QualityChain> chain : chains) {
-            Component line = ChainReport.line(chain.value().tiers().stream().map(DefinitionText::name).toList(),
-                    chain.value().indexOf(quality));
-            source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain",
-                    HolderHelper.id(chain).toString(), line), false);
-        }
-        return chains.size();
+        Component line = ChainReport.line(ladder.nodes().stream().map(DefinitionText::name).toList(),
+                ladder.indexOf(HolderHelper.id(quality)));
+        source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain",
+                String.valueOf(ladder.key()), line), false);
+        return 1;
     }
 }

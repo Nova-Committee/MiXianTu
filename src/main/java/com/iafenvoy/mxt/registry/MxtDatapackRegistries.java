@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.registry;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.Talisman;
@@ -28,7 +27,6 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
@@ -54,12 +52,12 @@ import java.util.stream.Stream;
 
 /**
  * Native Minecraft datapack registries. Reloading and client synchronisation belong to the vanilla registry
- * system, so this class never stores a registry snapshot; the {@code mxt:disabled} tag turns an entry off
- * without deleting it, and every read here filters on it.
+ * system, so this class never stores a registry snapshot; a definition a pack wants out of the world is kept out
+ * of the pack (or gated by a {@code neoforge:conditions} block, see {@code docs/数据包格式.md}), so an entry that
+ * did load is always live and nothing here filters.
  */
 @EventBusSubscriber
 public final class MxtDatapackRegistries {
-    private static final Identifier DISABLED_TAG = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "disabled");
     private static final List<ResourceKey<? extends Registry<?>>> KEYS = new LinkedList<>();
 
     @SubscribeEvent
@@ -99,7 +97,6 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
         register(event, MxtResourceKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
         register(event, MxtResourceKeys.ITEM_QUALITY, ItemQuality.DIRECT_CODEC);
-        register(event, MxtResourceKeys.QUALITY_CHAIN, QualityChain.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
         register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
     }
@@ -114,67 +111,41 @@ public final class MxtDatapackRegistries {
     }
 
     public static <T> Optional<T> get(ResourceKey<? extends Registry<T>> key, Identifier id) {
-        return isDisabled(key, id) ? Optional.empty() : registry(key).getOptional(id);
-    }
-
-    public static <T> Optional<T> get(ResourceKey<? extends Registry<T>> key, Holder<T> holder) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return holder.is(disabled) ? Optional.empty() : Optional.of(holder.value());
+        return registry(key).getOptional(id);
     }
 
     public static <T> Optional<Reference<T>> holder(ResourceKey<? extends Registry<T>> key, Identifier id) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return registry(key).get(ResourceKey.create(key, id)).filter(holder -> !holder.is(disabled));
+        return registry(key).get(ResourceKey.create(key, id));
     }
 
     public static <T> Stream<Reference<T>> holders(ResourceKey<? extends Registry<T>> key) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return registry(key).listElements().filter(holder -> !holder.is(disabled));
+        return registry(key).listElements();
     }
 
-    // Deliberately does not judge whether the entry is disabled, so a caller can tell a definition that was
-    // disabled from one that was deleted; empty when no server is running, since there is no registry then.
-    public static <T> Optional<Reference<T>> rawHolder(ResourceKey<? extends Registry<T>> key, Identifier id) {
+    // The same lookup without the "a server has to be running" trap, for readers that also run on a client; empty
+    // when no server is running, since there is no registry then.
+    public static <T> Optional<Reference<T>> holderOrEmpty(ResourceKey<? extends Registry<T>> key, Identifier id) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return Optional.empty();
         return server.registryAccess().lookupOrThrow(key).get(ResourceKey.create(key, id));
     }
 
     public static <T> Stream<Reference<T>> holders(RegistryAccess access, ResourceKey<? extends Registry<T>> key) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return access.lookupOrThrow(key).listElements().filter(holder -> !holder.is(disabled));
+        return access.lookupOrThrow(key).listElements();
     }
 
     public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return access.lookupOrThrow(key).listElements().filter(holder -> !holder.is(disabled));
+        return access.lookupOrThrow(key).listElements();
     }
 
     // Client code must use this rather than holder(ResourceKey, Identifier): that one reads the server's
     // registries, which exist on a client only while it runs an integrated server.
     public static <T> Optional<Reference<T>> holder(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return access.lookupOrThrow(key).get(ResourceKey.create(key, id)).filter(holder -> !holder.is(disabled));
+        return access.lookupOrThrow(key).get(ResourceKey.create(key, id));
     }
 
     public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return access.lookupOrThrow(key).get(ResourceKey.create(key, id))
-                .filter(holder -> !holder.is(disabled))
-                .map(Holder::value);
-    }
-
-    public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Holder<T> holder) {
-        return holder.is(TagKey.create(key, DISABLED_TAG)) ? Optional.empty() : Optional.of(holder.value());
-    }
-
-    public static <T> boolean isDisabled(ResourceKey<? extends Registry<T>> key, Identifier id) {
-        TagKey<T> disabled = TagKey.create(key, DISABLED_TAG);
-        return registry(key).get(ResourceKey.create(key, id)).map(holder -> holder.is(disabled)).orElse(false);
-    }
-
-    public static <T> boolean isDisabled(ResourceKey<? extends Registry<T>> key, Holder<T> holder) {
-        return holder.is(TagKey.create(key, DISABLED_TAG));
+        return access.lookupOrThrow(key).get(ResourceKey.create(key, id)).map(Holder::value);
     }
 
     public static <T> boolean isTagged(ResourceKey<? extends Registry<T>> key, Identifier id, Identifier tagId) {

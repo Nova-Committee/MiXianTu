@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
+import com.iafenvoy.mxt.runtime.ability.AbilitySources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
@@ -21,6 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * What one wheel page holds, read the same way on both sides: the configured page answers from the player's saved
@@ -48,9 +50,9 @@ public final class WheelSources {
                 .toList();
     }
 
-    // Every pressable ability the player holds, whatever granted it. This is what the configured page's pool
-    // offers, and it is read from the ledger rather than from the equipment, so a cell the player pinned stays
-    // valid wherever the thing that grants it happens to be.
+    // Every pressable ability the player holds, whatever granted it: the ledger the editor's pool and the saved
+    // cells' resolution list are both built from, read here rather than from the equipment so neither depends on
+    // where the thing that grants it happens to be.
     public static List<Holder<Ability>> abilities(LivingEntity entity) {
         AbilityAttachment holder = entity.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return List.of();
@@ -61,6 +63,20 @@ public final class WheelSources {
                         .filter(AbilityActivationService::togglable)
                         .ifPresent(found::add));
         return List.copyOf(found);
+    }
+
+    // Where one ability's grant comes from right now; empty once nothing holds it, which is a different answer
+    // from "held by something the tooltip cannot name".
+    public static Set<Identifier> sources(LivingEntity entity, Identifier abilityId) {
+        AbilityAttachment holder = entity.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
+        return holder == null ? Set.of() : holder.sources().of(abilityId);
+    }
+
+    // True when a hand is the only thing holding it: such a skill belongs on that item's own page, because the
+    // hand is whatever is picked up next. A charm in a Curios slot stays with the body and counts as the player's.
+    public static boolean handOnly(LivingEntity entity, Holder<Ability> ability) {
+        Set<Identifier> sources = sources(entity, HolderHelper.id(ability));
+        return !sources.isEmpty() && sources.stream().allMatch(AbilitySources::isEquipment);
     }
 
     // The stack an ability acts on, for one page: the first item the page names that offers it. Empty when the

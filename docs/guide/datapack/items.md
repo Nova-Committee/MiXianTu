@@ -2,14 +2,14 @@
 title: 物品绑定、品质与经济
 ---
 
-绑定表只匹配现有物品，不负责创建物品；`technique_binding` 是例外——它按**功法**匹配，手册的载体是堆上的 `mxt:technique` 组件（见[数据包格式](../../数据包格式.md)的该节，`carrier_item` 只决定本体替它生成哪件物品）。`pill_binding` 的 `items` 可以省略，身份改由组件 `mxt:pill` 携带，载体是 `mxt:pill`。`weapon_binding`、`pill_binding` 的字段互不混用；武器拥有伤害、攻击速度、属性和攻击/使用/Tick 行为。
+绑定表只匹配现有物品，不负责创建物品；五张 binding 都是这样（`item_binding`、`weapon_binding`、`pill_binding`、`tool_binding`、`blueprint_binding`），`technique_binding` 多一条可选路——它的 `items` 可以认领物品，但手册的身份仍以堆上的 `mxt:technique` 组件为先。`pill_binding` 的 `items` 可以省略；身份由组件 `mxt:pill` 的可选 `binding` 指向，载体是 `mxt:pill`。各表的字段互不混用；武器拥有原版属性修正和攻击/使用/Tick 行为，工具与图纸给出锻打方式与蓝图。逐件附加（品质、元素、丹药数据、功法阅读、锻打方式、图纸）走物品组件，规则见[数据包格式](../../数据包格式.md)的「物品组件」。
 
 ```json
 {
   "items": ["minecraft:iron_sword", "#minecraft:swords"],
   "actions": [{"type": "mxt:grant_spirit_root", "spirit_root": "mxt:fire_root"}],
   "conditions": [
-    {"type": "mxt:always_true"},
+    {"type": "mxt:always"},
     {
       "condition": {"type": "mxt:realm", "realm": "example:foundation"},
       "description": "condition.example.foundation_required"
@@ -38,4 +38,4 @@ title: 物品绑定、品质与经济
 }
 ```
 
-`quality` 定义品质内容；**品质顺序、默认档与升级路径由 `quality_chain` 决定**，物品通过绑定表的 `quality_chain` 引用一条链（解析出的档必须在链上，否则不能用）。品质自己的 `name` / `description` / `color` 可以省略（`name` / `description` 按 id 生成翻译键），三个修正对象里的 `description` 省略就不画那一行。`currency` 为物品定义货币价值，`unavailable_when` 是包含 `condition` 和 `reason` 的 ItemCondition 数组。
+`quality` 定义品质内容；**品质的顺序、入口档与升级路径都在 `quality` 自己身上**——`next` 指向更高一档，目标档的 `upgrade_costs` / `upgrade_condition` 决定升级代价与条件，链名写在入口档的 `quality` 字段上并沿 `next` 传播。绑定表**不声明链**，物品读哪条链完全由它解析出的档位决定。品质自己的 `name` / `description` / `color` 可以省略（`name` / `description` 按 id 生成翻译键），三个修正对象里的 `description` 省略就不画那一行。`currency` 为物品定义货币价值，`unavailable_when` 是包含 `condition` 和 `reason` 的 ItemCondition 数组。

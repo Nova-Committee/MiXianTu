@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
@@ -51,6 +52,11 @@ public final class TechniqueCommand {
                         .requires(ServerCommandManager::mayChange)
                         .then(argument("id", IdentifierArgument.id())
                                 .executes(ctx -> drop(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
+                // The same surgery under the name a player means: dropping a mistake, forgetting a technique.
+                .then(literal("forget")
+                        .requires(ServerCommandManager::mayChange)
+                        .then(argument("id", IdentifierArgument.id())
+                                .executes(ctx -> forget(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
                 .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
     }
 
@@ -129,29 +135,25 @@ public final class TechniqueCommand {
         return count;
     }
 
-    // The sweep cannot reach a reference that is already gone, and naming the entry also undoes a mistaken grant.
+    // Both nodes are the same removal, kept apart only by what they are pointed at: "drop" is used against a
+    // reference the pack no longer provides, "forget" is a player giving up a technique they still hold.
     private static int drop(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
-        int before = identity.learnedTechniques().size() + identity.techniqueStages().size();
-
-        List<Holder<Technique>> techniques = new ArrayList<>();
-        for (Holder<Technique> technique : identity.learnedTechniques())
-            if (!HolderHelper.id(technique).equals(id)) techniques.add(technique);
-
-        Map<Holder<Technique>, Holder<SkillStage>> stages = new LinkedHashMap<>();
-        for (Entry<Holder<Technique>, Holder<SkillStage>> entry : identity.techniqueStages().entrySet())
-            if (!HolderHelper.id(entry.getKey()).equals(id)) stages.put(entry.getKey(), entry.getValue());
-
-        int after = techniques.size() + stages.size();
-        if (before == after) {
+        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), id).changed()) {
             source.sendFailure(Component.translatable("command.mxt.technique.drop.absent", id.toString()));
             return 0;
         }
-        identity.setLearnedTechniques(techniques);
-        identity.setTechniqueStages(stages);
-        rebuild(player, identity);
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.drop.done", id.toString()), true);
+        return 1;
+    }
+
+    private static int forget(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), id).changed()) {
+            source.sendFailure(Component.translatable("command.mxt.technique.forget.absent", id.toString()));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.technique.forget.done", id.toString()), true);
         return 1;
     }
 

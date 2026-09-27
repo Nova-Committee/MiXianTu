@@ -14,7 +14,7 @@ import java.util.*;
 
 /**
  * The registry of HUD entries, and the only thing the rest of the mod needs to know about the HUD: modules
- * register here, this draws them, the edit screen drags them and the client config stores their placement.
+ * register here, this draws them, the edit screen drags them and the layout file stores their placement.
  * Registration happens on first use, so an entry is built exactly when its owning module is loaded.
  */
 @EventBusSubscriber(Dist.CLIENT)
@@ -33,10 +33,13 @@ public final class HudManager {
         return entry;
     }
 
+    // Every element the editor may offer, hidden ones included: the editor draws those faintly so their checkbox
+    // can turn them back on, which a hidden element filtered out here could never do. An element that is not
+    // movable stays out - it draws, but there is nothing to place.
     public static List<HudEntry> moveableEntries() {
         List<HudEntry> result = new ArrayList<>();
         for (HudEntry entry : REGISTRY.values())
-            if (entry.visible() && entry.moveable()) result.add(entry);
+            if (entry.moveable()) result.add(entry);
         return Collections.unmodifiableList(result);
     }
 
@@ -60,22 +63,14 @@ public final class HudManager {
             if (!entry.visible()) continue;
             List<RenderBlock> blocks = entry.renderBlocks();
             if (blocks.isEmpty()) entry.render(graphics, deltaTracker);
-            else if (entry.anchor().bottom())
+            else if (entry.anchor().atBottom())
                 HudRenderer.renderStanding(graphics, blocks, entry.x(), entry.y() + entry.layoutHeight());
             else HudRenderer.renderColumn(graphics, blocks, entry.x(), entry.y());
         }
     }
 
-    public static boolean editMode() {
-        return ScreenHolder.EDITED != null;
-    }
-
     public static void layoutChanged() {
         for (HudEntry entry : REGISTRY.values()) entry.refreshPlacement();
-    }
-
-    static void setEditedEntry(HudEntry entry) {
-        ScreenHolder.EDITED = entry;
     }
 
     // Refreshing first is what makes the editor independent of where it was opened from: the framework's GUI
@@ -89,11 +84,5 @@ public final class HudManager {
     @SubscribeEvent
     public static void registerLayer(RegisterGuiLayersEvent event) {
         event.registerAboveAll(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "hud_framework"), HudManager::render);
-    }
-
-    // Own class on purpose: the common path - a GUI layer asking every frame whether the edit screen is open -
-    // must not load the client-only edit screen class at the earliest moment a HUD entry is constructed.
-    private static final class ScreenHolder {
-        private static HudEntry EDITED;
     }
 }

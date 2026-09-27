@@ -77,8 +77,7 @@ public record FormationPlateComponent(List<Allowed> allowed,
         return this.allowed.stream().anyMatch(entry -> entry.matches(candidate));
     }
 
-    // So binding and suggestions do not enumerate the registry themselves. Disabled entries are left to the
-    // caller, which rejects them itself.
+    // So binding and suggestions do not enumerate the registry themselves.
     public List<Reference<Formation>> admissible(Registry<Formation> registry) {
         return registry.listElements().filter(this::admits).toList();
     }

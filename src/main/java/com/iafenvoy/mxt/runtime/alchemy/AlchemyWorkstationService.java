@@ -59,9 +59,11 @@ public final class AlchemyWorkstationService {
 
     public static Optional<Holder<AlchemyFurnaceDefinition>> furnaceDefinition(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        Holder<AlchemyFurnaceDefinition> holder = stack.get(MxtDataComponents.ALCHEMY_FURNACE.get());
-        if (holder == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.ALCHEMY_FURNACE, holder)) return Optional.empty();
-        return Optional.of(holder);
+        Holder<AlchemyFurnaceDefinition> stored = stack.get(MxtDataComponents.ALCHEMY_FURNACE.get());
+        if (stored == null) return Optional.empty();
+        Identifier id = HolderHelper.id(stored);
+        if (id.equals(HolderHelper.EMPTY)) return Optional.empty();
+        return MxtDatapackRegistries.holder(access, MxtResourceKeys.ALCHEMY_FURNACE, id).map(holder -> holder);
     }
 
     private static Optional<Parameters> parameters(ServerPlayer player, AlchemyWorkstation station, AlchemyRecipe recipe, Evaluated evaluated) {
@@ -457,8 +459,7 @@ public final class AlchemyWorkstationService {
         return switch (failure) {
             case BINDING_CONDITIONS -> AlchemyFailure.BINDING_CONDITIONS;
             case QUALITY_CONDITIONS -> AlchemyFailure.QUALITY_CONDITIONS;
-            case QUALITY_CHAIN -> AlchemyFailure.QUALITY_CHAIN;
-            case PILL_DISABLED -> AlchemyFailure.PILL_DISABLED;
+            case UNBOUND -> AlchemyFailure.UNBOUND;
             case MAX_USES -> AlchemyFailure.MAX_USES;
             case COOLDOWN -> AlchemyFailure.COOLDOWN;
         };

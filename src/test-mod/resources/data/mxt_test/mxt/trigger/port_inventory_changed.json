@@ -1,5 +1,5 @@
 {
   "trigger": {"type": "mxt:inventory_changed", "items": [{"items": "minecraft:stone"}]},
-  "condition": {"type": "mxt:always_true"},
+  "condition": {"type": "mxt:always"},
   "action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 16}
 }

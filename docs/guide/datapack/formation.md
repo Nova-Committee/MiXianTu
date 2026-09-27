@@ -7,7 +7,7 @@ title: 阵法、锻造与炼丹
 | 字段                       | 类型                              | 默认          | 说明                            |
 |--------------------------|---------------------------------|-------------|-------------------------------|
 | `structure_template`     | Identifier                      | 见下          | 结构模板；controller 即模板原点          |
-| `structure_check`        | `structure` / `always`          | `structure` | **立阵时是否校验结构**（2026-09-25 新增）。`always` 表示这座阵法哪里都能立，此时**不允许**再写 `structure_template` 或 `structure`（写了是加载错误，不是被忽略） |
+| `structure_check`        | `structure` / `always`          | `structure` | **立阵时是否校验结构**（2026-09-25 新增）。`always` 表示这座阵法哪里都能立，此时 `structure_template` / `structure` 写了也**不会被读**（静默忽略，2026-09-27 起不再报错） |
 | `structure`              | `List<RequiredBlock>`           | 见下          | 内联结构；controller 即偏移原点          |
 | `radius`                 | NumberProvider                  | **必填**      | 球形作用半径                        |
 | `activation_costs`       | `List<Cost>`                    | `[]`        | 激活消耗，从激活者账上扣；条目见 [`Cost`](../../数据包格式.md#cost) |
@@ -78,7 +78,7 @@ title: 阵法、锻造与炼丹
 三档 `target` 是同一条规则的不同宽度：`all` 不筛；`allies` 要求好友判定给出 `true`，而**归属名单上的人在好友判定里算自己的好友**，
 所以 `allies` 包含他们；`owner` 只认归属名单，是同样效果的更窄写法（名单上**任何一位**都算）。
 
-**属性加成不在这里找字段。** `ability` 自带 `modifiers`，授予一个能力就等于授予它的属性修饰符；基座不再开第二个入口，
+**属性加成不在这里找字段。** 授予一个 `mxt:modifier` 能力就等于授予它的属性修饰符（`modifiers` 在那个类型上），基座不再开第二个入口，
 否则同一件事会有两套规则，包括"修饰符活过了授予它的那座阵法"这类最容易出错的部分。
 
 **不再被选中的实体会被收回授予**：站在阵里而好友关系消失时，这个 source 会被对账清空，不必等它走出去。
@@ -568,7 +568,7 @@ give @s mxt:formation_plate[mxt:formation_plate={allowed:["#mypack:wood_arrays"]
 }
 ```
 
-炉型放在 `data/example/mxt/alchemy_furnace/basic.json`。炉壁材料放在 `data/example/mxt/alchemy_wall_material/basic_wall.json`。药引固定 1 格。品质只决定显示和使用条件。槽位、容量和冷却以炉型字段为准。耐温取 22 块炉壁的最低值，再和异火上限取较低值。只升级 `mxt:item_quality` 不会换成另一份规格，也不改变耐温。不要再写 `max_temperature`、`heating_per_tick`、`aura_capacity` 或 `heating_costs`。
+炉型放在 `data/example/mxt/alchemy_furnace/basic.json`。炉壁材料放在 `data/example/mxt/alchemy_wall_material/basic_wall.json`。药引固定 1 格。品质只决定显示和使用条件。槽位、容量和冷却以炉型字段为准。耐温取 22 块炉壁的最低值，再和异火上限取较低值。只升级 `mxt:quality` 不会换成另一份规格，也不改变耐温。不要再写 `max_temperature`、`heating_per_tick`、`aura_capacity` 或 `heating_costs`。
 
 ```mcfunction
 give @s mxt:alchemy_furnace[mxt:alchemy_furnace="example:basic"]
@@ -603,7 +603,7 @@ give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall
   "max_bad_ticks": 2,
   "minimum_aura": { "example:fire_qi": 10 },
   "success_outputs": [
-    { "id": "mxt:pill", "count": 1, "components": { "mxt:pill": "example:warming_pill" } }
+    { "id": "mxt:pill", "count": 1, "components": { "mxt:pill": { "binding": "example:warming_pill" } } }
   ],
   "failure_outputs": [{ "id": "mxt:alchemy_dregs" }],
   "guide": {
@@ -635,7 +635,7 @@ give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall
 `items` 可以省略。发给玩家：
 
 ```mcfunction
-give @s mxt:pill[mxt:pill="example:warming_pill"]
+give @s mxt:pill[mxt:pill={binding:"example:warming_pill"}]
 ```
 
 次数按这条丹药定义计，不按物品 ID。排毒用 `mxt:modify_pill_toxicity` 的负 `add`，不清次数。服务端配置「炼丹 → 每秒丹毒自然消退」默认 0。测试包原丹毒丹的 25 / 100 / 20 不要改。

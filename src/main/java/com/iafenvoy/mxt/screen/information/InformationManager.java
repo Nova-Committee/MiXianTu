@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
@@ -120,7 +119,6 @@ public final class InformationManager {
     }
 
     // A root is listed with the element it is bound to, because its own name does not say what it cultivates.
-    // A root whose element a pack disabled still appears, because the player holds it; it simply shows no element.
     private static void spiritRootLines(InformationCollector collector) {
         SpiritIdentityAttachment identity = collector.getData(MxtAttachments.SPIRIT_IDENTITY);
         List<Holder<SpiritRoot>> roots = identity.spiritRoots();
@@ -132,8 +130,7 @@ public final class InformationManager {
             if (index > 0) line.append(", ");
             boolean active = identity.isSpiritRootEnabled(root);
             line.append(heldName(DefinitionText.name(root, "spirit_root"), active));
-            List<SpiritRoot.ElementWeight> elements = root.value().elements().stream()
-                    .filter(entry -> Elements.enabled(entry.element())).toList();
+            List<SpiritRoot.ElementWeight> elements = root.value().elements();
             if (!elements.isEmpty()) {
                 MutableComponent names = Component.empty();
                 for (int elementIndex = 0; elementIndex < elements.size(); elementIndex++) {

@@ -5,21 +5,16 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
-import com.iafenvoy.mxt.data.item.ItemBinding;
-import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import net.minecraft.core.Holder;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -107,32 +102,27 @@ public final class DamageCalculationService {
         if (roots.isEmpty()) return 1.0D;
         double result = 1.0D;
         for (Holder<Element> element : wielded) {
-            if (Double.isFinite(result) && conflicts(holder.level().registryAccess(), roots, element))
+            if (Double.isFinite(result) && conflicts(roots, element))
                 result *= element.value().conflictMultiplier();
         }
         return Double.isFinite(result) ? result : 1.0D;
     }
 
-    // Read the same way every other conflicting_elements reader reads it, so a disabled element matches nothing.
-    private static boolean conflicts(RegistryAccess access, List<Holder<SpiritRoot>> roots, Holder<Element> element) {
-        for (Holder<SpiritRoot> root : roots) {
-            SpiritRoot definition = MxtDatapackRegistries.get(access, MxtResourceKeys.SPIRIT_ROOT, root).orElse(null);
-            if (definition != null && Elements.matches(definition.conflictingElements(), element)) return true;
-        }
+    // Read the same way every other conflicting_elements reader reads it.
+    private static boolean conflicts(List<Holder<SpiritRoot>> roots, Holder<Element> element) {
+        for (Holder<SpiritRoot> root : roots)
+            if (RegistryCodecs.matches(root.value().conflictingElements(), element)) return true;
         return false;
     }
 
     // The only place this number is applied, and it is applied to the buildup, not to a reaction's effect: a
-    // carrier that wants to soften that has a physique's damage_taken_multiplier instead.
+    // carrier that wants to soften that has a physique's damage_taken_multiplier instead. Only artifacts carry it,
+    // so an ordinary weapon or item is never a ward by accident.
     public static double attachmentMultiplier(LivingEntity target) {
         List<ItemStack> carried = ArtifactUpkeepService.carried(target);
         double result = 1.0D;
         for (ItemStack stack : carried) {
             if (stack.isEmpty()) continue;
-            result *= usable(ItemBindingService.weapon(target.level().registryAccess(), stack)
-                    .map(WeaponBinding::attachmentMultiplier).orElse(1.0D));
-            result *= usable(ItemBindingService.binding(target.level().registryAccess(), stack)
-                    .map(ItemBinding::attachmentMultiplier).orElse(1.0D));
             result *= usable(ArtifactService.definition(target.level().registryAccess(), stack)
                     .map(holder -> holder.value().attachmentMultiplier()).orElse(1.0D));
         }

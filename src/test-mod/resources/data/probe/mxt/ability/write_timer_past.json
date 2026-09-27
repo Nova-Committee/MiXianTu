@@ -5,6 +5,10 @@
     "type": "mxt:modify_storage",
     "family": "mxt:ability",
     "id": "probe:storage_probe",
-    "value": {"type": "mxt:timer", "duration": 200, "ends_at": 0}
+    "value": {
+      "type": "mxt:timer",
+      "duration": 200,
+      "ends_at": 0
+    }
   }
 }

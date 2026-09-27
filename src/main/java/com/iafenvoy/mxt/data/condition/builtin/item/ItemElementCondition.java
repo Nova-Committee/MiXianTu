@@ -15,7 +15,6 @@ import net.minecraft.tags.TagKey;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * True when the item carries one of the listed elements, as read by {@link ItemElements}: what the weapon, item or
@@ -35,8 +34,7 @@ public record ItemElementCondition(List<Either<Holder<Element>, TagKey<Element>>
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        Set<Holder<Element>> carried = ItemElements.of(ctx.holder().level().registryAccess(), ctx.stack());
-        return carried.stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
+        return ItemElements.of(ctx.holder().level().registryAccess(), ctx.stack()).stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
     }
 
     @Override

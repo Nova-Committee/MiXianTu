@@ -1,4 +1,8 @@
 {
   "type": "mxt:active",
-  "entity_action": { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 3 }
+  "entity_action": {
+    "type": "mxt:add_resource",
+    "resource": "mxt:common",
+    "amount": 3
+  }
 }

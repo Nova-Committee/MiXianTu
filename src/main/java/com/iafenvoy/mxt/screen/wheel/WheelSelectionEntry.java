@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.screen.hud.AbstractHudEntry;
-import com.iafenvoy.mxt.screen.hud.HudLayout;
+import com.iafenvoy.mxt.screen.hud.HudAnchor;
 import com.iafenvoy.mxt.screen.hud.HudManager;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -74,14 +74,19 @@ public final class WheelSelectionEntry extends AbstractHudEntry {
     }
 
     @Override
-    public int defaultX() {
+    public HudAnchor defaultAnchor() {
+        return HudAnchor.LEFT_CENTER;
+    }
+
+    @Override
+    public int defaultOffsetX() {
         return EDGE_MARGIN;
     }
 
     @Override
-    public int defaultY() {
-        int[] window = HudLayout.window();
-        return window == null ? 0 : (window[1] - this.layoutHeight()) / 2;
+    public int defaultOffsetY() {
+        // The middle of the left edge, so the block stays centred as it grows downward.
+        return 0;
     }
 
     @Override

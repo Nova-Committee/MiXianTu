@@ -25,7 +25,7 @@ import java.util.Optional;
  * two separate declarations.
  *
  * <p>Never activated: only these fields are read, so the ability fields that describe an activation
- * ({@code entity_action}, {@code modifiers}, a cast time) do nothing here.
+ * ({@code entity_action}, a cast time) do nothing here, and {@code modifiers} belongs to {@code mxt:modifier}.
  */
 public record MountAbilityType(NumberProvider speed, int seats, boolean sit, FlightDisplay display,
                                double width, double height, double stepHeight, List<Vec3> seatOffsets,

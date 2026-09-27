@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
@@ -28,13 +29,12 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService.Failure;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
-import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -48,43 +48,97 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * The talisman carrier's own half of the pour: what a carrier takes to fill, and what happens once it is full.
- * A carrier's capacity is its {@code aura_cost} bill summed over every definition written on it, so "full" is
- * exactly what the invocation will cost rather than a number somebody picked; the pour itself belongs to the
+ * The talisman carrier's own half of the pour: what a carrier takes to fill, and what happens once it holds
+ * enough to fire. A carrier's capacity is the multiplier written on its definitions times what one invocation
+ * wants, capped by the wear the carrier has left - so "full" is what the carrier was written to hold, and one with
+ * room for several invocations fires again without being poured. What one invocation takes is its {@code costs}:
+ * an aura entry comes out of that store, every other entry is paid by the holder. The pour itself belongs to the
  * spirit module ({@link UseItemAuraAccess#pour}), and a carrier takes one unit a tick at one for one. Firing is
- * the carrier's answer both to being charged and to a right-click once there is nothing left to pour, so a
- * carrier billed nothing at all is still usable. The invocation is an ordinary ability use with one thing
- * changed - the carrier answers for the grant - which is what keeps a talisman from being a way around every
- * other gate. What it costs the carrier is its own wear when the definitions written on it declare any, and
- * the carrier itself one item at a time when none of them do.
+ * the carrier's answer both to being charged and to a right-click once it holds a whole invocation, so a carrier
+ * billed nothing at all is still usable. The invocation is an ordinary ability use with one thing changed - the
+ * carrier answers for the grant - which is what keeps a talisman from being a way around every other gate. What it
+ * costs the carrier is its own wear when the definitions written on it declare any, and the carrier itself one
+ * item at a time when none of them do.
  */
 public final class TalismanService {
     private TalismanService() {
     }
 
-    // One entry per aura, in the order the definitions were written, because that order decides which aura a
-    // pour fills next - so a list, not a map with an iteration order of its own. Priced against the empty
-    // context because it has to be: the bill is also how long a pour lasts, and the client sizes the same
-    // gesture from the same stack.
-    public static Map<Holder<Aura>, Integer> bill(ItemStack stack) {
-        Map<Holder<Aura>, Integer> totals = new LinkedHashMap<>();
+    // One entry per aura, each the aura one invocation wants times the multiplier, rounded up to the whole units a
+    // pour moves in. Auras, amounts and multipliers are all summed over the definitions written on the carrier.
+    // Priced against the empty context because it has to be: the capacity is also how long a pour lasts, and the
+    // client sizes the same gesture from the same stack.
+    public static Map<Holder<Aura>, Integer> capacity(ItemStack stack) {
+        Map<Holder<Aura>, Double> totals = new LinkedHashMap<>();
+        int uses = remainingUses(stack);
         for (Holder<Talisman> talisman : inscribed(stack)) {
-            talisman.value().auraCost().forEach((aura, amount) -> {
-                double cost = amount.evaluate(FormulaContext.EMPTY);
-                if (!Double.isFinite(cost) || cost <= 0.0D) return;
-                int units = cost >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.floor(cost);
-                totals.merge(aura, units, TalismanService::add);
-            });
+            // What the carrier can still spend caps what it can hold: a carrier with two invocations of wear left is
+            // never poured for five, and one that is spent whole holds exactly one.
+            double multiplier = Math.min(talisman.value().capacity(), uses);
+            for (Cost cost : talisman.value().costs())
+                if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
+                    double amount = amount1.evaluate(FormulaContext.EMPTY);
+                    if (Double.isFinite(amount) && amount > 0.0D)
+                        totals.merge(aura1, amount * multiplier, Double::sum);
+                }
         }
-        return totals;
+        Map<Holder<Aura>, Integer> capacity = new LinkedHashMap<>();
+        totals.forEach((aura, amount) -> capacity.put(aura, units(amount)));
+        return capacity;
     }
 
-    // A bill that cannot be priced without a holder prices to nothing and is left out, so this includes a
-    // carrier billed nothing at all: a free talisman is fired by the same click as a filled one.
-    public static boolean ready(Provider registries, ItemStack stack) {
-        if (!(stack.getItem() instanceof UseItemAuraAccess access)) return false;
-        SpiritPour pour = access.pour(registries, stack).orElse(null);
-        return pour == null || pour.full();
+    // What one invocation takes out of the carrier's own store: the aura entries of the definitions' costs, summed
+    // over the definitions. Priced against the empty context for the same reason the capacity is - the two numbers
+    // have to agree about what one invocation costs, and neither may depend on who happens to be holding it. The
+    // amounts are kept as they are written rather than rounded up, so a multiplier really does buy that many
+    // invocations of them.
+    private static Map<Holder<Aura>, Double> draw(List<Holder<Talisman>> written) {
+        Map<Holder<Aura>, Double> draw = new LinkedHashMap<>();
+        for (Holder<Talisman> talisman : written)
+            for (Cost cost : talisman.value().costs())
+                if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
+                    double amount = amount1.evaluate(FormulaContext.EMPTY);
+                    if (Double.isFinite(amount) && amount > 0.0D) draw.merge(aura1, amount, Double::sum);
+                }
+        return draw;
+    }
+
+    // How many invocations a carrier still has in it. Wear is the only use count a carrier has, so a carrier whose
+    // definitions declare none is spent whole and has exactly one; one that declares wear has at least one, because
+    // a carrier the wear has not destroyed yet can always fire once more - that shot is the one that destroys it. A
+    // partial point of wear buys nothing, which is the same rounding `spend` does when it destroys the carrier.
+    private static int remainingUses(ItemStack stack) {
+        int cap = durability(stack);
+        int cost = durabilityCost(stack);
+        if (cap <= 0 || cost <= 0) return 1;
+        return Math.max(1, (cap - stack.getDamageValue()) / cost);
+    }
+
+    // Whole units, the same rounding the shared stores use: a capacity of half an aura is still one whole one.
+    private static int units(double amount) {
+        if (!Double.isFinite(amount) || amount <= 0.0D) return 0;
+        return amount >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(amount);
+    }
+
+    // Whether the store covers one invocation, which is what a click needs to be a firing rather than a pour. A
+    // carrier billed no aura at all answers yes and is fired by the same click as a filled one.
+    public static boolean ready(ItemStack stack) {
+        Map<Holder<Aura>, Double> draw = draw(inscribed(stack));
+        if (draw.isEmpty()) return true;
+        SpiritStorageComponent charge = store(stack);
+        return draw.entrySet().stream().allMatch(entry -> charge.get(entry.getKey()) >= entry.getValue());
+    }
+
+    // What one invocation takes off the store, leaving the rest for the invocations after it.
+    private static SpiritStorageComponent drain(SpiritStorageComponent charge, Map<Holder<Aura>, Double> draw) {
+        SpiritStorageComponent left = charge;
+        for (Map.Entry<Holder<Aura>, Double> entry : draw.entrySet())
+            left = left.with(entry.getKey(), Math.max(0.0D, left.get(entry.getKey()) - entry.getValue()));
+        return left;
+    }
+
+    private static SpiritStorageComponent store(ItemStack stack) {
+        return stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
     }
 
     // How much wear a carrier has in it, read off the stack first and off what is written on it second: a cap the
@@ -141,12 +195,13 @@ public final class TalismanService {
         return Optional.empty();
     }
 
-    // What one invocation costs the holder on top of what the carrier was filled with, in the order the
-    // definitions were written. The list goes into the shared transaction untouched, so a price that cannot be
-    // paid refuses the invocation instead of half-paying it - which is the threshold a "needs enough spirit
-    // power" condition would have been.
-    private static List<Cost> costs(List<Holder<Talisman>> written) {
-        return written.stream().flatMap(talisman -> talisman.value().costs().stream()).toList();
+    // What one invocation costs the holder, in the order the definitions were written. Every aura entry is left
+    // out: an aura is drawn from the carrier's own store rather than from an account. The list goes into the shared
+    // transaction untouched, so a price that cannot be paid refuses the invocation instead of half-paying it -
+    // which is the threshold a "needs enough spirit power" condition would have been.
+    private static List<Cost> holderCosts(List<Holder<Talisman>> written) {
+        return written.stream().flatMap(talisman -> talisman.value().costs().stream())
+                .filter(cost -> !(cost instanceof AuraCost)).toList();
     }
 
     // The one entry every trigger shares - a hand (TalismanItem#use) and a carrier that filled itself - so
@@ -173,7 +228,7 @@ public final class TalismanService {
     public static boolean toggleMode(SpiritSource source, ItemStack stack) {
         if (inscribed(stack).isEmpty()) return false;
         TalismanComponent component = component(stack);
-        boolean full = ready(source.level().registryAccess(), stack);
+        boolean full = SpiritChargeService.full(source.level().registryAccess(), stack);
         if (component.mode() == TriggerMode.STORE && full) {
             // Set first: firing spends the stack, and this is the mode the rest of it is left in.
             stack.set(MxtDataComponents.TALISMAN, component.withMode(TriggerMode.FIRE));
@@ -214,7 +269,7 @@ public final class TalismanService {
             say(holder, Component.translatable("actionbar.mxt.talisman.blank"));
             return Attempt.NOT_AN_ATTEMPT;
         }
-        if (!ready(source.level().registryAccess(), stack)) {
+        if (!ready(stack)) {
             say(holder, Component.translatable("actionbar.mxt.talisman.not_charged"));
             return Attempt.NOT_AN_ATTEMPT;
         }
@@ -232,11 +287,12 @@ public final class TalismanService {
         // belong to - the position says where, not who.
         FormulaContext context = FormulaContext.of(holder, Map.of("block_x", source.position().x(),
                 "block_y", source.position().y(), "block_z", source.position().z()));
-        // What the carrier's own definitions charge for one invocation, planned before anything happens: a price
-        // the holder cannot pay refuses the invocation, which is where a "needs enough spirit power" threshold
-        // lives now. Nothing is written by the plan, so a carrier whose abilities all refuse still costs nothing.
+        // What the carrier's own definitions charge the holder for one invocation, planned before anything
+        // happens: a price the holder cannot pay refuses the invocation, which is where a "needs enough spirit
+        // power" threshold lives now. Nothing is written by the plan, so a carrier whose abilities all refuse
+        // still costs nothing. The aura entries are not in it - they come out of the carrier's own store.
         CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
-        CostTransaction.Planning price = CostTransaction.plan(costs(written), costContext);
+        CostTransaction.Planning price = CostTransaction.plan(holderCosts(written), costContext);
         if (!price.ok()) {
             say(holder, Component.translatable("actionbar.mxt.talisman.failed", Component.translatable(
                     "actionbar.mxt.talisman.failure." + costFailure(price.failure()).name().toLowerCase(Locale.ROOT))));
@@ -265,12 +321,13 @@ public final class TalismanService {
                     "actionbar.mxt.talisman.failure." + costFailure(paid.failure()).name().toLowerCase(Locale.ROOT))));
             return Attempt.REFUSED;
         }
-        // What was poured in was spent on the invocation rather than left for the next one; what the invocation
-        // takes off the carrier itself is spend's business. The charge is read first, because a carrier the wear
-        // burns out from under it never got to spend it, and an empty stack has no components left to read.
-        SpiritStorageComponent charge = stack.get(MxtDataComponents.SPIRIT_STORAGE);
-        stack.remove(MxtDataComponents.SPIRIT_STORAGE);
-        if (spend(stack, holder, inHand)) refund(charge, holder);
+        // This invocation's share of the store is spent here; whatever the definitions wrote on top of one
+        // invocation is left for the invocations after it. What is left goes back to whoever set the invocation
+        // off when the carrier itself is spent, which is the one case where it never gets to keep it.
+        SpiritStorageComponent left = drain(store(stack), draw(written));
+        if (left.isEmpty()) stack.remove(MxtDataComponents.SPIRIT_STORAGE);
+        else stack.set(MxtDataComponents.SPIRIT_STORAGE, left);
+        if (spend(stack, holder, inHand)) refund(left, holder);
         say(holder, Component.translatable("actionbar.mxt.talisman.invoked", fired));
         return Attempt.FIRED;
     }
@@ -281,12 +338,12 @@ public final class TalismanService {
         return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INSUFFICIENT_COST;
     }
 
-    // What a carrier was still holding when the wear burned it out, handed back to whoever set that invocation
-    // off. The pour charged one unit of the aura's own resource for each unit it put in, so that is what comes
-    // back; a definition that no longer resolves or an amount the resource will not take loses the aura with the
-    // paper rather than failing the invocation that has already happened.
-    private static void refund(@Nullable SpiritStorageComponent charge, LivingEntity holder) {
-        if (charge == null || charge.isEmpty()) return;
+    // What a carrier was still holding when it was spent, handed back to whoever set that invocation off. The pour
+    // charged one unit of the aura's own resource for each unit it put in, so that is what comes back; a definition
+    // that no longer resolves or an amount the resource will not take loses the aura with the paper rather than
+    // failing the invocation that has already happened.
+    private static void refund(SpiritStorageComponent charge, LivingEntity holder) {
+        if (charge.isEmpty()) return;
         ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
         charge.amounts().forEach((aura, units) -> {
             double amount = units * SpiritChargeService.POUR_COST_PER_UNIT;
@@ -301,8 +358,8 @@ public final class TalismanService {
     // carrier itself - one item off the stack, which is what a carrier with no wear to spend has always cost.
     // Wear that passes the cap destroys the carrier and leaves nothing behind, so the damage a stack shows is
     // always the wear of the item on top. A creative hand spends neither, which is vanilla's own answer that its
-    // stack is not the thing being spent. True means the wear is what destroyed the carrier, which is the one
-    // case where what was poured in is not spent on the invocation.
+    // stack is not the thing being spent. True means the carrier is gone, which is when what it was still holding
+    // has nobody left to keep it.
     private static boolean spend(ItemStack stack, LivingEntity holder, boolean inHand) {
         applyDurability(stack);
         boolean creative = inHand && holder instanceof Player player && player.hasInfiniteMaterials();
@@ -317,7 +374,7 @@ public final class TalismanService {
             }
             stack.shrink(1);
             if (!stack.isEmpty()) stack.setDamageValue(0);
-            return true;
+            return stack.isEmpty();
         }
         if (!inHand) {
             // A placed carrier is always spent: nobody's creative mode is holding it.
@@ -325,7 +382,7 @@ public final class TalismanService {
         } else if (!creative) {
             stack.consume(1, holder);
         }
-        return false;
+        return stack.isEmpty();
     }
 
     // An attempt is what the use cooldown is charged for, so the two answers are kept apart rather than
@@ -372,15 +429,15 @@ public final class TalismanService {
                 .distinct().toList();
     }
 
-    // The whole bill of a stack as the pour reads it: one entry per aura, in declaration order, with whatever
-    // has been poured in so far.
+    // The whole store of a stack as the pour reads it: one entry per aura, in the order capacity was written,
+    // with whatever has been poured in so far.
     public static List<Entry> entries(ItemStack stack) {
-        Map<Holder<Aura>, Integer> bill = bill(stack);
-        if (bill.isEmpty()) return List.of();
-        SpiritStorageComponent charge = stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
-        List<Entry> entries = new ArrayList<>(bill.size());
-        bill.forEach((aura, capacity) -> entries.add(new Entry(aura,
-                (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity), capacity)));
+        Map<Holder<Aura>, Integer> capacity = capacity(stack);
+        if (capacity.isEmpty()) return List.of();
+        SpiritStorageComponent charge = store(stack);
+        List<Entry> entries = new ArrayList<>(capacity.size());
+        capacity.forEach((aura, size) -> entries.add(new Entry(aura,
+                (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, size), size)));
         return List.copyOf(entries);
     }
 

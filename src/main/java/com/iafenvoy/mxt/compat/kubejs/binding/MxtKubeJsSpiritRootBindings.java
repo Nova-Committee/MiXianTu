@@ -22,7 +22,7 @@ public final class MxtKubeJsSpiritRootBindings {
         return MxtKubeJsApi.spiritRoots(entity);
     }
 
-    @Info("The held spirit roots that count right now, sorted: switched-off roots and roots bound to a disabled element are left out.")
+    @Info("The held spirit roots that count right now, sorted: switched-off roots and roots whose definition the pack no longer provides are left out.")
     public List<String> active(Entity entity) {
         return MxtKubeJsApi.activeSpiritRoots(entity);
     }

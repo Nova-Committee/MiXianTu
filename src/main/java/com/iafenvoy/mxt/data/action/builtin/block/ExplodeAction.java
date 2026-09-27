@@ -30,7 +30,6 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
     @Override
     public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
-        BlockPos pos = ctx.pos();
         if (level.isClientSide() || !Float.isFinite(this.power) || this.power < 0.0F) return;
         ExplosionDamageCalculator calculator = this.indestructible.<ExplosionDamageCalculator>map(condition -> new ExplosionDamageCalculator() {
             @Override
@@ -43,7 +42,7 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
                 return level;
             }
         }).orElseGet(ExplosionDamageCalculator::new);
-        level.explode(null, level.damageSources().explosion(null, null), calculator, pos.getCenter(), this.power, this.createFire, this.interaction);
+        level.explode(null, level.damageSources().explosion(null, null), calculator, ctx.pos().getCenter(), this.power, this.createFire, this.interaction);
     }
 
     @Override

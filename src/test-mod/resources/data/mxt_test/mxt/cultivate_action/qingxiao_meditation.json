@@ -1,5 +1,5 @@
 {
-  "default": true,
+  "priority": 1,
   "tick_interval": 20,
   "absorb_amount": "2 + level * 0.05",
   "aura_costs": {},

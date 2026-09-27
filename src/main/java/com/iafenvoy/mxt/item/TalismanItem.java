@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
@@ -67,7 +68,7 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     @Override
     public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, ItemStack stack) {
         Object2IntMap<Holder<Aura>> capacities = new Object2IntOpenHashMap<>();
-        for (Map.Entry<Holder<Aura>, Integer> entry : TalismanService.bill(stack).entrySet())
+        for (Map.Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet())
             capacities.put(entry.getKey(), entry.getValue().intValue());
         return capacities;
     }
@@ -118,10 +119,12 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     }
 
     // Nothing is said while the store is not full: a pour reports every tick, and a message per tick would drown
-    // the one that matters. The mode held next to the inscriptions decides whether it fires or is left charged.
+    // the one that matters. The mode held next to the inscriptions decides whether it fires or is left charged, and
+    // only the tick that reaches the top counts - a carrier with room for several invocations must not fire on the
+    // way there.
     @Override
     public void onCharged(SpiritSource source, ItemStack stack) {
-        if (!TalismanService.ready(source.level().registryAccess(), stack)) return;
+        if (!SpiritChargeService.full(source.level().registryAccess(), stack)) return;
         if (!TalismanService.autoFires(stack)) {
             if (source.actor() instanceof ServerPlayer player)
                 player.sendSystemMessage(Component.translatable("actionbar.mxt.talisman.stored"), true);

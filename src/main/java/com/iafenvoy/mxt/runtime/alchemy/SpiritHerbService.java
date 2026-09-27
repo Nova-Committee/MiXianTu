@@ -25,8 +25,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Resolves the first enabled herb binding, its age and the potency of one furnace role. Age is a formula input,
- * not a second multiplier: a pack that wants older herbs to be stronger writes {@code herb_age} into the potency.
+ * Resolves the highest-priority herb binding, its age and the potency of one furnace role. Age is a formula
+ * input, not a second multiplier: a pack that wants older herbs to be stronger writes {@code herb_age} into the potency.
  */
 public final class SpiritHerbService {
     public static final String HERB_AGE = "herb_age";
@@ -47,14 +47,15 @@ public final class SpiritHerbService {
     }
 
     /**
-     * The first enabled herb whose growth seeds accept this stack. Item bindings and seeds are separate lists, so
-     * a seed does not have to be the harvested item.
+     * The highest-priority herb whose growth seeds accept this stack. Item bindings and seeds are separate lists,
+     * so a seed does not have to be the harvested item. A tie keeps registry order.
      */
     public static Optional<Holder<SpiritHerb>> findSeed(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
                 .filter(holder -> holder.value().growth().filter(growth -> matches(growth.seeds(), stack)).isPresent())
-                .min(Comparator.comparingInt(holder -> holder.value().priority())).map(holder -> holder);
+                .min(Comparator.comparing(Holder::value, ItemMatcher.ORDER))
+                .map(holder -> holder);
     }
 
     public static int age(ItemStack stack, SpiritHerb herb) {
@@ -67,7 +68,7 @@ public final class SpiritHerbService {
     }
 
     /**
-     * Empty only when no enabled binding claims the stack. A matching herb with no power in this role is still
+     * Empty only when no loaded binding claims the stack. A matching herb with no power in this role is still
      * returned, so the furnace can refuse it as zero power rather than as an unknown item.
      */
     public static Optional<HerbPotency> potency(Provider access, ItemStack stack, HerbRole role, FormulaContext context) {
@@ -88,7 +89,7 @@ public final class SpiritHerbService {
         Map<Holder<MedicinalProperty>, Double> properties = new LinkedHashMap<>();
         double total = 0.0D;
         for (Map.Entry<Holder<MedicinalProperty>, NumberProvider> entry : source.entrySet()) {
-            if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.MEDICINAL_PROPERTY, entry.getKey())) continue;
+            if (!entry.getKey().isBound()) continue;
             double amount = entry.getValue().evaluate(aged);
             if (!Double.isFinite(amount) || amount == 0.0D) continue;
             properties.put(entry.getKey(), amount);
@@ -112,9 +113,7 @@ public final class SpiritHerbService {
 
     private static Optional<Holder<SpiritHerb>> findHolder(Stream<Reference<SpiritHerb>> holders, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        return holders.filter(holder -> matches(holder.value().entries(), stack))
-                .min(Comparator.comparingInt(holder -> holder.value().priority()))
-                .map(holder -> holder);
+        return ItemMatcher.find(holders, Holder::value, stack).map(holder -> holder);
     }
 
     private static boolean matches(List<ItemMatcher.Entry> entries, ItemStack stack) {
@@ -126,19 +125,18 @@ public final class SpiritHerbService {
     public static void validateBoundHarvests(Provider access) {
         List<String> errors = new ArrayList<>();
         access.lookupOrThrow(MxtResourceKeys.SPIRIT_HERB).listElements().forEach(holder -> {
-            if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.SPIRIT_HERB, holder)) return;
             holder.value().growth().ifPresent(growth -> {
                 ItemStack harvested = growth.harvest().create();
                 Identifier self = holder.key().identifier();
                 Identifier found = findHolder(access, harvested).flatMap(Holder::unwrapKey).map(ResourceKey::identifier).orElse(null);
                 if (!self.equals(found)) {
                     errors.add(self + " harvest " + BuiltInRegistries.ITEM.getKey(harvested.getItem())
-                            + " resolves to " + (found == null ? "no enabled spirit herb" : found));
+                            + " resolves to " + (found == null ? "no spirit herb" : found));
                 }
             });
         });
         if (errors.isEmpty()) return;
-        String message = "Spirit herb harvest must be the first enabled binding of that herb: " + String.join("; ", errors);
+        String message = "Spirit herb harvest must be claimed by that herb: " + String.join("; ", errors);
         MiXianTu.LOGGER.error(message);
         throw new IllegalStateException(message);
     }

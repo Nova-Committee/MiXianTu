@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbGrowthService;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -24,14 +25,13 @@ import java.util.Locale;
 
 /**
  * One soil bed and at most one plant. The saved seed is the stack that was sown, not a freshly built one, so a
- * disabled definition can still be pulled.
+ * definition that no longer loads can still be pulled.
  */
 public final class SpiritHerbPlotBlockEntity extends BlockEntity {
     public enum Pause {
-        NONE, DISABLED, MISSING, CAPPED, CONDITION, AURA, GROWTH;
+        NONE, MISSING, CAPPED, CONDITION, AURA, GROWTH;
 
-        public static final Codec<Pause> CODEC = Codec.STRING.xmap(
-                value -> valueOf(value.toUpperCase(Locale.ROOT)),
+        public static final Codec<Pause> CODEC = Codec.STRING.comapFlatMap(SpiritHerbPlotBlockEntity::decodePause,
                 value -> value.name().toLowerCase(Locale.ROOT));
     }
 
@@ -88,7 +88,7 @@ public final class SpiritHerbPlotBlockEntity extends BlockEntity {
     }
 
     /**
-     * Restores a plant that was already sown, including one whose definition has since been disabled.
+     * Restores a plant that was already sown, including one whose definition no longer loads.
      */
     public void restore(@Nullable Holder<SpiritHerb> herb, ItemStack seed, float progress, int remainder, Pause pause) {
         this.herb = herb;
@@ -143,6 +143,17 @@ public final class SpiritHerbPlotBlockEntity extends BlockEntity {
         output.store("progress", Codec.FLOAT, this.progress);
         output.store("remainder", Codec.INT, this.remainder);
         output.store("pause", Pause.CODEC, this.pause);
+    }
+
+    // Plots saved while disabled tags existed stored this pause. The definition is simply absent now.
+    private static DataResult<Pause> decodePause(String raw) {
+        String name = raw.toUpperCase(Locale.ROOT);
+        if (name.equals("DISABLED")) return DataResult.success(Pause.MISSING);
+        try {
+            return DataResult.success(Pause.valueOf(name));
+        } catch (IllegalArgumentException exception) {
+            return DataResult.error(() -> "Unknown herb pause " + raw);
+        }
     }
 
     @Override

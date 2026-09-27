@@ -10,7 +10,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.NonNull;
 
@@ -32,8 +31,7 @@ public record ModifyLifespanAction(Mode mode, NumberProvider amount) implements 
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        if (!(entity instanceof LivingEntity living)) return;
+        if (!(ctx.entity() instanceof LivingEntity living)) return;
         double value = this.amount.evaluate(ctx.formula());
         if (!Double.isFinite(value)) return;
         long ticks = Math.round(value);

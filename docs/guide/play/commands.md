@@ -17,26 +17,27 @@ title: 命令
 | `/quality get [<target>]`（= `/mxt quality get …`） | 同上，看别人的（需要 gamemaster 权限）。 |
 | `/quality set <targets> <quality>`（= `/mxt quality set …`） | 把品质**覆盖组件**写到目标主手的物品上（需要 gamemaster 权限）。它盖过定义默认档，`/quality clear` 摘掉；这一档能不能用仍由它自己的 `condition` 与所属链条决定。 |
 | `/quality clear <targets>`（= `/mxt quality clear …`） | 摘掉主手物品上的覆盖组件，让它回到定义默认档（需要 gamemaster 权限）。本来就没有覆盖时逐个目标报失败。 |
-| `/quality upgrade <targets>`（= `/mxt quality upgrade …`） | 把主手物品在它所属的链条上**往上推一档**（需要 gamemaster 权限）：代价就是链条那一步自己声明的 `costs`（`plan` → `commit` 整组原子，付不出就一点不动），并先过它的 `condition`。没声明代价的那一步不能升；已经在顶端、不属于任何链条、或同一档属于多条链时都会逐个目标报出原因。 |
-| `/quality chain <quality>`（= `/mxt quality chain …`） | 打印这一档所在的**整条品质链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。同一档可能同时在多条链上，那就每条链各一行；一条都没有时报"没有品质链包含它"，这一档自己被 `#mxt:disabled` 停用时同样按"没有这个定义"拒绝。 |
+| `/quality upgrade <targets>`（= `/mxt quality upgrade …`） | 把主手物品在它所属的链条上**往上推一档**（需要 gamemaster 权限）：代价就是**下一档**自己声明的 `upgrade_costs`（`plan` → `commit` 整组原子，付不出就一点不动），并先过它的 `upgrade_condition`。已经在顶端、或解析出的档不在链上时都会逐个目标报出原因。 |
+| `/quality chain <quality>`（= `/mxt quality chain …`） | 打印这一档所在的**整条品质链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。一档只属于一条链（它自己声明的 `quality`），没有链时报"没有品质链包含它"。 |
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
 | `/flight fill`（= `/mxt flight fill`） | 把当前玩家所骑飞行器的**空座位全部塞上僵尸**（需要 gamemaster 权限）：僵尸无 AI、不消失、头上戴着一顶**不毁的铁头盔**（原版口径：头上有东西就不会被日光点燃），位置由载具按 `seat_offsets` 自己摆，用来对着实机调座位落点（改完 `/reload` 它们会跟着定义立刻换位）。它们随这一趟飞行结束一起消失；没在飞或座位已满会说明原因。 |
 | `/mxt resource <id>` | 查询资源值。 |
 | `/mxt resource <id> set <value>` | 设置资源值。 |
 | `/mxt resourcebar [resource] [index]` | 查看资源条的原始当前值、上下限、未截断百分比、上下文、位置和顺序；不填参数时列出全部资源条。 |
 | `/mxt cultivate status` | 查看修炼状态。 |
+| `/mxt cultivate select <action>` | 手动点名一条法门（`mxt:cultivate_action` 的条目）**立刻开练**：正在修另一条就先停掉它，但照样要过"此刻适用"那把筛子，不适用就报「没有一门当下能修的法门」且不动正在跑的那条。它**不落盘**——下一次按修炼键仍然由"筛适用 + `priority`"决定，需要 gamemaster 权限。 |
 | `/lifespan [<targets>]`（= `/mxt lifespan`） | 查看目标（不填则自己）的寿元账本「剩余 / 上限」，没有账本时读作「未记账」。不需要权限，单位是刻。 |
 | `/lifespan set <targets> <ticks>`（= `/mxt lifespan set …`） | 把两个数一起重写成 `ticks`（必须 ≥ 0，需要 gamemaster 权限）。 |
 | `/lifespan add <targets> <ticks>`（= `/mxt lifespan add …`） | 加减寿元：正数延寿（两个数一起涨）、负数抽寿（只减剩余），需要 gamemaster 权限。 |
 | `/lifespan reincarnate <targets>`（= `/mxt lifespan reincarnate …`） | 让目标当场转世：跑一遍服务端配置「转世」页的重置清单，并把账本按「凡人基础寿元」重开，需要 gamemaster 权限。 |
 | `/aura`（= `/mxt aura`） | 不带子命令时什么都不做（它以前打开轮盘配置界面，现在是客户端命令 `/wheel`）。 |
 | `/aura query [type]`（= `/mxt aura query [type]`） | 查询当前位置灵气；`type` 是**灵气 ID**（`mxt:aura` 的条目，补全给的就是它），不填时显示全部灵气，并在名字后附带该灵气的元素标记。 |
-| `/aura query element <element>`（= `/mxt aura query element …`） | 按**元素**查询：把这个位置上所有元素标记为该元素的灵气汇总列出（元素被停用时不参与）。补全来自 `mxt:element`。 |
+| `/aura query element <element>`（= `/mxt aura query element …`） | 按**元素**查询：把这个位置上所有元素标记为该元素的灵气汇总列出。补全来自 `mxt:element`。 |
 | `/aura vein`（= `/mxt aura vein`） | 查询当前位置灵石矿脉等级。 |
 | `/aura cache clear [radius]`（= `/mxt aura cache clear [radius]`） | 清除并立即重建周围已加载区块的子区块灵气缓存；半径按区块计算，默认 3，范围 0–32。 |
 | `/ability`（= `/mxt ability`） | 不带子命令时什么都不做（它以前打开轮盘配置界面，现在是客户端命令 `/wheel`）。 |
 | `/ability cast <id>`（= `/mxt ability cast <id>`） | 强制施放技能。 |
-| `/ability list [<target>]`（= `/mxt ability list …`） | 列出持有者身上的技能：名字与**还在维持它的来源**。读的是附件而不是注册表，所以被停用/定义已删除的技能照样列出来——它仍然被持有，也仍然只能按名字撤销。不填 `target` 时看自己，不需要权限。 |
+| `/ability list [<target>]`（= `/mxt ability list …`） | 列出持有者身上的技能：名字与**还在维持它的来源**。读的是附件而不是注册表，所以定义已不在当前包里的技能照样列出来——它仍然被持有，也仍然只能按名字撤销。不填 `target` 时看自己，不需要权限。 |
 | `/ability grant <targets> <ability>`（= `/mxt ability grant …`） | 以命令自己的来源 `mxt:command` 授予技能（需要 gamemaster 权限）。逐个目标报告成功或失败，失败发生在该目标已由这一来源持有时。 |
 | `/ability revoke <targets> <ability>`（= `/mxt ability revoke …`） | 只撤销 `mxt:command` 这一份来源（需要 gamemaster 权限）；还有别的来源持有就什么都不发生，该目标记为失败。逐个目标报告结果。 |
 | `/mxt breakthrough <aura>` | 尝试突破到这门**灵气**（`mxt:aura` 条目，补全给的就是它）所通往的境界。缺哪一种修炼资源由境界自己声明，失败时会点名。 |
@@ -63,14 +64,15 @@ title: 命令
 | `/mxt formation owners <pos>` | 打印该阵心上的**归属名单**（一组 UUID）。 |
 | `/mxt formation owners <pos> add\|remove <player>` | 加 / 减一位阵主（需要 gamemaster 权限）。归属是一组 UUID：名单上的人都算阵主，因此 `mxt:formation_owner`、拆除权限、逐实体行为的"给阵主"与"给队友"都按这一组判定；好友系统也改成问**每一位**阵主（任一位认得你就算队友）。加一位已经在名单上的、或减一位不在名单上的，会照实回答且不改动。 |
 | `/mxt formation bind <formation>`（= `/formation bind`） | 把指定阵法写入**主手**的阵盘（需要 gamemaster 权限）。阵盘是唯一能把阵法带进世界的物品，而它的绑定存在物品组件里；这条命令是生存流程里取得可用阵盘的入口。Tab 补全列出注册表里的全部阵法（不再只列白名单内那些），但**白名单仍在写盘之前把关**：不在名单里的会被拒绝且不修改阵盘；重复绑定会覆盖原值，ID 写错时连解析都过不去，阵盘自然保持原样。 |
-| `/spirit_root list [<target>]`（= `/mxt spirit_root list`） | 列出该实体持有的灵根：名字、稀有度、绑定元素与是否生效。读附件而不是注册表，所以定义被停用/删除的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
-| `/spirit_root grant\|remove <targets> <root>`（= `/mxt spirit_root …`） | 授予或移除灵根（需要 gamemaster 权限）。授予走实体行为 `mxt:grant_spirit_root` 的同一套服务，因此 `conflicting_elements` 与「已持有」都会拒绝并逐个目标报出原因；移除按 `spirit_identity` 附件里**持有的那条引用**去找，所以被 `mxt:disabled` 停用的灵根照样摘得掉。 |
-| `/spirit_root enable\|disable <targets> <root>`（= `/mxt spirit_root …`） | 「关闭但不失去」：关掉的灵根仍然持有，只是不再提供元素、修炼倍率、授予能力与 `conflicting_elements`。这与数据包标签 `mxt:disabled` 不是一回事。 |
+| `/spirit_root list [<target>]`（= `/mxt spirit_root list`） | 列出该实体持有的灵根：名字、稀有度、绑定元素与是否生效。读附件而不是注册表，所以定义已不在当前包里的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
+| `/spirit_root grant\|remove <targets> <root>`（= `/mxt spirit_root …`） | 授予或移除灵根（需要 gamemaster 权限）。授予走实体行为 `mxt:grant_spirit_root` 的同一套服务，因此 `conflicting_elements` 与「已持有」都会拒绝并逐个目标报出原因；移除按 `spirit_identity` 附件里**持有的那条引用**去找，所以定义已不在当前包里的灵根照样摘得掉。 |
+| `/spirit_root enable\|disable <targets> <root>`（= `/mxt spirit_root …`） | 「关闭但不失去」：关掉的灵根仍然持有，只是不再提供元素、修炼倍率、授予能力与 `conflicting_elements`。这与"从数据包里拿掉这条定义"是两件事。 |
 | `/physique list [<target>]`（= `/mxt physique list`） | 列出该实体持有的体质：名字、稀有度与是否生效（叠加时同名只列一行），不需要权限。 |
 | `/physique grant\|remove <targets> <physique>`（= `/mxt physique …`） | 授予（按当前实体判定 `holder_condition` 与互斥标签）或移除体质（需要 gamemaster 权限）。移除与灵根同一口径：按附件里持有的引用找。 |
 | `/physique enable\|disable <targets> <physique>`（= `/mxt physique …`） | 与灵根同义的开关：关闭后属性修正、授予能力与两个伤害倍率全部不生效，但体质仍然被持有。 |
 | `/technique repair [dry-run]`（= `/mxt technique repair`） | 清理指向已删除功法定义的失效数据。 |
 | `/technique drop <id>`（= `/mxt technique drop <id>`） | 移除一项已习得功法并重建其带来的属性与能力。 |
+| `/technique forget <id>`（= `/mxt technique forget <id>`） | 遗忘一项功法：连同**这门功法自己的层数记录**一起删掉（重新学会从入口级开始），并重建它带来的属性与能力；境界、修为、资源与正在跑的法门都是别的状态，不受影响。与 `drop` 是同一件手术，只是说法对着"我要放弃这门功法"。 |
 | `/technique diagnose`（= `/mxt technique diagnose`） | 逐条检查手持功法物品为何无法使用。 |
 | `/display [player] [slot]`（= `/mxt display`） | 展示槽位物品。 |
 | `/trade <player>`（= `/mxt trade <player>`） | 向玩家发起交易请求。 |
@@ -83,9 +85,9 @@ title: 命令
 | `/mxt lightning [pos] [color … | palette …]`（= `/lightning`） | 直接打下一道雷，需要 gamemaster 权限。单色或渐变、亮度、粗细、伤害按固定顺序可选，见下。 |
 | `/mxt tribulation start <id> [<target>]`（= `/tribulation start …`） | 手动开始一场天劫（需要 gamemaster 权限），不必等突破；不填 `target` 时挂在自己身上。配套的 `status` 报告跑到第几拍与当前节拍的现场，`stop` 清除。 |
 | `/mxt curse list [<target>]`（= `/curse`） | 列出持有者身上的诅咒：名字、层数、剩余 tick 或「永不到期」。不填 `target` 时看自己，不需要权限。 |
-| `/mxt curse apply <targets> <curse> [<stacks>] [<duration_ticks>]`（= `/curse apply …`） | 施加一条诅咒（需要 gamemaster 权限），`stacks` 取 1–256，走与内容同一条事务：条件、叠层、`on_apply` 照常；被 `#mxt:disabled` 停用或已删除的定义会被拒绝并报出原因。`duration_ticks` 只能收紧定义自己的时长。 |
-| `/mxt curse remove <targets> <curse>`（= `/curse remove …`） | 以 `explicit` 原因移除（需要 gamemaster 权限）。这也是**被停用/已删除定义的唯一出口**。 |
-| `/mxt curse cleanse <targets> <tag>`（= `/curse cleanse …`） | 按 `mxt:curse` 标签解毒（需要 gamemaster 权限），与解毒剂同一个 `cleansed` 原因；被停用的实例会拒绝并说明原因。 |
+| `/mxt curse apply <targets> <curse> [<stacks>] [<duration_ticks>]`（= `/curse apply …`） | 施加一条诅咒（需要 gamemaster 权限），`stacks` 取 1–256，走与内容同一条事务：条件、叠层、`on_apply` 照常；`ResourceArgument` 找不到的定义在解析阶段就被拒。`duration_ticks` 只能收紧定义自己的时长。 |
+| `/mxt curse remove <targets> <curse>`（= `/curse remove …`） | 以 `explicit` 原因移除（需要 gamemaster 权限）。这也是**定义已不在当前包里的诅咒的唯一出口**。 |
+| `/mxt curse cleanse <targets> <tag>`（= `/curse cleanse …`） | 按 `mxt:curse` 标签解毒（需要 gamemaster 权限），与解毒剂同一个 `cleansed` 原因；定义已不在当前包里的实例会拒绝并说明原因。 |
 | `/talisman blank [count <count>]`（= `/mxt talisman blank …`） | 给空白载体：什么都没铭刻，因此没有灵气账单。 |
 | `/talisman give <talisman> [count <count>] [stored]`（= `/mxt talisman give …`） | 发给你已铭刻这条符箓定义的载体；`count` 一次给出多份（1–64，默认 1），`stored` 以储存模式铭刻，于是它们靠手动灌注而不是下一次点按发动。**定义的 `durability` 会当场写进载体**，所以拿到手就有耐久条；带耐久的载体不叠放，`count` 给的是**多份单张**。 |
 | `/talisman give <talisman> count <count> charged`（= `/mxt talisman give …`） | 同上，并同时把整笔灵气灌进去，这正是让载体在下一次点按发动的方式。`charged` 只能写在 `count` 之后。 |
@@ -117,9 +119,9 @@ title: 命令
 
 `color <色>` 与 `palette <渐变>` 是**二选一**的两支，各自后面接着同一条固定顺序的尾巴 `[alpha [thickness [damage [visual_only]]]]`：想写后面的就必须把前面的也写出来（Tab 补全会一路提示），例如要 `thickness` 就得先写颜色或渐变、再写 `alpha`。数据包侧的同一个行为 `mxt:spawn_lightning` 支持任意组合的字段（渐变写在 `palette`），见[数据包 JSON 格式](../../数据包格式)。
 
-命令中的注册表 ID 使用原版 `ResourceArgument`：解析、Tab 补全与"没有这个条目"的报错都由它给出，补全来自服务端当前注册表。有一点要记住：`ResourceArgument` 读的是**原始注册表**，所以被 `#mxt:disabled` 停用的条目**会出现在补全里**，但真正执行时仍会被拒绝（与以前一样按"没有这个定义"处理）。
+命令中的注册表 ID 使用原版 `ResourceArgument`：解析、Tab 补全与"没有这个条目"的报错都由它给出，补全来自服务端当前注册表。**补全里的一条就是能用的**：被 `neoforge:conditions` 挡掉的条目根本不进注册表，所以不会再出现"补全里有、执行时被拒"这种状态。
 
-少数参数**故意**仍然用 `IdentifierArgument`，它们的用途就是点名一个**当前数据包已经不提供**的引用：`/technique drop <id>`、`/spirit_root remove|enable|disable <targets> <id>`、`/physique remove|enable|disable <targets> <id>`、`/curse remove`、`/ability revoke`。换成 `ResourceArgument` 会在解析阶段就被拒绝。要注意**"已经删掉的定义"实际上到不了这几条**：灵根/体质在附件里存的是 `Holder`，解码时条目已被删除的那一条会被容错 Codec 丢掉，所以真正需要它们救的是**被 `mxt:disabled` 停用**的条目——它仍然被身体持有，这三条都按身体持有的引用去找（不是查注册表），因此照样摘得掉、关得掉。它们的 Tab 补全来自当前注册表里**还生效**的条目。
+少数参数**故意**仍然用 `IdentifierArgument`，它们的用途就是点名一个**当前数据包已经不提供**的引用：`/technique drop <id>`、`/technique forget <id>`、`/spirit_root remove|enable|disable <targets> <id>`、`/physique remove|enable|disable <targets> <id>`、`/curse remove`、`/ability revoke`。换成 `ResourceArgument` 会在解析阶段就被拒绝。它们要救的是**身体里还存着、而当前包已经不提供的 `Holder`**：条目被条件挡掉或直接删了文件之后，同一次会话里附件里那份引用还在（附件只在**世界加载**时解码，`/reload` 不重解；下次进世界时缺失的那一条会被容错列表丢掉），所以这几条一律按身体持有的引用去找（不是查注册表），照样摘得掉、关得掉。它们的 Tab 补全来自当前注册表里**还在的**条目，所以那种条目要手打 ID。
 
 维度 ID（`/mxt secret_realm info|destroy`、`/mxt rift target|place|bind`）与触发器信号（`/mxt trigger …`）同样不是注册表条目，也留在 `IdentifierArgument`；`/picker <category>` 收的是**注册表自己的 ID**（如 `mxt:aura`）而不是某个条目，所以也留在它那里。
 
@@ -141,17 +143,17 @@ title: 命令
 ### 境界链（`/realm`）
 **境界（`mxt:realm_stage`）和秘境（`mxt:secret_realm`）是两套东西**：前者是一条数值修炼链上的一档，后者是一份按需生成的实例维度。`/realm` 只管前者，秘境实例那几条在下面的 `/mxt secret_realm` 里。
 
-境界链属于**灵气定义**（[aura](../../数据包格式) 的 `first_realm` 是链的入口），链上每一档用 `next_realm` 指向下一档，所以一条链是单向的、每份定义一条。`/realm chain <realm>` 不看谁持有哪一档，纯粹回答"这一档前面是谁、后面是谁"——数据包写错 `next_realm` 时这是最快的核对方式。它看的是**当前生效**的阶段：某一档被 `#mxt:disabled` 停用就从链上断开（服务端重建境界索引时同样会拒绝这样的链），被停用的那一档本身会报"没有可用的境界链包含它"。
+境界链属于**灵气定义**（[aura](../../数据包格式) 的 `first_realm` 是链的入口），链上每一档用 `next_realm` 指向下一档，所以一条链是单向的、每份定义一条。`/realm chain <realm>` 不看谁持有哪一档，纯粹回答"这一档前面是谁、后面是谁"——数据包写错 `next_realm` 时这是最快的核对方式。它看的是**当前注册表里的**阶段：某一档不在包里就从链上断开（服务端重建境界索引时同样会拒绝这样的链），那一档本身会报"没有可用的境界链包含它"。
 
 ### 契约（`/contract`）
 
 **能不能被契约是代码事实**：目标生物必须自己实现 `com.iafenvoy.mxt.api.Contractable`（见[特殊公开接口](../java/interfaces)），任何数据包都造不出这个资格，所以原版生物默认都签不了。数据包能做的是：用契约类型自己的**实体类型标签** `#<命名空间>:contract/<路径>` 收窄"这类生物签不签这份契约"（没写标签或标签为空就是不限制，见 [`contract_type`](../../数据包格式.md#contract_type)）；用 `owner_condition` / `creature_condition` 收窄双方；用 `costs` 收代价。
 
-签订一步的顺序是固定的，也是这组命令与卷轴共用的那一份：已经签过 → 目标没实现接口 → 契约类型被 `#mxt:disabled` 停用 → 接口的 `acceptsContract` → 主人条件 → 灵宠条件 → 每人上限 → `Pre` 事件（可取消）→ **最后才收钱** → 写记录 → 写主人索引 → 生物的 `onContractBound`。**收钱排在事件之后**是因为脚本通道退不了款，取消之后要还钱的地方就不该先收。
+签订一步的顺序是固定的，也是这组命令与卷轴共用的那一份：已经签过 → 目标没实现接口 → 接口的 `acceptsContract` → 主人条件 → 灵宠条件 → 每人上限 → `Pre` 事件（可取消）→ **最后才收钱** → 写记录 → 写主人索引 → 生物的 `onContractBound`。**收钱排在事件之后**是因为脚本通道退不了款，取消之后要还钱的地方就不该先收。
 
 解除与死亡是**两条不同的路**：`break` 走 `release_action` 并回调 `onContractReleased`，灵宠还活着；灵宠自己死亡走 `death_action` 并回调 `onContractDeath`。两者都会清掉记录与主人索引，也都会发对应的事件。**捕捉不是实体侧的门槛**：任何生物都可能被捕捉，怎么捕捉由物品决定（灵兽袋自己的规则是"你自己的已契约灵兽、一次一只"）。生物只有在实现 `CaptureListener` 时才会收到"被收走/被放出"的通知——不实现它照样能被收走，只是收不到通知。
 
-失败原因共用一套文案键 `contract.mxt.failure.<小写枚举名>`（卷轴、御兽铃、灵兽袋与这组命令打的是同一张表），取值有 `already_bound`、`disabled`、`not_contractable`、`owner_conditions`、`creature_conditions`、`limit_reached`、`insufficient_cost`、`not_bound`、`not_owner`、`recall_cooldown`、`cancelled`、`unsupported_behavior`、`behavior_refused`。
+失败原因共用一套文案键 `contract.mxt.failure.<小写枚举名>`（卷轴、御兽铃、灵兽袋与这组命令打的是同一张表），取值有 `already_bound`、`not_contractable`、`owner_conditions`、`creature_conditions`、`limit_reached`、`insufficient_cost`、`not_bound`、`not_owner`、`recall_cooldown`、`cancelled`、`unsupported_behavior`、`behavior_refused`。
 
 **行为（order）不是数据包字段**：它由生物自己回答（`ContractOperations.behaviors()`），框架只内置跟随 / 游荡 / 驻守 / 召回四条，其余由内容方用 `ContractBehavior` + `ContractBehaviors.register` 添。当前那条写在灵兽的 `mxt:contract` 记录里（读不出来就退回跟随），`follow_action` 只在当前是**跟随**时才跑。玩家的入口是御兽铃右键生物（对准它）再右键空处（开轮盘选），这组命令是管理员入口。
 
@@ -163,7 +165,7 @@ title: 命令
 | --- | --- |
 | `list` | 列出所有实例。`loaded=false` 表示这份实例正在休眠——通常是因为它被认领过、人都走光了，地形留在存档里等着主人再来。 |
 | `info <dimension>` | 只看一份，参数写维度键，例如 `mxt:secret_realm/trial_realm/0`。 |
-| `enter <definition>` | 自己进去。走完整流程：停用检查、进入条件、找一份没满的实例或新开一份（受 `max_instances` 限制）、生成维度与结构、落到入口。 |
+| `enter <definition>` | 自己进去。走完整流程：存在性检查、进入条件、找一份没满的实例或新开一份（受 `max_instances` 限制）、生成维度与结构、落到入口。 |
 | `exit` | 回进入时的位置。定义里的 `exit_condition` 对这条命令同样生效（和自己用令牌离开一样）。 |
 | `destroy <dimension>` | 结束一份实例并**删除它的地形**。被锁在里面的玩家会被送回；`mxt:existing` 型秘境只清空成员，不动那个真实维度。 |
 
@@ -228,7 +230,7 @@ title: 命令
 
 | 命令 | 说明 |
 | --- | --- |
-| `/hud` | 列出框架登记的全部可移动 HUD 元素：布局键、显示名、位置、尺寸、当前要画几个块、是否可见、是否可拖。 |
+| `/hud` | 列出框架登记的全部可移动 HUD 元素：布局键、显示名、**绑定的锚点**、位置、尺寸、当前要画几个块、是否可见、是否可拖。 |
 | `/hud open` | 打开 HUD 布局编辑器，等同于按键 `key.mxt.hud_layout`（默认右 Shift）。 |
 | `/hud <布局键> reset` | 把某个元素复位到它自己的默认位置（布局键见 `/hud` 的输出，如 `resource_bars.left`）。复位会**同时删掉 `config/mxt/mxt-hud.json` 里那一项**，所以它跨重启有效；删掉之后这个元素重新跟着窗口走（默认位置就定义在窗口上），直到玩家再次拖动它。 |
 | `/wheel`（= `/wheel configure`） | 打开轮盘配置界面，等同于按键 `key.mxt.wheel_configuration`（**默认未绑定**）。左边 6 列是能发射的灵气、右边 6 列是已学会的主动技能，下面一排 12 格是**主盘**的 12 格；`Esc` 保存并关闭。**从盘（主手物品 / 副手物品 / 法器 / 契约灵兽）不在这里**：它们的内容由随身装备与手里的御兽铃现读，界面只编辑主盘。还没进世界（主菜单里）时它只报一句"现在无法打开轮盘配置"，不会打开空界面。 |

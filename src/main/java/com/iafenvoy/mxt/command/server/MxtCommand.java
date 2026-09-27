@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.CultivateAction;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceBar;
@@ -11,6 +12,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.item.RiftAnchorItem;
@@ -18,6 +20,8 @@ import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
@@ -93,7 +97,12 @@ public final class MxtCommand {
                                 .then(argument("index", IntegerArgumentType.integer(0, 255))
                                         .executes(ctx -> listResourceBars(ctx.getSource(), resource(ctx, "resource"),
                                                 IntegerArgumentType.getInteger(ctx, "index"))))))
-                .then(literal("cultivate").then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource()))))
+                .then(literal("cultivate")
+                        .then(literal("status").executes(ctx -> cultivateStatus(ctx.getSource())))
+                        .then(literal("select")
+                                .requires(ServerCommandManager::mayChange)
+                                .then(argument("action", ResourceArgument.resource(context, MxtResourceKeys.CULTIVATE_ACTION))
+                                        .executes(ctx -> selectCultivation(ctx.getSource(), cultivateAction(ctx))))))
                 .then(literal("breakthrough").requires(ServerCommandManager::mayChange)
                         .then(argument("aura", ResourceArgument.resource(context, MxtResourceKeys.AURA))
                                 .executes(ctx -> attemptBreakthrough(ctx.getSource(), aura(ctx)))))
@@ -167,6 +176,10 @@ public final class MxtCommand {
         return ResourceArgument.getResource(ctx, "aura", MxtResourceKeys.AURA);
     }
 
+    private static Reference<CultivateAction> cultivateAction(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "action", MxtResourceKeys.CULTIVATE_ACTION);
+    }
+
     private static Reference<SecretRealm> secretRealm(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         return ResourceArgument.getResource(ctx, "definition", MxtResourceKeys.SECRET_REALM);
     }
@@ -219,13 +232,13 @@ public final class MxtCommand {
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         source.sendSuccess(() -> Component.translatable("command.mxt.attachment.status", resources.values().size(), abilities.sources().size(),
-                abilities.cooldowns().size(), curses.instances().size(), identity.spiritRoots().size(), identity.physiques().size()), false);
+                abilities.storage().count(CooldownDataStorage.class), curses.instances().size(), identity.spiritRoots().size(), identity.physiques().size()), false);
         return 1;
     }
 
     private static int queryResource(CommandSourceStack source, Reference<Resource> resource) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, resource)) return 0;
+        if (player == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
         source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(resource, "resource"), value), false);
         return 1;
@@ -233,7 +246,7 @@ public final class MxtCommand {
 
     private static int setResource(CommandSourceStack source, Reference<Resource> resource, double value) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, resource)) return 0;
+        if (player == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
         source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(resource, "resource"), value), true);
         return 1;
@@ -243,11 +256,6 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
-            return 0;
-        }
-        // A disabled definition is no more usable here than a missing one, which is what the old lookup said.
-        if (selection != null && MxtDatapackRegistries.isDisabled(MxtResourceKeys.RESOURCE, selection)) {
-            source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_resource", HolderHelper.id(selection).toString()));
             return 0;
         }
         List<Reference<Resource>> resources = selection != null ? List.of(selection)
@@ -341,9 +349,30 @@ public final class MxtCommand {
         return 1;
     }
 
+    // The one-shot explicit pick: the named method runs now even when priority would choose another, and that
+    // body's own conditions still decide whether it runs at all.
+    private static int selectCultivation(CommandSourceStack source, Holder<CultivateAction> action) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        CultivationActionService.Result result = CultivationModeService.startNamed(player, action);
+        if (!result.started()) {
+            String failure = result.failure() == null ? "not_applicable" : result.failure().name().toLowerCase(Locale.ROOT);
+            source.sendFailure(Component.translatable("command.mxt.cultivate.select.failed",
+                    DefinitionText.name(action, "cultivate_action"),
+                    Component.translatable("actionbar.mxt.cultivation.failure." + failure)));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.select.done",
+                DefinitionText.name(action, "cultivate_action")), true);
+        return 1;
+    }
+
     private static int attemptBreakthrough(CommandSourceStack source, Reference<Aura> aura) {
         ServerPlayer player = source.getPlayer();
-        if (player == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.AURA, aura)) return 0;
+        if (player == null) return 0;
         BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), HolderHelper.id(aura), FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
             Component reason = result == null || result.failure() == null
@@ -398,11 +427,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.SECRET_REALM, definition)) {
-            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", HolderHelper.id(definition).toString()));
-            return 0;
-        }
-        Result result = SecretRealmService.enter(player, definition);
+        Result result = SecretRealmService.enter(player, source.getServer(), definition);
         if (!result.changed()) {
             source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.enter_failed",
                     result.failure().name())));

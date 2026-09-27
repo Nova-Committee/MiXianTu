@@ -71,6 +71,8 @@ public final class AbilityActivationService {
             case CANCELLED -> Togglable.Failure.CANCELLED;
             case PERMISSION_DENIED -> Togglable.Failure.PERMISSION_DENIED;
             case ELEMENT_AFFINITY -> Togglable.Failure.ELEMENT_AFFINITY;
+            case NO_TARGET -> Togglable.Failure.NO_TARGET;
+            case NOT_APPLICABLE -> Togglable.Failure.NOT_APPLICABLE;
             case DISABLED, SERVER_ONLY, CARRIED_NOT_INSTANT -> Togglable.Failure.UNAVAILABLE;
         };
     }

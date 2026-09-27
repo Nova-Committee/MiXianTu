@@ -1,4 +1,4 @@
 {
   "abilities": ["mxt_test:sigil_pulse"],
-  "aura_cost": { "mxt_test:spirit_power": 2, "mxt_test:qi": 1 }
+  "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 2 }, { "type": "mxt:aura", "aura": "mxt_test:qi", "amount": 1 }]
 }

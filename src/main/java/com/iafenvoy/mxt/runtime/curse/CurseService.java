@@ -16,7 +16,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
@@ -45,13 +44,9 @@ public final class CurseService {
     // Where one held instance stands relative to the definitions loaded now.
     public enum DefinitionState {
         /**
-         * The definition is loaded and enabled.
+         * The definition is loaded.
          */
         ACTIVE,
-        /**
-         * The definition is loaded but carries the {@code #mxt:disabled} tag.
-         */
-        DISABLED,
         /**
          * The definition is not in the registry at all any more.
          */
@@ -62,8 +57,8 @@ public final class CurseService {
     // server-authoritative anyway, so the instance reads as active.
     public static DefinitionState definitionState(Holder<Curse> curse) {
         if (ServerLifecycleHooks.getCurrentServer() == null) return DefinitionState.ACTIVE;
-        Optional<Reference<Curse>> current = MxtDatapackRegistries.rawHolder(MxtResourceKeys.CURSE, HolderHelper.id(curse));
-        return current.map(curseReference -> MxtDatapackRegistries.isDisabled(MxtResourceKeys.CURSE, curseReference) ? DefinitionState.DISABLED : DefinitionState.ACTIVE).orElse(DefinitionState.UNKNOWN);
+        return MxtDatapackRegistries.holderOrEmpty(MxtResourceKeys.CURSE, HolderHelper.id(curse)).isPresent()
+                ? DefinitionState.ACTIVE : DefinitionState.UNKNOWN;
     }
 
     public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks,
@@ -126,7 +121,7 @@ public final class CurseService {
         Curse definition = curse.value();
         DefinitionState state = definitionState(curse);
         if (state != DefinitionState.ACTIVE)
-            return ApplyResult.rejected(state == DefinitionState.DISABLED ? ApplyFailure.DISABLED : ApplyFailure.UNKNOWN);
+            return ApplyResult.rejected(ApplyFailure.UNKNOWN);
         if (!definition.applicationCondition().test(target, context))
             return ApplyResult.rejected(ApplyFailure.CONDITION);
         String key = transactionKey(target, curse);
@@ -165,7 +160,7 @@ public final class CurseService {
                                                   Reason reason, long gameTime, @NotNull IEventBus eventBus) {
         State state = data.instances().get(curse);
         if (state == null) return Optional.empty();
-        // A frozen instance - its definition was disabled or deleted - runs nothing and only ever leaves by an
+        // A frozen instance - its definition is gone from the pack - runs nothing and only ever leaves by an
         // explicit removal, so neither an expiry nor a cure can quietly turn it into a default effect.
         if (definitionState(curse) != DefinitionState.ACTIVE && reason != Reason.EXPLICIT) return Optional.empty();
         if (eventBus.post(new Pre(data, curse, state, sources, reason, gameTime)).isCanceled()) return Optional.empty();
@@ -331,10 +326,6 @@ public final class CurseService {
          * The caller is a client; curses are server-authoritative.
          */
         SERVER_ONLY,
-        /**
-         * The definition carries the {@code #mxt:disabled} tag.
-         */
-        DISABLED,
         /**
          * The definition is not in the registry any more.
          */

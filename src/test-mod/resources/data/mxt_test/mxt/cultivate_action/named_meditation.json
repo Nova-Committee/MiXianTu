@@ -1,0 +1,5 @@
+{
+  "tick_interval": 20,
+  "start_condition": { "type": "mxt:technique", "techniques": ["mxt_test:sword_manual"] },
+  "absorb_amount": "2"
+}

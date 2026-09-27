@@ -38,7 +38,7 @@ title: 修炼、境界与灵根
 // data/example/mxt/realm_stage/foundation.json
 {
   "aura": "example:qi",
-  "cultivate_condition": {"type": "mxt:always_true"},
+  "cultivate_condition": {"type": "mxt:always"},
   "aura_share_weight": 1.0,
   "breakthrough_exp": 100,
   "max_experience": 250,
@@ -46,3 +46,17 @@ title: 修炼、境界与灵根
   "breakthrough": { "conditions": [] }
 }
 ```
+
+## 修炼方式（`cultivate_action`）
+
+一次"运功"是一条 `cultivate_action` 定义：吸收哪些环境灵气（`aura_costs` / `aura_gains`）、每隔多久结算（`tick_interval`）、每拍做什么（`tick_action`）、收什么费（`costs`）、给什么收获（`absorb_amount`），以及三个条件：**能不能坐下**（`start_condition`）、**这一拍能不能拿到成果**（`cultivate_condition`）、**还继续不继续**（`tick_condition`）。"仅凭功法修炼"这类规则写在 `start_condition` 上（`mxt:technique`），不需要在服务器配置里加开关。
+
+三个条件的分工是这次定形的：`cultivate_condition` 不成立时**不中止**，只是这一拍空过（不扣钱、不给收获、不推进结算，条件一恢复立刻出成果）；`tick_condition` 不成立才**中止**，而那句中止话说什么由可选的 `abort_reason` 决定（不写就用通用的「不满足修炼条件」；环境不允许、灵气不足、公式无效这些另算）。所以"同伴手上拿着同一本手册"这类要求写在 `cultivate_condition`（它在坐下前就能成立），"对方在不在修炼"写在 `tick_condition`（它在坐下前必然为假）。
+
+`cultivate_condition` 的用途很窄，**基本只用于双修判定**："身边得有人、而且他手上得拿着东西，我这一拍才拿得到成果"。单人的门槛用另外两个更直白：不满足就别修（灵气浓度、维度、功法、场地）写 `start_condition`，修到一半不该继续写 `tick_condition`。
+
+多条方式并存时，选择器（`CultivationModeService.select`）**先筛后挑**：把整张表里"此刻适用的"筛出来——`start_condition` 与 `cultivate_condition` **都成立**，再加上灵气侧那道门禁（每条有首境界的 `aura` 的 `start_cultivate_conditions`）——再取 `priority` 最大的一条（同分按注册表顺序）；一条都不适用就报 `NOT_APPLICABLE`。**`tick_condition` 不参与这一步**：拿"还在不在修"去筛，会让所有还没坐下的身体互相挡住（双修第一次开练就会谁也进不去）。**附件里存着的那条只是"现在在跑的是哪条"的记录**（tick / 停止 / 自动突破读它），不参与挑选；按 C 停止时也直接用它，不走选择器——否则"当前那条已经不适用"会变成停不下来。
+
+双修因此是**一条**法门而不是两条：`cultivate_condition` 里问"5 格内有没有一个拿着同一本手册的好友"（`mxt:partner` 套 `mxt:target_condition` 套 `mxt:main_hand_item`），想要"对方一起身我也停"再把"同伴在修"写进 `tick_condition`。
+
+内容侧能读的状态：`mxt:cultivating`（在不在修炼，可点名一条）、`mxt:partner`（`range` 格内有没有满足双实体条件的存活生物，自己不算）。能起的停：实体行为 `mxt:cultivate`（走选择器或点名一条）与 `mxt:stop_cultivating`（停下并写冷却），这也是"右键某物开始修炼"这类内容的入口。管理员要用一条**不按 `priority`** 的法门临时开练，用 `/mxt cultivate select <action>`——它只开这一次，不落盘，也不改按键时的挑选顺序。

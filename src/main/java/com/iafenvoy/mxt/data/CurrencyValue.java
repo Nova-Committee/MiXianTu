@@ -21,7 +21,7 @@ import java.util.Optional;
  * so modded items can participate without a hardcoded coin item class.
  */
 public record CurrencyValue(List<Entry> items, long value, List<UnavailableWhen> unavailableWhen,
-                            List<Exchange> exchanges) implements ItemMatcher {
+                            List<Exchange> exchanges, int priority) implements ItemMatcher {
     public static final Codec<CurrencyValue> CODEC = RecordCodecBuilder.<CurrencyValue>create(i -> i.group(
             ENTRIES_CODEC.optionalFieldOf("items", List.of()).forGetter(CurrencyValue::items),
             BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("item").forGetter(definition -> definition.items().size() == 1 && definition.items().getFirst() instanceof ItemEntry(
@@ -29,9 +29,10 @@ public record CurrencyValue(List<Entry> items, long value, List<UnavailableWhen>
             ) ? Optional.of(item) : Optional.empty()),
             Codec.LONG.fieldOf("value").forGetter(CurrencyValue::value),
             UnavailableWhen.CODEC.listOf().optionalFieldOf("unavailable_when", List.of()).forGetter(CurrencyValue::unavailableWhen),
-            Exchange.CODEC.listOf().fieldOf("exchanges").forGetter(CurrencyValue::exchanges)
-    ).apply(i, (items, legacyItem, value, unavailableWhen, exchanges) -> new CurrencyValue(
-            items.isEmpty() ? legacyItem.map(item -> List.of((Entry) new ItemEntry(item))).orElse(List.of()) : items, value, unavailableWhen, exchanges
+            Exchange.CODEC.listOf().fieldOf("exchanges").forGetter(CurrencyValue::exchanges),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(CurrencyValue::priority)
+    ).apply(i, (items, legacyItem, value, unavailableWhen, exchanges, priority) -> new CurrencyValue(
+            items.isEmpty() ? legacyItem.map(item -> List.of((Entry) new ItemEntry(item))).orElse(List.of()) : items, value, unavailableWhen, exchanges, priority
     ))).validate(CurrencyValue::validate);
 
     @Override

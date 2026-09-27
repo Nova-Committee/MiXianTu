@@ -13,10 +13,12 @@ import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.QualityChain;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -33,13 +35,12 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.item.QualityChainService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
@@ -117,8 +118,8 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Drops one source's claim; the ability goes only with its last source, and its cooldowns and stored values
-     * go with it. An unknown ability answers {@code false}.
+     * Drops one source's claim; the ability goes only with its last source, and the state it kept - its cooldown
+     * included - goes with it. An unknown ability answers {@code false}.
      */
     public static boolean revokeAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
@@ -128,7 +129,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Read from the attachment, not the registry: a definition that was disabled or deleted still answers.
+     * Read from the attachment, not the registry: a definition the pack no longer provides still answers.
      */
     public static boolean hasAbility(@NotNull Entity entity, Identifier id) {
         return findAbility(entity, id).isPresent();
@@ -213,7 +214,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Read from the attachment, not the registry: a definition that was disabled or deleted still answers.
+     * Read from the attachment, not the registry: a definition the pack no longer provides still answers.
      */
     public static boolean hasCurse(@NotNull Entity target, Identifier id) {
         return findCurse(target, id).isPresent();
@@ -252,7 +253,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The live elements the entity's spirit roots name, sorted. Asked of the body, not the registry, so it works
+     * The elements the entity's spirit roots name, sorted. Asked of the body, not the registry, so it works
      * without knowing which roots exist.
      */
     public static List<String> elements(@NotNull Entity entity) {
@@ -265,7 +266,7 @@ public final class MxtKubeJsApi {
 
     /**
      * How much of one element has built up on the entity, readable on either side because the accumulation is a
-     * synchronised attachment. A disabled or unknown element answers {@code 0}, the same rule the
+     * synchronised attachment. An unknown element answers {@code 0}, the same rule the
      * {@code mxt:element_attachment} condition follows.
      */
     public static double elementAmount(@NotNull Entity entity, Identifier id) {
@@ -275,7 +276,7 @@ public final class MxtKubeJsApi {
 
     /**
      * Builds one element up on the entity and answers the new total, through the pipeline a strike uses, so a
-     * reaction can fire here. A negative amount wears the buildup off; a disabled or unknown element changes
+     * reaction can fire here. A negative amount wears the buildup off; an unknown element changes
      * nothing.
      */
     public static double attachElement(@NotNull Entity entity, Identifier id, double amount) {
@@ -287,10 +288,9 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * Every spirit root the entity holds, sorted. Read off the body, so a root a pack disabled is still reported,
-     * and {@link #removeSpiritRoot} by that name still takes it off: both work off the held list, never the
-     * registry. A deleted one cannot be held at all, because the attachment decodes its holders. This is the held
-     * list; the roots that count right now are {@link #activeSpiritRoots}.
+     * Every spirit root the entity holds, sorted. Read off the body, so a root the current pack no longer provides
+     * is still reported, and {@link #removeSpiritRoot} by that name still takes it off: both work off the held
+     * list, never the registry. This is the held list; the roots that count right now are {@link #activeSpiritRoots}.
      */
     public static List<String> spiritRoots(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);
@@ -299,17 +299,16 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The held roots that count, sorted: a root switched off, or whose elements are all not live, is left out. The
-     * elements are resolved against the entity's level registry, so an unresolvable or disabled definition answers
-     * false instead of throwing, on either side.
+     * The held roots that count, sorted: a root switched off, or whose definition the current pack no longer
+     * provides, is left out. The definition is resolved against the entity's level registry, so the reading works
+     * on either side instead of throwing.
      */
     public static List<String> activeSpiritRoots(@NotNull Entity entity) {
         SpiritIdentityAttachment spirit = identity(entity);
         if (spirit == null) return List.of();
         return spirit.activeSpiritRoots().stream()
                 .filter(root -> MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT,
-                                HolderHelper.id(root))
-                        .map(value -> value.elementHolders().stream().anyMatch(Elements::enabled)).orElse(false))
+                        HolderHelper.id(root)).isPresent())
                 .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
     }
 
@@ -329,7 +328,7 @@ public final class MxtKubeJsApi {
 
     /**
      * Grants one spirit root through the service the data pack action uses, so conflict rules and granted
-     * abilities behave identically. Unknown or disabled definitions are refused, not granted by name.
+     * abilities behave identically. Unknown definitions are refused, not granted by name.
      */
     public static CultivationIdentityService.Result grantSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
@@ -412,6 +411,58 @@ public final class MxtKubeJsApi {
         return entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
     }
 
+    /**
+     * Every technique the entity has learned, sorted. Read off the body, so a technique the current pack no longer
+     * provides is still reported, and {@link #forgetTechnique} by that name still takes it off.
+     */
+    public static List<String> techniques(@NotNull Entity entity) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        return spirit == null ? List.of() : spirit.learnedTechniques().stream()
+                .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
+    }
+
+    public static boolean hasTechnique(@NotNull Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        if (spirit == null) return false;
+        return spirit.learnedTechniques().stream().anyMatch(technique -> HolderHelper.id(technique).equals(id));
+    }
+
+    /**
+     * The skill stage that technique is at, or {@code null} when it is not learned or carries no stage record yet.
+     */
+    public static @Nullable Identifier techniqueStage(@NotNull Entity entity, Identifier id) {
+        SpiritIdentityAttachment spirit = identity(entity);
+        if (spirit == null) return null;
+        for (Entry<Holder<Technique>, Holder<SkillStage>> entry : spirit.techniqueStages().entrySet())
+            if (HolderHelper.id(entry.getKey()).equals(id)) return HolderHelper.id(entry.getValue());
+        return null;
+    }
+
+    /**
+     * Learns a technique through the service the item and the data pack use, so the learn condition, the
+     * exclusive-tag conflict rules and both learn events apply. An unknown definition is refused, not learned by name.
+     */
+    public static TechniqueService.Result learnTechnique(@NotNull LivingEntity entity, Identifier id) {
+        if (entity.level().isClientSide())
+            return new TechniqueService.Result(false, TechniqueService.Failure.SERVER_ONLY);
+        Holder<Technique> technique = MxtDatapackRegistries.holder(MxtResourceKeys.TECHNIQUE, id).orElse(null);
+        return technique == null
+                ? new TechniqueService.Result(false, TechniqueService.Failure.DISABLED)
+                : TechniqueService.learn(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), technique,
+                FormulaContext.of(entity));
+    }
+
+    /**
+     * Forgets a technique and its own stage record, rebuilding what it granted; the realm, the progress, the
+     * resources and the running method live elsewhere and stay put. Asked by id, so a technique the current pack no
+     * longer provides can still be given up.
+     */
+    public static TechniqueService.Result forgetTechnique(@NotNull LivingEntity entity, Identifier id) {
+        if (entity.level().isClientSide())
+            return new TechniqueService.Result(false, TechniqueService.Failure.SERVER_ONLY);
+        return TechniqueService.forget(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), id);
+    }
+
     private static Holder<SpiritRoot> foundSpiritRoot(Entity entity, Identifier id) {
         SpiritIdentityAttachment spirit = identity(entity);
         if (spirit == null) return null;
@@ -467,15 +518,13 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The ladder that stack's tier belongs to: the one its binding declares, otherwise the only ladder holding it.
+     * The ladder that stack's tier belongs to: the one the stack carries, otherwise the one its binding declares.
      */
     public static @Nullable Identifier itemQualityChain(Entity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return null;
         Provider access = entity.level().registryAccess();
-        return ItemQualityService.find(access, stack).flatMap(quality -> {
-            Optional<Holder<QualityChain>> declared = ItemBindingService.qualityChain(access, stack);
-            return declared.isPresent() ? declared : QualityChainService.soleChain(access, quality);
-        }).map(HolderHelper::id).orElse(null);
+        return ItemQualityService.find(access, stack)
+                .flatMap(quality -> QualityLadders.cache(access).keyOf(HolderHelper.id(quality))).orElse(null);
     }
 
     /**

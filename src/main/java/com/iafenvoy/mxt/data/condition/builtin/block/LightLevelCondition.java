@@ -2,13 +2,11 @@ package com.iafenvoy.mxt.data.condition.builtin.block;
 
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import org.jspecify.annotations.NonNull;
@@ -32,9 +30,7 @@ public record LightLevelCondition(Optional<LightLayer> lightType, Comparison com
     @Override
     public boolean test(@NonNull BlockConditionContext ctx) {
         Level level = ctx.level();
-        BlockPos pos = ctx.pos();
-        FormulaContext context = ctx.formula();
-        int light = this.lightType.map(type -> level.getBrightness(type, pos)).orElseGet(() -> level.getMaxLocalRawBrightness(pos));
+        int light = this.lightType.map(type -> level.getBrightness(type, ctx.pos())).orElseGet(() -> level.getMaxLocalRawBrightness(ctx.pos()));
         return this.comparison.compare(light);
     }
 

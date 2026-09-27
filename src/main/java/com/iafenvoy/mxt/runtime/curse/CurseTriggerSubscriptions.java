@@ -40,7 +40,7 @@ public final class CurseTriggerSubscriptions {
 
             @Override
             public void rehydrate(LivingEntity entity) {
-                // A definition that came back from being disabled has to be scheduled again as well as subscribed.
+                // A definition that came back has to be scheduled again as well as subscribed.
                 CurseScheduler.reschedule(entity);
                 rebuild(entity);
             }

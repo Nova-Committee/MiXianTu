@@ -1,6 +1,9 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
+import com.google.gson.JsonElement;
+import com.iafenvoy.mxt.data.item.PillComponent;
+import com.mojang.serialization.JsonOps;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceBlock;
@@ -201,7 +204,7 @@ public final class AlchemyProbes {
         check(source, "century-main", century.mixture().main().getOrDefault(MAIN, -1.0D), 6.0D);
         check(source, "century-resolved", resolvedId(century), PRACTICE);
         check(source, "century-only", matchedCount(century), 1);
-        check(source, "century-edible", ediblePractice(century.successOutputs()), true);
+        check(source, "century-edible", ediblePractice(level.registryAccess(), century.successOutputs()), true);
         furnace.container().setItem(1, new ItemStack(Items.DANDELION));
         var conflict = AlchemyWorkstationService.preview(playerOf(source), furnace);
         check(source, "conflict", conflict.blocker().orElse(null), AlchemyFailure.CONFLICT);
@@ -212,7 +215,7 @@ public final class AlchemyProbes {
         furnace.container().setItem(1, ItemStack.EMPTY);
         check(source, "practice-start", AlchemyWorkstationService.start(playerOf(source), furnace).started(), true);
         tickUntil(level, furnace, 220, phase -> phase == AlchemyPhase.IDLE);
-        check(source, "practice-pills", ediblePractice(List.of(stored(furnace, MxtItems.PILL.get()))), true);
+        check(source, "practice-pills", ediblePractice(level.registryAccess(), List.of(stored(furnace, MxtItems.PILL.get()))), true);
     }
 
     private static void resolution(CommandSourceStack source, ServerLevel level, ServerPlayer player, BlockPos at, List<BlockPos> touched) {
@@ -408,7 +411,7 @@ public final class AlchemyProbes {
         AlchemyWorkstationService.start(player, furnace);
         AlchemyFurnaceBlockEntity saved = reload(level, furnace);
         check(source, "override-saved-name", saved.furnaceItem().get(DataComponents.CUSTOM_NAME) != null, true);
-        check(source, "override-saved-quality", saved.furnaceItem().get(MxtDataComponents.ITEM_QUALITY.get()) != null, true);
+        check(source, "override-saved-quality", saved.furnaceItem().get(MxtDataComponents.QUALITY.get()) != null, true);
         BlockPos casing = AlchemyFurnaceStructure.world(at, Direction.NORTH, 0);
         level.setBlockAndUpdate(casing, Blocks.AIR.defaultBlockState());
         check(source, "casing-abort", furnace.state().session().map(AlchemySession::failed).orElse(false), true);
@@ -422,7 +425,7 @@ public final class AlchemyProbes {
         check(source, "controller-one-furnace", count(drops, MxtBlocks.ALCHEMY_FURNACE.get().asItem()), 1);
         check(source, "controller-no-ingredient", count(drops, Items.ALLIUM), 0);
         ItemStack dropped = drops.stream().map(ItemEntity::getItem).filter(stack -> stack.is(MxtBlocks.ALCHEMY_FURNACE.get().asItem())).findFirst().orElse(ItemStack.EMPTY);
-        check(source, "override-quality", dropped.get(MxtDataComponents.ITEM_QUALITY.get()) != null && HolderHelperEquals(dropped, id("alchemy/kiln_b")), true);
+        check(source, "override-quality", dropped.get(MxtDataComponents.QUALITY.get()) != null && HolderHelperEquals(dropped, id("alchemy/kiln_b")), true);
         check(source, "override-name", dropped.get(DataComponents.CUSTOM_NAME) != null, true);
         check(source, "override-spec", dropped.get(MxtDataComponents.ALCHEMY_FURNACE.get()) != null, true);
     }
@@ -746,7 +749,7 @@ public final class AlchemyProbes {
 
     private static ItemStack overrideItem(ServerLevel level) {
         ItemStack stack = item(level, WIDE);
-        stack.set(MxtDataComponents.ITEM_QUALITY.get(), MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, id("alchemy/kiln_b")).orElseThrow());
+        stack.set(MxtDataComponents.QUALITY.get(), MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, id("alchemy/kiln_b")).orElseThrow());
         stack.set(DataComponents.CUSTOM_NAME, Component.literal("Probe Kiln"));
         return stack;
     }
@@ -791,11 +794,14 @@ public final class AlchemyProbes {
         return count;
     }
 
-    private static boolean ediblePractice(List<ItemStack> stacks) {
+    private static boolean ediblePractice(net.minecraft.core.HolderLookup.Provider access, List<ItemStack> stacks) {
         for (ItemStack stack : stacks) {
             if (!stack.is(MxtItems.PILL.get()) || stack.getCount() != 4 || !stack.has(DataComponents.CONSUMABLE)) continue;
-            Holder<?> pill = stack.get(MxtDataComponents.PILL.get());
-            return pill != null && com.iafenvoy.mxt.util.HolderHelper.id(pill).equals(id("toxicity_pill"));
+            PillComponent pill = stack.get(MxtDataComponents.PILL.get());
+            if (pill == null) return false;
+            JsonElement encoded = PillComponent.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE), pill).getOrThrow();
+            return encoded.isJsonObject() && encoded.getAsJsonObject().has("binding")
+                    && "mxt_test:toxicity_pill".equals(encoded.getAsJsonObject().get("binding").getAsString());
         }
         return false;
     }
@@ -1058,7 +1064,7 @@ public final class AlchemyProbes {
     }
 
     private static boolean HolderHelperEquals(ItemStack stack, Identifier quality) {
-        Holder<?> holder = stack.get(MxtDataComponents.ITEM_QUALITY.get());
+        Holder<?> holder = stack.get(MxtDataComponents.QUALITY.get());
         return holder != null && com.iafenvoy.mxt.util.HolderHelper.id(holder).equals(quality);
     }
 

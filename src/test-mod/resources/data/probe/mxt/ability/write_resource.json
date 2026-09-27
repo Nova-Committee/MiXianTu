@@ -5,6 +5,10 @@
     "type": "mxt:modify_storage",
     "family": "mxt:ability",
     "id": "probe:storage_probe",
-    "value": {"type": "mxt:resource", "resource": "mxt_test:qi", "amount": 5}
+    "value": {
+      "type": "mxt:resource",
+      "resource": "mxt_test:qi",
+      "amount": 5
+    }
   }
 }

@@ -1,4 +1,5 @@
 {
   "name": "quality.mxt.mxt_test.excellent",
-  "color": "#FFAA00"
+  "color": "#FFAA00",
+  "chain": "mxt_test:forged"
 }

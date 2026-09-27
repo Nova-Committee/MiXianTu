@@ -63,6 +63,9 @@ public interface Togglable {
         NO_CHARGES,
         CANCELLED,
         PERMISSION_DENIED,
-        ELEMENT_AFFINITY
+        ELEMENT_AFFINITY,
+        // The press reached nothing it could act on, or names something that cannot act on a target at all.
+        NO_TARGET,
+        NOT_APPLICABLE
     }
 }

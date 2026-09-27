@@ -6,7 +6,7 @@
     "mature_age": 1,
     "max_age": 20,
     "growth_rate": 2,
-    "condition": { "type": "mxt:constant", "value": false },
+    "condition": { "type": "mxt:never" },
     "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 2 }],
     "harvest": { "id": "minecraft:fermented_spider_eye", "count": 1 },
     "texture": "mxt_test:block/herb/grower"

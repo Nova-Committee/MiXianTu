@@ -58,6 +58,13 @@ public record HerbTagEntry(Optional<Either<Holder<Element>, TagKey<Element>>> el
         }
     }
 
+    // The answer is the herb another registry claims the item for, not the item alone, so a caller caching per
+    // item must ask this about every stack.
+    @Override
+    public boolean itemLevel() {
+        return false;
+    }
+
     @Override
     public MapCodec<HerbTagEntry> codec() {
         return CODEC;

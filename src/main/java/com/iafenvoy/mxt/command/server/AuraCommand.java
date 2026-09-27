@@ -3,13 +3,10 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.world.*;
 import com.iafenvoy.mxt.runtime.world.SpiritStoneVein.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -60,10 +57,6 @@ public final class AuraCommand {
         ServerPlayer player = source.getPlayerOrException();
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
         if (selection != null) {
-            if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.AURA, selection)) {
-                source.sendFailure(Component.translatable("command.mxt.aura.unknown_type", HolderHelper.id(selection).toString()));
-                return 0;
-            }
             AuraPool pool = aura.pool(selection);
             source.sendSuccess(() -> auraReport(aura, Map.of(selection, pool), null), false);
             return 1;
@@ -75,10 +68,6 @@ public final class AuraCommand {
     // The question is asked of the element because several auras can carry the same aura_type.
     private static int queryElement(CommandSourceStack source, Reference<Element> element) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element)) {
-            source.sendFailure(Component.translatable("command.mxt.aura.unknown_element", HolderHelper.id(element).toString()));
-            return 0;
-        }
         AuraResult aura = AuraService.getPositionAura(player.level(), player.blockPosition());
         Map<Holder<Aura>, AuraPool> pools = new LinkedHashMap<>();
         aura.aura().forEach((holder, pool) -> {
@@ -121,7 +110,6 @@ public final class AuraCommand {
     private static Component resourceName(Holder<Aura> aura) {
         MutableComponent base = DefinitionText.name(aura, "aura");
         return aura.value().auraType()
-                .filter(Elements::enabled)
                 .map(type -> base.copy().append(" (").append(DefinitionText.name(type, "element")).append(")")).orElse(base);
     }
 

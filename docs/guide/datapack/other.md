@@ -7,6 +7,6 @@ title: 其他注册表
 - `secret_realm`：秘境模板——每次进入按它开出一份独立维度的实例，声明维度怎么生成、边界多大、要放哪些结构、从哪进、谁来认领，以及进出的条件与行为。详见[数据包格式](../../数据包格式.md#secret_realm)。
 - `spirit_herb`：绑定现有物品的灵植。可写药性药力与寒热；写了 `growth` 才能在灵田 `mxt:spirit_herb_plot` 单格培育。药龄在组件 `mxt:herb_age`。详见[数据包格式](../../数据包格式.md#spirit_herb)。
 - `artifact`：法器——用 `items` 认领已有物品，用 `abilities`（固有分派）声明授予技能、载人飞行、自带储物与**周期性代价**（`mxt:upkeep`），用 `spirit_capacity` 声明每种灵气的上限，用 `hold_ticks` / `claim_condition` / `claim_action` / `pour_action` / `use_action` 声明长按（未认主时认主、认主后注入自身灵气）。认主的代价就是 `claim_action` 的默认值（扣 4 点生命），想免费就写 `"claim_action": {"type": "mxt:no_op"}`。字段与内置类型见[数据包格式](../../数据包格式.md#artifact)。
-- `talisman`：符箓定义——铭刻后授予的 `ability`、灌注灵气的账单 `aura_cost`、载体自己的磨损（`durability` / `consume`）、向持有者收的代价 `costs`（"灵力不足无法使用"这类门槛就写在这里，不另立条件字段）与品阶 `quality`；“已经铭刻了哪些符箓”由物品 `mxt:talisman` 的组件保存，见[数据包格式](../../数据包格式.md#符箓)。
+- `talisman`：符箓定义——铭刻后授予的 `ability`、载体能装下几次发动的灌注容量倍率 `capacity`、每次发动的代价 `costs`（灵气条目从载体自己的存量里扣，其余向持有者收；"灵力不足无法使用"这类门槛就写在这里，不另立条件字段）、载体自己的磨损（`durability` / `consume`）与品阶 `quality`；“已经铭刻了哪些符箓”由物品 `mxt:talisman` 的组件保存，见[数据包格式](../../数据包格式.md#符箓)。
 
 > 称号（`title`）、徽章（`badge`）与宗门（`sect`）曾是预留注册表，现已彻底移除，详见[数据包格式](../../数据包格式.md#动态注册表)。

@@ -4,9 +4,18 @@
   "entity_action": {
     "type": "mxt:apply_curses",
     "curses": [
-      {"curse": "mxt_test:dan_toxicity", "stacks": 2},
-      {"curse": "mxt_test:curse_probe", "stacks": 1},
-      {"curse": "mxt_test:curse_hidden", "stacks": 1}
+      {
+        "curse": "mxt_test:dan_toxicity",
+        "stacks": 2
+      },
+      {
+        "curse": "mxt_test:curse_probe",
+        "stacks": 1
+      },
+      {
+        "curse": "mxt_test:curse_hidden",
+        "stacks": 1
+      }
     ]
   }
 }

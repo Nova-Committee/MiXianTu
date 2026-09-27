@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.attachment.PillToxicityAttachment;
 import com.iafenvoy.mxt.attachment.PillUsageAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.item.PillBinding;
-import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -22,7 +21,8 @@ import java.util.Optional;
 
 /**
  * Server-authoritative pill gate, one-dose settlement and toxicity ledger. Reads use
- * {@code getExistingData}; writes are the only path that creates an attachment.
+ * {@code getExistingData}; writes are the only path that creates an attachment. Use limits follow the bound
+ * holder, never the overlaid effect copy.
  */
 @EventBusSubscriber
 public final class PillService {
@@ -32,10 +32,8 @@ public final class PillService {
     }
 
     public enum Failure {
-        DISABLED,
+        UNBOUND,
         CONDITIONS,
-        QUALITY,
-        QUALITY_CHAIN,
         MAX_USES,
         COOLDOWN
     }
@@ -44,26 +42,21 @@ public final class PillService {
         return check(user.level().registryAccess(), user, stack);
     }
 
-    // Conditions, quality, the declared ladder, the use cap and the cooldown. An explicit disabled component
-    // refuses here and does not fall through to another binding.
+    // Conditions, the use cap and the cooldown. An explicit missing binding refuses and does not fall through.
+    // Quality is ItemQualityService's gate, not a second copy of that lookup.
     public static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {
         PillResolution resolution = ItemBindingService.resolvePill(access, stack);
-        if (resolution.refused()) return Optional.of(Failure.DISABLED);
-        Holder<PillBinding> holder = resolution.holder().orElse(null);
-        if (holder == null) return Optional.empty();
+        if (resolution.unbound()) return Optional.of(Failure.UNBOUND);
+        PillBinding definition = resolution.effects().orElse(null);
+        if (definition == null) return Optional.empty();
         FormulaContext context = FormulaContext.of(user);
-        PillBinding definition = holder.value();
         if (definition.conditions().stream().anyMatch(condition -> !condition.value().test(user, context)))
             return Optional.of(Failure.CONDITIONS);
-        Optional<Holder<ItemQuality>> quality = ItemQualityService.find(access, stack);
-        if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
-            return Optional.of(Failure.QUALITY);
-        if (definition.qualityChain().filter(chain -> !QualityChainService.isMember(chain, quality.orElse(null))).isPresent())
-            return Optional.of(Failure.QUALITY_CHAIN);
-        return usageFailure(user, holder);
+        return resolution.identity().flatMap(holder -> usageFailure(user, holder));
     }
 
     public static Optional<Failure> usageFailure(LivingEntity user, Holder<PillBinding> pill) {
+        if (!pill.isBound()) return Optional.of(Failure.UNBOUND);
         if (pill.value().maxUses().filter(max -> uses(user, pill) >= max).isPresent())
             return Optional.of(Failure.MAX_USES);
         if (onCooldown(user, pill)) return Optional.of(Failure.COOLDOWN);
@@ -84,16 +77,16 @@ public final class PillService {
     }
 
     // One successful consume. The caller has already passed the Start/Tick gate; this does not re-check it.
+    // Cooldown and the cap are read from the holder, so an effect overlay cannot shorten or erase them.
     public static void registerUse(LivingEntity entity, Holder<PillBinding> pill) {
-        if (entity.level().isClientSide()) return;
+        if (entity.level().isClientSide() || !pill.isBound()) return;
         PillUsageAttachment usage = entity.getData(MxtAttachments.PILL_USAGE);
         int cooldown = cooldownTicks(pill.value(), entity);
         long until = cooldown == 0 ? 0L : overworldGameTime(entity) + cooldown;
         usage.record(pill, usage.uses(pill) + 1, until);
     }
 
-    public static Result apply(LivingEntity entity, Holder<PillBinding> holder) {
-        PillBinding definition = holder.value();
+    public static Result apply(LivingEntity entity, PillBinding definition) {
         FormulaContext context = FormulaContext.of(entity);
         definition.onConsume().execute(entity, context);
         PillToxicityAttachment toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);

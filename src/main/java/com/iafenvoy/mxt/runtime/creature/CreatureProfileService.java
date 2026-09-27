@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -43,7 +42,7 @@ public final class CreatureProfileService {
         })
                 || (!definition.preferredAuraElements().isEmpty() && aura.aura().entrySet().stream().noneMatch(element -> element.getValue().amount() > 0.0D
                 && element.getKey().value().auraType()
-                .filter(type -> Elements.matches(definition.preferredAuraElements(), type)).isPresent())))
+                .filter(type -> RegistryCodecs.matches(definition.preferredAuraElements(), type)).isPresent())))
             return false;
         final double intelligence;
         try {

@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.talisman;
 
 import com.iafenvoy.mxt.item.TalismanItem;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item.TooltipContext;
@@ -31,11 +30,9 @@ public final class TalismanTooltipAppender {
 
     private static void appendHint(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         if (!(stack.getItem() instanceof TalismanItem)) return;
-        // A blank carrier says nothing extra: there is no bill to fill and nothing to fire.
+        // A blank carrier says nothing extra: there is no store to fill and nothing to fire.
         if (TalismanService.inscribed(stack).isEmpty()) return;
-        Provider registries = context.registries();
-        if (registries == null) return;
-        String key = TalismanService.ready(registries, stack)
+        String key = TalismanService.ready(stack)
                 ? "tooltip.mxt.talisman.ready" : "tooltip.mxt.talisman.charging";
         builder.accept(Component.translatable(key).withStyle(ChatFormatting.DARK_AQUA));
         // The bar only exists once the component does, and a carrier a pack wrote itself carries none until it is

@@ -1,7 +1,7 @@
 {
   "timeline": [
     { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 1 } },
-    { "type": "mxt:branch", "condition": { "type": "mxt:always_true" }, "if_true": 3 },
+    { "type": "mxt:branch", "condition": { "type": "mxt:always" }, "if_true": 3 },
     { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 100 } },
     { "type": "mxt:action", "action": { "type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 1000 } }
   ]

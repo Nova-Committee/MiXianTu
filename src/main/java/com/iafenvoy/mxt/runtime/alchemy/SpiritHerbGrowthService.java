@@ -11,9 +11,11 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -172,7 +174,6 @@ public final class SpiritHerbGrowthService {
 
     private static Pause structural(ServerLevel level, BlockPos pos, SpiritHerbPlotBlockEntity plot) {
         if (plot.herb() == null) return Pause.MISSING;
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.SPIRIT_HERB, plot.herb())) return Pause.DISABLED;
         Growth growth = liveGrowth(level, plot).orElse(null);
         if (growth == null) return Pause.MISSING;
         if (plot.age() >= growth.maxAge()) return Pause.CAPPED;
@@ -196,8 +197,10 @@ public final class SpiritHerbGrowthService {
 
     private static Optional<Growth> liveGrowth(ServerLevel level, SpiritHerbPlotBlockEntity plot) {
         Holder<SpiritHerb> herb = plot.herb();
-        if (herb == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.SPIRIT_HERB, herb)) return Optional.empty();
-        return MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.SPIRIT_HERB, herb).flatMap(SpiritHerb::growth);
+        if (herb == null) return Optional.empty();
+        Identifier id = HolderHelper.id(herb);
+        if (id.equals(HolderHelper.EMPTY)) return Optional.empty();
+        return MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.SPIRIT_HERB, id).flatMap(SpiritHerb::growth);
     }
 
     private static Optional<Holder<SpiritHerb>> seedOf(net.minecraft.world.level.Level level, ItemStack stack) {

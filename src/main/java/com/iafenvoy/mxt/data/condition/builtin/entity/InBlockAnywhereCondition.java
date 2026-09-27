@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -22,7 +21,6 @@ public record InBlockAnywhereCondition(BlockCondition blockCondition,
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         AABB bounds = entity.getBoundingBox();
         BlockPos min = BlockPos.containing(bounds.minX + 0.001D, bounds.minY + 0.001D, bounds.minZ + 0.001D);
         BlockPos max = BlockPos.containing(bounds.maxX - 0.001D, bounds.maxY - 0.001D, bounds.maxZ - 0.001D);

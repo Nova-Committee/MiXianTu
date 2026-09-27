@@ -14,7 +14,7 @@ import java.util.function.Function;
 
 /**
  * The bridge from a data pack to storage: a data pack can only name a registry, so one line per family connects
- * that registry to the attachment that holds an entity's values for it.
+ * that registry to the attachment that holds an entity's values for it. Only {@code mxt:ability} is registered.
  */
 public final class MxtDataStorageHosts {
     private static final Map<Identifier, Function<Entity, DataStorageHolder>> BY_REGISTRY = new LinkedHashMap<>();
@@ -26,6 +26,8 @@ public final class MxtDataStorageHosts {
     private MxtDataStorageHosts() {
     }
 
+    // The seam a second family plugs into, each with a holder of its own: sharing the ability holder instead would
+    // need the family in the stored address, since two id spaces would otherwise be one map.
     public static <T extends DataStorageDeclaration> void register(ResourceKey<? extends Registry<T>> registry, Function<Entity, DataStorageHolder> storage) {
         BY_REGISTRY.put(registry.identifier(), storage);
     }

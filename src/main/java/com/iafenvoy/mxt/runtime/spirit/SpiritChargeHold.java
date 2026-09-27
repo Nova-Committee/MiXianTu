@@ -36,6 +36,11 @@ public record SpiritChargeHold() implements HoldBinding {
     }
 
     @Override
+    public int priority() {
+        return DEFAULT_PRIORITY;
+    }
+
+    @Override
     public int holdTicks() {
         return NO_HOLD;
     }

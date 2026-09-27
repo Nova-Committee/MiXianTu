@@ -6,9 +6,8 @@ import net.minecraft.util.StringRepresentable;
 public enum AlchemyFailure implements StringRepresentable {
     FURNACE_QUALITY,
     QUALITY_CONDITIONS,
-    QUALITY_CHAIN,
     BINDING_CONDITIONS,
-    PILL_DISABLED,
+    UNBOUND,
     MAX_USES,
     COOLDOWN,
     NO_FURNACE,

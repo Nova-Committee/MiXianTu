@@ -3,9 +3,20 @@
   "cooldown": 0,
   "condition": {
     "type": "mxt:has_curse",
-    "tags": ["#mxt_test:cleanse/probe"],
-    "stacks": {"min": 1, "max": 1},
-    "remaining_ticks": {"min": 50}
+    "tags": [
+      "#mxt_test:cleanse/probe"
+    ],
+    "stacks": {
+      "min": 1,
+      "max": 1
+    },
+    "remaining_ticks": {
+      "min": 50
+    }
   },
-  "entity_action": {"type": "mxt:add_resource", "resource": "mxt_test:curse_probe", "amount": 32}
+  "entity_action": {
+    "type": "mxt:add_resource",
+    "resource": "mxt_test:curse_probe",
+    "amount": 32
+  }
 }

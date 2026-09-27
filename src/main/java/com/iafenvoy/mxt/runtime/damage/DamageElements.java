@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.damage;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.cultivation.DamageTypeClaim;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -202,6 +201,13 @@ public final class DamageElements {
         if (REPORTED.size() < REPORT_LIMIT && REPORTED.add(message)) MiXianTu.LOGGER.warn("{}", message);
     }
 
+    // Called on every datapack load, before anything can rebuild the index.
+    public static void invalidate() {
+        synchronized (LOCK) {
+            indexes = Map.of();
+        }
+    }
+
     private static List<Claim> claims(Registry<Element> elements, Registry<DamageType> types, Holder<DamageType> type) {
         List<Claim> claimed = index(elements, types).get(type);
         return claimed == null ? List.of() : claimed;
@@ -215,8 +221,9 @@ public final class DamageElements {
         return Set.copyOf(result);
     }
 
-    // Keyed on the damage type registry instance: a pack reload replaces it (the element registry is reloaded in
-    // the same step, so one key notices both), while /reload does not. MAX_CACHED_REGISTRIES bounds the map.
+    // Keyed on the damage type registry instance, and dropped on every datapack load by ServerCache: a reloaded
+    // pack may keep the same registry instance, so the key alone cannot be trusted to notice one. The index
+    // reads element definitions, so it never outlives the pack that built it. MAX_CACHED_REGISTRIES bounds the map.
     private static Map<Holder<DamageType>, List<Claim>> index(Registry<Element> elements, Registry<DamageType> types) {
         Map<Holder<DamageType>, List<Claim>> cached = indexes.get(types);
         if (cached != null) return cached;
@@ -225,7 +232,6 @@ public final class DamageElements {
             if (cached != null) return cached;
             Map<Holder<DamageType>, List<Claim>> built = new HashMap<>();
             for (Reference<Element> element : elements.listElements().toList()) {
-                if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element)) continue;
                 claimAll(built, types, element);
             }
             Map<Holder<DamageType>, List<Claim>> frozen = new HashMap<>();

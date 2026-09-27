@@ -1,6 +1,10 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.attachment.PillToxicityAttachment;
+import com.google.gson.JsonParser;
+import com.iafenvoy.mxt.data.item.PillComponent;
+import com.iafenvoy.mxt.util.HolderHelper;
+import com.mojang.serialization.JsonOps;
 import com.iafenvoy.mxt.attachment.PillUsageAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.action.builtin.entity.ModifyPillToxicityAction;
@@ -114,13 +118,13 @@ public final class PillProbes {
             Holder<PillBinding> limited = require(player, "pill/limited");
             Holder<PillBinding> disabled = raw(player, "pill/disabled_ref");
             Holder<PillBinding> toxicity = require(player, "toxicity_pill");
-            if (blocked == null || hungry == null || reenter == null || limited == null || disabled == null || toxicity == null) {
+            if (blocked == null || hungry == null || reenter == null || limited == null || toxicity == null) {
                 source.sendFailure(Component.literal("pill probe: fixture missing"));
                 return 0;
             }
 
             feed(player, 1, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND, honey(blocked));
+            player.setItemInHand(InteractionHand.MAIN_HAND, honey(player, blocked));
             int before = player.getMainHandItem().getCount();
             boolean started = begin(player);
             ok &= leg(source, "illegal_start", !started && player.getMainHandItem().getCount() == before
@@ -132,7 +136,7 @@ public final class PillProbes {
             player.stopUsingItem();
 
             feed(player, 10, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND, honey(hungry));
+            player.setItemInHand(InteractionHand.MAIN_HAND, honey(player, hungry));
             before = player.getMainHandItem().getCount();
             boolean tickStarted = begin(player);
             player.getFoodData().setSaturation(5.0F);
@@ -145,7 +149,7 @@ public final class PillProbes {
             player.stopUsingItem();
 
             feed(player, 10, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND, honey(hungry));
+            player.setItemInHand(InteractionHand.MAIN_HAND, honey(player, hungry));
             int honeyBefore = count(player, Items.HONEY_BOTTLE);
             int glassBefore = count(player, Items.GLASS_BOTTLE);
             boolean finished = finish(player, 40);
@@ -162,7 +166,7 @@ public final class PillProbes {
 
             clearLedgers(player);
             PillProbeActions.calls = 0;
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(new ItemStack(MxtItems.PILL.get()), reenter));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), reenter));
             finished = finish(player, 4);
             ok &= leg(source, "reentry", finished && PillProbeActions.calls == 1 && close(PillService.toxicity(player), 7.0D)
                             && PillService.uses(player, reenter) == 1 && PillService.uses(player, toxicity) == 0,
@@ -171,22 +175,22 @@ public final class PillProbes {
 
             clearLedgers(player);
             long atConsume = PillService.overworldGameTime(player);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
             finished = finish(player, 4);
             long until = PillService.cooldownUntil(player, limited);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
             boolean immediate = begin(player);
             player.stopUsingItem();
             clock.setGameTime(until - 1);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
             boolean at19 = begin(player);
             player.stopUsingItem();
             clock.setGameTime(until);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
             boolean at20 = begin(player);
             boolean second = at20 && finish(player, 4);
             clock.setGameTime(until + 100);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
             boolean third = begin(player);
             player.stopUsingItem();
             ok &= leg(source, "cooldown_max_uses", finished && until == atConsume + 20 && !immediate && !at19 && second
@@ -247,15 +251,52 @@ public final class PillProbes {
                             + " remainder=" + remainder + " decayed=" + decayed,
                     "empty held=10 offline=10 early=10 remainder=19 decayed=8");
 
-            feed(player, 1, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND, honey(disabled));
-            boolean disabledStart = begin(player);
-            ok &= leg(source, "disabled_component", !disabledStart && close(PillService.toxicity(player), 0.0D)
-                            && PillService.uses(player, toxicity) == 4,
-                    "started=" + disabledStart + " reason=" + refusal(player) + " tox=" + PillService.toxicity(player)
-                            + " uses=" + PillService.uses(player, toxicity),
-                    "started=false no fallback to toxicity_pill");
+            boolean excludedFile = player.level().getServer().getResourceManager()
+                    .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/pill_binding/pill/disabled_ref.json")).isPresent();
+            ok &= leg(source, "excluded_binding", excludedFile && disabled == null,
+                    "file=" + excludedFile + " holder=" + (disabled == null ? "absent" : HolderHelper.id(disabled)),
+                    "file=true holder=absent");
+
+            clearLedgers(player);
+            feed(player, 20, 5.0F);
+            long overlayAt = PillService.overworldGameTime(player);
+            PillComponent overlaid = component(player, "{\"binding\":\"mxt_test:pill/limited\",\"toxicity_gain\":9}");
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            boolean overlayFirst = finish(player, 4);
+            long overlayUntil = PillService.cooldownUntil(player, limited);
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            boolean overlayImmediate = begin(player);
             player.stopUsingItem();
+            clock.setGameTime(overlayUntil);
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            boolean overlaySecond = begin(player) && finish(player, 4);
+            clock.setGameTime(overlayUntil + 100);
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            boolean overlayThird = begin(player);
+            player.stopUsingItem();
+            ok &= leg(source, "overlay_keeps_limits", overlayFirst && overlayUntil == overlayAt + 20 && !overlayImmediate
+                            && overlaySecond && !overlayThird && close(PillService.toxicity(player), 18.0D)
+                            && PillService.uses(player, limited) == 2 && PillService.uses(player, toxicity) == 0,
+                    "first=" + overlayFirst + " until=" + overlayUntil + " at=" + overlayAt
+                            + " immediate=" + overlayImmediate + " second=" + overlaySecond + " third=" + overlayThird
+                            + " tox=" + PillService.toxicity(player) + " limited=" + PillService.uses(player, limited)
+                            + " toxicityUses=" + PillService.uses(player, toxicity),
+                    "gain=9 cooldown=20 uses=2 toxicityUses=0");
+
+            clearLedgers(player);
+            PillComponent only = component(player, "{\"toxicity_gain\":4}");
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), only));
+            boolean onlyFirst = finish(player, 4);
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), only));
+            boolean onlySecond = finish(player, 4);
+            ok &= leg(source, "component_only", onlyFirst && onlySecond && close(PillService.toxicity(player), 8.0D)
+                            && !player.hasData(MxtAttachments.PILL_USAGE)
+                            && PillService.uses(player, limited) == 0 && PillService.uses(player, toxicity) == 0
+                            && PillService.uses(player, hungry) == 0 && PillService.cooldownUntil(player, limited) == 0L,
+                    "first=" + onlyFirst + " second=" + onlySecond + " tox=" + PillService.toxicity(player)
+                            + " limited=" + PillService.uses(player, limited)
+                            + " toxicityUses=" + PillService.uses(player, toxicity),
+                    "gain=4 twice no bound counter");
         } catch (RuntimeException failure) {
             ok = false;
             source.sendFailure(Component.literal("pill probe: " + failure.getClass().getSimpleName() + " " + failure.getMessage()));
@@ -305,16 +346,32 @@ public final class PillProbes {
         return Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, path);
     }
 
-    private static ItemStack honey(Holder<PillBinding> pill) {
-        ItemStack stack = new ItemStack(Items.HONEY_BOTTLE);
+    private static ItemStack honey(ServerPlayer player, Holder<PillBinding> pill) {
+        return bound(new ItemStack(Items.HONEY_BOTTLE), pill);
+    }
+
+    private static ItemStack quick(ServerPlayer player, ItemStack stack, Holder<PillBinding> pill) {
+        return arm(bound(stack, pill));
+    }
+
+    private static ItemStack quick(ServerPlayer player, ItemStack stack, PillComponent pill) {
         stack.set(MxtDataComponents.PILL.get(), pill);
+        return arm(stack);
+    }
+
+    private static ItemStack bound(ItemStack stack, Holder<PillBinding> pill) {
+        stack.set(MxtDataComponents.PILL.get(), PillComponent.ofBinding(pill));
         return stack;
     }
 
-    private static ItemStack quick(ItemStack stack, Holder<PillBinding> pill) {
-        stack.set(MxtDataComponents.PILL.get(), pill);
+    private static ItemStack arm(ItemStack stack) {
         stack.set(DataComponents.CONSUMABLE, QUICK);
         return stack;
+    }
+
+    private static PillComponent component(ServerPlayer player, String json) {
+        return PillComponent.CODEC.parse(player.registryAccess().createSerializationContext(JsonOps.INSTANCE),
+                JsonParser.parseString(json)).getOrThrow();
     }
 
     private static void feed(ServerPlayer player, int food, float saturation) {

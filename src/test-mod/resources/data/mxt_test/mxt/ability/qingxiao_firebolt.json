@@ -1,11 +1,18 @@
 {
   "type": "mxt:active",
-  "costs": [{ "id": "mxt_test:spirit_power", "amount": 8 }],
+  "costs": [
+    {
+      "id": "mxt_test:spirit_power",
+      "amount": 8
+    }
+  ],
   "cooldown": 20,
+  "element_affinity": [
+    "mxt_test:fire"
+  ],
   "entity_action": {
     "type": "mxt:apply_effect",
     "effect": "minecraft:fire_resistance",
     "duration_ticks": 120
-  },
-  "element_affinity": ["mxt_test:fire"]
+  }
 }

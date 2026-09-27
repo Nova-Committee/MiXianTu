@@ -1,4 +1,7 @@
 {
-  "toxicity_gain": 99,
-  "items": "minecraft:honey_bottle"
+  "neoforge:conditions": [
+    { "type": "neoforge:never" }
+  ],
+  "items": [],
+  "toxicity_gain": 99
 }

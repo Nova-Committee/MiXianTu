@@ -37,6 +37,11 @@ public record ArtifactHold(Artifact artifact) implements HoldBinding {
     }
 
     @Override
+    public int priority() {
+        return this.artifact.priority();
+    }
+
+    @Override
     public int holdTicks() {
         // Read where no entity exists: this decides whether the definition is a hold at all, which is the question
         // HoldLookup asks once per pack load.

@@ -1,9 +1,15 @@
 {
   "type": "mxt:triggered",
   "triggers": [
-    { "type": "mxt:item_use" },
-    { "type": "mxt:hurt" }
+    {
+      "type": "mxt:item_use"
+    },
+    {
+      "type": "mxt:hurt"
+    }
   ],
   "chance": 1,
-  "entity_action": { "type": "mxt:no_op" }
+  "entity_action": {
+    "type": "mxt:no_op"
+  }
 }

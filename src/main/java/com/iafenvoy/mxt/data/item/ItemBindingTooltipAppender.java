@@ -27,6 +27,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.tooltip.TooltipLocation;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -50,9 +51,10 @@ public final class ItemBindingTooltipAppender {
         if (registries == null) return;
         ResolvedBindings bindings = ItemBindingService.resolve(registries, stack);
         bindings.weapon().ifPresent(weapon -> appendWeapon(builder, weapon));
-        bindings.pill().ifPresent(pill -> appendPill(builder, pill, player));
-        if (bindings.pillRefused())
-            builder.accept(Component.translatable("tooltip.mxt.pill.disabled").withStyle(ChatFormatting.RED));
+        ItemBindingService.PillResolution resolution = bindings.pill();
+        if (resolution.unbound())
+            builder.accept(Component.translatable("tooltip.mxt.pill.unbound").withStyle(ChatFormatting.RED));
+        else resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null), effects, player));
         bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
         bindings.item().map(ItemBinding::actions).orElse(List.of()).stream()
                 .filter(GrantSpiritRootAction.class::isInstance)
@@ -62,7 +64,7 @@ public final class ItemBindingTooltipAppender {
             FormulaContext formula = FormulaContext.of(player);
             bindings.item().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
             bindings.weapon().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
-            bindings.pill().ifPresent(pill -> appendConditions(builder, pill.value().conditions(), player, formula));
+            bindings.pill().effects().ifPresent(pill -> appendConditions(builder, pill.conditions(), player, formula));
             bindings.technique().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
         }
     }
@@ -88,10 +90,6 @@ public final class ItemBindingTooltipAppender {
 
     private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon) {
         builder.accept(Component.translatable("tooltip.mxt.item.weapon").withStyle(ChatFormatting.GOLD));
-        builder.accept(Component.translatable("tooltip.mxt.weapon.attack_damage",
-                TooltipText.number(weapon.attackDamage().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
-        builder.accept(Component.translatable("tooltip.mxt.weapon.attack_speed",
-                TooltipText.number(weapon.attackSpeed().evaluate(FormulaContext.EMPTY))).withStyle(ChatFormatting.BLUE));
         for (AttributeEntry attribute : weapon.attributes()) {
             Attribute value = attribute.attribute().value();
             double amount = attribute.amount(FormulaContext.EMPTY);
@@ -110,13 +108,14 @@ public final class ItemBindingTooltipAppender {
         }
     }
 
-    private static void appendPill(Consumer<Component> builder, Holder<PillBinding> holder, Player player) {
-        PillBinding pill = holder.value();
-        double gain = pill.toxicityGain().evaluate(FormulaContext.EMPTY);
-        double threshold = pill.toxicityThreshold().evaluate(FormulaContext.EMPTY);
-        builder.accept(DefinitionText.name(holder).withStyle(ChatFormatting.LIGHT_PURPLE));
-        if (DefinitionText.resolved(pill.description()) && !pill.description().getString().isBlank())
-            builder.accept(pill.description().copy().withStyle(ChatFormatting.GRAY));
+    private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity, PillBinding effects,
+                                   Player player) {
+        if (identity != null && identity.isBound())
+            builder.accept(DefinitionText.name(identity).withStyle(ChatFormatting.LIGHT_PURPLE));
+        if (DefinitionText.resolved(effects.description()) && !effects.description().getString().isBlank())
+            builder.accept(effects.description().copy().withStyle(ChatFormatting.GRAY));
+        double gain = effects.toxicityGain().evaluate(FormulaContext.EMPTY);
+        double threshold = effects.toxicityThreshold().evaluate(FormulaContext.EMPTY);
         if (threshold >= Double.MAX_VALUE / 2.0D) {
             builder.accept(Component.translatable("tooltip.mxt.pill.toxicity_no_threshold", TooltipText.signed(gain))
                     .withStyle(ChatFormatting.DARK_PURPLE));
@@ -124,19 +123,22 @@ public final class ItemBindingTooltipAppender {
             builder.accept(Component.translatable("tooltip.mxt.pill.toxicity", TooltipText.signed(gain), TooltipText.number(threshold))
                     .withStyle(ChatFormatting.DARK_PURPLE));
         }
-        int taken = player == null ? 0 : PillService.uses(player, holder);
-        if (pill.maxUses().isPresent()) {
-            builder.accept(Component.translatable("tooltip.mxt.pill.max_uses", taken, pill.maxUses().orElseThrow())
+        // Limits stay on the bound definition. An overlay must not hide or replace them.
+        if (identity == null || !identity.isBound()) return;
+        PillBinding limits = identity.value();
+        int taken = player == null ? 0 : PillService.uses(player, identity);
+        if (limits.maxUses().isPresent()) {
+            builder.accept(Component.translatable("tooltip.mxt.pill.max_uses", taken, limits.maxUses().orElseThrow())
                     .withStyle(ChatFormatting.DARK_PURPLE));
         } else if (taken > 0) {
             builder.accept(Component.translatable("tooltip.mxt.pill.uses", taken).withStyle(ChatFormatting.DARK_PURPLE));
         }
-        double cooldown = pill.cooldown().evaluate(FormulaContext.EMPTY);
+        double cooldown = limits.cooldown().evaluate(FormulaContext.EMPTY);
         if (Double.isFinite(cooldown) && cooldown > 0.0D)
             builder.accept(Component.translatable("tooltip.mxt.pill.cooldown", TooltipText.number(cooldown))
                     .withStyle(ChatFormatting.DARK_PURPLE));
-        if (player != null && PillService.onCooldown(player, holder)) {
-            long left = Math.max(0L, PillService.cooldownUntil(player, holder) - PillService.overworldGameTime(player));
+        if (player != null && PillService.onCooldown(player, identity)) {
+            long left = Math.max(0L, PillService.cooldownUntil(player, identity) - PillService.overworldGameTime(player));
             builder.accept(Component.translatable("tooltip.mxt.pill.cooldown_remaining", left)
                     .withStyle(ChatFormatting.DARK_PURPLE));
         }

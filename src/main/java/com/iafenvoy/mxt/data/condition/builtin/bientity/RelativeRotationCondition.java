@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.Comparison;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -34,11 +33,8 @@ public record RelativeRotationCondition(EnumSet<Axis> axis, RotationType actorRo
 
     @Override
     public boolean test(@NonNull BiEntityConditionContext ctx) {
-        Entity actor = ctx.actor();
-        Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
-        Vec3 actorVector = reduceAxes(this.actorRotation.getRotation(actor), this.axis);
-        Vec3 targetVector = reduceAxes(this.targetRotation.getRotation(target), this.axis);
+        Vec3 actorVector = reduceAxes(this.actorRotation.getRotation(ctx.actor()), this.axis);
+        Vec3 targetVector = reduceAxes(this.targetRotation.getRotation(ctx.target()), this.axis);
         double product = actorVector.length() * targetVector.length();
         return product > 0.0D && this.comparison.compare(actorVector.dot(targetVector) / product);
     }

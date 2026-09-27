@@ -3,8 +3,23 @@
   "entity_action": {
     "type": "mxt:sequence",
     "actions": [
-      { "type": "mxt:spawn_lightning", "palette": ["#7A5CFF", "#66CCFF", "#FF4444"], "visual_only": true, "damage": 0, "cause": false },
-      { "type": "mxt:play_sound", "sound": "minecraft:entity.lightning_bolt.thunder", "volume": 0.6, "pitch": 1.4 }
+      {
+        "type": "mxt:spawn_lightning",
+        "palette": [
+          "#7A5CFF",
+          "#66CCFF",
+          "#FF4444"
+        ],
+        "visual_only": true,
+        "damage": 0,
+        "cause": false
+      },
+      {
+        "type": "mxt:play_sound",
+        "sound": "minecraft:entity.lightning_bolt.thunder",
+        "volume": 0.6,
+        "pitch": 1.4
+      }
     ]
   }
 }

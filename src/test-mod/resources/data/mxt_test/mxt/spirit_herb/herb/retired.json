@@ -1,4 +1,7 @@
 {
+  "neoforge:conditions": [
+    { "type": "neoforge:never" }
+  ],
   "items": "minecraft:blue_orchid",
   "quality": "mxt_test:spirit_iron",
   "growth": {

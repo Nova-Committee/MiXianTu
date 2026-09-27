@@ -55,11 +55,11 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends BiEntityAction>> BI_ENTITY_ACTION_TYPE = create("no_op", MxtResourceKeys.BI_ENTITY_ACTION_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends BlockAction>> BLOCK_ACTION_TYPE = create("no_op", MxtResourceKeys.BLOCK_ACTION_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends ItemAction>> ITEM_ACTION_TYPE = create("no_op", MxtResourceKeys.ITEM_ACTION_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends EntityCondition>> ENTITY_CONDITION_TYPE = create("always_true", MxtResourceKeys.ENTITY_CONDITION_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends BiEntityCondition>> BI_ENTITY_CONDITION_TYPE = create("always_true", MxtResourceKeys.BI_ENTITY_CONDITION_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends BlockCondition>> BLOCK_CONDITION_TYPE = create("always_true", MxtResourceKeys.BLOCK_CONDITION_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends ItemCondition>> ITEM_CONDITION_TYPE = create("always_true", MxtResourceKeys.ITEM_CONDITION_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends DamageCondition>> DAMAGE_CONDITION_TYPE = create("always_true", MxtResourceKeys.DAMAGE_CONDITION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends EntityCondition>> ENTITY_CONDITION_TYPE = create("always", MxtResourceKeys.ENTITY_CONDITION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends BiEntityCondition>> BI_ENTITY_CONDITION_TYPE = create("always", MxtResourceKeys.BI_ENTITY_CONDITION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends BlockCondition>> BLOCK_CONDITION_TYPE = create("always", MxtResourceKeys.BLOCK_CONDITION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends ItemCondition>> ITEM_CONDITION_TYPE = create("always", MxtResourceKeys.ITEM_CONDITION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends DamageCondition>> DAMAGE_CONDITION_TYPE = create("always", MxtResourceKeys.DAMAGE_CONDITION_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarRenderData>> RESOURCE_BAR_RENDER_DATA_TYPE = create("missing", MxtResourceKeys.RESOURCE_BAR_RENDER_DATA_TYPE);
     public static final DefaultedRegistry<ResourceBarContext> RESOURCE_BAR_CONTEXT = create("self_hud", MxtResourceKeys.RESOURCE_BAR_CONTEXT);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = create("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE);

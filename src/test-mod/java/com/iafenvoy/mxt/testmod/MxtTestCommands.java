@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
@@ -28,10 +29,13 @@ import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.AbilityEffect;
 import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
+import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.ModifyLifespanAction;
@@ -40,23 +44,28 @@ import com.iafenvoy.mxt.data.action.builtin.entity.SetNoGravityAction;
 import com.iafenvoy.mxt.data.action.builtin.item.AddAbilityAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactDescription;
-import com.iafenvoy.mxt.data.artifact.ArtifactStorageComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
-import com.iafenvoy.mxt.data.condition.AlwaysTrueCondition;
+import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
+import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.CultivatingEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
-import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
+import com.iafenvoy.mxt.data.storage.DataStorageHolder;
+import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
@@ -97,6 +106,7 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
+import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent;
 import com.iafenvoy.mxt.event.LifeSpanRebirthEvent;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
@@ -111,6 +121,7 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
+import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
@@ -120,6 +131,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
@@ -141,6 +153,9 @@ import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.ItemStorageService;
+import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
+import com.iafenvoy.mxt.runtime.perch.PerchService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
@@ -154,7 +169,9 @@ import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
+
 import java.util.stream.Collectors;
+
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -171,6 +188,7 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
@@ -203,6 +221,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.TriState;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -215,6 +234,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -239,6 +259,7 @@ import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
 
 import static net.minecraft.commands.Commands.literal;
+
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
 import top.theillusivec4.curios.api.SlotContext;
@@ -248,6 +269,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -255,7 +277,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-/** Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario. */
+/**
+ * Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario.
+ */
+@SuppressWarnings("DataFlowIssue")
 public final class MxtTestCommands {
     private static final Identifier QI = id("qi");
     private static final Identifier QI_REFINING = id("qi_refining");
@@ -273,6 +298,14 @@ public final class MxtTestCommands {
     private static final Identifier PHYSIQUE = id("qingxiao_body");
     private static final Identifier TECHNIQUE = id("qingxiao_breathing_manual");
     private static final Identifier CULTIVATE = id("qingxiao_meditation");
+    private static final Identifier FREE_MEDITATION = id("free_meditation");
+    private static final Identifier TECHNIQUE_MEDITATION = id("technique_meditation");
+    private static final Identifier DUAL_MEDITATION = id("dual_meditation");
+    private static final Identifier NAMED_MEDITATION = id("named_meditation");
+    private static final Identifier STRICT_MEDITATION = id("strict_meditation");
+    private static final Identifier WORLDLY_MEDITATION = id("worldly_meditation");
+    private static final Identifier SWORD_MANUAL = id("sword_manual");
+    private static final Identifier SWORD_MASTERY = id("sword_mastery");
     private static final Identifier FORMATION = id("spirit_gathering");
     private static final Identifier TRIAL_REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
@@ -296,7 +329,9 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_FIRE_ELEMENT = id("fire");
     private static final Identifier PROBE_WATER_ELEMENT = id("water");
     private static final Identifier PROBE_INERT_ELEMENT = id("inert");
+    private static final Identifier PROBE_GATED_ELEMENT = id("condition_gated");
     private static final Identifier PROBE_ELEMENT_ABILITY = id("elemental_probe");
+    private static final Identifier PROBE_ELEMENTAL = id("elemental_probe");
     private static final Identifier PROBE_ELEMENT_TAG = id("basic");
     private static final Identifier PROBE_PHYSIQUE = id("probe_body");
     private static final Identifier PROBE_AFFINITY_ABILITY = id("firebolt");
@@ -342,7 +377,9 @@ public final class MxtTestCommands {
         dispatcher.register(literal("mxt_test")
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                 .then(literal("kit").executes(context -> giveKit(context.getSource())))
-                .then(literal("cultivate").executes(context -> startCultivation(context.getSource())))
+                .then(literal("cultivate")
+                        .executes(context -> startCultivation(context.getSource()))
+                        .then(literal("probe").executes(context -> probeCultivation(context.getSource()))))
                 .then(literal("verify").executes(context -> verify(context.getSource())))
                 .then(literal("damage").executes(context -> probeDamage(context.getSource())))
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
@@ -351,6 +388,7 @@ public final class MxtTestCommands {
                 .then(literal("alchemy").executes(context -> AlchemyProbes.run(context.getSource())))
                 .then(literal("herb").executes(context -> HerbProbes.run(context.getSource())))
                 .then(literal("pill").executes(context -> PillProbes.run(context.getSource())))
+                .then(literal("perch").executes(context -> probePerch(context.getSource())))
                 .then(literal("artifacts").executes(context -> probeArtifactRoster(context.getSource())))
                 .then(literal("secret_realm")
                         .executes(context -> probeSecretRealm(context.getSource()))
@@ -529,8 +567,8 @@ public final class MxtTestCommands {
         return verifyOwnerSet();
     }
 
-    // mxt:active no longer carries a slot, and a pack that still writes one hears about it rather than losing the
-    // key: which cell a skill sits in is the player's own wheel layout.
+    // mxt:active no longer carries a slot, and a pack that still writes one keeps loading: which cell a skill sits
+    // in is the player's own wheel layout, so the key is an unread field like any other.
     private static String verifyActiveSlot(RegistryOps<JsonElement> ops) {
         JsonObject plain = new JsonObject();
         plain.addProperty("type", "mxt:active");
@@ -538,10 +576,11 @@ public final class MxtTestCommands {
         plain.addProperty("description", "probe");
         JsonObject slotted = plain.deepCopy();
         slotted.addProperty("slot", "utility");
-        if (Ability.DIRECT_CODEC.parse(ops, plain).result().isEmpty())
-            return "mxt:active without a slot no longer decodes";
-        if (Ability.DIRECT_CODEC.parse(ops, slotted).result().isPresent())
-            return "mxt:active still accepts the removed slot field";
+        Ability plainAbility = Ability.DIRECT_CODEC.parse(ops, plain).result().orElse(null);
+        Ability slottedAbility = Ability.DIRECT_CODEC.parse(ops, slotted).result().orElse(null);
+        if (plainAbility == null) return "mxt:active without a slot no longer decodes";
+        if (slottedAbility == null) return "mxt:active no longer ignores a slot the wheel layout owns";
+        if (!slottedAbility.equals(plainAbility)) return "an ignored slot changed what mxt:active decoded to";
         return null;
     }
 
@@ -654,7 +693,8 @@ public final class MxtTestCommands {
         return null;
     }
 
-    // A formation may declare that its structure is not checked, and then it may not declare one at all.
+    // A formation may declare that its structure is not checked; a structure written beside that is then a field
+    // this definition never reads, which is ignored rather than refused.
     private static String verifyStructureCheck(RegistryOps<JsonElement> ops) {
         JsonObject always = new JsonObject();
         always.addProperty("radius", 8);
@@ -668,8 +708,8 @@ public final class MxtTestCommands {
         block.addProperty("state", "minecraft:stone");
         structure.add(block);
         declared.add("structure", structure);
-        if (Formation.DIRECT_CODEC.parse(ops, declared).result().isPresent())
-            return "structure_check always accepted a declared structure it would never check";
+        if (Formation.DIRECT_CODEC.parse(ops, declared).result().isEmpty())
+            return "structure_check always no longer tolerates a structure it would never check";
         JsonObject neither = new JsonObject();
         neither.addProperty("radius", 8);
         if (Formation.DIRECT_CODEC.parse(ops, neither).result().isPresent())
@@ -761,6 +801,8 @@ public final class MxtTestCommands {
         if (wearFailure != null) return wearFailure;
         String ledgerFailure = verifyTalismanLedger(level, actor);
         if (ledgerFailure != null) return ledgerFailure;
+        String bufferFailure = verifyTalismanBuffer(level, actor);
+        if (bufferFailure != null) return bufferFailure;
         return verifyTalismanRefund(level, actor);
     }
 
@@ -861,11 +903,47 @@ public final class MxtTestCommands {
         return null;
     }
 
-    // What a carrier was holding when the wear burned it out goes back to whoever set that invocation off: the
-    // pour charged one unit of the aura's own resource per unit, so that is what returns. A carrier that survives
-    // its invocation still burns what it holds, which is what the first of the two legs below pins down. The
-    // fixture pours an aura whose resource has a flat ceiling, because one whose ceiling depends on a realm can
-    // only take the refund for a being that has one.
+    // The capacity is a multiplier of what one invocation costs, so a carrier written with room for more than one
+    // invocation fires again without being poured - and what the carrier can still spend caps it, so the fixture
+    // writes five while its wear leaves three and is poured for three. Every invocation takes its own share off the
+    // store rather than the whole pour. An empty carrier is not a firing one, which is the gate a click runs into.
+    private static String verifyTalismanBuffer(ServerLevel level, LivingEntity actor) {
+        ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("buffer_sigil")));
+        if (!(stack.getItem() instanceof ItemAuraAccess access)) return "a talisman carrier no longer stores aura";
+        Holder<Aura> aura = require(MxtResourceKeys.AURA, SPIRIT_POWER);
+        Holder<Resource> resource = require(MxtResourceKeys.RESOURCE, SPIRIT_POWER);
+        ResourceHolderAttachment resources = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        double before = resources.get(resource);
+        try {
+            resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
+            Map<Holder<Aura>, Integer> capacity = TalismanService.capacity(stack);
+            if (capacity.getOrDefault(aura, 0) != 9)
+                return "a carrier written for five invocations over three of wear read " + capacity + " instead of 9";
+            if (TalismanService.ready(stack)) return "an empty carrier was ready to fire";
+            access.insert(actor, stack, aura, 9, false);
+            if (!TalismanService.ready(stack)) return "a filled carrier was not ready to fire";
+            SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
+            for (int shot = 1; shot <= 3; shot++) {
+                if (!TalismanService.invokeOnUse(placed, stack))
+                    return "invocation " + shot + " of a carrier holding three did not fire";
+                double left = stored(stack, aura);
+                if (!close(left, 9.0D - 3.0D * shot))
+                    return "invocation " + shot + " left " + left + " units in the carrier instead of " + (9 - 3 * shot);
+                if (!close(resources.get(resource), 0.0D))
+                    return "an invocation out of a poured carrier still charged its holder " + resources.get(resource);
+            }
+            if (!stack.isEmpty()) return "a carrier worn out by three invocations survived";
+        } finally {
+            resources.set(resource, before);
+        }
+        return null;
+    }
+
+    // What a carrier was still holding when it was spent goes back to whoever set that invocation off: the pour
+    // charged one unit of the aura's own resource per unit, so that is what returns. The fixture holds four
+    // invocations of wear and is poured full; damaging it twice drops what it can still spend to two, so the two
+    // invocations it fires leave two invocations of aura behind, and the wear that destroys it hands them back.
+    // A carrier that survives its invocation is not handed anything back, which is what the first half pins down.
     private static String verifyTalismanRefund(ServerLevel level, LivingEntity actor) {
         ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("refund_sigil")));
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return "a talisman carrier no longer stores aura";
@@ -876,26 +954,39 @@ public final class MxtTestCommands {
         try {
             resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
-            // One invocation of the two points of wear the fixture declares: the carrier survives, so what was
-            // poured into it is spent on the invocation exactly as it always was.
-            access.insert(actor, stack, aura, 2, false);
+            access.insert(actor, stack, aura, 8, false);
+            if (!close(stored(stack, aura), 8.0D)) return "a full carrier of four invocations did not hold eight units";
+            // Wear the carrier down without firing it: what it can still spend decides what it may hold, so being
+            // damaged past the point the store was sized for is what leaves aura behind when it finally breaks.
+            TalismanService.applyDurability(stack);
+            stack.setDamageValue(2);
+            if (TalismanService.capacity(stack).getOrDefault(aura, 0) != 4)
+                return "a carrier with two invocations of wear left read a capacity of "
+                        + TalismanService.capacity(stack) + " instead of 4";
+            // One invocation of the two points of wear the fixture declares: the carrier survives, so what it spent
+            // is not handed back, while what it has not spent stays in the store for the invocation after it.
             if (!TalismanService.invokeOnUse(placed, stack))
                 return "the first invocation of a refundable carrier did not fire";
-            if (stack.getCount() != 1 || stack.getDamageValue() != 1)
-                return "a carrier with wear left was not left standing at one point of wear";
+            if (stack.getCount() != 1 || stack.getDamageValue() != 3)
+                return "a carrier with wear left was not left standing at three points of wear";
             if (!close(resources.get(resource), 0.0D))
                 return "a carrier that survived its invocation handed its charge back instead of spending it";
-            // The second invocation is the one the wear destroys, and the charge it never spent comes back.
-            access.insert(actor, stack, aura, 2, false);
+            if (!close(stored(stack, aura), 6.0D))
+                return "a carrier that survived its invocation kept " + stored(stack, aura) + " units instead of 6";
+            // The second invocation is the one the wear destroys, and what it never spent comes back with the paper.
             if (!TalismanService.invokeOnUse(placed, stack))
                 return "the invocation that burns the carrier out did not fire";
             if (!stack.isEmpty()) return "a carrier worn past its cap survived";
-            if (!close(resources.get(resource), 2.0D))
-                return "a carrier burned out by wear returned " + resources.get(resource) + " instead of the 2 it held";
+            if (!close(resources.get(resource), 4.0D))
+                return "a carrier burned out by wear returned " + resources.get(resource) + " instead of the 4 it held";
         } finally {
             resources.set(resource, before);
         }
         return null;
+    }
+
+    private static double stored(ItemStack stack, Holder<Aura> aura) {
+        return stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY).get(aura);
     }
 
     private static ItemStack carrier(Holder<Talisman> inscribed) {
@@ -943,7 +1034,8 @@ public final class MxtTestCommands {
 
     // A page that answers for exactly one entry, so what the shared check does with the page's own answer is what
     // the leg measures rather than anything a real page reads.
-    private record ProbeWheelSource(Identifier id, Identifier entry) implements WheelSource {        @Override
+    private record ProbeWheelSource(Identifier id, Identifier entry) implements WheelSource {
+        @Override
         public Component displayName() {
             return Component.literal("Probe Page");
         }
@@ -1029,7 +1121,7 @@ public final class MxtTestCommands {
             return "a refused payment still took " + (before - account.get(probe)) + " off the first entry";
 
         CostTransaction.PayResult item = CostTransaction.pay(decodeCosts(registries,
-                        "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), context);
+                "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), context);
         if (item.paid() || item.failure() != CostFailure.NO_CHANNEL)
             return "an item cost without a player channel read as " + item.failure();
 
@@ -1141,7 +1233,8 @@ public final class MxtTestCommands {
         if (!Double.isNaN(undefined))
             return "a stage without minor_stages reads as " + undefined + " instead of NaN";
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        if (!CultivationService.setRealm(spirit, QI_REFINING)) return "the realm cache could not resolve " + QI_REFINING;
+        if (!CultivationService.setRealm(spirit, QI_REFINING))
+            return "the realm cache could not resolve " + QI_REFINING;
         spirit.setCultivationProgress(requireProfile(QI), 80.0D);
         FormulaContext context = ResourceService.formulaContext(player, require(MxtResourceKeys.RESOURCE, QI), FormulaContext.of(player));
         double read = context.value("minor_stage");
@@ -1741,11 +1834,20 @@ public final class MxtTestCommands {
             boolean profiled = beast.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()
                     && close(beast.getData(MxtAttachments.CREATURE_SPIRIT).intelligence(), 20.0D)
                     && probeCore.is(Items.AMETHYST_SHARD) && probeCore.getCount() == 2 && spawnAction && idleAction;
+            // Writing a profile onto an attachment that already exists has to mark it for sync too, not only its
+            // construction: the flag is consumed here first, the same way the server tick consumes it.
+            CreatureSpiritAttachment spirit = beast.getData(MxtAttachments.CREATURE_SPIRIT);
+            Holder<CreatureProfile> beastHolder = MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id("probe_beast")).orElse(null);
+            if (beastHolder != null) {
+                spirit.checkDirty();
+                spirit.apply(beastHolder, 20.0D, probeCore.copy());
+            }
+            boolean synced = beastHolder != null && spirit.checkDirty();
             boolean twice = ContractService.bind(tagged, player, beast, false).failure()
                     == ContractService.Failure.ALREADY_BOUND;
-            boolean record = priceRefused && bound && profiled && twice;
+            boolean record = priceRefused && bound && profiled && synced && twice;
             source.sendSuccess(() -> Component.literal("contract probe: price_refused=" + priceRefused
-                    + " bound=" + bound + " profiled=" + profiled + " twice=" + twice
+                    + " bound=" + bound + " profiled=" + profiled + " synced=" + synced + " twice=" + twice
                     + (record ? " OK" : " MISMATCH")), false);
 
             // The owner's list is what a limit counts, and releasing frees the slot it held.
@@ -1891,6 +1993,177 @@ public final class MxtTestCommands {
         }
     }
 
+    // Drives the perch facility between throwaway creatures, which is the shape a content mod's pet would use.
+    // Everything here is synchronous: the seat is what positionRider computes and the probe asks for it itself,
+    // and the release policy is driven by handing the bridge the very event the game hands it. A player's own half
+    // - a crouching body taking its perch down with it - is the same mechanism with a shorter vehicle, which is
+    // why one of the two vehicles below is a chicken.
+    private static int probePerch(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        MxtServerConfig.Perch settings = MxtServerConfig.INSTANCE.perch;
+        int wasMax = settings.maxPerches.getValue();
+        boolean wasSneak = settings.dropWhenSneaking.getValue();
+        boolean wasFall = settings.dropOnFall.getValue();
+        boolean wasPowder = settings.dropInPowderSnow.getValue();
+        settings.maxPerches.setValue(2);
+        // The two points a humanoid's shoulders are at, in the vehicle's own frame: x is the vehicle's left, z is
+        // the way it faces, and y counts down from the vehicle's top.
+        Vec3 left = new Vec3(0.5D, -0.4D, 0.0D);
+        Vec3 right = new Vec3(-0.5D, -0.4D, 0.0D);
+        BlockPos origin = source.getPlayer() != null
+                ? source.getPlayer().blockPosition()
+                : level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO);
+        List<Entity> spawned = new ArrayList<>();
+        try {
+            ProbeBeast vehicle = spawnProbeBeast(level, origin.above());
+            vehicle.setYRot(0.0F);
+            spawned.add(vehicle);
+            ProbeBeast first = spawnProbeBeast(level, origin.above(3));
+            ProbeBeast second = spawnProbeBeast(level, origin.above(6));
+            ProbeBeast third = spawnProbeBeast(level, origin.above(9));
+            spawned.add(first);
+            spawned.add(second);
+            spawned.add(third);
+            double tall = vehicle.getDimensions(vehicle.getPose()).height();
+
+            // A passenger nobody says anything about lands on the head, which is the baseline the audit recorded.
+            boolean ridden = first.startRiding(vehicle);
+            vehicle.positionRider(first);
+            boolean defaultSeat = ridden && close(first.getX(), vehicle.getX())
+                    && close(first.getY(), vehicle.getY() + tall) && close(first.getZ(), vehicle.getZ());
+            first.stopRiding();
+
+            // A declared offset replaces that seat, and it turns with the vehicle.
+            boolean seated = PerchService.perch(first, vehicle, left).changed();
+            vehicle.positionRider(first);
+            boolean declaredSeat = seated && PerchService.perchOffset(first).isPresent()
+                    && close(first.getX(), vehicle.getX() + left.x)
+                    && close(first.getY(), vehicle.getY() + tall + left.y)
+                    && close(first.getZ(), vehicle.getZ());
+            vehicle.setYRot(-90.0F);
+            vehicle.positionRider(first);
+            boolean turned = close(first.getX(), vehicle.getX())
+                    && close(first.getY(), vehicle.getY() + tall + left.y)
+                    && close(first.getZ(), vehicle.getZ() - left.x);
+            vehicle.setYRot(0.0F);
+            source.sendSuccess(() -> Component.literal("perch probe: default_seat=" + defaultSeat
+                    + " declared_seat=" + declaredSeat + " turned=" + turned
+                    + (defaultSeat && declaredSeat && turned ? " OK" : " MISMATCH")), false);
+
+            // y counts down from the vehicle's own top, so a shorter vehicle carries the same offset lower by
+            // exactly its own height difference rather than by a number baked into the seat.
+            Chicken chicken = EntityType.CHICKEN.create(level, EntitySpawnReason.COMMAND);
+            if (chicken == null) {
+                source.sendFailure(Component.literal("perch probe: could not create the shorter vehicle"));
+                return 0;
+            }
+            chicken.setNoAi(true);
+            BlockPos coop = origin.above(12);
+            chicken.setPos(coop.getX() + 0.5D, coop.getY(), coop.getZ() + 0.5D);
+            level.addFreshEntity(chicken);
+            spawned.add(chicken);
+            double shortVehicle = chicken.getDimensions(chicken.getPose()).height();
+            boolean released = PerchService.release(first).changed() && !first.isPassenger()
+                    && PerchService.perchOffset(first).isEmpty();
+            PerchService.perch(first, chicken, left);
+            chicken.positionRider(first);
+            boolean followsHeight = shortVehicle < tall
+                    && close(first.getY() - chicken.getY(), shortVehicle + left.y);
+            source.sendSuccess(() -> Component.literal("perch probe: released=" + released
+                    + " follows_height=" + followsHeight
+                    + (released && followsHeight ? " OK" : " MISMATCH")), false);
+
+            // The count is the service's own, since a forced boarding skips the vanilla one, and moving an already
+            // perched creature to its other side is a move rather than a second slot.
+            PerchService.release(first);
+            boolean firstTwo = PerchService.perch(first, vehicle, left).changed()
+                    && PerchService.perch(second, vehicle, right).changed();
+            boolean thirdRefused = PerchService.perch(third, vehicle, left).failure() == PerchService.Failure.FULL
+                    && !third.isPassenger();
+            boolean moved = PerchService.perch(first, vehicle, right).changed()
+                    && PerchService.perch(third, vehicle, left).failure() == PerchService.Failure.FULL;
+            vehicle.positionRider(first);
+            boolean otherSide = close(first.getX(), vehicle.getX() + right.x);
+            boolean capacity = firstTwo && thirdRefused && moved && otherSide;
+            source.sendSuccess(() -> Component.literal("perch probe: two_seated=" + firstTwo
+                    + " third_refused=" + thirdRefused + " moved=" + moved + " other_side=" + otherSide
+                    + (capacity ? " OK" : " MISMATCH")), false);
+
+            // The release policy, through the bridge: sneaking is the manual way down, a fall and powder snow are
+            // two of the automatic ones, a switch turned off leaves the perch alone, and a record whose ride ended
+            // behind its back is cleared instead of being applied to the next one.
+            PerchService.release(first);
+            PerchService.perch(first, vehicle, left);
+            vehicle.setShiftKeyDown(true);
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean manual = !first.isPassenger() && PerchService.perchOffset(first).isEmpty();
+            vehicle.setShiftKeyDown(false);
+            settings.dropWhenSneaking.setValue(false);
+            PerchService.perch(first, vehicle, left);
+            vehicle.setShiftKeyDown(true);
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean switchOff = PerchService.perchOffset(first).isPresent();
+            settings.dropWhenSneaking.setValue(true);
+            vehicle.setShiftKeyDown(false);
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean kept = PerchService.perchOffset(first).isPresent();
+            vehicle.fallDistance = 1.0D;
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean fell = PerchService.perchOffset(first).isEmpty();
+            vehicle.fallDistance = 0.0D;
+            PerchService.perch(first, vehicle, left);
+            vehicle.isInPowderSnow = true;
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean powder = PerchService.perchOffset(first).isEmpty();
+            vehicle.isInPowderSnow = false;
+            PerchService.perch(first, vehicle, left);
+            first.stopRiding();
+            PerchEventBridge.onEntityTick(new EntityTickEvent.Post(first));
+            boolean stale = PerchService.perchOffset(first).isEmpty();
+            boolean policy = manual && switchOff && kept && fell && powder && stale;
+            source.sendSuccess(() -> Component.literal("perch probe: manual=" + manual + " switch_off=" + switchOff
+                    + " kept=" + kept + " fell=" + fell + " powder=" + powder + " stale=" + stale
+                    + (policy ? " OK" : " MISMATCH")), false);
+
+            // A creature that answers for itself: the framework asks where it wants to sit, reports a refusal as
+            // one, and tells the creature once it is on - an addon therefore ships a creature, never a seat.
+            ProbeBeast host = spawnProbeBeast(level, origin.above(12));
+            ProbeBeast answerer = spawnProbeBeast(level, origin.above(15));
+            LivingEntity plain = spawnProbe(level, origin.above(18), null);
+            spawned.add(host);
+            spawned.add(answerer);
+            if (plain != null) spawned.add(plain);
+            ProbeBeast.reset();
+            ProbeBeast.perchAnswer(Optional.of(new Vec3(0.25D, -0.3D, 0.0D)));
+            boolean asked = PerchService.perch(answerer, host).changed()
+                    && PerchService.perchOffset(answerer)
+                    .filter(offset -> close(offset.x, 0.25D) && close(offset.y, -0.3D)).isPresent()
+                    && ProbeBeast.calls().contains("seat:0") && ProbeBeast.calls().contains("perched");
+            boolean unperched = PerchService.release(answerer).changed() && ProbeBeast.calls().contains("unperched");
+            ProbeBeast.perchAnswer(Optional.empty());
+            boolean notWilling = PerchService.perch(answerer, host).failure() == PerchService.Failure.NOT_WILLING;
+            boolean notPerchable = plain != null
+                    && PerchService.perch(plain, host).failure() == PerchService.Failure.NOT_WILLING;
+            boolean answers = asked && unperched && notWilling && notPerchable;
+            source.sendSuccess(() -> Component.literal("perch probe: answered=" + asked + " unperched=" + unperched
+                    + " not_willing=" + notWilling + " not_perchable=" + notPerchable
+                    + (answers ? " OK" : " MISMATCH")), false);
+
+            if (defaultSeat && declaredSeat && turned && released && followsHeight && capacity && policy && answers) {
+                source.sendSuccess(() -> Component.literal("perch probe: OK"), false);
+                return 1;
+            }
+            source.sendFailure(Component.literal("perch probe: MISMATCH"));
+            return 0;
+        } finally {
+            settings.maxPerches.setValue(wasMax);
+            settings.dropWhenSneaking.setValue(wasSneak);
+            settings.dropOnFall.setValue(wasFall);
+            settings.dropInPowderSnow.setValue(wasPowder);
+            for (Entity entity : spawned) entity.discard();
+        }
+    }
+
     private static ContractContext context(Mob creature, ServerPlayer owner, Holder<ContractType> type) {
         return ContractContext.of(creature, owner.getUUID(), owner, type);
     }
@@ -1964,7 +2237,7 @@ public final class MxtTestCommands {
                     && row.curiosEquipable() == ArtifactService.curiosEquipable(access, stack)
                     && row.requireOwner() == definition.requireOwner()
                     && row.mount() == ArtifactService.mount(access, stack).isPresent()
-                    && ArtifactService.storageSlots(access, stack, context) == row.slots()
+                    && containerSlots(access, stack, context) == row.slots()
                     && ArtifactService.capacity(access, stack, qi, 0.0D, context) == row.qi()
                     && ArtifactService.capacity(access, stack, waterPower, 0.0D, context) == row.waterPower()
                     && ArtifactService.capacity(access, stack, soulPower, 0.0D, context) == row.soulPower();
@@ -2002,7 +2275,7 @@ public final class MxtTestCommands {
                 instanceof FlightControlAbilityType value ? value : null;
         boolean offhandEntry = offhand != null && offhand.hand() == FlightControlAbilityType.Hand.OFF
                 && close(offhand.speedMultiplier().evaluate(context), 0.8D)
-                && close(require(MxtResourceKeys.ABILITY, id("offhand_flight")).value().cooldown().evaluate(context), 40.0D);
+                && close(offhand.cooldown().evaluate(context), 40.0D);
         ok &= check(source, "artifact roster offhand flight hand=off multiplier=0.8 cooldown=40", offhandEntry);
 
         // The three-seat vehicle: what the geometry fields do once they are written out.
@@ -2121,7 +2394,8 @@ public final class MxtTestCommands {
                     && close(qiBeforeTick - pilotResources.get(qiResource), 0.1D);
             // Once the artifact is charged, the same tick comes out of it instead: the mount carries the aura it
             // burns, and only what the artifact cannot cover falls back on the pilot.
-            if (sword != null) ArtifactService.addEnergy(access, sword.visual(), qi, 5.0D, 0.0D, FormulaContext.of(pilot));
+            if (sword != null)
+                ArtifactService.addEnergy(access, sword.visual(), qi, 5.0D, 0.0D, FormulaContext.of(pilot));
             double artifactBefore = sword == null ? 0.0D : ArtifactService.stored(sword.visual(), qi);
             double poolBefore = pilotResources.get(qiResource);
             boolean artifactFuel = sword != null
@@ -2143,8 +2417,8 @@ public final class MxtTestCommands {
         if (pilot != null) pilot.discard();
         ok &= check(source, "artifact roster flight ungranted=refused granted=by-technique custody=hand-empty seats=2 third=refused tick=fuel=0.1 artifact=burned-first landed=item-back", flight);
 
-        // A field a vehicle never reads is refused at load time rather than stored: the same document without it
-        // parses, so the rejection is the field and not the shape.
+        // A field a vehicle never reads is ignored rather than refused: the same document with it decodes to the
+        // very definition the one without it does.
         JsonObject legalMount = new JsonObject();
         legalMount.addProperty("type", "mxt:mount");
         legalMount.addProperty("speed", 0.1D);
@@ -2152,9 +2426,10 @@ public final class MxtTestCommands {
         legalMount.addProperty("description", "probe mount");
         JsonObject illegalMount = legalMount.deepCopy();
         illegalMount.add("entity_action", JsonParser.parseString("{\"type\": \"mxt:no_op\"}"));
-        boolean inertFields = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, legalMount).result().isPresent()
-                && Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, illegalMount).result().isEmpty();
-        ok &= check(source, "artifact roster mount refuses a field it never reads", inertFields);
+        Ability legalMountAbility = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, legalMount).result().orElse(null);
+        Ability inertMountAbility = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, illegalMount).result().orElse(null);
+        boolean inertFields = legalMountAbility != null && legalMountAbility.equals(inertMountAbility);
+        ok &= check(source, "artifact roster mount ignores a field it never reads", inertFields);
 
         // The same flight with a player, asked the directed way: the merged payload names the state it wants, and a
         // request for the state it is already in changes nothing. The hand is put back afterwards, since the rest of
@@ -2251,6 +2526,74 @@ public final class MxtTestCommands {
                 && !ArtifactService.hasOwner(plainJade) && ArtifactService.hasOwner(jadeStack);
         ok &= check(source, "artifact roster ownership gate require_owner=true refuses, =false binds", ownershipGate);
 
+        // The container an ability declares is one entry of the carrier's own ability storage, addressed by that
+        // ability's id: slot 1 of 27, the untouched slots left as holes, and one round trip of the synced component.
+        Holder<Ability> storageAbility = ArtifactService.abilities(access, jadeStack).stream()
+                .filter(ref -> ref.value().type() instanceof StorageAbilityType).findFirst().orElse(null);
+        Holder<Ability> foreignStorage = require(MxtResourceKeys.ABILITY, PROBE_BOUND_STORAGE);
+        boolean stored = storageAbility != null
+                && ArtifactStorageService.INSTANCE.set(access, jadeStack, storageAbility, 1, new ItemStack(Items.STONE, 3), player)
+                // A second write of the same kind replaces that ability's one entry instead of adding a second.
+                && ArtifactStorageService.INSTANCE.set(access, jadeStack, storageAbility, 2, new ItemStack(Items.DIRT), player);
+        DataStorageHolder jadeStorage = jadeStack.get(MxtDataComponents.STORAGE);
+        boolean container = stored
+                && jadeStorage != null && jadeStorage.count(ContainerDataStorage.class) == 1
+                && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 1, player).is(Items.STONE)
+                && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 1, player).getCount() == 3
+                // The capacity is the definition's, so the slot one past it is not there.
+                && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 27, player).isEmpty()
+                && ItemStorageService.get(jadeStack, HolderHelper.id(storageAbility), ContainerDataStorage.class)
+                .filter(value -> value.contents().size() == 27 && value.get(0).isEmpty()
+                        && value.get(1).is(Items.STONE) && value.get(2).is(Items.DIRT)).isPresent()
+                // Another ability's id is a different slot: two storage abilities on one carrier never share a box.
+                && ItemStorageService.get(jadeStack, HolderHelper.id(foreignStorage), ContainerDataStorage.class).isEmpty()
+                && roundTripsStorage(jadeStorage, HolderHelper.id(storageAbility),
+                source.getLevel().registryAccess());
+        ok &= check(source, "artifact roster container 27 slots, slot 1 = stone x3, slot 2 = dirt, one entry per (ability, kind), codec round-trip", container);
+
+        // The state kinds belong to the type now: the removed `components` key is ignored like any other unread
+        // field, a type that keeps a cursor of its own says so without the pack writing anything, and the one pool
+        // a type cannot know (charges) is the ability's own field.
+        JsonObject removedComponents = new JsonObject();
+        removedComponents.addProperty("type", "mxt:active");
+        removedComponents.add("components", JsonParser.parseString(
+                "[{\"type\": \"mxt:cooldown\", \"ticks\": 20}, {\"type\": \"mxt:cooldown\", \"ticks\": 40}]"));
+        JsonObject chargedChannel = new JsonObject();
+        chargedChannel.addProperty("type", "mxt:channelled");
+        chargedChannel.add("charges", JsonParser.parseString("{\"maximum\": 2, \"recharge_ticks\": 40}"));
+        Ability byType = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, removedComponents).result().orElse(null);
+        Ability declaredOnce = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, chargedChannel).result().orElse(null);
+        boolean stateByType = byType != null && declaredOnce != null
+                && byType.storages().stream().filter(CooldownDataStorage.class::isInstance).count() == 1
+                && byType.charges().isEmpty()
+                && declaredOnce.charges().isPresent()
+                && declaredOnce.storages().stream().filter(ChargesDataStorage.class::isInstance).count() == 1;
+        ok &= check(source, "artifact roster ability declares its state by type, removed components ignored", stateByType);
+
+        // Every type that runs actions carries the four fields itself, so one skill is one definition: the fields
+        // decode straight onto the acting type.
+        JsonObject timed = new JsonObject();
+        timed.addProperty("type", "mxt:active");
+        timed.add("target_selector", JsonParser.parseString("{\"type\": \"mxt:area\", \"radius\": 3}"));
+        timed.add("bi_entity_action", JsonParser.parseString("{\"type\": \"mxt:send_message\", \"message\": \"probe\"}"));
+        Ability timedAbility = Ability.DIRECT_CODEC.parse(JsonOps.INSTANCE, timed).result().orElse(null);
+        Ability elemental = require(MxtResourceKeys.ABILITY, PROBE_ELEMENTAL).value();
+        boolean actionsByType = timedAbility != null && timedAbility.type() instanceof ActiveAbilityType active
+                && active.targetSelector() instanceof AreaTargetSelector
+                && !(active.biEntityAction() instanceof NoOpAction)
+                && elemental.type() instanceof ActiveAbilityType carried
+                && !(carried.biEntityAction() instanceof NoOpAction);
+        ok &= check(source, "artifact roster action fields live on the acting type", actionsByType);
+
+        JsonElement oneEntry = JsonParser.parseString(
+                "[{\"id\": \"mxt_test:probe\", \"value\": {\"type\": \"mxt:cooldown\", \"duration\": 20, \"started_at\": 1}}]");
+        JsonElement twoEntries = JsonParser.parseString(
+                "[{\"id\": \"mxt_test:probe\", \"value\": {\"type\": \"mxt:cooldown\", \"duration\": 20, \"started_at\": 1}},"
+                        + "{\"id\": \"mxt_test:probe\", \"value\": {\"type\": \"mxt:cooldown\", \"duration\": 40, \"started_at\": 2}}]");
+        boolean oneEntryPerAddress = DataStorageHolder.CODEC.parse(JsonOps.INSTANCE, oneEntry).result().isPresent()
+                && DataStorageHolder.CODEC.parse(JsonOps.INSTANCE, twoEntries).result().isEmpty();
+        ok &= check(source, "artifact roster storage refuses two entries for one (id, kind)", oneEntryPerAddress);
+
         // ArtifactDescription builds the tooltip so the same list is readable here without a client: the rendered
         // words belong to a language file, but how many lines a definition earns belongs to this module.
         // Ownership and warmth are known because the fresh stacks carry neither and the jade was just refined.
@@ -2265,24 +2608,24 @@ public final class MxtTestCommands {
         // The long press closes every tooltip with a gesture, and an unowned artifact is offered the claim while
         // one the reader owns is offered the pour - the two halves never appear together.
         boolean tooltip = flightLines.equals(List.of(tooltipKey("header"), tooltipKey("unowned"),
-                        // One entry, one line: the speed and what riding costs share a line, so a definition with
-                        // four abilities produces four lines rather than a paragraph.
-                        tooltipKey("aura"), tooltipKey("mount_costs"), tooltipKey("hold_claim")))
+                // One entry, one line: the speed and what riding costs share a line, so a definition with
+                // four abilities produces four lines rather than a paragraph.
+                tooltipKey("aura"), tooltipKey("mount_costs"), tooltipKey("hold_claim")))
                 // The jade does not require an owner, so a fresh one says nothing about ownership at all, and its
                 // action charges aura rather than health, so its claim is free.
                 && jadeLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("storage"), tooltipKey("hold_claim_free")))
+                tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("storage"), tooltipKey("hold_claim_free")))
                 && fedLines.equals(List.of(tooltipKey("header"), tooltipKey("owned"),
-                        tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("nourishment"),
-                        tooltipKey("storage"), tooltipKey("hold_pour")))
+                tooltipKey("aura"), tooltipKey("aura"), tooltipKey("aura"), tooltipKey("nourishment"),
+                tooltipKey("storage"), tooltipKey("hold_pour")))
                 // The ward says nothing about a price, so the default two hearts are what it reports.
                 && wardLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("passive"), tooltipKey("passive"), tooltipKey("hold_claim")))
+                tooltipKey("aura"), tooltipKey("passive"), tooltipKey("passive"), tooltipKey("hold_claim")))
                 && bloodLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("hold_claim")))
+                tooltipKey("aura"), tooltipKey("hold_claim")))
                 // An upkeep entry is a line of its own, and the fixture's free price keeps its claim line free.
                 && upkeepLines.equals(List.of(tooltipKey("header"),
-                        tooltipKey("aura"), tooltipKey("upkeep"), tooltipKey("hold_claim_free")))
+                tooltipKey("aura"), tooltipKey("upkeep"), tooltipKey("hold_claim_free")))
                 // A stack no definition claims gets nothing at all, and advanced tooltips add the id under the name.
                 && ArtifactDescription.describe(access, new ItemStack(Items.DIAMOND), player, false).isEmpty()
                 && ArtifactDescription.keys(ArtifactDescription.describe(access, flightStack, player, true)).size() == flightLines.size() + 1;
@@ -2383,7 +2726,7 @@ public final class MxtTestCommands {
                 && (player.isInvulnerable() || close(healthBeforeScript - player.getHealth(), 3.0D));
         player.setHealth(healthBeforeClaim);
         ok &= check(source, "artifact hold claim paid=" + pricePaid + " free=" + freeClaim + " unguarded=" + unguarded
-                + " condition=" + sealedRefused + " script=" + scriptPaid,
+                        + " condition=" + sealedRefused + " script=" + scriptPaid,
                 pricePaid && freeClaim && unguarded && sealedRefused && scriptPaid);
 
         // Whose a stack is is reported by name: the claim above wrote this player's name next to their UUID and
@@ -2591,12 +2934,12 @@ public final class MxtTestCommands {
                     + (claimed ? " OK" : " MISMATCH")), false);
 
             // 2. An action that declares an element is read as that element, not as the caster's roots: a water
-            //    caster would otherwise land 10 * 1.0 * 0.5 = 5 on a water body.
-            Ability declaration = require(MxtResourceKeys.ABILITY, PROBE_ELEMENT_ABILITY).value();
+            //    caster would otherwise land 10 * 1.0 * 0.5 = 5 on a water body. The action lives on the probe skill
+            //    itself, which is the type that carries these fields.
+            Ability declaration = require(MxtResourceKeys.ABILITY, PROBE_ELEMENTAL).value();
             FormulaContext casterContext = FormulaContext.of(waterCaster);
             double beforeDeclared = declaredVictim.getHealth();
-            declaration.biEntityAction().execute(waterCaster, declaredVictim,
-                    new BiEntityActionContext(waterCaster, declaredVictim, casterContext, null));
+            AbilityEffect.runOn(declaration.type(), waterCaster, declaredVictim, casterContext, null);
             double declaredLost = beforeDeclared - declaredVictim.getHealth();
             boolean declared = close(declaredLost, 7.5D);
             source.sendSuccess(() -> Component.literal("element probe: declared element on a water caster, health_lost="
@@ -2614,14 +2957,18 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: attachment built=" + built
                     + " reaction damage=" + reactionLost + " left=" + leftOver + (reaction ? " OK" : " MISMATCH")), false);
 
-            // 4. A disabled element stops applying: its own root contributes nothing and the condition asking
-            //    about it says no. The fixture element is fetched raw, because the enabled accessor is exactly
-            //    what this leg is here to prove is empty.
-            Holder<Element> inert = MxtDatapackRegistries.rawHolder(MxtResourceKeys.ELEMENT, PROBE_INERT_ELEMENT)
-                    .orElseThrow(() -> new IllegalStateException("Missing disabled element fixture " + PROBE_INERT_ELEMENT));
-            boolean disabled = !Elements.enabled(inert) && Elements.of(inertHolder).isEmpty() && Elements.enabled(fire);
-            source.sendSuccess(() -> Component.literal("element probe: disabled element inert=" + disabled
-                    + (disabled ? " OK" : " MISMATCH")), false);
+            // 4. A definition is taken out of the world while the pack loads, not by a query-time tag: the fixture
+            //    element whose file carries a false `neoforge:conditions` block never enters the registry, while an
+            //    ordinary one does. The file itself is still shipped, which is what tells a skipped entry apart from
+            //    a typo in the id. This is what replaced the mxt:disabled tag.
+            boolean gatedFile = level.getServer().getResourceManager()
+                    .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/element/condition_gated.json")).isPresent();
+            boolean gated = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, PROBE_GATED_ELEMENT).isEmpty();
+            boolean plain = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, PROBE_INERT_ELEMENT).isPresent();
+            boolean gatedOut = gatedFile && gated && plain;
+            source.sendSuccess(() -> Component.literal("element probe: condition-gated file=" + gatedFile
+                    + " element absent=" + gated + " plain element present=" + plain
+                    + (gatedOut ? " OK" : " MISMATCH")), false);
 
             // 5. The conditions that read elements: by element, by element tag, and by what has built up.
             boolean hasElement = new HasElementEntityCondition(List.of(Either.left(fire)))
@@ -2698,7 +3045,7 @@ public final class MxtTestCommands {
             SpiritIdentityAttachment evenRoots = new SpiritIdentityAttachment();
             evenRoots.setSpiritRoots(List.of(dualEvenRoot));
             AuraResult fireOnly = new AuraResult(Map.of(require(MxtResourceKeys.AURA, SPIRIT_POWER), AuraPool.natural(1.0D, 1.0D, 0.0D)),
-                    AuraZone.Rules.DEFAULT, 0.0D, 0.0D, AlwaysTrueCondition.INSTANCE, AuraZone.Distribution.EQUAL,
+                    AuraZone.Rules.DEFAULT, 0.0D, 0.0D, AlwaysCondition.INSTANCE, AuraZone.Distribution.EQUAL,
                     id("probe"), AuraResult.SourceKind.CHUNK);
             double heavy = CultivationAffinity.multiplier(heavyFire, fireOnly, FormulaContext.EMPTY);
             double even = CultivationAffinity.multiplier(evenRoots, fireOnly, FormulaContext.EMPTY);
@@ -2717,9 +3064,8 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("element probe: self-feeding reaction left=" + loopLeft
                     + (loop ? " OK" : " MISMATCH")), false);
 
-            // 8. Who a spirit root rules out. The fixture root carries fire and declares both water and the
-            //    disabled inert element, so one body answers all three rules: a live element is refused, a
-            //    disabled element is not an element as far as the declaration goes, and once the declaring root
+            // 8. Who a spirit root rules out. The fixture root carries fire and declares both water and the inert
+            //    element, so one body answers all three rules: either element is refused, and once the declaring root
             //    itself is switched off its declaration is not in force either.
             Holder<SpiritRoot> antiWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_ANTI_WATER_ROOT);
             Holder<SpiritRoot> probeWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_WATER_ROOT);
@@ -2727,12 +3073,13 @@ public final class MxtTestCommands {
             boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_ANTI_WATER_ROOT, antiWater.value()).changed()
                     && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).failure()
                     == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
-            boolean inertFree = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_INERT_ROOT, probeInert.value()).changed();
+            boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_INERT_ROOT, probeInert.value()).failure()
+                    == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
             boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).changed()
                     && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).changed();
-            boolean conflict = blocked && inertFree && reopened;
+            boolean conflict = blocked && inertBlocked && reopened;
             source.sendSuccess(() -> Component.literal("element probe: conflict blocked=" + blocked
-                    + " inert_free=" + inertFree + " reopened=" + reopened
+                    + " inert_blocked=" + inertBlocked + " reopened=" + reopened
                     + (conflict ? " OK" : " MISMATCH")), false);
 
             // 9. The five-phase set the test package ships: metal beats wood in the shaping layer and wood is
@@ -2804,7 +3151,7 @@ public final class MxtTestCommands {
                     + " jade=" + elementIds(jadeElements) + " crystal=" + elementIds(crystalElements)
                     + " plain=" + plainElements.size() + (itemElement ? " OK" : " MISMATCH")), false);
 
-            if (claimed && declared && reaction && disabled && hasElement && auraElement && attachment && toggle
+            if (claimed && declared && reaction && gatedOut && hasElement && auraElement && attachment && toggle
                     && loop && conflict && fivePhases && bloom && settle && itemElement) {
                 source.sendSuccess(() -> Component.literal("element probe: OK"), false);
                 return 1;
@@ -2824,27 +3171,36 @@ public final class MxtTestCommands {
         return TagKey.create(MxtResourceKeys.ELEMENT, PROBE_ELEMENT_TAG);
     }
 
+    // The container a stack declares, as the roster rows state it: the slots of the first storage ability it offers.
+    private static int containerSlots(Provider access, ItemStack stack, FormulaContext context) {
+        return ArtifactService.abilities(access, stack).stream()
+                .filter(ref -> ref.value().type() instanceof StorageAbilityType)
+                .findFirst()
+                .map(ref -> ArtifactService.storageSlots(stack, ref, context))
+                .orElse(0);
+    }
+
     // One page's answer to "would a trigger for this ability from this page be honoured".
     private static boolean offers(LivingEntity probe, WheelSource source, Identifier ability) {
         return WheelSources.offers(probe, source, WheelEntryKinds.ABILITY, ability);
     }
 
-    // Sends one storage component through the registered network codec and reads it back - the very codec the
-    // server uses when handing a container slot to a client. This is the only way a probe reaches that failure:
-    // it happens while encoding a packet, not while opening the window, so the window looks healthy right up to
-    // the moment the stack is synced.
-    private static boolean roundTripsStorage(ArtifactStorageComponent component, RegistryAccess registries) {
-        DataComponentType<ArtifactStorageComponent> type = MxtDataComponents.ARTIFACT_STORAGE.get();
+    // Sends the ability storage component through the registered network codec and reads it back - the very codec
+    // the server uses when handing a container slot to a client, and the one place an empty stack in the list could
+    // take the whole packet down. Reached from the container leg above, which is what keeps it from rotting.
+    private static boolean roundTripsStorage(DataStorageHolder holder, Identifier id, RegistryAccess registries) {
+        if (holder == null) return false;
+        DataComponentType<DataStorageHolder> type = MxtDataComponents.STORAGE.get();
         // The connection type only tells NeoForge what the other end is; NEOFORGE is what this server's own
         // client is, which is who the codec under test would be encoding for.
         RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries, ConnectionType.NEOFORGE);
         try {
-            type.streamCodec().encode(buffer, component);
-            ArtifactStorageComponent decoded = type.streamCodec().decode(buffer);
-            return decoded.contents().size() == component.contents().size()
-                    && decoded.get(0).isEmpty()
-                    && decoded.get(1).is(Items.STONE)
-                    && decoded.get(1).getCount() == 3;
+            type.streamCodec().encode(buffer, holder);
+            DataStorageHolder decoded = type.streamCodec().decode(buffer);
+            return decoded.get(id, ContainerDataStorage.class)
+                    .filter(value -> value.contents().size() == 27 && value.get(0).isEmpty()
+                            && value.get(1).is(Items.STONE) && value.get(1).getCount() == 3)
+                    .isPresent();
         } catch (RuntimeException error) {
             return false;
         }
@@ -2993,7 +3349,7 @@ public final class MxtTestCommands {
             //     membership row and the teleport are keyed on the entity, not on a connection.
             LivingEntity mobTraveller = spawnProbe(overworld, overworld.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, BlockPos.ZERO).above(4), null);
             probes.add(mobTraveller);
-            SecretRealmService.Result mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, mirror);
+            SecretRealmService.Result mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, source.getServer(), mirror);
             SecretRealmRecord mobHome = mobTraveller == null ? null : SecretRealmRegistry.ofMember(mobTraveller.getUUID()).orElse(null);
             if (mobHome != null) opened.add(mobHome.dimension());
             boolean mobIn = mobTraveller != null && mobEntered != null && mobEntered.changed() && mobHome != null
@@ -3177,7 +3533,7 @@ public final class MxtTestCommands {
             LifeSpanService.add(plain, 40L);
             boolean fromZero = LifeSpanService.remaining(plain) == 40L && LifeSpanService.total(plain) == 40L;
             ok &= check(source, "lifespan probe: seed base=" + LifeSpanService.remaining(seeded)
-                            + " zero=" + LifeSpanService.remaining(plain), fromBase && fromZero);
+                    + " zero=" + LifeSpanService.remaining(plain), fromBase && fromZero);
 
             // 5. Settlement and the NONE outcome: 25 spends down to 5 and then closes the account at 0.
             settings.onExpire.setValue(LifespanOutcome.NONE);
@@ -3413,7 +3769,8 @@ public final class MxtTestCommands {
         return 0;
     }
 
-    private static int probeRift(CommandSourceStack source) {        double thickness = RiftMesh.DEFAULT_THICKNESS;
+    private static int probeRift(CommandSourceStack source) {
+        double thickness = RiftMesh.DEFAULT_THICKNESS;
         MinecraftServer server = source.getServer();
         ServerLevel level = server.overworld();
         Identifier here = level.dimension().identifier();
@@ -3580,7 +3937,8 @@ public final class MxtTestCommands {
         } finally {
             for (BlockPos pos : touched) level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
             ServerLevel end_ = server.getLevel(Level.END);
-            if (end_ != null) for (BlockPos pos : touchedInEnd) end_.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            if (end_ != null)
+                for (BlockPos pos : touchedInEnd) end_.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         }
         if (ok) {
             source.sendSuccess(() -> Component.literal("rift probe: OK"), false);
@@ -3697,7 +4055,7 @@ public final class MxtTestCommands {
     }
 
     private static SecretRealmRecord openInstance(MinecraftServer server, Holder<SecretRealm> definition, int index,
-                                            long seed, List<ResourceKey<Level>> opened) {
+                                                  long seed, List<ResourceKey<Level>> opened) {
         SecretRealmRecord record = SecretRealmService.open(server, planned(definition, index, seed)).orElse(null);
         if (record != null) opened.add(record.dimension());
         return record;
@@ -3787,6 +4145,348 @@ public final class MxtTestCommands {
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.cultivate.success"), true);
         return 1;
+    }
+
+    // Drives the cultivation-method pick end to end: which method a body selects, what each of the three conditions
+    // answers, and what a settlement does when one of them says no. Every leg runs on disposable probe beings;
+    // friendship is answered by a listener, because only a player can keep a friend list.
+    private static int probeCultivation(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        long now = level.getGameTime();
+        Holder<CultivateAction> free = require(MxtResourceKeys.CULTIVATE_ACTION, FREE_MEDITATION);
+        Holder<CultivateAction> gated = require(MxtResourceKeys.CULTIVATE_ACTION, TECHNIQUE_MEDITATION);
+        Holder<CultivateAction> dual = require(MxtResourceKeys.CULTIVATE_ACTION, DUAL_MEDITATION);
+        Holder<CultivateAction> named = require(MxtResourceKeys.CULTIVATE_ACTION, NAMED_MEDITATION);
+        Holder<CultivateAction> strict = require(MxtResourceKeys.CULTIVATE_ACTION, STRICT_MEDITATION);
+        Holder<CultivateAction> worldly = require(MxtResourceKeys.CULTIVATE_ACTION, WORLDLY_MEDITATION);
+        Holder<CultivateAction> basic = require(MxtResourceKeys.CULTIVATE_ACTION, CULTIVATE);
+        Holder<Technique> breathing = require(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
+        Holder<Technique> sword = require(MxtResourceKeys.TECHNIQUE, SWORD_MANUAL);
+        Holder<Resource> waterPower = require(MxtResourceKeys.RESOURCE, WATER_POWER);
+        Holder<Resource> mastery = require(MxtResourceKeys.RESOURCE, SWORD_MASTERY);
+        // The manual the partner leg reads is the jade slip carrying the technique component: a declaration's
+        // claimed item is a manual by matching and would carry no component at all.
+        ItemStack carrier = new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get());
+        carrier.set(MxtDataComponents.TECHNIQUE.get(), breathing);
+
+        // The source's own position, so the probe runs both from a client and from the server console, whose
+        // position is the world spawn - the one place a server keeps loaded for a console run.
+        BlockPos base = BlockPos.containing(source.getPosition());
+        LivingEntity solo = spawnProbe(level, probeSpot(base, 0), null);
+        LivingEntity learner = spawnProbe(level, probeSpot(base, 1), null);
+        LivingEntity veteran = spawnProbe(level, probeSpot(base, 2), null);
+        LivingEntity seatA = spawnProbe(level, probeSpot(base, 3), null);
+        LivingEntity seatB = spawnProbe(level, probeSpot(base, 3).offset(3, 0, 0), null);
+        LivingEntity runA = spawnProbe(level, probeSpot(base, 4), null);
+        LivingEntity runB = spawnProbe(level, probeSpot(base, 4).offset(3, 0, 0), null);
+        LivingEntity bareA = spawnProbe(level, probeSpot(base, 5), null);
+        LivingEntity bareB = spawnProbe(level, probeSpot(base, 5).offset(3, 0, 0), null);
+        LivingEntity crowdA = spawnProbe(level, probeSpot(base, 6), null);
+        LivingEntity crowd1 = spawnProbe(level, probeSpot(base, 6).offset(3, 0, 0), null);
+        LivingEntity crowd2 = spawnProbe(level, probeSpot(base, 6).offset(0, 0, 3), null);
+        LivingEntity crowd3 = spawnProbe(level, probeSpot(base, 6).offset(3, 0, 3), null);
+        LivingEntity rangeA = spawnProbe(level, probeSpot(base, 7), null);
+        LivingEntity rangeFar = spawnProbe(level, probeSpot(base, 7).above(8), null);
+        LivingEntity lonely = spawnProbe(level, probeSpot(base, 8), null);
+        LivingEntity actor = spawnProbe(level, probeSpot(base, 9), null);
+        List<LivingEntity> probes = new ArrayList<>();
+        for (LivingEntity probe : Arrays.asList(solo, learner, veteran, seatA, seatB, runA, runB, bareA, bareB,
+                crowdA, crowd1, crowd2, crowd3, rangeA, rangeFar, lonely, actor))
+            if (probe != null) probes.add(probe);
+        if (probes.size() != 17) {
+            for (LivingEntity probe : probes) probe.discard();
+            source.sendFailure(Component.literal("cultivation probe: could not create the probe beings"));
+            return 0;
+        }
+        // Everyone holds the manual except where a leg takes it away, because what the partner holds is the whole
+        // yield test. The two extra crowd members join the friend pool only for the count leg.
+        for (LivingEntity probe : Arrays.asList(seatB, runA, runB, bareA, crowd1, crowd2, crowd3, rangeFar, actor))
+            probe.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
+        Set<UUID> friends = new HashSet<>();
+        for (LivingEntity probe : probes) friends.add(probe.getUUID());
+        friends.remove(crowd2.getUUID());
+        friends.remove(crowd3.getUUID());
+        // Ordered "judge>candidate" pairs that are not friends, so one leg can hold a friendship that only goes one
+        // way: FALSE overrides the friend pools below, which answer by pair and therefore always answer symmetrically.
+        Set<String> refused = new HashSet<>();
+        Consumer<FriendEvent.Relation> relation = event -> {
+            if (refused.contains(event.judgeId() + ">" + event.candidate().getUUID()))
+                event.setResult(TriState.FALSE);
+            else if (friends.contains(event.judgeId()) && friends.contains(event.candidate().getUUID()))
+                event.setResult(TriState.TRUE);
+        };
+        NeoForge.EVENT_BUS.addListener(relation);
+
+        boolean ok = true;
+        try {
+            // 1. Asking starts nothing, and the method that asks for nothing (requirement ②) answers for a body
+            //    with no technique at all. A joined body already carries an empty record - the trigger rehydration
+            //    reads the resources a formula context needs - so the claim is that no session was written, not
+            //    that the body has no record.
+            boolean pickedFree = picks(CultivationModeService.select(solo, contextOf(solo)), FREE_MEDITATION);
+            boolean untouched = solo.getExistingData(MxtAttachments.CULTIVATION)
+                    .map(spirit -> !spirit.cultivating() && spirit.cultivateAction().isEmpty()).orElse(true);
+            ok &= check(source, "cultivation probe: baseline pick=" + pickedFree + " attach=" + !untouched,
+                    pickedFree && untouched);
+
+            // 2. A method whose own condition says no is neither selectable nor usable.
+            boolean gatedOut = !asks(gated, solo) && !gated.value().startCondition().test(solo, contextOf(solo));
+            ok &= check(source, "cultivation probe: gated_out=" + gatedOut, gatedOut);
+
+            // 3. mxt:technique reads the learned list: the tag entry, the named entry, all of them, and none.
+            boolean noneLearned = !asks(named, learner) && !asks(strict, learner) && asks(worldly, learner);
+            boolean learnedBreathing = TechniqueService.learn(learner,
+                    learner.getData(MxtAttachments.SPIRIT_IDENTITY), breathing, contextOf(learner)).changed();
+            boolean tagOnly = asks(gated, learner) && !asks(named, learner) && !asks(strict, learner)
+                    && !asks(worldly, learner);
+            boolean learnedSword = TechniqueService.learn(learner,
+                    learner.getData(MxtAttachments.SPIRIT_IDENTITY), sword, contextOf(learner)).changed();
+            boolean allOf = asks(named, learner) && asks(strict, learner);
+            ok &= check(source, "cultivation probe: technique none=" + noneLearned + " learned="
+                            + (learnedBreathing && learnedSword) + " tag=" + tagOnly + " all=" + allOf,
+                    noneLearned && learnedBreathing && tagOnly && learnedSword && allOf);
+
+            // 4. What the attachment holds is a record, not a preference: the moment a higher-priority method
+            //    becomes applicable the pick moves, while the stored one is still the one running.
+            CultivationAttachment veteranSpirit = veteran.getData(MxtAttachments.CULTIVATION);
+            boolean seatedFree = CultivationModeService.start(veteran, veteranSpirit, free, contextOf(veteran)).started()
+                    && runs(veteranSpirit, FREE_MEDITATION);
+            TechniqueService.learn(veteran, veteran.getData(MxtAttachments.SPIRIT_IDENTITY), breathing,
+                    contextOf(veteran));
+            boolean movedOn = picks(CultivationModeService.select(veteran, contextOf(veteran)), TECHNIQUE_MEDITATION)
+                    && runs(veteranSpirit, FREE_MEDITATION);
+            CultivationModeService.stop(veteran, veteranSpirit, free);
+            ok &= check(source, "cultivation probe: attachment seated=" + seatedFree + " moved=" + movedOn
+                            + " still_running=" + veteranSpirit.cultivating(),
+                    seatedFree && movedOn && !veteranSpirit.cultivating());
+
+            // 5. What admits a body is start_condition plus the yield condition, never the upkeep one: A sits down
+            //    while B is not cultivating, and the first settlement aborts on that very upkeep condition.
+            CultivationAttachment seatSpirit = seatA.getData(MxtAttachments.CULTIVATION);
+            boolean yieldHolds = asks(dual, seatA);
+            boolean upkeepFalse = !dual.value().tickCondition().test(seatA, contextOf(seatA));
+            boolean seated = CultivationModeService.start(seatA, seatSpirit, dual, contextOf(seatA)).started();
+            Result upkeepTick = tickCultivation(seatA, seatSpirit, dual, now);
+            boolean aborted = !seatSpirit.cultivating()
+                    && upkeepTick.failure() == CultivationActionService.Failure.CONDITIONS
+                    && named(upkeepTick, "the partner is gone");
+            ok &= check(source, "cultivation probe: upkeep yield=" + yieldHolds + " false=" + upkeepFalse
+                            + " seated=" + seated + " failure=" + upkeepTick.failure()
+                            + " reason=" + (upkeepTick.abortReason() == null ? "none" : upkeepTick.abortReason().getString()),
+                    yieldHolds && upkeepFalse && seated && aborted);
+
+            // 6. Two bodies each hold a manual, so both sit down: the yield test asks what the partner holds, not
+            //    whether the partner is already seated. The two resources have flat maxima, so nothing here needs a
+            //    realm: water_power pays the cost and sword_mastery is what the tick action hands out.
+            CultivationAttachment runSpiritA = runA.getData(MxtAttachments.CULTIVATION);
+            CultivationAttachment runSpiritB = runB.getData(MxtAttachments.CULTIVATION);
+            ResourceHolderAttachment runResources = runA.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment otherResources = runB.getData(MxtAttachments.RESOURCE_HOLDER);
+            ensureResource(runA, runResources, waterPower, 10.0D);
+            ensureResource(runA, runResources, mastery, 0.0D);
+            ensureResource(runB, otherResources, waterPower, 10.0D);
+            boolean bothSeated = CultivationModeService.start(runA, runSpiritA, dual, contextOf(runA)).started()
+                    && CultivationModeService.start(runB, runSpiritB, dual, contextOf(runB)).started();
+            Result firstA = tickCultivation(runA, runSpiritA, dual, now);
+            Result firstB = tickCultivation(runB, runSpiritB, dual, now);
+            boolean bothPaid = firstA.progressed() && firstB.progressed()
+                    && close(runResources.get(waterPower), 9.0D) && close(runResources.get(mastery), 1.0D);
+            ok &= check(source, "cultivation probe: pair seated=" + bothSeated + " progressed=" + firstA.progressed()
+                            + "/" + firstB.progressed() + " power=" + runResources.get(waterPower)
+                            + " mastery=" + runResources.get(mastery),
+                    bothSeated && bothPaid);
+
+            // 7. Taking the manual away turns the due settlement into a no-op: nothing paid, nothing gained, no
+            //    reschedule, the session carries on - and the same settlement yields the moment it is back.
+            ItemStack held = runB.getMainHandItem().copy();
+            runB.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            long due = runSpiritA.nextCultivateTick();
+            double powerBefore = runResources.get(waterPower);
+            double masteryBefore = runResources.get(mastery);
+            Result skipped = tickCultivation(runA, runSpiritA, dual, due);
+            boolean noYield = skipped.waiting() && !skipped.progressed() && runSpiritA.cultivating()
+                    && close(runResources.get(waterPower), powerBefore) && close(runResources.get(mastery), masteryBefore)
+                    && runSpiritA.nextCultivateTick() == due;
+            runB.setItemInHand(InteractionHand.MAIN_HAND, held);
+            Result resumed = tickCultivation(runA, runSpiritA, dual, due);
+            boolean yieldsAgain = resumed.progressed() && close(runResources.get(waterPower), powerBefore - 1.0D)
+                    && close(runResources.get(mastery), masteryBefore + 1.0D) && runSpiritA.nextCultivateTick() == due + 20L;
+            ok &= check(source, "cultivation probe: skipped waiting=" + skipped.waiting() + " resumed=" + yieldsAgain
+                            + " power=" + runResources.get(waterPower) + " mastery=" + runResources.get(mastery)
+                            + " next_in=" + (runSpiritA.nextCultivateTick() - due),
+                    noYield && yieldsAgain);
+
+            // 8. mxt:partner asks about the candidate: the manual has to be in the partner's own hand, the partner
+            //    has to be inside the range, and count decides how many of them there may be.
+            boolean manualOnPartner = !asks(dual, bareA);
+            boolean outOfRange = !asks(dual, rangeA);
+            boolean noPartner = !asks(dual, lonely);
+            boolean onePartner = asks(dual, crowdA);
+            friends.add(crowd2.getUUID());
+            friends.add(crowd3.getUUID());
+            boolean tooMany = !asks(dual, crowdA);
+            ok &= check(source, "cultivation probe: partner manual=" + !manualOnPartner + " far=" + outOfRange
+                            + " none=" + noPartner + " one=" + onePartner + " crowd=" + tooMany,
+                    manualOnPartner && outOfRange && noPartner && onePartner && tooMany);
+
+            // 9. mxt:cultivating reads the run that is on the body, and can name one method.
+            boolean state = new CultivatingEntityCondition(Optional.empty()).test(runA, contextOf(runA))
+                    && new CultivatingEntityCondition(Optional.of(dual)).test(runB, contextOf(runB))
+                    && !new CultivatingEntityCondition(Optional.of(free)).test(runA, contextOf(runA))
+                    && !new CultivatingEntityCondition(Optional.empty()).test(lonely, contextOf(lonely));
+            ok &= check(source, "cultivation probe: state=" + state, state);
+
+            // 10. The two actions are the pack's own way in and out: the first picks, the second stops and writes
+            //     the method's own cooldown, which a restart inside it runs into and one after it does not.
+            CultivationAttachment actorSpirit = actor.getData(MxtAttachments.CULTIVATION);
+            entityAction(level, "{\"type\": \"mxt:cultivate\"}").execute(actor, contextOf(actor));
+            boolean actionStarted = runs(actorSpirit, FREE_MEDITATION);
+            entityAction(level, "{\"type\": \"mxt:stop_cultivating\"}").execute(actor, contextOf(actor));
+            boolean actionStopped = !actorSpirit.cultivating() && actorSpirit.isCultivateActionOnCooldown(free, now);
+            boolean coolingDown = !CultivationActionService.start(actorSpirit, free, free.value(), now, () -> true)
+                    .started();
+            boolean cooldownOver = CultivationActionService.start(actorSpirit, free, free.value(), now + 200L,
+                    () -> true).started();
+            // The named form starts that very method for a body that has the manual, and stays silent for one that
+            // does not: nothing in the data pack can hand a failure back.
+            entityAction(level, "{\"type\": \"mxt:cultivate\", \"action\": \"mxt_test:named_meditation\"}")
+                    .execute(learner, contextOf(learner));
+            boolean namedStarted = runs(learner.getData(MxtAttachments.CULTIVATION), NAMED_MEDITATION);
+            entityAction(level, "{\"type\": \"mxt:cultivate\", \"action\": \"mxt_test:named_meditation\"}")
+                    .execute(lonely, contextOf(lonely));
+            boolean namedSilent = lonely.getData(MxtAttachments.CULTIVATION).cultivateAction().isEmpty();
+            ok &= check(source, "cultivation probe: actions start=" + actionStarted + " stop=" + actionStopped
+                            + " cooling=" + coolingDown + " expired=" + cooldownOver + " named=" + namedStarted
+                            + " silent=" + namedSilent,
+                    actionStarted && actionStopped && coolingDown && cooldownOver && namedStarted && namedSilent);
+
+            // 11. Both sessions of the pair are put away by the stored method, and the method that asks for nothing
+            //     keeps answering for a body that has techniques (the regression baseline of requirement ②).
+            CultivationModeService.stop(runA, runSpiritA, dual);
+            CultivationModeService.stop(runB, runSpiritB, dual);
+            boolean baselineKept = asks(free, learner) && asks(free, solo);
+            ok &= check(source, "cultivation probe: stop runs=" + runSpiritA.cultivating() + "/"
+                            + runSpiritB.cultivating() + " baseline=" + baselineKept,
+                    !runSpiritA.cultivating() && !runSpiritB.cultivating() && baselineKept);
+
+            // 12. The explicit pick is one start, not a preference: the named method runs although the selector
+            //     would choose another, and a pick that does not apply is refused without disturbing the session
+            //     already running. The named one is the lowest-priority fixture, because the method the pair legs
+            //     started and stopped on is still on its own cooldown.
+            CultivationAttachment pickSpirit = veteran.getData(MxtAttachments.CULTIVATION);
+            Result namedPick = CultivationModeService.startNamed(veteran, basic);
+            boolean pickedAnyway = namedPick.started() && runs(pickSpirit, CULTIVATE)
+                    && picks(CultivationModeService.select(veteran, contextOf(veteran)), TECHNIQUE_MEDITATION);
+            boolean pickRefused = CultivationModeService.startNamed(actor, gated).failure()
+                    == CultivationActionService.Failure.NOT_APPLICABLE
+                    && runs(actorSpirit, FREE_MEDITATION);
+            boolean pickRunning = CultivationModeService.startNamed(learner, named).failure()
+                    == CultivationActionService.Failure.ALREADY_ACTIVE;
+            ok &= check(source, "cultivation probe: pick named=" + pickedAnyway + " refused=" + pickRefused
+                            + " running=" + pickRunning + " failure=" + namedPick.failure(),
+                    pickedAnyway && pickRefused && pickRunning);
+
+            // 13. Forgetting takes the technique and its own stage record, and rebuilds what it granted; the realm
+            //     stage and everything else in the body are other state and stay exactly where they were.
+            SpiritIdentityAttachment bareIdentity = bareA.getData(MxtAttachments.SPIRIT_IDENTITY);
+            CultivationAttachment bareSpirit = bareA.getData(MxtAttachments.CULTIVATION);
+            AbilityAttachment bareAbilities = bareA.getData(MxtAttachments.ABILITY_HOLDER);
+            bareSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, QI_REFINING));
+            boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
+            bareIdentity.setTechniqueStage(sword, require(MxtResourceKeys.SKILL_STAGE, PROBE_TECHNIQUE_STAGE));
+            boolean bareGranted = bareAbilities.has(id("artifact_guard"));
+            boolean forgotten = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).changed();
+            boolean gone = bareIdentity.learnedTechniques().stream()
+                    .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
+                    && bareIdentity.techniqueStages().keySet().stream()
+                    .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
+                    && !bareAbilities.has(id("artifact_guard"))
+                    && !bareSpirit.realmStages().isEmpty();
+            boolean absent = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).failure()
+                    == TechniqueService.Failure.ABSENT;
+            ok &= check(source, "cultivation probe: forget learned=" + bareLearned + " granted=" + bareGranted
+                            + " forgotten=" + forgotten + " gone=" + gone + " absent=" + absent,
+                    bareLearned && bareGranted && forgotten && gone && absent);
+
+            // 14. mxt:mutual is both directions where mxt:undirected is either: a friendship held one way only
+            //     passes mxt:friend and mxt:undirected in that direction and is refused by the both-ways form,
+            //     while a pair that trusts each other passes all three.
+            refused.add(seatB.getUUID() + ">" + bareB.getUUID());
+            BiEntityCondition trust = biEntityCondition(level, "{\"type\": \"mxt:friend\"}");
+            BiEntityCondition eitherWay = biEntityCondition(level,
+                    "{\"type\": \"mxt:undirected\", \"condition\": {\"type\": \"mxt:friend\"}}");
+            BiEntityCondition bothWays = biEntityCondition(level,
+                    "{\"type\": \"mxt:mutual\", \"condition\": {\"type\": \"mxt:friend\"}}");
+            boolean oneWay = trust.test(bareB, seatB, contextOf(bareB)) && !trust.test(seatB, bareB, contextOf(seatB));
+            boolean either = eitherWay.test(bareB, seatB, contextOf(bareB)) && eitherWay.test(seatB, bareB, contextOf(seatB));
+            boolean notMutual = !bothWays.test(bareB, seatB, contextOf(bareB)) && !bothWays.test(seatB, bareB, contextOf(seatB));
+            boolean mutualPair = bothWays.test(bareB, crowd1, contextOf(bareB));
+            ok &= check(source, "cultivation probe: mutual one_way=" + oneWay + " either=" + either
+                            + " refusing=" + notMutual + " pair=" + mutualPair,
+                    oneWay && either && notMutual && mutualPair);
+        } finally {
+            NeoForge.EVENT_BUS.unregister(relation);
+            for (LivingEntity probe : probes) probe.discard();
+        }
+        if (ok) {
+            source.sendSuccess(() -> Component.literal("cultivation probe: OK"), false);
+            return 1;
+        }
+        source.sendFailure(Component.literal("cultivation probe: MISMATCH"));
+        return 0;
+    }
+
+    // Beings are laid out on a twelve block grid: mxt:partner asks about a five block sphere, so a column of
+    // beings stacked above one another would count as each other's partners.
+    private static BlockPos probeSpot(BlockPos base, int index) {
+        return base.offset(16 + index % 4 * 12, 2, 16 + index / 4 * 12);
+    }
+
+    // One settlement of a running method, driven the way the runtime drives it: the place supplies the aura, the
+    // caller supplies the upkeep answer, and the time is whatever the caller says it is.
+    private static Result tickCultivation(LivingEntity entity, CultivationAttachment spirit,
+                                          Holder<CultivateAction> action, long gameTime) {
+        CultivateAction definition = action.value();
+        FormulaContext context = contextOf(entity);
+        AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
+        return CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura,
+                action, definition, gameTime, context, () -> definition.tickCondition().test(entity, context));
+    }
+
+    private static FormulaContext contextOf(LivingEntity entity) {
+        return FormulaContexts.forEntity(entity);
+    }
+
+    private static boolean asks(Holder<CultivateAction> action, LivingEntity entity) {
+        return CultivationModeService.applicable(entity, action, contextOf(entity));
+    }
+
+    private static boolean picks(Optional<Holder<CultivateAction>> chosen, Identifier expected) {
+        return chosen.map(action -> HolderHelper.id(action).equals(expected)).orElse(false);
+    }
+
+    private static boolean runs(CultivationAttachment spirit, Identifier expected) {
+        return spirit.cultivating()
+                && spirit.cultivateAction().map(action -> HolderHelper.id(action).equals(expected)).orElse(false);
+    }
+
+    // A pack-named abort carries its own text; every other failure carries none and is told by its enum.
+    private static boolean named(Result result, String expected) {
+        return result.abortReason() != null && result.abortReason().getString().equals(expected);
+    }
+
+    // Definitions name other definitions through registry holders, so the parse needs the level's registries: plain
+    // JsonOps cannot resolve an `mxt:cultivate` action that names its method.
+    private static EntityAction entityAction(ServerLevel level, String json) {
+        return EntityAction.SINGLE_CODEC
+                .parse(RegistryOps.create(JsonOps.INSTANCE, level.registryAccess()), JsonParser.parseString(json))
+                .getOrThrow();
+    }
+
+    private static BiEntityCondition biEntityCondition(ServerLevel level, String json) {
+        return BiEntityCondition.SINGLE_CODEC
+                .parse(RegistryOps.create(JsonOps.INSTANCE, level.registryAccess()), JsonParser.parseString(json))
+                .getOrThrow();
     }
 
     // Prints the character panel's own line model, so what the panel would show is readable from the server

@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
@@ -103,16 +102,13 @@ public final class SpiritRootCommand {
         return distinct.size();
     }
 
-    // A root of several elements names every live one, with its share when the share is not the whole of it; a
-    // root whose elements are all switched off names none.
-    private static @Nullable Component elements(SpiritRoot definition) {
-        List<MutableComponent> live = definition.elements().stream().filter(entry -> Elements.enabled(entry.element()))
-                .map(SpiritRootCommand::elementName).toList();
-        if (live.isEmpty()) return null;
+    // A root of several elements names every one, with its share when the share is not the whole of it.
+    private static Component elements(SpiritRoot definition) {
+        List<MutableComponent> named = definition.elements().stream().map(SpiritRootCommand::elementName).toList();
         MutableComponent joined = Component.empty();
-        for (int index = 0; index < live.size(); index++) {
+        for (int index = 0; index < named.size(); index++) {
             if (index > 0) joined.append("/");
-            joined.append(live.get(index));
+            joined.append(named.get(index));
         }
         return joined;
     }
@@ -125,9 +121,6 @@ public final class SpiritRootCommand {
     private static int grant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Reference<SpiritRoot> root = ResourceArgument.getResource(ctx, "root", MxtResourceKeys.SPIRIT_ROOT);
-        // The argument has already found the entry, so this is only the mxt:disabled half of the old lookup.
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.SPIRIT_ROOT, root))
-            return unknown(source, HolderHelper.id(root));
         int granted = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
@@ -168,8 +161,8 @@ public final class SpiritRootCommand {
         return removed;
     }
 
-    // The holder is looked up among the held references, not in the registry, so an entry a pack has since
-    // disabled can still be switched off: the state is about the body.
+    // The holder is looked up among the held references, not in the registry, so an entry whose definition the
+    // current pack no longer provides can still be switched off: the state is about the body.
     private static int toggle(CommandContext<CommandSourceStack> ctx, boolean enabled) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Identifier id = IdentifierArgument.getId(ctx, "root");
@@ -201,15 +194,10 @@ public final class SpiritRootCommand {
         return null;
     }
 
-    // Resolved by id rather than through value(): the body can hold a reference to a definition that has since
-    // been disabled or deleted. Disabled counts as present, deleted answers empty and reads as unknown.
+    // Resolved by id rather than through value(): the body can hold a reference to a definition the current pack
+    // no longer provides. Present counts even then; a definition that is gone answers empty and reads as unknown.
     private static Optional<SpiritRoot> definition(Holder<SpiritRoot> root) {
-        return MxtDatapackRegistries.rawHolder(MxtResourceKeys.SPIRIT_ROOT, HolderHelper.id(root)).map(Holder::value);
-    }
-
-    private static int unknown(CommandSourceStack source, Identifier id) {
-        source.sendFailure(Component.translatable("command.mxt.identity.unknown", id.toString()));
-        return 0;
+        return MxtDatapackRegistries.holderOrEmpty(MxtResourceKeys.SPIRIT_ROOT, HolderHelper.id(root)).map(Holder::value);
     }
 
     private static int noPlayer(CommandSourceStack source) {

@@ -19,7 +19,7 @@ public interface BlockCondition {
     Codec<BlockCondition> CODEC = Codec.either(SINGLE_CODEC.listOf(), SINGLE_CODEC).xmap(value -> value.map(AndBlockCondition::new, Function.identity()), Either::right);
 
     static MapCodec<BlockCondition> optionalCodec(String name) {
-        return CODEC.optionalFieldOf(name, AlwaysTrueCondition.INSTANCE);
+        return CODEC.optionalFieldOf(name, AlwaysCondition.INSTANCE);
     }
 
     @NotNull MapCodec<? extends BlockCondition> codec();

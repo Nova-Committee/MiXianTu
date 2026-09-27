@@ -7,11 +7,8 @@ import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
@@ -22,11 +19,8 @@ public record AuraRangeBlockCondition(Map<Holder<Aura>, AuraRequirement> aura) i
 
     @Override
     public boolean test(@NonNull BlockConditionContext ctx) {
-        Level level = ctx.level();
-        BlockPos pos = ctx.pos();
-        FormulaContext context = ctx.formula();
-        AuraResult resolved = AuraService.getPositionAura(level, pos);
-        return this.aura.entrySet().stream().allMatch(entry -> entry.getValue().test(resolved.pool(entry.getKey()).amount(), context));
+        AuraResult resolved = AuraService.getPositionAura(ctx.level(), ctx.pos());
+        return this.aura.entrySet().stream().allMatch(entry -> entry.getValue().test(resolved.pool(entry.getKey()).amount(), ctx.formula()));
     }
 
     @Override

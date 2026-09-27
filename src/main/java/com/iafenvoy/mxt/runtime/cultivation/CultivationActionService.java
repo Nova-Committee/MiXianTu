@@ -31,10 +31,12 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,7 +48,6 @@ import java.util.function.BooleanSupplier;
  * Authoritative lifecycle for the selected cultivation action; each realm resource chain is processed
  * independently while the action runs.
  */
-//TODO::May be removed together with CultivateAction - see that record for the cluster it lives in.
 public final class CultivationActionService {
     private CultivationActionService() {
     }
@@ -117,7 +118,11 @@ public final class CultivationActionService {
         if (!spirit.cultivating() || spirit.cultivateAction().filter(action::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
         if (!conditionsMet.getAsBoolean())
-            return stop(entity, spirit, action, definition, gameTime, Failure.CONDITIONS);
+            return stop(entity, spirit, action, definition, gameTime, Failure.CONDITIONS,
+                    definition.abortReason().orElse(null));
+        // A tick with no yield: the session carries on, but nothing is paid, gained or scheduled, so the moment the
+        // condition holds again the body settles straight away.
+        if (!definition.cultivateCondition().test(entity, context)) return Result.waitingResult();
         ItemAuraService.tick(entity, resources, context);
         Recovery recovery = recover(entity, spirit, resources, aura, definition, affinity, context);
         if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
@@ -232,17 +237,29 @@ public final class CultivationActionService {
     }
 
     private static Result stop(CultivationAttachment spirit, Holder<CultivateAction> action, CultivateAction definition, long gameTime, Failure reason) {
+        return stop(spirit, action, definition, gameTime, reason, null);
+    }
+
+    // The abort reason travels with the result so the actionbar can name this pack's own abort instead of the
+    // generic "conditions are not met"; every other stop names nothing and keeps the enum's message.
+    private static Result stop(CultivationAttachment spirit, Holder<CultivateAction> action, CultivateAction definition, long gameTime,
+                               Failure reason, @Nullable Component abortReason) {
         spirit.stopCultivateAction(action, Math.addExact(gameTime, definition.cooldownTicks()));
-        return reason == null ? Result.stoppedResult() : Result.rejected(reason, null);
+        return reason == null ? Result.stoppedResult() : Result.rejected(reason, null, abortReason);
     }
 
     private static Result stop(LivingEntity entity, CultivationAttachment spirit, Holder<CultivateAction> action, CultivateAction definition,
                                long gameTime, Failure reason) {
+        return stop(entity, spirit, action, definition, gameTime, reason, null);
+    }
+
+    private static Result stop(LivingEntity entity, CultivationAttachment spirit, Holder<CultivateAction> action, CultivateAction definition,
+                               long gameTime, Failure reason, @Nullable Component abortReason) {
         ItemAuraService.returnFloatingItem(entity);
         // Breakthrough listeners are derived runtime state and must disappear as soon as cultivation
         // stops, including on failure paths inside the tick.
         CultivationTriggerService.clear(entity);
-        return stop(spirit, action, definition, gameTime, reason);
+        return stop(spirit, action, definition, gameTime, reason, abortReason);
     }
 
     private static ResourceHolderAttachment copyOf(ResourceHolderAttachment source) {
@@ -534,29 +551,34 @@ public final class CultivationActionService {
         }
     }
 
-    public enum Failure {DISABLED, ALREADY_ACTIVE, COOLDOWN, CONDITIONS, NOT_ACTIVE, ENVIRONMENT, INVALID_FORMULA, INSUFFICIENT_RESOURCE, INSUFFICIENT_AURA}
+    public enum Failure {DISABLED, ALREADY_ACTIVE, COOLDOWN, CONDITIONS, NOT_ACTIVE, NOT_APPLICABLE, ENVIRONMENT, INVALID_FORMULA, INSUFFICIENT_RESOURCE, INSUFFICIENT_AURA}
 
     public record Result(boolean started, boolean progressed, boolean waiting, boolean stopped, Failure failure,
                          Identifier failedResource,
-                         double absorbedAmount, Map<Identifier, Double> paidCosts) {
+                         double absorbedAmount, Map<Identifier, Double> paidCosts,
+                         @Nullable Component abortReason) {
         private static Result startedResult() {
-            return new Result(true, false, false, false, null, null, 0.0D, Map.of());
+            return new Result(true, false, false, false, null, null, 0.0D, Map.of(), null);
         }
 
         private static Result progressed(double gained, Map<Identifier, Double> costs) {
-            return new Result(false, true, false, false, null, null, gained, costs);
+            return new Result(false, true, false, false, null, null, gained, costs, null);
         }
 
         private static Result waitingResult() {
-            return new Result(false, false, true, false, null, null, 0.0D, Map.of());
+            return new Result(false, false, true, false, null, null, 0.0D, Map.of(), null);
         }
 
         private static Result stoppedResult() {
-            return new Result(false, false, false, true, null, null, 0.0D, Map.of());
+            return new Result(false, false, false, true, null, null, 0.0D, Map.of(), null);
         }
 
         static Result rejected(Failure failure, Identifier resource) {
-            return new Result(false, false, false, false, failure, resource, 0.0D, Map.of());
+            return rejected(failure, resource, null);
+        }
+
+        static Result rejected(Failure failure, Identifier resource, @Nullable Component abortReason) {
+            return new Result(false, false, false, false, failure, resource, 0.0D, Map.of(), abortReason);
         }
     }
 }

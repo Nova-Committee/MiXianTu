@@ -8,9 +8,11 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -50,12 +52,16 @@ public final class AlchemyFurnaceCasingBlockEntity extends BlockEntity {
     }
 
     public Optional<Holder<AlchemyWallMaterial>> material() {
-        if (this.wallItem.isEmpty()) return Optional.empty();
-        Holder<AlchemyWallMaterial> holder = this.wallItem.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get());
-        if (holder == null || MxtDatapackRegistries.isDisabled(MxtResourceKeys.ALCHEMY_WALL_MATERIAL, holder))
-            return Optional.empty();
-        double max = holder.value().maxTemperature();
-        return Double.isFinite(max) && max > 0.0D ? Optional.of(holder) : Optional.empty();
+        if (this.wallItem.isEmpty() || this.level == null) return Optional.empty();
+        Holder<AlchemyWallMaterial> stored = this.wallItem.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get());
+        if (stored == null) return Optional.empty();
+        Identifier id = HolderHelper.id(stored);
+        if (id.equals(HolderHelper.EMPTY)) return Optional.empty();
+        Optional<Holder<AlchemyWallMaterial>> loaded = MxtDatapackRegistries.holder(this.level.registryAccess(),
+                MxtResourceKeys.ALCHEMY_WALL_MATERIAL, id).map(holder -> holder);
+        if (loaded.isEmpty()) return Optional.empty();
+        double max = loaded.get().value().maxTemperature();
+        return Double.isFinite(max) && max > 0.0D ? loaded : Optional.empty();
     }
 
     public void claim(BlockPos controller) {

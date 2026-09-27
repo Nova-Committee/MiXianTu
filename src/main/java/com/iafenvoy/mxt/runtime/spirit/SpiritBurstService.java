@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -42,7 +41,7 @@ public final class SpiritBurstService {
         }
         Optional<Holder<Aura>> valid = auraId.flatMap(id -> MxtDatapackRegistries.holder(MxtResourceKeys.AURA, id))
                 .map(aura -> (Holder<Aura>) aura)
-                .filter(aura -> Elements.enabled(aura.value().auraType()) && ResourceUseService.canUse(holder, aura));
+                .filter(aura -> aura.value().auraType().isPresent() && ResourceUseService.canUse(holder, aura));
         if (valid.isEmpty()) return;
         Set<Holder<Aura>> active = ACTIVE_AURAS.computeIfAbsent(holderId, ignored -> new HashSet<>());
         if (firing) {
@@ -79,7 +78,7 @@ public final class SpiritBurstService {
         if (auraId == null) return false;
         Holder<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId)
                 .map(value -> (Holder<Aura>) value)
-                .filter(value -> Elements.enabled(value.value().auraType()) && ResourceUseService.canUse(holder, value))
+                .filter(value -> value.value().auraType().isPresent() && ResourceUseService.canUse(holder, value))
                 .orElse(null);
         return aura != null && attempt(holder, aura);
     }
@@ -87,7 +86,7 @@ public final class SpiritBurstService {
     private static void fire(LivingEntity holder, Holder<Aura> aura) {
         Set<Holder<Aura>> active = ACTIVE_AURAS.get(holder.getUUID());
         if (active == null || !active.contains(aura)) return;
-        active.removeIf(candidate -> !Elements.enabled(candidate.value().auraType()) || !ResourceUseService.canUse(holder, candidate));
+        active.removeIf(candidate -> candidate.value().auraType().isEmpty() || !ResourceUseService.canUse(holder, candidate));
         attempt(holder, aura);
     }
 
@@ -104,7 +103,7 @@ public final class SpiritBurstService {
     // A positive burst_amount marks an aura that can be fired by the shortcut.
     private static boolean tryFire(LivingEntity holder, ResourceHolderAttachment resources, Holder<Aura> aura) {
         Aura definition = aura.value();
-        if (!Elements.enabled(definition.auraType()) || !ResourceUseService.canUse(holder, aura)) return false;
+        if (definition.auraType().isEmpty() || !ResourceUseService.canUse(holder, aura)) return false;
         Holder<Resource> resource = definition.resource();
         FormulaContext context = ResourceService.formulaContext(holder, resource, FormulaContext.of(holder));
         int amount = asWholeAmount(definition.burstAmount().evaluate(context));

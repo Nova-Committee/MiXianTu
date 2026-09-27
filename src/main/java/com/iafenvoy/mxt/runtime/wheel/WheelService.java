@@ -12,13 +12,13 @@ import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
+import com.iafenvoy.mxt.runtime.ability.AbilityFeedback;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
-import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -198,11 +198,8 @@ public final class WheelService {
         String name = failure.name().toLowerCase(Locale.ROOT);
         MiXianTu.LOGGER.info("Refusing the wheel {} {} for {}: {}{}", verb, id, player.getGameProfile().name(), name,
                 failedResource == null ? "" : " (" + failedResource + ")");
-        Component reason = failure == Togglable.Failure.INSUFFICIENT_RESOURCE && failedResource != null
-                ? Component.translatable("actionbar.mxt.ability.failure.insufficient_resource_named",
-                DefinitionText.name(failedResource, "resource"))
-                : Component.translatable("actionbar.mxt.ability.failure." + name);
-        player.sendSystemMessage(Component.translatable(messageKey, reason), true);
+        player.sendSystemMessage(Component.translatable(messageKey,
+                AbilityFeedback.reason(failure, failedResource)), true);
         return false;
     }
 }

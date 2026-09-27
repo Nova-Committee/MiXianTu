@@ -1,0 +1,6 @@
+{
+  "priority": 5,
+  "tick_interval": 20,
+  "absorb_amount": "3",
+  "cooldown": 200
+}

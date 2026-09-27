@@ -1,4 +1,4 @@
 {
   "abilities": ["mxt_test:storm_pulse"],
-  "aura_cost": { "mxt_test:spirit_power": 5 }
+  "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 5 }]
 }

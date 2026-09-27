@@ -1,0 +1,9 @@
+{
+  "type": "mxt:interval",
+  "interval": 20,
+  "condition": {"type": "mxt:always"},
+  "entity_action": {"type": "mxt:add_resource", "resource": "mxt_test:channel_probe", "amount": 1},
+  "target_selector": {"type": "mxt:area", "radius": 3, "include_actor": true},
+  "target_condition": {"type": "mxt:always"},
+  "bi_entity_action": {"type": "mxt:no_op"}
+}

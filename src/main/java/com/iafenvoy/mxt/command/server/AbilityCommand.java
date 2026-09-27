@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.command.Suggestions;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -71,8 +70,8 @@ public final class AbilityCommand {
         return ResourceArgument.getResource(ctx, "id", MxtResourceKeys.ABILITY);
     }
 
-    // Read from the attachment rather than the registry, so an ability whose definition was disabled or deleted is
-    // still reported: it is still held, and revoking it by name is still what takes it off.
+    // Read from the attachment rather than the registry, so an ability whose definition the pack no longer provides
+    // is still reported: it is still held, and revoking it by name is still what takes it off.
     private static int list(CommandSourceStack source, @Nullable Entity target) {
         if (target == null) {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
@@ -98,10 +97,6 @@ public final class AbilityCommand {
         Reference<Ability> ability = ResourceArgument.getResource(ctx, "ability", MxtResourceKeys.ABILITY);
         Identifier id = HolderHelper.id(ability);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, ability)) {
-            source.sendFailure(Component.translatable("command.mxt.ability.unknown", id.toString()));
-            return 0;
-        }
         int granted = 0;
         for (Entity target : targets) {
             AbilityAttachment abilities = target.getData(MxtAttachments.ABILITY_HOLDER);
@@ -146,13 +141,11 @@ public final class AbilityCommand {
 
     private static int castAbility(CommandSourceStack source, Reference<Ability> ability) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ABILITY, ability)) {
-            source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", "unknown_definition"));
-            return 0;
-        }
         UseResult result = AbilityService.use(ability, player, player.getData(MxtAttachments.ABILITY_HOLDER),
                 player.getData(MxtAttachments.RESOURCE_HOLDER), player.level().getGameTime(), FormulaContext.of(player));
-        if (!result.committed()) {
+        // An accepted cast is a success too: it commits when the cast time runs out, so there is no failure to
+        // name here - reading one would be a null pointer for every skill that has a cast time.
+        if (result.failure() != null) {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().name()));
             return 0;
         }

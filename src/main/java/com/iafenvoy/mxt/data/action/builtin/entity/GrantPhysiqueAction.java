@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.NonNull;
 
@@ -22,8 +21,7 @@ public record GrantPhysiqueAction(Holder<Physique> physique) implements EntityAc
 
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
-        Entity entity = ctx.entity();
-        if (entity instanceof LivingEntity living)
+        if (ctx.entity() instanceof LivingEntity living)
             CultivationIdentityService.grantPhysique(living, HolderHelper.id(this.physique), this.physique.value(), ctx.formula());
     }
 

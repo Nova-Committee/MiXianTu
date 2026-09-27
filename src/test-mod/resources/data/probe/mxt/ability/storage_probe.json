@@ -1,12 +1,11 @@
 {
   "type": "mxt:active",
   "cooldown": 0,
-  "components": [
-    {"type": "mxt:toggle", "default": false},
-    {"type": "mxt:charges", "maximum": 2, "recharge_ticks": 20},
-    {"type": "mxt:timer", "duration": 200},
-    {"type": "mxt:resource", "resource": "mxt_test:qi"},
-    {"type": "mxt:target_lock", "range": 16}
-  ],
-  "entity_action": {"type": "mxt:no_op"}
+  "charges": {
+    "maximum": 2,
+    "recharge_ticks": 20
+  },
+  "entity_action": {
+    "type": "mxt:no_op"
+  }
 }

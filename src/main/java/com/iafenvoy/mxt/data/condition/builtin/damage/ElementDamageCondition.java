@@ -15,7 +15,6 @@ import net.minecraft.tags.TagKey;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * True when any element the strike is made of - {@link DamageElements#strike}: the damage type's claimants, or the
@@ -36,8 +35,7 @@ public record ElementDamageCondition(
 
     @Override
     public boolean test(@NonNull DamageConditionContext ctx) {
-        Set<Holder<Element>> strike = DamageElements.strike(ctx.source());
-        return strike.stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
+        return DamageElements.strike(ctx.source()).stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
     }
 
     @Override

@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * One HUD element the framework knows how to place, draw and let the player drag: position only, no scaling
  * and no bounds dependency graph (research/26). None of these methods runs while an entry is being
- * constructed, so {@link #defaultX()} may read fields assigned after {@code super(...)} returns.
+ * constructed, so {@link #defaultOffsetX()} may read fields assigned after {@code super(...)} returns.
  */
 public interface HudEntry {
     // The identity of this entry: the config key its position is stored under, the suffix of its translation
@@ -32,15 +32,21 @@ public interface HudEntry {
     // Every frame outside the edit screen; while editing, only for the entry the placeholders draw over.
     void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker);
 
-    // Only a suggestion: as soon as there is a stored placement, that wins.
-    int defaultX();
+    // The window anchor this element is bound to right now, and the point of its own rectangle the stored offset
+    // is measured to. The editor rebinds it while the element is dragged across an anchor.
+    HudAnchor anchor();
 
-    int defaultY();
+    void setAnchor(HudAnchor anchor);
 
-    // Which point defaultX() / defaultY() describe, and the point that stays fixed when the entry resizes.
-    default HudAnchor anchor() {
+    // Only a suggestion: as soon as there is a stored placement, that wins. The offset is in pixels from the window
+    // point the anchor names, so it keeps meaning the same thing at any window size.
+    default HudAnchor defaultAnchor() {
         return HudAnchor.LEFT_TOP;
     }
+
+    int defaultOffsetX();
+
+    int defaultOffsetY();
 
     default int x() {
         return this.bounds().x();
@@ -56,7 +62,8 @@ public interface HudEntry {
     // Values outside the window are clamped, so the stored position is one the player can actually see.
     void setPosition(int x, int y);
 
-    // A hidden entry is neither drawn nor draggable; turning one back on is the entry's own business.
+    // A hidden entry is not drawn while playing; the editor still draws it faintly and its checkbox turns it back
+    // on, so hiding one is never a one-way trip out of the layout.
     boolean visible();
 
     void setVisible(boolean visible);

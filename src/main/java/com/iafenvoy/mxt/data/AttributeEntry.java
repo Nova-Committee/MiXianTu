@@ -14,8 +14,7 @@ import java.util.Optional;
  * An attribute target paired with the vanilla modifier. The optional value
  * provider replaces the modifier amount at runtime and is evaluated each tick.
  */
-public record AttributeEntry(Holder<Attribute> attribute, AttributeModifier modifier,
-                             Optional<NumberProvider> value) {
+public record AttributeEntry(Holder<Attribute> attribute, AttributeModifier modifier, Optional<NumberProvider> value) {
     public static final Codec<AttributeEntry> CODEC = RecordCodecBuilder.create(i -> i.group(
             Attribute.CODEC.fieldOf("attribute").forGetter(AttributeEntry::attribute),
             AttributeModifier.MAP_CODEC.forGetter(AttributeEntry::modifier),

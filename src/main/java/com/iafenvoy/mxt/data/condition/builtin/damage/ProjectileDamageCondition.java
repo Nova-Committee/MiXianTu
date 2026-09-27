@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.condition.builtin.damage;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -30,8 +29,6 @@ public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projecti
     @Override
     public boolean test(@NonNull DamageConditionContext ctx) {
         DamageSource source = ctx.source();
-        float amount = ctx.amount();
-        FormulaContext context = ctx.formula();
         Entity entity = source.getDirectEntity();
         return source.is(DamageTypeTags.IS_PROJECTILE)
                 && entity != null

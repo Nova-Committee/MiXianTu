@@ -1,0 +1,124 @@
+package com.iafenvoy.mxt.data.quality;
+
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.ChainCache;
+import com.iafenvoy.mxt.util.HolderHelper;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.HolderLookup.RegistryLookup;
+import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+/**
+ * The one place a quality ladder is read. A ladder is not declared anywhere: it is walked out of the tiers' own
+ * {@code next} links, the same way a skill chain is walked out of {@code next_stage}, and its name is the
+ * {@code quality} some tier on it writes. That name reaches the tiers below it, so a ladder only has to be named
+ * once; the tier nothing points at is the entry, and every tier after it is one step higher.
+ *
+ * <p>The ladder itself is a {@link ChainCache.Chain} of tiers, read in either direction; this class only says
+ * which links belong to a ladder, what each ladder is called, and which of them are mistakes.
+ */
+public final class QualityLadders {
+    private QualityLadders() {
+    }
+
+    /**
+     * The whole index, for a caller that reads a tier's neighbours rather than the ladder itself. Empty rather
+     * than absent when no registry is loaded, so a read never has to distinguish the two.
+     */
+    public static ChainCache<ItemQuality> cache(Provider access) {
+        return lookup(access).map(QualityLadders::index).orElseGet(ChainCache::empty);
+    }
+
+    /**
+     * The ladder the tier sits on: the one its own name points at. Empty for a tier on no ladder.
+     */
+    public static Optional<ChainCache.Chain<ItemQuality>> of(Provider access, @Nullable Holder<ItemQuality> tier) {
+        return tier == null ? Optional.empty() : cache(access).chainOf(HolderHelper.id(tier));
+    }
+
+    private static ChainCache<ItemQuality> index(RegistryLookup<ItemQuality> registry) {
+        return ChainCache.cached(registry, () -> diagnose(registry));
+    }
+
+    /**
+     * The whole registry walked once. The problems ride on the result, so a report can never describe a different
+     * registry than the one the runtime reads.
+     */
+    public static ChainCache<ItemQuality> diagnose(RegistryLookup<ItemQuality> registry) {
+        Map<Identifier, Holder<ItemQuality>> tiers = new LinkedHashMap<>();
+        registry.listElements().forEach(holder -> tiers.put(holder.key().identifier(), holder));
+        Map<Identifier, Identifier> inherited = inherit(tiers);
+        // What each tier hands over to, and which tier cannot be walked at all: a name contradicting the one that
+        // reaches it refuses that tier's whole ladder rather than cutting the ladder in two.
+        ChainCache.Builder<ItemQuality> ladders = ChainCache.builder(tiers);
+        Set<Identifier> pointedAt = new LinkedHashSet<>();
+        for (Map.Entry<Identifier, Holder<ItemQuality>> entry : tiers.entrySet()) {
+            Identifier id = entry.getKey();
+            ItemQuality tier = entry.getValue().value();
+            Identifier declared = tier.quality().orElse(null);
+            if (declared != null && !Objects.equals(declared, inherited.get(id)))
+                ladders.refuse(id, "names quality " + declared + " inside " + inherited.get(id));
+            tier.next().map(HolderHelper::id).ifPresent(next -> {
+                pointedAt.add(next);
+                ladders.link(id, next);
+            });
+        }
+        // The entry is the tier nothing points at, and the name reaching it is what the ladder is known by.
+        List<Identifier> heads = new ArrayList<>();
+        tiers.keySet().stream().filter(id -> !pointedAt.contains(id)).forEach(head -> {
+            heads.add(head);
+            ladders.head(head, inherited.get(head));
+        });
+        ChainCache<ItemQuality> built = ladders.build();
+        // Two entries naming one ladder would leave "where does this climb to" unanswered.
+        List<ChainCache.Report> problems = new ArrayList<>();
+        Set<Identifier> named = new LinkedHashSet<>();
+        for (Identifier head : heads) {
+            Identifier quality = inherited.get(head);
+            if (quality == null || named.add(quality)) continue;
+            problems.add(new ChainCache.Report(head,
+                    "starts a second ladder named " + quality + ", which another tier already names"));
+        }
+        // A tier that names a ladder has to end up on it, whether the walk failed or it was never an entry.
+        for (Map.Entry<Identifier, Holder<ItemQuality>> entry : tiers.entrySet())
+            if (entry.getValue().value().quality().isPresent() && !built.contains(entry.getKey()))
+                problems.add(new ChainCache.Report(entry.getKey(),
+                        "cannot be reached from the start of its ladder: it is cyclic, points into another, "
+                                + "or names a quality that is already taken"));
+        return built.with(problems);
+    }
+
+    // A ladder is named on one tier and reaches every tier below it, so a pack writes it once. A tier carrying two
+    // different names from the tiers above it keeps the first one and is reported by the walk that crosses it.
+    private static Map<Identifier, Identifier> inherit(Map<Identifier, Holder<ItemQuality>> tiers) {
+        Map<Identifier, Identifier> inherited = new LinkedHashMap<>();
+        for (Map.Entry<Identifier, Holder<ItemQuality>> entry : tiers.entrySet()) {
+            Identifier quality = entry.getValue().value().quality().orElse(null);
+            if (quality == null) continue;
+            Identifier current = entry.getKey();
+            while (current != null) {
+                inherited.putIfAbsent(current, quality);
+                Holder<ItemQuality> tier = tiers.get(current);
+                if (tier == null) break;
+                Identifier next = tier.value().next().map(HolderHelper::id).orElse(null);
+                if (next == null || !tiers.containsKey(next)) break;
+                current = next;
+            }
+        }
+        return inherited;
+    }
+
+    private static Optional<RegistryLookup<ItemQuality>> lookup(Provider access) {
+        return access.lookup(MxtResourceKeys.ITEM_QUALITY).map(registry -> (RegistryLookup<ItemQuality>) registry);
+    }
+}

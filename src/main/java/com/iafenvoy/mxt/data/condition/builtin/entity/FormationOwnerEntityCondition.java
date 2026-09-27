@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.runtime.formation.FormationCarrier;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -18,9 +17,8 @@ public enum FormationOwnerEntityCondition implements EntityCondition {
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        Entity entity = ctx.entity();
         return FormationCarrier.of(ctx)
-                .map(carrier -> FormationRelations.isOwner(carrier, entity))
+                .map(carrier -> FormationRelations.isOwner(carrier, ctx.entity()))
                 .orElse(false);
     }
 

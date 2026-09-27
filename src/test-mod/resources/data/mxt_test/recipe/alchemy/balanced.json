@@ -19,7 +19,7 @@
       "id": "minecraft:paper",
       "count": 2,
       "components": {
-        "mxt:item_quality": "mxt_test:alchemy/kiln_a"
+        "mxt:quality": "mxt_test:alchemy/kiln_a"
       }
     }
   ],

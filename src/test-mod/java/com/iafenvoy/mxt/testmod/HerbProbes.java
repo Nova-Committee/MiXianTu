@@ -225,17 +225,20 @@ public final class HerbProbes {
         plot.sync();
         ok &= randomRoll(source, level, pos, player, spirit, chunk);
 
-        Holder<SpiritHerb> retired = level.registryAccess().lookupOrThrow(MxtResourceKeys.SPIRIT_HERB)
-                .get(ResourceKey.create(MxtResourceKeys.SPIRIT_HERB, id("herb/retired"))).orElse(null);
-        if (retired == null) return check(source, "herb probe: retired holder", "missing", "mxt_test:herb/retired");
-        plot.restore(retired, new ItemStack(Items.LILY_OF_THE_VALLEY), 4.0F, 0, Pause.NONE);
+        boolean retiredFile = level.getServer().getResourceManager()
+                .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/spirit_herb/herb/retired.json")).isPresent();
+        boolean retiredAbsent = level.registryAccess().lookupOrThrow(MxtResourceKeys.SPIRIT_HERB)
+                .get(ResourceKey.create(MxtResourceKeys.SPIRIT_HERB, id("herb/retired"))).isEmpty();
+        ok &= check(source, "herb probe: excluded file", retiredFile, true);
+        ok &= check(source, "herb probe: excluded holder", retiredAbsent, true);
+        plot.restore(null, new ItemStack(Items.LILY_OF_THE_VALLEY), 4.0F, 0, Pause.NONE);
         tick(level, pos, 20);
-        boolean stopped = plot.progress() == 4.0F && plot.pause() == Pause.DISABLED;
+        boolean stopped = plot.progress() == 4.0F && plot.herb() == null && plot.pause() == Pause.MISSING;
         int before = count(player, Items.LILY_OF_THE_VALLEY);
         clearDrops(level, pos);
-        ok &= emptyClick(source, "herb probe: disabled pull click", player, level, pos, true);
+        ok &= emptyClick(source, "herb probe: absent pull click", player, level, pos, true);
         int gained = count(player, Items.LILY_OF_THE_VALLEY) - before + dropped(level, pos, Items.LILY_OF_THE_VALLEY);
-        ok &= check(source, "herb probe: disabled returns seed", stopped && gained == 1 && !plot.occupied(), true);
+        ok &= check(source, "herb probe: absent returns seed", stopped && gained == 1 && !plot.occupied(), true);
         return ok;
     }
 

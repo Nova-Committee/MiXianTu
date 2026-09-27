@@ -48,6 +48,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillToxicityAttachment>> PILL_TOXICITY = entity("pill_toxicity", PillToxicityAttachment::new, PillToxicityAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillUsageAttachment>> PILL_USAGE = entity("pill_usage", PillUsageAttachment::new, PillUsageAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FlightAttachment>> FLIGHT = entityWithoutDeathCopy("flight", FlightAttachment::new, FlightAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PerchAttachment>> PERCH = entityWithoutDeathCopy("perch", PerchAttachment::new, PerchAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FriendAttachment>> FRIEND = entityServerOnly("friend", FriendAttachment::new, FriendAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TriggerCooldownAttachment>> TRIGGER_COOLDOWNS = entityServerOnly("trigger_cooldowns", TriggerCooldownAttachment::new, TriggerCooldownAttachment.CODEC);
     // Level

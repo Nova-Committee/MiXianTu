@@ -2,10 +2,11 @@ package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Inventory/UI-neutral contract for a placed forge table, so runtime services never depend on the concrete
@@ -52,11 +53,12 @@ public interface ForgingSurface {
     }
 
     // The one placement rule, shared by the block entity - the authority for hoppers and shift-clicks - and the
-    // menu. A session freezes the output, the inputs and the blueprint; tools stay live.
-    static boolean canPlace(int slot, ItemStack stack, boolean active, ForgingBlueprint locked) {
+    // menu. A session freezes the output, the inputs and the blueprint; tools stay live. The registries are asked
+    // because a tool or a sheet is a stack some declaration claims, not one carrying a component of its own.
+    static boolean canPlace(int slot, ItemStack stack, boolean active, ForgingBlueprint locked, @Nullable Provider access) {
         if (isOutputSlot(slot)) return false;
-        if (isToolSlot(slot)) return stack.has(MxtDataComponents.TOOL_BINDING.get());
-        if (isBlueprintSlot(slot)) return !active && stack.has(MxtDataComponents.BLUEPRINT_BINDING.get());
+        if (isToolSlot(slot)) return access != null && ForgingBindingService.isTool(access, stack);
+        if (isBlueprintSlot(slot)) return !active && access != null && ForgingBindingService.isBlueprint(access, stack);
         if (!isInputSlot(slot)) return false;
         if (active) return false;
         if (locked == null) return true;

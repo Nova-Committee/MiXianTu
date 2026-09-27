@@ -1,6 +1,7 @@
 {
   "abilities": ["mxt_test:sigil_pulse"],
-  "aura_cost": { "mxt_test:soul_power": 2 },
-  "durability": 2,
+  "capacity": 4,
+  "costs": [{ "type": "mxt:aura", "aura": "mxt_test:soul_power", "amount": 2 }],
+  "durability": 4,
   "consume": 1
 }

@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
@@ -112,17 +111,7 @@ public record SpiritRoot(Component name, Component description, List<ElementWeig
     // Two roots conflict when either one names an element the other holds. Both directions are asked because a
     // pack writes the rule on whichever root it thinks of first.
     public boolean conflictsWith(SpiritRoot other) {
-        return this.elementHolders().stream().anyMatch(element -> names(other.conflictingElements(), element))
-                || other.elementHolders().stream().anyMatch(element -> names(this.conflictingElements, element));
-    }
-
-    // Both elements must be live for the question to mean anything: a mxt:disabled element neither rules another
-    // out nor is ruled out by one, so a root bound to it coexists with everything.
-    private static boolean names(List<Either<Holder<Element>, TagKey<Element>>> declared, Holder<Element> element) {
-        return enabled(element) && RegistryCodecs.matches(declared, element);
-    }
-
-    private static boolean enabled(Holder<Element> element) {
-        return !MxtDatapackRegistries.isDisabled(MxtResourceKeys.ELEMENT, element);
+        return this.elementHolders().stream().anyMatch(element -> RegistryCodecs.matches(other.conflictingElements(), element))
+                || other.elementHolders().stream().anyMatch(element -> RegistryCodecs.matches(this.conflictingElements, element));
     }
 }

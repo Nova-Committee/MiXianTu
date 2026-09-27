@@ -44,7 +44,7 @@ public final class AuraDistributionService {
             FormulaContext context = FormulaContexts.forEntity(player);
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
             if (!CultivationActionService.canCultivateInEnvironment(spirit, player, aura, context)
-                    || !definition.condition().test(player, context)) continue;
+                    || !definition.tickCondition().test(player, context)) continue;
             Map<Holder<Aura>, Double> requested = evaluateCosts(definition, context);
             if (requested == null || requested.isEmpty()) continue;
             double weight = shareWeight(spirit, context);

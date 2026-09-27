@@ -15,11 +15,9 @@ import net.minecraft.tags.TagKey;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
-import java.util.Set;
 
 /**
- * True when any element the entity's spirit roots name is one of the listed ones. An element a pack disabled is
- * not part of the answer, exactly as everywhere else.
+ * True when any element the entity's spirit roots name is one of the listed ones.
  */
 public record HasElementEntityCondition(
         List<Either<Holder<Element>, TagKey<Element>>> elements) implements EntityCondition {
@@ -36,8 +34,7 @@ public record HasElementEntityCondition(
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        Set<Holder<Element>> held = Elements.of(ctx.entity());
-        return held.stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
+        return Elements.of(ctx.entity()).stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
     }
 
     @Override

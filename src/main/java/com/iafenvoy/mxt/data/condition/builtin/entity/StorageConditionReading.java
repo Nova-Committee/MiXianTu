@@ -34,9 +34,4 @@ record StorageConditionReading(Identifier id, DataStorageHolder holder, DataStor
     <T extends DataStorage> Optional<T> stored(Class<T> kind) {
         return this.holder.get(this.id, kind);
     }
-
-    // -1 when the host declares the kind but has never written it.
-    long changedAt(Class<? extends DataStorage> kind) {
-        return this.holder.changedAt(this.id, kind);
-    }
 }

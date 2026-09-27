@@ -5,10 +5,8 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
@@ -27,16 +25,14 @@ public record ChangeAuraBlockAction(Map<Holder<Aura>, NumberProvider> aura) impl
     @Override
     public void execute(@NonNull BlockActionContext ctx) {
         Level level = ctx.level();
-        BlockPos pos = ctx.pos();
-        FormulaContext context = ctx.formula();
         if (level.isClientSide()) return;
         Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
         for (Entry<Holder<Aura>, NumberProvider> entry : this.aura.entrySet()) {
-            double amount = entry.getValue().evaluate(context);
+            double amount = entry.getValue().evaluate(ctx.formula());
             if (!Double.isFinite(amount)) return;
             amounts.put(entry.getKey(), amount);
         }
-        AuraService.change(level, pos, amounts);
+        AuraService.change(level, ctx.pos(), amounts);
     }
 
     @Override

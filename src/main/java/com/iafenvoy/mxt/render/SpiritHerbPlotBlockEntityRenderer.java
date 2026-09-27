@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.item.block.SpiritHerbPlotBlock;
 import com.iafenvoy.mxt.item.block.entity.SpiritHerbPlotBlockEntity;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -41,7 +42,9 @@ public final class SpiritHerbPlotBlockEntityRenderer implements BlockEntityRende
         BlockEntityRenderState.extractBase(entity, state, breakProgress);
         state.texture = null;
         if (entity.getLevel() == null || entity.herb() == null) return;
-        SpiritHerb herb = MxtDatapackRegistries.get(entity.getLevel().registryAccess(), MxtResourceKeys.SPIRIT_HERB, entity.herb())
+        Identifier id = HolderHelper.id(entity.herb());
+        if (id.equals(HolderHelper.EMPTY)) return;
+        SpiritHerb herb = MxtDatapackRegistries.get(entity.getLevel().registryAccess(), MxtResourceKeys.SPIRIT_HERB, id)
                 .orElse(null);
         if (herb == null || herb.growth().isEmpty()) return;
         state.texture = herb.growth().get().textureResource();

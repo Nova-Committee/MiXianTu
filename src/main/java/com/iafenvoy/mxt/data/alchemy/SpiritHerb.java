@@ -30,14 +30,16 @@ import java.util.Optional;
 
 /**
  * Metadata bound to existing items. A pack entry never registers its own Item. {@code element_tags} is affinity,
- * not a medicinal property; omitting {@code growth} leaves the item usable in a furnace but unsowable.
+ * written with the element registry and read by {@code mxt:herb_tag}; it is not a medicinal property. Omitting
+ * {@code growth} leaves the item usable in a furnace but unsowable. Overlapping entries resolve by {@code priority}:
+ * the highest wins, and a tie keeps registry order.
  */
 public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Component name, Component description,
                          int defaultAge, List<Either<Holder<Element>, TagKey<Element>>> elementTags,
                          List<Identifier> materialTags, Map<Holder<MedicinalProperty>, NumberProvider> mainEffects,
                          Map<Holder<MedicinalProperty>, NumberProvider> auxiliaryEffects,
                          NumberProvider catalystPower, double thermalBias,
-                         Optional<Growth> growth) implements ItemMatcher, NamedDefinition {
+                         Optional<Growth> growth, int priority) implements ItemMatcher, NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SPIRIT_HERB.identifier());
     // A bad property reference fails the whole entry. The shared map codec would log it and keep going.
     private static final Codec<Map<Holder<MedicinalProperty>, NumberProvider>> EFFECTS =
@@ -55,7 +57,8 @@ public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Compo
             EFFECTS.optionalFieldOf("auxiliary_effects", Map.of()).forGetter(SpiritHerb::auxiliaryEffects),
             NumberProvider.CODEC.optionalFieldOf("catalyst_power", new Constant(0.0D)).forGetter(SpiritHerb::catalystPower),
             Codec.DOUBLE.optionalFieldOf("thermal_bias", 0.0D).forGetter(SpiritHerb::thermalBias),
-            Growth.CODEC.optionalFieldOf("growth").forGetter(SpiritHerb::growth)
+            Growth.CODEC.optionalFieldOf("growth").forGetter(SpiritHerb::growth),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(SpiritHerb::priority)
     ).apply(i, SpiritHerb::new)).validate(SpiritHerb::validate);
 
     private static DataResult<SpiritHerb> validate(SpiritHerb herb) {

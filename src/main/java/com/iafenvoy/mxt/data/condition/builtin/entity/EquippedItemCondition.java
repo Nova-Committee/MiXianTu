@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
@@ -22,7 +21,6 @@ public record EquippedItemCondition(EquipmentSlot equipmentSlot,
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        FormulaContext context = ctx.formula();
         if (!(entity instanceof LivingEntity living)) return false;
         ItemStack stack = living.getItemBySlot(this.equipmentSlot);
         return !stack.isEmpty() && this.itemCondition.test(entity, stack, ctx);

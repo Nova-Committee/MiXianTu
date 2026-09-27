@@ -15,12 +15,10 @@ import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -76,13 +74,9 @@ public final class FormationCommand {
                                         ResourceArgument.getResource(ctx, "formation", MxtResourceKeys.FORMATION)))));
     }
 
-    // Rebinding is allowed and overwrites, and a definition the pack switched off is refused before the plate is
-    // touched. Public so the server audit can drive the command body with a FakePlayer.
+    // Rebinding is allowed and overwrites. Public so the server audit can drive the command body with a FakePlayer.
     public static int bind(CommandSourceStack source, Reference<Formation> definition) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.FORMATION, definition))
-            throw new SimpleCommandExceptionType(Component.translatable("command.mxt.formation.bind.unknown",
-                    HolderHelper.id(definition).toString())).create();
         ItemStack stack = player.getMainHandItem();
         if (!(stack.getItem() instanceof FormationPlateItem)) {
             source.sendFailure(Component.translatable("command.mxt.formation.bind.missing"));
@@ -216,7 +210,7 @@ public final class FormationCommand {
                 + " @ " + controller.getX() + " " + controller.getY() + " " + controller.getZ()
                 + " r=" + formation.radius()
                 + " owner=" + (formation.owners().ids().isEmpty() ? "-"
-                        : formation.owners().ids().stream().map(UUID::toString).collect(Collectors.joining(",")))
+                : formation.owners().ids().stream().map(UUID::toString).collect(Collectors.joining(",")))
                 + " upkeep=" + formation.maintenanceCount()
                 + (formation.stored().isEmpty() ? "" : " stored=" + formation.stored());
     }

@@ -45,18 +45,15 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/forging_table.png");
 
     // The option sprite runs the full cell width, as at 16 it would leave a stripe of the recess showing.
-    private static final int OPTION_W = ForgingMenu.CELL;
-    private static final int OPTION_H = 18;
+    private static final int OPTION_W = ForgingMenu.CELL, OPTION_H = 18;
     // An item icon is 16x16 whatever the cell around it measures.
     private static final int ICON = 16;
     private static final Identifier OPTION = Identifier.withDefaultNamespace("container/stonecutter/recipe");
     private static final Identifier OPTION_SELECTED = Identifier.withDefaultNamespace("container/stonecutter/recipe_selected");
     private static final Identifier OPTION_HIGHLIGHTED = Identifier.withDefaultNamespace("container/stonecutter/recipe_highlighted");
     private static final int TEXT = 0xFF404040;
-
     // The vanilla stonecutter's scrollbar: sprite size, travel and drag maths are its own unchanged.
-    private static final int SCROLLER_WIDTH = 12;
-    private static final int SCROLLER_HEIGHT = 15;
+    private static final int SCROLLER_WIDTH = 12, SCROLLER_HEIGHT = 15;
     // The track the scroller slides in: 54, the stonecutter's number rather than the recess's 76, because
     // blitSprite scales the 12x15 sprite to the rectangle it is handed.
     private static final int SCROLLER_FULL_HEIGHT = 54;
@@ -66,9 +63,7 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final Identifier SCROLLER_DISABLED = Identifier.withDefaultNamespace("container/stonecutter/scroller_disabled");
     // The meter trough: the texture draws one pixel of black border around 160x4 of C6C6C6, and METER_X is
     // the left border's own column, so the usable interior is what is left after it.
-    private static final int METER_X = 80;
-    private static final int METER_Y = 76;
-    private static final int METER_W = 162;
+    private static final int METER_X = 80, METER_Y = 76, METER_W = 162;
     private static final int METER_INNER_X = METER_X + 1;
     private static final int METER_INNER_W = METER_W - 2;
     private static final int METER_H = 4;
@@ -83,21 +78,16 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     // The readout sits in the grey band between the meter and the first step row: that band is three pixels
     // tall and text on the meter's own line runs into the step cells underneath.
     private static final int READOUT_Y = 85;
-    private static final int STEP_X = 135;
-    private static final int STEP_Y = 98;
-    private static final int STEP_ROW_PITCH = 22;
-    private static final int STEP_CELL_PITCH = 18;
+    private static final int STEP_X = 135, STEP_Y = 98;
+    private static final int STEP_ROW_PITCH = 22, STEP_CELL_PITCH = 18;
     // An unset cell draws a barrier: a row is always six cells wide, so a hole would leave the alignment to be guessed.
     private static final IconReference EMPTY_STEP = IconReference.item(ItemStackTemplate.fromNonEmptyStack(new ItemStack(Items.BARRIER)));
     // The first cell column starts this far inside its recess (recess at 7, its cells at 8).
     private static final int GRID_INSET = 1;
     // The action buttons and the row under them: the two buttons, the cancel button and the step count
     // readout all have to agree on these.
-    private static final int ACTION_LEFT_X = 7;
-    private static final int ACTION_RIGHT_X = 250;
-    private static final int ACTION_Y = 100;
-    private static final int ACTION_W = 65;
-    private static final int ACTION_H = 16;
+    private static final int ACTION_LEFT_X = 7, ACTION_RIGHT_X = 250;
+    private static final int ACTION_Y = 100, ACTION_W = 65, ACTION_H = 16;
     private static final int ACTION_SECOND_ROW_Y = 120;
     // Where a vanilla button draws its label; the step count stands in for one.
     private static final int ACTION_TEXT_INSET = 4;
@@ -105,16 +95,13 @@ public final class ForgingScreen extends AbstractContainerScreen<ForgingMenu> {
     private static final int QUALITY_READOUT_Y = ACTION_SECOND_ROW_Y + ACTION_H + 1;
 
     // Scroll offset as a fraction of the list, as the stonecutter keeps it: the first visible cell is derived.
-    private float blueprintOffs;
-    private float methodOffs;
+    private float blueprintOffs, methodOffs;
     // Which scrollbar is being dragged: 0 none, 1 blueprint, 2 method.
     private int dragging;
     private Button useBlueprint, useMethod, cancel;
-
     // Picks are ids, not list positions, because a position is a fact about a list that moves. A pick is
     // never sent on its own; only the buttons turn one into a request.
-    private Identifier selectedBlueprint;
-    private Identifier selectedMethod;
+    private Identifier selectedBlueprint, selectedMethod;
 
     public ForgingScreen(ForgingMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, 322, 234);

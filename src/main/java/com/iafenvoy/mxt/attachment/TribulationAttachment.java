@@ -34,8 +34,7 @@ public final class TribulationAttachment extends ShouldSyncAttachment {
         this(Optional.empty(), List.of(), 0, Optional.empty(), 0L);
     }
 
-    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline, int cursor,
-                                  Optional<DataStorage> state, long windup) {
+    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline, int cursor, Optional<DataStorage> state, long windup) {
         this.tribulation = tribulation;
         this.timeline = new ArrayList<>(timeline);
         this.cursor = cursor;

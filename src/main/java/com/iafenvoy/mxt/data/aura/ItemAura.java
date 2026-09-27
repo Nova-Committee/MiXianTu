@@ -19,8 +19,8 @@ import java.util.Optional;
  * value - with its bounds - is read from {@code Aura#resource()} wherever the pool is written.
  */
 public record ItemAura(List<Entry> items, Holder<Aura> type, NumberProvider aura, NumberProvider consumeSpeed,
-                       NumberProvider releaseSpeed,
-                       Optional<ItemStackTemplate> resultStack, EntityAction exhaustedAction) implements ItemMatcher {
+                       NumberProvider releaseSpeed, Optional<ItemStackTemplate> resultStack,
+                       EntityAction exhaustedAction, int priority) implements ItemMatcher {
     public static final Codec<Holder<ItemAura>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_AURA);
     public static final Codec<ItemAura> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(ItemAura::items),
@@ -29,7 +29,8 @@ public record ItemAura(List<Entry> items, Holder<Aura> type, NumberProvider aura
             NumberProvider.CODEC.fieldOf("consume_speed").forGetter(ItemAura::consumeSpeed),
             NumberProvider.CODEC.fieldOf("release_speed").forGetter(ItemAura::releaseSpeed),
             ItemStackTemplate.CODEC.optionalFieldOf("result_stack").forGetter(ItemAura::resultStack),
-            EntityAction.optionalCodec("exhausted_action").forGetter(ItemAura::exhaustedAction)
+            EntityAction.optionalCodec("exhausted_action").forGetter(ItemAura::exhaustedAction),
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(ItemAura::priority)
     ).apply(i, ItemAura::new));
 
     @Override

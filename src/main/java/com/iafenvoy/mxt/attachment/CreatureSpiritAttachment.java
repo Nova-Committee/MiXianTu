@@ -56,5 +56,6 @@ public final class CreatureSpiritAttachment extends ShouldSyncAttachment {
         this.profile = profile;
         this.intelligence = intelligence;
         this.innerCore = innerCore;
+        this.markDirty();
     }
 }

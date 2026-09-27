@@ -13,13 +13,16 @@ MiXianTu 不为每个玩法预设具体数值，但提供少量通用承载物�
 | 注册表 | 用途 |
 | --- | --- |
 | `item_binding` | 给现有物品附加行为、条件、灵根或通用显示。 |
-| `weapon_binding` | 配置伤害、攻击速度、属性和攻击/使用/Tick 行为。 |
-| `pill_binding` | 配置药效、丹毒、服用上限与冷却。可以不绑物品，改用组件 `mxt:pill`。 |
-| `technique_binding` | 一条功法怎么被读（长按时长、姿势、音效、品质链、条件），以及本体替它生成的载体物品；**手册是堆上的 `mxt:technique` 组件**，不是物品 id。 |
+| `weapon_binding` | 给武器附加原版属性修正（攻击力与攻速也写在这里）与攻击/使用/Tick 行为。 |
+| `pill_binding` | 配置药效、丹毒、服用上限与冷却。可以不绑物品；身份写在组件 `mxt:pill` 的 `binding` 上。 |
+| `technique_binding` | 一条功法怎么被读（长按时长、姿势、音效、条件），以及本体替它生成的载体物品；**手册的身份是堆上的 `mxt:technique` 组件**，它自己的 `items` 是可选的第二条路。品阶是功法定义上的 `quality`，不是另一张链条表。 |
+| `tool_binding` / `blueprint_binding` | 认领工具与图纸物品，给出它们解锁的锻打方式与提供的蓝图。 |
 
 物品匹配支持单个物品、原版物品标签、通配符、正则和混合数组。
 
-丹药载体是 `mxt:pill`，身份在组件 `mxt:pill`。药龄在 `mxt:herb_age`。炉型规格在核心的 `mxt:alchemy_furnace`。炉壁材料在外壳的 `mxt:alchemy_wall_material`。投料仓和产物仓不带炉型规格。
+丹药载体是 `mxt:pill`。组件 `mxt:pill` 是对象：可选 `binding` 指向一条绑定，其余键按字段覆盖。药龄在 `mxt:herb_age`。炉型规格在核心的 `mxt:alchemy_furnace`。炉壁材料在外壳的 `mxt:alchemy_wall_material`。投料仓和产物仓不带炉型规格。
+
+**逐件附加走组件，不走"绑定对象"**：品质、元素、丹药数据、功法阅读、锻打方式、图纸都可以直接写在那一堆物品上（`mxt:quality`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`），与定义给的那一份叠加；条件与武器属性仍只由定义给。`mxt:quality` 写的是**整份品质对象**，所以它既换档位也换这一堆读的那条链。`mxt:pill` 先取 `binding`，没有再按物品匹配，然后按字段覆盖；覆盖不能改耐药身份。字段与合成规则见[数据包格式](../../数据包格式.md)的「物品组件」。
 
 ## 灵气物品
 

@@ -4,10 +4,11 @@ import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.ItemAura;
+import com.iafenvoy.mxt.data.forging.BlueprintBinding;
+import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.registry.MxtBlocks;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -58,13 +59,15 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.ITEM_BINDING, ItemBinding::entries);
         registerMatcher(MxtResourceKeys.WEAPON_BINDING, WeaponBinding::entries);
         register(MxtResourceKeys.PILL_BINDING, (holder, access) -> {
-            if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.PILL_BINDING, holder)) return List.of();
             List<PickerItem> items = new ArrayList<>();
-            items.add(described(componentStack(new ItemStack(MxtItems.PILL.get()), MxtDataComponents.PILL, holder), holder));
+            items.add(described(componentStack(new ItemStack(MxtItems.PILL.get()), MxtDataComponents.PILL,
+                    PillComponent.ofBinding(holder)), holder));
             for (ItemStack stack : stackItems(holder.value().entries()))
                 items.add(new PickerItem(stack, names(stack.getHoverName(), holder.value().name(), idName(HolderHelper.idOrNull(holder)))));
             return items;
         });
+        registerMatcher(MxtResourceKeys.TOOL_BINDING, ToolBinding::entries);
+        registerMatcher(MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding::entries);
         registerMatcher(MxtResourceKeys.ARTIFACT, Artifact::entries);
 
         // Definitions carried by a dedicated item: written onto the stack, and the definition's own name wins.
@@ -88,7 +91,7 @@ public final class ItemPickerManager {
         // the declaration names or the jade slip.
         registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
         register(MxtResourceKeys.ALCHEMY_FURNACE, (holder, access) -> {
-            if (MxtDatapackRegistries.isDisabled(MxtResourceKeys.ALCHEMY_FURNACE, holder)) return List.of();
+            if (!holder.isBound()) return List.of();
             ItemStack stack = componentStack(new ItemStack(MxtBlocks.ALCHEMY_FURNACE.get()), MxtDataComponents.ALCHEMY_FURNACE, holder);
             Component name = DefinitionText.name(holder);
             Component quality = ItemQualityService.find(access, stack)

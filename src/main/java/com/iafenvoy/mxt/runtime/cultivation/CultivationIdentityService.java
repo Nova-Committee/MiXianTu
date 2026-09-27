@@ -60,9 +60,9 @@ public final class CultivationIdentityService {
         return Result.changedResult();
     }
 
-    // The reference is looked up among the held ones rather than in the registry: a definition the pack has since
-    // disabled is still held and has to be removable. A deleted one cannot be in the list to begin with, because
-    // the attachment decodes its holders through the registry.
+    // The reference is looked up among the held ones rather than in the registry: a definition the pack no longer
+    // provides is still held and has to be removable. The attachment decodes its holders through the registry, so
+    // an entry that is gone by then simply is not in the list.
     public static boolean removeSpiritRoot(LivingEntity entity, Identifier id) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());

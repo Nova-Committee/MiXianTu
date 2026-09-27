@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
@@ -73,8 +74,8 @@ public final class RealmCommand {
         Reference<RealmStage> target = ResourceArgument.getResource(ctx, "realm", MxtResourceKeys.REALM_STAGE);
         Identifier start = HolderHelper.id(target);
         Identifier aura = HolderHelper.id(target.value().aura());
-        // The ladder in use is the enabled one, so a disabled stage breaks the chain here for the same reason the
-        // server cache refuses to index such a chain.
+        // The ladder in use is the loaded one, so a stage the pack no longer provides breaks the chain here for the
+        // same reason the server cache refuses to index such a chain.
         Map<Identifier, Reference<RealmStage>> stages = new LinkedHashMap<>();
         MxtDatapackRegistries.holders(source.getServer().registryAccess(), MxtResourceKeys.REALM_STAGE)
                 .forEach(stage -> stages.put(HolderHelper.id(stage), stage));
@@ -82,9 +83,24 @@ public final class RealmCommand {
             source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
             return 0;
         }
-        // A ladder is one aura's stages: following the links backwards reaches its first stage. A link that leaves
-        // the aura is not one of its rungs, and a stage that already has a predecessor keeps that one, so the walk
-        // below cannot be turned into a cycle by hand-written data.
+        // A chain the cache validated is read straight from it. One it refused to index whole is still walked here
+        // from the loaded stages, so an author sees what is written rather than only "no chain".
+        List<Identifier> ids = ServerCache.get().map(cache -> cache.realmsOf(aura))
+                .filter(chain -> chain.contains(start)).orElseGet(() -> walkChain(stages, start, aura));
+        int current = ids.indexOf(start);
+        if (current < 0) {
+            source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
+            return 0;
+        }
+        Component line = ChainReport.line(ids.stream().map(id -> DefinitionText.name(stages.get(id))).toList(), current);
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm.chain", aura.toString(), line), false);
+        return ids.size();
+    }
+
+    // A ladder is one aura's stages: following the links backwards reaches its first stage. A link that leaves the
+    // aura is not one of its rungs, and a stage that already has a predecessor keeps that one, so the walk below
+    // cannot be turned into a cycle by hand-written data.
+    private static List<Identifier> walkChain(Map<Identifier, Reference<RealmStage>> stages, Identifier start, Identifier aura) {
         Map<Identifier, Identifier> previous = new HashMap<>();
         for (Reference<RealmStage> stage : stages.values()) {
             if (!HolderHelper.id(stage.value().aura()).equals(aura)) continue;
@@ -104,14 +120,7 @@ public final class RealmCommand {
             ids.add(cursor);
             cursor = nextOf(stages, stage, aura).orElse(null);
         }
-        int current = ids.indexOf(start);
-        if (current < 0) {
-            source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
-            return 0;
-        }
-        Component line = ChainReport.line(ids.stream().map(id -> DefinitionText.name(stages.get(id))).toList(), current);
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm.chain", aura.toString(), line), false);
-        return ids.size();
+        return ids;
     }
 
     // The next rung of the same ladder, or empty at its top: a link that names another aura or an absent stage ends

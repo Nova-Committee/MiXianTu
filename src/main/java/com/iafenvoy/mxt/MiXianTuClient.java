@@ -3,7 +3,6 @@ package com.iafenvoy.mxt;
 import com.iafenvoy.jupiter.ConfigManager;
 import com.iafenvoy.jupiter.render.screen.ConfigSelectScreen;
 import com.iafenvoy.mxt.config.MxtClientConfig;
-import com.iafenvoy.mxt.config.MxtHudConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.render.animation.CultivationAnimationController;
 import com.iafenvoy.mxt.screen.resourcebar.ResourceBarOverlay;
@@ -20,7 +19,6 @@ public final class MiXianTuClient {
     @SubscribeEvent
     public static void init(FMLClientSetupEvent event) {
         ConfigManager.getInstance().registerConfigHandler(MxtClientConfig.INSTANCE);
-        ConfigManager.getInstance().registerConfigHandler(MxtHudConfig.INSTANCE);
         event.getContainer().registerExtensionPoint(IConfigScreenFactory.class, (_, parent) -> ConfigSelectScreen.builder("config.mxt.title", parent).client(MxtClientConfig.INSTANCE).server(MxtServerConfig.INSTANCE).build());
 
         CultivationAnimationController.register();

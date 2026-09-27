@@ -4,10 +4,8 @@ import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
-import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Set;
@@ -22,11 +20,8 @@ public enum ElementOvercomesBiEntityCondition implements BiEntityCondition {
 
     @Override
     public boolean test(@NonNull BiEntityConditionContext ctx) {
-        Entity actor = ctx.actor();
-        Entity target = ctx.target();
-        FormulaContext context = ctx.formula();
-        Set<Holder<Element>> actorElements = Elements.of(actor);
-        Set<Holder<Element>> targetElements = Elements.of(target);
+        Set<Holder<Element>> actorElements = Elements.of(ctx.actor());
+        Set<Holder<Element>> targetElements = Elements.of(ctx.target());
         return actorElements.stream().anyMatch(element -> targetElements.stream()
                 .anyMatch(targetElement -> element.value().overcomes(targetElement)));
     }
