@@ -1,0 +1,7 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:never" }
+  ],
+  "items": [],
+  "toxicity_gain": 99
+}

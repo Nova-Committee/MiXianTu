@@ -1,0 +1,20 @@
+{
+  "type": "mxt:alchemy",
+  "main_requirements": {
+    "mxt_test:herb/main": 6,
+    "mxt_test:alchemy/heat": 2
+  },
+  "auxiliary_requirements": {
+    "mxt_test:herb/auxiliary": 6
+  },
+  "catalyst_requirement": 1,
+  "target_temperature": 100,
+  "temperature_tolerance": 5,
+  "duration": 4,
+  "success_outputs": [
+    {
+      "id": "minecraft:diamond",
+      "count": 1
+    }
+  ]
+}

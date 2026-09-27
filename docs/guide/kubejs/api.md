@@ -426,10 +426,10 @@ const stage = MxtTechniques.stage(player, 'mxt_test:azure_water_manual')
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `get(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈现在解析出的品质 ID（`mxt:quality` 组件 → 锻造结果 → 定义默认 → 这一栈所读链条的入口档 → 灵植声明）；没有则为 `null`。 |
+| `get(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈解析出的品质 ID（`mxt:quality` 组件 → 锻造结果 → 定义默认 → 灵植声明）；没有则为 `null`，不补链的入口档。 |
 | `chain(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈的品质所属的**链条** ID：就是这一档所在那条链的名字；它不在任何链上时返回 `null`。 |
 | `next(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 链条上的下一档 ID；已经在顶端或没有链条时为 `null`。 |
-| `set(entity, stack, quality)` | `Entity`、`ItemStack`、品质 ID | `boolean` | 把 `mxt:quality` **组件**（整份品质对象）写到这一栈上，盖过定义默认档、也换掉这一栈读的链；ID 解析不出来或客户端调用返回 `false`。 |
+| `set(entity, stack, quality)` | `Entity`、`ItemStack`、品质 ID | `boolean` | 把品质条目引用写入 `mxt:quality` **组件**，盖过定义默认档，也改变这一栈读的链；ID 解析不出来或客户端调用返回 `false`。 |
 | `clear(entity, stack)` | `Entity`、`ItemStack` | `boolean` | 摘掉组件，回到定义默认档；本来就没有组件时返回 `false`。 |
 | `upgrade(entity, stack)` | `LivingEntity`、`ItemStack` | `{changed, failure, from, to}` | 在链条上**推一档**：先过**下一档**的 `upgrade_condition`，再用全局消耗事务付清它的 `upgrade_costs`（原子），付不出就一点不动、也不写档。 |
 
@@ -444,7 +444,7 @@ if (result.changed) {
 } else {
   console.warn(`upgrade refused: ${result.failure}`)
 }
-// 直接覆盖某一档（无视链条入口档），clear 之后回到定义默认。
+// 直接覆盖当前品质；clear 之后重新按默认顺序解析。
 MxtQuality.set(player, event.item, 'mxt_test:excellent')
 ```
 
@@ -646,7 +646,7 @@ MxtEvents.friendRelation(event => {
 | `curseRemove` | `Pre`、`Post` | `curse()`（`Holder<Curse>`）、`state()`、`reason()`、`gameTime()`、`holder()`；`Pre` 可取消移除。reason 为 `EXPLICIT`、`EXPIRED`、`CLEANSED`、`REPLACED`（`replace` 叠层模式覆盖旧实例时补发的 `Post` 用它，且不可取消）。 |
 | `cultivationBreak` | `Pre`、`Post` | `target()`（`Holder<RealmStage>`）、`threshold()`、`context()`、`spirit()`、`resources()`；`Pre` 另有 `originalCosts()`、`costs()`、`setCost(resource, amount)`，可取消；`Post` 有 `paidCosts()`。 |
 | `techniqueLearn` | `Pre`、`Post` | `technique()`（`Holder<Technique>`）、`spirit()`；`Pre` 可取消。 |
-| `alchemyCraft` | `Pre`、`Post` | `recipe()`（`RecipeHolder<AlchemyRecipe>`）；`Pre.inputs()` 为输入 ID 列表且可取消；`Post.spoiled()`、`Post.outputs()` 为结果状态。 |
+| `alchemyCraft` | `Pre`、`Post` | 事件名不变。两端都有 `recipe()`、`pos()`、`operator()`（UUID）。`recipe()` 是自动解析后冻进批次的身份，不是玩家选择。`Pre.player()` 一定有开炉的人。`Pre.inputs()` 是不可变 `InputCopy` 列表，每项 `role()` 与 `stack()` 副本，可取消；改副本不改账，取消不扣料。改真实库存则拒绝开炉且不还原库存。`Post.player()` 离线为空。`Post.success()`、`Post.reason()`（成功时为空）、`Post.outputs()` 是产物快照。结算先清待输出和会话，再在重入守卫内执行完成动作与判据，退出守卫后才发 `Post`；回调可在仍有效的丹炉上启动下一批，旧批次不会再清掉或破坏它。没有 `spoiled()`。原操作者离线不把玩家行为转给后来开界面的人。 |
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
 | `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
 | `formation` | `Activate`、`Deactivate`、`Tick`、`TickEffects`、`UpkeepFailed` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate`、`TickEffects`、`UpkeepFailed` 可取消，`Deactivate` 与 `Tick` 不可取消。`Tick` 是"本周期已付费"的观察点，`TickEffects` 只挡这一周期的效果且不退费，`UpkeepFailed` 取消表示让阵法撑过付不出钱的这一周期；`UpkeepFailed` 另有 `payer()`（`Optional<Entity>`，无人付款时为空）与 `failedResource()`（`Optional<Identifier>`，没有付款者时为空），脚本据此知道谁欠费、欠的是哪种资源。 |

@@ -6,7 +6,7 @@ MiXianTu 不为每个玩法预设具体数值，但提供少量通用承载物�
 
 ## 通用物品
 
-当前内置内容包括灵石系列、灵铁锭、灵木、朱砂、符纸、符箓、契约卷轴、召回符、御兽铃、令牌、灵石袋、戒指、锻造台、药渣、杂质、秘境奖励箱和展示架等。具体注册名以 `src/main/java/com/iafenvoy/mxt/registry` 和资源文件为准。
+当前内置内容包括灵石系列、灵铁锭、灵木、朱砂、符纸、符箓、契约卷轴、召回符、御兽铃、令牌、灵石袋、戒指、锻造台、丹炉控制器、丹炉外壳、灵田、丹药载体、药渣、杂质、秘境奖励箱和展示架等。具体注册名以 `src/main/java/com/iafenvoy/mxt/registry` 和资源文件为准。丹炉要手搭成 3×3×3，不是放下一件控制器就完成。
 
 ## 物品绑定
 
@@ -14,13 +14,15 @@ MiXianTu 不为每个玩法预设具体数值，但提供少量通用承载物�
 | --- | --- |
 | `item_binding` | 给现有物品附加行为、条件、灵根或通用显示。 |
 | `weapon_binding` | 给武器附加原版属性修正（攻击力与攻速也写在这里）与攻击/使用/Tick 行为。 |
-| `pill_binding` | 配置丹药消耗和行为。 |
-| `technique_binding` | 一条功法怎么被读（长按时长、姿势、音效、品质链、条件），以及本体替它生成的载体物品；**手册的身份是堆上的 `mxt:technique` 组件**，它自己的 `items` 是可选的第二条路。 |
+| `pill_binding` | 配置药效、丹毒、服用上限与冷却。可以不绑物品；身份写在组件 `mxt:pill` 的 `binding` 上。 |
+| `technique_binding` | 一条功法怎么被读（长按时长、姿势、音效、条件），以及本体替它生成的载体物品；**手册的身份是堆上的 `mxt:technique` 组件**，它自己的 `items` 是可选的第二条路。品阶是功法定义上的 `quality`，不是另一张链条表。 |
 | `tool_binding` / `blueprint_binding` | 认领工具与图纸物品，给出它们解锁的锻打方式与提供的蓝图。 |
 
 物品匹配支持单个物品、原版物品标签、通配符、正则和混合数组。
 
-**逐件附加走组件，不走"绑定对象"**：品质、元素、丹药数据、功法阅读、锻打方式、图纸都可以直接写在那一堆物品上（`mxt:quality`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`），与定义给的那一份叠加；条件与武器属性仍只由定义给。`mxt:quality` 写的是**整份品质对象**，所以它既换档位也换这一堆读的那条链。字段与合成规则见[数据包格式](../../数据包格式.md)的「物品组件」。
+丹药载体是 `mxt:pill`。组件 `mxt:pill` 是对象：可选 `binding` 指向一条绑定，其余键按字段覆盖。药龄在 `mxt:herb_age`。炉型规格在核心的 `mxt:alchemy_furnace`。炉壁材料在外壳的 `mxt:alchemy_wall_material`。投料仓和产物仓不带炉型规格。
+
+**逐件附加走组件，不走"绑定对象"**：品质、元素、丹药数据、功法阅读、锻打方式、图纸都可以直接写在那一堆物品上（`mxt:quality`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`），与定义给的那一份叠加；条件与武器属性仍只由定义给。`mxt:quality` 写的是**整份品质对象**，所以它既换档位也换这一堆读的那条链。`mxt:pill` 先取 `binding`，没有再按物品匹配，然后按字段覆盖；覆盖不能改耐药身份。字段与合成规则见[数据包格式](../../数据包格式.md)的「物品组件」。
 
 ## 灵气物品
 

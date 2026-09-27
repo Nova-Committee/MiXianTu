@@ -9,9 +9,11 @@ import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
+import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -88,6 +90,8 @@ public final class ItemQualityService {
         Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
         if (failure.isPresent()) {
             event.setCanceled(true);
+            // Cancel returns -1; the following decrement would completeUsingItem unless the live use is cleared.
+            event.getEntity().releaseUsingItem();
             notifyCannotUse(event.getEntity(), failure.orElseThrow());
         }
     }
@@ -127,16 +131,19 @@ public final class ItemQualityService {
         return access.lookup(MxtResourceKeys.ITEM_QUALITY).map(lookup -> (RegistryLookup<ItemQuality>) lookup);
     }
 
-    // What the definition claiming this stack says its own tier is: an artifact, the sigil written on a talisman
-    // carrier, or the technique it teaches.
+    // What the definition claiming this stack says its own tier is: an artifact, the sigil on a talisman,
+    // the technique it teaches, then the furnace specification. Quality is not derived from a tier name.
     private static Optional<Holder<ItemQuality>> definitionDefault(Provider access, ItemStack stack) {
         Optional<Holder<ItemQuality>> artifact = ArtifactService.definition(access, stack)
                 .flatMap(holder -> holder.value().quality());
         if (artifact.isPresent()) return artifact;
         Optional<Holder<ItemQuality>> talisman = TalismanService.quality(stack);
         if (talisman.isPresent()) return talisman;
-        return ItemBindingService.technique(access, stack)
+        Optional<Holder<ItemQuality>> technique = ItemBindingService.technique(access, stack)
                 .flatMap(binding -> binding.technique().value().quality());
+        if (technique.isPresent()) return technique;
+        return AlchemyWorkstationService.furnaceDefinition(access, stack)
+                .map(holder -> holder.value().quality());
     }
 
     // The entry tier of the ladder the stack's own tier sits on, which is where a stack with no tier of its own
@@ -145,8 +152,8 @@ public final class ItemQualityService {
         return tier == null ? Optional.empty() : QualityLadders.cache(access).firstOf(HolderHelper.id(tier));
     }
 
-    // Why an entity may not use an item: the gate is the union of two independent data-driven checks, so it
-    // reports which one refused instead of only that the item is unusable.
+    // Why an entity may not use an item. Furnace quality is one of the checks above; pill caps are extra and
+    // never replace them. A missing explicit pill binding refuses instead of matching another pill.
     public enum Failure {
         /**
          * A matching binding's own conditions did not all pass.
@@ -155,7 +162,19 @@ public final class ItemQualityService {
         /**
          * The condition of the item's resolved quality did not pass.
          */
-        QUALITY_CONDITIONS
+        QUALITY_CONDITIONS,
+        /**
+         * The pill binding's use cap has already been reached.
+         */
+        MAX_USES,
+        /**
+         * The pill binding is still on cooldown.
+         */
+        COOLDOWN,
+        /**
+         * The stack names a pill binding that is no longer in the registry, and must not fall back to another pill.
+         */
+        UNBOUND
     }
 
     public static boolean canUse(LivingEntity user, ItemStack stack) {
@@ -187,9 +206,17 @@ public final class ItemQualityService {
         Optional<Holder<ItemQuality>> quality = find(registry.orElse(null), stack, bindings, access);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
             return Optional.of(Failure.QUALITY_CONDITIONS);
-        // Nothing left to refuse: the ladder is derived from the tier itself, so a tier that resolves one is a
-        // member of it by construction, and a tier on no ladder is still usable.
-        return Optional.empty();
+        return bindings.pill().identity().flatMap(holder -> PillService.usageFailure(user, holder))
+                .map(ItemQualityService::fromPill);
+    }
+
+    private static Failure fromPill(PillService.Failure failure) {
+        return switch (failure) {
+            case MAX_USES -> Failure.MAX_USES;
+            case COOLDOWN -> Failure.COOLDOWN;
+            case UNBOUND -> Failure.UNBOUND;
+            case CONDITIONS -> Failure.BINDING_CONDITIONS;
+        };
     }
 
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {

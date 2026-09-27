@@ -72,6 +72,29 @@ def progress_bar() -> Image.Image:
     return image
 
 
+def alchemy_furnace() -> Image.Image:
+    image = Image.new("RGBA", (512, 256), (0, 0, 0, 0))
+    image.paste(panel((320, 234)), (0, 0))
+    draw = ImageDraw.Draw(image)
+    draw.line((5, 27, 314, 27), fill=(139, 139, 139, 255))
+    draw.rectangle((7, 40, 94, 129), fill=(171, 171, 171, 255))
+    draw.rectangle((98, 86, 209, 124), fill=(181, 181, 181, 255))
+    draw.line((215, 29, 215, 149), fill=(139, 139, 139, 255))
+    draw.line((75, 152, 75, 230), fill=(139, 139, 139, 255))
+    draw.line((245, 152, 245, 230), fill=(139, 139, 139, 255))
+    machine = [(108, 42), (126, 42), (166, 42), (184, 42), (148, 65)]
+    machine += [(110 + index * 18, 133) for index in range(4)]
+    inventory = [(79 + column * 18, 156 + row * 18) for row in range(3) for column in range(9)]
+    inventory += [(79 + column * 18, 214) for column in range(9)]
+    for x, y in machine + inventory:
+        draw.rectangle((x - 1, y - 1, x + 16, y + 16), fill=(139, 139, 139, 255))
+        draw.line((x - 1, y + 16, x + 16, y + 16), fill=(255, 255, 255, 255))
+        draw.line((x + 16, y - 1, x + 16, y + 16), fill=(255, 255, 255, 255))
+        draw.line((x, y, x + 15, y), fill=(55, 55, 55, 255))
+        draw.line((x, y, x, y + 15), fill=(55, 55, 55, 255))
+    return image
+
+
 def main() -> None:
     ROOT.mkdir(parents=True, exist_ok=True)
     hotbar_configuration_panel().save(ROOT / "hotbar_configuration.png")
@@ -83,6 +106,7 @@ def main() -> None:
     slot(22, True).save(ROOT / "slot_22_selected.png")
     slot(24).save(ROOT / "slot_24.png")
     slot(24, True).save(ROOT / "slot_24_selected.png")
+    alchemy_furnace().save(ROOT.parent / "alchemy_furnace.png")
 
 
 if __name__ == "__main__":

@@ -1,156 +1,220 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.data.alchemy.AlchemyRecipe;
-import com.iafenvoy.mxt.event.AlchemyCraftEvent.Post;
-import com.iafenvoy.mxt.event.AlchemyCraftEvent.Pre;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.data.action.BlockAction;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.recipe.AlchemyRecipe;
+import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.Parameters;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.item.crafting.RecipeHolder;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-/**
- * Server-side furnace session; the UI and block inventory adapt to this state instead of owning recipe
- * logic. The {@link RecipeHolder} is kept for event reporting, while snapshots persist only the recipe id.
- */
+// Completion, events and the GUI read this recipe snapshot, never the live recipe manager.
 public final class AlchemySession {
-    private final RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder;
+    private final Identifier recipeId;
+    private final AlchemyRecipe recipe;
+    private final Parameters parameters;
+    private final List<ItemStack> successOutputs;
+    private final List<ItemStack> failureOutputs;
+    private final UUID operator;
+    private final AlchemyMixture mixture;
+    private AlchemyPhase phase;
     private long remainingTicks;
-    private boolean spoiled;
-    private boolean complete;
+    private int badTicks;
+    private @Nullable AlchemyFailure failure;
+    private boolean settled;
+    private final List<ItemStack> pending = new ArrayList<>(4);
 
-    private AlchemySession(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, long remainingTicks, boolean spoiled, boolean complete) {
-        this.holder = holder;
+    private AlchemySession(Identifier recipeId, AlchemyRecipe recipe, Parameters parameters,
+                           List<ItemStack> successOutputs, List<ItemStack> failureOutputs,
+                           UUID operator, AlchemyMixture mixture, AlchemyPhase phase, long remainingTicks, int badTicks,
+                           @Nullable AlchemyFailure failure, boolean settled, List<ItemStack> pending) {
+        this.recipeId = recipeId;
+        this.recipe = recipe;
+        this.parameters = parameters;
+        this.successOutputs = copy(successOutputs);
+        this.failureOutputs = copy(failureOutputs);
+        this.operator = operator;
+        this.mixture = mixture;
+        this.phase = phase;
         this.remainingTicks = remainingTicks;
-        this.spoiled = spoiled;
-        this.complete = complete;
+        this.badTicks = badTicks;
+        this.failure = failure;
+        this.settled = settled;
+        pending.forEach(stack -> this.pending.add(stack.copy()));
     }
 
-    public static StartResult start(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, int furnaceTier,
-                                    List<Identifier> inputs, FormulaContext context) {
-        return start(holder, furnaceTier, inputs, context, ItemQualityService.DEFAULT_MODIFIER);
+    public static AlchemySession start(Identifier recipeId, AlchemyRecipe recipe, Parameters parameters,
+                                       List<ItemStack> success, List<ItemStack> failure, UUID operator, AlchemyMixture mixture) {
+        return new AlchemySession(recipeId, recipe, parameters, success, failure, operator, mixture,
+                AlchemyPhase.WARMING, parameters.durationTicks(), 0, null, false, List.of());
     }
 
-    // The alchemy modifier of the batch's own ingredients divides the declared duration, which is declared as an
-    // improvement; only the duration, because lock() releases the stacks the moment the session is stored.
-    public static StartResult start(RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder, int furnaceTier,
-                                    List<Identifier> inputs, FormulaContext context, double alchemyModifier) {
-        AlchemyRecipe recipe = holder.value().definition();
-        if (NeoForge.EVENT_BUS.post(new Pre(holder, inputs)).isCanceled())
-            return StartResult.rejected(Failure.CANCELLED);
-        if (furnaceTier < recipe.minimumFurnaceTier()) return StartResult.rejected(Failure.FURNACE_TIER);
-        if (!sameMultiset(recipe.inputs(), inputs)) return StartResult.rejected(Failure.INPUTS);
-        double duration = effectiveDuration(recipe.duration().evaluate(context), alchemyModifier);
-        if (!Double.isFinite(duration) || duration <= 0.0D || duration > Long.MAX_VALUE)
-            return StartResult.rejected(Failure.INVALID_FORMULA);
-        return StartResult.started(new AlchemySession(holder, Math.max(1L, Math.round(duration)), false, false));
-    }
-
-    // An unusable modifier can only ever mean "no change". Deliberately not rounded here: the caller rounds the
-    // tick count, and rounding twice would answer a question the recipe did not ask.
-    static double effectiveDuration(double duration, double alchemyModifier) {
-        if (alchemyModifier == ItemQualityService.DEFAULT_MODIFIER) return duration;
-        double scaled = duration / alchemyModifier;
-        return Double.isFinite(scaled) && scaled > 0.0D ? scaled : duration;
-    }
-
-    // Runtime state only; the caller must resolve the recipe holder from the snapshot id.
-    public static AlchemySession restore(Snapshot snapshot, RecipeHolder<com.iafenvoy.mxt.recipe.AlchemyRecipe> holder) {
-        if (snapshot.remainingTicks() < 0L)
-            throw new IllegalArgumentException("Alchemy snapshot has negative remaining ticks");
-        if (!holder.id().identifier().equals(snapshot.recipe()))
-            throw new IllegalArgumentException("Alchemy snapshot recipe does not match the resolved recipe holder");
-        return new AlchemySession(holder, snapshot.remainingTicks(), snapshot.spoiled(), snapshot.complete());
+    public static AlchemySession restore(Snapshot snapshot) {
+        return new AlchemySession(snapshot.recipeId(), snapshot.recipe(), snapshot.parameters(), snapshot.successOutputs(), snapshot.failureOutputs(),
+                snapshot.operator(), snapshot.mixture(), snapshot.phase(), snapshot.remainingTicks(), snapshot.badTicks(),
+                snapshot.failure().orElse(null), snapshot.settled(), snapshot.pending());
     }
 
     public Snapshot snapshot() {
-        return new Snapshot(this.holder.id().identifier(), this.remainingTicks, this.spoiled, this.complete);
+        return new Snapshot(this.recipeId, this.recipe, this.parameters,
+                copy(this.successOutputs), copy(this.failureOutputs), this.operator, this.mixture, this.phase,
+                this.remainingTicks, this.badTicks, this.failure(), this.settled, copy(this.pending));
     }
 
-    // Outputs are handed back once, after the final tick; a temperature outside the tolerance spoils the batch.
-    public TickResult tick(double temperature, FormulaContext context) {
-        if (this.complete) return TickResult.idle();
-        AlchemyRecipe recipe = this.holder.value().definition();
-        double target = recipe.targetTemperature().evaluate(context);
-        double tolerance = recipe.temperatureTolerance().evaluate(context);
-        if (!Double.isFinite(target) || !Double.isFinite(tolerance) || tolerance < 0.0D) {
-            this.spoiled = true;
-        } else if (Math.abs(temperature - target) > tolerance) {
-            this.spoiled = true;
-        }
+    public Identifier recipeId() {
+        return this.recipeId;
+    }
+
+    public AlchemyRecipe recipe() {
+        return this.recipe;
+    }
+
+    public Parameters parameters() {
+        return this.parameters;
+    }
+
+    public double frozenTarget() {
+        return this.parameters.targetTemperature();
+    }
+
+    public double frozenTolerance() {
+        return this.parameters.temperatureTolerance();
+    }
+
+    public long totalTicks() {
+        return this.parameters.durationTicks();
+    }
+
+    public long remainingTicks() {
+        return this.remainingTicks;
+    }
+
+    public int maxBadTicks() {
+        return this.parameters.maxBadTicks();
+    }
+
+    public int badTicks() {
+        return this.badTicks;
+    }
+
+    public boolean failed() {
+        return this.failure != null;
+    }
+
+    public Optional<AlchemyFailure> failure() {
+        return Optional.ofNullable(this.failure);
+    }
+
+    public boolean settled() {
+        return this.settled;
+    }
+
+    public UUID operator() {
+        return this.operator;
+    }
+
+    public AlchemyMixture mixture() {
+        return this.mixture;
+    }
+
+    public AlchemyPhase phase() {
+        return this.phase;
+    }
+
+    public boolean inRange(double temperature) {
+        return temperature >= this.frozenTarget() - this.frozenTolerance() && temperature <= this.frozenTarget() + this.frozenTolerance();
+    }
+
+    public void enterRunning() {
+        if (this.phase == AlchemyPhase.WARMING) this.phase = AlchemyPhase.RUNNING;
+    }
+
+    public void tickRunning(double temperature) {
+        if (this.phase != AlchemyPhase.RUNNING || this.remainingTicks <= 0L || this.failed()) return;
         this.remainingTicks--;
-        if (this.remainingTicks > 0L) return TickResult.running(this.remainingTicks, this.spoiled);
-        this.complete = true;
-        List<Identifier> outputs = this.spoiled ? recipe.failureOutputs() : recipe.successOutputs();
-        NeoForge.EVENT_BUS.post(new Post(this.holder, this.spoiled, outputs));
-        return TickResult.finished(outputs, this.spoiled);
-    }
-
-    public boolean complete() {
-        return this.complete;
-    }
-
-    public boolean spoiled() {
-        return this.spoiled;
-    }
-
-    private static boolean sameMultiset(List<Identifier> expected, List<Identifier> actual) {
-        List<Identifier> left = new ArrayList<>(expected);
-        List<Identifier> right = new ArrayList<>(actual);
-        left.sort(Identifier::compareTo);
-        right.sort(Identifier::compareTo);
-        return left.equals(right);
-    }
-
-    public enum Failure {DISABLED, FURNACE_TIER, INPUTS, ENVIRONMENT, INVALID_FORMULA, CANCELLED}
-
-    public record StartResult(AlchemySession session, Failure failure) {
-        static StartResult started(AlchemySession session) {
-            return new StartResult(session, null);
-        }
-
-        static StartResult rejected(Failure failure) {
-            return new StartResult(null, failure);
-        }
-
-        public boolean started() {
-            return this.session != null;
+        if (!this.inRange(temperature)) {
+            if (this.badTicks >= this.maxBadTicks()) this.failure = AlchemyFailure.TEMPERATURE;
+            if (this.badTicks < Integer.MAX_VALUE) this.badTicks++;
         }
     }
 
-    public record TickResult(boolean finished, boolean spoiled, long remainingTicks, List<Identifier> outputs) {
-        public TickResult {
-            outputs = new LinkedList<>(outputs);
-        }
-
-        static TickResult idle() {
-            return new TickResult(false, false, 0L, List.of());
-        }
-
-        static TickResult running(long remaining, boolean spoiled) {
-            return new TickResult(false, spoiled, remaining, List.of());
-        }
-
-        static TickResult finished(List<Identifier> outputs, boolean spoiled) {
-            return new TickResult(true, spoiled, 0L, outputs);
-        }
+    public boolean due() {
+        return this.failed() || this.remainingTicks <= 0L;
     }
 
-    public record Snapshot(Identifier recipe, long remainingTicks, boolean spoiled, boolean complete) {
+    public void generatePending() {
+        if (this.phase == AlchemyPhase.READY || this.settled) return;
+        this.pending.addAll(copy(this.failed() ? this.failureOutputs : this.successOutputs));
+        this.phase = AlchemyPhase.READY;
+    }
+
+    public void scrap(AlchemyFailure reason) {
+        if (this.phase == AlchemyPhase.READY || this.settled) return;
+        this.failure = reason;
+        this.generatePending();
+    }
+
+    public List<ItemStack> pendingOutputs() {
+        return copy(this.pending);
+    }
+
+    // The service only reads this list; event and public callers receive independent stack copies.
+    List<ItemStack> pendingItems() {
+        return this.pending;
+    }
+
+    public void clearPending() {
+        this.pending.clear();
+    }
+
+    public void markSettled() {
+        this.settled = true;
+    }
+
+    public EntityAction action() {
+        return this.failed() ? this.recipe.failureAction() : this.recipe.successAction();
+    }
+
+    public BlockAction blockAction() {
+        return this.failed() ? this.recipe.failureBlockAction() : this.recipe.successBlockAction();
+    }
+
+    private static List<ItemStack> copy(List<ItemStack> stacks) {
+        List<ItemStack> result = new ArrayList<>(stacks.size());
+        for (ItemStack stack : stacks) if (!stack.isEmpty()) result.add(stack.copy());
+        return result;
+    }
+
+    public record Snapshot(Identifier recipeId, AlchemyRecipe recipe, Parameters parameters,
+                           List<ItemStack> successOutputs, List<ItemStack> failureOutputs,
+                           UUID operator, AlchemyMixture mixture, AlchemyPhase phase, long remainingTicks, int badTicks,
+                           Optional<AlchemyFailure> failure, boolean settled, List<ItemStack> pending) {
         public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
-                Identifier.CODEC.fieldOf("recipe").forGetter(Snapshot::recipe), Codec.LONG.fieldOf("remaining_ticks").forGetter(Snapshot::remainingTicks),
-                Codec.BOOL.optionalFieldOf("spoiled", false).forGetter(Snapshot::spoiled), Codec.BOOL.optionalFieldOf("complete", false).forGetter(Snapshot::complete)
-        ).apply(i, Snapshot::new));
-
-        public Snapshot {
-            if (remainingTicks < 0L)
-                throw new IllegalArgumentException("Alchemy snapshot has negative remaining ticks");
-        }
+                MiscCodecs.pair(Identifier.CODEC.fieldOf("recipe"), AlchemyRecipe.CODEC.codec().fieldOf("frozen_recipe"))
+                        .forGetter(snapshot -> Pair.of(snapshot.recipeId(), snapshot.recipe())),
+                Parameters.CODEC.fieldOf("parameters").forGetter(Snapshot::parameters),
+                MiscCodecs.pair(ItemStack.CODEC.listOf(1, 4).fieldOf("success"), ItemStack.CODEC.listOf(0, 4).fieldOf("failure_outputs"))
+                        .forGetter(snapshot -> Pair.of(snapshot.successOutputs(), snapshot.failureOutputs())),
+                UUIDUtil.CODEC.fieldOf("operator").forGetter(Snapshot::operator),
+                AlchemyMixture.CODEC.fieldOf("mixture").forGetter(Snapshot::mixture),
+                AlchemyPhase.CODEC.fieldOf("phase").forGetter(Snapshot::phase),
+                Codec.LONG.fieldOf("remaining").forGetter(Snapshot::remainingTicks),
+                Codec.INT.fieldOf("bad_ticks").forGetter(Snapshot::badTicks),
+                AlchemyFailure.CODEC.lenientOptionalFieldOf("failure").forGetter(Snapshot::failure),
+                Codec.BOOL.lenientOptionalFieldOf("settled", false).forGetter(Snapshot::settled),
+                ItemStack.OPTIONAL_CODEC.listOf(0, 4).lenientOptionalFieldOf("pending", List.of()).forGetter(Snapshot::pending)
+        ).apply(i, (identity, parameters, outputs, operator, mixture, phase, remaining, bad, failure, settled, pending) ->
+                new Snapshot(identity.getFirst(), identity.getSecond(), parameters,
+                        outputs.getFirst(), outputs.getSecond(), operator, mixture, phase, remaining, bad, failure, settled, pending)));
     }
 }

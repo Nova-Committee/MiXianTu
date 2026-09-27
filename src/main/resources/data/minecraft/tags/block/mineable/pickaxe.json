@@ -1,6 +1,11 @@
 {
   "replace": false,
   "values": [
-    "mxt:spirit_stone_block"
+    "mxt:spirit_stone_block",
+    "mxt:alchemy_furnace",
+    "mxt:alchemy_furnace_casing",
+    "mxt:alchemy_main_input",
+    "mxt:alchemy_auxiliary_input",
+    "mxt:alchemy_output"
   ]
 }

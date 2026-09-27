@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.alchemy.PillService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -53,12 +52,15 @@ import java.util.*;
 import java.util.stream.Stream;
 
 /**
- * Resolves datapack gameplay bindings for items already registered by Minecraft, a mod or KubeJS: a binding table
- * attaches this mod's rules to a stack, while what the item itself is stays with its own content registry. No
- * logical item definition is ever stored in an ItemStack.
+ * Resolves datapack gameplay bindings for items already registered by Minecraft, a mod or KubeJS. A binding table
+ * attaches this mod's rules to a stack. A pill stack may also name its definition with {@code mxt:pill.binding};
+ * effect fields on that component overlay the definition and never replace its holder.
  */
 @EventBusSubscriber
 public final class ItemBindingService {
+    // One consume must not settle again when its own action finishes another use on the same body.
+    private static final ThreadLocal<Set<UUID>> SETTLING = ThreadLocal.withInitial(HashSet::new);
+
     private ItemBindingService() {
     }
 
@@ -83,7 +85,6 @@ public final class ItemBindingService {
 
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
-        if (!ItemQualityService.canUse(event.getEntity(), event.getItem())) return;
         onUseFinish(event.getEntity(), event.getItem());
     }
 
@@ -107,9 +108,24 @@ public final class ItemBindingService {
                 .map(Reference::value), stack);
     }
 
-    private static Optional<PillBinding> pill(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING)
-                .map(Reference::value), stack);
+    // Explicit binding wins and does not fall through. A missing holder refuses. Otherwise the matcher, then overlay.
+    public static PillResolution resolvePill(Provider access, ItemStack stack) {
+        if (stack.isEmpty()) return PillResolution.none();
+        PillComponent component = stack.get(MxtDataComponents.PILL.get());
+        if (component != null && component.binding().isPresent()) {
+            Holder<PillBinding> explicit = component.binding().orElseThrow();
+            if (!explicit.isBound()) return PillResolution.unbound(explicit);
+            return PillResolution.bound(explicit, component.applyTo(explicit.value()));
+        }
+        Optional<Reference<PillBinding>> matched = ItemMatcher.find(
+                MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING), Reference::value, stack);
+        if (matched.isPresent()) {
+            Reference<PillBinding> holder = matched.orElseThrow();
+            PillBinding effects = component == null ? holder.value() : component.applyTo(holder.value());
+            return PillResolution.bound(holder, effects);
+        }
+        if (component != null) return PillResolution.componentOnly(component.applyTo(PillBinding.defaults()));
+        return PillResolution.none();
     }
 
     // What a stack teaches is the stack's own mxt:technique component; the declaration for that technique only
@@ -173,13 +189,10 @@ public final class ItemBindingService {
     public static ResolvedBindings resolve(Provider access, ItemStack stack) {
         // An empty stack answers nothing: a wildcard matcher would otherwise claim it, and every component read
         // below would be a miss anyway.
-        if (stack.isEmpty()) return new ResolvedBindings(Optional.empty(), Optional.empty(), Optional.empty(),
+        if (stack.isEmpty()) return new ResolvedBindings(Optional.empty(), Optional.empty(), PillResolution.none(),
                 Optional.empty());
-        Optional<PillBinding> declared = pill(access, stack);
-        PillComponent pill = stack.get(MxtDataComponents.PILL.get());
-        Optional<PillBinding> merged = pill == null ? declared
-                : Optional.of(pill.applyTo(declared.orElseGet(PillBinding::defaults)));
-        return new ResolvedBindings(binding(access, stack), weapon(access, stack), merged, technique(access, stack));
+        return new ResolvedBindings(binding(access, stack), weapon(access, stack), resolvePill(access, stack),
+                technique(access, stack));
     }
 
     private static void refreshEquipped(LivingEntity entity) {
@@ -218,13 +231,24 @@ public final class ItemBindingService {
         bindings.weapon().ifPresent(weapon -> weapon.useAction().execute(holder, context));
     }
 
+    // Finish is after vanilla has already consumed the item. Do not re-check canUse: a condition that the dose
+    // itself just changed must not erase this settlement. The Start/Tick gate is what refuses an illegal dose.
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return;
-        ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
-        if (!ItemQualityService.canUse(entity, stack, bindings)) return;
-        FormulaContext context = FormulaContext.of(entity);
-        bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
-        bindings.pill().ifPresent(definition -> PillService.consume(entity, definition));
+        Set<UUID> settling = SETTLING.get();
+        if (!settling.add(entity.getUUID())) return;
+        try {
+            ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
+            PillResolution pill = bindings.pill();
+            Holder<PillBinding> identity = pill.identity().orElse(null);
+            if (identity != null && identity.isBound()) PillService.registerUse(entity, identity);
+            FormulaContext context = FormulaContext.of(entity);
+            bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
+            pill.effects().ifPresent(effects -> PillService.apply(entity, effects));
+        } finally {
+            settling.remove(entity.getUUID());
+            if (settling.isEmpty()) SETTLING.remove();
+        }
     }
 
     // Public because it is one of the readings ItemElements takes when it asks what an item is made of; resolve()
@@ -293,16 +317,43 @@ public final class ItemBindingService {
     // Immutable resolution snapshot, so one operation does not repeat the matcher scans. Which quality ladder a
     // stack reads is not here: it comes from the quality the stack resolves, not from a declaration.
     public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon,
-                                   Optional<PillBinding> pill, Optional<TechniqueBinding> technique) {
+                                   PillResolution pill, Optional<TechniqueBinding> technique) {
         public boolean conditionsMet(LivingEntity entity, FormulaContext context) {
             return this.weapon.map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
-                    && this.pill.map(value -> value.conditions().stream()
+                    && this.pill.effects().map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
                     && this.technique.map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
                     && this.item.map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true);
+        }
+    }
+
+    /**
+     * One pill reading. {@code identity} is the holder that owns counters; empty for a component-only dose.
+     * {@code effects} is the overlaid definition that actually runs. {@code unbound} is an explicit binding that
+     * is no longer in the registry: it must not fall back to another pill or to defaults.
+     */
+    public record PillResolution(Optional<Holder<PillBinding>> identity, Optional<PillBinding> effects, boolean unbound) {
+        public static PillResolution none() {
+            return new PillResolution(Optional.empty(), Optional.empty(), false);
+        }
+
+        public static PillResolution unbound(Holder<PillBinding> holder) {
+            return new PillResolution(Optional.of(holder), Optional.empty(), true);
+        }
+
+        public static PillResolution bound(Holder<PillBinding> holder, PillBinding effects) {
+            return new PillResolution(Optional.of(holder), Optional.of(effects), false);
+        }
+
+        public static PillResolution componentOnly(PillBinding effects) {
+            return new PillResolution(Optional.empty(), Optional.of(effects), false);
+        }
+
+        public boolean present() {
+            return this.effects.isPresent();
         }
     }
 }

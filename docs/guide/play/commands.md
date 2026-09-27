@@ -13,7 +13,7 @@ title: 命令
 | `/mxt registries list` | 列出动态注册表及条目数量。 |
 | `/mxt registries validate` | 校验数据包定义，并把本次构建**发现的全部问题一次列出**：每条都带出错的文件路径；没有问题时报告注册表与条目数量。 |
 | `/picker [<category>]`（= `/mxt picker`） | 打开物品选择器，列出所选数据包注册表定义对应的物品；`category` 是注册表 ID（如 `mxt:aura`、`mxt:artifact`、`mxt:item_binding`），不填列出全部已注册分类。需要 gamemaster 权限，且只在创造模式下可用。 |
-| `/quality`（= `/mxt quality`） | 查看自己**主手**物品的品质：解析出来的那一档（覆盖组件 → 锻造结果 → 定义默认 → 链条默认 → 灵植声明）。不需要权限。 |
+| `/quality`（= `/mxt quality`） | 查看自己**主手**物品的品质：解析出来的那一档（覆盖组件 → 锻造结果 → 定义默认，含炉型规格 → 链条默认 → 灵植声明）。不需要权限。 |
 | `/quality get [<target>]`（= `/mxt quality get …`） | 同上，看别人的（需要 gamemaster 权限）。 |
 | `/quality set <targets> <quality>`（= `/mxt quality set …`） | 把品质**覆盖组件**写到目标主手的物品上（需要 gamemaster 权限）。它盖过定义默认档，`/quality clear` 摘掉；这一档能不能用仍由它自己的 `condition` 与所属链条决定。 |
 | `/quality clear <targets>`（= `/mxt quality clear …`） | 摘掉主手物品上的覆盖组件，让它回到定义默认档（需要 gamemaster 权限）。本来就没有覆盖时逐个目标报失败。 |
@@ -219,6 +219,10 @@ title: 命令
 | --- | --- | --- |
 | `id` | 必填 | 天劫定义 ID。 |
 | `target` | 命令执行者 | 天劫挂在哪一个活体实体上。 |
+
+## 炼丹配置
+
+服务端配置「炼丹 → 每秒丹毒自然消退」是有限非负数，默认 0。默认不消退。设成正数后，只对已经有且不为 0 的丹毒、每累计 20 个实体活跃 tick 减一次；离线不减，也不给没服过丹的实体建立附件。这不是命令。
 
 ## 客户端命令（`/hud`、`/wheel`）
 

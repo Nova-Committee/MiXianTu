@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "side": "mxt:block/alchemy_bronze",
+    "top": "mxt:block/alchemy_vent",
+    "front": "mxt:block/alchemy_trim"
+  }
+}

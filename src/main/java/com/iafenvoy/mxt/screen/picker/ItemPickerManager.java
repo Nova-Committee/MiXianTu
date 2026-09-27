@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.forging.BlueprintBinding;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
+import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -57,7 +58,14 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.SPIRIT_HERB, SpiritHerb::entries);
         registerMatcher(MxtResourceKeys.ITEM_BINDING, ItemBinding::entries);
         registerMatcher(MxtResourceKeys.WEAPON_BINDING, WeaponBinding::entries);
-        registerMatcher(MxtResourceKeys.PILL_BINDING, PillBinding::entries);
+        register(MxtResourceKeys.PILL_BINDING, (holder, access) -> {
+            List<PickerItem> items = new ArrayList<>();
+            items.add(described(componentStack(new ItemStack(MxtItems.PILL.get()), MxtDataComponents.PILL,
+                    PillComponent.ofBinding(holder)), holder));
+            for (ItemStack stack : stackItems(holder.value().entries()))
+                items.add(new PickerItem(stack, names(stack.getHoverName(), holder.value().name(), idName(HolderHelper.idOrNull(holder)))));
+            return items;
+        });
         registerMatcher(MxtResourceKeys.TOOL_BINDING, ToolBinding::entries);
         registerMatcher(MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding::entries);
         registerMatcher(MxtResourceKeys.ARTIFACT, Artifact::entries);
@@ -82,6 +90,18 @@ public final class ItemPickerManager {
         // A technique has no item of its own: the row is the carrier the mod generates for it, which is the item
         // the declaration names or the jade slip.
         registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
+        register(MxtResourceKeys.ALCHEMY_FURNACE, (holder, access) -> {
+            if (!holder.isBound()) return List.of();
+            ItemStack stack = componentStack(new ItemStack(MxtBlocks.ALCHEMY_FURNACE.get()), MxtDataComponents.ALCHEMY_FURNACE, holder);
+            Component name = DefinitionText.name(holder);
+            Component quality = ItemQualityService.find(access, stack)
+                    .map(value -> ItemQualityService.coloredName(value, value.value().name()))
+                    .orElse(Component.translatable("screen.mxt.alchemy.no_quality"));
+            return List.of(new PickerItem(stack, names(name, quality, idName(HolderHelper.idOrNull(holder)))));
+        });
+        registerSingle(MxtResourceKeys.ALCHEMY_WALL_MATERIAL, holder -> described(
+                componentStack(new ItemStack(MxtBlocks.ALCHEMY_FURNACE_CASING.get()), MxtDataComponents.ALCHEMY_WALL_MATERIAL, holder),
+                holder));
 
         // Auras have no item of their own, so one stand-in item carries whatever the definition is called.
         registerSingle(MxtResourceKeys.AURA, holder -> described(new ItemStack(MxtItems.SPIRIT_STONE.get()), holder));

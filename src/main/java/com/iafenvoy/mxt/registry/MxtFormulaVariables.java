@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
 import com.iafenvoy.mxt.util.formula.FormulaNames;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
+import com.iafenvoy.mxt.util.formula.PillToxicityVariable;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -46,6 +47,7 @@ public final class MxtFormulaVariables {
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> SECRET_REALM = REGISTRY.register("secret_realm", SecretRealmVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> LIFESPAN = REGISTRY.register("lifespan", LifespanVariable::new);
+    public static final DeferredHolder<FormulaVariable, FormulaVariable> PILL_TOXICITY = REGISTRY.register("pill_toxicity", PillToxicityVariable::new);
 
     // For formulas that must switch a term off without editing the expression.
     private record ZeroVariable() implements FormulaVariable {

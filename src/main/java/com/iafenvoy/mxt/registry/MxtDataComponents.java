@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
+import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
@@ -58,6 +60,9 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TalismanComponent>> TALISMAN = register("talisman", TalismanComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<RiftComponent>> RIFT = register("rift", RiftComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<Technique>>> TECHNIQUE = register("technique", Technique.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> HERB_AGE = register("herb_age", Codec.intRange(0, Integer.MAX_VALUE));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyFurnaceDefinition>>> ALCHEMY_FURNACE = register("alchemy_furnace", AlchemyFurnaceDefinition.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyWallMaterial>>> ALCHEMY_WALL_MATERIAL = register("alchemy_wall_material", AlchemyWallMaterial.CODEC);
 
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(String id, Codec<T> codec) {
         return REGISTRY.registerComponentType(id, b -> b.persistent(codec).networkSynchronized(ByteBufCodecs.fromCodecWithRegistries(codec)));

@@ -2,7 +2,13 @@
 title: 特殊公开接口
 ---
 
-本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；同一天这一族又多了三个生物侧契约（`Contractable`、`ContractOperations`、`CaptureListener`，见文末三节）。该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`Toggable` 留在 `data/ability`——它不算对外 API**（它是本体登记"需要按键的技能"的形状，`mxt:active` / `mxt:flight_control` / `mxt:storage` 三个技能类型实现它）。哪些东西**不**进 `api` 见 `AGENTS.md` §3：只有"别的模组会实现或调用"的契约才进去，服务类的静态代理是明确的推迟项。
+本页的实现型接口里，`AuraAccess`、`ItemAuraAccess`、`UseItemAuraAccess`（原 `runtime/spirit`）与 `WheelMenuEntry`（原 `screen/wheel`）已于 2026-09-22 搬进 **`com.iafenvoy.mxt.api`**；同一天这一族又多了三个生物侧契约（`Contractable`、`ContractOperations`、`CaptureListener`，见文末三节）。异火物品实现 `AlchemyHeatSource`，也在这个包里。该包**只有接口与 `package-info`**，实现仍在各自模块，搬动只改包名与 import。`TooltipAppender` 是 NeoForge 的扩展点、`Cost` 在 `data/cost`；**`Toggable` 留在 `data/ability`——它不算对外 API**（它是本体登记"需要按键的技能"的形状，`mxt:active` / `mxt:flight_control` / `mxt:storage` 三个技能类型实现它）。哪些东西**不**进 `api` 见 `AGENTS.md` §3：只有"别的模组会实现或调用"的契约才进去，服务类的静态代理是明确的推迟项。
+
+### `AlchemyHeatSource`
+
+异火物品实现的供热边界，在 `com.iafenvoy.mxt.api`。两个方法都只读：`double maxTemperature(ItemStack stack, ServerLevel level, BlockPos pos)` 与 `double heatingPerTick(ItemStack stack, ServerLevel level, BlockPos pos)`。返回值必须有限且大于 0；否则丹炉把这件火当成没有。不要每个 tick 分配一份温度曲线。温度写入由服务端炼丹服务完成，物品不要自己改批次。本体没有生产异火。测试模组的 `AlchemyTestFireItems.FIRE`（`mxt_test:alchemy_test_fire`，200 / 40）和 `WEAK_FIRE`（`mxt_test:alchemy_weak_fire`，80 / 10）只供测试，不是内容包要注册的物品。
+
+`AlchemyWorkstation` 仍在 `api`。保留 `container`、`state`、`getBlockPos`、`furnaceItem`、`furnaceDefinition`、`temperature`、`targetTemperature`、`setTargetTemperature`、`setTemperature`、`structureStatus`、`phase`、`setChanged`。没有 `select`、`clearSelection`、`selected`。新增 `fireContainer`、`canPlaceFire`、`canTakeFire`、`wallTemperatureLimit`、`fireTemperatureLimit`、`maximumTemperature`。`poweredTicks`、`setPoweredTicks`、`auraBank` 已删除。开炉是 `AlchemyWorkstationService.start(ServerPlayer, AlchemyWorkstation)`，预览同形且不接收所选配方。动作包是三个字段：`containerId`、`TEMPERATURE` / `START` / `ABORT`、温度。参数表以当前接口为准，本文不另造重载。
 
 ### `AuraAccess`
 

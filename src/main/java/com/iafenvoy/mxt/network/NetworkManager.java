@@ -22,9 +22,10 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 public final class NetworkManager {
     @SubscribeEvent
     public static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1")
+        PayloadRegistrar registrar = event.registrar("2")
                 .playToServer(WheelActionC2SPayload.TYPE, WheelActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelAction))
                 .playToServer(ForgingActionC2SPayload.TYPE, ForgingActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onForgingAction))
+                .playToServer(AlchemyActionC2SPayload.TYPE, AlchemyActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onAlchemyAction))
                 .playToServer(ChequeActionC2SPayload.TYPE, ChequeActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onChequeAction))
                 .playToServer(StationTradeC2SPayload.TYPE, StationTradeC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onStationTrade))
                 .playToServer(PlayerTradeActionC2SPayload.TYPE, PlayerTradeActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onPlayerTradeAction))
@@ -38,6 +39,7 @@ public final class NetworkManager {
         if (FMLEnvironment.getDist() != Dist.CLIENT) {
             registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC)
                     .playToClient(ItemPickerS2CPayload.TYPE, ItemPickerS2CPayload.STREAM_CODEC)
+                    .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC)
                     .playToClient(OwnerNameS2CPayload.TYPE, OwnerNameS2CPayload.STREAM_CODEC);
             return;
         }
@@ -45,6 +47,8 @@ public final class NetworkManager {
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onAuraState))
                 .playToClient(ItemPickerS2CPayload.TYPE, ItemPickerS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onItemPicker))
+                .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onAlchemyState))
                 .playToClient(OwnerNameS2CPayload.TYPE, OwnerNameS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onOwnerName));
     }

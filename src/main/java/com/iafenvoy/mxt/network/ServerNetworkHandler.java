@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
+import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
@@ -86,6 +87,13 @@ public final class ServerNetworkHandler {
             case FINISH -> MXT_DEBUG.info("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
             case CANCEL -> MXT_DEBUG.info("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
         }
+    }
+
+    static void onAlchemyAction(AlchemyActionC2SPayload payload, IPayloadContext context) {
+        if (!(context.player() instanceof ServerPlayer player)) return;
+        if (!(player.containerMenu instanceof AlchemyFurnaceMenu menu)
+                || menu.containerId != payload.containerId() || !menu.stillValid(player)) return;
+        menu.handleAction(player, payload);
     }
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {

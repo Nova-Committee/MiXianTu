@@ -1,0 +1,16 @@
+{
+  "items": "minecraft:sweet_berries",
+  "quality": "mxt_test:spirit_iron",
+  "growth": {
+    "seeds": "minecraft:glow_berries",
+    "mature_age": 10,
+    "max_age": 20,
+    "growth_rate": 2,
+    "costs": [
+      { "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 2 },
+      { "type": "mxt:aura", "aura": "mxt_test:water_power", "amount": 2 }
+    ],
+    "harvest": { "id": "minecraft:sweet_berries", "count": 1 },
+    "texture": "mxt_test:block/herb/grower"
+  }
+}

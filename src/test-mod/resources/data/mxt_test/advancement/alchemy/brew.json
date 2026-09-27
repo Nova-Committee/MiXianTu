@@ -1,0 +1,13 @@
+{
+  "criteria": {
+    "brew": {
+      "trigger": "mxt:alchemy",
+      "conditions": {
+        "definition": "mxt_test:alchemy/criterion"
+      }
+    }
+  },
+  "rewards": {
+    "experience": 1
+  }
+}

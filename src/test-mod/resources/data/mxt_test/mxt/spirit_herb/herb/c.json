@@ -1,0 +1,6 @@
+{
+  "items": "minecraft:cornflower",
+  "quality": "mxt_test:spirit_iron",
+  "auxiliary_effects": { "mxt_test:herb/auxiliary": 3 },
+  "thermal_bias": -1
+}

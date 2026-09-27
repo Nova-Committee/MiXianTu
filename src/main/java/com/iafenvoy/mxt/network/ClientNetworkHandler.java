@@ -1,9 +1,11 @@
 package com.iafenvoy.mxt.network;
 
+import com.iafenvoy.mxt.network.payload.AlchemyStateS2CPayload;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.network.payload.ItemPickerS2CPayload;
 import com.iafenvoy.mxt.network.payload.OwnerNameS2CPayload;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
+import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.picker.ItemPickerScreen;
 import com.iafenvoy.mxt.util.ClientPlayerNames;
 import net.minecraft.client.Minecraft;
@@ -12,6 +14,11 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public final class ClientNetworkHandler {
     static void onAuraState(AuraStateS2CPayload payload, IPayloadContext context) {
         AuraClientState.update(payload.source(), payload.actual(), payload.environment());
+    }
+
+    static void onAlchemyState(AlchemyStateS2CPayload payload, IPayloadContext context) {
+        if (context.player().containerMenu instanceof AlchemyFurnaceMenu menu && menu.containerId == payload.containerId())
+            menu.acceptView(payload.view());
     }
 
     // The grid is built on this side from the synced registries, and taking an item out of it is the vanilla

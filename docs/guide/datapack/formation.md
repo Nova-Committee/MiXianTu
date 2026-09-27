@@ -513,4 +513,131 @@ give @s mxt:formation_plate[mxt:formation_plate={allowed:["#mypack:wood_arrays"]
 
 `forging_blueprint` 定义输入、锻造步骤、偏移范围、质量阈值和失败结算；`forging_method` 定义每次操作的消耗、条件与锻打音效。
 
-`alchemy_recipe` 使用原版配方系统和炼丹环境条件，材料、灵气和结果由数据包定义。
+## 炼丹与灵植
+
+丹方、药性、炉型、炉壁材料和灵植都由数据包提供。本体给出核心 `mxt:alchemy_furnace`、主药仓 `mxt:alchemy_main_input`、辅药仓 `mxt:alchemy_auxiliary_input`、产物仓 `mxt:alchemy_output`、炉壁 `mxt:alchemy_furnace_casing`、灵田 `mxt:spirit_herb_plot` 和丹药载体 `mxt:pill`。本体没有默认异火。下面的 `example:` 条目不会随本体发布；测试包里才有可玩夹具。玩家点击开炉后的产物判定尚未实跑，不要把这篇教程当成这次改动的验收。
+
+### 先写药性
+
+```json
+{
+  "name": "property.example.nourish",
+  "description": "property.example.nourish.description"
+}
+```
+
+文件放在 `data/example/mxt/medicinal_property/nourish.json`。药性不是元素。
+
+### 再写灵植
+
+不可种植的药材省略 `growth`。可种植的要写种苗、年龄、贴图和收获物；收获物必须能解析回这条定义。药龄组件是 `mxt:herb_age`。旧的顶层 `age`、`growth_rate`、`drop_chance` 不要再写。
+
+火灵参若只是入药、不种植，保留原品质、标签和默认年龄 100 即可：
+
+```json
+{
+  "items": ["minecraft:red_mushroom", "#mxt_test:spirit_herbs"],
+  "quality": "mxt_test:spirit_iron",
+  "default_age": 100,
+  "element_tags": ["mxt_test:fire"],
+  "material_tags": ["mxt_test:herb"],
+  "main_effects": { "example:nourish": "3 + herb_age / 50" },
+  "thermal_bias": 1
+}
+```
+
+`herb_age` 只在药力公式里是局部变量。需要年龄增益就写进公式，管线不会再乘一次。
+
+种下去用灵田：持种苗右键空的 `mxt:spirit_herb_plot`。一格一株。成熟后右键采收，拿回收获物和原种苗；潜行空手只拔种苗。环境加成写在 `aura_zone.rules.spirit_plant_bonus`，实际增长是 `growth_rate × max(0, 1 + spirit_plant_bonus)`。不要再写 `natural_spawn_herb`。
+
+### 炉型与炉壁
+
+```json
+{
+  "quality": "example:common",
+  "main_slots": 2,
+  "auxiliary_slots": 2,
+  "capacity": 64,
+  "cooling_per_tick": 0.5
+}
+```
+
+```json
+{
+  "max_temperature": 200
+}
+```
+
+炉型放在 `data/example/mxt/alchemy_furnace/basic.json`。炉壁材料放在 `data/example/mxt/alchemy_wall_material/basic_wall.json`。药引固定 1 格。品质只决定显示和使用条件。槽位、容量和冷却以炉型字段为准。耐温取 22 块炉壁的最低值，再和异火上限取较低值。只升级 `mxt:quality` 不会换成另一份规格，也不改变耐温。不要再写 `max_temperature`、`heating_per_tick`、`aura_capacity` 或 `heating_costs`。
+
+```mcfunction
+give @s mxt:alchemy_furnace[mxt:alchemy_furnace="example:basic"]
+give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall"]
+```
+
+### 手搭丹炉
+
+这不是放下一件方块就开炉。手搭固定的 3×3×3，不能在数据包里改形状。
+
+1. 核心放在正面中层。本地坐标 `(1,1,0)`，index `x + 3 * z + 9 * y` 等于 10。默认朝北。站在北侧、面朝南时，左侧是本地 `x = 2`。
+2. 左侧主药仓放在 `(2,1,1)`，index 14。右侧辅药仓放在 `(0,1,1)`，index 12。顶部产物仓放在 `(1,2,1)`，index 22。
+3. 中心 `(1,1,1)` 留空。index 13 不能有方块。
+4. 其余 22 格放带材料的 `mxt:alchemy_furnace_casing`。炉壁不打开界面。
+5. 壳不齐或材料无效时不能成型，也不能开炉。活动中缺块或冲突会失败一次；有格子未加载则这一 tick 不推进，也不加载那个区块。
+6. 异火放进核心。`alchemy_env_bonus` 只顶替配方的环境门槛，不供热。本体没有默认异火。
+7. 主药放左侧仓，辅药和药引放右侧仓。产物仓只能取出。漏斗只能从产物仓下侧面抽出，成型后那一面对着中心空气，所以那里放不进漏斗。
+8. 活动中拆炉壁或一座仓：这一批失败一次，不退已消耗的材料，并停火。拆一座仓只掉这座仓自己的物品。拆核心只掉核心、异火和已生成待输出。
+
+### 丹方
+
+```json
+{
+  "type": "mxt:alchemy",
+  "main_requirements": { "example:nourish": 6 },
+  "auxiliary_requirements": { "example:calm": 6 },
+  "catalyst_requirement": 1,
+  "balance_tolerance": 0,
+  "target_temperature": 100,
+  "temperature_tolerance": 5,
+  "duration": 200,
+  "max_bad_ticks": 2,
+  "minimum_aura": { "example:fire_qi": 10 },
+  "success_outputs": [
+    { "id": "mxt:pill", "count": 1, "components": { "mxt:pill": { "binding": "example:warming_pill" } } }
+  ],
+  "failure_outputs": [{ "id": "mxt:alchemy_dregs" }],
+  "guide": {
+    "main": [{ "id": "example:herb_a", "count": 2 }],
+    "auxiliary": [{ "id": "example:herb_c", "count": 2 }],
+    "catalyst": [{ "id": "example:herb_d" }]
+  }
+}
+```
+
+文件放在 `data/example/recipe/warming.json`。不要写 `inputs` 或 `minimum_furnace_tier`。`guide` 可以留下，只是示例元数据；丹炉不读取、不展示，也不另做查看器。放入材料不会自行开炉。玩家点击开炉后，才按实际药性判定产物；多条匹配时由需求向量支配，玩家不选丹方。没有唯一支配结果就是配伍冲突，不扣料。
+
+同角色拆堆不改变结果。未要求的非零药性是冲突，不能开炉，也不扣料。
+
+### 丹药
+
+```json
+{
+  "name": "pill_binding.example.warming_pill",
+  "max_uses": 2,
+  "cooldown": 20,
+  "toxicity_gain": 25,
+  "toxicity_threshold": 100,
+  "toxicity_after_overdose": 20,
+  "on_consume": { "type": "mxt:heal", "amount": 4 }
+}
+```
+
+`items` 可以省略。发给玩家：
+
+```mcfunction
+give @s mxt:pill[mxt:pill={binding:"example:warming_pill"}]
+```
+
+次数按这条丹药定义计，不按物品 ID。排毒用 `mxt:modify_pill_toxicity` 的负 `add`，不清次数。服务端配置「炼丹 → 每秒丹毒自然消退」默认 0。测试包原丹毒丹的 25 / 100 / 20 不要改。
+
+KubeJS 仍监听 `alchemyCraft`。`Pre` 可取消，`inputs()` 是 `role` 与 `stack` 副本，改副本不改账；改真实库存则拒绝且不还原。`Post` 用 `success()`、`reason()` 和 `outputs()`，没有 `spoiled()`。输出入仓后先清旧会话，在事务守卫内执行完成行为与进度条件，释放守卫后才发 `Post`；`Post` 可开启下一批，不会被旧批次收尾覆盖。原操作者离线时，玩家行为不补发。

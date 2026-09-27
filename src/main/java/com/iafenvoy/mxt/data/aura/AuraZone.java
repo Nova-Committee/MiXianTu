@@ -134,15 +134,21 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
     }
 
     public record Rules(boolean cultivateSuppress, double tribulationModify, double spiritPlantBonus,
-                        boolean alchemyEnvBonus, boolean naturalSpawnHerb) {
-        public static final Rules DEFAULT = new Rules(false, 0.0D, 0.0D, false, false);
-        public static final Codec<Rules> CODEC = RecordCodecBuilder.create(i -> i.group(
+                        boolean alchemyEnvBonus) {
+        public static final Rules DEFAULT = new Rules(false, 0.0D, 0.0D, false);
+        public static final Codec<Rules> CODEC = RecordCodecBuilder.<Rules>create(i -> i.group(
                 Codec.BOOL.optionalFieldOf("cultivate_suppress", false).forGetter(Rules::cultivateSuppress),
                 Codec.DOUBLE.optionalFieldOf("tribulation_modify", 0.0D).forGetter(Rules::tribulationModify),
                 Codec.DOUBLE.optionalFieldOf("spirit_plant_bonus", 0.0D).forGetter(Rules::spiritPlantBonus),
-                Codec.BOOL.optionalFieldOf("alchemy_env_bonus", false).forGetter(Rules::alchemyEnvBonus),
-                Codec.BOOL.optionalFieldOf("natural_spawn_herb", false).forGetter(Rules::naturalSpawnHerb)
-        ).apply(i, Rules::new));
+                Codec.BOOL.optionalFieldOf("alchemy_env_bonus", false).forGetter(Rules::alchemyEnvBonus)
+        ).apply(i, Rules::new)).validate(Rules::validate);
+
+        // Growth multiplies by max(0, 1 + bonus), so a bonus below -1 is not a slower plant, it is a bad pack.
+        private static DataResult<Rules> validate(Rules rules) {
+            return Double.isFinite(rules.spiritPlantBonus) && rules.spiritPlantBonus >= -1.0D
+                    ? DataResult.success(rules)
+                    : DataResult.error(() -> "spirit_plant_bonus must be finite and at least -1, was " + rules.spiritPlantBonus);
+        }
     }
 
     // Seed lives in datapacks so template distributions are reproducible.
