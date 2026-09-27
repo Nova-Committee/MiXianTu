@@ -32,7 +32,6 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
@@ -121,7 +120,6 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<BlockAura>> BLOCK_AURA = create("block_aura");
     public static final ResourceKey<Registry<ItemAura>> ITEM_AURA = create("item_aura");
     public static final ResourceKey<Registry<ItemQuality>> ITEM_QUALITY = create("quality");
-    public static final ResourceKey<Registry<QualityChain>> QUALITY_CHAIN = create("quality_chain");
     public static final ResourceKey<Registry<TriggerRule>> TRIGGER = create("trigger");
     public static final ResourceKey<Registry<Talisman>> TALISMAN = create("talisman");
 

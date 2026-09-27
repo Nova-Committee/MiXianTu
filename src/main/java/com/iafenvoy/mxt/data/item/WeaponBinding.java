@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -25,7 +24,6 @@ import java.util.Optional;
  */
 public record WeaponBinding(List<Entry> entries, List<AttributeEntry> attributes, EntityAction useAction,
                             BiEntityAction attackAction, EntityAction tickAction,
-                            Optional<Holder<QualityChain>> qualityChain,
                             List<DescribedEntry<EntityCondition>> conditions,
                             List<Either<Holder<Element>, TagKey<Element>>> element,
                             int priority) implements ItemMatcher {
@@ -35,7 +33,6 @@ public record WeaponBinding(List<Entry> entries, List<AttributeEntry> attributes
             EntityAction.optionalCodec("use_action").forGetter(WeaponBinding::useAction),
             BiEntityAction.optionalCodec("attack_action").forGetter(WeaponBinding::attackAction),
             EntityAction.optionalCodec("tick_action").forGetter(WeaponBinding::tickAction),
-            QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(WeaponBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(WeaponBinding::conditions),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(WeaponBinding::element),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(WeaponBinding::priority)).apply(i, WeaponBinding::new));

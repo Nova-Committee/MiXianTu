@@ -4,9 +4,12 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -75,12 +78,13 @@ public final class ServerCache {
 
     @SubscribeEvent
     public static void onDatapackLoaded(ServerDataLoad event) {
-        // Rebuild only after a server datapack load or /reload, not for every player sync. The three indexes
+        // Rebuild only after a server datapack load or /reload, not for every player sync. The four indexes
         // below are keyed by registry instance, which a reloaded pack may keep, so they are dropped here rather
         // than left to notice the reload by themselves.
         DamageElements.invalidate();
         ElementReactionService.invalidate();
         FormulaNames.invalidate();
+        QualityLadders.invalidate();
         get().ifPresent(ServerCache::rebuild);
     }
 
@@ -118,6 +122,7 @@ public final class ServerCache {
         this.rankByRealm = ranks;
         this.rebuildTriggerRules(problems);
         this.rebuildSkillChains(problems);
+        this.validateQualityLadders(problems);
         this.rebuildArtifacts(problems);
         this.problems = List.copyOf(problems);
         if (problems.isEmpty()) {
@@ -251,6 +256,28 @@ public final class ServerCache {
         Identifier currentSkill = this.skillByStage.get(current);
         return currentSkill != null && currentSkill.equals(this.skillByStage.get(required))
                 && this.rankByStage.getOrDefault(current, -1) >= this.rankByStage.getOrDefault(required, Integer.MAX_VALUE);
+    }
+
+    // The one thing a quality tier cannot check about itself, because it needs the whole registry: a next tier
+    // that does not exist, a ladder nothing can walk, or upgrade data on a tier that leads nowhere. The walk and
+    // the index behind it live in QualityLadders, so a report can never describe a different registry than the
+    // one the runtime reads.
+    private void validateQualityLadders(List<String> problems) {
+        Registry<ItemQuality> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY);
+        registry.listElements().forEach(holder -> {
+            ItemQuality tier = holder.value();
+            // Upgrade data on a tier that leads nowhere would be read by nobody, which is the forgotten-field
+            // mistake this check exists for - the codec itself cannot see the other tiers.
+            if (tier.next().isEmpty() && (!tier.upgradeCosts().isEmpty() || !(tier.upgradeCondition() instanceof AlwaysCondition)))
+                problems.add(problem(MxtResourceKeys.ITEM_QUALITY, holder.key().identifier(),
+                        "declares upgrade_costs or upgrade_condition but no next tier"));
+            tier.next().map(HolderHelper::id)
+                    .filter(next -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_QUALITY, next).isEmpty())
+                    .ifPresent(next -> problems.add(problem(MxtResourceKeys.ITEM_QUALITY, holder.key().identifier(),
+                            "next " + next + " is not a quality")));
+        });
+        for (QualityLadders.Report report : QualityLadders.diagnose(registry).problems())
+            problems.add(problem(MxtResourceKeys.ITEM_QUALITY, report.tier(), report.message()));
     }
 
     private void indexChain(Identifier cultivation, Identifier first, Map<Identifier, Identifier> resolved, Map<Identifier, Integer> ranks) {

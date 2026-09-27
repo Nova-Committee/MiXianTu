@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.data.item.PillComponent;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.TechniqueReadingComponent;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
@@ -175,17 +174,12 @@ public final class ItemBindingService {
         // An empty stack answers nothing: a wildcard matcher would otherwise claim it, and every component read
         // below would be a miss anyway.
         if (stack.isEmpty()) return new ResolvedBindings(Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty());
+                Optional.empty());
         Optional<PillBinding> declared = pill(access, stack);
         PillComponent pill = stack.get(MxtDataComponents.PILL.get());
         Optional<PillBinding> merged = pill == null ? declared
                 : Optional.of(pill.applyTo(declared.orElseGet(PillBinding::defaults)));
-        return new ResolvedBindings(binding(access, stack), weapon(access, stack), merged, technique(access, stack),
-                Optional.ofNullable(stack.get(MxtDataComponents.QUALITY_CHAIN.get())));
-    }
-
-    public static Optional<Holder<QualityChain>> qualityChain(Provider access, ItemStack stack) {
-        return resolve(access, stack).qualityChain();
+        return new ResolvedBindings(binding(access, stack), weapon(access, stack), merged, technique(access, stack));
     }
 
     private static void refreshEquipped(LivingEntity entity) {
@@ -296,19 +290,10 @@ public final class ItemBindingService {
         }
     }
 
-    // Immutable resolution snapshot, so one operation does not repeat the matcher scans. The stack's own
-    // mxt:quality_chain is read here too, because it outranks every declaration's.
+    // Immutable resolution snapshot, so one operation does not repeat the matcher scans. Which quality ladder a
+    // stack reads is not here: it comes from the quality the stack resolves, not from a declaration.
     public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon,
-                                   Optional<PillBinding> pill, Optional<TechniqueBinding> technique,
-                                   Optional<Holder<QualityChain>> qualityChainOverride) {
-        public Optional<Holder<QualityChain>> qualityChain() {
-            return this.qualityChainOverride
-                    .or(() -> this.weapon.flatMap(WeaponBinding::qualityChain))
-                    .or(() -> this.pill.flatMap(PillBinding::qualityChain))
-                    .or(() -> this.technique.flatMap(TechniqueBinding::qualityChain))
-                    .or(() -> this.item.flatMap(ItemBinding::qualityChain));
-        }
-
+                                   Optional<PillBinding> pill, Optional<TechniqueBinding> technique) {
         public boolean conditionsMet(LivingEntity entity, FormulaContext context) {
             return this.weapon.map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true)

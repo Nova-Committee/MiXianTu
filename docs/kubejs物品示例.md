@@ -26,8 +26,7 @@ StartupEvents.registry('item', event => {
 ```json
 // kubejs/data/example/mxt/item_binding/fire_root_pellet.json
 {
-  "items": "kubejs:fire_root_pellet",
-  "quality_chain": "example:pellet",
+  "items": "kubejs:fire_root_pellet"
   "actions": [
     {
       "type": "mxt:grant_spirit_root",
@@ -44,16 +43,14 @@ StartupEvents.registry('item', event => {
   "attributes": [
     {"attribute": "minecraft:attack_damage", "id": "example:firebound_sword/damage", "amount": 8, "operation": "add_value"},
     {"attribute": "minecraft:attack_speed", "id": "example:firebound_sword/speed", "amount": -2.4, "operation": "add_value"}
-  ],
-  "quality_chain": "example:firebound_weapon"
+  ]
 }
 ```
 
 ```json
 // kubejs/data/example/mxt/pill_binding/returning_pill.json
 {
-  "items": "kubejs:returning_pill",
-  "quality_chain": "example:pill",
+  "items": "kubejs:returning_pill"
   "toxicity_gain": 10,
   "toxicity_threshold": 100,
   "toxicity_after_overdose": 25
@@ -64,11 +61,10 @@ StartupEvents.registry('item', event => {
 // kubejs/data/example/mxt/technique_binding/fire_manual.json
 {
   "technique": "example:fire_manual",
-  "carrier_item": "kubejs:fire_manual",
-  "quality_chain": "example:manual"
+  "carrier_item": "kubejs:fire_manual"
 }
 ```
 
-三种绑定均只引用已经由 KubeJS、原版或其他模组注册的物品；`quality_chain` 是可选的链条引用（写一个 `mxt:quality_chain` 定义的 id，链给出这个物品的默认档、成员资格与升级路径）。当前各绑定的运行时接入状态和缺口**以代码为准**（两份 README 的「模块完成情况」表是汇总）。
+三种绑定均只引用已经由 KubeJS、原版或其他模组注册的物品；绑定表**不声明品质链**（链名与 `next` 都写在 `quality` 条目自己身上）。当前各绑定的运行时接入状态和缺口**以代码为准**（两份 README 的「模块完成情况」表是汇总）。
 
 KubeJS 注册物品表后需要重启游戏；MXT 的绑定数据表属于原版数据包注册表，读取发生在世界加载时，因此修改后需要重新加载世界（单机退回标题界面再进入，服务器重启），`/reload` 不会重新读取它们。绑定的物品 ID 不存在时，数据包加载会失败，避免产生无法解析的物品规则。

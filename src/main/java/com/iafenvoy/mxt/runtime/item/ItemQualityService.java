@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -30,13 +31,15 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
 
 /**
- * Resolves an item's quality and exposes the tag-defined quality catalogue. Direct stack data takes precedence
- * over a forge result, which takes precedence over a binding's tag-defined default quality.
+ * Resolves an item's quality, the ladder it is read on, and the tag-defined quality catalogue. The stack's own
+ * component takes precedence over a forge result, which takes precedence over a definition's or a spirit herb's
+ * declaration.
  */
 @EventBusSubscriber
 public final class ItemQualityService {
@@ -102,18 +105,25 @@ public final class ItemQualityService {
     }
 
     // The one resolution order: an explicit component, what a settlement wrote, the definition claiming the stack,
-    // the ladder its binding declares, and last a spirit herb's own declaration. Read with a Provider because the
-    // client draws tooltips from the same order.
+    // the entry tier of the ladder that stack reads, and last a spirit herb's own declaration. Read with a Provider
+    // because the client draws tooltips from the same order.
     public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
-        return find(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), stack, ItemBindingService.resolve(access, stack), access);
+        return find(registry(access).orElse(null), stack, ItemBindingService.resolve(access, stack), access);
     }
 
-    private static Optional<Holder<ItemQuality>> find(RegistryLookup<ItemQuality> registry, ItemStack stack,
+    private static Optional<Holder<ItemQuality>> find(@Nullable RegistryLookup<ItemQuality> registry, ItemStack stack,
                                                       ResolvedBindings bindings, Provider access) {
-        return intrinsic(stack)
+        Optional<Holder<ItemQuality>> declared = intrinsic(registry, stack);
+        return declared
                 .or(() -> definitionDefault(access, stack))
-                .or(() -> chainDefault(bindings))
+                .or(() -> ladderDefault(access, declared.orElse(null)))
                 .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality));
+    }
+
+    // A registry the client has not been sent is not an error here: the stack simply resolves to whatever the
+    // remaining slots answer.
+    private static Optional<RegistryLookup<ItemQuality>> registry(Provider access) {
+        return access.lookup(MxtResourceKeys.ITEM_QUALITY).map(lookup -> (RegistryLookup<ItemQuality>) lookup);
     }
 
     // What the definition claiming this stack says its own tier is: an artifact, the sigil written on a talisman
@@ -128,9 +138,15 @@ public final class ItemQualityService {
                 .flatMap(binding -> binding.technique().value().quality());
     }
 
-    // The tier the item's own ladder starts at.
-    private static Optional<Holder<ItemQuality>> chainDefault(ResolvedBindings bindings) {
-        return bindings.qualityChain().map(chain -> chain.value().first());
+    // The entry tier of the ladder the stack's own tier sits on, which is where a stack with no tier of its own
+    // starts. A stack carrying nothing, or carrying a tier on no ladder, has no such slot.
+    private static Optional<Holder<ItemQuality>> ladderDefault(Provider access, @Nullable Holder<ItemQuality> tier) {
+        return ladder(access, tier).flatMap(ladder -> Optional.of(ladder.first()));
+    }
+
+    // The ladder a tier sits on, which is also the ladder a stack carrying it is read on.
+    public static Optional<QualityLadders.Ladder> ladder(Provider access, @Nullable Holder<ItemQuality> tier) {
+        return QualityLadders.of(access, tier);
     }
 
     // Why an entity may not use an item: the gate is the union of three independent data-driven checks, so it
@@ -145,7 +161,7 @@ public final class ItemQualityService {
          */
         QUALITY_CONDITIONS,
         /**
-         * The item's resolved quality is missing, or is not a tier of the ladder its binding declares.
+         * The item's resolved quality is missing, or is not a tier of the ladder the stack reads.
          */
         QUALITY_CHAIN
     }
@@ -175,12 +191,15 @@ public final class ItemQualityService {
         if (stack.isEmpty()) return Optional.empty();
         FormulaContext context = FormulaContext.of(user);
         if (!bindings.conditionsMet(user, context)) return Optional.of(Failure.BINDING_CONDITIONS);
-        Optional<Holder<ItemQuality>> quality = find(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), stack, bindings, access);
+        Optional<RegistryLookup<ItemQuality>> registry = registry(access);
+        Optional<Holder<ItemQuality>> quality = find(registry.orElse(null), stack, bindings, access);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
             return Optional.of(Failure.QUALITY_CONDITIONS);
-        return bindings.qualityChain()
-                .filter(chain -> !QualityChainService.isMember(chain, quality.orElse(null)))
-                .map(chain -> Failure.QUALITY_CHAIN);
+        // The ladder this stack's tier sits on is a membership gate: a tier that does not walk into it cannot be
+        // used.
+        return QualityLadders.of(access, quality.orElse(null))
+                .filter(ladder -> !ladder.isMember(quality.orElse(null)))
+                .map(ladder -> Failure.QUALITY_CHAIN);
     }
 
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {
@@ -188,17 +207,17 @@ public final class ItemQualityService {
     }
 
     public static void set(ItemStack stack, Holder<ItemQuality> quality) {
-        stack.set(MxtDataComponents.ITEM_QUALITY.get(), quality);
+        stack.set(MxtDataComponents.QUALITY.get(), quality);
     }
 
     public static void clear(ItemStack stack) {
-        stack.remove(MxtDataComponents.ITEM_QUALITY.get());
+        stack.remove(MxtDataComponents.QUALITY.get());
     }
 
-    // Whether the stack carries the override component, which is a different question from whether a tier resolves
-    // for it: an item may show a definition's default without anything written on it.
+    // Whether the stack carries the component, which is a different question from whether a tier resolves for it:
+    // an item may show a definition's default without anything written on it.
     public static boolean hasOverride(ItemStack stack) {
-        return stack.get(MxtDataComponents.ITEM_QUALITY.get()) != null;
+        return stack.get(MxtDataComponents.QUALITY.get()) != null;
     }
 
     // The same 1.0 the codec defaults to, so an item whose quality declares no modifier settles exactly as it did
@@ -248,9 +267,13 @@ public final class ItemQualityService {
         return List.copyOf(values);
     }
 
-    private static Optional<Holder<ItemQuality>> intrinsic(ItemStack stack) {
-        Holder<ItemQuality> direct = stack.get(MxtDataComponents.ITEM_QUALITY.get());
-        if (direct != null) return Optional.of(direct);
+    // The component and the settlement both sit on the stack, so both are read through the registry the caller
+    // already looked up: an id the current pack does not provide resolves to nothing rather than a dead holder.
+    private static Optional<Holder<ItemQuality>> intrinsic(@Nullable RegistryLookup<ItemQuality> registry, ItemStack stack) {
+        Holder<ItemQuality> direct = stack.get(MxtDataComponents.QUALITY.get());
+        if (direct != null)
+            return registry == null ? Optional.empty()
+                    : direct.unwrapKey().flatMap(registry::get).map(holder -> holder);
         ForgingResultComponent forged = stack.get(MxtDataComponents.FORGING_RESULT);
         if (forged != null) return Optional.of(forged.quality());
         return Optional.empty();

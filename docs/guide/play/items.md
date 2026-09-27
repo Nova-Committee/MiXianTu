@@ -20,7 +20,7 @@ MiXianTu 不为每个玩法预设具体数值，但提供少量通用承载物�
 
 物品匹配支持单个物品、原版物品标签、通配符、正则和混合数组。
 
-**逐件附加走组件，不走"绑定对象"**：品质链、元素、丹药数据、功法阅读、锻打方式、图纸都可以直接写在那一堆物品上（`mxt:quality_chain`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`），与定义给的那一份叠加；条件与武器属性仍只由定义给。字段与合成规则见[数据包格式](../../数据包格式.md)的「物品组件」。
+**逐件附加走组件，不走"绑定对象"**：品质、元素、丹药数据、功法阅读、锻打方式、图纸都可以直接写在那一堆物品上（`mxt:quality`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`），与定义给的那一份叠加；条件与武器属性仍只由定义给。`mxt:quality` 写的是**整份品质对象**，所以它既换档位也换这一堆读的那条链。字段与合成规则见[数据包格式](../../数据包格式.md)的「物品组件」。
 
 ## 灵气物品
 

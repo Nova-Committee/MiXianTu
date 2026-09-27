@@ -22,7 +22,7 @@ public record TechniqueReadingComponent(Optional<Integer> learnTime, Optional<It
 
     public TechniqueBinding applyTo(TechniqueBinding base) {
         return new TechniqueBinding(base.technique(), base.entries(), base.priority(), base.carrierItem(),
-                base.qualityChain(), base.conditions(), this.learnTime.orElse(base.learnTime()),
+                base.conditions(), this.learnTime.orElse(base.learnTime()),
                 this.holdAnimation.orElse(base.holdAnimation()), this.holdSound.orElse(base.holdSound()));
     }
 }

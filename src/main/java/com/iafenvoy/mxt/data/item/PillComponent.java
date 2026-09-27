@@ -29,6 +29,6 @@ public record PillComponent(Optional<EntityAction> onConsume, Optional<NumberPro
                 this.toxicityGain.orElse(base.toxicityGain()), this.toxicityThreshold.orElse(base.toxicityThreshold()),
                 this.onOverdose.orElse(base.onOverdose()),
                 this.toxicityAfterOverdose.orElse(base.toxicityAfterOverdose()),
-                base.qualityChain(), base.conditions(), base.priority());
+                base.conditions(), base.priority());
     }
 }

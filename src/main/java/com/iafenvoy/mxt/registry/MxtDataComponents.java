@@ -14,7 +14,6 @@ import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -37,8 +36,7 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ForgingResultComponent>> FORGING_RESULT = register("forging_result", ForgingResultComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingMethod>>>> FORGING_METHODS = register("forging_methods", AutoIgnoreListCodec.create(ForgingMethod.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingBlueprint>>>> FORGING_BLUEPRINTS = register("forging_blueprints", AutoIgnoreListCodec.create(ForgingBlueprint.CODEC));
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<ItemQuality>>> ITEM_QUALITY = register("item_quality", ItemQuality.CODEC);
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<QualityChain>>> QUALITY_CHAIN = register("quality_chain", QualityChain.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<ItemQuality>>> QUALITY = register("quality", ItemQuality.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Either<Holder<Element>, TagKey<Element>>>>> ELEMENT = register("element", RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<PillComponent>> PILL = register("pill", PillComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TechniqueReadingComponent>> TECHNIQUE_READING = register("technique_reading", TechniqueReadingComponent.CODEC);

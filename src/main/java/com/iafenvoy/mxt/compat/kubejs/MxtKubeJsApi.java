@@ -16,7 +16,7 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.QualityChain;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -39,7 +39,6 @@ import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.item.QualityChainService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
@@ -465,15 +464,14 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The ladder that stack's tier belongs to: the one its binding declares, otherwise the only ladder holding it.
+     * The ladder that stack's tier belongs to: the one the stack carries, otherwise the one its binding declares.
      */
     public static @Nullable Identifier itemQualityChain(Entity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return null;
         Provider access = entity.level().registryAccess();
-        return ItemQualityService.find(access, stack).flatMap(quality -> {
-            Optional<Holder<QualityChain>> declared = ItemBindingService.qualityChain(access, stack);
-            return declared.isPresent() ? declared : QualityChainService.soleChain(access, quality);
-        }).map(HolderHelper::id).orElse(null);
+        return ItemQualityService.find(access, stack)
+                .flatMap(quality -> ItemQualityService.ladder(access, quality))
+                .map(QualityLadders.Ladder::quality).orElse(null);
     }
 
     /**

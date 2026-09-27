@@ -3,10 +3,9 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ChainReport;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.quality.QualityChain;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.item.QualityChainService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -37,8 +36,8 @@ import static net.minecraft.commands.Commands.literal;
  * The {@code /quality} command; also reachable as {@code /mxt quality}. It works on the item a target is holding,
  * which is where a quality actually lives: {@code set} writes the override component, {@code clear} takes that
  * override off so the item falls back to whatever its definition declares, {@code upgrade} climbs the ladder
- * its binding declares, paying that step's own costs through the shared transaction, and {@code chain} prints the
- * ladders a named tier is a rung of.
+ * its binding declares, paying the cost the next tier declares, and {@code chain} prints the ladder a named
+ * tier is a rung of.
  */
 public final class QualityCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
@@ -153,18 +152,16 @@ public final class QualityCommand {
     private static int chain(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Reference<ItemQuality> quality = ResourceArgument.getResource(ctx, "quality", MxtResourceKeys.ITEM_QUALITY);
-        List<Holder<QualityChain>> chains = QualityChainService.chainsOf(source.getServer().registryAccess(), quality);
-        if (chains.isEmpty()) {
+        // A tier sits on exactly one ladder, the one its own chain walks into.
+        QualityLadders.Ladder ladder = QualityLadders.of(source.getServer().registryAccess(), quality).orElse(null);
+        if (ladder == null) {
             source.sendFailure(Component.translatable("command.mxt.quality.chain.none", HolderHelper.id(quality).toString()));
             return 0;
         }
-        // One tier may sit on several ladders, so every one of them gets a line instead of the command picking one.
-        for (Holder<QualityChain> chain : chains) {
-            Component line = ChainReport.line(chain.value().tiers().stream().map(DefinitionText::name).toList(),
-                    chain.value().indexOf(quality));
-            source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain",
-                    HolderHelper.id(chain).toString(), line), false);
-        }
-        return chains.size();
+        Component line = ChainReport.line(ladder.tiers().stream().map(DefinitionText::name).toList(),
+                ladder.indexOf(quality));
+        source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain",
+                String.valueOf(ladder.quality()), line), false);
+        return 1;
     }
 }

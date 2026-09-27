@@ -2,5 +2,9 @@
   "color": "#808080",
   "condition": {
     "type": "mxt:always"
-  }
+  },
+  "chain": "mxt_test:forged",
+  "next": "mxt_test:normal",
+  "upgrade_costs": [{ "id": "mxt_test:qi", "amount": 5 }],
+  "upgrade_condition": { "type": "mxt:always" }
 }

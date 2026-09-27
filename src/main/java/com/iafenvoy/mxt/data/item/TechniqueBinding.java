@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.item;
 import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Technique;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -26,7 +25,7 @@ import java.util.Optional;
  * the creative tab, and absent means the jade slip.
  */
 public record TechniqueBinding(Holder<Technique> technique, List<Entry> entries, int priority,
-                               Optional<Item> carrierItem, Optional<Holder<QualityChain>> qualityChain,
+                               Optional<Item> carrierItem,
                                List<DescribedEntry<EntityCondition>> conditions,
                                int learnTime, ItemUseAnimation holdAnimation,
                                Holder<SoundEvent> holdSound) implements ItemMatcher {
@@ -35,7 +34,6 @@ public record TechniqueBinding(Holder<Technique> technique, List<Entry> entries,
             ENTRIES_CODEC.optionalFieldOf("items", List.of()).forGetter(TechniqueBinding::entries),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(TechniqueBinding::priority),
             BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("carrier_item").forGetter(TechniqueBinding::carrierItem),
-            QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(TechniqueBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(TechniqueBinding::conditions),
             // Bounded because the value is handed to the use cycle, where an enormous duration would leave
             // the player holding the item forever with no way to tell it apart from a bug.
@@ -45,7 +43,7 @@ public record TechniqueBinding(Holder<Technique> technique, List<Entry> entries,
     ).apply(i, TechniqueBinding::new)).validate(TechniqueBinding::validate);
 
     public static TechniqueBinding defaults(Holder<Technique> technique) {
-        return new TechniqueBinding(technique, List.of(), DEFAULT_PRIORITY, Optional.empty(), Optional.empty(), List.of(),
+        return new TechniqueBinding(technique, List.of(), DEFAULT_PRIORITY, Optional.empty(), List.of(),
                 HoldBinding.NO_HOLD, HoldBinding.DEFAULT_HOLD_ANIMATION, HoldBinding.DEFAULT_HOLD_SOUND);
     }
 

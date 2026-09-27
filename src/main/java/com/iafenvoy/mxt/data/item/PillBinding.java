@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -13,14 +12,13 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Pill behaviour attached directly to an already registered consumable item.
  */
 public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberProvider toxicityGain,
                           NumberProvider toxicityThreshold, EntityAction onOverdose,
-                          NumberProvider toxicityAfterOverdose, Optional<Holder<QualityChain>> qualityChain,
+                          NumberProvider toxicityAfterOverdose,
                           List<DescribedEntry<EntityCondition>> conditions, int priority) implements ItemMatcher {
     public static final Codec<PillBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(PillBinding::entries),
@@ -29,7 +27,6 @@ public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberPro
             NumberProvider.CODEC.optionalFieldOf("toxicity_threshold", new Constant(Double.MAX_VALUE)).forGetter(PillBinding::toxicityThreshold),
             EntityAction.optionalCodec("on_overdose").forGetter(PillBinding::onOverdose),
             NumberProvider.CODEC.optionalFieldOf("toxicity_after_overdose", new Constant(0.0D)).forGetter(PillBinding::toxicityAfterOverdose),
-            QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(PillBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(PillBinding::conditions),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(PillBinding::priority)
     ).apply(i, PillBinding::new));
@@ -38,6 +35,6 @@ public record PillBinding(List<Entry> entries, EntityAction onConsume, NumberPro
     // the one the codec would have supplied.
     public static PillBinding defaults() {
         return new PillBinding(List.of(), NoOpAction.INSTANCE, new Constant(0.0D), new Constant(Double.MAX_VALUE),
-                NoOpAction.INSTANCE, new Constant(0.0D), Optional.empty(), List.of(), DEFAULT_PRIORITY);
+                NoOpAction.INSTANCE, new Constant(0.0D), List.of(), DEFAULT_PRIORITY);
     }
 }

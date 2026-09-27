@@ -1,4 +1,8 @@
 {
   "name": "quality.mxt.mxt_test.normal",
-  "description": "quality.mxt.mxt_test.normal.description"
+  "description": "quality.mxt.mxt_test.normal.description",
+  "chain": "mxt_test:forged",
+  "next": "mxt_test:excellent",
+  "upgrade_costs": [{ "id": "mxt_test:qi", "amount": 10 }],
+  "upgrade_condition": { "type": "mxt:always" }
 }

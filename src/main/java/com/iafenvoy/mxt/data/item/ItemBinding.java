@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.quality.QualityChain;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -22,14 +21,13 @@ import java.util.Optional;
  * of; an item whose definitions declare no element at all falls back to the element of the aura it stores or
  * declares. What the item is worth as a ward belongs to {@code artifact} alone.
  */
-public record ItemBinding(List<Entry> entries, List<EntityAction> actions, Optional<Holder<QualityChain>> qualityChain,
+public record ItemBinding(List<Entry> entries, List<EntityAction> actions,
                           List<DescribedEntry<EntityCondition>> conditions,
                           List<Either<Holder<Element>, TagKey<Element>>> element,
                           int priority) implements ItemMatcher {
     public static final Codec<ItemBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(ItemBinding::entries),
             EntityAction.SINGLE_CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(ItemBinding::actions),
-            QualityChain.CODEC.optionalFieldOf("quality_chain").forGetter(ItemBinding::qualityChain),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(ItemBinding::conditions),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(ItemBinding::element),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(ItemBinding::priority)

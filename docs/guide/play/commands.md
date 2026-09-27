@@ -17,8 +17,8 @@ title: 命令
 | `/quality get [<target>]`（= `/mxt quality get …`） | 同上，看别人的（需要 gamemaster 权限）。 |
 | `/quality set <targets> <quality>`（= `/mxt quality set …`） | 把品质**覆盖组件**写到目标主手的物品上（需要 gamemaster 权限）。它盖过定义默认档，`/quality clear` 摘掉；这一档能不能用仍由它自己的 `condition` 与所属链条决定。 |
 | `/quality clear <targets>`（= `/mxt quality clear …`） | 摘掉主手物品上的覆盖组件，让它回到定义默认档（需要 gamemaster 权限）。本来就没有覆盖时逐个目标报失败。 |
-| `/quality upgrade <targets>`（= `/mxt quality upgrade …`） | 把主手物品在它所属的链条上**往上推一档**（需要 gamemaster 权限）：代价就是链条那一步自己声明的 `costs`（`plan` → `commit` 整组原子，付不出就一点不动），并先过它的 `condition`。没声明代价的那一步不能升；已经在顶端、不属于任何链条、或同一档属于多条链时都会逐个目标报出原因。 |
-| `/quality chain <quality>`（= `/mxt quality chain …`） | 打印这一档所在的**整条品质链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。同一档可能同时在多条链上，那就每条链各一行；一条都没有时报"没有品质链包含它"。 |
+| `/quality upgrade <targets>`（= `/mxt quality upgrade …`） | 把主手物品在它所属的链条上**往上推一档**（需要 gamemaster 权限）：代价就是**下一档**自己声明的 `upgrade_costs`（`plan` → `commit` 整组原子，付不出就一点不动），并先过它的 `upgrade_condition`。已经在顶端、或解析出的档不在链上时都会逐个目标报出原因。 |
+| `/quality chain <quality>`（= `/mxt quality chain …`） | 打印这一档所在的**整条品质链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。一档只属于一条链（它自己声明的 `quality`），没有链时报"没有品质链包含它"。 |
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
 | `/flight fill`（= `/mxt flight fill`） | 把当前玩家所骑飞行器的**空座位全部塞上僵尸**（需要 gamemaster 权限）：僵尸无 AI、不消失、头上戴着一顶**不毁的铁头盔**（原版口径：头上有东西就不会被日光点燃），位置由载具按 `seat_offsets` 自己摆，用来对着实机调座位落点（改完 `/reload` 它们会跟着定义立刻换位）。它们随这一趟飞行结束一起消失；没在飞或座位已满会说明原因。 |
 | `/mxt resource <id>` | 查询资源值。 |

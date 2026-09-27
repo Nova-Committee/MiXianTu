@@ -1,6 +1,5 @@
 {
   "items": ["minecraft:diamond_sword", "minecraft:netherite_sword"],
-  "quality_chain": "mxt_test:forged",
   "conditions": [
     {"type": "mxt:always"}
   ],
