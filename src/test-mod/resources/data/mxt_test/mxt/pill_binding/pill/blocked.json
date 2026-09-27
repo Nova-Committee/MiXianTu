@@ -1,0 +1,6 @@
+{
+  "toxicity_gain": 11,
+  "conditions": [
+    {"condition": {"type": "mxt:never"}}
+  ]
+}

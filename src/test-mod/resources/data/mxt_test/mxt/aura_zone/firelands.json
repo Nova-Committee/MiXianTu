@@ -16,8 +16,7 @@
     "cultivate_suppress": false,
     "tribulation_modify": 0.15,
     "spirit_plant_bonus": 0.2,
-    "alchemy_env_bonus": true,
-    "natural_spawn_herb": true
+    "alchemy_env_bonus": true
   },
   "element_fit_bonus": 0.25,
   "element_conflict_penalty": 0.2,

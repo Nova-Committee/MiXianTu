@@ -45,6 +45,8 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
+def testClientGameDirectory = project.findProperty('mxtTestClientGameDirectory') ?: 'run-test-client'
+def testClientUsername = project.findProperty('mxtTestClientUsername')
 def testServerGameDirectory = project.findProperty('mxtTestServerGameDirectory') ?: 'run-test-server'
 def testServerPort = project.findProperty('mxtTestServerPort') ?: '25566'
 
@@ -69,9 +71,13 @@ neoForge {
 
         testClient {
             client()
-            gameDirectory = file('run-test-client')
+            gameDirectory = file(testClientGameDirectory)
             ideName = 'Test Client'
             systemProperty 'fml.debugLoading', 'true'
+            if (testClientUsername) {
+                programArgument '--username'
+                programArgument testClientUsername
+            }
         }
 
         testServer {
@@ -117,6 +123,7 @@ tasks.named('runTestClient').configure {
 }
 
 tasks.named('runTestServer').configure {
+    standardInput = System.in
     // Same reason as the client below: the run task does not reliably pull in the test source set's resource
     // processing, so a server could launch with a stale `build/resources/testMod` pack and fail to load a
     // datapack file the working tree no longer has.
@@ -133,7 +140,9 @@ configurations {
 
 dependencies {
     implementation "curse.maven:jupiter-1072905:8569832"
-//    implementation "com.lowdragmc.ldlib2:ldlib2-neoforge-26.1:${ldlib2_version}"
+    implementation("com.lowdragmc.ldlib2:ldlib2-neoforge-26.1:${ldlib2_version}") {
+        exclude group: "net.neoforged", module: "neoforge"
+    }
 
     implementation jarJar("net.objecthunter:exp4j:0.4.8")
     implementation jarJar("top.theillusivec4.curios:curios-neoforge:$curios_version")
@@ -165,6 +174,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
             curios_version         : curios_version,
+            ldlib2_version         : ldlib2_version,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,

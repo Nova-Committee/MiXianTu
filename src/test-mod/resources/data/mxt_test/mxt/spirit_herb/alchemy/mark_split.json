@@ -1,0 +1,8 @@
+{
+  "items": "minecraft:peony",
+  "quality": "mxt_test:spirit_iron",
+  "main_effects": {
+    "mxt_test:alchemy/mark_split": 1
+  },
+  "thermal_bias": 0
+}

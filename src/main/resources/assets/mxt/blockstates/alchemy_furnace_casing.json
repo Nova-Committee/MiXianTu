@@ -1,0 +1,900 @@
+{
+  "variants": {
+    "facing=north,part=0,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=1,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_0",
+      "y": 0
+    },
+    "facing=north,part=2,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_1",
+      "y": 0
+    },
+    "facing=north,part=3,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_2",
+      "y": 0
+    },
+    "facing=north,part=4,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_3",
+      "y": 0
+    },
+    "facing=north,part=5,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_4",
+      "y": 0
+    },
+    "facing=north,part=6,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_5",
+      "y": 0
+    },
+    "facing=north,part=7,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_6",
+      "y": 0
+    },
+    "facing=north,part=8,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_7",
+      "y": 0
+    },
+    "facing=north,part=9,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_8",
+      "y": 0
+    },
+    "facing=north,part=10,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_9",
+      "y": 0
+    },
+    "facing=north,part=11,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=12,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_11",
+      "y": 0
+    },
+    "facing=north,part=13,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=14,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=15,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=16,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_15",
+      "y": 0
+    },
+    "facing=north,part=17,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_16",
+      "y": 0
+    },
+    "facing=north,part=18,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_17",
+      "y": 0
+    },
+    "facing=north,part=19,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_18",
+      "y": 0
+    },
+    "facing=north,part=20,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_19",
+      "y": 0
+    },
+    "facing=north,part=21,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_20",
+      "y": 0
+    },
+    "facing=north,part=22,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_21",
+      "y": 0
+    },
+    "facing=north,part=23,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=24,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_23",
+      "y": 0
+    },
+    "facing=north,part=25,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_24",
+      "y": 0
+    },
+    "facing=north,part=26,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_25",
+      "y": 0
+    },
+    "facing=north,part=27,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_26",
+      "y": 0
+    },
+    "facing=north,part=0,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=1,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_0_lit",
+      "y": 0
+    },
+    "facing=north,part=2,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_1_lit",
+      "y": 0
+    },
+    "facing=north,part=3,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_2_lit",
+      "y": 0
+    },
+    "facing=north,part=4,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_3_lit",
+      "y": 0
+    },
+    "facing=north,part=5,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_4_lit",
+      "y": 0
+    },
+    "facing=north,part=6,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_5_lit",
+      "y": 0
+    },
+    "facing=north,part=7,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_6_lit",
+      "y": 0
+    },
+    "facing=north,part=8,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_7_lit",
+      "y": 0
+    },
+    "facing=north,part=9,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_8_lit",
+      "y": 0
+    },
+    "facing=north,part=10,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_9_lit",
+      "y": 0
+    },
+    "facing=north,part=11,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=12,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_11_lit",
+      "y": 0
+    },
+    "facing=north,part=13,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=14,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=15,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=16,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_15_lit",
+      "y": 0
+    },
+    "facing=north,part=17,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_16_lit",
+      "y": 0
+    },
+    "facing=north,part=18,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_17_lit",
+      "y": 0
+    },
+    "facing=north,part=19,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_18_lit",
+      "y": 0
+    },
+    "facing=north,part=20,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_19_lit",
+      "y": 0
+    },
+    "facing=north,part=21,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_20_lit",
+      "y": 0
+    },
+    "facing=north,part=22,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_21_lit",
+      "y": 0
+    },
+    "facing=north,part=23,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 0
+    },
+    "facing=north,part=24,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_23_lit",
+      "y": 0
+    },
+    "facing=north,part=25,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_24_lit",
+      "y": 0
+    },
+    "facing=north,part=26,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_25_lit",
+      "y": 0
+    },
+    "facing=north,part=27,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_26_lit",
+      "y": 0
+    },
+    "facing=east,part=0,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=1,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_0",
+      "y": 90
+    },
+    "facing=east,part=2,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_1",
+      "y": 90
+    },
+    "facing=east,part=3,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_2",
+      "y": 90
+    },
+    "facing=east,part=4,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_3",
+      "y": 90
+    },
+    "facing=east,part=5,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_4",
+      "y": 90
+    },
+    "facing=east,part=6,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_5",
+      "y": 90
+    },
+    "facing=east,part=7,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_6",
+      "y": 90
+    },
+    "facing=east,part=8,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_7",
+      "y": 90
+    },
+    "facing=east,part=9,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_8",
+      "y": 90
+    },
+    "facing=east,part=10,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_9",
+      "y": 90
+    },
+    "facing=east,part=11,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=12,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_11",
+      "y": 90
+    },
+    "facing=east,part=13,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=14,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=15,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=16,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_15",
+      "y": 90
+    },
+    "facing=east,part=17,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_16",
+      "y": 90
+    },
+    "facing=east,part=18,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_17",
+      "y": 90
+    },
+    "facing=east,part=19,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_18",
+      "y": 90
+    },
+    "facing=east,part=20,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_19",
+      "y": 90
+    },
+    "facing=east,part=21,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_20",
+      "y": 90
+    },
+    "facing=east,part=22,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_21",
+      "y": 90
+    },
+    "facing=east,part=23,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=24,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_23",
+      "y": 90
+    },
+    "facing=east,part=25,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_24",
+      "y": 90
+    },
+    "facing=east,part=26,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_25",
+      "y": 90
+    },
+    "facing=east,part=27,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_26",
+      "y": 90
+    },
+    "facing=east,part=0,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=1,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_0_lit",
+      "y": 90
+    },
+    "facing=east,part=2,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_1_lit",
+      "y": 90
+    },
+    "facing=east,part=3,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_2_lit",
+      "y": 90
+    },
+    "facing=east,part=4,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_3_lit",
+      "y": 90
+    },
+    "facing=east,part=5,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_4_lit",
+      "y": 90
+    },
+    "facing=east,part=6,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_5_lit",
+      "y": 90
+    },
+    "facing=east,part=7,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_6_lit",
+      "y": 90
+    },
+    "facing=east,part=8,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_7_lit",
+      "y": 90
+    },
+    "facing=east,part=9,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_8_lit",
+      "y": 90
+    },
+    "facing=east,part=10,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_9_lit",
+      "y": 90
+    },
+    "facing=east,part=11,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=12,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_11_lit",
+      "y": 90
+    },
+    "facing=east,part=13,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=14,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=15,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=16,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_15_lit",
+      "y": 90
+    },
+    "facing=east,part=17,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_16_lit",
+      "y": 90
+    },
+    "facing=east,part=18,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_17_lit",
+      "y": 90
+    },
+    "facing=east,part=19,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_18_lit",
+      "y": 90
+    },
+    "facing=east,part=20,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_19_lit",
+      "y": 90
+    },
+    "facing=east,part=21,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_20_lit",
+      "y": 90
+    },
+    "facing=east,part=22,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_21_lit",
+      "y": 90
+    },
+    "facing=east,part=23,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 90
+    },
+    "facing=east,part=24,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_23_lit",
+      "y": 90
+    },
+    "facing=east,part=25,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_24_lit",
+      "y": 90
+    },
+    "facing=east,part=26,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_25_lit",
+      "y": 90
+    },
+    "facing=east,part=27,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_26_lit",
+      "y": 90
+    },
+    "facing=south,part=0,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=1,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_0",
+      "y": 180
+    },
+    "facing=south,part=2,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_1",
+      "y": 180
+    },
+    "facing=south,part=3,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_2",
+      "y": 180
+    },
+    "facing=south,part=4,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_3",
+      "y": 180
+    },
+    "facing=south,part=5,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_4",
+      "y": 180
+    },
+    "facing=south,part=6,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_5",
+      "y": 180
+    },
+    "facing=south,part=7,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_6",
+      "y": 180
+    },
+    "facing=south,part=8,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_7",
+      "y": 180
+    },
+    "facing=south,part=9,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_8",
+      "y": 180
+    },
+    "facing=south,part=10,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_9",
+      "y": 180
+    },
+    "facing=south,part=11,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=12,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_11",
+      "y": 180
+    },
+    "facing=south,part=13,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=14,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=15,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=16,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_15",
+      "y": 180
+    },
+    "facing=south,part=17,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_16",
+      "y": 180
+    },
+    "facing=south,part=18,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_17",
+      "y": 180
+    },
+    "facing=south,part=19,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_18",
+      "y": 180
+    },
+    "facing=south,part=20,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_19",
+      "y": 180
+    },
+    "facing=south,part=21,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_20",
+      "y": 180
+    },
+    "facing=south,part=22,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_21",
+      "y": 180
+    },
+    "facing=south,part=23,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=24,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_23",
+      "y": 180
+    },
+    "facing=south,part=25,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_24",
+      "y": 180
+    },
+    "facing=south,part=26,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_25",
+      "y": 180
+    },
+    "facing=south,part=27,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_26",
+      "y": 180
+    },
+    "facing=south,part=0,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=1,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_0_lit",
+      "y": 180
+    },
+    "facing=south,part=2,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_1_lit",
+      "y": 180
+    },
+    "facing=south,part=3,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_2_lit",
+      "y": 180
+    },
+    "facing=south,part=4,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_3_lit",
+      "y": 180
+    },
+    "facing=south,part=5,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_4_lit",
+      "y": 180
+    },
+    "facing=south,part=6,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_5_lit",
+      "y": 180
+    },
+    "facing=south,part=7,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_6_lit",
+      "y": 180
+    },
+    "facing=south,part=8,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_7_lit",
+      "y": 180
+    },
+    "facing=south,part=9,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_8_lit",
+      "y": 180
+    },
+    "facing=south,part=10,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_9_lit",
+      "y": 180
+    },
+    "facing=south,part=11,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=12,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_11_lit",
+      "y": 180
+    },
+    "facing=south,part=13,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=14,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=15,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=16,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_15_lit",
+      "y": 180
+    },
+    "facing=south,part=17,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_16_lit",
+      "y": 180
+    },
+    "facing=south,part=18,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_17_lit",
+      "y": 180
+    },
+    "facing=south,part=19,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_18_lit",
+      "y": 180
+    },
+    "facing=south,part=20,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_19_lit",
+      "y": 180
+    },
+    "facing=south,part=21,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_20_lit",
+      "y": 180
+    },
+    "facing=south,part=22,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_21_lit",
+      "y": 180
+    },
+    "facing=south,part=23,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 180
+    },
+    "facing=south,part=24,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_23_lit",
+      "y": 180
+    },
+    "facing=south,part=25,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_24_lit",
+      "y": 180
+    },
+    "facing=south,part=26,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_25_lit",
+      "y": 180
+    },
+    "facing=south,part=27,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_26_lit",
+      "y": 180
+    },
+    "facing=west,part=0,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=1,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_0",
+      "y": 270
+    },
+    "facing=west,part=2,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_1",
+      "y": 270
+    },
+    "facing=west,part=3,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_2",
+      "y": 270
+    },
+    "facing=west,part=4,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_3",
+      "y": 270
+    },
+    "facing=west,part=5,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_4",
+      "y": 270
+    },
+    "facing=west,part=6,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_5",
+      "y": 270
+    },
+    "facing=west,part=7,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_6",
+      "y": 270
+    },
+    "facing=west,part=8,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_7",
+      "y": 270
+    },
+    "facing=west,part=9,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_8",
+      "y": 270
+    },
+    "facing=west,part=10,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_9",
+      "y": 270
+    },
+    "facing=west,part=11,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=12,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_11",
+      "y": 270
+    },
+    "facing=west,part=13,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=14,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=15,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=16,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_15",
+      "y": 270
+    },
+    "facing=west,part=17,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_16",
+      "y": 270
+    },
+    "facing=west,part=18,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_17",
+      "y": 270
+    },
+    "facing=west,part=19,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_18",
+      "y": 270
+    },
+    "facing=west,part=20,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_19",
+      "y": 270
+    },
+    "facing=west,part=21,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_20",
+      "y": 270
+    },
+    "facing=west,part=22,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_21",
+      "y": 270
+    },
+    "facing=west,part=23,lit=false": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=24,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_23",
+      "y": 270
+    },
+    "facing=west,part=25,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_24",
+      "y": 270
+    },
+    "facing=west,part=26,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_25",
+      "y": 270
+    },
+    "facing=west,part=27,lit=false": {
+      "model": "mxt:block/alchemy_furnace/part_26",
+      "y": 270
+    },
+    "facing=west,part=0,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=1,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_0_lit",
+      "y": 270
+    },
+    "facing=west,part=2,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_1_lit",
+      "y": 270
+    },
+    "facing=west,part=3,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_2_lit",
+      "y": 270
+    },
+    "facing=west,part=4,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_3_lit",
+      "y": 270
+    },
+    "facing=west,part=5,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_4_lit",
+      "y": 270
+    },
+    "facing=west,part=6,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_5_lit",
+      "y": 270
+    },
+    "facing=west,part=7,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_6_lit",
+      "y": 270
+    },
+    "facing=west,part=8,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_7_lit",
+      "y": 270
+    },
+    "facing=west,part=9,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_8_lit",
+      "y": 270
+    },
+    "facing=west,part=10,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_9_lit",
+      "y": 270
+    },
+    "facing=west,part=11,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=12,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_11_lit",
+      "y": 270
+    },
+    "facing=west,part=13,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=14,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=15,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=16,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_15_lit",
+      "y": 270
+    },
+    "facing=west,part=17,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_16_lit",
+      "y": 270
+    },
+    "facing=west,part=18,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_17_lit",
+      "y": 270
+    },
+    "facing=west,part=19,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_18_lit",
+      "y": 270
+    },
+    "facing=west,part=20,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_19_lit",
+      "y": 270
+    },
+    "facing=west,part=21,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_20_lit",
+      "y": 270
+    },
+    "facing=west,part=22,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_21_lit",
+      "y": 270
+    },
+    "facing=west,part=23,lit=true": {
+      "model": "mxt:block/alchemy_furnace_casing",
+      "y": 270
+    },
+    "facing=west,part=24,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_23_lit",
+      "y": 270
+    },
+    "facing=west,part=25,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_24_lit",
+      "y": 270
+    },
+    "facing=west,part=26,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_25_lit",
+      "y": 270
+    },
+    "facing=west,part=27,lit=true": {
+      "model": "mxt:block/alchemy_furnace/part_26_lit",
+      "y": 270
+    }
+  }
+}

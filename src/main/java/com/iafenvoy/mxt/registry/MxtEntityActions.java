@@ -73,6 +73,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnEffectCloudAction>> SPAWN_EFFECT_CLOUD = REGISTRY.register("spawn_effect_cloud", () -> SpawnEffectCloudAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnLightningAction>> SPAWN_LIGHTNING = REGISTRY.register("spawn_lightning", () -> SpawnLightningAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyLifespanAction>> MODIFY_LIFESPAN = REGISTRY.register("modify_lifespan", () -> ModifyLifespanAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyPillToxicityAction>> MODIFY_PILL_TOXICITY = REGISTRY.register("modify_pill_toxicity", () -> ModifyPillToxicityAction.CODEC);
     // A pack's own reincarnation pill, trial or curse ends here instead of waiting for a life to run out; the reset
     // list, the config switches and any listener's veto are the ones the command and the script entry use.
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<? extends EntityAction>> REINCARNATE = REGISTRY.register("reincarnate", () -> createEntity(ctx -> {

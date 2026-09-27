@@ -60,5 +60,12 @@ versionRange = "[${curios_version},)"
 ordering = "NONE"
 side = "BOTH"
 
+[[dependencies.${mod_id}]]
+modId = "ldlib2"
+type = "required"
+versionRange = "[${ldlib2_version},)"
+ordering = "AFTER"
+side = "BOTH"
+
 #[features.${mod_id}]
 #openGLVersion="[3.2,)"

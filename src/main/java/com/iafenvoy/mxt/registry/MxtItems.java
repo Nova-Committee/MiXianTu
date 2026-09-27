@@ -46,6 +46,7 @@ public final class MxtItems {
     public static final DeferredItem<Item> CULTIVATION_JADE_SLIP = register("cultivation_jade_slip", Item::new);
     public static final DeferredItem<Item> BLANK_TALISMAN = register("blank_talisman", Item::new);
     public static final DeferredItem<Item> ALCHEMY_DREGS = register("alchemy_dregs", Item::new);
+    public static final DeferredItem<PillItem> PILL = register("pill", PillItem::new);
     public static final DeferredItem<Item> IMPURITY = register("impurity", Item::new);
     public static final DeferredItem<ContractScrollItem> CONTRACT_SCROLL = register("contract_scroll", properties -> new ContractScrollItem(properties.component(MxtDataComponents.CONTRACT_SCROLL, ContractScrollComponent.EMPTY)));
     public static final DeferredItem<Item> RECALL_TALISMAN = register("recall_talisman", Item::new);

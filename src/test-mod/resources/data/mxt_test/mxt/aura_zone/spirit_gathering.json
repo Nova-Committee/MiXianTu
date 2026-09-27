@@ -1,6 +1,6 @@
 {
   "aura": { "mxt_test:spirit_power": { "amount": 200.0, "max": 200.0, "regen_per_tick": 0.25 } },
-  "rules": { "alchemy_env_bonus": true, "natural_spawn_herb": true },
+  "rules": { "alchemy_env_bonus": true },
   "element_fit_bonus": 0.4,
   "particle": { "particle": { "type": "minecraft:glow" }, "count": 8 },
   "client_render": { "fog_color": "#88ffdd", "render_distance": 64 }

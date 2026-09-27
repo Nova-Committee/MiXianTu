@@ -1,0 +1,17 @@
+{
+  "type": "mxt:alchemy",
+  "main_requirements": {
+    "mxt_test:alchemy/rank": 2
+  },
+  "catalyst_requirement": 1,
+  "balance_tolerance": 0,
+  "target_temperature": 50,
+  "temperature_tolerance": 5,
+  "duration": 4,
+  "success_outputs": [
+    {
+      "id": "minecraft:emerald",
+      "count": 1
+    }
+  ]
+}

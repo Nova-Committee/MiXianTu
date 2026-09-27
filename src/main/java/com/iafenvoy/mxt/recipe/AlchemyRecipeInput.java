@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.recipe;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import com.iafenvoy.mxt.recipe.AlchemyRecipe.Role;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeInput;
 import org.jspecify.annotations.NonNull;
@@ -9,29 +8,26 @@ import org.jspecify.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 
-public record AlchemyRecipeInput(List<ItemStack> stacks) implements RecipeInput {
-    // Copies and drops empty stacks: the input outlives the station's slot contents.
+/**
+ * Fixed role slots. Empty slots stay so a missing auxiliary cell cannot be read as the catalyst.
+ */
+public record AlchemyRecipeInput(List<Slot> slots) implements RecipeInput {
     public AlchemyRecipeInput {
-        stacks = stacks.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList();
+        List<Slot> copied = new ArrayList<>(slots.size());
+        for (Slot slot : slots) copied.add(new Slot(slot.role(), slot.stack().copy()));
+        slots = List.copyOf(copied);
     }
 
     @Override
     public @NonNull ItemStack getItem(int index) {
-        return this.stacks.get(index);
+        return this.slots.get(index).stack();
     }
 
     @Override
     public int size() {
-        return this.stacks.size();
+        return this.slots.size();
     }
 
-    public boolean matches(List<Identifier> expected) {
-        if (expected.size() != this.stacks.size()) return false;
-        List<Identifier> actual = new ArrayList<>(this.stacks.size());
-        for (ItemStack stack : this.stacks) actual.add(BuiltInRegistries.ITEM.getKey(stack.getItem()));
-        actual.sort(Identifier::compareTo);
-        List<Identifier> required = new ArrayList<>(expected);
-        required.sort(Identifier::compareTo);
-        return actual.equals(required);
+    public record Slot(Role role, ItemStack stack) {
     }
 }

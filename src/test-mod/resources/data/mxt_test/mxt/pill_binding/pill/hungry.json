@@ -1,0 +1,8 @@
+{
+  "toxicity_gain": 3,
+  "conditions": [
+    {
+      "condition": {"type": "mxt:saturation_level", "comparison": "==", "compare_to": 0}
+    }
+  ]
+}

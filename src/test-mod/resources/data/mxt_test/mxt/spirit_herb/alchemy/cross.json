@@ -1,0 +1,8 @@
+{
+  "items": "minecraft:bamboo",
+  "quality": "mxt_test:spirit_iron",
+  "main_effects": {
+    "mxt_test:alchemy/cross": 1
+  },
+  "thermal_bias": 0
+}

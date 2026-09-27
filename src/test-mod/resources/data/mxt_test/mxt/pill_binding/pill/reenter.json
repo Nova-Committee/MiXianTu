@@ -1,0 +1,4 @@
+{
+  "toxicity_gain": 7,
+  "on_consume": {"type": "mxt_test:reenter_pill"}
+}

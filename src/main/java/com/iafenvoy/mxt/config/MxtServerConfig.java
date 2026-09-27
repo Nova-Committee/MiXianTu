@@ -27,6 +27,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Formations formations = new Formations();
     public final Flight flight = new Flight();
     public final Commands commands = new Commands();
+    public final Alchemy alchemy = new Alchemy();
     public final Compat compat = new Compat();
 
     private MxtServerConfig() {
@@ -312,6 +313,20 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
         private Compat() {
             super("compat", "config.mxt.server.compat");
+        }
+    }
+
+    /**
+     * How the server treats a body that already carries pill toxicity. The numbers themselves stay in the data pack.
+     */
+    public static final class Alchemy extends AutoInitConfigCategoryBase {
+        public final DoubleEntry toxicityDecayPerSecond = DoubleEntry.builder("config.mxt.server.alchemy.toxicity_decay_per_second", 0.0D)
+                .key("toxicity_decay_per_second")
+                .tooltip("config.mxt.server.alchemy.toxicity_decay_per_second.tooltip")
+                .range(0.0D, 1_000_000.0D).build();
+
+        private Alchemy() {
+            super("alchemy", "config.mxt.server.alchemy");
         }
     }
 

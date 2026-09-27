@@ -1,0 +1,29 @@
+{
+  "type": "mxt:alchemy",
+  "main_requirements": {
+    "mxt_test:herb/main": 6,
+    "mxt_test:alchemy/mark_proof": 1
+  },
+  "auxiliary_requirements": {
+    "mxt_test:herb/auxiliary": 6
+  },
+  "catalyst_requirement": 1,
+  "balance_tolerance": 0,
+  "target_temperature": 50,
+  "temperature_tolerance": 40,
+  "duration": 1,
+  "max_bad_ticks": 100,
+  "success_outputs": [
+    {
+      "id": "minecraft:paper",
+      "count": 1
+    }
+  ],
+  "success_action": {
+    "type": "mxt:give_item",
+    "stack": {
+      "id": "minecraft:prismarine_crystals",
+      "count": 1
+    }
+  }
+}

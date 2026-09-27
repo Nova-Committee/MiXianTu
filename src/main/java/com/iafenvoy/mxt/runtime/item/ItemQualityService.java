@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.quality.ItemQualityTags;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
@@ -84,6 +85,8 @@ public final class ItemQualityService {
         Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
         if (failure.isPresent()) {
             event.setCanceled(true);
+            // Cancel returns -1; the following decrement would completeUsingItem unless the live use is cleared.
+            event.getEntity().releaseUsingItem();
             notifyCannotUse(event.getEntity(), failure.orElseThrow());
         }
     }
@@ -116,16 +119,20 @@ public final class ItemQualityService {
                 .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality).filter(ItemQualityService::enabled));
     }
 
-    // What the definition claiming this stack says its own tier is: an artifact, the sigil written on a talisman
-    // carrier, or the technique it teaches.
+    // What the definition claiming this stack says its own tier is: an artifact, the sigil on a talisman,
+    // the technique it teaches, then the furnace specification. Quality is not derived from a tier name.
     private static Optional<Holder<ItemQuality>> definitionDefault(Provider access, ItemStack stack) {
         Optional<Holder<ItemQuality>> artifact = ArtifactService.definition(access, stack)
                 .flatMap(holder -> holder.value().quality()).filter(ItemQualityService::enabled);
         if (artifact.isPresent()) return artifact;
         Optional<Holder<ItemQuality>> talisman = TalismanService.quality(stack).filter(ItemQualityService::enabled);
         if (talisman.isPresent()) return talisman;
-        return ItemBindingService.technique(access, stack)
+        Optional<Holder<ItemQuality>> technique = ItemBindingService.technique(access, stack)
                 .flatMap(binding -> binding.technique().value().quality())
+                .filter(ItemQualityService::enabled);
+        if (technique.isPresent()) return technique;
+        return AlchemyWorkstationService.furnaceDefinition(access, stack)
+                .map(holder -> holder.value().quality())
                 .filter(ItemQualityService::enabled);
     }
 
@@ -135,8 +142,8 @@ public final class ItemQualityService {
         return bindings.qualityChain().map(chain -> chain.value().first()).filter(ItemQualityService::enabled);
     }
 
-    // Why an entity may not use an item: the gate is the union of three independent data-driven checks, so it
-    // reports which one refused instead of only that the item is unusable.
+    // Why an entity may not use an item. Furnace quality is one of the checks above; pill caps are extra and
+    // never replace them.
     public enum Failure {
         /**
          * A matching binding's own conditions did not all pass.
@@ -149,7 +156,19 @@ public final class ItemQualityService {
         /**
          * The item's resolved quality is missing, or is not a tier of the ladder its binding declares.
          */
-        QUALITY_CHAIN
+        QUALITY_CHAIN,
+        /**
+         * The stack names a pill binding that is missing or disabled, and must not fall back to another pill.
+         */
+        PILL_DISABLED,
+        /**
+         * The pill binding's use cap has already been reached.
+         */
+        MAX_USES,
+        /**
+         * The pill binding is still on cooldown.
+         */
+        COOLDOWN
     }
 
     public static boolean canUse(LivingEntity user, ItemStack stack) {
@@ -180,9 +199,18 @@ public final class ItemQualityService {
         Optional<Holder<ItemQuality>> quality = find(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY), stack, bindings, access);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
             return Optional.of(Failure.QUALITY_CONDITIONS);
-        return bindings.qualityChain()
-                .filter(chain -> !QualityChainService.isMember(chain, quality.orElse(null)))
-                .map(chain -> Failure.QUALITY_CHAIN);
+        if (bindings.qualityChain().filter(chain -> !QualityChainService.isMember(chain, quality.orElse(null))).isPresent())
+            return Optional.of(Failure.QUALITY_CHAIN);
+        if (bindings.pillRefused()) return Optional.of(Failure.PILL_DISABLED);
+        return bindings.pill().flatMap(holder -> PillService.usageFailure(user, holder)).map(ItemQualityService::fromPill);
+    }
+
+    private static Failure fromPill(PillService.Failure failure) {
+        return switch (failure) {
+            case MAX_USES -> Failure.MAX_USES;
+            case COOLDOWN -> Failure.COOLDOWN;
+            default -> Failure.PILL_DISABLED;
+        };
     }
 
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {

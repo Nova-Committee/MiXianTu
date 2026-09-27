@@ -1,88 +1,79 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.runtime.alchemy.AlchemySession.Snapshot;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.item.ItemStack;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
 
 /**
- * Persistable, inventory-neutral state for a cauldron or other alchemy workstation: this class owns only
- * the recipe inputs, the active session snapshot and completed output stacks.
+ * Process state only. Part block entities own the real items; the core owns the fire slot separately.
  */
 public final class AlchemyWorkstationState {
-    public static final MapCodec<AlchemyWorkstationState> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            ItemStack.CODEC.listOf().optionalFieldOf("inputs", List.of()).forGetter(AlchemyWorkstationState::inputs),
-            ItemStack.CODEC.listOf().optionalFieldOf("outputs", List.of()).forGetter(AlchemyWorkstationState::outputs),
-            Snapshot.CODEC.optionalFieldOf("session").forGetter(AlchemyWorkstationState::session)
+    public static final Codec<AlchemyWorkstationState> CODEC = RecordCodecBuilder.create(i -> i.group(
+            AlchemySession.Snapshot.CODEC.lenientOptionalFieldOf("session").forGetter(AlchemyWorkstationState::snapshot),
+            Codec.DOUBLE.lenientOptionalFieldOf("temperature", 0.0D).forGetter(AlchemyWorkstationState::temperature),
+            Codec.DOUBLE.lenientOptionalFieldOf("target_temperature", 0.0D).forGetter(AlchemyWorkstationState::targetTemperature)
     ).apply(i, AlchemyWorkstationState::new));
-    public static final Codec<AlchemyWorkstationState> CODEC = MAP_CODEC.codec();
 
-    private final List<ItemStack> inputs;
-    private final List<ItemStack> outputs;
-    private Snapshot session;
+    private AlchemySession session;
+    private double temperature;
+    private double targetTemperature;
 
     public AlchemyWorkstationState() {
-        this(List.of(), List.of(), Optional.empty());
     }
 
-    private AlchemyWorkstationState(List<ItemStack> inputs, List<ItemStack> outputs, Optional<Snapshot> session) {
-        this.inputs = new LinkedList<>(copyStacks(inputs));
-        this.outputs = new LinkedList<>(copyStacks(outputs));
-        this.session = session.orElse(null);
+    private AlchemyWorkstationState(Optional<AlchemySession.Snapshot> session, double temperature, double targetTemperature) {
+        this.session = session.map(AlchemySession::restore).orElse(null);
+        this.temperature = finite(temperature);
+        this.targetTemperature = finite(targetTemperature);
     }
 
-    public List<ItemStack> inputs() {
-        return this.inputs;
+    public Optional<AlchemySession.Snapshot> snapshot() {
+        return this.session == null ? Optional.empty() : Optional.of(this.session.snapshot());
     }
 
-    public List<ItemStack> outputs() {
-        return this.outputs;
-    }
-
-    public Optional<Snapshot> session() {
+    public Optional<AlchemySession> session() {
         return Optional.ofNullable(this.session);
     }
 
+    public AlchemyPhase phase() {
+        return this.session == null ? AlchemyPhase.IDLE : this.session.phase();
+    }
+
     public boolean active() {
-        return this.session != null && !this.session.complete();
+        AlchemyPhase phase = this.phase();
+        return phase == AlchemyPhase.WARMING || phase == AlchemyPhase.RUNNING;
     }
 
-    public void setInputs(List<ItemStack> values) {
-        if (this.active()) throw new IllegalStateException("Cannot change alchemy inputs during an active session");
-        this.inputs.clear();
-        this.inputs.addAll(copyStacks(values));
+    public boolean busy() {
+        return this.session != null && !this.session.settled();
     }
 
-    public void lock(AlchemySession value) {
-        if (this.active()) throw new IllegalStateException("Alchemy session already active");
-        this.inputs.clear();
-        this.session = value.snapshot();
-    }
-
-    public void update(AlchemySession value) {
-        this.session = value.snapshot();
-    }
-
-    public void addOutputs(List<ItemStack> values) {
-        this.outputs.addAll(copyStacks(values));
-    }
-
-    public List<ItemStack> takeOutputs() {
-        List<ItemStack> result = copyStacks(this.outputs);
-        this.outputs.clear();
-        return result;
+    public void begin(AlchemySession session) {
+        this.session = session;
     }
 
     public void clearSession() {
         this.session = null;
     }
 
-    private static List<ItemStack> copyStacks(List<ItemStack> values) {
-        return values.stream().filter(stack -> !stack.isEmpty()).map(ItemStack::copy).toList();
+    public double temperature() {
+        return this.temperature;
+    }
+
+    public void setTemperature(double temperature) {
+        this.temperature = finite(temperature);
+    }
+
+    public double targetTemperature() {
+        return this.targetTemperature;
+    }
+
+    public void setTargetTemperature(double temperature) {
+        this.targetTemperature = finite(temperature);
+    }
+
+    private static double finite(double value) {
+        return Double.isFinite(value) ? value : 0.0D;
     }
 }

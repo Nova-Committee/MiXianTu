@@ -58,6 +58,8 @@ StartupEvents.registry('item', event => {
 }
 ```
 
+`items` 可以省略。次数和冷却是可选字段：`max_uses` 是正整数，`cooldown` 是 tick。纯数据包丹药用 `mxt:pill` 加上组件 `mxt:pill`，不要在物品脚本里再执行一次药效。
+
 ```json
 // kubejs/data/example/mxt/technique_binding/fire_manual.json
 {

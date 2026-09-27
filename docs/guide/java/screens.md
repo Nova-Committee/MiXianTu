@@ -140,7 +140,7 @@ if (screen != null) Minecraft.getInstance().setScreen(screen);
 
 用列表而不是单个名字，是因为一行可以有好几种叫法。界面不再需要从「注册表 key + 条目 id」去反推任何东西；只有 `over(...)` 那条路没有目录可问，界面自己补上「展示名 + item id」。
 
-翻译键的拼法统一由 `com.iafenvoy.mxt.util.DefinitionText` 决定：类别就是注册表自己的 path，没有例外表。手里已经有 `Holder` / `ResourceKey` 时直接 `DefinitionText.name(holder)`，只有拿到的是一根光秃秃的 `Identifier` 时才需要把类别当参数传进去（`DefinitionText.name(id, "resource")`）。自带 `name` / `description` 字段的定义（19 张注册表，含 `quality` 与 `quality_chain`）不走这条路：文本由数据包给，或由 `ContextNameCodec` 按 id 生成**同一个键**（`quality.mxt.<命名空间>.<路径>` 这类），所以两套名字键不再是两套。
+翻译键的拼法统一由 `com.iafenvoy.mxt.util.DefinitionText` 决定：类别就是注册表自己的 path，没有例外表。手里已经有 `Holder` / `ResourceKey` 时直接 `DefinitionText.name(holder)`，只有拿到的是一根光秃秃的 `Identifier` 时才需要把类别当参数传进去（`DefinitionText.name(id, "resource")`）。自带 `name` / `description` 字段的定义（24 张注册表，含药性、炉型、炉壁材料、灵植、丹药绑定、`quality` 与 `quality_chain`）不走这条路：文本由数据包给，或由 `ContextNameCodec` 按 id 生成**同一个键**（`quality.mxt.<命名空间>.<路径>` 这类），所以两套名字键不再是两套。`mxt:alchemy` 配方不是数据包注册表，省略名字时用 `recipe.mxt.<命名空间>.<路径>`，路径里的 `/` 改成 `.`。丹炉四个页面不走这里的原版 `Screen`：布局在 `assets/mxt/ui/*.ui.nbt`，Java 只绑定模板 ID，没有写死的备用树。
 
 分类就是注册表本身，`/picker <分类 id>` 可以只列出某一个（如 `/picker mxt:aura`、`/picker mxt:artifact`、`/picker mxt:item_binding`），不写则给出全部已注册分类。
 

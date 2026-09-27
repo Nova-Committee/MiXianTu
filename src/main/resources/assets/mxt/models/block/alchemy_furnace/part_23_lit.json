@@ -1,0 +1,6 @@
+{
+  "parent": "mxt:block/alchemy_furnace/part_23",
+  "textures": {
+    "3": "mxt:block/alchemy_vent_lit"
+  }
+}

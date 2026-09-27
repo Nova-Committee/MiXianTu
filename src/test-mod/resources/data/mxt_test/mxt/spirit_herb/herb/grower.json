@@ -1,0 +1,12 @@
+{
+  "items": "minecraft:torchflower",
+  "quality": "mxt_test:spirit_iron",
+  "growth": {
+    "seeds": "minecraft:torchflower_seeds",
+    "mature_age": 10,
+    "max_age": 20,
+    "growth_rate": 2,
+    "harvest": { "id": "minecraft:torchflower", "count": 1 },
+    "texture": "mxt_test:block/herb/grower"
+  }
+}

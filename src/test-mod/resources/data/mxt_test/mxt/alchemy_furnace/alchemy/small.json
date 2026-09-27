@@ -1,0 +1,9 @@
+{
+  "name": "alchemy_furnace.mxt.mxt_test.alchemy/small",
+  "description": "alchemy_furnace.mxt.mxt_test.alchemy/small.description",
+  "main_slots": 1,
+  "auxiliary_slots": 0,
+  "quality": "mxt_test:alchemy/kiln_a",
+  "capacity": 4,
+  "cooling_per_tick": 10
+}

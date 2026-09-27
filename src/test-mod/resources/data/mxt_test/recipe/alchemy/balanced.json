@@ -1,0 +1,32 @@
+{
+  "type": "mxt:alchemy",
+  "name": "recipe.mxt.mxt_test.alchemy.balanced",
+  "main_requirements": {
+    "mxt_test:herb/main": 6,
+    "mxt_test:alchemy/mark_balanced": 1
+  },
+  "auxiliary_requirements": {
+    "mxt_test:herb/auxiliary": 6
+  },
+  "catalyst_requirement": 1,
+  "balance_tolerance": 0,
+  "target_temperature": 50,
+  "temperature_tolerance": 5,
+  "duration": 4,
+  "max_bad_ticks": 2,
+  "success_outputs": [
+    {
+      "id": "minecraft:paper",
+      "count": 2,
+      "components": {
+        "mxt:item_quality": "mxt_test:alchemy/kiln_a"
+      }
+    }
+  ],
+  "failure_outputs": [
+    {
+      "id": "minecraft:charcoal",
+      "count": 1
+    }
+  ]
+}

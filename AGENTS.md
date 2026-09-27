@@ -55,7 +55,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | --- | --- |
 | 对外 Java API（别的模组实现或调用的契约） | `src/main/java/com/iafenvoy/mxt/api/`——**只放接口**（外加 `package-info`）；实现留在各自模块，服务类暂不设代理（推迟项） |
 | 数据包定义（字段 / Codec / 加载期校验） | `src/main/java/com/iafenvoy/mxt/data/<模块>/` |
-| 动态注册表声明 | `registry/MxtDatapackRegistries.java` + `registry/MxtResourceKeys.java`（35 张表，原版 datapack registry） |
+| 动态注册表声明 | `registry/MxtDatapackRegistries.java` + `registry/MxtResourceKeys.java`（38 张表，原版 datapack registry） |
 | 固有分派类型（条件 / 行为 / 触发器 …） | `data/condition/builtin/`、`data/action/builtin/`、`registry/Mxt*Conditions.java`、`registry/Mxt*Actions.java` |
 | 原版配方类型 | `registry/MxtRecipeTypes.java`（`mxt:alchemy`、`mxt:spirit_shaped`、`mxt:spirit_shapeless`）。`mxt:formation` 与 `mxt:refining` 已于 2026-09-25 删除（两个从未有过执行者的死配方：产物恒为空、全仓无人查它们；法器的产出走蓝图锻造、阵法按定义落地） |
 | 运行时服务（结算、事务、调度） | `runtime/<模块>/` |
@@ -87,7 +87,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 - **缓存按注册表实例开键**（见 `DamageElements`、`ElementReactionService`、`FormulaNames`）：`/reload` 不会重建 datapack registry，世界加载才会换实例，缓存键天然正确；上限参考 `MAX_CACHED_REGISTRIES` + `LOCK` 双检。
 - **重入守卫用 `ThreadLocal<Set<...>>` + try/finally**（见 `CurseService.IN_TRANSACTION`、`ElementReactionService.IN_CHAIN`、`TriggerDispatcher.DISPATCHING`）：链式触发很容易写成无限递归。
 - **失败用结果记录，不用异常**：`Result(changed, failure)` + `Failure` 枚举（`CultivationIdentityService`、`CultivationToggleService`、`AbilityService.UseResult` …）。客户端调用一律返回 `false` / `0` / `failure = SERVER_ONLY`，不写日志。
-- **显示名走 `DefinitionText.name(holder, category)`**；自由文本（如 `spirit_root` / `physique` 的 `rarity`）先查 `mxt.rarity.<值>`，有翻译用翻译、否则显示原文（功法过去的自由文本 `grade` 已于 2026-09-23 换成 `quality` 引用，见 `docs/数据包格式.md` 的 `technique`）。**19 张注册表的定义自带 `name` / `description` 两个可选字段**（`api/NamedDefinition`，走 `util/codec/ContextNameCodec`；一组文本用 `util/codec/ContextNameListCodec`，目前只有子境界名）：省略时按解码时的条目 id 生成**和上面同一个键** `<类别>.<注册表命名空间>.<定义命名空间>.<路径>`（注册表命名空间就是 `mxt`），`DefinitionText.name(...)` 认得出这个接口、直接读字段——别在别处再拼一套名字键，也别再造第二套键。
+- **显示名走 `DefinitionText.name(holder, category)`**；自由文本（如 `spirit_root` / `physique` 的 `rarity`）先查 `mxt.rarity.<值>`，有翻译用翻译、否则显示原文（功法过去的自由文本 `grade` 已于 2026-09-23 换成 `quality` 引用，见 `docs/数据包格式.md` 的 `technique`）。**24 张注册表的定义自带 `name` / `description` 两个可选字段**（`api/NamedDefinition`，走 `util/codec/ContextNameCodec`；一组文本用 `util/codec/ContextNameListCodec`，目前只有子境界名）：省略时按解码时的条目 id 生成**和上面同一个键** `<类别>.<注册表命名空间>.<定义命名空间>.<路径>`（注册表命名空间就是 `mxt`），`DefinitionText.name(...)` 认得出这个接口、直接读字段——别在别处再拼一套名字键，也别再造第二套键。
 - **`RecordCodecBuilder.group` 最多 16 个组件**：加上 `name` / `description` 后超出的记录（`RealmStage` 18 个、`SecretRealm` 17 个、`Ability` **19** 个——2026-09-23 合并新增 `hidden` 与 `item_action` 后用了三组 `pair`）用 `MiscCodecs.pair(a, b)` 把两个字段并成一组，JSON 键不变。`ContextNameCodec` 与 `DefinitionText` 共用 `DefinitionText.key(...)` / `defaultText(...)` 两个出口，两边永远同形。
 - **消耗只有一套形状**：所有"使用消耗"字段都是 `Cost[]`（`mxt:resource` / `mxt:aura` / `mxt:item` / `mxt:js` + `{id, amount}` 简写，见 `docs/数据包格式.md` 的「`Cost`」）。一个 `Cost` 只描述"要扣什么"（`charge`，只读），校验与扣除都由 `CostTransaction` 用同一份计划完成（`plan` → `commit`，中途拒付会还原已写入的部分）；**别在别处再写一套扣费逻辑，也别为某个字段另造一种代价格式**。付款者是 `LivingEntity` + 通道（`CostContext`）：`mxt:item` / `mxt:js` 需要玩家，缺通道就是拒付而不是报错；阵法维护这类"主人可能不在线"的字段直接点名一个资源账户。消耗数组解码失败**不许静默丢弃**（旧的 `AutoIgnoreListCodec` 容错口径不适用于它）。**货币不是消耗**：`currency` 的 `exchanges[].cost` 与 `value_multiplier` 是价格/价值，永远不进 `Cost`。
 - **能力只有一套形状**（2026-09-23 合并，同日取消内联）：技能就是一个 `mxt:ability` 注册表条目，**定义只写一处**，别处（法器 `abilities`、功法 `granted_abilities`、灵根/体质、符箓…）只用**它自己的 id 或 `#技能标签`** 引用，身份统一为**它自己的注册表 holder**（`Holder<Ability>`；要 id 就用 `HolderHelper.id(holder)`，见 `research/40_能力与法器能力合并设计.md`（§12 记了同日的两次收缩））；**别再造"内联技能"或第二张能力分派表**。`mxt:mount` / `mxt:flight_control` / `mxt:storage` / `mxt:upkeep` 就是普通的 `mxt:ability_type`（法器专用的 `mxt:artifact_ability_type` 已删除；载人飞行在 2026-09-25 拆成"法器声明载具 `mxt:mount` + 功法授予按键技能 `mxt:flight_control`"两条，起剑时那件法器被收进载具实体、落地原样归还），需要展开标签时用 `RegistryCodecs.resolve(values, Provider, key)`（客户端与服务端同一条路径）。凡是"需要按键才发动"的实现 `data/ability/Toggable`（只有 `state` / `gated` / `activate` 三个方法，别再加"宿主内的名字"），服务端只经 `runtime/ability/AbilityActivationService` 受理（轮盘、命令、KubeJS 都走它），**别在别处再写一套"按下某个开关"的分派**；冷却与消耗由 `AbilityService` 的同一条闸门负责，`cooldown` 字段自己会写 `mxt:cooldown` 状态，不需要内容再声明一遍。
@@ -102,7 +102,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 ## 5. 测试与探针
 
 - 本仓库**没有 JUnit**。验证靠：编译 →（获准时）实机跑 `/mxt_test`。
-- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `contract` / `identity` / `artifacts` / `secret_realm [keep|reopen]` / `rift` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
+- 探针在 `src/test-mod`，子命令：`kit` / `cultivate` / `verify` / `damage` / `element` / `contract` / `identity` / `artifacts` / `secret_realm [keep|reopen]` / `rift` / `alchemy` / `herb` / `pill` / `info` / `guide`。风格是**一次性探针实体 + 精确数字断言**（`close(actual, expected)`），一条腿一个 `OK / MISMATCH`，最后汇总。
 - **夹具里那些数字是断言的一部分**：例如测试包的火/水克制与适应倍率决定了 `10 × 1.5 × 0.5 = 7.5`。给测试包加内容时，先确认不会改变既有腿的算式（新内容用新文件承载，或让默认倍率为 1）。
 - 探针**只编译不等于跑过**：报告里必须写明"未实跑"，并给出跑一次该看什么输出。
 

@@ -13,7 +13,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.alchemy.PillService;
+
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -50,11 +50,14 @@ import java.util.*;
 import java.util.stream.Stream;
 
 /**
- * Resolves datapack gameplay bindings for items already registered by Minecraft, a mod or KubeJS. No logical
- * item definition is ever stored in an ItemStack.
+ * Resolves datapack gameplay bindings for items already registered by Minecraft, a mod or KubeJS. A pill or
+ * technique carrier stores its holder on the stack; every other binding is still matched, never copied onto it.
  */
 @EventBusSubscriber
 public final class ItemBindingService {
+    // One consume must not settle again when its own action finishes another use on the same body.
+    private static final ThreadLocal<Set<UUID>> SETTLING = ThreadLocal.withInitial(HashSet::new);
+
     private ItemBindingService() {
     }
 
@@ -79,7 +82,6 @@ public final class ItemBindingService {
 
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
-        if (!ItemQualityService.canUse(event.getEntity(), event.getItem())) return;
         onUseFinish(event.getEntity(), event.getItem());
     }
 
@@ -117,13 +119,33 @@ public final class ItemBindingService {
     }
 
     public static Optional<PillBinding> pill(ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(MxtResourceKeys.PILL_BINDING)
-                .map(Reference::value), stack);
+        return resolvePill(stack).holder().map(Holder::value);
     }
 
     public static Optional<PillBinding> pill(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING)
-                .map(Reference::value), stack);
+        return resolvePill(access, stack).holder().map(Holder::value);
+    }
+
+    public static PillResolution resolvePill(ItemStack stack) {
+        return resolvePill(MxtDatapackRegistries.holders(MxtResourceKeys.PILL_BINDING), stack);
+    }
+
+    public static PillResolution resolvePill(Provider access, ItemStack stack) {
+        return resolvePill(MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING), stack);
+    }
+
+    // An explicit component wins, and a disabled or missing one refuses instead of matching another pill.
+    private static PillResolution resolvePill(Stream<Reference<PillBinding>> holders, ItemStack stack) {
+        Holder<PillBinding> explicit = stack.get(MxtDataComponents.PILL.get());
+        if (explicit != null) {
+            if (!explicit.isBound() || MxtDatapackRegistries.isDisabled(MxtResourceKeys.PILL_BINDING, explicit))
+                return PillResolution.disabled();
+            return PillResolution.bound(explicit);
+        }
+        return holders.filter(holder -> holder.value().entries().stream().anyMatch(entry -> entry.matches(stack)))
+                .min(Comparator.comparingInt(holder -> holder.value().priority()))
+                .map(PillResolution::bound)
+                .orElseGet(PillResolution::none);
     }
 
     // What a stack teaches is the stack's own component; the declaration only says how reading one feels, and a
@@ -158,11 +180,13 @@ public final class ItemBindingService {
     }
 
     public static ResolvedBindings resolve(ItemStack stack) {
-        return new ResolvedBindings(binding(stack), weapon(stack), pill(stack), technique(stack));
+        PillResolution pill = resolvePill(stack);
+        return new ResolvedBindings(binding(stack), weapon(stack), pill.holder(), technique(stack), pill.refused());
     }
 
     public static ResolvedBindings resolve(Provider access, ItemStack stack) {
-        return new ResolvedBindings(binding(access, stack), weapon(access, stack), pill(access, stack), technique(access, stack));
+        PillResolution pill = resolvePill(access, stack);
+        return new ResolvedBindings(binding(access, stack), weapon(access, stack), pill.holder(), technique(access, stack), pill.refused());
     }
 
     public static Optional<Holder<QualityChain>> qualityChain(ItemStack stack) {
@@ -215,11 +239,19 @@ public final class ItemBindingService {
 
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return;
-        ResolvedBindings bindings = resolve(stack);
-        if (!ItemQualityService.canUse(entity, stack, bindings)) return;
-        FormulaContext context = FormulaContext.of(entity);
-        bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
-        bindings.pill().ifPresent(definition -> PillService.consume(entity, definition));
+        Set<UUID> settling = SETTLING.get();
+        if (!settling.add(entity.getUUID())) return;
+        try {
+            ResolvedBindings bindings = resolve(stack);
+            Holder<PillBinding> pill = bindings.pill().orElse(null);
+            if (pill != null) PillService.registerUse(entity, pill);
+            FormulaContext context = FormulaContext.of(entity);
+            bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
+            if (pill != null) PillService.apply(entity, pill);
+        } finally {
+            settling.remove(entity.getUUID());
+            if (settling.isEmpty()) SETTLING.remove();
+        }
     }
 
     private static Optional<ItemBinding> binding(ItemStack stack) {
@@ -322,10 +354,11 @@ public final class ItemBindingService {
 
     // Immutable resolution snapshot, so one operation does not repeat the matcher scans.
     public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon,
-                                   Optional<PillBinding> pill, Optional<TechniqueBinding> technique) {
+                                   Optional<Holder<PillBinding>> pill, Optional<TechniqueBinding> technique,
+                                   boolean pillRefused) {
         public Optional<Holder<QualityChain>> qualityChain() {
             return this.weapon.flatMap(WeaponBinding::qualityChain)
-                    .or(() -> this.pill.flatMap(PillBinding::qualityChain))
+                    .or(() -> this.pill.flatMap(holder -> holder.value().qualityChain()))
                     .or(() -> this.technique.flatMap(TechniqueBinding::qualityChain))
                     .or(() -> this.item.flatMap(ItemBinding::qualityChain));
         }
@@ -333,12 +366,26 @@ public final class ItemBindingService {
         public boolean conditionsMet(LivingEntity entity, FormulaContext context) {
             return this.weapon.map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
-                    && this.pill.map(value -> value.conditions().stream()
+                    && this.pill.map(holder -> holder.value().conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
                     && this.technique.map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
                     && this.item.map(value -> value.conditions().stream()
                     .allMatch(condition -> condition.value().test(entity, context))).orElse(true);
+        }
+    }
+
+    public record PillResolution(Optional<Holder<PillBinding>> holder, boolean refused) {
+        public static PillResolution none() {
+            return new PillResolution(Optional.empty(), false);
+        }
+
+        public static PillResolution disabled() {
+            return new PillResolution(Optional.empty(), true);
+        }
+
+        public static PillResolution bound(Holder<PillBinding> holder) {
+            return new PillResolution(Optional.of(holder), false);
         }
     }
 }

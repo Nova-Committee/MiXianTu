@@ -1,0 +1,22 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "minecraft:block/dirt",
+    "soil": "minecraft:block/dirt",
+    "top": "minecraft:block/farmland"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 4, 16],
+      "faces": {
+        "down": { "texture": "#soil", "cullface": "down" },
+        "up": { "texture": "#top" },
+        "north": { "texture": "#soil", "cullface": "north" },
+        "south": { "texture": "#soil", "cullface": "south" },
+        "west": { "texture": "#soil", "cullface": "west" },
+        "east": { "texture": "#soil", "cullface": "east" }
+      }
+    }
+  ]
+}

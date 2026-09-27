@@ -1,6 +1,6 @@
 # Tools
 
-Four scripts live here, none of which is part of the mod build:
+Five scripts live here, none of which is part of the mod build:
 
 | File | What it is |
 | --- | --- |
@@ -8,6 +8,28 @@ Four scripts live here, none of which is part of the mod build:
 | `generate_classic_gui_textures.py` | Regenerates `src/main/resources/assets/mxt/textures/gui/classic/` with Pillow. |
 | `generate_rift_textures.py` | Regenerates the rift's surface pattern and the icons of the rift block and of the rift anchor with Pillow and NumPy. |
 | `codex_token_usage.py` | Tallies Codex token spend from local rollout logs, filtered by working directory. |
+| `export_alchemy_furnace.py` | Splits the Blockbench furnace export into multiblock models, blockstates and matching Java collision shapes. |
+
+## Alchemy Furnace (`export_alchemy_furnace.py`)
+
+Edit `src/main/resources/assets/mxt/models/block/alchemy_furnace.bbmodel` in Blockbench,
+then export the Java block model to the adjacent `alchemy_furnace.json`. Run:
+
+```bash
+python tools/export_alchemy_furnace.py
+```
+
+The standard-library-only script scales the model to 3×3×3, clips its cubes and UVs at
+block boundaries, and overwrites the 26 occupied-cell models and their lit variants,
+the five blockstate files, unformed component models/item definitions, and
+`runtime/alchemy/AlchemyFurnaceShapes.java`. Rendering and collision use the same source
+bounds. The center cell 13 stays empty; core is 10, main input is 14, auxiliary/catalyst
+input is 12, output is 22. The remaining 22 cells are walls. Left/right refer to a player
+facing the front. Unformed components are cubes, not miniature assembled furnaces.
+
+Output is deterministic. Rotated cubes and rotated UVs are rejected rather than
+silently producing different collision or texture geometry. Do not edit generated
+parts or Java bounds independently; regenerate them after changing the source model.
 
 ## Rift Textures (`generate_rift_textures.py`)
 

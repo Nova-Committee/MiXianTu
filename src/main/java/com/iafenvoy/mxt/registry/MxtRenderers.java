@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.render.DisplayStandBlockEntityRenderer;
 import com.iafenvoy.mxt.render.FlyingSwordRenderer;
 import com.iafenvoy.mxt.render.RiftBlockEntityRenderer;
 import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
+import com.iafenvoy.mxt.render.SpiritHerbPlotBlockEntityRenderer;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
@@ -37,6 +38,7 @@ public final class MxtRenderers {
         event.registerBlockEntityRenderer(MxtBlockEntities.SYSTEM_STATION.get(), StationBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.DISPLAY_STAND.get(), DisplayStandBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.RIFT.get(), RiftBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(MxtBlockEntities.SPIRIT_HERB_PLOT.get(), SpiritHerbPlotBlockEntityRenderer::new);
     }
 
     @SubscribeEvent
@@ -56,6 +58,7 @@ public final class MxtRenderers {
         event.register(MxtMenus.PLAYER_TRADE.get(), PlayerTradeScreen::new);
         event.register(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SpiritCraftingScreen::new);
         event.register(MxtMenus.FORGING_TABLE.get(), ForgingScreen::new);
+        event.register(MxtMenus.ALCHEMY_FURNACE.get(), AlchemyFurnaceScreen::new);
         event.register(MxtMenus.ARTIFACT_STORAGE.get(), ContainerScreen::new);
     }
 
