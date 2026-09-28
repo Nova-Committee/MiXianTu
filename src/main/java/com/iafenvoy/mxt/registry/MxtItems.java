@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.item.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
@@ -63,6 +64,10 @@ public final class MxtItems {
     public static final DeferredItem<Item> CINNABAR = register("cinnabar", Item::new);
     public static final DeferredItem<TalismanItem> TALISMAN = register("talisman", properties -> new TalismanItem(properties.component(MxtDataComponents.TALISMAN, TalismanComponent.EMPTY)));
     public static final DeferredItem<ChequeItem> CHEQUE = register("cheque", ChequeItem::new);
+    // An easter egg, not framework: a plain vanilla food, so eating it, the nutrition and the stack behaviour are
+    // all vanilla's.
+    public static final DeferredItem<Item> FRIED_DOUGH_CAKE = register("fried_dough_cake",
+            properties -> new Item(properties.food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.7F).build())));
 
     public static <T extends Item> DeferredItem<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

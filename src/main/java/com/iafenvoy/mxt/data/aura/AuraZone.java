@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -16,6 +15,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.dimension.LevelStem;
 
@@ -165,7 +165,7 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
     public record ClientRender(int fogColor, int renderDistance, float fogStrength) {
         public static final ClientRender DEFAULT = new ClientRender(0xFFFFFF, 64, 0.35F);
         public static final Codec<ClientRender> CODEC = RecordCodecBuilder.create(i -> i.group(
-                MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("fog_color", 0xFFFFFF).forGetter(ClientRender::fogColor),
+                ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("fog_color", 0xFFFFFF).forGetter(ClientRender::fogColor),
                 Codec.intRange(8, 256).optionalFieldOf("render_distance", 64).forGetter(ClientRender::renderDistance),
                 Codec.floatRange(0.0F, 1.0F).optionalFieldOf("fog_strength", 0.35F).forGetter(ClientRender::fogStrength)
         ).apply(i, ClientRender::new));

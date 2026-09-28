@@ -52,13 +52,14 @@ import java.util.*;
  * enough to fire. A carrier's capacity is the multiplier written on its definitions times what one invocation
  * wants, capped by the wear the carrier has left - so "full" is what the carrier was written to hold, and one with
  * room for several invocations fires again without being poured. What one invocation takes is its {@code costs}:
- * an aura entry comes out of that store, every other entry is paid by the holder. The pour itself belongs to the
- * spirit module ({@link UseItemAuraAccess#pour}), and a carrier takes one unit a tick at one for one. Firing is
- * the carrier's answer both to being charged and to a right-click once it holds a whole invocation, so a carrier
- * billed nothing at all is still usable. The invocation is an ordinary ability use with one thing changed - the
- * carrier answers for the grant - which is what keeps a talisman from being a way around every other gate. What it
- * costs the carrier is its own wear when the definitions written on it declare any, and the carrier itself one
- * item at a time when none of them do.
+ * an aura entry comes out of that store, every other entry is paid by the holder. Whether the holder may use the
+ * carrier at all is the definitions' own {@code condition}, asked before the price is planned. The pour itself
+ * belongs to the spirit module ({@link UseItemAuraAccess#pour}), and a carrier takes one unit a tick at one for
+ * one. Firing is the carrier's answer both to being charged and to a right-click once it holds a whole
+ * invocation, so a carrier billed nothing at all is still usable. The invocation is an ordinary ability use with
+ * one thing changed - the carrier answers for the grant - which is what keeps a talisman from being a way around
+ * every other gate. What it costs the carrier is its own wear when the definitions written on it declare any, and
+ * the carrier itself one item at a time when none of them do.
  */
 public final class TalismanService {
     private TalismanService() {
@@ -197,8 +198,7 @@ public final class TalismanService {
 
     // What one invocation costs the holder, in the order the definitions were written. Every aura entry is left
     // out: an aura is drawn from the carrier's own store rather than from an account. The list goes into the shared
-    // transaction untouched, so a price that cannot be paid refuses the invocation instead of half-paying it -
-    // which is the threshold a "needs enough spirit power" condition would have been.
+    // transaction untouched, so a price that cannot be paid refuses the invocation instead of half-paying it.
     private static List<Cost> holderCosts(List<Holder<Talisman>> written) {
         return written.stream().flatMap(talisman -> talisman.value().costs().stream())
                 .filter(cost -> !(cost instanceof AuraCost)).toList();
@@ -247,8 +247,9 @@ public final class TalismanService {
         return !coolingDown(holder, stack);
     }
 
-    // One invocation, and whether it got as far as being one: every ability refusing still means the carrier
-    // was used, while a carrier that is blank, uncharged, inert or cooling down was never attempted.
+    // One invocation, and whether it got as far as being one: every ability refusing, or the carrier's own
+    // condition refusing the holder, still means the carrier was used, while a carrier that is blank, uncharged,
+    // inert or cooling down was never attempted.
     private static Attempt attempt(SpiritSource source, ItemStack stack) {
         LivingEntity holder = source.actor();
         // Nothing living is answerable for it: an ability needs somebody to pay, to be credited and to answer
@@ -287,10 +288,17 @@ public final class TalismanService {
         // belong to - the position says where, not who.
         FormulaContext context = FormulaContext.of(holder, Map.of("block_x", source.position().x(),
                 "block_y", source.position().y(), "block_z", source.position().z()));
+        // The definitions' own gate, asked before the price is planned: what a carrier will not let the holder do
+        // right now is refused while nothing has been paid, so a condition can never cost the holder anything.
+        if (!allowed(written, holder, context)) {
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed",
+                    Component.translatable("actionbar.mxt.talisman.failure.condition_failed")));
+            return Attempt.REFUSED;
+        }
         // What the carrier's own definitions charge the holder for one invocation, planned before anything
-        // happens: a price the holder cannot pay refuses the invocation, which is where a "needs enough spirit
-        // power" threshold lives now. Nothing is written by the plan, so a carrier whose abilities all refuse
-        // still costs nothing. The aura entries are not in it - they come out of the carrier's own store.
+        // happens: a price the holder cannot pay refuses the invocation. Nothing is written by the plan, so a
+        // carrier whose abilities all refuse still costs nothing. The aura entries are not in it - they come out
+        // of the carrier's own store.
         CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
         CostTransaction.Planning price = CostTransaction.plan(holderCosts(written), costContext);
         if (!price.ok()) {
@@ -330,6 +338,12 @@ public final class TalismanService {
         if (spend(stack, holder, inHand)) refund(left, holder);
         say(holder, Component.translatable("actionbar.mxt.talisman.invoked", fired));
         return Attempt.FIRED;
+    }
+
+    // Every inscription, because one invocation is one act across everything written on the carrier: a definition
+    // that says the holder may not use it now refuses the whole carrier rather than being left out of the volley.
+    private static boolean allowed(List<Holder<Talisman>> written, LivingEntity holder, FormulaContext context) {
+        return written.stream().allMatch(talisman -> talisman.value().condition().test(holder, context));
     }
 
     // A price the holder cannot make is the same two answers every other cost gives: not enough of one resource,

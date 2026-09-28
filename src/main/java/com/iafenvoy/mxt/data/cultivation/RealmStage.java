@@ -35,18 +35,16 @@ import java.util.Optional;
  * One named realm stage, belonging to one {@link Aura}: the chain it is a link of, what it costs, and what
  * happens when it gives way to the next. Conditions and outcomes are resolved by the cultivation runtime.
  */
-public record RealmStage(Component name, Component description, Holder<Aura> aura,
-                         NumberProvider auraShareWeight, EntityCondition cultivateCondition,
-                         Optional<Holder<RealmStage>> nextRealm,
+public record RealmStage(Component name, Component description, Holder<Aura> aura, NumberProvider auraShareWeight,
+                         EntityCondition cultivateCondition, Optional<Holder<RealmStage>> nextRealm,
                          NumberProvider breakthroughExp, NumberProvider maxExperience, List<Component> minorStages,
-                         CultivateConditions breakthrough,
-                         boolean autoBreakthrough,
+                         CultivateConditions breakthrough, boolean autoBreakthrough,
                          List<AttributeEntry> passiveModifiers, Optional<NumberProvider> lifespan,
                          List<Cost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
-                         List<MinorStageAbilities> minorStageAbilities,
-                         Optional<Holder<Tribulation>> tribulation, Optional<ParticleEffect> breakthroughParticle,
-                         EntityAction successAction, EntityAction failAction) implements NamedDefinition {
+                         List<MinorStageAbilities> minorStageAbilities, Optional<Holder<Tribulation>> tribulation,
+                         Optional<ParticleEffect> breakthroughParticle, EntityAction successAction,
+                         EntityAction failAction) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.REALM_STAGE.identifier());
 
     /**

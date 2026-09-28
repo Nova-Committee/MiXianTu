@@ -28,12 +28,12 @@ public final class RegistryCodecs {
     }
 
     public static <T> Codec<List<Either<Holder<T>, TagKey<T>>>> holderOrTagList(ResourceKey<Registry<T>> key) {
-        return CombinedCodecs.combineCodec(holderOrTag(key));
+        return MiscCodecs.combineCodec(holderOrTag(key));
     }
 
     // Delayed variant, for registries that are not available while a datapack registry is decoded.
     public static <T> Codec<List<Either<ResourceKey<T>, TagKey<T>>>> keyOrTagList(ResourceKey<Registry<T>> key) {
-        return CombinedCodecs.combineCodec(Codec.either(ResourceKey.codec(key), TagKey.hashedCodec(key)));
+        return MiscCodecs.combineCodec(Codec.either(ResourceKey.codec(key), TagKey.hashedCodec(key)));
     }
 
     public static <T> boolean matches(Collection<Either<Holder<T>, TagKey<T>>> values, Holder<T> candidate) {

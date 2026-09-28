@@ -30,7 +30,7 @@
 6. **大改才留档。** `research/` 是**设计稿存储处**，不是改动日志：**只有大改**（新模块、换形状的改版、跨模块重构）**或用户明确要求先设计**时才写稿，动手写代码之前或同时写，编号接着 `NN_` 往下排（当前编号看 [`research/README.md`](research/README.md) 的目录，别在这里抄死），审计放 `research/audit/`。日常小改、修 bug、改名、拆包、加字段、文档同步**不写稿**——结论写进代码注释（硬约束）与 `docs/`、本文件（约定）里就够。反过来，真要写的稿子**不要在聊天里、提交信息里或代码注释里留下唯一一份设计说明**。规矩见 [`research/README.md`](research/README.md)。
 7. **不把研究设计写成"已完成"。** 「制作中 / 完成」只能由代码事实支撑；做不到的部分要明说。
 8. **不在文档里写死模组版本号。** 版本以 `gradle.properties` / 你装的那份 Jar 为准。平台与依赖版本（Minecraft / NeoForge / Curios / KubeJS）可以写。
-9. **内容不进本体。** 具体世界观数值、五行、丹方、灵根表这类内容属于数据包 / 测试包 / 内容模组；本体只提供框架与规则。
+9. **内容不进本体。** 具体世界观数值、五行、丹方、灵根表这类内容属于数据包 / 测试包 / 内容模组；本体只提供框架与规则。**例外只有彩蛋 / 玩笑物品**：它可以注册在本体里、进创造栏，但**一律不写进任何说明文档**——两份 README、本仓库 `docs/` 与文档站都不提它，名称与 tooltip 只留在两份 lang 里，让玩家自己翻到。
 10. **本仓库不写文档站怎么操作。** 构建、校验、开发服务器、部署、站内脚本这些只属于文档站仓库自己（那边有它自己的 `AGENTS.md`）；这里只保留指向它的链接。同理，本仓库的 `docs/` 是**仓库内的开发文档源**（中文，作者向），不是那个站点——两者别混，用途对照见 [`docs/README.md`](docs/README.md)。
 
 ## 2. 验证命令
@@ -110,7 +110,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 - **命令的注册表参数只有一套形状**：每个命令类的 `ROOT` 是 `Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>`（注册表参数要在**建树时**就拿到上下文，所以子树是现造的而不是静态常量），注册表条目参数一律用原版 `ResourceArgument`——解析、Tab 补全、"没有这个条目"的报错三件事一起从原版拿来；**别再加"`IdentifierArgument.id()` + 手写 `suggests` + 执行期 `MxtDatapackRegistries.holder(...)` 回查"这三件套**。只有**点名一个当前数据包已不提供的引用**的节点（`technique drop`、`technique forget`、`spirit_root`/`physique` 的 `remove|enable|disable`、`curse remove`、`ability revoke`）与维度 / 触发器信号 / `/picker` 的注册表 ID 参数留在 `IdentifierArgument`，它们要补全就用 `Suggestions.enabledIds`；这几条要救的是**身体里还存着、而当前包已经不提供**的引用：条目被 `neoforge:conditions` 挡掉或直接删了文件之后，同一次会话里附件里那份 `Holder` 还在（附件只在**世界加载**时解码，`/reload` 不重解，下次进世界时缺失的那条会被容错列表丢掉），所以"按名字找"必须找**身体持有的引用**而不是回查注册表。注册表条目参数一律用 `ResourceArgument`，`neoforge:conditions` 挡掉的条目根本不进表，所以**不存在"补全里有、执行时按停用拒绝"这一层**。服务端节点的写操作一律 `requires(ServerCommandManager::mayChange)`——权限判断只有这一份，别在节点里再写一遍 `source.permissions().hasPermission(...)`；两侧的注册分别只在 `ServerCommandManager` / `ClientCommandManager`（节点类不要自己 `register`）。
 - **附件是存档，读宽容；注册表引用存 Holder / ResourceKey**：`attachment/` 与 `runtime/{world,formation}` 里那几个附件 codec 的可选字段一律用 `lenientOptionalFieldOf`——附件解码失败时 NeoForge 会**整份丢弃**（日志 `Failed to deserialize data attachment … Skipping.`），宽容读法只丢那一个字段、但也不留日志；**数据包定义的 codec 不跟着宽容**（定义写错必须报错），共用的值 codec（如 `AuraPool`，网络 payload 也用）同样不动。附件里指向注册表的字段不要存 `Identifier` 再回查：`mxt:` 定义与静态注册表条目存 `Holder`（`Xxx.CODEC` / `holderByNameCodec()`），**会被 `/reload` 换掉实例的原版表（战利品表）存 `ResourceKey`**；比较用 `Holder.is(Identifier)`，不要用 `Holder.equals`（key 在重载后未必可靠）。**`RegistryFixedCodec` 解出来的 holder 不看注册表**：一条被 `neoforge:conditions` 挡掉、或整个文件被删掉的定义，只要身体里存着它的 `Holder` 就一直算数，要问"现在还在不在"就按 id 回查（`Elements.of` 就是这么做的）。id → 能力 holder 一律走 `Abilities.resolve`（`MxtDatapackRegistries.holder(Provider, …)` 的一层封装），这一层**不许绕过**（理由见 `research/40` 的拍板）。
 - **服务端权威**：扣费、校验、修炼、突破、实体行为只在服务端；客户端只渲染与发请求。
-- **数据包对象视为不可变**，别做多余的 `copyOf` / Mutable 转换；颜色用 `MiscCodecs.COLOR`；数值加载期校验有限性，运行期遇到 NaN/Infinity 记一次警告并按 0（或 1，视语义）处理。
+- **数据包对象视为不可变**，别做多余的 `copyOf` / Mutable 转换；颜色用 `MiscCodecs.RGB_COLOR`；数值加载期校验有限性，运行期遇到 NaN/Infinity 记一次警告并按 0（或 1，视语义）处理。
 - **元素相关规则只有一份实现**：灵根"持有 vs 生效"、这一击是什么元素、伤害管线的每个因子（`damage_multiplier`、`element_modifier`、攻击方 `overcomes`、受击方 `adapted_to`、体质的 `damage_dealt_multiplier` / `damage_taken_multiplier`）都已经有公共入口（`Elements`、`DamageElements`、`DamageCalculationService`），新代码接进去，不要在别处再算一套。
 - **KubeJS 只能扩展固有类型**，不能注入数据包定义；脚本侧读得到实体的附件，写操作全部走 `MxtKubeJsApi` 里那些受校验的方法。
 
@@ -130,6 +130,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | 公开 API / KubeJS 全局对象 | 本仓库 `docs/guide/kubejs/api.md` → 文档站仓库的 KubeJS 页（中英） |
 | 新命令 / 新配置项 | 本仓库 `docs/guide/play/commands.md` → 文档站仓库的命令页与功能页（中英）+ 两份 lang（含 `config.mxt.server.*.tooltip`） |
 | 新增 / 改动面向玩家的文案（界面 / 提示 / tooltip / 配置） | 两份 lang，再跑一次 `runTestClient` 看 `run-test-client/config/wamt/exports/` 有没有漏掉的键（见第 2 节） |
+| 新增 / 改动内置物品 | 两份 lang（`item.mxt.*` 与它自己的 tooltip 键）与资源（`items/` 的定义、`models/item/` 的模型、`textures/item/` 的贴图）；**彩蛋 / 玩笑物品不进任何说明文档**——README、本仓库 `docs/`、文档站都不写，只留 lang |
 | 模块完成度变化 | README 两张表与文档站两页的**状态列**（**四处**保持一致，完成度以代码为准） |
 | 推翻 / 关闭了研究里的设计 | `research/audit/*.md` 标注"已于 <日期> 关闭 / 修正"，并写清新行为 |
 | 改了数据包语义（比如某倍率改由管线消费） | 文档站仓库的技术说明、公式变量页与相关教程（中英），**教程里的旧写法必须改掉**，否则包会重复相乘 |

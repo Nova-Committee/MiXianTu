@@ -801,6 +801,8 @@ public final class MxtTestCommands {
         if (wearFailure != null) return wearFailure;
         String ledgerFailure = verifyTalismanLedger(level, actor);
         if (ledgerFailure != null) return ledgerFailure;
+        String gateFailure = verifyTalismanGate(level, actor);
+        if (gateFailure != null) return gateFailure;
         String bufferFailure = verifyTalismanBuffer(level, actor);
         if (bufferFailure != null) return bufferFailure;
         return verifyTalismanRefund(level, actor);
@@ -896,6 +898,59 @@ public final class MxtTestCommands {
                 return "the invocation left " + resources.get(probe) + " of its price unpaid";
             if (!close(resources.get(common) - commonBefore, 3.0D))
                 return "the ability behind a paid invocation added " + (resources.get(common) - commonBefore) + " instead of 3";
+        } finally {
+            resources.set(probe, probeBefore);
+            resources.set(common, commonBefore);
+        }
+        return null;
+    }
+
+    // The inscription's own condition, which the carrier asks before it prices anything: the fixture wants ten of
+    // the very resource its price takes five of, so a holder with five is refused while its account stays whole,
+    // and the same stack fires once the condition is met. One refused inscription refuses the carrier, so a free
+    // one written next to a blocked one does not run either.
+    private static String verifyTalismanGate(ServerLevel level, LivingEntity actor) {
+        ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("gated_sigil")));
+        ResourceHolderAttachment resources = actor.getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> probe = require(MxtResourceKeys.RESOURCE, id("trigger_probe"));
+        Holder<Resource> common = require(MxtResourceKeys.RESOURCE, mxt("common"));
+        double probeBefore = resources.get(probe);
+        double commonBefore = resources.get(common);
+        try {
+            SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
+            // Enough to pay the price, not enough for the condition: the refusal must come first, so the price the
+            // holder could have paid is still there and the ability never ran.
+            resources.set(probe, 5.0D, 0.0D, 100_000.0D, -1L, "closure");
+            if (TalismanService.invokeOnUse(placed, stack))
+                return "an invocation its inscription's condition refused still happened";
+            if (!close(resources.get(probe), 5.0D))
+                return "a refused condition was checked after the price was taken, leaving " + resources.get(probe);
+            if (!close(resources.get(common), commonBefore))
+                return "an invocation refused by its condition still ran the ability behind it";
+            if (stack.getCount() != 1 || stack.getDamageValue() != 0)
+                return "an invocation refused by its condition still spent the carrier";
+            // The condition is the only thing that changed, and the invocation is an ordinary one.
+            resources.set(probe, 10.0D, 0.0D, 100_000.0D, -1L, "closure");
+            if (!TalismanService.invokeOnUse(placed, stack))
+                return "an invocation whose condition was met did not happen";
+            if (!close(resources.get(probe), 5.0D))
+                return "a met condition left " + resources.get(probe) + " instead of paying five of the ten";
+            if (!close(resources.get(common) - commonBefore, 3.0D))
+                return "the ability behind a met condition added " + (resources.get(common) - commonBefore);
+            // A carrier is used as a whole: the free inscription next to a blocked one does not fire on its own.
+            Holder<Talisman> free = require(MxtResourceKeys.TALISMAN, id("free_sigil"));
+            Holder<Talisman> blocked = require(MxtResourceKeys.TALISMAN, id("blocked_sigil"));
+            ItemStack mixed = MxtItems.TALISMAN.toStack();
+            mixed.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(free, blocked), TriggerMode.FIRE));
+            if (TalismanService.invokeOnUse(placed, mixed))
+                return "a carrier whose second inscription was blocked fired anyway";
+            if (mixed.getCount() != 1)
+                return "a carrier blocked by one of its inscriptions was still spent";
+            if (!close(resources.get(common) - commonBefore, 3.0D))
+                return "a blocked carrier still ran the ability its free inscription carries";
+            // The control: the same free inscription on its own fires, so the leg above is about the block.
+            if (!TalismanService.invokeOnUse(placed, carrier(free)))
+                return "an ungated carrier of the same inscription did not fire";
         } finally {
             resources.set(probe, probeBefore);
             resources.set(common, commonBefore);

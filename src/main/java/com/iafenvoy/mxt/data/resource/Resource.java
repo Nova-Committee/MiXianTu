@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -13,6 +12,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.ExtraCodecs;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -35,7 +35,7 @@ public record Resource(Component name, Component description, NumberProvider def
             NumberProvider.CODEC.optionalFieldOf("min", new Constant(0.0D)).forGetter(Resource::min),
             NumberProvider.CODEC.fieldOf("max").forGetter(Resource::max),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(Resource::icon),
-            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("particle_color", 0xFFFFFF).forGetter(Resource::particleColor),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("particle_color", 0xFFFFFF).forGetter(Resource::particleColor),
             ResourceBar.CODEC.listOf().optionalFieldOf("bars", List.of()).forGetter(Resource::bars)
     ).apply(i, Resource::new));
 

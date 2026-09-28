@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -16,6 +15,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.ExtraCodecs;
 
 import java.util.List;
 
@@ -34,7 +34,7 @@ public record Pill(Component name, Component description, int color, EntityActio
     public static final Codec<Pill> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(Pill::name),
             ContextNameCodec.description(CATEGORY).forGetter(Pill::description),
-            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("color", DEFAULT_COLOR).forGetter(Pill::color),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color", DEFAULT_COLOR).forGetter(Pill::color),
             EntityAction.optionalCodec("on_consume").forGetter(Pill::onConsume),
             NumberProvider.CODEC.optionalFieldOf("toxicity_gain", new Constant(0.0D)).forGetter(Pill::toxicityGain),
             NumberProvider.CODEC.optionalFieldOf("toxicity_threshold", new Constant(Double.MAX_VALUE)).forGetter(Pill::toxicityThreshold),

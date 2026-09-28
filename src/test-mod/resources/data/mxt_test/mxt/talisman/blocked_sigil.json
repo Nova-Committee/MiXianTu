@@ -1,0 +1,4 @@
+{
+  "abilities": ["mxt_test:sigil_pulse"],
+  "condition": { "type": "mxt:never" }
+}

@@ -15,6 +15,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.ExtraCodecs;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +43,7 @@ public record ItemQuality(Component name, Component description, Optional<Intege
     public static final Codec<ItemQuality> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(ItemQuality::name),
             ContextNameCodec.description(CATEGORY).forGetter(ItemQuality::description),
-            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("color").forGetter(ItemQuality::color),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color").forGetter(ItemQuality::color),
             Modifier.CODEC.optionalFieldOf("value_multiplier", Modifier.DEFAULT).forGetter(ItemQuality::valueMultiplier),
             Modifier.CODEC.optionalFieldOf("forging_modifier", Modifier.DEFAULT).forGetter(ItemQuality::forgingModifier),
             Modifier.CODEC.optionalFieldOf("alchemy_modifier", Modifier.DEFAULT).forGetter(ItemQuality::alchemyModifier),

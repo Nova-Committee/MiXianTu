@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.util.matcher;
 
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.util.codec.CombinedCodecs;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
 import com.mojang.datafixers.util.Either;
@@ -33,7 +33,7 @@ import java.util.stream.Stream;
  */
 public interface ItemMatcher {
     int DEFAULT_PRIORITY = 0;
-    Codec<List<Entry>> ENTRIES_CODEC = CombinedCodecs.combineCodec(Entry.CODEC);
+    Codec<List<Entry>> ENTRIES_CODEC = MiscCodecs.combineCodec(Entry.CODEC);
     Comparator<ItemMatcher> ORDER = Comparator.comparingInt(ItemMatcher::priority).reversed();
 
     List<Entry> entries();

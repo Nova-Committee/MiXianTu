@@ -1,0 +1,5 @@
+{
+  "abilities": ["mxt_test:sigil_pulse"],
+  "condition": { "type": "mxt:resource_compare", "resource": "mxt_test:trigger_probe", "min": 10 },
+  "costs": [{ "id": "mxt_test:trigger_probe", "amount": 5 }]
+}

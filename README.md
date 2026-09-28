@@ -36,11 +36,12 @@ the changelog.**
   Slot" is unbound by default. All of them can be changed in the controls settings.
 - **Interface**: the wheel is a main wheel plus pages read from what you carry, all strung together by one continuous
   cell numbering - you arrange the main wheel's twelve cells yourself, and the pages behind it come from your main hand,
-  off hand, artifacts and the contract beast your Beast Taming Bell is tuned to, opening another page whenever one is
+  offhand, artifacts and the contract beast your Beast Taming Bell is tuned to, opening another page whenever one is
   not enough; plus resource bars and an aura HUD.
 - **Blocks**: Spirit Crafting Table (uses aura recipes and deducts aura when the result is taken out), Forge Table,
   Exchange Station, Trade Station, Cheque Table, Display Stand, plus Spirit Stone Ore and Spirit Stone Block. An
-  alchemy furnace is hand-built as a 3×3×3: core at the front, main bin on the left when you face it, auxiliary bin on the right, output on top, 22 material walls, and the centre stays air. A spirit herb plot holds one plant.
+  alchemy furnace is hand-built as a 3×3×3: core at the front, main bin on the left when you face it, auxiliary bin on 
+  the right, output on top, 22 material walls, and the centre stays air. A spirit herb plot holds one plant.
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Cultivation Jade Slip, Blank Talisman
   Paper with Talisman Brush and Ink, Talisman (written with a sigil, poured full of aura, and spent the moment it
@@ -123,9 +124,9 @@ recipes. You need a datapack or content pack (including content written with Kub
 
 ### What dependencies are required?
 
-Jupiter is a required dependency, and every other required dependency is bundled inside the mod. KubeJS is only needed
-if you want to register content from scripts. JEI and Jade are optional compatibility mods, and the game works fine
-without them.
+Jupiter and LDLib2 are required dependencies needed manual installation, and every other required dependency is bundled 
+inside the mod. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional compatibility 
+mods, and the game works fine without them.
 
 ### Can I make my own content pack and distribute it?
 

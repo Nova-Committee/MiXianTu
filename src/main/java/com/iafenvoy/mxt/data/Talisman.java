@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -30,13 +31,16 @@ import java.util.Optional;
  * for five, and one whose definitions declare no wear has exactly one. {@code durability} is how much wear the
  * carrier made of it has and {@code consume} how much one invocation takes off; zero durability means the carrier
  * never wears out but is spent whole. {@code quality} is the tier a carrier made from this starts on; whether it
- * fires on its own lives on the {@code mxt:talisman} stack, not here.
+ * fires on its own lives on the {@code mxt:talisman} stack, not here. {@code condition} is asked of the holder
+ * before {@code costs} are planned, so an inscription that says "not now" refuses the carrier before anything is
+ * paid for it.
  */
 public record Talisman(Component name, Component description,
                        List<Either<Holder<Ability>, TagKey<Ability>>> abilities,
                        double capacity,
                        int durability, int consume,
-                       Optional<Holder<ItemQuality>> quality, List<Cost> costs) implements NamedDefinition {
+                       Optional<Holder<ItemQuality>> quality, EntityCondition condition,
+                       List<Cost> costs) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.TALISMAN.identifier());
     public static final Codec<Holder<Talisman>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TALISMAN);
     public static final Codec<Talisman> DIRECT_CODEC = RecordCodecBuilder.<Talisman>create(i -> i.group(
@@ -47,6 +51,7 @@ public record Talisman(Component name, Component description,
             Codec.INT.optionalFieldOf("durability", 0).forGetter(Talisman::durability),
             Codec.INT.optionalFieldOf("consume", 1).forGetter(Talisman::consume),
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Talisman::quality),
+            EntityCondition.optionalCodec("condition").forGetter(Talisman::condition),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Talisman::costs)
     ).apply(i, Talisman::new)).flatXmap(Talisman::validate, Talisman::validate);
 

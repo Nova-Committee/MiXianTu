@@ -2,10 +2,10 @@ package com.iafenvoy.mxt.data.resourcebar.builtin.renderdata;
 
 import com.iafenvoy.mxt.data.SpriteIcon;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.util.ExtraCodecs;
 
 /**
  * A background and a fill pair drawn into the bar's own box. Each is a GUI atlas sprite, a texture path, or a
@@ -22,7 +22,7 @@ public record TexturedRenderData(SpriteIcon backgroundSprite, SpriteIcon fillSpr
             SpriteIcon.SPRITE_CODEC.fieldOf("fill_sprite").forGetter(TexturedRenderData::fillSprite),
             Codec.intRange(1, 1024).fieldOf("width").forGetter(TexturedRenderData::width),
             Codec.intRange(1, 1024).fieldOf("height").forGetter(TexturedRenderData::height),
-            MiscCodecs.COLOR_NO_ALPHA.optionalFieldOf("fill_color", 0xFFFFFF).forGetter(TexturedRenderData::fillColor),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("fill_color", 0xFFFFFF).forGetter(TexturedRenderData::fillColor),
             Codec.BOOL.optionalFieldOf("show_value", false).forGetter(TexturedRenderData::showValue)
     ).apply(i, TexturedRenderData::new));
 

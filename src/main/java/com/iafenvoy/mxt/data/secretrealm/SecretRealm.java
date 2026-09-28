@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.CombinedCodecs;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.datafixers.util.Pair;
@@ -183,7 +182,7 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
                 Codec.DOUBLE.optionalFieldOf("spread", 3.0D).forGetter(EntryPoint::spread),
                 Codec.INT.optionalFieldOf("weight", 1).forGetter(EntryPoint::weight)
         ).apply(i, EntryPoint::new));
-        public static final Codec<List<EntryPoint>> LIST_CODEC = CombinedCodecs.combineCodec(CODEC);
+        public static final Codec<List<EntryPoint>> LIST_CODEC = MiscCodecs.combineCodec(CODEC);
 
         // Same fallback as Weighted: a non-positive total picks uniformly instead of failing.
         public static EntryPoint select(List<EntryPoint> entries, RandomSource random) {
