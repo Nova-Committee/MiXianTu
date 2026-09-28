@@ -1,4 +1,9 @@
 {
   "type": "minecraft:block",
-  "pools": []
+  "pools": [{
+    "rolls": 1,
+    "entries": [{ "type": "minecraft:item", "name": "mxt:alchemy_furnace_casing" }],
+    "conditions": [{ "condition": "minecraft:survives_explosion" }],
+    "functions": [{ "function": "minecraft:copy_components", "source": "block_entity" }]
+  }]
 }

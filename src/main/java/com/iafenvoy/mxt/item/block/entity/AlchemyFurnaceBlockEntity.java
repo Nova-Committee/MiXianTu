@@ -17,6 +17,7 @@ import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -144,6 +145,13 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
         return this.level == null ? Optional.empty() : AlchemyWorkstationService.furnaceDefinition(this.level.registryAccess(), this.furnaceItem);
     }
 
+    // The loot table hands the core back, so its specification travels as a component instead of being popped here.
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        if (!this.voidContents && !this.furnaceItem.isEmpty()) components.addAll(this.furnaceItem.getComponents());
+    }
+
     @Override
     public double temperature() {
         return this.state.temperature();
@@ -236,12 +244,10 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
         if (this.level instanceof ServerLevel server && state.getBlock() instanceof AlchemyFurnaceBlock) {
             AlchemyFurnaceStructure.release(server, pos, state.getValue(AlchemyFurnaceBlock.FACING));
             if (!this.voidContents) {
-                if (!this.furnaceItem.isEmpty()) Block.popResource(server, pos, this.furnaceItem.copy());
                 ItemStack flame = this.fire.getItem(0);
                 if (!flame.isEmpty()) Block.popResource(server, pos, flame.copy());
                 this.state.session().ifPresent(session -> session.pendingOutputs().forEach(stack -> Block.popResource(server, pos, stack)));
             }
-            this.furnaceItem = ItemStack.EMPTY;
             this.fire.clearContent();
             this.state.clearSession();
         }

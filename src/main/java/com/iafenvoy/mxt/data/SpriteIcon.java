@@ -38,7 +38,7 @@ public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> textu
         ).apply(i, Region::new));
     }
 
-    private static final Codec<SpriteIcon> OBJECT_CODEC = RecordCodecBuilder.<SpriteIcon>create(i -> i.group(
+    private static final Codec<SpriteIcon> CODEC = RecordCodecBuilder.<SpriteIcon>create(i -> i.group(
             Identifier.CODEC.optionalFieldOf("sprite").forGetter(SpriteIcon::sprite),
             Identifier.CODEC.optionalFieldOf("texture").forGetter(SpriteIcon::texture),
             Region.CODEC.optionalFieldOf("region").forGetter(SpriteIcon::region),
@@ -47,13 +47,12 @@ public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> textu
     ).apply(i, SpriteIcon::new)).validate(SpriteIcon::validate);
 
     public static SpriteIcon of(Identifier id, boolean sprite) {
-        return sprite ? new SpriteIcon(Optional.of(id), Optional.empty(), Optional.empty(), 0, 0)
-                : new SpriteIcon(Optional.empty(), Optional.of(id), Optional.empty(), 0, 0);
+        return new SpriteIcon(Optional.ofNullable(sprite ? id : null), Optional.ofNullable(sprite ? null : id), Optional.empty(), 0, 0);
     }
 
     // A bare id means a sprite in one codec and a texture in the other, and the written form follows the same rule.
     private static Codec<SpriteIcon> bare(boolean spriteByDefault) {
-        return Codec.either(Identifier.CODEC, OBJECT_CODEC).xmap(
+        return Codec.either(Identifier.CODEC, CODEC).xmap(
                 value -> value.map(id -> of(id, spriteByDefault), Function.identity()),
                 icon -> icon.base(spriteByDefault)
                         .<Either<Identifier, SpriteIcon>>map(Either::left).orElseGet(() -> Either.right(icon)));
@@ -63,8 +62,7 @@ public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> textu
         if (icon.sprite().isPresent() == icon.texture().isPresent())
             return DataResult.error(() -> "A sprite icon names exactly one of sprite and texture");
         if (icon.sprite().isPresent() && icon.region().isPresent())
-            return DataResult.error(() -> "A sprite icon cannot declare a region: an atlas sprite already says "
-                    + "where it is in its sheet");
+            return DataResult.error(() -> "A sprite icon cannot declare a region: an atlas sprite already says where it is in its sheet");
         if ((icon.width() == 0) != (icon.height() == 0))
             return DataResult.error(() -> "A sprite icon declares both width and height, or neither");
         return DataResult.success(icon);

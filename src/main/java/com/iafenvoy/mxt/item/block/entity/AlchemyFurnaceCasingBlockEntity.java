@@ -12,10 +12,10 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -26,8 +26,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Remembers which controller claimed this shell cell and which wall item was placed. Breaking the cell drops that
- * item once and does not drop the controller or any port inventory.
+ * Remembers which controller claimed this shell cell and which wall item was placed. The loot table hands the wall
+ * item back; the cell never drops the controller or any port inventory.
  */
 public final class AlchemyFurnaceCasingBlockEntity extends BlockEntity {
     private BlockPos controller;
@@ -91,6 +91,12 @@ public final class AlchemyFurnaceCasingBlockEntity extends BlockEntity {
         this.wallItem = ItemStack.EMPTY;
     }
 
+    @Override
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        if (!this.voidContents && !this.wallItem.isEmpty()) components.addAll(this.wallItem.getComponents());
+    }
+
     public void validateClaim() {
         if (this.controller == null || !(this.level instanceof ServerLevel server)) return;
         if (!server.isLoaded(this.controller)) {
@@ -107,20 +113,13 @@ public final class AlchemyFurnaceCasingBlockEntity extends BlockEntity {
 
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        if (this.level instanceof ServerLevel server) {
-            if (!this.voidContents) {
-                ItemStack drop = this.wallItem.isEmpty() ? new ItemStack(state.getBlock()) : this.wallItem.copy();
-                this.wallItem = ItemStack.EMPTY;
-                Block.popResource(server, pos, drop);
-            }
-            if (this.controller != null && server.isLoaded(this.controller)
-                    && server.getBlockEntity(this.controller) instanceof AlchemyFurnaceBlockEntity furnace
-                    && furnace.getBlockState().getBlock() instanceof AlchemyFurnaceBlock
-                    && furnace.getBlockState().getValue(AlchemyFurnaceBlock.FORMED)) {
-                Direction facing = furnace.getBlockState().getValue(AlchemyFurnaceBlock.FACING);
-                AlchemyFurnaceStructure.release(server, this.controller, facing);
-                furnace.onStructureLost();
-            }
+        if (this.level instanceof ServerLevel server && this.controller != null && server.isLoaded(this.controller)
+                && server.getBlockEntity(this.controller) instanceof AlchemyFurnaceBlockEntity furnace
+                && furnace.getBlockState().getBlock() instanceof AlchemyFurnaceBlock
+                && furnace.getBlockState().getValue(AlchemyFurnaceBlock.FORMED)) {
+            Direction facing = furnace.getBlockState().getValue(AlchemyFurnaceBlock.FACING);
+            AlchemyFurnaceStructure.release(server, this.controller, facing);
+            furnace.onStructureLost();
         }
         super.preRemoveSideEffects(pos, state);
     }

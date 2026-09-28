@@ -420,7 +420,7 @@ public final class AlchemyProbes {
         level.setBlockAndUpdate(AlchemyFurnaceStructure.world(at, Direction.NORTH, 2), Blocks.AIR.defaultBlockState());
         check(source, "casing-abort-once", charcoalCount(furnace), charcoal);
         clearDrops(level, at);
-        level.setBlockAndUpdate(at, Blocks.AIR.defaultBlockState());
+        level.destroyBlock(at, true, player);
         List<ItemEntity> drops = drops(level, at);
         check(source, "controller-one-furnace", count(drops, MxtBlocks.ALCHEMY_FURNACE.get().asItem()), 1);
         check(source, "controller-no-ingredient", count(drops, Items.ALLIUM), 0);
@@ -906,13 +906,13 @@ public final class AlchemyProbes {
         check(source, "core-hopper-has-no-aggregate", net.minecraft.world.level.block.entity.HopperBlockEntity.getContainerAt(level, at) == null, true);
         BlockPos main = AlchemyFurnaceStructure.world(at, Direction.NORTH, AlchemyFurnaceStructure.MAIN_INDEX);
         clearDrops(level, main);
-        level.setBlockAndUpdate(main, Blocks.AIR.defaultBlockState());
+        level.destroyBlock(main, true, player);
         List<ItemEntity> mainDrops = drops(level, main);
         check(source, "main-drops-herb", count(mainDrops, Items.ALLIUM), 2);
         check(source, "main-drops-not-aux", count(mainDrops, Items.CORNFLOWER), 0);
         check(source, "aux-kept", owned.container().getItem(2).getCount(), 2);
         clearDrops(level, at);
-        level.setBlockAndUpdate(at, Blocks.AIR.defaultBlockState());
+        level.destroyBlock(at, true, player);
         List<ItemEntity> coreDrops = drops(level, at);
         check(source, "core-one-furnace", count(coreDrops, MxtBlocks.ALCHEMY_FURNACE.get().asItem()), 1);
         check(source, "core-one-fire", count(coreDrops, AlchemyTestFireItems.FIRE.get()), 1);

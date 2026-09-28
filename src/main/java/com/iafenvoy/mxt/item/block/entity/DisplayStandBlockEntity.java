@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -53,7 +54,7 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity) {
         if (this.displayedItem.getItem() instanceof ItemAuraAccess access)
             return access.getCapacity(entity, this.displayedItem);
-        return new Object2IntOpenHashMap<>();
+        return Object2IntMaps.emptyMap();
     }
 
     @Override
