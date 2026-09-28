@@ -82,9 +82,8 @@ public final class MxtBlocks {
         return block;
     }
 
-    // The block itself is invisible - only its block entity is drawn. Unbreakable by ordinary means, lit, no
-    // collision, and neighbours are asked not to cull faces against it. It still gets an ordinary block item,
-    // which is what places one; the anchor item only ever adjusts rifts that already exist.
+    // The block is invisible (only its block entity is drawn), unbreakable, lit and without collision; there is no
+    // loot table either, because a rift is placed and never taken back. The anchor item only ever adjusts one.
     private static <T extends Block> DeferredBlock<T> registerRift(String path, Function<Properties, T> factory) {
         ResourceKey<Block> key = ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));
         DeferredBlock<T> block = REGISTRY.register(path, () -> factory.apply(Properties.of()
@@ -95,7 +94,8 @@ public final class MxtBlocks {
                 .lightLevel(state -> 15)
                 .noCollision()
                 .noOcclusion()
-                .noTerrainParticles()));
+                .noTerrainParticles()
+                .noLootTable()));
         MxtItems.registerBlockItem(path, block);
         return block;
     }

@@ -154,7 +154,7 @@ title: 命令
 
 解除与死亡是**两条不同的路**：`break` 走 `release_action` 并回调 `onContractReleased`，灵宠还活着；灵宠自己死亡走 `death_action` 并回调 `onContractDeath`。两者都会清掉记录与主人索引，也都会发对应的事件。**捕捉不是实体侧的门槛**：任何生物都可能被捕捉，怎么捕捉由物品决定（灵兽袋自己的规则是"你自己的已契约灵兽、一次一只"）。生物只有在实现 `CaptureListener` 时才会收到"被收走/被放出"的通知——不实现它照样能被收走，只是收不到通知。
 
-失败原因共用一套文案键 `contract.mxt.failure.<小写枚举名>`（卷轴、御兽铃、灵兽袋与这组命令打的是同一张表），取值有 `already_bound`、`not_contractable`、`owner_conditions`、`creature_conditions`、`limit_reached`、`insufficient_cost`、`not_bound`、`not_owner`、`recall_cooldown`、`cancelled`、`unsupported_behavior`、`behavior_refused`。
+失败原因共用一套文案键 `contract.mxt.failure.<小写枚举名>`（卷轴、御兽铃、灵兽袋与这组命令打的是同一张表），取值有 `already_bound`、`not_contractable`、`owner_conditions`、`creature_conditions`、`limit_reached`、`insufficient_cost`、`not_bound`、`not_owner`、`recall_cooldown`、`recall_pending`（闩已经置上、还没落地）、`cancelled`、`unsupported_behavior`、`behavior_refused`。
 
 **行为（order）不是数据包字段**：它由生物自己回答（`ContractOperations.behaviors()`），框架只内置跟随 / 游荡 / 驻守 / 召回四条，其余由内容方用 `ContractBehavior` + `ContractBehaviors.register` 添。当前那条写在灵兽的 `mxt:contract` 记录里（读不出来就退回跟随），`follow_action` 只在当前是**跟随**时才跑。玩家的入口是御兽铃右键生物（对准它）再右键空处（开轮盘选），这组命令是管理员入口。
 
@@ -172,7 +172,7 @@ title: 命令
 
 ### 裂隙（`/mxt rift`）
 
-裂隙（`mxt:rift`）不是数据包定义，而是运行时摆出来的方块：每个裂隙在方块中心画一个点，和 3×3×3 内所有相邻裂隙连线（不看朝向），两条线彼此也相邻时就围出一个三角形并填充内部。这组命令是它的运维入口，**整棵子树都需要 gamemaster 权限**；玩家侧的正常用法是拿裂隙方块（`mxt:rift` 物品）摆、拿裂隙锚（`mxt:rift_anchor` 物品）改。
+裂隙（`mxt:rift`）不是数据包定义，而是运行时摆出来的方块：每个裂隙在方块中心画一个点，和 3×3×3 内所有相邻裂隙连线（不看朝向），两条线彼此也相邻时就围出一个三角形并填充内部。它**只摆不拆**：破坏耗时 `-1`、抗爆 `3600000`，且声明了没有掉落表，所以生存挖不动、创造破坏也不掉东西（要清掉只能 `/setblock … air`）。这组命令是它的运维入口，**整棵子树都需要 gamemaster 权限**；玩家侧的正常用法是拿裂隙方块（`mxt:rift` 物品）摆、拿裂隙锚（`mxt:rift_anchor` 物品）改。
 
 | 子命令 | 行为 |
 | --- | --- |

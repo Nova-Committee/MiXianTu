@@ -357,6 +357,7 @@
   "contract.mxt.failure.not_owner": "你不是它的主人。",
   "contract.mxt.failure.owner_conditions": "你不满足这份契约的条件。",
   "contract.mxt.failure.recall_cooldown": "召回还在冷却中。",
+  "contract.mxt.failure.recall_pending": "召回已经发出，它还在回来的路上。",
   "contract.mxt.failure.unsupported_behavior": "它不接受这道命令。",
   "command.mxt.resource.query": "%s = %s",
   "command.mxt.resource.set": "已将 %s 设为 %s",

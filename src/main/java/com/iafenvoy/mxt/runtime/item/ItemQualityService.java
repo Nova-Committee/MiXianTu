@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
-import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -15,7 +14,6 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -110,8 +108,8 @@ public final class ItemQualityService {
     }
 
     // The one resolution order: an explicit component, what a settlement wrote, the definition claiming the stack,
-    // the entry tier of the ladder that stack reads, and last a spirit herb's own declaration. Read with a Provider
-    // because the client draws tooltips from the same order.
+    // and last a spirit herb's own declaration. Read with a Provider because the client draws tooltips from the
+    // same order.
     public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
         return find(registry(access).orElse(null), stack, ItemBindingService.resolve(access, stack), access);
     }
@@ -121,7 +119,6 @@ public final class ItemQualityService {
         Optional<Holder<ItemQuality>> declared = intrinsic(registry, stack);
         return declared
                 .or(() -> definitionDefault(access, stack))
-                .or(() -> ladderDefault(access, null))
                 .or(() -> SpiritHerbService.find(access, stack).map(SpiritHerb::quality));
     }
 
@@ -144,12 +141,6 @@ public final class ItemQualityService {
         if (technique.isPresent()) return technique;
         return AlchemyWorkstationService.furnaceDefinition(access, stack)
                 .map(holder -> holder.value().quality());
-    }
-
-    // The entry tier of the ladder the stack's own tier sits on, which is where a stack with no tier of its own
-    // starts. A stack carrying nothing, or carrying a tier on no ladder, has no such slot.
-    private static Optional<Holder<ItemQuality>> ladderDefault(Provider access, @Nullable Holder<ItemQuality> tier) {
-        return tier == null ? Optional.empty() : QualityLadders.cache(access).firstOf(HolderHelper.id(tier));
     }
 
     // Why an entity may not use an item. Furnace quality is one of the checks above; pill caps are extra and

@@ -13,7 +13,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.stats.Stats;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -110,18 +109,6 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
     @Override
     public @NonNull Transition getLocalTransition() {
         return Transition.CONFUSION;
-    }
-
-    // Breaking hands back an anchor still aimed where the rift led. There is no loot table: this drop is the only one.
-    @Override
-    public void playerDestroy(@NonNull Level level, @NonNull Player player, @NonNull BlockPos pos, @NonNull BlockState state, @Nullable BlockEntity blockEntity, @NonNull ItemStack destroyedWith) {
-        player.awardStat(Stats.BLOCK_MINED.get(this));
-        player.causeFoodExhaustion(0.005F);
-        if (level.isClientSide() || player.hasInfiniteMaterials()) return;
-        if (!(blockEntity instanceof RiftBlockEntity rift)) return;
-        ItemStack drop = new ItemStack(this);
-        drop.set(MxtDataComponents.RIFT, new RiftComponent(rift.target(), rift.color()));
-        popResource(level, pos, drop);
     }
 
     // The mod's own particle is the vanilla portal particle wearing this rift's colour, and the points gather around

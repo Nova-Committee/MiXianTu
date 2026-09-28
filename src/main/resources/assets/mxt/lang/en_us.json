@@ -357,6 +357,7 @@
   "contract.mxt.failure.not_owner": "You are not its owner.",
   "contract.mxt.failure.owner_conditions": "You do not meet this contract's conditions.",
   "contract.mxt.failure.recall_cooldown": "The recall is still cooling down.",
+  "contract.mxt.failure.recall_pending": "The recall is already on its way back.",
   "contract.mxt.failure.unsupported_behavior": "It does not take that order.",
   "command.mxt.resource.query": "%s = %s",
   "command.mxt.resource.set": "Set %s to %s",

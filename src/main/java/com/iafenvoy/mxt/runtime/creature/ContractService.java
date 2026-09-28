@@ -96,7 +96,9 @@ public final class ContractService {
         Holder<ContractType> type = data.contractType().orElseThrow();
         UUID owner = Contracts.ownerOf(creature).orElse(null);
         if (!force && (owner == null || !owner.equals(requester))) return Result.rejected(Failure.NOT_OWNER);
-        if (data.recalled()) return Result.unchanged();
+        // A latch that is still set is its own answer rather than "nothing happened": the caller reports whatever
+        // reason a refusal carries, so losing one here would leave it reading a null.
+        if (data.recalled()) return Result.rejected(Failure.RECALL_PENDING);
         long gameTime = creature.level().getGameTime();
         if (!force && !data.canRecall(gameTime, type.value().recallCooldown()))
             return Result.rejected(Failure.RECALL_COOLDOWN);
@@ -137,9 +139,12 @@ public final class ContractService {
 
     public enum Failure {
         ALREADY_BOUND, NOT_CONTRACTABLE, OWNER_CONDITIONS, CREATURE_CONDITIONS, LIMIT_REACHED,
-        INSUFFICIENT_COST, NOT_BOUND, NOT_OWNER, RECALL_COOLDOWN, CANCELLED, UNSUPPORTED_BEHAVIOR, BEHAVIOR_REFUSED
+        INSUFFICIENT_COST, NOT_BOUND, NOT_OWNER, RECALL_COOLDOWN, RECALL_PENDING, CANCELLED,
+        UNSUPPORTED_BEHAVIOR, BEHAVIOR_REFUSED
     }
 
+    // Everything but a change names a reason: the callers report failure() whenever changed() is false, so no
+    // result may carry a null failure.
     public record Result(boolean changed, Failure failure) {
         static Result bound() {
             return new Result(true, null);
@@ -156,10 +161,6 @@ public final class ContractService {
         // An order that was taken: recorded, or - for a momentary one - acted on by the creature.
         static Result applied() {
             return new Result(true, null);
-        }
-
-        static Result unchanged() {
-            return new Result(false, null);
         }
 
         static Result rejected(Failure failure) {

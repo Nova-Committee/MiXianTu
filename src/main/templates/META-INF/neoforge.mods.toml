@@ -18,7 +18,7 @@ logoFile="logo.png" #optional
 
 #credits="" #optional
 
-authors = "IAFEnvoy"
+authors = "IAFEnvoy, cnlimiter"
 
 description = '''
 A data-driven cultivation framework with server-authoritative runtime for cultivation, aura, abilities and so on.

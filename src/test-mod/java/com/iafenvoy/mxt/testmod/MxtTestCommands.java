@@ -1874,6 +1874,9 @@ public final class MxtTestCommands {
             boolean latch = ContractService.requestRecall(beast, player.getUUID(), false).changed()
                     && beast.getData(MxtAttachments.CONTRACT).recalled()
                     && beast.getData(MxtAttachments.CONTRACT).recallAt() == now;
+            // The latch is still set, so a second order has to name that instead of reporting no reason at all.
+            boolean pending = ContractService.requestRecall(beast, player.getUUID(), false).failure()
+                    == ContractService.Failure.RECALL_PENDING;
             ContractService.completeRecall(beast);
             boolean cooling = ContractService.requestRecall(beast, player.getUUID(), false).failure()
                     == ContractService.Failure.RECALL_COOLDOWN;
@@ -1884,9 +1887,9 @@ public final class MxtTestCommands {
             beast.setPos(player.getX() + 20.0D, player.getY(), player.getZ());
             Contracts.operations(beast).orElseThrow().recall(context(beast, player, tagged));
             boolean landed = beast.distanceToSqr(player) < 1.0D;
-            boolean recall = latch && cooling && forced && landed;
-            source.sendSuccess(() -> Component.literal("contract probe: latch=" + latch + " cooling=" + cooling
-                    + " forced=" + forced + " landed=" + landed + (recall ? " OK" : " MISMATCH")), false);
+            boolean recall = latch && pending && cooling && forced && landed;
+            source.sendSuccess(() -> Component.literal("contract probe: latch=" + latch + " pending=" + pending
+                    + " cooling=" + cooling + " forced=" + forced + " landed=" + landed + (recall ? " OK" : " MISMATCH")), false);
 
             // The bell names one beast and carries that creature's own answer about the orders it takes, which is
             // what lets the wheel be drawn without resolving the creature. A creature that is not a bound beast of
