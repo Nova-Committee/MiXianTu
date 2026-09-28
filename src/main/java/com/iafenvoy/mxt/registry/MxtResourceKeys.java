@@ -105,7 +105,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<BlueprintBinding>> BLUEPRINT_BINDING = create("blueprint_binding");
     public static final ResourceKey<Registry<Technique>> TECHNIQUE = create("technique");
     public static final ResourceKey<Registry<SkillStage>> SKILL_STAGE = create("skill_stage");
-    public static final ResourceKey<Registry<CultivateAction>> CULTIVATE_ACTION = create("cultivate_action");
+    public static final ResourceKey<Registry<Cultivation>> CULTIVATION = create("cultivation");
     public static final ResourceKey<Registry<Artifact>> ARTIFACT = create("artifact");
     public static final ResourceKey<Registry<SpiritHerb>> SPIRIT_HERB = create("spirit_herb");
     public static final ResourceKey<Registry<MedicinalProperty>> MEDICINAL_PROPERTY = create("medicinal_property");

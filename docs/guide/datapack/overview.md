@@ -61,7 +61,7 @@ data/<namespace>/mxt/<registry>/<path>.json
 
 | 分类 | 注册表 |
 | --- | --- |
-| 资源与修炼 | `resource`、`aura`、`element`、`realm_stage`、`spirit_root`、`physique`、`technique`、`skill_stage`、`cultivate_action` |
+| 资源与修炼 | `resource`、`aura`、`element`、`realm_stage`、`spirit_root`、`physique`、`technique`、`skill_stage`、`cultivation` |
 | 技能与规则 | `ability`、`curse`、`formation`、`tribulation`、`trigger`、`talisman` |
 | 灵气与世界 | `aura_zone`、`block_aura`、`item_aura`、`secret_realm` |
 | 物品与品质 | `item_binding`、`weapon_binding`、`pill_binding`、`technique_binding`、`tool_binding`、`blueprint_binding`、`artifact`、`quality` |

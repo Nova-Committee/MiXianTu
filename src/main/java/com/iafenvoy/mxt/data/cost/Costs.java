@@ -40,7 +40,7 @@ public final class Costs {
     }
 
     /**
-     * Load-time check for the fields that are aura costs by definition ({@code cultivate_action.aura_costs},
+     * Load-time check for the fields that are aura costs by definition ({@code cultivation.aura_costs},
      * spirit-crafting recipes): a resource, item or script entry there could never be paid by the store the field
      * charges, so it is refused instead of quietly never crafting.
      */

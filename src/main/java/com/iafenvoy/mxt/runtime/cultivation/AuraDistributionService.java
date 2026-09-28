@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
-import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -38,12 +38,12 @@ public final class AuraDistributionService {
         Map<Long, List<Claim>> claimsByChunk = new HashMap<>();
         for (ServerPlayer player : level.players()) {
             CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-            Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
+            Holder<Cultivation> action = spirit.cultivation().orElse(null);
             if (!spirit.cultivating() || action == null || gameTime < spirit.nextCultivateTick()) continue;
-            CultivateAction definition = action.value();
+            Cultivation definition = action.value();
             FormulaContext context = FormulaContexts.forEntity(player);
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
-            if (!CultivationActionService.canCultivateInEnvironment(spirit, player, aura, context)
+            if (!CultivationMethodService.canCultivateInEnvironment(spirit, player, aura, context)
                     || !definition.tickCondition().test(player, context)) continue;
             Map<Holder<Aura>, Double> requested = evaluateCosts(definition, context);
             if (requested == null || requested.isEmpty()) continue;
@@ -158,7 +158,7 @@ public final class AuraDistributionService {
                 .max(Double::compareTo).orElse(1.0D);
     }
 
-    private static Map<Holder<Aura>, Double> evaluateCosts(CultivateAction action, FormulaContext context) {
+    private static Map<Holder<Aura>, Double> evaluateCosts(Cultivation action, FormulaContext context) {
         return Costs.auras(action.auraCosts(), CostContext.of(null, context, CostOrigin.CULTIVATION));
     }
 

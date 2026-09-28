@@ -7,5 +7,5 @@
   "aura_costs": { "mxt_test:spirit_power": 1 },
   "aura_gains": [{ "id": "mxt_test:qi", "amount": "2 + level * 0.1" }],
   "cooldown": 0,
-  "tick_action": { "type": "mxt:apply_effect", "effect": "minecraft:fire_resistance", "duration_ticks": 40 }
+  "cultivate_action": { "type": "mxt:apply_effect", "effect": "minecraft:fire_resistance", "duration_ticks": 40 }
 }

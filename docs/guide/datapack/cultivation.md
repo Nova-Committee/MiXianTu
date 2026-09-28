@@ -47,9 +47,9 @@ title: 修炼、境界与灵根
 }
 ```
 
-## 修炼方式（`cultivate_action`）
+## 修炼方式（`cultivation`）
 
-一次"运功"是一条 `cultivate_action` 定义：吸收哪些环境灵气（`aura_costs` / `aura_gains`）、每隔多久结算（`tick_interval`）、每拍做什么（`tick_action`）、收什么费（`costs`）、给什么收获（`absorb_amount`），以及三个条件：**能不能坐下**（`start_condition`）、**这一拍能不能拿到成果**（`cultivate_condition`）、**还继续不继续**（`tick_condition`）。"仅凭功法修炼"这类规则写在 `start_condition` 上（`mxt:technique`），不需要在服务器配置里加开关。
+一次"运功"是一条 `cultivation` 定义：吸收哪些环境灵气（`aura_costs` / `aura_gains`）、每隔多久结算（`tick_interval`）、**每个 tick** 做什么（`tick_action`）、**结算成功那一拍**做什么（`cultivate_action`）、收什么费（`costs`）、给什么收获（`absorb_amount`），以及三个条件：**能不能坐下**（`start_condition`）、**这一拍能不能拿到成果**（`cultivate_condition`）、**还继续不继续**（`tick_condition`）。"仅凭功法修炼"这类规则写在 `start_condition` 上（`mxt:technique`），不需要在服务器配置里加开关。
 
 三个条件的分工是这次定形的：`cultivate_condition` 不成立时**不中止**，只是这一拍空过（不扣钱、不给收获、不推进结算，条件一恢复立刻出成果）；`tick_condition` 不成立才**中止**，而那句中止话说什么由可选的 `abort_reason` 决定（不写就用通用的「不满足修炼条件」；环境不允许、灵气不足、公式无效这些另算）。所以"同伴手上拿着同一本手册"这类要求写在 `cultivate_condition`（它在坐下前就能成立），"对方在不在修炼"写在 `tick_condition`（它在坐下前必然为假）。
 

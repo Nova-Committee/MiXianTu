@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Failure;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Failure;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -31,13 +31,13 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Drives the one persisted cultivation action using the entity's current chunk aura.
+ * Drives the one persisted cultivation method using the entity's current chunk aura.
  */
 @EventBusSubscriber
-public final class CultivationActionEventBridge {
+public final class CultivationEventBridge {
     private static final Map<UUID, FailureNotice> LAST_FAILURES = new HashMap<>();
 
-    private CultivationActionEventBridge() {
+    private CultivationEventBridge() {
     }
 
     @SubscribeEvent
@@ -71,16 +71,16 @@ public final class CultivationActionEventBridge {
     private static void tick(LivingEntity entity) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         if (!spirit.cultivating()) return;
-        Holder<CultivateAction> action = spirit.cultivateAction().orElse(null);
+        Holder<Cultivation> action = spirit.cultivation().orElse(null);
         if (action == null) {
             if (entity instanceof ServerPlayer player) LAST_FAILURES.remove(player.getUUID());
             return;
         }
-        CultivateAction definition = action.value();
+        Cultivation definition = action.value();
         FormulaContext context = FormulaContexts.forEntity(entity);
         boolean mayContinue = definition.tickCondition().test(entity, context);
         AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        Result result = CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
+        Result result = CultivationMethodService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
                 entity.level().getGameTime(), context, () -> mayContinue);
         if (entity instanceof ServerPlayer player) {
             if (result.failure() == null) {

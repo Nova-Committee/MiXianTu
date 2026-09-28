@@ -87,7 +87,7 @@ import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
-import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -126,8 +126,8 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService.Result;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
@@ -4139,8 +4139,8 @@ public final class MxtTestCommands {
     private static int startCultivation(CommandSourceStack source) {
         ServerPlayer player = player(source);
         if (player == null) return 0;
-        CultivateAction action = require(MxtResourceKeys.CULTIVATE_ACTION, CULTIVATE).value();
-        Result result = CultivationActionService.start(player, player.getData(MxtAttachments.CULTIVATION),
+        Cultivation action = require(MxtResourceKeys.CULTIVATION, CULTIVATE).value();
+        Result result = CultivationMethodService.start(player, player.getData(MxtAttachments.CULTIVATION),
                 CULTIVATE, action, player.level().getGameTime(), FormulaContext.of(player));
         if (!result.started()) {
             source.sendFailure(Component.translatable("command.mxt_test.cultivate.failed", result.failure().name()));
@@ -4156,13 +4156,13 @@ public final class MxtTestCommands {
     private static int probeCultivation(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         long now = level.getGameTime();
-        Holder<CultivateAction> free = require(MxtResourceKeys.CULTIVATE_ACTION, FREE_MEDITATION);
-        Holder<CultivateAction> gated = require(MxtResourceKeys.CULTIVATE_ACTION, TECHNIQUE_MEDITATION);
-        Holder<CultivateAction> dual = require(MxtResourceKeys.CULTIVATE_ACTION, DUAL_MEDITATION);
-        Holder<CultivateAction> named = require(MxtResourceKeys.CULTIVATE_ACTION, NAMED_MEDITATION);
-        Holder<CultivateAction> strict = require(MxtResourceKeys.CULTIVATE_ACTION, STRICT_MEDITATION);
-        Holder<CultivateAction> worldly = require(MxtResourceKeys.CULTIVATE_ACTION, WORLDLY_MEDITATION);
-        Holder<CultivateAction> basic = require(MxtResourceKeys.CULTIVATE_ACTION, CULTIVATE);
+        Holder<Cultivation> free = require(MxtResourceKeys.CULTIVATION, FREE_MEDITATION);
+        Holder<Cultivation> gated = require(MxtResourceKeys.CULTIVATION, TECHNIQUE_MEDITATION);
+        Holder<Cultivation> dual = require(MxtResourceKeys.CULTIVATION, DUAL_MEDITATION);
+        Holder<Cultivation> named = require(MxtResourceKeys.CULTIVATION, NAMED_MEDITATION);
+        Holder<Cultivation> strict = require(MxtResourceKeys.CULTIVATION, STRICT_MEDITATION);
+        Holder<Cultivation> worldly = require(MxtResourceKeys.CULTIVATION, WORLDLY_MEDITATION);
+        Holder<Cultivation> basic = require(MxtResourceKeys.CULTIVATION, CULTIVATE);
         Holder<Technique> breathing = require(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
         Holder<Technique> sword = require(MxtResourceKeys.TECHNIQUE, SWORD_MANUAL);
         Holder<Resource> waterPower = require(MxtResourceKeys.RESOURCE, WATER_POWER);
@@ -4228,7 +4228,7 @@ public final class MxtTestCommands {
             //    that the body has no record.
             boolean pickedFree = picks(CultivationModeService.select(solo, contextOf(solo)), FREE_MEDITATION);
             boolean untouched = solo.getExistingData(MxtAttachments.CULTIVATION)
-                    .map(spirit -> !spirit.cultivating() && spirit.cultivateAction().isEmpty()).orElse(true);
+                    .map(spirit -> !spirit.cultivating() && spirit.cultivation().isEmpty()).orElse(true);
             ok &= check(source, "cultivation probe: baseline pick=" + pickedFree + " attach=" + !untouched,
                     pickedFree && untouched);
 
@@ -4271,7 +4271,7 @@ public final class MxtTestCommands {
             boolean seated = CultivationModeService.start(seatA, seatSpirit, dual, contextOf(seatA)).started();
             Result upkeepTick = tickCultivation(seatA, seatSpirit, dual, now);
             boolean aborted = !seatSpirit.cultivating()
-                    && upkeepTick.failure() == CultivationActionService.Failure.CONDITIONS
+                    && upkeepTick.failure() == CultivationMethodService.Failure.CONDITIONS
                     && named(upkeepTick, "the partner is gone");
             ok &= check(source, "cultivation probe: upkeep yield=" + yieldHolds + " false=" + upkeepFalse
                             + " seated=" + seated + " failure=" + upkeepTick.failure()
@@ -4345,10 +4345,10 @@ public final class MxtTestCommands {
             entityAction(level, "{\"type\": \"mxt:cultivate\"}").execute(actor, contextOf(actor));
             boolean actionStarted = runs(actorSpirit, FREE_MEDITATION);
             entityAction(level, "{\"type\": \"mxt:stop_cultivating\"}").execute(actor, contextOf(actor));
-            boolean actionStopped = !actorSpirit.cultivating() && actorSpirit.isCultivateActionOnCooldown(free, now);
-            boolean coolingDown = !CultivationActionService.start(actorSpirit, free, free.value(), now, () -> true)
+            boolean actionStopped = !actorSpirit.cultivating() && actorSpirit.isCultivationOnCooldown(free, now);
+            boolean coolingDown = !CultivationMethodService.start(actorSpirit, free, free.value(), now, () -> true)
                     .started();
-            boolean cooldownOver = CultivationActionService.start(actorSpirit, free, free.value(), now + 200L,
+            boolean cooldownOver = CultivationMethodService.start(actorSpirit, free, free.value(), now + 200L,
                     () -> true).started();
             // The named form starts that very method for a body that has the manual, and stays silent for one that
             // does not: nothing in the data pack can hand a failure back.
@@ -4357,7 +4357,7 @@ public final class MxtTestCommands {
             boolean namedStarted = runs(learner.getData(MxtAttachments.CULTIVATION), NAMED_MEDITATION);
             entityAction(level, "{\"type\": \"mxt:cultivate\", \"action\": \"mxt_test:named_meditation\"}")
                     .execute(lonely, contextOf(lonely));
-            boolean namedSilent = lonely.getData(MxtAttachments.CULTIVATION).cultivateAction().isEmpty();
+            boolean namedSilent = lonely.getData(MxtAttachments.CULTIVATION).cultivation().isEmpty();
             ok &= check(source, "cultivation probe: actions start=" + actionStarted + " stop=" + actionStopped
                             + " cooling=" + coolingDown + " expired=" + cooldownOver + " named=" + namedStarted
                             + " silent=" + namedSilent,
@@ -4381,10 +4381,10 @@ public final class MxtTestCommands {
             boolean pickedAnyway = namedPick.started() && runs(pickSpirit, CULTIVATE)
                     && picks(CultivationModeService.select(veteran, contextOf(veteran)), TECHNIQUE_MEDITATION);
             boolean pickRefused = CultivationModeService.startNamed(actor, gated).failure()
-                    == CultivationActionService.Failure.NOT_APPLICABLE
+                    == CultivationMethodService.Failure.NOT_APPLICABLE
                     && runs(actorSpirit, FREE_MEDITATION);
             boolean pickRunning = CultivationModeService.startNamed(learner, named).failure()
-                    == CultivationActionService.Failure.ALREADY_ACTIVE;
+                    == CultivationMethodService.Failure.ALREADY_ACTIVE;
             ok &= check(source, "cultivation probe: pick named=" + pickedAnyway + " refused=" + pickRefused
                             + " running=" + pickRunning + " failure=" + namedPick.failure(),
                     pickedAnyway && pickRefused && pickRunning);
@@ -4448,11 +4448,11 @@ public final class MxtTestCommands {
     // One settlement of a running method, driven the way the runtime drives it: the place supplies the aura, the
     // caller supplies the upkeep answer, and the time is whatever the caller says it is.
     private static Result tickCultivation(LivingEntity entity, CultivationAttachment spirit,
-                                          Holder<CultivateAction> action, long gameTime) {
-        CultivateAction definition = action.value();
+                                          Holder<Cultivation> action, long gameTime) {
+        Cultivation definition = action.value();
         FormulaContext context = contextOf(entity);
         AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        return CultivationActionService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura,
+        return CultivationMethodService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura,
                 action, definition, gameTime, context, () -> definition.tickCondition().test(entity, context));
     }
 
@@ -4460,17 +4460,17 @@ public final class MxtTestCommands {
         return FormulaContexts.forEntity(entity);
     }
 
-    private static boolean asks(Holder<CultivateAction> action, LivingEntity entity) {
+    private static boolean asks(Holder<Cultivation> action, LivingEntity entity) {
         return CultivationModeService.applicable(entity, action, contextOf(entity));
     }
 
-    private static boolean picks(Optional<Holder<CultivateAction>> chosen, Identifier expected) {
+    private static boolean picks(Optional<Holder<Cultivation>> chosen, Identifier expected) {
         return chosen.map(action -> HolderHelper.id(action).equals(expected)).orElse(false);
     }
 
     private static boolean runs(CultivationAttachment spirit, Identifier expected) {
         return spirit.cultivating()
-                && spirit.cultivateAction().map(action -> HolderHelper.id(action).equals(expected)).orElse(false);
+                && spirit.cultivation().map(action -> HolderHelper.id(action).equals(expected)).orElse(false);
     }
 
     // A pack-named abort carries its own text; every other failure carries none and is told by its enum.

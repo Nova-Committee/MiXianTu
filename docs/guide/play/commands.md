@@ -25,7 +25,7 @@ title: 命令
 | `/mxt resource <id> set <value>` | 设置资源值。 |
 | `/mxt resourcebar [resource] [index]` | 查看资源条的原始当前值、上下限、未截断百分比、上下文、位置和顺序；不填参数时列出全部资源条。 |
 | `/mxt cultivate status` | 查看修炼状态。 |
-| `/mxt cultivate select <action>` | 手动点名一条法门（`mxt:cultivate_action` 的条目）**立刻开练**：正在修另一条就先停掉它，但照样要过"此刻适用"那把筛子，不适用就报「没有一门当下能修的法门」且不动正在跑的那条。它**不落盘**——下一次按修炼键仍然由"筛适用 + `priority`"决定，需要 gamemaster 权限。 |
+| `/mxt cultivate select <action>` | 手动点名一条法门（`mxt:cultivation` 的条目）**立刻开练**：正在修另一条就先停掉它，但照样要过"此刻适用"那把筛子，不适用就报「没有一门当下能修的法门」且不动正在跑的那条。它**不落盘**——下一次按修炼键仍然由"筛适用 + `priority`"决定，需要 gamemaster 权限。 |
 | `/lifespan [<targets>]`（= `/mxt lifespan`） | 查看目标（不填则自己）的寿元账本「剩余 / 上限」，没有账本时读作「未记账」。不需要权限，单位是刻。 |
 | `/lifespan set <targets> <ticks>`（= `/mxt lifespan set …`） | 把两个数一起重写成 `ticks`（必须 ≥ 0，需要 gamemaster 权限）。 |
 | `/lifespan add <targets> <ticks>`（= `/mxt lifespan add …`） | 加减寿元：正数延寿（两个数一起涨）、负数抽寿（只减剩余），需要 gamemaster 权限。 |

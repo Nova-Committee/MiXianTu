@@ -77,7 +77,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.TECHNIQUE, Technique.DIRECT_CODEC);
         register(event, MxtResourceKeys.SKILL_STAGE, SkillStage.DIRECT_CODEC);
-        register(event, MxtResourceKeys.CULTIVATE_ACTION, CultivateAction.DIRECT_CODEC);
+        register(event, MxtResourceKeys.CULTIVATION, Cultivation.DIRECT_CODEC);
         register(event, MxtResourceKeys.ARTIFACT, Artifact.DIRECT_CODEC);
         register(event, MxtResourceKeys.MEDICINAL_PROPERTY, MedicinalProperty.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_HERB, SpiritHerb.DIRECT_CODEC);

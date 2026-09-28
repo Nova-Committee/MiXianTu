@@ -21,7 +21,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationActionService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
@@ -102,7 +102,7 @@ public final class AbilityEventBridge {
         for (Reference<Aura> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).toList()) {
             Holder<Resource> resource = cultivation.value().resource();
             if (!resourceHolder.contains(resource)) continue;
-            if (CultivationActionService.handlesNaturalRegeneration(entity, cultivation)) continue;
+            if (CultivationMethodService.handlesNaturalRegeneration(entity, cultivation)) continue;
             ResourceService.regenerate(resourceHolder, resource, cultivation.value().regen(), 1L,
                     ResourceService.formulaContext(entity, resource, FormulaContext.EMPTY));
         }

@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-import com.iafenvoy.mxt.data.cultivation.CultivateAction;
+import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -19,8 +19,8 @@ import java.util.Optional;
  * Starts a cultivation method: the one named, or the selector's pick. Server only, and silent when nothing can be
  * started - an action has no result to hand back, so the method just does not begin.
  */
-public record StartCultivatingAction(Optional<Holder<CultivateAction>> action) implements EntityAction {
-    public static final MapCodec<StartCultivatingAction> CODEC = CultivateAction.CODEC.optionalFieldOf("action")
+public record StartCultivatingAction(Optional<Holder<Cultivation>> action) implements EntityAction {
+    public static final MapCodec<StartCultivatingAction> CODEC = Cultivation.CODEC.optionalFieldOf("action")
             .xmap(StartCultivatingAction::new, StartCultivatingAction::action);
 
     @Override
@@ -30,7 +30,7 @@ public record StartCultivatingAction(Optional<Holder<CultivateAction>> action) i
         CultivationAttachment running = living.getExistingData(MxtAttachments.CULTIVATION).orElse(null);
         if (running != null && running.cultivating()) return;
         FormulaContext context = FormulaContexts.forEntity(living, ctx.formula());
-        Holder<CultivateAction> chosen = this.action.orElse(null);
+        Holder<Cultivation> chosen = this.action.orElse(null);
         if (chosen == null) chosen = CultivationModeService.select(living, context).orElse(null);
         if (chosen == null) return;
         CultivationModeService.start(living, living.getData(MxtAttachments.CULTIVATION), chosen, context);

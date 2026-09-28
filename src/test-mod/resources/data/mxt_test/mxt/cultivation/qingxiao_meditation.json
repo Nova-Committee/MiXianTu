@@ -5,5 +5,5 @@
   "aura_costs": {},
   "aura_gains": [{ "id": "mxt_test:qi", "amount": "1 + level * 0.05" }],
   "cooldown": 0,
-  "tick_action": { "type": "mxt:apply_effect", "effect": "minecraft:night_vision", "duration_ticks": 40 }
+  "cultivate_action": { "type": "mxt:apply_effect", "effect": "minecraft:night_vision", "duration_ticks": 40 }
 }

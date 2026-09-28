@@ -29,5 +29,5 @@
   "absorb_amount": "2",
   "abort_reason": "the partner is gone",
   "costs": [{ "id": "mxt_test:water_power", "amount": 1 }],
-  "tick_action": { "type": "mxt:add_resource", "resource": "mxt_test:sword_mastery", "amount": "1" }
+  "cultivate_action": { "type": "mxt:add_resource", "resource": "mxt_test:sword_mastery", "amount": "1" }
 }
