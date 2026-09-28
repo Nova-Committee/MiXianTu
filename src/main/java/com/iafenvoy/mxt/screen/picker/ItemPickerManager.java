@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
@@ -53,40 +54,27 @@ public final class ItemPickerManager {
         registerSingle(Registries.BLOCK, holder -> plain(holder.value().asItem().getDefaultInstance(), holder));
 
         // Item-shaped definitions: the row is the matched item, named by the definition's own language key.
-        registerMatcher(MxtResourceKeys.ITEM_AURA, ItemAura::entries);
-        registerMatcher(MxtResourceKeys.CURRENCY, CurrencyValue::items);
-        registerMatcher(MxtResourceKeys.SPIRIT_HERB, SpiritHerb::entries);
-        registerMatcher(MxtResourceKeys.ITEM_BINDING, ItemBinding::entries);
-        registerMatcher(MxtResourceKeys.WEAPON_BINDING, WeaponBinding::entries);
-        register(MxtResourceKeys.PILL_BINDING, (holder, access) -> {
+        registerMatcher(MxtResourceKeys.ITEM_AURA);
+        registerMatcher(MxtResourceKeys.CURRENCY);
+        registerMatcher(MxtResourceKeys.SPIRIT_HERB);
+        registerMatcher(MxtResourceKeys.ITEM_BINDING);
+        registerMatcher(MxtResourceKeys.WEAPON_BINDING);
+        register(MxtResourceKeys.PILL_BINDING, (holder, _) -> {
             List<PickerItem> items = new ArrayList<>();
-            items.add(described(componentStack(MxtItems.PILL.toStack(), MxtDataComponents.PILL,
-                    PillComponent.ofBinding(holder)), holder));
+            items.add(described(componentStack(MxtItems.PILL.toStack(), MxtDataComponents.PILL, PillComponent.ofBinding(holder)), holder));
             for (ItemStack stack : stackItems(holder.value().entries()))
                 items.add(new PickerItem(stack, names(stack.getHoverName(), holder.value().name(), idName(HolderHelper.idOrNull(holder)))));
             return items;
         });
-        registerMatcher(MxtResourceKeys.TOOL_BINDING, ToolBinding::entries);
-        registerMatcher(MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding::entries);
-        registerMatcher(MxtResourceKeys.ARTIFACT, Artifact::entries);
+        registerMatcher(MxtResourceKeys.TOOL_BINDING);
+        registerMatcher(MxtResourceKeys.BLUEPRINT_BINDING);
+        registerMatcher(MxtResourceKeys.ARTIFACT);
 
         // Definitions carried by a dedicated item: written onto the stack, and the definition's own name wins.
-        registerSingle(MxtResourceKeys.CONTRACT_TYPE, holder -> described(
-                componentStack(MxtItems.CONTRACT_SCROLL.toStack(), MxtDataComponents.CONTRACT_SCROLL,
-                        new ContractScrollComponent(Optional.of(holder))),
-                holder));
-        registerSingle(MxtResourceKeys.SECRET_REALM, holder -> described(
-                componentStack(MxtItems.SECRET_REALM_TOKEN.toStack(), MxtDataComponents.SECRET_REALM_TOKEN,
-                        new SecretRealmTokenComponent(Optional.of(holder))),
-                holder));
-        registerSingle(MxtResourceKeys.FORMATION, holder -> described(
-                componentStack(MxtItems.FORMATION_PLATE.toStack(), MxtDataComponents.FORMATION_PLATE,
-                        new FormationPlateComponent(List.of(), Optional.of(holder))),
-                holder));
-        registerSingle(MxtResourceKeys.TALISMAN, holder -> described(
-                componentStack(MxtItems.TALISMAN.toStack(), MxtDataComponents.TALISMAN,
-                        new TalismanComponent(List.of(holder), TriggerMode.FIRE)),
-                holder));
+        registerSingle(MxtResourceKeys.CONTRACT_TYPE, holder -> described(componentStack(MxtItems.CONTRACT_SCROLL.toStack(), MxtDataComponents.CONTRACT_SCROLL, new ContractScrollComponent(Optional.of(holder))), holder));
+        registerSingle(MxtResourceKeys.SECRET_REALM, holder -> described(componentStack(MxtItems.SECRET_REALM_TOKEN.toStack(), MxtDataComponents.SECRET_REALM_TOKEN, new SecretRealmTokenComponent(Optional.of(holder))), holder));
+        registerSingle(MxtResourceKeys.FORMATION, holder -> described(componentStack(MxtItems.FORMATION_PLATE.toStack(), MxtDataComponents.FORMATION_PLATE, new FormationPlateComponent(List.of(), Optional.of(holder))), holder));
+        registerSingle(MxtResourceKeys.TALISMAN, holder -> described(componentStack(MxtItems.TALISMAN.toStack(), MxtDataComponents.TALISMAN, new TalismanComponent(List.of(holder), TriggerMode.FIRE)), holder));
         // A technique has no item of its own: the row is the carrier the mod generates for it, which is the item
         // the declaration names or the jade slip.
         registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
@@ -99,9 +87,7 @@ public final class ItemPickerManager {
                     .orElse(Component.translatable("screen.mxt.alchemy.no_quality"));
             return List.of(new PickerItem(stack, names(name, quality, idName(HolderHelper.idOrNull(holder)))));
         });
-        registerSingle(MxtResourceKeys.ALCHEMY_WALL_MATERIAL, holder -> described(
-                componentStack(MxtBlocks.ALCHEMY_FURNACE_CASING.toStack(), MxtDataComponents.ALCHEMY_WALL_MATERIAL, holder),
-                holder));
+        registerSingle(MxtResourceKeys.ALCHEMY_WALL_MATERIAL, holder -> described(componentStack(MxtBlocks.ALCHEMY_FURNACE_CASING.toStack(), MxtDataComponents.ALCHEMY_WALL_MATERIAL, holder), holder));
 
         // Auras have no item of their own, so one stand-in item carries whatever the definition is called.
         registerSingle(MxtResourceKeys.AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
@@ -109,9 +95,7 @@ public final class ItemPickerManager {
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
         // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
-        registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(
-                MxtItems.IDENTIFICATION_MIRROR.toStack(), holder,
-                ItemQualityService.coloredName(holder, holder.value().name())));
+        registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, ItemQualityService.coloredName(holder, holder.value().name())));
     }
 
     // Wildcard key is unwidened here because that is the shape the picker passes around; nothing reads the entry type back out.
@@ -157,7 +141,7 @@ public final class ItemPickerManager {
     }
 
     public static <T> void registerSingle(ResourceKey<Registry<T>> key, Function<Holder<T>, PickerItem> provider) {
-        register(key, (holder, access) -> List.of(provider.apply(holder)));
+        register(key, (holder, _) -> List.of(provider.apply(holder)));
     }
 
     // The provider is what a row needs when it has to resolve a second registry - a technique's carrier item is
@@ -167,11 +151,15 @@ public final class ItemPickerManager {
     }
 
     public static <T> void register(ResourceKey<Registry<T>> key, Function<Holder<T>, List<PickerItem>> provider) {
-        PROVIDERS.add(new ItemProvider<>(key, (holder, access) -> provider.apply(holder)));
+        PROVIDERS.add(new ItemProvider<>(key, (holder, _) -> provider.apply(holder)));
     }
 
     public static <T> void register(ResourceKey<Registry<T>> key, BiFunction<Holder<T>, Provider, List<PickerItem>> provider) {
         PROVIDERS.add(new ItemProvider<>(key, provider));
+    }
+
+    private static <T extends ItemMatcher> void registerMatcher(ResourceKey<Registry<T>> key) {
+        registerMatcher(key, ItemMatcher::entries);
     }
 
     private static <T> void registerMatcher(ResourceKey<Registry<T>> key, Function<T, List<Entry>> entries) {

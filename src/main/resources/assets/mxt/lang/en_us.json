@@ -144,6 +144,8 @@
   "actionbar.mxt.ability.failure.no_charges": "it has no charges left",
   "actionbar.mxt.ability.failure.permission_denied": "you may not cast it",
   "actionbar.mxt.ability.failure.carried_not_instant": "an ability carried by an item must be instant",
+  "actionbar.mxt.ability.failure.disabled": "that ability is disabled",
+  "actionbar.mxt.ability.failure.server_only": "it can only be cast on the server",
   "actionbar.mxt.ability.failure.cancelled": "the cast was cancelled",
   "actionbar.mxt.ability.failure.invalid_formula": "its numbers are misconfigured",
   "actionbar.mxt.ability.failure.not_owned": "that artifact does not answer to you",

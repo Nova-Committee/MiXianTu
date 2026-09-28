@@ -49,6 +49,15 @@
 node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=require('./src/main/resources/assets/mxt/lang/en_us.json');const k=o=>Object.keys(o).sort();const m=k(a).filter(x=>!(x in b)),e=k(b).filter(x=>!(x in a));console.log(m.length||e.length?'DIFF zh-only='+m+' en-only='+e:'keys identical ('+k(a).length+')')"
 ```
 
+**上面那条只保证两份键集合一致，不保证"该有翻译的文本都有翻译"。** 漏掉的键用 **Where Are My Translations**（`where-are-my-translations`）查：它是**开发环境专用**依赖（`build.gradle` 里那句 `runtimeOnly "curse.maven:where-are-my-translations-…"`，只进 `runTestClient`，不打进发行包），挂在客户端语言系统上，把查不到翻译的键导出成 JSON。跑一次 `runTestClient`（实机仍需先问，见第 1 节第 4 条）后看 `run-test-client/config/wamt/exports/`，关注两个文件：
+
+- `mxt/en_us.json` —— **游戏里显示过、但两份 lang 都没有**的键（界面上直接显示成 `item.mxt.xxx` 这种原文）。它**只在真正显示过一次时才记录**，没打开过的界面查不到，所以它只能当实机补漏，代替不了上面那条静态比对。
+- `mxt/zh_cn.json` —— **`en_us` 有、`zh_cn` 没覆盖**的键（缺键，或两边写着一模一样的文案）。
+
+`zh_cn.json` 那一份是"缺键"和"两边写得一样"混在一起的，**逐条看过再动手**：纯格式串（`%s %s`、`%ss`）与命令字面量（`/realm`、`/talisman`）在两份文件里本来就该一模一样，不是漏翻，别给它们编中文。命名规律上，`item.*` / `block.*` / `screen.*` / `command.*` 这些才是有实义的文案。
+
+**每次加 / 改面向玩家的文案（界面、命令、提示、tooltip、配置项）之后都跑一次看一眼**，把里面出现的键补进两份 lang。两个注意点：导出目录按"键里最先出现的模组 id"分，测试包的键可能落在 `mxt/` 也可能落在 `mxt_test/`，两个都看；导出文件是**增量重写**的，上一次留下的旧文件不会被删掉，别把旧内容当成本次结论。
+
 ## 3. 代码地图
 
 | 要改什么 | 去哪 |
@@ -120,6 +129,7 @@ node -e "const a=require('./src/main/resources/assets/mxt/lang/zh_cn.json'),b=re
 | 新增 / 改名 / 删除数据包字段 | 本仓库 `docs/数据包格式.md` → 文档站仓库的对应页（中英各一份）→ 测试包示例（README 与文档站首页的**介绍列**只在模块范围变化时才改） |
 | 公开 API / KubeJS 全局对象 | 本仓库 `docs/guide/kubejs/api.md` → 文档站仓库的 KubeJS 页（中英） |
 | 新命令 / 新配置项 | 本仓库 `docs/guide/play/commands.md` → 文档站仓库的命令页与功能页（中英）+ 两份 lang（含 `config.mxt.server.*.tooltip`） |
+| 新增 / 改动面向玩家的文案（界面 / 提示 / tooltip / 配置） | 两份 lang，再跑一次 `runTestClient` 看 `run-test-client/config/wamt/exports/` 有没有漏掉的键（见第 2 节） |
 | 模块完成度变化 | README 两张表与文档站两页的**状态列**（**四处**保持一致，完成度以代码为准） |
 | 推翻 / 关闭了研究里的设计 | `research/audit/*.md` 标注"已于 <日期> 关闭 / 修正"，并写清新行为 |
 | 改了数据包语义（比如某倍率改由管线消费） | 文档站仓库的技术说明、公式变量页与相关教程（中英），**教程里的旧写法必须改掉**，否则包会重复相乘 |

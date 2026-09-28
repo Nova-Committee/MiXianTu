@@ -159,6 +159,9 @@ dependencies {
 //    runtimeOnly "dev.ftb.mods:ftb-library-neoforge:26.1.2.8"
 //    runtimeOnly "dev.ftb.mods:ftb-teams-neoforge:26.1.2.4"
 //    runtimeOnly "dev.ftb.mods:ftb-chunks-neoforge:26.1.2.8"
+
+    //Tools
+    runtimeOnly "curse.maven:where-are-my-translations-1454778:8997277"
 }
 
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {

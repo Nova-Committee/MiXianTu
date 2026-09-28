@@ -144,6 +144,8 @@
   "actionbar.mxt.ability.failure.no_charges": "次数已经用完",
   "actionbar.mxt.ability.failure.permission_denied": "没有施放它的权限",
   "actionbar.mxt.ability.failure.carried_not_instant": "物品携带的技能不能是引导或需蓄力的",
+  "actionbar.mxt.ability.failure.disabled": "这门技能已被禁用",
+  "actionbar.mxt.ability.failure.server_only": "只能在服务端发动",
   "actionbar.mxt.ability.failure.cancelled": "施放被取消了",
   "actionbar.mxt.ability.failure.invalid_formula": "这门技能的数值配置有误",
   "actionbar.mxt.ability.failure.not_owned": "这件法器不认你",
