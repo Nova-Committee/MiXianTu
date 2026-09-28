@@ -17,7 +17,7 @@ public final class TriggerSignals {
     public static final Identifier EQUIP = id("equip");
     public static final Identifier DEATH = id("death");
     public static final Identifier BREAKTHROUGH = id("breakthrough");
-    public static final Identifier TECHNIQUE_STAGE = id("technique_stage");
+    public static final Identifier PROGRESSION_LEVEL = id("progression_level");
 
     // Ported vanilla triggers: the signal keeps the vanilla id, but MiXianTu's own hooks publish it instead of
     // the call sites vanilla fires from.

@@ -123,7 +123,7 @@ public final class TechniquePanelScreen extends Screen {
         SpiritIdentityAttachment spirit = this.minecraft.player.getData(MxtAttachments.SPIRIT_IDENTITY);
         ResourceHolderAttachment resources = this.minecraft.player.getData(MxtAttachments.RESOURCE_HOLDER);
         Mode mode = MxtClientConfig.INSTANCE.techniques.progressMode.getValue();
-        List<Entry> rows = TechniqueProgress.rows(spirit, resources, FormulaContexts.forEntity(this.minecraft.player));
+        List<Entry> rows = TechniqueProgress.rows(spirit, this.minecraft.player.getData(MxtAttachments.PROGRESSION), resources, FormulaContexts.forEntity(this.minecraft.player));
         this.empty = rows.isEmpty();
         List<TechniqueList.RowEntry> entries = new ArrayList<>(rows.size());
         for (Entry row : rows) entries.add(new TechniqueList.RowEntry(row, TechniqueProgress.progress(row, mode)));
@@ -221,7 +221,7 @@ public final class TechniquePanelScreen extends Screen {
                 graphics.text(font, name, textX, rowTop + LABEL_OFFSET, TEXT_COLOR, false);
                 if (levelWidth > 0)
                     graphics.text(font, level, textX + nameWidth + NAME_GAP, rowTop + LABEL_OFFSET,
-                            this.row.hasStage() ? TEXT_COLOR : UNKNOWN_COLOR, false);
+                            this.row.hasLevel() ? TEXT_COLOR : UNKNOWN_COLOR, false);
                 graphics.text(font, value, valueX, rowTop + LABEL_OFFSET, TEXT_COLOR, false);
 
                 int barWidth = Math.max(1, rowRight - textX);
@@ -251,9 +251,9 @@ public final class TechniquePanelScreen extends Screen {
             // The level's own display name when the pack provides one, its rank otherwise; the name and the level
             // share one line, so both are measured before either is drawn.
             private Component levelText() {
-                if (!this.row.hasStage()) return Component.translatable("screen.mxt.technique_panel.level_unknown");
-                assert this.row.stage() != null;
-                Component name = DefinitionText.name(this.row.stage(), "skill_stage");
+                if (!this.row.hasLevel()) return Component.translatable("screen.mxt.technique_panel.level_unknown");
+                assert this.row.level() != null;
+                Component name = DefinitionText.name(this.row.level(), "progression");
                 Component label = DefinitionText.resolved(name)
                         ? name : Component.literal(Integer.toString(this.row.rank() + 1));
                 return Component.translatable("screen.mxt.technique_panel.level", label,
@@ -261,7 +261,7 @@ public final class TechniquePanelScreen extends Screen {
             }
 
             private Component valueText() {
-                if (!this.row.hasStage() || !this.row.hasMastery())
+                if (!this.row.hasLevel() || !this.row.hasMastery())
                     return Component.translatable("screen.mxt.technique_panel.value_unknown");
                 if (!this.row.hasNextLevel()) return Component.translatable("screen.mxt.technique_panel.value_max");
                 return Component.translatable("screen.mxt.technique_panel.value",
@@ -277,8 +277,8 @@ public final class TechniquePanelScreen extends Screen {
             // A row has no room for the level id or the tier, so both are spelled out here.
             private List<Component> tooltip() {
                 MutableComponent line = this.nameText(Minecraft.getInstance().font, Integer.MAX_VALUE).copy();
-                if (this.row.hasStage())
-                    line.append(" ").append(Component.literal(HolderHelper.id(this.row.stage()).toString())
+                if (this.row.hasLevel())
+                    line.append(" ").append(Component.literal(HolderHelper.id(this.row.level()).toString())
                             .withStyle(ChatFormatting.DARK_GRAY));
                 return List.of(line, Component.translatable("screen.mxt.technique_panel.grade",
                         this.gradeText()).withStyle(ChatFormatting.GRAY));

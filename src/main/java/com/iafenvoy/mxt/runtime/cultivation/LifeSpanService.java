@@ -237,7 +237,7 @@ public final class LifeSpanService {
         }
         if (!settings.keepTechniques.getValue()) {
             entity.getData(MxtAttachments.SPIRIT_IDENTITY).setLearnedTechniques(List.of());
-            entity.getData(MxtAttachments.SPIRIT_IDENTITY).setTechniqueStages(Map.of());
+            entity.getData(MxtAttachments.PROGRESSION).clear();
         }
         if (!settings.keepSoul.getValue()) stats.resetSoul();
         CultivationGrantService.recalculate(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY),

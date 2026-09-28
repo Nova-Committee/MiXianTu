@@ -13,6 +13,6 @@
     }
   ],
   "granted_abilities": ["mxt_test:water_shield"],
-  "default_stage": "mxt_test:azure_water_1",
+  "default_level": "mxt_test:azure_water_1",
   "mastery_resource": "mxt_test:water_power"
 }

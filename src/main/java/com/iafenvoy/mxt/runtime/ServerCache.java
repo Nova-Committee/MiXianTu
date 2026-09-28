@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.cultivation.SkillStage;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
@@ -47,8 +47,8 @@ public final class ServerCache {
 
     private final MinecraftServer server;
     private ChainCache<RealmStage> realmChains = ChainCache.empty();
-    private Map<Identifier, Identifier> skillByStage = new LinkedHashMap<>();
-    private Map<Identifier, Integer> rankByStage = new LinkedHashMap<>();
+    private Map<Identifier, Identifier> headByLevel = new LinkedHashMap<>();
+    private Map<Identifier, Integer> rankByLevel = new LinkedHashMap<>();
     private Map<Identifier, List<Reference<TriggerRule>>> triggerRulesBySignal = Map.of();
     private List<String> problems = List.of();
 
@@ -100,13 +100,13 @@ public final class ServerCache {
         List<String> problems = new ArrayList<>();
         this.rebuildRealmChains(problems);
         this.rebuildTriggerRules(problems);
-        this.rebuildSkillChains(problems);
+        this.rebuildProgressionChains(problems);
         this.validateQualityLadders(problems);
         this.rebuildArtifacts(problems);
         this.problems = List.copyOf(problems);
         if (problems.isEmpty()) {
-            MiXianTu.LOGGER.info("Datapack validation passed: {} cultivation realms, {} skill stages, {} trigger rules",
-                    this.realmChains.size(), this.skillByStage.size(),
+            MiXianTu.LOGGER.info("Datapack validation passed: {} cultivation realms, {} progression levels, {} trigger rules",
+                    this.realmChains.size(), this.headByLevel.size(),
                     this.triggerRulesBySignal.values().stream().mapToInt(List::size).sum());
         } else {
             MiXianTu.LOGGER.warn("Found {} datapack validation problem(s):\n{}", problems.size(), String.join("\n", problems));
@@ -232,25 +232,21 @@ public final class ServerCache {
                 && this.rankForRealm(current).orElse(-1) >= this.rankForRealm(required).orElse(Integer.MAX_VALUE);
     }
 
-    public Optional<Identifier> skillForStage(Identifier stage) {
-        return Optional.ofNullable(this.skillByStage.get(stage));
+    public boolean containsLevel(Identifier level) {
+        return this.headByLevel.containsKey(level);
     }
 
-    public boolean containsStage(Identifier stage) {
-        return this.skillByStage.containsKey(stage);
-    }
-
-    public Optional<Integer> rankForStage(Identifier stage) {
-        return Optional.ofNullable(this.rankByStage.get(stage));
+    public Optional<Integer> rankForLevel(Identifier level) {
+        return Optional.ofNullable(this.rankByLevel.get(level));
     }
 
     /**
-     * The comparison every stage-gated rule uses.
+     * The comparison every level-gated rule uses.
      */
-    public boolean isStageAtLeast(Identifier current, Identifier required) {
-        Identifier currentSkill = this.skillByStage.get(current);
-        return currentSkill != null && currentSkill.equals(this.skillByStage.get(required))
-                && this.rankByStage.getOrDefault(current, -1) >= this.rankByStage.getOrDefault(required, Integer.MAX_VALUE);
+    public boolean isLevelAtLeast(Identifier current, Identifier required) {
+        Identifier chain = this.headByLevel.get(current);
+        return chain != null && chain.equals(this.headByLevel.get(required))
+                && this.rankByLevel.getOrDefault(current, -1) >= this.rankByLevel.getOrDefault(required, Integer.MAX_VALUE);
     }
 
     // The one thing a quality tier cannot check about itself, because it needs the whole registry: a next tier
@@ -351,45 +347,31 @@ public final class ServerCache {
         }
     }
 
-    // A chain is discovered from its next_stage links, not from the level a definition enters at, because
-    // several techniques may share a skill and enter it at different levels. A chain that cannot be walked is
-    // reported and left out, never indexed partially.
-    private void rebuildSkillChains(List<String> problems) {
-        Map<Identifier, SkillStage> stages = new LinkedHashMap<>();
-        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.SKILL_STAGE)
+    // A chain is its next_level links, not the level a definition enters at: several owners may walk one chain
+    // and enter it at different levels. A chain that cannot be walked is reported and left out, never indexed
+    // partially.
+    private void rebuildProgressionChains(List<String> problems) {
+        Map<Identifier, Progression> stages = new LinkedHashMap<>();
+        MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.PROGRESSION)
                 .forEach(holder -> stages.put(holder.key().identifier(), holder.value()));
         Map<Identifier, Identifier> previous = new LinkedHashMap<>();
-        for (Entry<Identifier, SkillStage> entry : stages.entrySet()) {
-            Identifier next = entry.getValue().nextStage().map(HolderHelper::id).orElse(null);
+        for (Entry<Identifier, Progression> entry : stages.entrySet()) {
+            Identifier next = entry.getValue().nextLevel().map(HolderHelper::id).orElse(null);
             if (next == null) continue;
-            SkillStage target = stages.get(next);
-            if (target == null) {
-                problems.add(problem(MxtResourceKeys.SKILL_STAGE, entry.getKey(), "next_stage " + next + " is not a skill stage"));
-                continue;
-            }
-            if (!target.skill().equals(entry.getValue().skill())) {
-                problems.add(problem(MxtResourceKeys.SKILL_STAGE, entry.getKey(),
-                        "next_stage " + next + " belongs to skill " + target.skill() + " instead of " + entry.getValue().skill()));
+            if (!stages.containsKey(next)) {
+                problems.add(problem(MxtResourceKeys.PROGRESSION, entry.getKey(), "next_level " + next + " is not a progression"));
                 continue;
             }
             Identifier other = previous.putIfAbsent(next, entry.getKey());
             if (other != null && !other.equals(entry.getKey()))
-                problems.add(problem(MxtResourceKeys.SKILL_STAGE, next,
+                problems.add(problem(MxtResourceKeys.PROGRESSION, next,
                         "follows both " + other + " and " + entry.getKey()));
         }
         Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
         Map<Identifier, Integer> ranks = new LinkedHashMap<>();
-        Map<Identifier, Identifier> firstBySkill = new LinkedHashMap<>();
         Set<Identifier> unwalked = new LinkedHashSet<>();
         for (Identifier first : stages.keySet()) {
             if (previous.containsKey(first)) continue;
-            Identifier known = firstBySkill.putIfAbsent(stages.get(first).skill(), first);
-            if (known != null) {
-                problems.add(problem(MxtResourceKeys.SKILL_STAGE, first,
-                        "shares skill " + stages.get(first).skill() + " with the first stage " + known));
-                unwalked.add(first);
-                continue;
-            }
             Map<Identifier, Identifier> chain = new LinkedHashMap<>();
             Map<Identifier, Integer> chainRanks = new LinkedHashMap<>();
             Identifier current = first;
@@ -398,24 +380,24 @@ public final class ServerCache {
             String failure = null;
             while (current != null) {
                 if (chain.containsKey(current) || ranks.containsKey(current)) {
-                    failure = "chain is cyclic, or joins another chain, at stage " + current;
+                    failure = "chain is cyclic, or joins another chain, at level " + current;
                     break;
                 }
                 // A later level may not ask for less mastery than an earlier one. Only a constant can be
                 // compared: a formula provider that drops only makes advancement climb faster.
                 if (stages.get(current).mastery() instanceof Constant(double mastery)) {
                     if (mastery < lastMastery) {
-                        failure = "lowers its mastery requirement at stage " + current;
+                        failure = "lowers its mastery requirement at level " + current;
                         break;
                     }
                     lastMastery = mastery;
                 }
-                chain.put(current, stages.get(current).skill());
+                chain.put(current, first);
                 chainRanks.put(current, rank++);
-                current = stages.get(current).nextStage().map(HolderHelper::id).orElse(null);
+                current = stages.get(current).nextLevel().map(HolderHelper::id).orElse(null);
             }
             if (failure != null) {
-                problems.add(problem(MxtResourceKeys.SKILL_STAGE, first, failure));
+                problems.add(problem(MxtResourceKeys.PROGRESSION, first, failure));
                 unwalked.addAll(chain.keySet());
                 unwalked.add(current);
                 continue;
@@ -426,27 +408,26 @@ public final class ServerCache {
         }
         for (Identifier id : stages.keySet())
             if (!ranks.containsKey(id) && !unwalked.contains(id))
-                problems.add(problem(MxtResourceKeys.SKILL_STAGE, id,
-                        "cannot be reached from a first stage: the chain is cyclic or split"));
-        this.validateTechniqueChains(resolved, stages, problems);
-        this.skillByStage = resolved;
-        this.rankByStage = ranks;
+                problems.add(problem(MxtResourceKeys.PROGRESSION, id,
+                        "cannot be reached from a first level: the chain is cyclic or split"));
+        this.validateTechniqueLevels(resolved, stages, problems);
+        this.headByLevel = resolved;
+        this.rankByLevel = ranks;
     }
 
     // A technique annotates one chain: a holder starts at its entry level and may be configured for every level
     // after it. A partially annotated chain is reported, so nobody reaches a level nothing describes.
-    private void validateTechniqueChains(Map<Identifier, Identifier> resolved, Map<Identifier, SkillStage> stages,
+    private void validateTechniqueLevels(Map<Identifier, Identifier> resolved, Map<Identifier, Progression> stages,
                                          List<String> problems) {
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TECHNIQUE).forEach(holder -> {
             Technique technique = holder.value();
-            Identifier entry = technique.defaultStage().map(HolderHelper::id).orElse(null);
+            Identifier entry = technique.defaultLevel().map(HolderHelper::id).orElse(null);
             if (entry == null) return;
             Identifier techniqueId = holder.key().identifier();
-            Identifier skill = resolved.get(entry);
-            if (skill == null) {
+            if (resolved.get(entry) == null) {
                 // A stage that exists but was not indexed belongs to a chain that was already reported.
                 if (!stages.containsKey(entry))
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "enters the unknown skill stage " + entry));
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "enters the unknown progression level " + entry));
                 return;
             }
             Set<Identifier> configured = new LinkedHashSet<>();
@@ -455,30 +436,24 @@ public final class ServerCache {
             Identifier current = entry;
             while (current != null) {
                 if (!reached.add(current)) {
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks a cyclic skill chain at stage " + current));
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks a cyclic progression chain at level " + current));
                     return;
                 }
                 if (!entry.equals(current) && !configured.contains(current)) {
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "does not configure the skill stage " + current));
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "does not configure the progression level " + current));
                     return;
                 }
-                Identifier stageSkill = resolved.get(current);
-                if (!skill.equals(stageSkill)) {
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId,
-                            "walks stage " + current + " of skill " + stageSkill + " instead of " + skill));
+                Progression level = stages.get(current);
+                if (level == null) {
+                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks the unknown progression level " + current));
                     return;
                 }
-                SkillStage stage = stages.get(current);
-                if (stage == null) {
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks the unknown skill stage " + current));
-                    return;
-                }
-                current = stage.nextStage().map(HolderHelper::id).orElse(null);
+                current = level.nextLevel().map(HolderHelper::id).orElse(null);
             }
             for (Identifier configuredStage : configured)
                 if (!reached.contains(configuredStage))
                     problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId,
-                            "configures skill stage " + configuredStage + ", which it can never reach from " + entry));
+                            "configures progression level " + configuredStage + ", which it can never reach from " + entry));
         });
     }
 }

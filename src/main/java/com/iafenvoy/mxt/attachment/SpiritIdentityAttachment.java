@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.cultivation.SkillStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
@@ -16,18 +15,16 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * Persisted roots, physiques, learned techniques and their mastery levels. A technique's level is stored only once
- * it has advanced, so a data pack that moves the entry level moves everyone who never advanced. The two
- * {@code disabled_*} sets are the storage half of the enable/disable module and name things the entity still holds,
- * so held and active are different questions: ownership reads {@link #spiritRoots()}, every effect reads
- * {@link #activeSpiritRoots()}.
+ * Persisted roots, physiques and learned techniques; how far one has climbed lives in the progression attachment.
+ * The two {@code disabled_*} sets are the storage half of the enable/disable module and name things the entity
+ * still holds, so held and active are different questions: ownership reads {@link #spiritRoots()}, every effect
+ * reads {@link #activeSpiritRoots()}.
  */
 public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     public static final MapCodec<SpiritIdentityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.list(SpiritRoot.CODEC).lenientOptionalFieldOf("spirit_roots", List.of()).forGetter(SpiritIdentityAttachment::spiritRoots),
             CollectionCodecs.list(Physique.CODEC).lenientOptionalFieldOf("physiques", List.of()).forGetter(SpiritIdentityAttachment::physiques),
             CollectionCodecs.list(Technique.CODEC).lenientOptionalFieldOf("learned_techniques", List.of()).forGetter(SpiritIdentityAttachment::learnedTechniques),
-            CollectionCodecs.map(Technique.CODEC, SkillStage.CODEC).lenientOptionalFieldOf("technique_stages", Map.of()).forGetter(SpiritIdentityAttachment::techniqueStages),
             CollectionCodecs.set(SpiritRoot.CODEC).lenientOptionalFieldOf("disabled_spirit_roots", Set.of()).forGetter(SpiritIdentityAttachment::disabledSpiritRoots),
             CollectionCodecs.set(Physique.CODEC).lenientOptionalFieldOf("disabled_physiques", Set.of()).forGetter(SpiritIdentityAttachment::disabledPhysiques),
             CollectionCodecs.map(RealmStage.CODEC, Codec.INT).lenientOptionalFieldOf("minor_stage_records", Map.of()).forGetter(SpiritIdentityAttachment::minorStageRecords)
@@ -36,25 +33,22 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
     private final List<Holder<SpiritRoot>> spiritRoots;
     private final List<Holder<Physique>> physiques;
     private final List<Holder<Technique>> learnedTechniques;
-    private final Map<Holder<Technique>, Holder<SkillStage>> techniqueStages;
     private final Set<Holder<SpiritRoot>> disabledSpiritRoots;
     private final Set<Holder<Physique>> disabledPhysiques;
     private final Map<Holder<RealmStage>, Integer> minorStageRecords;
 
     public SpiritIdentityAttachment() {
-        this(List.of(), List.of(), List.of(), Map.of(), Set.of(), Set.of(), Map.of());
+        this(List.of(), List.of(), List.of(), Set.of(), Set.of(), Map.of());
     }
 
     private SpiritIdentityAttachment(List<Holder<SpiritRoot>> spiritRoots, List<Holder<Physique>> physiques,
                                      List<Holder<Technique>> learnedTechniques,
-                                     Map<Holder<Technique>, Holder<SkillStage>> techniqueStages,
                                      Set<Holder<SpiritRoot>> disabledSpiritRoots,
                                      Set<Holder<Physique>> disabledPhysiques,
                                      Map<Holder<RealmStage>, Integer> minorStageRecords) {
         this.spiritRoots = new LinkedList<>(spiritRoots);
         this.physiques = new LinkedList<>(physiques);
         this.learnedTechniques = new LinkedList<>(learnedTechniques);
-        this.techniqueStages = new LinkedHashMap<>(techniqueStages);
         this.disabledSpiritRoots = new LinkedHashSet<>(disabledSpiritRoots);
         this.disabledPhysiques = new LinkedHashSet<>(disabledPhysiques);
         this.minorStageRecords = new LinkedHashMap<>(minorStageRecords);
@@ -110,27 +104,6 @@ public final class SpiritIdentityAttachment extends ShouldSyncAttachment {
 
     public List<Holder<Technique>> learnedTechniques() {
         return this.learnedTechniques;
-    }
-
-    public Map<Holder<Technique>, Holder<SkillStage>> techniqueStages() {
-        return this.techniqueStages;
-    }
-
-    // Null while the holder still stands on the technique's entry level.
-    public @Nullable Holder<SkillStage> techniqueStage(Holder<Technique> technique) {
-        return this.techniqueStages.get(technique);
-    }
-
-    public void setTechniqueStage(Holder<Technique> technique, Holder<SkillStage> stage) {
-        if (technique == null || stage == null) return;
-        this.techniqueStages.put(technique, stage);
-        this.markDirty();
-    }
-
-    public void setTechniqueStages(Map<Holder<Technique>, Holder<SkillStage>> values) {
-        this.techniqueStages.clear();
-        this.techniqueStages.putAll(values);
-        this.markDirty();
     }
 
     public void setSpiritRoots(List<Holder<SpiritRoot>> values) {

@@ -20,7 +20,7 @@ import java.util.Set;
 
 /**
  * The one place a quality ladder is read. A ladder is not declared anywhere: it is walked out of the tiers' own
- * {@code next} links, the same way a skill chain is walked out of {@code next_stage}, and its name is the
+ * {@code next} links, the same way a progression chain is walked out of {@code next_level}, and its name is the
  * {@code quality} some tier on it writes. That name reaches the tiers below it, so a ladder only has to be named
  * once; the tier nothing points at is the entry, and every tier after it is one step higher.
  *

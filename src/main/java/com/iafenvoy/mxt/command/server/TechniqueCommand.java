@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.data.cultivation.SkillStage;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -115,11 +115,11 @@ public final class TechniqueCommand {
         List<Identifier> removed = new ArrayList<>();
 
         List<Holder<Technique>> techniques = prune(identity.learnedTechniques(), removed);
-        Map<Holder<Technique>, Holder<SkillStage>> stages = pruneStages(identity.techniqueStages(), removed);
+        Map<Identifier, Holder<Progression>> levels = pruneLevels(player.getData(MxtAttachments.PROGRESSION).levels(), removed);
 
         if (!dryRun) {
             identity.setLearnedTechniques(techniques);
-            identity.setTechniqueStages(stages);
+            player.getData(MxtAttachments.PROGRESSION).setLevels(levels);
         }
 
         int count = removed.size();
@@ -177,15 +177,16 @@ public final class TechniqueCommand {
         return kept;
     }
 
-    public static Map<Holder<Technique>, Holder<SkillStage>> pruneStages(Map<Holder<Technique>, Holder<SkillStage>> values, List<Identifier> removed) {
-        Map<Holder<Technique>, Holder<SkillStage>> kept = new LinkedHashMap<>();
-        for (Entry<Holder<Technique>, Holder<SkillStage>> entry : values.entrySet()) {
-            Holder<Technique> technique = entry.getKey();
-            if (!resolves(technique) || !resolvesStage(entry.getValue())) {
-                removed.add(HolderHelper.id(technique));
+    // Only the ids this sweep collected are dropped, so a progression owned by something else survives the
+    // technique repair; a level whose definition is gone is stale for everyone and goes too.
+    public static Map<Identifier, Holder<Progression>> pruneLevels(Map<Identifier, Holder<Progression>> values, List<Identifier> removed) {
+        Map<Identifier, Holder<Progression>> kept = new LinkedHashMap<>();
+        for (Entry<Identifier, Holder<Progression>> entry : values.entrySet()) {
+            if (removed.contains(entry.getKey()) || !resolvesLevel(entry.getValue())) {
+                removed.add(entry.getKey());
                 continue;
             }
-            kept.put(technique, entry.getValue());
+            kept.put(entry.getKey(), entry.getValue());
         }
         return kept;
     }
@@ -199,11 +200,11 @@ public final class TechniqueCommand {
         return MxtDatapackRegistries.get(MxtResourceKeys.TECHNIQUE, id).isPresent();
     }
 
-    public static boolean resolvesStage(Holder<SkillStage> stage) {
-        if (stage == null) return false;
-        Identifier id = HolderHelper.id(stage);
+    public static boolean resolvesLevel(Holder<Progression> level) {
+        if (level == null) return false;
+        Identifier id = HolderHelper.id(level);
         if (id.equals(HolderHelper.EMPTY)) return false;
-        return MxtDatapackRegistries.get(MxtResourceKeys.SKILL_STAGE, id).isPresent();
+        return MxtDatapackRegistries.get(MxtResourceKeys.PROGRESSION, id).isPresent();
     }
 
     private static String join(List<Identifier> values) {

@@ -22,7 +22,7 @@ MiXianTu 的 KubeJS 桥接按领域提供独立对象，不提供承载全部方
 | `MxtElements` | 查询实体身上的元素与元素附着，并施加附着。 |
 | `MxtSpiritRoots` | 查询、授予、移除与开关灵根。 |
 | `MxtPhysiques` | 查询、授予、移除与开关体质。 |
-| `MxtTechniques` | 查询、学习与遗忘功法，并读它的技能水平。 |
+| `MxtTechniques` | 查询、学习与遗忘功法，并读它的进度等级。 |
 | `MxtLifespan` | 读写成实体自己的寿元账本（剩余与上限），也能让实体当场转世。 |
 | `MxtSouls` | 回收实体可转移的魂魄。 |
 | `MxtTriggers` | 发布自定义触发器信号，并让脚本订阅信号。 |
@@ -405,9 +405,9 @@ const active = MxtSpiritRoots.active(player)
 | --- | --- | --- | --- |
 | `list(entity)` | `Entity` | `List<String>` | 该实体**学过**的功法 ID，按 ID 排序。定义已不在当前包里的功法仍会列出——它确实还学过。 |
 | `has(entity, technique)` | `Entity`、功法 ID | `boolean` | 是否学过（与 `mxt:technique` 同义）。 |
-| `stage(entity, technique)` | `Entity`、功法 ID | `String` 或 `null` | 这门功法当前的技能水平 ID；没学过、或还没写下水平记录时为 `null`。 |
+| `level(entity, technique)` | `Entity`、功法 ID | `String` 或 `null` | 这门功法当前的进度等级 ID；没学过、或还没写下等级记录时为 `null`。 |
 | `learn(entity, technique)` | `LivingEntity`、功法 ID | `{changed, failure}` | 走权威服务学习：`learn_condition`、`exclusive_tags` 与两个学习事件都照常处理。 |
-| `forget(entity, technique)` | `LivingEntity`、功法 ID | `{changed, failure}` | 遗忘这门功法**并删掉它自己的水平记录**，再重建它带来的属性与技能；境界 / 修为 / 资源 / 正在跑的法门都不动。没学过则为 `ABSENT`。 |
+| `forget(entity, technique)` | `LivingEntity`、功法 ID | `{changed, failure}` | 遗忘这门功法**并删掉它自己的等级记录**，再重建它带来的属性与技能；境界 / 修为 / 资源 / 正在跑的法门都不动。没学过则为 `ABSENT`。 |
 
 `failure` 词表：`DISABLED`（注册表里没有这个 id，含被 `neoforge:conditions` 挡掉的定义）、`ALREADY_LEARNED`、`CONFLICT`（`exclusive_tags` 撞上已修习的功法）、`CONDITIONS`（`learn_condition` 不满足）、`CANCELLED`（监听方取消了本次学习）、`ABSENT`、`SERVER_ONLY`（在客户端调用）。三个读方法两侧都能用，`learn` / `forget` 是服务端操作。
 
@@ -415,9 +415,9 @@ const active = MxtSpiritRoots.active(player)
 // kubejs/server_scripts/mxt_techniques.js
 const learned = MxtTechniques.learn(player, 'mxt_test:azure_water_manual')
 if (!learned.changed) console.warn(`learning refused: ${learned.failure}`)
-// 洗掉重来：功法和它自己的水平记录一起消失，境界与修为照旧。
+// 洗掉重来：功法和它自己的等级记录一起消失，境界与修为照旧。
 MxtTechniques.forget(player, 'mxt_test:qingxiao_breathing_manual')
-const stage = MxtTechniques.stage(player, 'mxt_test:azure_water_manual')
+const level = MxtTechniques.level(player, 'mxt_test:azure_water_manual')
 ```
 
 ### `MxtQuality`

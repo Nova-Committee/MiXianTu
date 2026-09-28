@@ -144,7 +144,7 @@ import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractEventBridge;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
-import com.iafenvoy.mxt.runtime.cultivation.SkillStageService;
+import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgression;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
@@ -337,7 +337,7 @@ public final class MxtTestCommands {
     private static final Identifier PROBE_AFFINITY_ABILITY = id("firebolt");
     private static final double PROBE_FIRE_AFFINITY = 1.1D;
     private static final Identifier PROBE_TECHNIQUE = id("sword_manual");
-    private static final Identifier PROBE_TECHNIQUE_STAGE = id("sword_art_2");
+    private static final Identifier PROBE_PROGRESSION_LEVEL = id("sword_art_2");
     private static final Identifier PROBE_ABILITY = id("artifact_guard");
     private static final Identifier SWORD_FOCUS = id("sword_focus");
     // The storage entry the fixture artifacts name; it is an ordinary mxt:ability entry.
@@ -1493,9 +1493,9 @@ public final class MxtTestCommands {
             Holder<Technique> technique = require(MxtResourceKeys.TECHNIQUE, PROBE_TECHNIQUE);
             Holder<Ability> ability = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
             spirit.addLearnedTechnique(technique);
-            double entry = SkillStageService.damageMultiplier(attacker, HolderHelper.id(ability));
-            spirit.setTechniqueStage(technique, require(MxtResourceKeys.SKILL_STAGE, PROBE_TECHNIQUE_STAGE));
-            double advanced = SkillStageService.damageMultiplier(attacker, HolderHelper.id(ability));
+            double entry = TechniqueProgression.damageMultiplier(attacker, HolderHelper.id(ability));
+            attacker.getData(MxtAttachments.PROGRESSION).setLevel(HolderHelper.id(technique), require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
+            double advanced = TechniqueProgression.damageMultiplier(attacker, HolderHelper.id(ability));
             float masteryBefore = masteryDefender.getHealth();
             DamageCalculationService.deal(attacker, masteryDefender, 4.0D, Optional.empty(),
                     context.with(DamageCalculationService.DAMAGE_MULTIPLIER, advanced));
@@ -2420,7 +2420,7 @@ public final class MxtTestCommands {
             // A technique is the ordinary way in: learning it grants the skill through the same ledger as any grant.
             SpiritIdentityAttachment spirit = pilot.getData(MxtAttachments.SPIRIT_IDENTITY);
             spirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
-            CultivationGrantService.recalculate(spirit, pilot.getData(MxtAttachments.ABILITY_HOLDER));
+            CultivationGrantService.recalculate(pilot, spirit, pilot.getData(MxtAttachments.ABILITY_HOLDER));
             boolean granted = pilot.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(controlAbility));
             double qiBeforePress = pilotResources.get(qiResource);
             Togglable.Result pressed = AbilityActivationService.activate(pilot, controlAbility, null);
@@ -2496,7 +2496,7 @@ public final class MxtTestCommands {
         ensureResource(player, player.getData(MxtAttachments.RESOURCE_HOLDER), qiResource, 40.0D);
         SpiritIdentityAttachment playerSpirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         playerSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
-        CultivationGrantService.recalculate(playerSpirit, player.getData(MxtAttachments.ABILITY_HOLDER));
+        CultivationGrantService.recalculate(player, playerSpirit, player.getData(MxtAttachments.ABILITY_HOLDER));
         int ownedBefore = ownedSwords(player);
         ItemStack playerMount = new ItemStack(Items.IRON_SWORD);
         ArtifactService.refine(playerMount, player);
@@ -2523,7 +2523,7 @@ public final class MxtTestCommands {
             crasher.setItemInHand(InteractionHand.MAIN_HAND, crashMount);
             SpiritIdentityAttachment crashSpirit = crasher.getData(MxtAttachments.SPIRIT_IDENTITY);
             crashSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
-            CultivationGrantService.recalculate(crashSpirit, crasher.getData(MxtAttachments.ABILITY_HOLDER));
+            CultivationGrantService.recalculate(crasher, crashSpirit, crasher.getData(MxtAttachments.ABILITY_HOLDER));
             FlyingSwordEntity crashSword = AbilityActivationService.activate(crasher, controlAbility, null).failure() == null
                     && crasher.getVehicle() instanceof FlyingSwordEntity value ? value : null;
             if (crashSword != null) {
@@ -4184,7 +4184,7 @@ public final class MxtTestCommands {
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
         TechniqueService.learn(player, spirit, technique.holder(), context);
         spirit.addLearnedTechnique(technique.holder());
-        CultivationGrantService.recalculate(spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
+        CultivationGrantService.recalculate(player, spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
         TEST_ACTIVE_ABILITIES.forEach(id -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(id, TEST_ABILITY_SOURCE));
         // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt where
         // the ability sources actually change.
@@ -4451,13 +4451,13 @@ public final class MxtTestCommands {
             AbilityAttachment bareAbilities = bareA.getData(MxtAttachments.ABILITY_HOLDER);
             bareSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, QI_REFINING));
             boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
-            bareIdentity.setTechniqueStage(sword, require(MxtResourceKeys.SKILL_STAGE, PROBE_TECHNIQUE_STAGE));
+            bareA.getData(MxtAttachments.PROGRESSION).setLevel(HolderHelper.id(sword), require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
             boolean bareGranted = bareAbilities.has(id("artifact_guard"));
             boolean forgotten = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).changed();
             boolean gone = bareIdentity.learnedTechniques().stream()
                     .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
-                    && bareIdentity.techniqueStages().keySet().stream()
-                    .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
+                    && bareA.getData(MxtAttachments.PROGRESSION).levels().keySet().stream()
+                    .noneMatch(owner -> owner.equals(SWORD_MANUAL))
                     && !bareAbilities.has(id("artifact_guard"))
                     && !bareSpirit.realmStages().isEmpty();
             boolean absent = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).failure()

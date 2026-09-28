@@ -17,6 +17,7 @@ import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.forging.BlueprintBinding;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
@@ -77,7 +78,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.TOOL_BINDING, ToolBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.TECHNIQUE, Technique.DIRECT_CODEC);
-        register(event, MxtResourceKeys.SKILL_STAGE, SkillStage.DIRECT_CODEC);
+        register(event, MxtResourceKeys.PROGRESSION, Progression.DIRECT_CODEC);
         register(event, MxtResourceKeys.CULTIVATION, Cultivation.DIRECT_CODEC);
         register(event, MxtResourceKeys.ARTIFACT, Artifact.DIRECT_CODEC);
         register(event, MxtResourceKeys.MEDICINAL_PROPERTY, MedicinalProperty.DIRECT_CODEC);

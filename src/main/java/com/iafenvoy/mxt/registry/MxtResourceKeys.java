@@ -23,6 +23,7 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.forging.BlueprintBinding;
@@ -105,7 +106,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<ToolBinding>> TOOL_BINDING = create("tool_binding");
     public static final ResourceKey<Registry<BlueprintBinding>> BLUEPRINT_BINDING = create("blueprint_binding");
     public static final ResourceKey<Registry<Technique>> TECHNIQUE = create("technique");
-    public static final ResourceKey<Registry<SkillStage>> SKILL_STAGE = create("skill_stage");
+    public static final ResourceKey<Registry<Progression>> PROGRESSION = create("progression");
     public static final ResourceKey<Registry<Cultivation>> CULTIVATION = create("cultivation");
     public static final ResourceKey<Registry<Artifact>> ARTIFACT = create("artifact");
     public static final ResourceKey<Registry<SpiritHerb>> SPIRIT_HERB = create("spirit_herb");

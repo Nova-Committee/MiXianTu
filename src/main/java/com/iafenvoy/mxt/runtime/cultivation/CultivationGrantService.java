@@ -2,16 +2,19 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilitySources;
+import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
@@ -32,7 +35,8 @@ public final class CultivationGrantService {
     private CultivationGrantService() {
     }
 
-    public static Result recalculate(SpiritIdentityAttachment spirit, AbilityAttachment abilities) {
+    public static Result recalculate(LivingEntity entity, SpiritIdentityAttachment spirit, AbilityAttachment abilities) {
+        ProgressionAttachment progress = entity.getExistingData(MxtAttachments.PROGRESSION).orElse(null);
         int revoked = 0;
         // Revocation mutates the multimap, so iterate a stable snapshot of its entries.
         for (Entry<Identifier, Identifier> entry : List.copyOf(abilities.sources().entries()))
@@ -46,12 +50,13 @@ public final class CultivationGrantService {
             granted += grantAll(abilities, physique.value().grantedAbilities(), source("physique", HolderHelper.id(physique)));
         }
         for (Holder<Technique> technique : spirit.learnedTechniques()) {
-            Identifier source = source("technique", HolderHelper.id(technique));
+            Identifier id = HolderHelper.id(technique);
+            Identifier source = source("technique", id);
             granted += grantAll(abilities, technique.value().grantedAbilities(), source);
             // Mastery adds to the same source, so a promotion only has to change the level: a technique's
             // grants are revoked and rebuilt together.
-            granted += SkillStageService.currentStage(spirit, technique)
-                    .map(current -> grantResolved(abilities, SkillStageService.unlockedAbilities(technique.value(), current), source))
+            granted += ProgressionService.currentLevel(progress, id, technique.value())
+                    .map(current -> grantResolved(abilities, ProgressionService.grantedAbilities(technique.value(), current), source))
                     .orElse(0);
         }
         // A realm stage's unlocks are keyed by how far the body got inside it, so the record is the whole answer:
@@ -60,13 +65,8 @@ public final class CultivationGrantService {
             Identifier source = source("realm_stage", HolderHelper.id(record.getKey()));
             granted += grantResolved(abilities, MinorStageService.unlockedAbilities(record.getKey(), record.getValue()), source);
         }
-        return new Result(granted, revoked);
-    }
-
-    public static Result recalculate(LivingEntity entity, SpiritIdentityAttachment spirit, AbilityAttachment abilities) {
-        Result result = recalculate(spirit, abilities);
         AbilityEventBridge.rebuildTriggerSubscriptions(entity);
-        return result;
+        return new Result(granted, revoked);
     }
 
     private static int grantAll(AbilityAttachment holder, List<Either<Holder<Ability>, TagKey<Ability>>> values, Identifier source) {

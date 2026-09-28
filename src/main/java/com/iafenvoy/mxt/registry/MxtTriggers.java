@@ -36,7 +36,7 @@ public final class MxtTriggers {
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> EQUIP = register("equip");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> DEATH = register("death");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> BREAKTHROUGH = register("breakthrough");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> TECHNIQUE_STAGE = register("technique_stage");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> PROGRESSION_LEVEL = register("progression_level");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<JsTrigger>> JS = REGISTRY.register("js", () -> JsTrigger.CODEC);
 
     static {

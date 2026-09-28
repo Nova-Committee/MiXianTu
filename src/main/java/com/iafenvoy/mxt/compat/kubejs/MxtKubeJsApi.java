@@ -13,7 +13,7 @@ import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
-import com.iafenvoy.mxt.data.cultivation.SkillStage;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.Curse;
@@ -428,14 +428,12 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The skill stage that technique is at, or {@code null} when it is not learned or carries no stage record yet.
+     * The progression level that owner has reached, or {@code null} when the entity has no record for it yet.
      */
-    public static @Nullable Identifier techniqueStage(@NotNull Entity entity, Identifier id) {
-        SpiritIdentityAttachment spirit = identity(entity);
-        if (spirit == null) return null;
-        for (Entry<Holder<Technique>, Holder<SkillStage>> entry : spirit.techniqueStages().entrySet())
-            if (HolderHelper.id(entry.getKey()).equals(id)) return HolderHelper.id(entry.getValue());
-        return null;
+    public static @Nullable Identifier progressionLevel(@NotNull Entity entity, Identifier owner) {
+        Holder<Progression> level = entity.getExistingData(MxtAttachments.PROGRESSION)
+                .map(progress -> progress.level(owner)).orElse(null);
+        return level == null ? null : HolderHelper.id(level);
     }
 
     /**

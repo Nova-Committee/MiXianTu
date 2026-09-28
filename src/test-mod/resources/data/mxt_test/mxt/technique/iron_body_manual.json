@@ -5,7 +5,7 @@
   "exclusive_tags": ["mxt_test:technique/iron_body"],
   "cultivation_modifier": 1.15,
   "granted_abilities": [],
-  "default_stage": "mxt_test:iron_body_1",
+  "default_level": "mxt_test:iron_body_1",
   "mastery_resource": "mxt_test:qi",
   "configuration": {
     "mxt_test:iron_body_1": {
