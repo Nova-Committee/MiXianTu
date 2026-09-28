@@ -8,7 +8,7 @@
   "temperature_tolerance": 5,
   "duration": 200,
   "max_bad_ticks": 2,
-  "success_outputs": [{ "id": "mxt:pill", "count": 4, "components": { "mxt:pill": { "binding": "mxt_test:toxicity_pill" }, "mxt:quality": "mxt_test:normal" } }],
+  "success_outputs": [{ "id": "mxt:pill", "count": 4, "components": { "mxt:pill": { "pill": "mxt_test:toxicity" }, "mxt:quality": "mxt_test:normal" } }],
   "failure_outputs": [{ "id": "minecraft:charcoal", "count": 1 }],
   "guide": {
     "main": [{ "id": "minecraft:allium", "count": 1, "components": { "mxt:herb_age": 100 } }],

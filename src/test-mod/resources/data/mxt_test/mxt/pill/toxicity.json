@@ -1,0 +1,12 @@
+{
+  "color": "#8F3FA8",
+  "toxicity_gain": 25,
+  "toxicity_threshold": 100,
+  "toxicity_after_overdose": 20,
+  "conditions": [
+    {
+      "condition": {"type": "mxt:always"},
+      "description": "condition.mxt_test.toxicity_pill"
+    }
+  ]
+}

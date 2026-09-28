@@ -64,7 +64,7 @@ data/<namespace>/mxt/<registry>/<path>.json
 | 资源与修炼 | `resource`、`aura`、`element`、`realm_stage`、`spirit_root`、`physique`、`technique`、`skill_stage`、`cultivation` |
 | 技能与规则 | `ability`、`curse`、`formation`、`tribulation`、`trigger`、`talisman` |
 | 灵气与世界 | `aura_zone`、`block_aura`、`item_aura`、`secret_realm` |
-| 物品与品质 | `item_binding`、`weapon_binding`、`pill_binding`、`technique_binding`、`tool_binding`、`blueprint_binding`、`artifact`、`quality` |
+| 物品与品质 | `item_binding`、`weapon_binding`、`pill`、`pill_binding`、`technique_binding`、`tool_binding`、`blueprint_binding`、`artifact`、`quality` |
 | 炼丹与灵植 | `medicinal_property`、`spirit_herb`、`alchemy_furnace`、`alchemy_wall_material`。丹方是原版配方 `mxt:alchemy`，不是这张表里的注册表。 |
 | 经济与内容 | `currency`、`forging_method`、`forging_blueprint`、`creature_profile`、`contract_type` |
 

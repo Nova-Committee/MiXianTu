@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.item;
 import com.iafenvoy.mxt.attachment.PillToxicityAttachment;
 import com.iafenvoy.mxt.attachment.PillUsageAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
+import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
@@ -47,7 +48,7 @@ public final class PillService {
     public static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {
         PillResolution resolution = ItemBindingService.resolvePill(access, stack);
         if (resolution.unbound()) return Optional.of(Failure.UNBOUND);
-        PillBinding definition = resolution.effects().orElse(null);
+        Pill definition = resolution.effects().orElse(null);
         if (definition == null) return Optional.empty();
         FormulaContext context = FormulaContext.of(user);
         if (definition.conditions().stream().anyMatch(condition -> !condition.value().test(user, context)))
@@ -86,7 +87,7 @@ public final class PillService {
         usage.record(pill, usage.uses(pill) + 1, until);
     }
 
-    public static Result apply(LivingEntity entity, PillBinding definition) {
+    public static Result apply(LivingEntity entity, Pill definition) {
         FormulaContext context = FormulaContext.of(entity);
         definition.onConsume().execute(entity, context);
         PillToxicityAttachment toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);

@@ -48,16 +48,23 @@ StartupEvents.registry('item', event => {
 ```
 
 ```json
-// kubejs/data/example/mxt/pill_binding/returning_pill.json
+// kubejs/data/example/mxt/pill/returning_pill.json
 {
-  "items": "kubejs:returning_pill"
   "toxicity_gain": 10,
   "toxicity_threshold": 100,
   "toxicity_after_overdose": 25
 }
 ```
 
-`items` 可以省略。次数和冷却是可选字段：`max_uses` 是正整数，`cooldown` 是 tick。纯数据包丹药用 `mxt:pill` 加上组件 `mxt:pill`，不要在物品脚本里再执行一次药效。
+```json
+// kubejs/data/example/mxt/pill_binding/returning_pill.json
+{
+  "items": "kubejs:returning_pill",
+  "pill": "example:returning_pill"
+}
+```
+
+绑定必须写 `pill` 指向一份定义；次数和冷却是绑定的可选字段：`max_uses` 是正整数，`cooldown` 是 tick。纯数据包丹药用 `mxt:pill` 加上组件 `mxt:pill`，不要在物品脚本里再执行一次药效。
 
 ```json
 // kubejs/data/example/mxt/technique_binding/fire_manual.json

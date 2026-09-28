@@ -23,6 +23,7 @@ import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.ItemBinding;
+import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
@@ -91,6 +92,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);
         register(event, MxtResourceKeys.ITEM_BINDING, ItemBinding.CODEC);
         register(event, MxtResourceKeys.WEAPON_BINDING, WeaponBinding.CODEC);
+        register(event, MxtResourceKeys.PILL, Pill.DIRECT_CODEC);
         register(event, MxtResourceKeys.PILL_BINDING, PillBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.TECHNIQUE_BINDING, TechniqueBinding.CODEC);
         register(event, MxtResourceKeys.AURA_ZONE, AuraZone.DIRECT_CODEC);

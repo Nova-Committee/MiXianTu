@@ -144,7 +144,7 @@ public final class ItemQualityService {
     }
 
     // Why an entity may not use an item. Furnace quality is one of the checks above; pill caps are extra and
-    // never replace them. A missing explicit pill binding refuses instead of matching another pill.
+    // never replace them. A named pill that is missing refuses instead of matching another pill.
     public enum Failure {
         /**
          * A matching binding's own conditions did not all pass.
@@ -163,7 +163,7 @@ public final class ItemQualityService {
          */
         COOLDOWN,
         /**
-         * The stack names a pill binding that is no longer in the registry, and must not fall back to another pill.
+         * The stack names a pill that is no longer in the registry, and must not fall back to another pill.
          */
         UNBOUND
     }
@@ -191,6 +191,9 @@ public final class ItemQualityService {
 
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack, ResolvedBindings bindings) {
         if (stack.isEmpty()) return Optional.empty();
+        // A stack naming a pill whose reference lost its value refuses: falling through would eat the item for
+        // nothing instead of reporting UNBOUND, which is the one outcome this state must never produce.
+        if (bindings.pill().unbound()) return Optional.of(Failure.UNBOUND);
         FormulaContext context = FormulaContext.of(user);
         if (!bindings.conditionsMet(user, context)) return Optional.of(Failure.BINDING_CONDITIONS);
         Optional<RegistryLookup<ItemQuality>> registry = registry(access);

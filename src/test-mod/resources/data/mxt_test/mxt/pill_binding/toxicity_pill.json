@@ -1,12 +1,4 @@
 {
   "items": ["minecraft:honey_bottle", "minecraft:suspicious_stew"],
-  "toxicity_gain": 25,
-  "conditions": [
-    {
-      "condition": {"type": "mxt:always"},
-      "description": "condition.mxt_test.toxicity_pill"
-    }
-  ],
-  "toxicity_threshold": 100,
-  "toxicity_after_overdose": 20
+  "pill": "mxt_test:toxicity"
 }

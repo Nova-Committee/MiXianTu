@@ -800,8 +800,8 @@ public final class AlchemyProbes {
             PillComponent pill = stack.get(MxtDataComponents.PILL.get());
             if (pill == null) return false;
             JsonElement encoded = PillComponent.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE), pill).getOrThrow();
-            return encoded.isJsonObject() && encoded.getAsJsonObject().has("binding")
-                    && "mxt_test:toxicity_pill".equals(encoded.getAsJsonObject().get("binding").getAsString());
+            return encoded.isJsonObject() && encoded.getAsJsonObject().has("pill")
+                    && "mxt_test:toxicity".equals(encoded.getAsJsonObject().get("pill").getAsString());
         }
         return false;
     }

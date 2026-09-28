@@ -31,6 +31,7 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.item.ItemBinding;
+import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
@@ -119,6 +120,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<CurrencyValue>> CURRENCY = create("currency");
     public static final ResourceKey<Registry<ItemBinding>> ITEM_BINDING = create("item_binding");
     public static final ResourceKey<Registry<WeaponBinding>> WEAPON_BINDING = create("weapon_binding");
+    public static final ResourceKey<Registry<Pill>> PILL = create("pill");
     public static final ResourceKey<Registry<PillBinding>> PILL_BINDING = create("pill_binding");
     public static final ResourceKey<Registry<TechniqueBinding>> TECHNIQUE_BINDING = create("technique_binding");
     public static final ResourceKey<Registry<AuraZone>> AURA_ZONE = create("aura_zone");

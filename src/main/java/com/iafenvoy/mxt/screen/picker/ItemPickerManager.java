@@ -59,13 +59,10 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.SPIRIT_HERB);
         registerMatcher(MxtResourceKeys.ITEM_BINDING);
         registerMatcher(MxtResourceKeys.WEAPON_BINDING);
-        register(MxtResourceKeys.PILL_BINDING, (holder, _) -> {
-            List<PickerItem> items = new ArrayList<>();
-            items.add(described(componentStack(MxtItems.PILL.toStack(), MxtDataComponents.PILL, PillComponent.ofBinding(holder)), holder));
-            for (ItemStack stack : stackItems(holder.value().entries()))
-                items.add(new PickerItem(stack, names(stack.getHoverName(), holder.value().name(), idName(HolderHelper.idOrNull(holder)))));
-            return items;
-        });
+        // One generic carrier per pill definition: the component names the pill, which is how a built-in dose is
+        // handed out. Bindings stay item-shaped rows, because a binding is only about which items those are.
+        registerSingle(MxtResourceKeys.PILL, holder -> described(componentStack(MxtItems.PILL.toStack(), MxtDataComponents.PILL, PillComponent.ofPill(holder)), holder));
+        registerMatcher(MxtResourceKeys.PILL_BINDING);
         registerMatcher(MxtResourceKeys.TOOL_BINDING);
         registerMatcher(MxtResourceKeys.BLUEPRINT_BINDING);
         registerMatcher(MxtResourceKeys.ARTIFACT);

@@ -108,10 +108,10 @@ public final class ItemBindingTooltipAppender {
         }
     }
 
-    private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity, PillBinding effects,
+    private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity, Pill effects,
                                    Player player) {
-        if (identity != null && identity.isBound())
-            builder.accept(DefinitionText.name(identity).withStyle(ChatFormatting.LIGHT_PURPLE));
+        if (DefinitionText.resolved(effects.name()))
+            builder.accept(effects.name().copy().withStyle(ChatFormatting.LIGHT_PURPLE));
         if (DefinitionText.resolved(effects.description()) && !effects.description().getString().isBlank())
             builder.accept(effects.description().copy().withStyle(ChatFormatting.GRAY));
         double gain = effects.toxicityGain().evaluate(FormulaContext.EMPTY);

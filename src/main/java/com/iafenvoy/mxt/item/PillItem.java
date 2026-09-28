@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.item;
 
+import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -29,8 +31,8 @@ public class PillItem extends Item {
     public @NonNull Component getName(@NonNull ItemStack stack) {
         PillComponent component = stack.get(MxtDataComponents.PILL.get());
         if (component != null) {
-            var binding = component.binding().orElse(null);
-            if (binding != null && binding.isBound()) return binding.value().name();
+            Holder<Pill> pill = component.pill().orElse(null);
+            if (pill != null && pill.isBound()) return pill.value().name();
         }
         return Component.translatable(this.getDescriptionId());
     }

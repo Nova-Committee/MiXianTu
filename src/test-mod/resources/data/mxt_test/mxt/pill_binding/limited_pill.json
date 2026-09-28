@@ -1,0 +1,6 @@
+{
+  "items": ["minecraft:sweet_berries"],
+  "pill": "mxt_test:limited",
+  "max_uses": 2,
+  "cooldown": 20
+}

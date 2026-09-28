@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.ItemBinding;
+import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.data.item.PillComponent;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
@@ -53,8 +54,8 @@ import java.util.stream.Stream;
 
 /**
  * Resolves datapack gameplay bindings for items already registered by Minecraft, a mod or KubeJS. A binding table
- * attaches this mod's rules to a stack. A pill stack may also name its definition with {@code mxt:pill.binding};
- * effect fields on that component overlay the definition and never replace its holder.
+ * attaches this mod's rules to a stack. A pill stack may also name its own pill with {@code mxt:pill.pill}; effect
+ * fields on that component overlay the pill, and the use cap and cooldown stay with the matched binding.
  */
 @EventBusSubscriber
 public final class ItemBindingService {
@@ -108,24 +109,22 @@ public final class ItemBindingService {
                 .map(Reference::value), stack);
     }
 
-    // Explicit binding wins and does not fall through. A missing holder refuses. Otherwise the matcher, then overlay.
+    // The stack's own component decides what the dose does and wins over the binding; the binding decides which
+    // items are that pill and owns their use limit and cooldown, so a component never adds or hides limits.
     public static PillResolution resolvePill(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return PillResolution.none();
         PillComponent component = stack.get(MxtDataComponents.PILL.get());
-        if (component != null && component.binding().isPresent()) {
-            Holder<PillBinding> explicit = component.binding().orElseThrow();
-            if (!explicit.isBound()) return PillResolution.unbound(explicit);
-            return PillResolution.bound(explicit, component.applyTo(explicit.value()));
-        }
         Optional<Reference<PillBinding>> matched = ItemMatcher.find(
                 MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING), Reference::value, stack);
-        if (matched.isPresent()) {
-            Reference<PillBinding> holder = matched.orElseThrow();
-            PillBinding effects = component == null ? holder.value() : component.applyTo(holder.value());
-            return PillResolution.bound(holder, effects);
-        }
-        if (component != null) return PillResolution.componentOnly(component.applyTo(PillBinding.defaults()));
-        return PillResolution.none();
+        Holder<PillBinding> identity = matched.orElse(null);
+        Holder<Pill> declared = component == null ? null : component.pill().orElse(null);
+        Holder<Pill> source = declared != null ? declared : identity == null ? null : identity.value().pill();
+        if (source != null && !source.isBound()) return PillResolution.unbound(source);
+        if (source == null)
+            return component == null ? PillResolution.none()
+                    : PillResolution.componentOnly(component.applyTo(Pill.defaults()));
+        Pill effects = component == null ? source.value() : component.applyTo(source.value());
+        return identity == null ? PillResolution.componentOnly(effects) : PillResolution.bound(identity, effects);
     }
 
     // What a stack teaches is the stack's own mxt:technique component; the declaration for that technique only
@@ -331,24 +330,24 @@ public final class ItemBindingService {
     }
 
     /**
-     * One pill reading. {@code identity} is the holder that owns counters; empty for a component-only dose.
-     * {@code effects} is the overlaid definition that actually runs. {@code unbound} is an explicit binding that
+     * One pill reading. {@code identity} is the matched binding that owns the counters; empty for a component-only
+     * dose. {@code effects} is the pill that actually runs, already overlaid. {@code unbound} is a named pill that
      * is no longer in the registry: it must not fall back to another pill or to defaults.
      */
-    public record PillResolution(Optional<Holder<PillBinding>> identity, Optional<PillBinding> effects, boolean unbound) {
+    public record PillResolution(Optional<Holder<PillBinding>> identity, Optional<Pill> effects, boolean unbound) {
         public static PillResolution none() {
             return new PillResolution(Optional.empty(), Optional.empty(), false);
         }
 
-        public static PillResolution unbound(Holder<PillBinding> holder) {
-            return new PillResolution(Optional.of(holder), Optional.empty(), true);
+        public static PillResolution unbound(Holder<Pill> pill) {
+            return new PillResolution(Optional.empty(), Optional.empty(), true);
         }
 
-        public static PillResolution bound(Holder<PillBinding> holder, PillBinding effects) {
+        public static PillResolution bound(Holder<PillBinding> holder, Pill effects) {
             return new PillResolution(Optional.of(holder), Optional.of(effects), false);
         }
 
-        public static PillResolution componentOnly(PillBinding effects) {
+        public static PillResolution componentOnly(Pill effects) {
             return new PillResolution(Optional.empty(), Optional.of(effects), false);
         }
 

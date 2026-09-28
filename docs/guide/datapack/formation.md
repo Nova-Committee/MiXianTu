@@ -603,7 +603,7 @@ give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall
   "max_bad_ticks": 2,
   "minimum_aura": { "example:fire_qi": 10 },
   "success_outputs": [
-    { "id": "mxt:pill", "count": 1, "components": { "mxt:pill": { "binding": "example:warming_pill" } } }
+    { "id": "mxt:pill", "count": 1, "components": { "mxt:pill": { "pill": "example:warming_pill" } } }
   ],
   "failure_outputs": [{ "id": "mxt:alchemy_dregs" }],
   "guide": {
@@ -620,11 +620,12 @@ give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall
 
 ### 丹药
 
+一份丹药是一份 `pill`（作用）加一条 `pill_binding`（绑到哪些物品、上限与冷却），`pill` 必填：
+
 ```json
+// data/example/mxt/pill/warming_pill.json
 {
-  "name": "pill_binding.example.warming_pill",
-  "max_uses": 2,
-  "cooldown": 20,
+  "color": "#FF9955",
   "toxicity_gain": 25,
   "toxicity_threshold": 100,
   "toxicity_after_overdose": 20,
@@ -632,12 +633,22 @@ give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall
 }
 ```
 
-`items` 可以省略。发给玩家：
-
-```mcfunction
-give @s mxt:pill[mxt:pill={binding:"example:warming_pill"}]
+```json
+// data/example/mxt/pill_binding/warming_pill.json
+{
+  "items": ["example:qi_pill"],
+  "pill": "example:warming_pill",
+  "max_uses": 2,
+  "cooldown": 20
+}
 ```
 
-次数按这条丹药定义计，不按物品 ID。排毒用 `mxt:modify_pill_toxicity` 的负 `add`，不清次数。服务端配置「炼丹 → 每秒丹毒自然消退」默认 0。测试包原丹毒丹的 25 / 100 / 20 不要改。
+内置丹药可以不要绑定，把作用直接写进组件：
+
+```mcfunction
+give @s mxt:pill[mxt:pill={pill:"example:warming_pill"}]
+```
+
+次数按这条绑定计，不按物品 ID；组件剂量不计次数。排毒用 `mxt:modify_pill_toxicity` 的负 `add`，不清次数。服务端配置「炼丹 → 每秒丹毒自然消退」默认 0。测试包原丹毒丹的 25 / 100 / 20 不要改。
 
 KubeJS 仍监听 `alchemyCraft`。`Pre` 可取消，`inputs()` 是 `role` 与 `stack` 副本，改副本不改账；改真实库存则拒绝且不还原。`Post` 用 `success()`、`reason()` 和 `outputs()`，没有 `spoiled()`。输出入仓后先清旧会话，在事务守卫内执行完成行为与进度条件，释放守卫后才发 `Post`；`Post` 可开启下一批，不会被旧批次收尾覆盖。原操作者离线时，玩家行为不补发。

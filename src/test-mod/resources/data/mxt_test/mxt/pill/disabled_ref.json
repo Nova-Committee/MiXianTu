@@ -2,6 +2,6 @@
   "neoforge:conditions": [
     { "type": "neoforge:never" }
   ],
-  "items": [],
+  "color": "#FF0000",
   "toxicity_gain": 99
 }

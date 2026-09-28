@@ -2,7 +2,7 @@
 title: 物品绑定、品质与经济
 ---
 
-绑定表只匹配现有物品，不负责创建物品；五张 binding 都是这样（`item_binding`、`weapon_binding`、`pill_binding`、`tool_binding`、`blueprint_binding`），`technique_binding` 多一条可选路——它的 `items` 可以认领物品，但手册的身份仍以堆上的 `mxt:technique` 组件为先。`pill_binding` 的 `items` 可以省略；身份由组件 `mxt:pill` 的可选 `binding` 指向，载体是 `mxt:pill`。各表的字段互不混用；武器拥有原版属性修正和攻击/使用/Tick 行为，工具与图纸给出锻打方式与蓝图。逐件附加（品质、元素、丹药数据、功法阅读、锻打方式、图纸）走物品组件，规则见[数据包格式](../../数据包格式.md)的「物品组件」。
+绑定表只匹配现有物品，不负责创建物品；五张 binding 都是这样（`item_binding`、`weapon_binding`、`pill_binding`、`tool_binding`、`blueprint_binding`），`technique_binding` 多一条可选路——它的 `items` 可以认领物品，但手册的身份仍以堆上的 `mxt:technique` 组件为先。`pill_binding` 只负责把物品绑到一份 `pill` 上（`pill` 必填）并给出这族物品的服用上限与冷却，载体是 `mxt:pill`；内置丹药的作用直接写在堆上的组件里。各表的字段互不混用；武器拥有原版属性修正和攻击/使用/Tick 行为，工具与图纸给出锻打方式与蓝图。逐件附加（品质、元素、丹药数据、功法阅读、锻打方式、图纸）走物品组件，规则见[数据包格式](../../数据包格式.md)的「物品组件」。
 
 ```json
 {

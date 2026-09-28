@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.attachment.PillToxicityAttachment;
 import com.google.gson.JsonParser;
+import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillComponent;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.JsonOps;
 import com.iafenvoy.mxt.attachment.PillUsageAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.item.PillService.ModifyMode;
@@ -112,19 +113,20 @@ public final class PillProbes {
             player.getAbilities().instabuild = false;
             player.level().getGameRules().set(GameRules.NATURAL_HEALTH_REGENERATION, false, player.level().getServer());
             clearLedgers(player);
-            Holder<PillBinding> blocked = require(player, "pill/blocked");
-            Holder<PillBinding> hungry = require(player, "pill/hungry");
-            Holder<PillBinding> reenter = require(player, "pill/reenter");
-            Holder<PillBinding> limited = require(player, "pill/limited");
-            Holder<PillBinding> disabled = raw(player, "pill/disabled_ref");
-            Holder<PillBinding> toxicity = require(player, "toxicity_pill");
-            if (blocked == null || hungry == null || reenter == null || limited == null || toxicity == null) {
+            Holder<PillBinding> blocked = binding(player, "blocked_pill");
+            Holder<PillBinding> hungry = binding(player, "hungry_pill");
+            Holder<PillBinding> reenter = binding(player, "reenter_pill");
+            Holder<PillBinding> limited = binding(player, "limited_pill");
+            Holder<PillBinding> toxicity = binding(player, "toxicity_pill");
+            boolean missingPill = pill(player, "disabled_ref") == null;
+            if (blocked == null || hungry == null || reenter == null || limited == null
+                    || toxicity == null || !missingPill) {
                 source.sendFailure(Component.literal("pill probe: fixture missing"));
                 return 0;
             }
 
             feed(player, 1, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND, honey(player, blocked));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.DRIED_KELP));
             int before = player.getMainHandItem().getCount();
             boolean started = begin(player);
             ok &= leg(source, "illegal_start", !started && player.getMainHandItem().getCount() == before
@@ -136,7 +138,7 @@ public final class PillProbes {
             player.stopUsingItem();
 
             feed(player, 10, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND, honey(player, hungry));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.GLOW_BERRIES));
             before = player.getMainHandItem().getCount();
             boolean tickStarted = begin(player);
             player.getFoodData().setSaturation(5.0F);
@@ -149,24 +151,22 @@ public final class PillProbes {
             player.stopUsingItem();
 
             feed(player, 10, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND, honey(player, hungry));
-            int honeyBefore = count(player, Items.HONEY_BOTTLE);
-            int glassBefore = count(player, Items.GLASS_BOTTLE);
-            boolean finished = finish(player, 40);
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.GLOW_BERRIES));
+            int berriesBefore = count(player, Items.GLOW_BERRIES);
+            boolean finished = finish(player, 4);
             ok &= leg(source, "finish_after_saturation", finished && close(PillService.toxicity(player), 3.0D)
-                            && count(player, Items.HONEY_BOTTLE) == honeyBefore - 1
-                            && count(player, Items.GLASS_BOTTLE) == glassBefore + 1
+                            && count(player, Items.GLOW_BERRIES) == berriesBefore - 1
                             && player.getFoodData().getSaturationLevel() > 0.0F
                             && PillService.uses(player, hungry) == 1,
                     "done=" + finished + " reason=" + stopReason + " tox=" + PillService.toxicity(player)
                             + " sat=" + player.getFoodData().getSaturationLevel()
-                            + " honey=" + count(player, Items.HONEY_BOTTLE) + " glass=" + count(player, Items.GLASS_BOTTLE)
+                            + " berries=" + count(player, Items.GLOW_BERRIES)
                             + " uses=" + PillService.uses(player, hungry),
-                    "tox=3 honey-1 glass+1 sat>0 uses=1");
+                    "tox=3 berries-1 sat>0 uses=1");
 
             clearLedgers(player);
             PillProbeActions.calls = 0;
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), reenter));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SPIDER_EYE));
             finished = finish(player, 4);
             ok &= leg(source, "reentry", finished && PillProbeActions.calls == 1 && close(PillService.toxicity(player), 7.0D)
                             && PillService.uses(player, reenter) == 1 && PillService.uses(player, toxicity) == 0,
@@ -175,22 +175,22 @@ public final class PillProbes {
 
             clearLedgers(player);
             long atConsume = PillService.overworldGameTime(player);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES));
             finished = finish(player, 4);
             long until = PillService.cooldownUntil(player, limited);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES));
             boolean immediate = begin(player);
             player.stopUsingItem();
             clock.setGameTime(until - 1);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES));
             boolean at19 = begin(player);
             player.stopUsingItem();
             clock.setGameTime(until);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES));
             boolean at20 = begin(player);
             boolean second = at20 && finish(player, 4);
             clock.setGameTime(until + 100);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES));
             boolean third = begin(player);
             player.stopUsingItem();
             ok &= leg(source, "cooldown_max_uses", finished && until == atConsume + 20 && !immediate && !at19 && second
@@ -252,26 +252,43 @@ public final class PillProbes {
                     "empty held=10 offline=10 early=10 remainder=19 decayed=8");
 
             boolean excludedFile = player.level().getServer().getResourceManager()
-                    .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/pill_binding/pill/disabled_ref.json")).isPresent();
-            ok &= leg(source, "excluded_binding", excludedFile && disabled == null,
-                    "file=" + excludedFile + " holder=" + (disabled == null ? "absent" : HolderHelper.id(disabled)),
-                    "file=true holder=absent");
+                    .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/pill/disabled_ref.json")).isPresent();
+            ok &= leg(source, "excluded_pill", excludedFile && missingPill,
+                    "file=" + excludedFile + " pill=" + (missingPill ? "absent" : "present"),
+                    "file=true pill=absent");
+
+            // Nothing in the pack may name the excluded pill: a definition that did would leave an unbound value in the
+            // registry and the whole load would fail. The guard is exercised with the one shape it is for instead, a
+            // holder that carries the key but no value; it must refuse rather than fall back to another pill.
+            clearLedgers(player);
+            feed(player, 10, 0.0F);
+            player.setItemInHand(InteractionHand.MAIN_HAND,
+                    dosed(MxtItems.PILL.get(), PillComponent.ofPill(unboundPill(player))));
+            ItemBindingService.PillResolution unbound = ItemBindingService.resolvePill(player.registryAccess(), player.getMainHandItem());
+            boolean unboundStarted = begin(player);
+            player.stopUsingItem();
+            ok &= leg(source, "unbound_pill", unbound.unbound() && unbound.effects().isEmpty() && !unboundStarted
+                            && PillService.toxicity(player) == 0.0D && !player.hasData(MxtAttachments.PILL_USAGE),
+                    "unbound=" + unbound.unbound() + " effects=" + unbound.effects().isPresent() + " started=" + unboundStarted
+                            + " reason=" + refusal(player) + " tox=" + PillService.toxicity(player),
+                    "unbound=true effects=false started=false reason=unbound tox=0");
 
             clearLedgers(player);
-            feed(player, 20, 5.0F);
+            feed(player, 10, 0.0F);
             long overlayAt = PillService.overworldGameTime(player);
-            PillComponent overlaid = component(player, "{\"binding\":\"mxt_test:pill/limited\",\"toxicity_gain\":9}");
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            // The component names another pill than the binding does: its effects win, the binding's caps stay.
+            PillComponent overlaid = component(player, "{\"pill\":\"mxt_test:toxicity\",\"toxicity_gain\":9}");
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES, overlaid));
             boolean overlayFirst = finish(player, 4);
             long overlayUntil = PillService.cooldownUntil(player, limited);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES, overlaid));
             boolean overlayImmediate = begin(player);
             player.stopUsingItem();
             clock.setGameTime(overlayUntil);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES, overlaid));
             boolean overlaySecond = begin(player) && finish(player, 4);
             clock.setGameTime(overlayUntil + 100);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(Items.HONEY_BOTTLE), overlaid));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES, overlaid));
             boolean overlayThird = begin(player);
             player.stopUsingItem();
             ok &= leg(source, "overlay_keeps_limits", overlayFirst && overlayUntil == overlayAt + 20 && !overlayImmediate
@@ -284,10 +301,24 @@ public final class PillProbes {
                     "gain=9 cooldown=20 uses=2 toxicityUses=0");
 
             clearLedgers(player);
+            feed(player, 10, 0.0F);
+            PillComponent overtaken = component(player, "{\"pill\":\"mxt_test:blocked\"}");
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.HONEY_BOTTLE, overtaken));
+            int honeyCount = player.getMainHandItem().getCount();
+            boolean overtakenStarted = begin(player);
+            player.stopUsingItem();
+            ok &= leg(source, "component_over_binding", !overtakenStarted
+                            && player.getMainHandItem().getCount() == honeyCount
+                            && PillService.toxicity(player) == 0.0D && PillService.uses(player, toxicity) == 0,
+                    "started=" + overtakenStarted + " reason=" + refusal(player) + " count=" + player.getMainHandItem().getCount()
+                            + " tox=" + PillService.toxicity(player),
+                    "started=false reason=conditions count=" + honeyCount + " tox=0");
+
+            clearLedgers(player);
             PillComponent only = component(player, "{\"toxicity_gain\":4}");
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), only));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(MxtItems.PILL.get(), only));
             boolean onlyFirst = finish(player, 4);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), only));
+            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(MxtItems.PILL.get(), only));
             boolean onlySecond = finish(player, 4);
             ok &= leg(source, "component_only", onlyFirst && onlySecond && close(PillService.toxicity(player), 8.0D)
                             && !player.hasData(MxtAttachments.PILL_USAGE)
@@ -297,6 +328,14 @@ public final class PillProbes {
                             + " limited=" + PillService.uses(player, limited)
                             + " toxicityUses=" + PillService.uses(player, toxicity),
                     "gain=4 twice no bound counter");
+
+            // What the client tint reads off a carrier stack: the colour of the pill it resolves. A dose that resolves
+            // to nothing paints nothing, which the unbound_pill leg above already covers.
+            Pill painted = ItemBindingService.resolvePill(player.registryAccess(),
+                    dosed(MxtItems.PILL.get(), component(player, "{\"pill\":\"mxt_test:toxicity\"}"))).effects().orElse(null);
+            ok &= leg(source, "pill_color", painted != null && painted.color() == 0x8F3FA8,
+                    "color=" + (painted == null ? "none" : Integer.toHexString(painted.color())),
+                    "color=8f3fa8");
         } catch (RuntimeException failure) {
             ok = false;
             source.sendFailure(Component.literal("pill probe: " + failure.getClass().getSimpleName() + " " + failure.getMessage()));
@@ -333,35 +372,36 @@ public final class PillProbes {
         return ok ? 1 : 0;
     }
 
-    private static Holder<PillBinding> require(ServerPlayer player, String path) {
+    private static Holder<PillBinding> binding(ServerPlayer player, String path) {
         return MxtDatapackRegistries.holder(player.registryAccess(), MxtResourceKeys.PILL_BINDING, id(path)).orElse(null);
     }
 
-    private static Holder<PillBinding> raw(ServerPlayer player, String path) {
-        return player.registryAccess().lookupOrThrow(MxtResourceKeys.PILL_BINDING)
-                .get(ResourceKey.create(MxtResourceKeys.PILL_BINDING, id(path))).orElse(null);
+    private static Holder<Pill> pill(ServerPlayer player, String path) {
+        return MxtDatapackRegistries.holder(player.registryAccess(), MxtResourceKeys.PILL, id(path)).orElse(null);
+    }
+
+    // A holder that carries the key but no value: what a reference to a pill the pack no longer provides looks like,
+    // and the one shape the resolution must refuse. No definition may name that excluded pill, since the loader would
+    // then leave an unbound value in the registry and the whole world would fail to load.
+    private static Holder<Pill> unboundPill(ServerPlayer player) {
+        return Holder.Reference.createStandAlone(player.registryAccess().lookupOrThrow(MxtResourceKeys.PILL),
+                ResourceKey.create(MxtResourceKeys.PILL, id("disabled_ref")));
     }
 
     private static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, path);
     }
 
-    private static ItemStack honey(ServerPlayer player, Holder<PillBinding> pill) {
-        return bound(new ItemStack(Items.HONEY_BOTTLE), pill);
+    // A stack of an item a binding claims: the dose runs that binding's pill and the counters are the binding's.
+    private static ItemStack dosed(Item item) {
+        return arm(new ItemStack(item));
     }
 
-    private static ItemStack quick(ServerPlayer player, ItemStack stack, Holder<PillBinding> pill) {
-        return arm(bound(stack, pill));
-    }
-
-    private static ItemStack quick(ServerPlayer player, ItemStack stack, PillComponent pill) {
-        stack.set(MxtDataComponents.PILL.get(), pill);
+    // Same, with the stack's own component on top: it decides what the dose does, never the counters.
+    private static ItemStack dosed(Item item, PillComponent component) {
+        ItemStack stack = new ItemStack(item);
+        stack.set(MxtDataComponents.PILL.get(), component);
         return arm(stack);
-    }
-
-    private static ItemStack bound(ItemStack stack, Holder<PillBinding> pill) {
-        stack.set(MxtDataComponents.PILL.get(), PillComponent.ofBinding(pill));
-        return stack;
     }
 
     private static ItemStack arm(ItemStack stack) {
@@ -433,7 +473,7 @@ public final class PillProbes {
         return total;
     }
 
-    // toxicity_pill declares no consume or overdose action. Honey's vanilla consume clears poison, and the
+    // mxt_test:toxicity declares no consume or overdose action. Honey's vanilla consume clears poison, and the
     // forced player ticks can shorten other effects or spend health, so those are put back with the inventory.
     private static void restoreEffects(ServerPlayer player, List<MobEffectInstance> saved) {
         List<Holder<MobEffect>> extra = new ArrayList<>();
