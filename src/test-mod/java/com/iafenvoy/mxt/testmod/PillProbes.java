@@ -166,7 +166,7 @@ public final class PillProbes {
 
             clearLedgers(player);
             PillProbeActions.calls = 0;
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), reenter));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), reenter));
             finished = finish(player, 4);
             ok &= leg(source, "reentry", finished && PillProbeActions.calls == 1 && close(PillService.toxicity(player), 7.0D)
                             && PillService.uses(player, reenter) == 1 && PillService.uses(player, toxicity) == 0,
@@ -175,22 +175,22 @@ public final class PillProbes {
 
             clearLedgers(player);
             long atConsume = PillService.overworldGameTime(player);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
             finished = finish(player, 4);
             long until = PillService.cooldownUntil(player, limited);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
             boolean immediate = begin(player);
             player.stopUsingItem();
             clock.setGameTime(until - 1);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
             boolean at19 = begin(player);
             player.stopUsingItem();
             clock.setGameTime(until);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
             boolean at20 = begin(player);
             boolean second = at20 && finish(player, 4);
             clock.setGameTime(until + 100);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), limited));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), limited));
             boolean third = begin(player);
             player.stopUsingItem();
             ok &= leg(source, "cooldown_max_uses", finished && until == atConsume + 20 && !immediate && !at19 && second
@@ -285,9 +285,9 @@ public final class PillProbes {
 
             clearLedgers(player);
             PillComponent only = component(player, "{\"toxicity_gain\":4}");
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), only));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), only));
             boolean onlyFirst = finish(player, 4);
-            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, new ItemStack(MxtItems.PILL.get()), only));
+            player.setItemInHand(InteractionHand.MAIN_HAND, quick(player, MxtItems.PILL.toStack(), only));
             boolean onlySecond = finish(player, 4);
             ok &= leg(source, "component_only", onlyFirst && onlySecond && close(PillService.toxicity(player), 8.0D)
                             && !player.hasData(MxtAttachments.PILL_USAGE)

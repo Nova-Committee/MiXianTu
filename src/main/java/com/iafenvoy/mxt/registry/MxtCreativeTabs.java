@@ -14,11 +14,11 @@ public final class MxtCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> REGISTRY = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MiXianTu.MOD_ID);
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
-            .title(Component.translatable("itemGroup.mxt.main")).icon(() -> new ItemStack(MxtItems.SPIRIT_STONE_BAG.get()))
+            .title(Component.translatable("itemGroup.mxt.main")).icon(() -> MxtItems.SPIRIT_STONE_BAG.toStack())
             .displayItems((params, output) -> {
                 MxtItems.registeredItems().forEach(item -> output.accept(item.get()));
                 MxtItems.spiritStones().forEach(item -> {
-                    ItemStack empty = new ItemStack(item.get());
+                    ItemStack empty = item.toStack();
                     // An empty map is a stone that was drained, which is what the creative entry offers: with no
                     // component at all it would read as a pristine, full one.
                     empty.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);

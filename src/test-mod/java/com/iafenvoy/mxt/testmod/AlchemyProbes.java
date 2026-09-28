@@ -742,7 +742,7 @@ public final class AlchemyProbes {
     }
 
     private static ItemStack item(ServerLevel level, Identifier id) {
-        ItemStack stack = new ItemStack(MxtBlocks.ALCHEMY_FURNACE.get());
+        ItemStack stack = MxtBlocks.ALCHEMY_FURNACE.toStack();
         stack.set(MxtDataComponents.ALCHEMY_FURNACE.get(), holder(level, id));
         return stack;
     }
@@ -855,7 +855,7 @@ public final class AlchemyProbes {
     }
 
     private static ItemStack wallItem(ServerLevel level, Identifier id) {
-        ItemStack stack = new ItemStack(MxtBlocks.ALCHEMY_FURNACE_CASING.get());
+        ItemStack stack = MxtBlocks.ALCHEMY_FURNACE_CASING.toStack();
         stack.set(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get(),
                 MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ALCHEMY_WALL_MATERIAL, id).orElseThrow());
         return stack;

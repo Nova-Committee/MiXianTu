@@ -847,7 +847,7 @@ public final class MxtTestCommands {
                 return "three invocations added " + (resources.get(common) - before) + " instead of the 9 the ability owes";
 
             // No declared wear anywhere means the old currency: one whole carrier per invocation.
-            ItemStack plain = new ItemStack(MxtItems.TALISMAN.get(), 2);
+            ItemStack plain = MxtItems.TALISMAN.toStack(2);
             plain.set(MxtDataComponents.TALISMAN, new TalismanComponent(
                     List.of(require(MxtResourceKeys.TALISMAN, id("free_sigil"))), TriggerMode.FIRE));
             if (TalismanService.durability(plain) != 0 || TalismanService.durabilityCost(plain) != 0)
@@ -990,7 +990,7 @@ public final class MxtTestCommands {
     }
 
     private static ItemStack carrier(Holder<Talisman> inscribed) {
-        ItemStack stack = new ItemStack(MxtItems.TALISMAN.get());
+        ItemStack stack = MxtItems.TALISMAN.toStack();
         stack.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), TriggerMode.FIRE));
         return stack;
     }
@@ -1467,7 +1467,7 @@ public final class MxtTestCommands {
             // What makes a manual is the stack's own component: a jade slip out of the creative menu teaches
             // nothing, while the carrier the mod generates for a technique teaches exactly that technique - using
             // the item the declaration names when it names one.
-            ItemStack blankSlip = new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get());
+            ItemStack blankSlip = MxtItems.CULTIVATION_JADE_SLIP.toStack();
             Holder<Technique> declaredTechnique = require(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
             ItemStack generated = ItemBindingService.techniqueCarrier(level.registryAccess(), declaredTechnique);
             Holder<Technique> customTechnique = require(MxtResourceKeys.TECHNIQUE, id("azure_water_manual"));
@@ -1891,7 +1891,7 @@ public final class MxtTestCommands {
             // The bell names one beast and carries that creature's own answer about the orders it takes, which is
             // what lets the wheel be drawn without resolving the creature. A creature that is not a bound beast of
             // the holder's is never named, however the bell is used.
-            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(MxtItems.BEAST_TAMING_BELL.get()));
+            player.setItemInHand(InteractionHand.MAIN_HAND, MxtItems.BEAST_TAMING_BELL.toStack());
             ItemStack bell = player.getMainHandItem();
             boolean tuned = bell.getItem().interactLivingEntity(bell, player, beast, InteractionHand.MAIN_HAND) == InteractionResult.SUCCESS
                     && bell.get(MxtDataComponents.CONTRACT_BELL) instanceof ContractBellComponent component
@@ -1941,7 +1941,7 @@ public final class MxtTestCommands {
             // owner back because the probe saves that reference itself. The bag also carries what it has to say
             // about the creature without loading it - type, name, contract type and owner - and the released one
             // is still bound, because attachments ride along in the saved data.
-            ItemStack bagStack = new ItemStack(MxtItems.SPIRIT_BEAST_BAG.get());
+            ItemStack bagStack = MxtItems.SPIRIT_BEAST_BAG.toStack();
             boolean captured = bagStack.getItem().interactLivingEntity(bagStack, player, second, InteractionHand.MAIN_HAND) == InteractionResult.SUCCESS
                     && second.isRemoved();
             SpiritBeastComponent stored = bagStack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
@@ -3139,7 +3139,7 @@ public final class MxtTestCommands {
             Set<Holder<Element>> jadeElements = ItemElements.of(level.registryAccess(),
                     new ItemStack(Items.AMETHYST_SHARD));
             Set<Holder<Element>> crystalElements = ItemElements.of(level.registryAccess(),
-                    new ItemStack(MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.get()));
+                    MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.toStack());
             Set<Holder<Element>> plainElements = ItemElements.of(level.registryAccess(), new ItemStack(Items.STICK));
             boolean itemElement = swordElements.equals(Set.of(fire)) && jadeElements.equals(Set.of(fire, water))
                     && crystalElements.equals(Set.of(fire)) && plainElements.isEmpty()
@@ -4085,8 +4085,8 @@ public final class MxtTestCommands {
         player.setData(MxtAttachments.RESOURCE_HOLDER, resources);
         player.setData(MxtAttachments.ABILITY_HOLDER, player.getData(MxtAttachments.ABILITY_HOLDER));
 
-        give(player, new ItemStack(MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.get(), 8));
-        give(player, new ItemStack(MxtItems.SPIRIT_STONE.get(), 3));
+        give(player, MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.toStack(8));
+        give(player, MxtItems.SPIRIT_STONE.toStack(3));
         give(player, new ItemStack(Items.DIAMOND_SWORD));
         give(player, new ItemStack(Items.HONEY_BOTTLE, 2));
         give(player, new ItemStack(Items.APPLE));
@@ -4166,7 +4166,7 @@ public final class MxtTestCommands {
         Holder<Resource> mastery = require(MxtResourceKeys.RESOURCE, SWORD_MASTERY);
         // The manual the partner leg reads is the jade slip carrying the technique component: a declaration's
         // claimed item is a manual by matching and would carry no component at all.
-        ItemStack carrier = new ItemStack(MxtItems.CULTIVATION_JADE_SLIP.get());
+        ItemStack carrier = MxtItems.CULTIVATION_JADE_SLIP.toStack();
         carrier.set(MxtDataComponents.TECHNIQUE.get(), breathing);
 
         // The source's own position, so the probe runs both from a client and from the server console, whose
@@ -4523,7 +4523,7 @@ public final class MxtTestCommands {
     }
 
     private static ItemStack formationPlate() {
-        ItemStack stack = new ItemStack(MxtItems.FORMATION_PLATE.get());
+        ItemStack stack = MxtItems.FORMATION_PLATE.toStack();
         // An empty allow list, which is the shipped plate: unrestricted unless the server option says otherwise,
         // and therefore bound to whatever the kit's own formation is.
         stack.set(MxtDataComponents.FORMATION_PLATE,
@@ -4532,13 +4532,13 @@ public final class MxtTestCommands {
     }
 
     private static ItemStack secretRealmToken() {
-        ItemStack stack = new ItemStack(MxtItems.SECRET_REALM_TOKEN.get());
+        ItemStack stack = MxtItems.SECRET_REALM_TOKEN.toStack();
         stack.set(MxtDataComponents.SECRET_REALM_TOKEN, new SecretRealmTokenComponent(Optional.of(require(MxtResourceKeys.SECRET_REALM, TRIAL_REALM))));
         return stack;
     }
 
     private static ItemStack contractScroll() {
-        ItemStack stack = new ItemStack(MxtItems.CONTRACT_SCROLL.get());
+        ItemStack stack = MxtItems.CONTRACT_SCROLL.toStack();
         stack.set(MxtDataComponents.CONTRACT_SCROLL, new ContractScrollComponent(Optional.of(require(MxtResourceKeys.CONTRACT_TYPE, CONTRACT))));
         return stack;
     }

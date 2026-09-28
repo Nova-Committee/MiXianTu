@@ -77,7 +77,7 @@ public final class TalismanCommand {
             ctx.getSource().sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        ItemStack stack = new ItemStack(MxtItems.TALISMAN.get(), count(ctx));
+        ItemStack stack = MxtItems.TALISMAN.toStack(count(ctx));
         player.getInventory().placeItemBackInInventory(stack);
         ctx.getSource().sendSuccess(() -> Component.translatable("command.mxt.talisman.blank", stack.getCount()), true);
         return stack.getCount();
@@ -92,7 +92,7 @@ public final class TalismanCommand {
         }
         Reference<Talisman> inscribed = ResourceArgument.getResource(ctx, "talisman", MxtResourceKeys.TALISMAN);
         int count = count(ctx);
-        ItemStack template = new ItemStack(MxtItems.TALISMAN.get());
+        ItemStack template = MxtItems.TALISMAN.toStack();
         template.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), mode));
         // The declared wear lands on the stack here, because a carrier handed out by the command is the only one
         // the framework itself makes: the bar is on the item before it is ever used.

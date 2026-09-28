@@ -13,7 +13,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import org.jspecify.annotations.NonNull;
 
@@ -25,7 +24,7 @@ final class SpiritShapelessCategory extends AbstractRecipeCategory<RecipeHolder<
 
     SpiritShapelessCategory(IGuiHelper gui) {
         super(MxtJeiPlugin.SHAPELESS, Component.translatable("jei.mxt.spirit_shapeless"),
-                gui.createDrawableItemStack(new ItemStack(MxtBlocks.SPIRIT_CRAFTING_TABLE.get().asItem())), 140, 88);
+                gui.createDrawableItemStack(MxtBlocks.SPIRIT_CRAFTING_TABLE.toStack()), 140, 88);
         this.arrow = gui.getRecipeArrow();
     }
 

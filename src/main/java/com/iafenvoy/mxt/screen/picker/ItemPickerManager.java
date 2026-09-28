@@ -60,7 +60,7 @@ public final class ItemPickerManager {
         registerMatcher(MxtResourceKeys.WEAPON_BINDING, WeaponBinding::entries);
         register(MxtResourceKeys.PILL_BINDING, (holder, access) -> {
             List<PickerItem> items = new ArrayList<>();
-            items.add(described(componentStack(new ItemStack(MxtItems.PILL.get()), MxtDataComponents.PILL,
+            items.add(described(componentStack(MxtItems.PILL.toStack(), MxtDataComponents.PILL,
                     PillComponent.ofBinding(holder)), holder));
             for (ItemStack stack : stackItems(holder.value().entries()))
                 items.add(new PickerItem(stack, names(stack.getHoverName(), holder.value().name(), idName(HolderHelper.idOrNull(holder)))));
@@ -72,19 +72,19 @@ public final class ItemPickerManager {
 
         // Definitions carried by a dedicated item: written onto the stack, and the definition's own name wins.
         registerSingle(MxtResourceKeys.CONTRACT_TYPE, holder -> described(
-                componentStack(new ItemStack(MxtItems.CONTRACT_SCROLL.get()), MxtDataComponents.CONTRACT_SCROLL,
+                componentStack(MxtItems.CONTRACT_SCROLL.toStack(), MxtDataComponents.CONTRACT_SCROLL,
                         new ContractScrollComponent(Optional.of(holder))),
                 holder));
         registerSingle(MxtResourceKeys.SECRET_REALM, holder -> described(
-                componentStack(new ItemStack(MxtItems.SECRET_REALM_TOKEN.get()), MxtDataComponents.SECRET_REALM_TOKEN,
+                componentStack(MxtItems.SECRET_REALM_TOKEN.toStack(), MxtDataComponents.SECRET_REALM_TOKEN,
                         new SecretRealmTokenComponent(Optional.of(holder))),
                 holder));
         registerSingle(MxtResourceKeys.FORMATION, holder -> described(
-                componentStack(new ItemStack(MxtItems.FORMATION_PLATE.get()), MxtDataComponents.FORMATION_PLATE,
+                componentStack(MxtItems.FORMATION_PLATE.toStack(), MxtDataComponents.FORMATION_PLATE,
                         new FormationPlateComponent(List.of(), Optional.of(holder))),
                 holder));
         registerSingle(MxtResourceKeys.TALISMAN, holder -> described(
-                componentStack(new ItemStack(MxtItems.TALISMAN.get()), MxtDataComponents.TALISMAN,
+                componentStack(MxtItems.TALISMAN.toStack(), MxtDataComponents.TALISMAN,
                         new TalismanComponent(List.of(holder), TriggerMode.FIRE)),
                 holder));
         // A technique has no item of its own: the row is the carrier the mod generates for it, which is the item
@@ -92,7 +92,7 @@ public final class ItemPickerManager {
         registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
         register(MxtResourceKeys.ALCHEMY_FURNACE, (holder, access) -> {
             if (!holder.isBound()) return List.of();
-            ItemStack stack = componentStack(new ItemStack(MxtBlocks.ALCHEMY_FURNACE.get()), MxtDataComponents.ALCHEMY_FURNACE, holder);
+            ItemStack stack = componentStack(MxtBlocks.ALCHEMY_FURNACE.toStack(), MxtDataComponents.ALCHEMY_FURNACE, holder);
             Component name = DefinitionText.name(holder);
             Component quality = ItemQualityService.find(access, stack)
                     .map(value -> ItemQualityService.coloredName(value, value.value().name()))
@@ -100,17 +100,17 @@ public final class ItemPickerManager {
             return List.of(new PickerItem(stack, names(name, quality, idName(HolderHelper.idOrNull(holder)))));
         });
         registerSingle(MxtResourceKeys.ALCHEMY_WALL_MATERIAL, holder -> described(
-                componentStack(new ItemStack(MxtBlocks.ALCHEMY_FURNACE_CASING.get()), MxtDataComponents.ALCHEMY_WALL_MATERIAL, holder),
+                componentStack(MxtBlocks.ALCHEMY_FURNACE_CASING.toStack(), MxtDataComponents.ALCHEMY_WALL_MATERIAL, holder),
                 holder));
 
         // Auras have no item of their own, so one stand-in item carries whatever the definition is called.
-        registerSingle(MxtResourceKeys.AURA, holder -> described(new ItemStack(MxtItems.SPIRIT_STONE.get()), holder));
-        registerSingle(MxtResourceKeys.BLOCK_AURA, holder -> described(new ItemStack(MxtItems.SPIRIT_STONE.get()), holder));
+        registerSingle(MxtResourceKeys.AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
+        registerSingle(MxtResourceKeys.BLOCK_AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
         // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
         registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(
-                new ItemStack(MxtItems.IDENTIFICATION_MIRROR.get()), holder,
+                MxtItems.IDENTIFICATION_MIRROR.toStack(), holder,
                 ItemQualityService.coloredName(holder, holder.value().name())));
     }
 

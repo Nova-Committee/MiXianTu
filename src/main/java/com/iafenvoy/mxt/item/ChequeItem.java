@@ -16,7 +16,7 @@ public final class ChequeItem extends Item {
 
     public static ItemStack create(long value, String issuer) {
         if (value <= 0L) throw new IllegalArgumentException("Cheque value must be positive");
-        ItemStack stack = new ItemStack(MxtItems.CHEQUE.get());
+        ItemStack stack = MxtItems.CHEQUE.toStack();
         stack.set(MxtDataComponents.CHEQUE.get(), new ChequeComponent(value, issuer));
         return stack;
     }
