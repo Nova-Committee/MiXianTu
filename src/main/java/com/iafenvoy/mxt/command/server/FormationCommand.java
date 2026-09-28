@@ -3,16 +3,19 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.item.FormationPlateItem;
+import com.iafenvoy.mxt.network.payload.FormationStructureS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
+import com.iafenvoy.mxt.runtime.formation.FormationStructures;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
@@ -31,6 +34,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.List;
 import java.util.Map;
@@ -67,11 +71,47 @@ public final class FormationCommand {
                                                 .executes(ctx -> editOwner(ctx.getSource(),
                                                         BlockPosArgument.getBlockPos(ctx, "pos"),
                                                         EntityArgument.getPlayer(ctx, "player"), false))))))
+                .then(literal("show")
+                        .then(argument("formation", ResourceArgument.resource(context, MxtResourceKeys.FORMATION))
+                                .executes(ctx -> show(ctx.getSource(),
+                                        ResourceArgument.getResource(ctx, "formation", MxtResourceKeys.FORMATION)))))
                 .then(literal("bind")
                         .requires(ServerCommandManager::mayChange)
                         .then(argument("formation", ResourceArgument.resource(context, MxtResourceKeys.FORMATION))
                                 .executes(ctx -> bind(ctx.getSource(),
                                         ResourceArgument.getResource(ctx, "formation", MxtResourceKeys.FORMATION)))));
+    }
+
+    // The shape is resolved on the server and sent, because a structure_template is server-side data: the client
+    // may not hold the packs that define it. Read-only, so it asks for no permission beyond being a player.
+    private static int show(CommandSourceStack source, Reference<Formation> definition) {
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            return 0;
+        }
+        Formation formation = definition.value();
+        if (formation.structureCheck() == Formation.StructureCheck.ALWAYS) {
+            source.sendFailure(Component.translatable("command.mxt.formation.show.none",
+                    DefinitionText.name(definition, "formation")));
+            return 0;
+        }
+        List<RequiredBlock> structure = FormationStructures.declared(source.getLevel(), formation);
+        if (structure.isEmpty()) {
+            source.sendFailure(Component.translatable("command.mxt.formation.show.missing",
+                    formation.structureTemplate().map(Identifier::toString).orElse("-")));
+            return 0;
+        }
+        if (structure.size() > FormationStructureS2CPayload.MAX_BLOCKS) {
+            source.sendFailure(Component.translatable("command.mxt.formation.show.too_large",
+                    structure.size(), FormationStructureS2CPayload.MAX_BLOCKS));
+            return 0;
+        }
+        PacketDistributor.sendToPlayer(player, new FormationStructureS2CPayload(
+                DefinitionText.name(definition, "formation"), structure));
+        source.sendSuccess(() -> Component.translatable("command.mxt.formation.show.done",
+                DefinitionText.name(definition, "formation"), structure.size()), false);
+        return structure.size();
     }
 
     // Rebinding is allowed and overwrites. Public so the server audit can drive the command body with a FakePlayer.

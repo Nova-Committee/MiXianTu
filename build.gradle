@@ -99,6 +99,14 @@ neoForge {
             systemProperty 'forge.logging.markers', 'REGISTRIES'
 
             logLevel = org.slf4j.event.Level.INFO
+
+            // Every run has `mxt_test` on its mod path (see the mods block below), and the IntelliJ run configurations
+            // this plugin generates only run the IDE's own builder, which never copies resources into
+            // `build/resources`. Asking for both class sets makes every IDE launch (and every `gradlew run*`) compile
+            // and copy first, instead of serving whatever the previous build left behind. The plugin turns these into
+            // a "Run Gradle task" step before launching in IntelliJ.
+            taskBefore(tasks.named('classes'))
+            taskBefore(tasks.named(testModSourceSet.classesTaskName))
         }
     }
 
@@ -112,26 +120,11 @@ neoForge {
     }
 }
 
-tasks.named('runTestClient').configure {
-    // The run task does not reliably pull in the test source set's resource
-    // processing, so make both build phases explicit before launching.
-    dependsOn(
-            testModSourceSet.compileJavaTaskName,
-            testModSourceSet.processResourcesTaskName,
-            testModSourceSet.classesTaskName
-    )
-}
-
+// The runs above declare their build prerequisites with `taskBefore`, which ModDevGradle turns into both a dependency
+// of the Gradle run task and a before-launch step in the IntelliJ run configuration. Without it an IDE launch reads
+// whatever happens to be in `build/resources/**`, so a fresh checkout or a pull serves the previous test pack.
 tasks.named('runTestServer').configure {
     standardInput = System.in
-    // Same reason as the client below: the run task does not reliably pull in the test source set's resource
-    // processing, so a server could launch with a stale `build/resources/testMod` pack and fail to load a
-    // datapack file the working tree no longer has.
-    dependsOn(
-            testModSourceSet.compileJavaTaskName,
-            testModSourceSet.processResourcesTaskName,
-            testModSourceSet.classesTaskName
-    )
 }
 
 configurations {
