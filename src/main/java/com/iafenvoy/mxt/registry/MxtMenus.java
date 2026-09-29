@@ -25,7 +25,7 @@ public final class MxtMenus {
     public static final DeferredHolder<MenuType<?>, MenuType<SpiritCraftingMenu>> SPIRIT_CRAFTING_TABLE = REGISTRY.register("spirit_crafting_table", () -> new MenuType<>(SpiritCraftingMenu::new, FeatureFlags.VANILLA_SET));
     public static final DeferredHolder<MenuType<?>, MenuType<ForgingMenu>> FORGING_TABLE = REGISTRY.register("forging_table", () -> new MenuType<>(ForgingMenu::new, FeatureFlags.VANILLA_SET));
     public static final DeferredHolder<MenuType<?>, MenuType<AlchemyFurnaceMenu>> ALCHEMY_FURNACE = REGISTRY.register("alchemy_furnace",
-            () -> IMenuTypeExtension.create((containerId, inventory, buffer) -> new AlchemyFurnaceMenu(containerId, inventory, buffer)));
+            () -> IMenuTypeExtension.create(AlchemyFurnaceMenu::new));
     // Nine slots a row over a container, so a vanilla chest menu is exactly right and there is nothing to draw.
     // The row count travels in the open packet and the client rebuilds the same shape from it, so whoever opens
     // one has to send that count through openMenu(provider, writer).

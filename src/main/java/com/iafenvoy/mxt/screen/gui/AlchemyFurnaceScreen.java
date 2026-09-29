@@ -31,12 +31,7 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Hosts one bundled ApricityUI page over the vanilla furnace menu: the page owns the panel art and the
@@ -50,7 +45,9 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     private static final int PANEL_WIDTH = 202;
     private static final int PANEL_HEIGHT_MONITOR = 225;
     private static final int PANEL_HEIGHT_PART = 160;
-    /** Off-panel x/y for menu slots that have no page geometry behind them yet. */
+    /**
+     * Off-panel x/y for menu slots that have no page geometry behind them yet.
+     */
     private static final int PARKED_SLOT = -1000;
     /**
      * Rounding slack, in document pixels, for "this slot lies inside the painted panel".
@@ -85,7 +82,7 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     private long boundGeneration = Long.MIN_VALUE;
 
     @Nullable
-    private Element panel, title, temperature, limit, status, progress, target,apply,start,abort;
+    private Element panel, title, temperature, limit, status, progress, target, apply, start, abort;
     private final Map<Integer, Element> cells = new LinkedHashMap<>();
     private final List<Tooltip.Binding> tooltips = new ArrayList<>();
 
@@ -102,12 +99,12 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     @Nullable
     private Component rejection;
 
-    private boolean startDisabled,abortDisabled;
+    private boolean startDisabled, abortDisabled;
     private float shownProgress = Float.NaN;
     private long shownTemperatureBits = Long.MIN_VALUE;
     private long shownLimitBits = Long.MIN_VALUE;
     @Nullable
-    private Component shownTitle, shownQuality,shownStatus;
+    private Component shownTitle, shownQuality, shownStatus;
 
     public AlchemyFurnaceScreen(AlchemyFurnaceMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, PANEL_WIDTH, panelHeight(menu.view()));
@@ -140,7 +137,9 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         this.refresh();
     }
 
-    /** Resolves the page contract again; a refresh (hot reload or resize) replaces every element. */
+    /**
+     * Resolves the page contract again; a refresh (hot reload or resize) replaces every element.
+     */
     private void rebind() {
         this.clearBindings();
         this.pageError = null;
@@ -157,9 +156,11 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         Element title = current.getElementById("title");
         if (title == null) return this.fail("title");
         if (!(current.getElementById("machine") instanceof Container machine)) return this.fail("machine (container)");
-        if (!(current.getElementById("player_inventory") instanceof Container inventory)) return this.fail("player_inventory (container)");
+        if (!(current.getElementById("player_inventory") instanceof Container inventory))
+            return this.fail("player_inventory (container)");
         List<Element> machineCells = slotsOf(current, machine);
-        if (machineCells.size() != this.menu.view().machineSlots()) return this.fail("machine (" + machineCells.size() + " slots)");
+        if (machineCells.size() != this.menu.view().machineSlots())
+            return this.fail("machine (" + machineCells.size() + " slots)");
         List<Element> playerCells = slotsOf(current, inventory);
         if (playerCells.size() != 36) return this.fail("player_inventory (" + playerCells.size() + " slots)");
         this.panel = panel;
@@ -219,7 +220,7 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         this.click(apply, this::applyTemperature);
         this.click(start, () -> this.send(Action.START, 0));
         this.click(abort, () -> this.send(Action.ABORT, 0));
-        this.tooltips.add(Tooltip.bind(title, () -> this.titleTooltip(), TOOLTIP_OPTIONS));
+        this.tooltips.add(Tooltip.bind(this.title, this::titleTooltip, TOOLTIP_OPTIONS));
         this.tooltips.add(Tooltip.bind(temperature, this::heatTooltip, TOOLTIP_OPTIONS));
         this.tooltips.add(Tooltip.bind(limit, this::limitTooltip, TOOLTIP_OPTIONS));
         this.tooltips.add(Tooltip.bind(target, this::fieldTooltip, TOOLTIP_OPTIONS));
@@ -274,7 +275,9 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         this.shownStatus = null;
     }
 
-    /** The menu builds every slot at (0, 0); parking them keeps that from drawing under the panel. */
+    /**
+     * The menu builds every slot at (0, 0); parking them keeps that from drawing under the panel.
+     */
     private void parkSlots() {
         for (Slot slot : this.menu.slots) {
             slot.x = PARKED_SLOT;
@@ -289,7 +292,7 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
             if (slot.findAncestor(Container.class) != container) continue;
             cells.add(slot);
         }
-        cells.sort((left, right) -> Integer.compare(slotIndexOf(left), slotIndexOf(right)));
+        cells.sort(Comparator.comparingInt(AlchemyFurnaceScreen::slotIndexOf));
         return cells;
     }
 
@@ -306,7 +309,9 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         };
     }
 
-    /** Runs before the vanilla pass so slot geometry is current and the page sits under the items. */
+    /**
+     * Runs before the vanilla pass so slot geometry is current and the page sits under the items.
+     */
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         this.syncPage();
@@ -396,7 +401,9 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         );
     }
 
-    /** Items may only be drawn once the slot geometry behind them has actually been read. */
+    /**
+     * Items may only be drawn once the slot geometry behind them has actually been read.
+     */
     private boolean slotsDrawn() {
         return this.slotsBound && this.geometryReady;
     }
@@ -427,12 +434,12 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
             this.shownProgress = progress;
         }
         boolean canStart = view.status().canStart();
-        if (this.start != null && !canStart != this.startDisabled) {
+        if (this.start != null && canStart == this.startDisabled) {
             this.start.setDisabled(!canStart);
             this.startDisabled = !canStart;
         }
         boolean canAbort = "WARMING".equals(view.status().phase()) || "RUNNING".equals(view.status().phase());
-        if (this.abort != null && !canAbort != this.abortDisabled) {
+        if (this.abort != null && canAbort == this.abortDisabled) {
             this.abort.setDisabled(!canAbort);
             this.abortDisabled = !canAbort;
         }
@@ -611,7 +618,7 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     }
 
     @Override
-    protected void extractSlot(@NonNull GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY) {
+    protected void extractSlot(@NonNull GuiGraphicsExtractor graphics, @NonNull Slot slot, int mouseX, int mouseY) {
         if (!this.slotsDrawn()) return;
         super.extractSlot(graphics, slot, mouseX, mouseY);
     }
@@ -620,7 +627,9 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     protected void extractLabels(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
     }
 
-    /** Without read geometry the cells are parked: they must not hover, take clicks or find slots. */
+    /**
+     * Without read geometry the cells are parked: they must not hover, take clicks or find slots.
+     */
     @Override
     protected boolean isHovering(int left, int top, int width, int height, double mouseX, double mouseY) {
         return this.slotsDrawn() && super.isHovering(left, top, width, height, mouseX, mouseY);

@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
-import com.iafenvoy.mxt.api.WheelEntryKind;
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;

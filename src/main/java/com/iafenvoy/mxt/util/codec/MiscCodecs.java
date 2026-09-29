@@ -8,7 +8,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.phys.Vec2;
 
 import java.util.List;

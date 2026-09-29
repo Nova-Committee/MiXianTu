@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.compat.geckolib;
 
-import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
-import com.geckolib.animatable.GeoAnimatable;
 import com.geckolib.model.GeoModel;
 import com.geckolib.renderer.base.GeoRenderState;
+import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 
 /**
  * The three assets a definition names. GeckoLib's own resource reloader bakes everything under
@@ -18,17 +18,17 @@ final class MountGeoModel extends GeoModel<MountAnimatable> {
     }
 
     @Override
-    public Identifier getModelResource(GeoRenderState renderState) {
+    public @NonNull Identifier getModelResource(@NonNull GeoRenderState renderState) {
         return this.definition.model();
     }
 
     @Override
-    public Identifier getTextureResource(GeoRenderState renderState) {
+    public @NonNull Identifier getTextureResource(@NonNull GeoRenderState renderState) {
         return this.definition.texture();
     }
 
     @Override
-    public Identifier getAnimationResource(MountAnimatable animatable) {
+    public @NonNull Identifier getAnimationResource(MountAnimatable animatable) {
         // Only asked when an animation is played, and no controller exists unless the definition names a file.
         return this.definition.animations().orElse(this.definition.model());
     }

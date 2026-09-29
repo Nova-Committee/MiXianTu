@@ -14,7 +14,7 @@ public final class MxtCreativeTabs {
     public static final DeferredRegister<CreativeModeTab> REGISTRY = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MiXianTu.MOD_ID);
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
-            .title(Component.translatable("itemGroup.mxt.main")).icon(() -> MxtItems.SPIRIT_STONE_BAG.toStack())
+            .title(Component.translatable("itemGroup.mxt.main")).icon(MxtItems.SPIRIT_STONE_BAG::toStack)
             .displayItems((params, output) -> {
                 MxtItems.registeredItems().forEach(item -> output.accept(item.get()));
                 MxtItems.spiritStones().forEach(item -> {

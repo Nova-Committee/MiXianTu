@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.item;
 
-import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.registry.MxtDataComponents;

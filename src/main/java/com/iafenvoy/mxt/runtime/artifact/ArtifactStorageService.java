@@ -32,7 +32,8 @@ public final class ArtifactStorageService implements ISpiritStorage {
     @Override
     public ItemStack get(Provider access, ItemStack stack, Holder<Ability> ability, int slot, Player viewer) {
         if (!this.mayAccess(access, stack, ability, viewer)) return ItemStack.EMPTY;
-        if (slot < 0 || slot >= this.slots(access, stack, ability, FormulaContexts.forEntity(viewer))) return ItemStack.EMPTY;
+        if (slot < 0 || slot >= this.slots(access, stack, ability, FormulaContexts.forEntity(viewer)))
+            return ItemStack.EMPTY;
         return storage(stack, ability).get(slot);
     }
 

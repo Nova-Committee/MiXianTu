@@ -1,8 +1,6 @@
 package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
@@ -28,7 +26,9 @@ public record PillBinding(Component name, Component description, List<Entry> ent
                           Optional<Integer> maxUses, NumberProvider cooldown, int priority)
         implements ItemMatcher, NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.PILL_BINDING.identifier());
-    /** Holder identity. Usage counters key off this, and a component overlay never replaces it. */
+    /**
+     * Holder identity. Usage counters key off this, and a component overlay never replaces it.
+     */
     public static final Codec<Holder<PillBinding>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PILL_BINDING);
     public static final Codec<PillBinding> DIRECT_CODEC = RecordCodecBuilder.<PillBinding>create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(PillBinding::name),

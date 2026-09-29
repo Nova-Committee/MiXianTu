@@ -35,8 +35,8 @@ record MultiblockSceneCamera(float yaw, float pitch, float scale, float centreX,
     // The cell under the mouse, or null when the ray misses every one of them. The rectangle is the scene's, in GUI
     // pixels, which is also what tells the camera which pixel the mouse is on.
     MultiblockSceneRenderState.@Nullable SceneBlock pick(List<MultiblockSceneRenderState.SceneBlock> blocks,
-                                                        double mouseX, double mouseY,
-                                                        int x0, int y0, int x1, int y1) {
+                                                         double mouseX, double mouseY,
+                                                         int x0, int y0, int x1, int y1) {
         Matrix3f inverse = new Matrix3f().rotateX((float) Math.toRadians(this.pitch))
                 .rotateY((float) Math.toRadians(this.yaw)).invert();
         float cameraX = (float) (mouseX - (x0 + x1) * 0.5D) / this.scale;

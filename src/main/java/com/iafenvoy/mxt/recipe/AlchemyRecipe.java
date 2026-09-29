@@ -22,11 +22,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
-import net.minecraft.world.item.crafting.PlacementInfo;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeBookCategory;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
@@ -52,8 +48,8 @@ public record AlchemyRecipe(Component name, Component description,
             Codec.unboundedMap(MedicinalProperty.CODEC, NumberProvider.CODEC);
     public static final MapCodec<AlchemyRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             MiscCodecs.pair(
-                    MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("name", Component.empty()),
-                    MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("description", Component.empty()))
+                            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("name", Component.empty()),
+                            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("description", Component.empty()))
                     .forGetter(recipe -> Pair.of(recipe.name(), recipe.description())),
             PROPERTIES.validate(AlchemyRecipe::requirePositive).fieldOf("main_requirements").forGetter(AlchemyRecipe::mainRequirements),
             PROPERTIES.validate(AlchemyRecipe::optionalPositive).optionalFieldOf("auxiliary_requirements", Map.of()).forGetter(AlchemyRecipe::auxiliaryRequirements),
@@ -80,7 +76,7 @@ public record AlchemyRecipe(Component name, Component description,
 
     @Override
     public boolean matches(AlchemyRecipeInput input, @NonNull Level level) {
-        return input != null && AlchemyResolver.matches(this, input, level);
+        return AlchemyResolver.matches(this, input, level);
     }
 
     @Override
@@ -122,7 +118,8 @@ public record AlchemyRecipe(Component name, Component description,
         MAIN, AUXILIARY, CATALYST
     }
 
-    public record Guide(List<ItemStackTemplate> main, List<ItemStackTemplate> auxiliary, List<ItemStackTemplate> catalyst) {
+    public record Guide(List<ItemStackTemplate> main, List<ItemStackTemplate> auxiliary,
+                        List<ItemStackTemplate> catalyst) {
         public static final Codec<Guide> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ItemStackTemplate.CODEC.listOf(0, 2).optionalFieldOf("main", List.of()).forGetter(Guide::main),
                 ItemStackTemplate.CODEC.listOf(0, 2).optionalFieldOf("auxiliary", List.of()).forGetter(Guide::auxiliary),
@@ -144,19 +141,19 @@ public record AlchemyRecipe(Component name, Component description,
     }
 
     private static DataResult<NumberProvider> positiveProvider(NumberProvider provider) {
-        if (provider instanceof Constant constant && constant.value() <= 0.0D)
+        if (provider instanceof Constant(double value) && value <= 0.0D)
             return DataResult.error(() -> "Alchemy threshold must be positive");
         return DataResult.success(provider);
     }
 
     private static DataResult<NumberProvider> nonNegativeProvider(NumberProvider provider) {
-        if (provider instanceof Constant constant && constant.value() < 0.0D)
+        if (provider instanceof Constant(double value) && value < 0.0D)
             return DataResult.error(() -> "Alchemy temperature must be non-negative");
         return DataResult.success(provider);
     }
 
     private static DataResult<NumberProvider> unitInterval(NumberProvider provider) {
-        if (provider instanceof Constant constant && (constant.value() < 0.0D || constant.value() > 1.0D))
+        if (provider instanceof Constant(double value) && (value < 0.0D || value > 1.0D))
             return DataResult.error(() -> "balance_tolerance must be in [0, 1]");
         return DataResult.success(provider);
     }

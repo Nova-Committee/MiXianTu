@@ -26,7 +26,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * The rules of one artifact, shared by every item {@code items} opts into them. There is no field naming a

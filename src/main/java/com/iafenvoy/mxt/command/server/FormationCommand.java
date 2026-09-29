@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.cost.context.CostContext;

@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.forging.*;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint.FailureSettlement;
+import com.iafenvoy.mxt.data.forging.ForgingMaterial;
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;

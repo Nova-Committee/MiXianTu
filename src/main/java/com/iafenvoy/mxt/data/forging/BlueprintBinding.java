@@ -14,7 +14,8 @@ import java.util.List;
  * The forging blueprints one item offers, claimed by item like every other binding table. A stack may instead carry
  * its own blueprints through {@code mxt:forging_blueprints}, and the two are unioned.
  */
-public record BlueprintBinding(List<Entry> entries, List<Holder<ForgingBlueprint>> blueprints, int priority) implements ItemMatcher {
+public record BlueprintBinding(List<Entry> entries, List<Holder<ForgingBlueprint>> blueprints,
+                               int priority) implements ItemMatcher {
     public static final Codec<BlueprintBinding> DIRECT_CODEC = RecordCodecBuilder.<BlueprintBinding>create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(BlueprintBinding::entries),
             AutoIgnoreListCodec.create(ForgingBlueprint.CODEC).fieldOf("blueprints").forGetter(BlueprintBinding::blueprints),

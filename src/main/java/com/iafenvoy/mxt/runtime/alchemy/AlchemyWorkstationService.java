@@ -7,8 +7,6 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
-import com.iafenvoy.mxt.recipe.AlchemyRecipe.Role;
-import com.iafenvoy.mxt.recipe.AlchemyRecipeInput;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput.Slot;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -28,24 +26,22 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Recipe numbers use the same parameters() path for preview and the frozen batch.
@@ -105,7 +101,8 @@ public final class AlchemyWorkstationService {
         if (station.state().busy()) blocker = AlchemyFailure.ACTIVE;
         else if (!station.structureStatus().complete()) blocker = AlchemyFailure.STRUCTURE;
         else if (spec == null) blocker = AlchemyFailure.NO_FURNACE;
-        else if (ItemQualityService.find(player.registryAccess(), station.furnaceItem()).isEmpty()) blocker = AlchemyFailure.FURNACE_QUALITY;
+        else if (ItemQualityService.find(player.registryAccess(), station.furnaceItem()).isEmpty())
+            blocker = AlchemyFailure.FURNACE_QUALITY;
         else {
             qualityFailure = ItemQualityService.check(player, station.furnaceItem());
             AlchemyFailure placed = placement(station.container(), spec);
@@ -113,7 +110,7 @@ public final class AlchemyWorkstationService {
             else if (placed != null) blocker = placed;
         }
         // Temperature and output capacity never choose a weaker match. They only accept or reject the dominator.
-        if (blocker == null && numbers.isPresent() && spec != null) {
+        if (blocker == null && numbers.isPresent()) {
             Parameters process = numbers.get();
             if (!reachable(station, process)) blocker = AlchemyFailure.TEMPERATURE;
             else if (!environment(player.level(), station.getBlockPos(), process)) blocker = AlchemyFailure.ENVIRONMENT;
@@ -137,7 +134,8 @@ public final class AlchemyWorkstationService {
         BlockPos pos = station.getBlockPos();
         if (station.state().busy()) return StartResult.rejected(AlchemyFailure.ACTIVE);
         AlchemyPreview preview = preview(player, station);
-        if (preview.blocker().isPresent()) return new StartResult(false, preview.blocker().get(), preview.qualityFailure());
+        if (preview.blocker().isPresent())
+            return new StartResult(false, preview.blocker().get(), preview.qualityFailure());
         if (preview.parameters().isEmpty() || preview.resolvedRecipe().isEmpty())
             return StartResult.rejected(AlchemyFailure.INVALID_FORMULA);
         Optional<RecipeHolder<AlchemyRecipe>> holder = recipe(player.level().getServer().getRecipeManager(), preview.resolvedRecipe().get());
@@ -188,13 +186,13 @@ public final class AlchemyWorkstationService {
             if (furnace.isEmpty()) abort(level, pos, station, AlchemyFailure.DISABLED);
             else {
                 heat(level, station, furnace.get().value());
-                if (session.phase() == AlchemyPhase.WARMING && session.inRange(state.temperature())) session.enterRunning();
+                if (session.phase() == AlchemyPhase.WARMING && session.inRange(state.temperature()))
+                    session.enterRunning();
                 if (session.phase() == AlchemyPhase.RUNNING) session.tickRunning(state.temperature());
                 if (session.due()) session.generatePending();
             }
-        } else if (furnace.isPresent()) {
-            cool(state, furnace.get().value().coolingPerTick(), 0.0D);
-        }
+        } else
+            furnace.ifPresent(alchemyFurnaceDefinitionHolder -> cool(state, alchemyFurnaceDefinitionHolder.value().coolingPerTick(), 0.0D));
         if (session != null && session.phase() == AlchemyPhase.READY && !session.settled())
             settle(level, pos, station, session);
         if (temperature != state.temperature() || phase != state.phase()
@@ -238,7 +236,7 @@ public final class AlchemyWorkstationService {
             if (!canAccept(station.container(), pending)) return;
             insert(station.container(), pending);
             ServerPlayer operator = level.getServer().getPlayerList().getPlayer(session.operator());
-            RecipeHolder<AlchemyRecipe> frozen = new RecipeHolder<>(ResourceKey.create(net.minecraft.core.registries.Registries.RECIPE, session.recipeId()), session.recipe());
+            RecipeHolder<AlchemyRecipe> frozen = new RecipeHolder<>(ResourceKey.create(Registries.RECIPE, session.recipeId()), session.recipe());
             event = new AlchemyCraftEvent.Post(frozen, pos, session.operator(), operator,
                     !session.failed(), session.failure().orElse(null), pending);
             session.clearPending();
@@ -266,12 +264,11 @@ public final class AlchemyWorkstationService {
         return cap > 0.0D && low <= cap && high >= 0.0D && low <= high && target >= low && target <= high;
     }
 
-    private static boolean environment(net.minecraft.world.level.Level level, BlockPos pos, Parameters numbers) {
+    private static boolean environment(Level level, BlockPos pos, Parameters numbers) {
         AuraResult aura = AuraService.getPositionAura(level, pos);
         if (aura.rules().alchemyEnvBonus()) return true;
         for (Map.Entry<Identifier, Double> entry : numbers.minimumAura().entrySet()) {
-            Optional<Holder<Aura>> holder = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.AURA, entry.getKey())
-                    .map(found -> (Holder<Aura>) found);
+            Optional<Holder<Aura>> holder = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.AURA, entry.getKey()).map(found -> found);
             if (holder.isEmpty() || aura.pool(holder.get()).amount() + 1.0E-6D < entry.getValue()) return false;
         }
         return true;
@@ -362,7 +359,9 @@ public final class AlchemyWorkstationService {
         }
     }
 
-    /** Remaining room per output slot after merging identical pending stacks. Null when they do not fit. */
+    /**
+     * Remaining room per output slot after merging identical pending stacks. Null when they do not fit.
+     */
     private static int @Nullable [] plan(Container container, List<ItemStack> stacks) {
         int[] counts = new int[AlchemySlots.OUTPUT_COUNT];
         ItemStack[] kinds = new ItemStack[AlchemySlots.OUTPUT_COUNT];
@@ -425,9 +424,9 @@ public final class AlchemyWorkstationService {
         return kinds;
     }
 
-    private static @Nullable List<ItemStack> create(List<net.minecraft.world.item.ItemStackTemplate> templates) {
+    private static @Nullable List<ItemStack> create(List<ItemStackTemplate> templates) {
         List<ItemStack> stacks = new ArrayList<>(templates.size());
-        for (net.minecraft.world.item.ItemStackTemplate template : templates) {
+        for (ItemStackTemplate template : templates) {
             ItemStack stack = template.create();
             if (stack.isEmpty() || stack.getCount() > stack.getMaxStackSize()) return null;
             stacks.add(stack);
@@ -483,12 +482,15 @@ public final class AlchemyWorkstationService {
         ).apply(i, Parameters::new));
     }
 
-    public record AlchemyPreview(AlchemyMixture mixture, List<Candidate> candidates, Optional<ResourceKey<Recipe<?>>> resolvedRecipe,
+    public record AlchemyPreview(AlchemyMixture mixture, List<Candidate> candidates,
+                                 Optional<ResourceKey<Recipe<?>>> resolvedRecipe,
                                  Optional<AlchemyFailure> blocker, Optional<Parameters> parameters,
-                                 Optional<ItemQualityService.Failure> qualityFailure, List<ItemStack> successOutputs, List<ItemStack> failureOutputs) {
+                                 Optional<ItemQualityService.Failure> qualityFailure, List<ItemStack> successOutputs,
+                                 List<ItemStack> failureOutputs) {
     }
 
-    public record StartResult(boolean started, @Nullable AlchemyFailure failure, Optional<ItemQualityService.Failure> qualityFailure) {
+    public record StartResult(boolean started, @Nullable AlchemyFailure failure,
+                              Optional<ItemQualityService.Failure> qualityFailure) {
         public static StartResult success() {
             return new StartResult(true, null, Optional.empty());
         }

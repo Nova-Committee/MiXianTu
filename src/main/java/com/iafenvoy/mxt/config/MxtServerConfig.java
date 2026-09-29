@@ -1,11 +1,7 @@
 package com.iafenvoy.mxt.config;
 
 import com.iafenvoy.jupiter.config.container.AutoInitConfigContainer;
-import com.iafenvoy.jupiter.config.entry.BooleanEntry;
-import com.iafenvoy.jupiter.config.entry.DoubleEntry;
-import com.iafenvoy.jupiter.config.entry.EnumEntry;
-import com.iafenvoy.jupiter.config.entry.IntegerEntry;
-import com.iafenvoy.jupiter.config.entry.LongEntry;
+import com.iafenvoy.jupiter.config.entry.*;
 import com.iafenvoy.mxt.MiXianTu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;

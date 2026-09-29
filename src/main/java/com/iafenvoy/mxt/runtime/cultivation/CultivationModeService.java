@@ -47,7 +47,7 @@ public final class CultivationModeService {
         return MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATION)
                 .filter(action -> applicable(entity, action, context))
                 .max(Comparator.comparingInt(action -> action.value().priority()))
-                .map(action -> (Holder<Cultivation>) action);
+                .map(action -> action);
     }
 
     // The one ruler for "usable right now": what start checks, plus the yield condition. The upkeep condition stays

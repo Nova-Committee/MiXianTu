@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.phys.shapes.Shapes;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -33,12 +34,12 @@ final class MultiblockSceneRenderer extends PictureInPictureRenderer<MultiblockS
     }
 
     @Override
-    public Class<MultiblockSceneRenderState> getRenderStateClass() {
+    public @NonNull Class<MultiblockSceneRenderState> getRenderStateClass() {
         return MultiblockSceneRenderState.class;
     }
 
     @Override
-    protected void renderToTexture(MultiblockSceneRenderState renderState, PoseStack poseStack) {
+    protected void renderToTexture(MultiblockSceneRenderState renderState, @NonNull PoseStack poseStack) {
         List<MultiblockSceneRenderState.SceneBlock> blocks = renderState.blocks();
         if (blocks.isEmpty()) return;
 
@@ -95,7 +96,7 @@ final class MultiblockSceneRenderer extends PictureInPictureRenderer<MultiblockS
     }
 
     @Override
-    protected String getTextureLabel() {
+    protected @NonNull String getTextureLabel() {
         return "mxt_multiblock";
     }
 }

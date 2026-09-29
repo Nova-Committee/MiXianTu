@@ -8,8 +8,10 @@ import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 
-/** What a carrier's own container holds under the ability that declares its slot count. The list stays at the
- * declared capacity and an empty stack is a real value, so the codec must stay {@code ItemStack.OPTIONAL_CODEC}. */
+/**
+ * What a carrier's own container holds under the ability that declares its slot count. The list stays at the
+ * declared capacity and an empty stack is a real value, so the codec must stay {@code ItemStack.OPTIONAL_CODEC}.
+ */
 public final class ContainerDataStorage extends DataStorage {
     // The declaration entry the storage type lists this kind by; the contents are the runtime's.
     public static final ContainerDataStorage INSTANCE = new ContainerDataStorage(List.of());

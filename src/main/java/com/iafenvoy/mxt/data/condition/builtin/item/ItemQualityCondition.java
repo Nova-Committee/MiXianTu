@@ -20,7 +20,8 @@ import java.util.List;
  * Asks which tier the stack resolves to, through the same order the quality gate and the tooltip read, so a
  * definition's own default tier counts as the stack's.
  */
-public record ItemQualityCondition(List<Either<Holder<ItemQuality>, TagKey<ItemQuality>>> qualities) implements ItemCondition {
+public record ItemQualityCondition(
+        List<Either<Holder<ItemQuality>, TagKey<ItemQuality>>> qualities) implements ItemCondition {
     public static final MapCodec<ItemQualityCondition> CODEC = RecordCodecBuilder.<ItemQualityCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ITEM_QUALITY).fieldOf("quality").forGetter(ItemQualityCondition::qualities)
     ).apply(i, ItemQualityCondition::new)).validate(ItemQualityCondition::validate);

@@ -77,12 +77,12 @@ public final class AlchemyFurnaceBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull VoxelShape getShape(BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
+    protected @NonNull VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
         return shape(state);
     }
 
     @Override
-    protected @NonNull VoxelShape getCollisionShape(BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
+    protected @NonNull VoxelShape getCollisionShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
         return shape(state);
     }
 
@@ -95,7 +95,8 @@ public final class AlchemyFurnaceBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(@NonNull Level level, @NonNull BlockPos pos, @NonNull BlockState state, @Nullable LivingEntity placer, @NonNull ItemStack stack) {
         Direction facing = Direction.NORTH;
-        if (placer != null && placer.getDirection().getAxis().isHorizontal()) facing = placer.getDirection().getOpposite();
+        if (placer != null && placer.getDirection().getAxis().isHorizontal())
+            facing = placer.getDirection().getOpposite();
         level.setBlock(pos, state.setValue(FACING, facing), 3);
         if (level.getBlockEntity(pos) instanceof AlchemyFurnaceBlockEntity furnace)
             furnace.acceptFurnaceItem(stack);
@@ -109,7 +110,7 @@ public final class AlchemyFurnaceBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {
+    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {
         if (player instanceof ServerPlayer server) AlchemyFurnaceMenus.open(server, pos);
         return InteractionResult.SUCCESS;
     }

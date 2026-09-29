@@ -5,15 +5,9 @@ import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceBlock;
-import com.iafenvoy.mxt.item.block.AlchemyFurnaceCasingBlock;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyAggregateContainer;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyFailure;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure;
+import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure.Status;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyPhase;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -57,19 +51,22 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
         @Override
         public void setItem(int slot, @NonNull ItemStack stack) {
             if (!AlchemyFurnaceBlockEntity.this.loading
-                    && (stack.isEmpty() ? !AlchemyFurnaceBlockEntity.this.canTakeFire() : !this.canPlaceItem(slot, stack))) return;
+                    && (stack.isEmpty() ? !AlchemyFurnaceBlockEntity.this.canTakeFire() : !this.canPlaceItem(slot, stack)))
+                return;
             super.setItem(slot, stack.isEmpty() || stack.getCount() == 1 ? stack : stack.copyWithCount(1));
         }
 
         @Override
         public @NonNull ItemStack removeItem(int slot, int count) {
-            if (!AlchemyFurnaceBlockEntity.this.loading && !AlchemyFurnaceBlockEntity.this.canTakeFire()) return ItemStack.EMPTY;
+            if (!AlchemyFurnaceBlockEntity.this.loading && !AlchemyFurnaceBlockEntity.this.canTakeFire())
+                return ItemStack.EMPTY;
             return super.removeItem(slot, count);
         }
 
         @Override
         public @NonNull ItemStack removeItemNoUpdate(int slot) {
-            if (!AlchemyFurnaceBlockEntity.this.loading && !AlchemyFurnaceBlockEntity.this.canTakeFire()) return ItemStack.EMPTY;
+            if (!AlchemyFurnaceBlockEntity.this.loading && !AlchemyFurnaceBlockEntity.this.canTakeFire())
+                return ItemStack.EMPTY;
             return super.removeItemNoUpdate(slot);
         }
     };
@@ -95,7 +92,8 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     }
 
     public void refreshStructure() {
-        if (!(this.level instanceof ServerLevel server) || !(this.getBlockState().getBlock() instanceof AlchemyFurnaceBlock)) return;
+        if (!(this.level instanceof ServerLevel server) || !(this.getBlockState().getBlock() instanceof AlchemyFurnaceBlock))
+            return;
         Direction facing = this.getBlockState().getValue(AlchemyFurnaceBlock.FACING);
         Status status = AlchemyFurnaceStructure.inspect(server, this.worldPosition, facing);
         boolean formed = this.getBlockState().getValue(AlchemyFurnaceBlock.FORMED);
@@ -120,7 +118,7 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     public void voidContents() {
         this.voidContents = true;
         this.fire.clearContent();
-        this.state.session().ifPresent(session -> session.clearPending());
+        this.state.session().ifPresent(AlchemySession::clearPending);
         this.state.clearSession();
         this.furnaceItem = ItemStack.EMPTY;
     }
@@ -147,7 +145,7 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
 
     // The loot table hands the core back, so its specification travels as a component instead of being popped here.
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+    protected void collectImplicitComponents(DataComponentMap.@NonNull Builder components) {
         super.collectImplicitComponents(components);
         if (!this.voidContents && !this.furnaceItem.isEmpty()) components.addAll(this.furnaceItem.getComponents());
     }
@@ -164,7 +162,8 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
 
     @Override
     public boolean setTargetTemperature(double temperature) {
-        if (!Double.isFinite(temperature) || temperature < 0.0D || temperature > this.maximumTemperature()) return false;
+        if (!Double.isFinite(temperature) || temperature < 0.0D || temperature > this.maximumTemperature())
+            return false;
         this.state.setTargetTemperature(temperature);
         this.setChanged();
         return true;
@@ -240,7 +239,7 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     }
 
     @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+    public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
         if (this.level instanceof ServerLevel server && state.getBlock() instanceof AlchemyFurnaceBlock) {
             AlchemyFurnaceStructure.release(server, pos, state.getValue(AlchemyFurnaceBlock.FACING));
             if (!this.voidContents) {

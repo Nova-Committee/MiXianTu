@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.loot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -11,7 +12,6 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootContext.EntityTarget;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
-import com.iafenvoy.mxt.util.HolderHelper;
 
 public record HasAbilityLootCondition(EntityTarget target,
                                       Identifier ability) implements LootItemCondition {

@@ -16,12 +16,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -124,17 +120,15 @@ public final class SpiritHerbService {
 
     public static void validateBoundHarvests(Provider access) {
         List<String> errors = new ArrayList<>();
-        access.lookupOrThrow(MxtResourceKeys.SPIRIT_HERB).listElements().forEach(holder -> {
-            holder.value().growth().ifPresent(growth -> {
-                ItemStack harvested = growth.harvest().create();
-                Identifier self = holder.key().identifier();
-                Identifier found = findHolder(access, harvested).flatMap(Holder::unwrapKey).map(ResourceKey::identifier).orElse(null);
-                if (!self.equals(found)) {
-                    errors.add(self + " harvest " + BuiltInRegistries.ITEM.getKey(harvested.getItem())
-                            + " resolves to " + (found == null ? "no spirit herb" : found));
-                }
-            });
-        });
+        access.lookupOrThrow(MxtResourceKeys.SPIRIT_HERB).listElements().forEach(holder -> holder.value().growth().ifPresent(growth -> {
+            ItemStack harvested = growth.harvest().create();
+            Identifier self = holder.key().identifier();
+            Identifier found = findHolder(access, harvested).flatMap(Holder::unwrapKey).map(ResourceKey::identifier).orElse(null);
+            if (!self.equals(found)) {
+                errors.add(self + " harvest " + BuiltInRegistries.ITEM.getKey(harvested.getItem())
+                        + " resolves to " + (found == null ? "no spirit herb" : found));
+            }
+        }));
         if (errors.isEmpty()) return;
         String message = "Spirit herb harvest must be claimed by that herb: " + String.join("; ", errors);
         MiXianTu.LOGGER.error(message);

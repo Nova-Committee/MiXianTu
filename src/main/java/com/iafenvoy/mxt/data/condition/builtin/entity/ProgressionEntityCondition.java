@@ -27,7 +27,7 @@ import java.util.List;
 public record ProgressionEntityCondition(Holder<Progression> level, RealmEntityCondition.Comparison comparison,
                                          List<Identifier> owner) implements EntityCondition {
     private static final Codec<List<Identifier>> OWNERS = Codec.either(Identifier.CODEC, Identifier.CODEC.listOf())
-            .xmap(either -> either.map(value -> List.of(value), list -> list),
+            .xmap(either -> either.map(List::of, list -> list),
                     list -> list.size() == 1 ? Either.left(list.getFirst()) : Either.right(list));
     public static final MapCodec<ProgressionEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Progression.CODEC.fieldOf("level").forGetter(ProgressionEntityCondition::level),

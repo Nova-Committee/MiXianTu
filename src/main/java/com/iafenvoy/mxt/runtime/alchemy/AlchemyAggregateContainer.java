@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
@@ -69,7 +70,7 @@ public final class AlchemyAggregateContainer implements Container {
 
     @Override
     public boolean stillValid(@NonNull Player player) {
-        var level = this.core.getLevel();
+        Level level = this.core.getLevel();
         return level != null && player.level() == level && !this.core.isRemoved()
                 && player.distanceToSqr(this.core.getBlockPos().getCenter()) <= 64.0D
                 && level.isLoaded(this.core.getBlockPos()) && level.getBlockEntity(this.core.getBlockPos()) == this.core;
@@ -84,7 +85,8 @@ public final class AlchemyAggregateContainer implements Container {
         if (index < 0 || index >= AlchemySlots.TOTAL) return null;
         if (!(this.core.getLevel() instanceof ServerLevel server)) return null;
         BlockPos corePos = this.core.getBlockPos();
-        if (this.core.isRemoved() || !server.isLoaded(corePos) || server.getBlockEntity(corePos) != this.core) return null;
+        if (this.core.isRemoved() || !server.isLoaded(corePos) || server.getBlockEntity(corePos) != this.core)
+            return null;
         if (!(this.core.getBlockState().getBlock() instanceof AlchemyFurnaceBlock)) return null;
         Direction facing = this.core.getBlockState().getValue(AlchemyFurnaceBlock.FACING);
         AlchemyInventoryKind kind = index < AlchemySlots.AUX_START ? AlchemyInventoryKind.MAIN

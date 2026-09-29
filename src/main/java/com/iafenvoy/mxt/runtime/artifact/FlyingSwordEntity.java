@@ -15,16 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityAttachment;
-import net.minecraft.world.entity.EntityAttachments;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityReference;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.InterpolationHandler;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -35,6 +26,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -108,7 +100,7 @@ public final class FlyingSwordEntity extends Entity implements MountVehicle {
         // The flight belongs to the player who started it: seat 0 is the driver, so a driver who left (logged out,
         // died, was ejected) must not hand that seat - and the fuel bill - to whoever is still sitting behind them.
         if (this.owner == null || !(this.getFirstPassenger() instanceof ServerPlayer rider)
-                || !this.owner.equals(rider.getUUID()) || !rider.isAlive()) {
+                || !Objects.equals(this.owner.getUUID(), rider.getUUID()) || !rider.isAlive()) {
             this.discard();
             return;
         }

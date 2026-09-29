@@ -17,7 +17,8 @@ import java.util.List;
  * Carries a formation's declared shape to the player who asked to see it. The blocks travel rather than the id,
  * because a {@code structure_template} is server-side data and the client may not hold the same packs.
  */
-public record FormationStructureS2CPayload(Component title, List<RequiredBlock> structure) implements CustomPacketPayload {
+public record FormationStructureS2CPayload(Component title,
+                                           List<RequiredBlock> structure) implements CustomPacketPayload {
     public static final int MAX_BLOCKS = 4096;
     public static final Type<FormationStructureS2CPayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "formation_structure_s2c"));

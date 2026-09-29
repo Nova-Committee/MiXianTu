@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.compat.geckolib;
 
-import com.iafenvoy.mxt.api.MountRenderContext;
-import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
-import com.geckolib.animatable.GeoAnimatable;
+import com.geckolib.renderer.GeoObjectRenderer;
 import com.geckolib.renderer.base.GeoRenderState;
 import com.geckolib.renderer.base.RenderPassInfo;
-import com.geckolib.renderer.GeoObjectRenderer;
+import com.iafenvoy.mxt.api.MountRenderContext;
+import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -41,6 +41,6 @@ final class MountGeoRenderer extends GeoObjectRenderer<MountAnimatable, MountRen
     // The base centres a model on a block and the caller has already applied the declared display, so this adds
     // nothing: a mount is drawn from its own origin.
     @Override
-    public void adjustRenderPose(RenderPassInfo<GeoRenderState> renderPassInfo) {
+    public void adjustRenderPose(@NonNull RenderPassInfo<GeoRenderState> renderPassInfo) {
     }
 }

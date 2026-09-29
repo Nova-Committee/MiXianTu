@@ -1,6 +1,10 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
+import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
+import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
+import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
@@ -8,10 +12,6 @@ import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
-import com.iafenvoy.mxt.data.ability.Abilities;
-import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
-import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
-import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;

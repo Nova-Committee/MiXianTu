@@ -34,7 +34,9 @@ public record AlchemyFurnaceDefinition(Component name, Component description, in
             POSITIVE.fieldOf("cooling_per_tick").forGetter(AlchemyFurnaceDefinition::coolingPerTick)
     ).apply(i, AlchemyFurnaceDefinition::new));
 
-    /** The catalyst slot count is fixed; it is not a pack field. */
+    /**
+     * The catalyst slot count is fixed; it is not a pack field.
+     */
     public int catalystSlots() {
         return CATALYST_SLOTS;
     }

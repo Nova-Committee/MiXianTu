@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.compat.kubejs;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -13,13 +13,12 @@ import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
-import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -29,14 +28,9 @@ import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
+import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
-import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
@@ -468,7 +462,7 @@ public final class MxtKubeJsApi {
      * way. An id the current pack does not provide is refused rather than stored by name.
      */
     public static ProgressionAdminService.Result setProgressionLevel(@NotNull LivingEntity entity, Identifier owner,
-                                                                    Identifier level, boolean force) {
+                                                                     Identifier level, boolean force) {
         if (entity.level().isClientSide())
             return ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.SERVER_ONLY);
         Holder<Progression> resolved = MxtDatapackRegistries.holder(MxtResourceKeys.PROGRESSION, level).orElse(null);

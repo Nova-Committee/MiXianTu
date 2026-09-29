@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
+import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.IconReference;
@@ -16,7 +16,7 @@ import com.iafenvoy.mxt.runtime.ability.AbilitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.api.WheelEntryKind;
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;

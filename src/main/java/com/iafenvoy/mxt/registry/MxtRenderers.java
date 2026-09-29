@@ -2,11 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.compat.geckolib.GeckoLibCompat;
 import com.iafenvoy.mxt.compat.geckolib.GeckoLibMountRenderers;
-import com.iafenvoy.mxt.render.DisplayStandBlockEntityRenderer;
-import com.iafenvoy.mxt.render.FlyingSwordRenderer;
-import com.iafenvoy.mxt.render.RiftBlockEntityRenderer;
-import com.iafenvoy.mxt.render.StationBlockEntityRenderer;
-import com.iafenvoy.mxt.render.SpiritHerbPlotBlockEntityRenderer;
+import com.iafenvoy.mxt.render.*;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;

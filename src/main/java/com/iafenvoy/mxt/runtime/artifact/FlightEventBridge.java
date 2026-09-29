@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.attachment.FlightAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Abilities;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.registry.MxtAttachments;

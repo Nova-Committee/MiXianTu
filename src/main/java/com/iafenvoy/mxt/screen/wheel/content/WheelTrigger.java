@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.api.WheelSource;
+import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 /**

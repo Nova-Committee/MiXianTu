@@ -16,14 +16,18 @@ import java.util.Optional;
  * the furnace item and the batch.
  */
 public interface AlchemyWorkstation {
-    /** Live view of the nine logical slots. Not a copied input list. */
+    /**
+     * Live view of the nine logical slots. Not a copied input list.
+     */
     Container container();
 
     AlchemyWorkstationState state();
 
     BlockPos getBlockPos();
 
-    /** Live count-1 furnace item. Callers must not mutate it. */
+    /**
+     * Live count-1 furnace item. Callers must not mutate it.
+     */
     ItemStack furnaceItem();
 
     Optional<Holder<AlchemyFurnaceDefinition>> furnaceDefinition();
@@ -36,20 +40,28 @@ public interface AlchemyWorkstation {
 
     void setTemperature(double temperature);
 
-    /** The single exotic-fire slot. Count is capped at 1. */
+    /**
+     * The single exotic-fire slot. Count is capped at 1.
+     */
     Container fireContainer();
 
     boolean canPlaceFire(ItemStack stack);
 
     boolean canTakeFire();
 
-    /** Minimum of the 22 wall ratings, or 0 when any wall is missing, unloaded, disabled or illegal. */
+    /**
+     * Minimum of the 22 wall ratings, or 0 when any wall is missing, unloaded, disabled or illegal.
+     */
     double wallTemperatureLimit();
 
-    /** Fire item maximum, or 0 when the slot is empty or the answer is not finite and positive. */
+    /**
+     * Fire item maximum, or 0 when the slot is empty or the answer is not finite and positive.
+     */
     double fireTemperatureLimit();
 
-    /** {@code min(wall, fire)}, or 0 when either limit is unavailable. */
+    /**
+     * {@code min(wall, fire)}, or 0 when either limit is unavailable.
+     */
     double maximumTemperature();
 
     AlchemyFurnaceStructure.Status structureStatus();

@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.api.CaptureListener;
-import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.mxt.api.ContractOperations;
+import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.mxt.data.creature.ContractContext;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import net.minecraft.core.Holder;

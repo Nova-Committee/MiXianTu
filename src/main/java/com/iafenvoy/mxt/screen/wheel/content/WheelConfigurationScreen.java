@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.render.IconRenderer;
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
 import net.minecraft.client.KeyMapping;

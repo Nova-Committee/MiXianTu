@@ -4,6 +4,7 @@ import com.geckolib.animatable.GeoAnimatable;
 import com.geckolib.animatable.instance.AnimatableInstanceCache;
 import com.geckolib.animatable.manager.AnimatableManager;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import org.jspecify.annotations.NonNull;
 
 /**
  * The animatable cache for a mount model. GeckoLib's own singleton cache never drops an entry, and a mount is
@@ -21,7 +22,7 @@ final class MountAnimatableCache extends AnimatableInstanceCache {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T extends GeoAnimatable> AnimatableManager<T> getManagerForId(long uniqueId) {
+    public <T extends GeoAnimatable> @NonNull AnimatableManager<T> getManagerForId(long uniqueId) {
         AnimatableManager<?> manager = this.managers.getAndMoveToFirst(uniqueId);
         if (manager == null) {
             manager = new AnimatableManager<>(this.animatable);

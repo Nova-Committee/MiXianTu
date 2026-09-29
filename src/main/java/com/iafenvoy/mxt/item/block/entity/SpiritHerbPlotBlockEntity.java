@@ -120,7 +120,7 @@ public final class SpiritHerbPlotBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+    public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
         super.preRemoveSideEffects(pos, state);
         if (this.level instanceof ServerLevel server) SpiritHerbGrowthService.dropOnRemove(server, pos, this);
     }

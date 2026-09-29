@@ -1,22 +1,13 @@
 package com.iafenvoy.mxt.data.ability.type;
 
+import com.iafenvoy.mxt.data.ability.*;
+import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityType;
-import com.iafenvoy.mxt.data.ability.ActionCarrier;
-import com.iafenvoy.mxt.data.ability.CooldownSource;
-import com.iafenvoy.mxt.data.ability.TargetSelector;
-import com.iafenvoy.mxt.data.ability.TriggerSource;
-import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
-import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
-import com.iafenvoy.mxt.data.storage.builtin.ResourceDataStorage;
-import com.iafenvoy.mxt.data.storage.builtin.TargetLockDataStorage;
-import com.iafenvoy.mxt.data.storage.builtin.TimerDataStorage;
-import com.iafenvoy.mxt.data.storage.builtin.ToggleDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.*;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -27,7 +18,9 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
 
-/** A skill a signal wakes up: which signals, how often they get through, and the action fields that then run. */
+/**
+ * A skill a signal wakes up: which signals, how often they get through, and the action fields that then run.
+ */
 public record TriggeredAbilityType(List<Trigger> triggers, NumberProvider chance, DamageCondition damageCondition,
                                    EntityAction entityAction, TargetSelector targetSelector,
                                    BiEntityCondition targetCondition, BiEntityAction biEntityAction,

@@ -8,16 +8,20 @@ import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import org.jspecify.annotations.NonNull;
 
+import java.util.Locale;
 import java.util.Optional;
 
 /**
@@ -144,15 +148,15 @@ public final class PillService {
         return Double.isFinite(value) ? Math.max(0.0D, value) : 0.0D;
     }
 
-    public enum ModifyMode implements net.minecraft.util.StringRepresentable {
+    public enum ModifyMode implements StringRepresentable {
         ADD, SET;
 
-        public static final com.mojang.serialization.Codec<ModifyMode> CODEC =
-                net.minecraft.util.StringRepresentable.fromEnum(ModifyMode::values);
+        public static final Codec<ModifyMode> CODEC =
+                StringRepresentable.fromEnum(ModifyMode::values);
 
         @Override
-        public @org.jspecify.annotations.NonNull String getSerializedName() {
-            return this.name().toLowerCase(java.util.Locale.ROOT);
+        public @NonNull String getSerializedName() {
+            return this.name().toLowerCase(Locale.ROOT);
         }
     }
 

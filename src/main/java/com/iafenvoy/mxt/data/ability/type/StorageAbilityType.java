@@ -1,10 +1,6 @@
 package com.iafenvoy.mxt.data.ability.type;
 
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityType;
-import com.iafenvoy.mxt.data.ability.CooldownSource;
-import com.iafenvoy.mxt.data.ability.Togglable;
-import com.iafenvoy.mxt.data.ability.ToggleContext;
+import com.iafenvoy.mxt.data.ability.*;
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;

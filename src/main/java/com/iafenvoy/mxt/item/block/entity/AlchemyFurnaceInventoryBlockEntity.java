@@ -4,11 +4,7 @@ import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceBlock;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceInventoryBlock;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyInventoryKind;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemySlots;
-import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
+import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -70,7 +66,8 @@ public final class AlchemyFurnaceInventoryBlockEntity extends BlockEntity implem
             return null;
         if (!(server.getBlockEntity(this.controller) instanceof AlchemyFurnaceBlockEntity furnace)) return null;
         BlockState state = furnace.getBlockState();
-        if (!(state.getBlock() instanceof AlchemyFurnaceBlock) || !state.getValue(AlchemyFurnaceBlock.FORMED)) return null;
+        if (!(state.getBlock() instanceof AlchemyFurnaceBlock) || !state.getValue(AlchemyFurnaceBlock.FORMED))
+            return null;
         return this.claimedBy(furnace.getBlockPos()) ? furnace : null;
     }
 
@@ -160,7 +157,8 @@ public final class AlchemyFurnaceInventoryBlockEntity extends BlockEntity implem
 
     @Override
     public boolean canPlaceItem(int slot, @NonNull ItemStack stack) {
-        if (stack.isEmpty() || this.kind == AlchemyInventoryKind.OUTPUT || slot < 0 || slot >= this.kind.slots()) return false;
+        if (stack.isEmpty() || this.kind == AlchemyInventoryKind.OUTPUT || slot < 0 || slot >= this.kind.slots())
+            return false;
         AlchemyFurnaceBlockEntity furnace = this.controller();
         if (furnace != null && furnace.state().busy()) return false;
         if (furnace != null) {
@@ -171,7 +169,7 @@ public final class AlchemyFurnaceInventoryBlockEntity extends BlockEntity implem
         if (this.level == null) return false;
         int logical = this.kind == AlchemyInventoryKind.MAIN ? slot : AlchemySlots.AUX_START + slot;
         return SpiritHerbService.potency(this.level.registryAccess(), stack, AlchemyResolver.herbRole(AlchemySlots.role(logical)), FormulaContext.of(this.level))
-                .filter(potency -> potency.placeable()).isPresent();
+                .filter(SpiritHerbService.HerbPotency::placeable).isPresent();
     }
 
     @Override
@@ -208,7 +206,7 @@ public final class AlchemyFurnaceInventoryBlockEntity extends BlockEntity implem
     }
 
     @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+    public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
         if (this.level instanceof ServerLevel server) {
             if (!this.voidContents) {
                 Containers.dropContents(server, pos, this.inventory);
@@ -228,6 +226,7 @@ public final class AlchemyFurnaceInventoryBlockEntity extends BlockEntity implem
         AlchemyFurnaceStructure.release(server, this.controller, facing);
         furnace.onStructureLost();
     }
+
     @Override
     protected void loadAdditional(@NonNull ValueInput input) {
         super.loadAdditional(input);

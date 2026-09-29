@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.screen.wheel;
 
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.api.WheelSource;
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.api.distmarker.Dist;

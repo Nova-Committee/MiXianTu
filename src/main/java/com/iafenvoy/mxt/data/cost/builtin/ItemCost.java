@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

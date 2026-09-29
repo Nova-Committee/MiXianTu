@@ -2,11 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.TargetSelector;
-import com.iafenvoy.mxt.data.ability.target.AreaTargetSelector;
-import com.iafenvoy.mxt.data.ability.target.ConeTargetSelector;
-import com.iafenvoy.mxt.data.ability.target.JsTargetSelector;
-import com.iafenvoy.mxt.data.ability.target.RayTargetSelector;
-import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
+import com.iafenvoy.mxt.data.ability.target.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

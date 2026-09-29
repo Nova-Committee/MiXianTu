@@ -20,7 +20,8 @@ import java.util.List;
  * Asks which abilities the stack grants: what its artifact definition declares plus what the
  * {@code mxt:item_abilities} component lists, which is the union the ability runtime reads.
  */
-public record ItemAbilitiesItemCondition(List<Either<Holder<Ability>, TagKey<Ability>>> abilities) implements ItemCondition {
+public record ItemAbilitiesItemCondition(
+        List<Either<Holder<Ability>, TagKey<Ability>>> abilities) implements ItemCondition {
     public static final MapCodec<ItemAbilitiesItemCondition> CODEC = RecordCodecBuilder.<ItemAbilitiesItemCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).fieldOf("abilities").forGetter(ItemAbilitiesItemCondition::abilities)
     ).apply(i, ItemAbilitiesItemCondition::new)).validate(ItemAbilitiesItemCondition::validate);

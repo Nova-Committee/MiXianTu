@@ -54,7 +54,8 @@ public final class ItemBindingTooltipAppender {
         ItemBindingService.PillResolution resolution = bindings.pill();
         if (resolution.unbound())
             builder.accept(Component.translatable("tooltip.mxt.pill.unbound").withStyle(ChatFormatting.RED));
-        else resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null), effects, player));
+        else
+            resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null), effects, player));
         bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
         bindings.item().map(ItemBinding::actions).orElse(List.of()).stream()
                 .filter(GrantSpiritRootAction.class::isInstance)

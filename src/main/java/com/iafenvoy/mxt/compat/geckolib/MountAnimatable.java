@@ -1,8 +1,5 @@
 package com.iafenvoy.mxt.compat.geckolib;
 
-import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.ability.render.MountPose;
-import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
 import com.geckolib.animatable.GeoAnimatable;
 import com.geckolib.animatable.instance.AnimatableInstanceCache;
 import com.geckolib.animatable.manager.AnimatableManager;
@@ -13,7 +10,11 @@ import com.geckolib.animation.state.AnimationTest;
 import com.geckolib.cache.GeckoLibResources;
 import com.geckolib.cache.animation.BakedAnimations;
 import com.geckolib.constant.dataticket.DataTicket;
+import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.ability.render.MountPose;
+import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
@@ -44,7 +45,7 @@ final class MountAnimatable implements GeoAnimatable {
     }
 
     @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    public void registerControllers(AnimatableManager.@NonNull ControllerRegistrar controllers) {
         // A definition with no animation file is a still model, and a controller would only make GeckoLib look one up.
         if (this.definition.animations().isEmpty()) return;
         controllers.add(this.motionController);
@@ -52,7 +53,7 @@ final class MountAnimatable implements GeoAnimatable {
     }
 
     @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
+    public @NonNull AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.cache;
     }
 

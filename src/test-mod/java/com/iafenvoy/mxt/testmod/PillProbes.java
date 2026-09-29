@@ -27,9 +27,11 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -57,6 +59,7 @@ import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 /**
@@ -453,13 +456,13 @@ public final class PillProbes {
 
     private static String refusal(ServerPlayer player) {
         return ItemQualityService.check(player, player.getMainHandItem())
-                .map(failure -> failure.name().toLowerCase(java.util.Locale.ROOT))
+                .map(failure -> failure.name().toLowerCase(Locale.ROOT))
                 .orElse("none") + " sat=" + player.getFoodData().getSaturationLevel();
     }
 
     private static PillUsageAttachment copyUsage(PillUsageAttachment usage, ServerPlayer player) {
         Codec<PillUsageAttachment> codec = PillUsageAttachment.CODEC.codec();
-        var ops = player.registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        RegistryOps<Tag> ops = player.registryAccess().createSerializationContext(NbtOps.INSTANCE);
         return codec.parse(ops, codec.encodeStart(ops, usage).getOrThrow()).getOrThrow();
     }
 

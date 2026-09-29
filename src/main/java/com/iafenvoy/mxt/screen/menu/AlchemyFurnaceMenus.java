@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 /**
  * The only furnace open path. Casing and unrelated blocks do not open a menu.
@@ -37,7 +38,7 @@ public final class AlchemyFurnaceMenus {
 
     private record Opener(BlockPos accessPos, View view) implements MenuProvider {
         @Override
-        public Component getDisplayName() {
+        public @NonNull Component getDisplayName() {
             return Component.translatable(switch (this.view) {
                 case MONITOR -> "screen.mxt.alchemy.monitor";
                 case MAIN -> "screen.mxt.alchemy.main_input";
@@ -47,13 +48,13 @@ public final class AlchemyFurnaceMenus {
         }
 
         @Override
-        public @Nullable AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+        public @Nullable AbstractContainerMenu createMenu(int containerId, @NonNull Inventory inventory, Player player) {
             if (AlchemyFurnaceMenu.physicalOwner(player.level(), this.accessPos, this.view) == null) return null;
             return new AlchemyFurnaceMenu(containerId, inventory, this.accessPos, this.view);
         }
 
         @Override
-        public void writeClientSideData(AbstractContainerMenu menu, RegistryFriendlyByteBuf buffer) {
+        public void writeClientSideData(@NonNull AbstractContainerMenu menu, RegistryFriendlyByteBuf buffer) {
             buffer.writeBlockPos(this.accessPos);
             buffer.writeEnum(this.view);
         }

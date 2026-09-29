@@ -113,8 +113,7 @@ public final class AlchemyFurnaceStructure {
         }
         BlockState core = level.isLoaded(controller) ? level.getBlockState(controller) : null;
         boolean formed = core != null && core.is(MxtBlocks.ALCHEMY_FURNACE.get()) && core.getValue(AlchemyFurnaceBlock.FORMED);
-        return new Status(formed, complete && conflicts.isEmpty(), List.copyOf(missing), List.copyOf(unloaded),
-                List.copyOf(conflicts), origin(controller, facing), facing);
+        return new Status(formed, complete, List.copyOf(missing), List.copyOf(unloaded), List.copyOf(conflicts), origin(controller, facing), facing);
     }
 
     public static void form(ServerLevel level, BlockPos controller, Direction facing, boolean lit) {
@@ -144,7 +143,9 @@ public final class AlchemyFurnaceStructure {
             level.setBlock(controller, state.setValue(AlchemyFurnaceBlock.FORMED, true), 3);
     }
 
-    /** Reverts parts this controller claimed. Does not drop them or clear their inventories. */
+    /**
+     * Reverts parts this controller claimed. Does not drop them or clear their inventories.
+     */
     public static void release(ServerLevel level, BlockPos controller, Direction facing) {
         for (int index = 0; index < 27; index++) {
             if (index == HOLLOW_INDEX || index == CONTROLLER_INDEX) continue;
@@ -159,7 +160,8 @@ public final class AlchemyFurnaceStructure {
                 continue;
             }
             if (!state.is(MxtBlocks.ALCHEMY_FURNACE_CASING.get())) continue;
-            if (!(level.getBlockEntity(pos) instanceof AlchemyFurnaceCasingBlockEntity casing) || !casing.claimedBy(controller)) continue;
+            if (!(level.getBlockEntity(pos) instanceof AlchemyFurnaceCasingBlockEntity casing) || !casing.claimedBy(controller))
+                continue;
             casing.clearClaim();
             if (state.getValue(AlchemyFurnaceCasingBlock.PART) != 0 || state.getValue(AlchemyFurnaceCasingBlock.LIT))
                 level.setBlock(pos, state.setValue(AlchemyFurnaceCasingBlock.PART, 0).setValue(AlchemyFurnaceCasingBlock.LIT, false), 3);
@@ -171,7 +173,8 @@ public final class AlchemyFurnaceStructure {
     }
 
     public static void syncLit(ServerLevel level, BlockPos controller, Direction facing, boolean lit) {
-        if (!level.isLoaded(controller) || !(level.getBlockState(controller).getBlock() instanceof AlchemyFurnaceBlock)) return;
+        if (!level.isLoaded(controller) || !(level.getBlockState(controller).getBlock() instanceof AlchemyFurnaceBlock))
+            return;
         for (int index = 0; index < 27; index++) {
             if (index == HOLLOW_INDEX || index == CONTROLLER_INDEX) continue;
             BlockPos pos = world(controller, facing, index);

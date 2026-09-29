@@ -14,7 +14,8 @@ import net.minecraft.resources.RegistryFixedCodec;
 /**
  * Temperature rating of one furnace wall. The furnace limit is the minimum of the 22 placed walls, never an average.
  */
-public record AlchemyWallMaterial(Component name, Component description, double maxTemperature) implements NamedDefinition {
+public record AlchemyWallMaterial(Component name, Component description,
+                                  double maxTemperature) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ALCHEMY_WALL_MATERIAL.identifier());
     public static final Codec<Holder<AlchemyWallMaterial>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ALCHEMY_WALL_MATERIAL);
     public static final Codec<AlchemyWallMaterial> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(

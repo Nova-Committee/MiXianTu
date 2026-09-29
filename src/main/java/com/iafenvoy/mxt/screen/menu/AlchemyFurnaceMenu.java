@@ -8,17 +8,14 @@ import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.AlchemyStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyFailure;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyInventoryKind;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemySession;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService;
+import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.Parameters;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Numbers;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Status;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -99,7 +96,8 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         // Client slots are a vanilla sync mirror. The server binds only the captured owner's container.
         Container machine;
         if (this.level.isClientSide()) machine = new SimpleContainer(view.machineSlots());
-        else if (found == null) throw new IllegalStateException("Alchemy furnace menu has no physical owner at " + accessPos + " for " + view);
+        else if (found == null)
+            throw new IllegalStateException("Alchemy furnace menu has no physical owner at " + accessPos + " for " + view);
         else machine = storage(found);
         for (int index = 0; index < view.machineSlots(); index++) this.addSlot(new PartSlot(machine, index));
         for (int index = 9; index < 36; index++) this.addSlot(new Slot(inventory, index, 0, 0));
@@ -110,9 +108,12 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
      * Authoritative temperature result. Initial epoch is 0; later values are the signed short counter, including wrap.
      * Target is the stored value, including a rejected or unchanged write.
      */
-    public record TemperatureAck(int epoch, boolean accepted, double target) {}
+    public record TemperatureAck(int epoch, boolean accepted, double target) {
+    }
 
-    /** Null when the owner is missing, removed, or its kind/slot count does not match the view. */
+    /**
+     * Null when the owner is missing, removed, or its kind/slot count does not match the view.
+     */
     public static @Nullable BlockEntity physicalOwner(Level level, BlockPos pos, View view) {
         if (!level.isLoaded(pos) || !roleMatches(level.getBlockState(pos), view)) return null;
         BlockEntity entity = level.getBlockEntity(pos);
@@ -171,13 +172,15 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
     }
 
     public void handleAction(ServerPlayer player, AlchemyActionC2SPayload payload) {
-        if (player.containerMenu != this || payload.containerId() != this.containerId || !this.stillValid(player)) return;
+        if (player.containerMenu != this || payload.containerId() != this.containerId || !this.stillValid(player))
+            return;
         if (this.view != View.MONITOR || !(this.owner instanceof AlchemyFurnaceBlockEntity furnace)) return;
         switch (payload.action()) {
             case TEMPERATURE -> this.acknowledgeTemperature(furnace, payload.temperature());
             case START -> {
                 AlchemyWorkstationService.StartResult result = AlchemyWorkstationService.start(player, furnace);
-                if (!result.started() && result.failure() != null) player.sendSystemMessage(failure(result.failure()), true);
+                if (!result.started() && result.failure() != null)
+                    player.sendSystemMessage(failure(result.failure()), true);
             }
             case ABORT -> AlchemyWorkstationService.abort(player.level(), furnace.getBlockPos(), furnace);
         }
@@ -244,7 +247,9 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         this.forceTemperatureAck = true;
     }
 
-    /** Machine destinations must not use the vanilla merge loop: it writes occupied stacks before mayPlace. */
+    /**
+     * Machine destinations must not use the vanilla merge loop: it writes occupied stacks before mayPlace.
+     */
     private boolean moveIntoMachine(ItemStack stack) {
         int end = this.view.machineSlots();
         boolean moved = false;
@@ -252,7 +257,8 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
             for (int index = 0; index < end && !stack.isEmpty(); index++) {
                 Slot slot = this.slots.get(index);
                 ItemStack existing = slot.getItem();
-                if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(stack, existing) || !slot.mayPlace(stack)) continue;
+                if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(stack, existing) || !slot.mayPlace(stack))
+                    continue;
                 int limit = slot.getMaxStackSize(existing);
                 int combined = existing.getCount() + stack.getCount();
                 if (combined <= limit) {
@@ -308,7 +314,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
     }
 
     private AlchemyFurnaceView snapshot(ServerPlayer player, AlchemyWorkstation furnace) {
-        AlchemyFurnaceDefinition spec = furnace.furnaceDefinition().map(holder -> holder.value()).orElse(null);
+        AlchemyFurnaceDefinition spec = furnace.furnaceDefinition().map(Holder::value).orElse(null);
         AlchemySession session = furnace.state().session().orElse(null);
         AlchemyPreview preview = session == null ? AlchemyWorkstationService.preview(player, furnace) : null;
         Parameters parameters = session != null ? session.parameters() : preview.parameters().orElse(null);
@@ -355,7 +361,8 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         public boolean mayPlace(@NonNull ItemStack stack) {
             BlockEntity owner = AlchemyFurnaceMenu.this.owner;
             if (owner instanceof AlchemyFurnaceBlockEntity furnace) return furnace.canPlaceFire(stack);
-            if (owner instanceof AlchemyFurnaceInventoryBlockEntity part) return part.canPlaceItem(this.getContainerSlot(), stack);
+            if (owner instanceof AlchemyFurnaceInventoryBlockEntity part)
+                return part.canPlaceItem(this.getContainerSlot(), stack);
             return false;
         }
 
@@ -363,7 +370,8 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         public boolean mayPickup(@NonNull Player player) {
             BlockEntity owner = AlchemyFurnaceMenu.this.owner;
             if (owner instanceof AlchemyFurnaceBlockEntity furnace) return furnace.canTakeFire();
-            if (owner instanceof AlchemyFurnaceInventoryBlockEntity part) return part.canTakeItem(this.getContainerSlot(), this.getItem());
+            if (owner instanceof AlchemyFurnaceInventoryBlockEntity part)
+                return part.canTakeItem(this.getContainerSlot(), this.getItem());
             return false;
         }
 

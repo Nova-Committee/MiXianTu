@@ -57,7 +57,9 @@ public abstract class AlchemyCraftEvent extends Event {
             this.inputs = List.copyOf(copies);
         }
 
-        /** Role copies. Mutating a stack or the list does not change what start consumes. */
+        /**
+         * Role copies. Mutating a stack or the list does not change what start consumes.
+         */
         public List<InputCopy> inputs() {
             return this.inputs;
         }

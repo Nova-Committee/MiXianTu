@@ -12,7 +12,6 @@ import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
-import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;

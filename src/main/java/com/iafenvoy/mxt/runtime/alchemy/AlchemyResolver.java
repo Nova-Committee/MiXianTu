@@ -22,12 +22,7 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * The only mixture check. Preview, recipe matching and start all call this.
@@ -156,7 +151,9 @@ public final class AlchemyResolver {
         return main > 0 || auxiliary > 0 || candidate.catalyst() > other.catalyst();
     }
 
-    /** 1 if the candidate strictly covers the other, 0 if equal, -1 if keys differ or a value is lower. */
+    /**
+     * 1 if the candidate strictly covers the other, 0 if equal, -1 if keys differ or a value is lower.
+     */
     private static int cover(Map<Identifier, Double> candidate, Map<Identifier, Double> other) {
         if (candidate.size() != other.size()) return -1;
         boolean strict = false;
@@ -236,7 +233,9 @@ public final class AlchemyResolver {
                             double duration, Map<Identifier, Double> minimumAura, boolean valid) {
     }
 
-    /** {@code role} is null only for a balance gap. */
+    /**
+     * {@code role} is null only for a balance gap.
+     */
     public record Gap(Kind kind, @Nullable Role role, @Nullable Identifier property, double actual, double required) {
         public enum Kind {MISSING, EXTRA, CATALYST, BALANCE}
     }

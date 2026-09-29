@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.testmod;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.google.gson.JsonElement;
 import com.iafenvoy.mxt.data.item.PillComponent;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.JsonOps;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent;
@@ -35,14 +36,18 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -50,19 +55,17 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Predicate;
 
 /**
  * Real furnace probes. Each line is OK or MISMATCH; placed blocks and listeners are restored in finally.
@@ -179,34 +182,34 @@ public final class AlchemyProbes {
         furnace.container().setItem(0, new ItemStack(Items.ALLIUM, 2));
         furnace.container().setItem(2, new ItemStack(Items.CORNFLOWER, 2));
         furnace.container().setItem(4, new ItemStack(Items.OXEYE_DAISY));
-        var together = AlchemyWorkstationService.preview(playerOf(source), furnace);
+        AlchemyPreview together = AlchemyWorkstationService.preview(playerOf(source), furnace);
         furnace.container().setItem(0, new ItemStack(Items.ALLIUM));
         furnace.container().setItem(1, new ItemStack(Items.ALLIUM));
-        var split = AlchemyWorkstationService.preview(playerOf(source), furnace);
+        AlchemyPreview split = AlchemyWorkstationService.preview(playerOf(source), furnace);
         check(source, "split-main", split.mixture().main().getOrDefault(MAIN, -1.0D), together.mixture().main().getOrDefault(MAIN, -2.0D));
         check(source, "split-same-recipe", resolvedId(split), resolvedId(together));
         furnace.container().setItem(0, ItemStack.EMPTY);
         furnace.container().setItem(1, ItemStack.EMPTY);
         furnace.container().setItem(2, new ItemStack(Items.ALLIUM, 2));
-        var asAux = AlchemyWorkstationService.preview(playerOf(source), furnace);
+        AlchemyPreview asAux = AlchemyWorkstationService.preview(playerOf(source), furnace);
         check(source, "aux-role", asAux.mixture().main().getOrDefault(MAIN, 0.0D), 0.0D);
         furnace.container().setItem(0, new ItemStack(Items.AZURE_BLUET));
         furnace.container().setItem(1, ItemStack.EMPTY);
         furnace.container().setItem(2, new ItemStack(Items.CORNFLOWER, 2));
-        var single = AlchemyWorkstationService.preview(playerOf(source), furnace);
+        AlchemyPreview single = AlchemyWorkstationService.preview(playerOf(source), furnace);
         check(source, "substitute-main", single.mixture().main().getOrDefault(MAIN, -1.0D), 6.0D);
         check(source, "substitute-balance", single.mixture().balance(), 0.0D);
         check(source, "substitute-resolved", resolvedId(single), PRACTICE);
         ItemStack aged = new ItemStack(Items.ALLIUM);
         aged.set(MxtDataComponents.HERB_AGE.get(), 100);
         furnace.container().setItem(0, aged);
-        var century = AlchemyWorkstationService.preview(playerOf(source), furnace);
+        AlchemyPreview century = AlchemyWorkstationService.preview(playerOf(source), furnace);
         check(source, "century-main", century.mixture().main().getOrDefault(MAIN, -1.0D), 6.0D);
         check(source, "century-resolved", resolvedId(century), PRACTICE);
         check(source, "century-only", matchedCount(century), 1);
         check(source, "century-edible", ediblePractice(level.registryAccess(), century.successOutputs()), true);
         furnace.container().setItem(1, new ItemStack(Items.DANDELION));
-        var conflict = AlchemyWorkstationService.preview(playerOf(source), furnace);
+        AlchemyPreview conflict = AlchemyWorkstationService.preview(playerOf(source), furnace);
         check(source, "conflict", conflict.blocker().orElse(null), AlchemyFailure.CONFLICT);
         int before = furnace.container().getItem(1).getCount();
         StartResult refused = AlchemyWorkstationService.start(playerOf(source), furnace);
@@ -224,18 +227,18 @@ public final class AlchemyProbes {
         furnace.setTargetTemperature(50);
         furnace.container().setItem(0, new ItemStack(Items.CACTUS));
         furnace.container().setItem(4, new ItemStack(Items.OXEYE_DAISY));
-        var low = AlchemyWorkstationService.preview(player, furnace);
+        AlchemyPreview low = AlchemyWorkstationService.preview(player, furnace);
         check(source, "rank-low-resolved", resolvedId(low), RANK_LOW);
         check(source, "rank-low-only", matchedCount(low), 1);
         furnace.container().setItem(0, new ItemStack(Items.CACTUS, 2));
-        var high = AlchemyWorkstationService.preview(player, furnace);
+        AlchemyPreview high = AlchemyWorkstationService.preview(player, furnace);
         check(source, "rank-high-resolved", resolvedId(high), RANK_HIGH);
         check(source, "rank-high-also-low", matched(high, RANK_LOW), true);
         Candidate reversed = AlchemyResolver.dominating(high.candidates().reversed());
         check(source, "rank-candidate-order", reversed == null ? null : reversed.id().identifier(), RANK_HIGH);
         furnace.container().setItem(0, new ItemStack(Items.CACTUS));
         furnace.container().setItem(1, new ItemStack(Items.CACTUS));
-        var splitRank = AlchemyWorkstationService.preview(player, furnace);
+        AlchemyPreview splitRank = AlchemyWorkstationService.preview(player, furnace);
         check(source, "rank-split", resolvedId(splitRank), resolvedId(high));
         check(source, "rank-start", AlchemyWorkstationService.start(player, furnace).started(), true);
         tickUntil(level, furnace, 12, phase -> phase == AlchemyPhase.IDLE);
@@ -244,7 +247,7 @@ public final class AlchemyProbes {
         clearInputs(furnace);
         fill(furnace);
         furnace.container().setItem(1, new ItemStack(Items.WITHER_ROSE));
-        var tie = AlchemyWorkstationService.preview(player, furnace);
+        AlchemyPreview tie = AlchemyWorkstationService.preview(player, furnace);
         check(source, "tie-ambiguous", tie.blocker().orElse(null), AlchemyFailure.AMBIGUOUS);
         check(source, "tie-unresolved", tie.resolvedRecipe().isEmpty(), true);
         int rose = furnace.container().getItem(1).getCount();
@@ -254,7 +257,7 @@ public final class AlchemyProbes {
         clearInputs(furnace);
         fill(furnace);
         furnace.container().setItem(1, new ItemStack(Items.BAMBOO));
-        var crossed = AlchemyWorkstationService.preview(player, furnace);
+        AlchemyPreview crossed = AlchemyWorkstationService.preview(player, furnace);
         check(source, "cross-ambiguous", crossed.blocker().orElse(null), AlchemyFailure.AMBIGUOUS);
         check(source, "cross-unresolved", crossed.resolvedRecipe().isEmpty(), true);
         int bamboo = furnace.container().getItem(1).getCount();
@@ -265,7 +268,7 @@ public final class AlchemyProbes {
         furnace.container().setItem(0, new ItemStack(Items.ALLIUM));
         furnace.container().setItem(2, new ItemStack(Items.CORNFLOWER));
         furnace.container().setItem(4, new ItemStack(Items.OXEYE_DAISY));
-        var shortfall = AlchemyWorkstationService.preview(player, furnace);
+        AlchemyPreview shortfall = AlchemyWorkstationService.preview(player, furnace);
         check(source, "shortfall", shortfall.blocker().orElse(null), AlchemyFailure.INSUFFICIENT);
     }
 
@@ -297,7 +300,7 @@ public final class AlchemyProbes {
         wide.refreshStructure();
         wide.setTargetTemperature(50);
         fillMarked(wide, Items.POPPY);
-        var hotPreview = AlchemyWorkstationService.preview(player, wide);
+        AlchemyPreview hotPreview = AlchemyWorkstationService.preview(player, wide);
         check(source, "hot-resolved", resolvedId(hotPreview), HOT);
         check(source, "hot-dominates-low", matched(hotPreview, HOT_LOW), true);
         check(source, "hot-not-practice", matched(hotPreview, PRACTICE), false);
@@ -555,17 +558,17 @@ public final class AlchemyProbes {
         furnace.setTargetTemperature(50);
         fillMarked(furnace, Items.LILAC);
         player.getRandom().setSeed(0xA17E5L);
-        net.minecraft.util.RandomSource mirror = net.minecraft.util.RandomSource.create(0xA17E5L);
+        RandomSource mirror = RandomSource.create(0xA17E5L);
         double first = 10.0D + mirror.nextDouble() * 10.0D;
         double second = 10.0D + mirror.nextDouble() * 10.0D;
         StartResult started = AlchemyWorkstationService.start(player, furnace);
-        long frozen = furnace.state().session().map(com.iafenvoy.mxt.runtime.alchemy.AlchemySession::totalTicks).orElse(-1L);
+        long frozen = furnace.state().session().map(AlchemySession::totalTicks).orElse(-1L);
         long firstTicks = Math.max(1L, Math.round(first));
         long secondTicks = Math.max(1L, Math.round(second));
         check(source, "roll-started", started.started(), true);
         check(source, "roll-one-evaluation", frozen, firstTicks);
         check(source, "roll-not-second", frozen == secondTicks && firstTicks != secondTicks, false);
-        check(source, "roll-target", furnace.state().session().map(com.iafenvoy.mxt.runtime.alchemy.AlchemySession::frozenTarget).orElse(-1.0D), 50.0D);
+        check(source, "roll-target", furnace.state().session().map(AlchemySession::frozenTarget).orElse(-1.0D), 50.0D);
     }
 
     private static void conflicts(CommandSourceStack source, ServerLevel level, ServerPlayer player, BlockPos at, List<BlockPos> touched) {
@@ -661,7 +664,7 @@ public final class AlchemyProbes {
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity idle = place(level, at, Direction.NORTH, item(level, WIDE), touched);
         idle.refreshStructure();
-        net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkAt(at);
+        LevelChunk chunk = level.getChunkAt(at);
         chunk.tryMarkSaved();
         tick(level, idle);
         check(source, "idle-not-dirtied", chunk.isUnsaved(), false);
@@ -779,7 +782,7 @@ public final class AlchemyProbes {
     }
 
     private static Identifier resolvedId(AlchemyPreview preview) {
-        return preview.resolvedRecipe().map(key -> key.identifier()).orElse(null);
+        return preview.resolvedRecipe().map(ResourceKey::identifier).orElse(null);
     }
 
     private static boolean matched(AlchemyPreview preview, Identifier id) {
@@ -794,7 +797,7 @@ public final class AlchemyProbes {
         return count;
     }
 
-    private static boolean ediblePractice(net.minecraft.core.HolderLookup.Provider access, List<ItemStack> stacks) {
+    private static boolean ediblePractice(HolderLookup.Provider access, List<ItemStack> stacks) {
         for (ItemStack stack : stacks) {
             if (!stack.is(MxtItems.PILL.get()) || stack.getCount() != 4 || !stack.has(DataComponents.CONSUMABLE)) continue;
             PillComponent pill = stack.get(MxtDataComponents.PILL.get());
@@ -816,7 +819,7 @@ public final class AlchemyProbes {
         AlchemyFurnaceBlockEntity.serverTick(level, live.getBlockPos(), live.getBlockState(), live);
     }
 
-    private static void tickUntil(ServerLevel level, AlchemyFurnaceBlockEntity furnace, int limit, java.util.function.Predicate<AlchemyPhase> done) {
+    private static void tickUntil(ServerLevel level, AlchemyFurnaceBlockEntity furnace, int limit, Predicate<AlchemyPhase> done) {
         for (int i = 0; i < limit && !done.test(furnace.phase()); i++) tick(level, furnace);
     }
 
@@ -903,7 +906,7 @@ public final class AlchemyProbes {
         owned.refreshStructure();
         fill(owned);
         owned.container().setItem(5, new ItemStack(Items.DIAMOND, 3));
-        check(source, "core-hopper-has-no-aggregate", net.minecraft.world.level.block.entity.HopperBlockEntity.getContainerAt(level, at) == null, true);
+        check(source, "core-hopper-has-no-aggregate", HopperBlockEntity.getContainerAt(level, at) == null, true);
         BlockPos main = AlchemyFurnaceStructure.world(at, Direction.NORTH, AlchemyFurnaceStructure.MAIN_INDEX);
         clearDrops(level, main);
         level.destroyBlock(main, true, player);
@@ -1048,7 +1051,7 @@ public final class AlchemyProbes {
         return total;
     }
 
-    private static int count(net.minecraft.world.entity.player.Player player, Item item) {
+    private static int count(Player player, Item item) {
         int total = 0;
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
             if (player.getInventory().getItem(slot).is(item)) total += player.getInventory().getItem(slot).getCount();
@@ -1065,7 +1068,7 @@ public final class AlchemyProbes {
 
     private static boolean HolderHelperEquals(ItemStack stack, Identifier quality) {
         Holder<?> holder = stack.get(MxtDataComponents.QUALITY.get());
-        return holder != null && com.iafenvoy.mxt.util.HolderHelper.id(holder).equals(quality);
+        return holder != null && HolderHelper.id(holder).equals(quality);
     }
 
     private static Identifier id(String path) {
@@ -1082,7 +1085,7 @@ public final class AlchemyProbes {
 
     private static void check(CommandSourceStack source, String name, Object actual, Object expected) {
         checks++;
-        boolean ok = expected == null ? actual == null : expected.equals(actual);
+        boolean ok = Objects.equals(expected, actual);
         if (!ok) mismatches++;
         Component line = Component.literal("alchemy probe: " + (ok ? "OK" : "MISMATCH") + " " + name + " actual=" + actual + " expected=" + expected);
         if (ok) source.sendSuccess(() -> line, false);

@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;

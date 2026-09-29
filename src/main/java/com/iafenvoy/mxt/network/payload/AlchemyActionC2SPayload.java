@@ -10,7 +10,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
 
-public record AlchemyActionC2SPayload(int containerId, Action action, double temperature) implements CustomPacketPayload {
+public record AlchemyActionC2SPayload(int containerId, Action action,
+                                      double temperature) implements CustomPacketPayload {
     public static final Type<AlchemyActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "alchemy_action_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, AlchemyActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, AlchemyActionC2SPayload::containerId,

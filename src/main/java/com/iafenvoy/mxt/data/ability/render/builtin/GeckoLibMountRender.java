@@ -20,7 +20,8 @@ import java.util.Optional;
  * {@code assets/<namespace>/geckolib/models/<path>.geo.json} is {@code "<namespace>:<path>"}.
  */
 public record GeckoLibMountRender(Identifier model, Identifier texture, Optional<Identifier> animations,
-                                  Map<MountPose, String> states, int transitionTicks, double scale) implements MountRender {
+                                  Map<MountPose, String> states, int transitionTicks,
+                                  double scale) implements MountRender {
     public static final int DEFAULT_TRANSITION_TICKS = 5;
     public static final double DEFAULT_SCALE = 1.0D;
     private static final Codec<Double> POSITIVE = Codec.doubleRange(Double.MIN_VALUE, Double.MAX_VALUE);

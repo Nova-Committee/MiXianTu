@@ -45,7 +45,9 @@ public final class AlchemyUiPages {
         return FMLPaths.GAMEDIR.get().resolve("apricity").resolve(FOLDER).toAbsolutePath().normalize();
     }
 
-    /** Copies every missing bundled page; an existing file is never replaced. */
+    /**
+     * Copies every missing bundled page; an existing file is never replaced.
+     */
     public static void seedMissing() {
         Path directory = directory();
         try {

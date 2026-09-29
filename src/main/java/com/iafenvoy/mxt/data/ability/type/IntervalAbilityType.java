@@ -1,13 +1,9 @@
 package com.iafenvoy.mxt.data.ability.type;
 
+import com.iafenvoy.mxt.data.ability.*;
+import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityContext;
-import com.iafenvoy.mxt.data.ability.AbilityType;
-import com.iafenvoy.mxt.data.ability.ActionCarrier;
-import com.iafenvoy.mxt.data.ability.TargetSelector;
-import com.iafenvoy.mxt.data.ability.target.SelfTargetSelector;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.builtin.ResourceDataStorage;

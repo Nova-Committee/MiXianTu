@@ -51,7 +51,7 @@ public final class SpiritHerbPlotBlock extends BaseEntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NonNull BlockState state,
                                                                   @NonNull BlockEntityType<T> type) {
         if (level.isClientSide() || type != MxtBlockEntities.SPIRIT_HERB_PLOT.get()) return null;
-        return (BlockEntityTicker<T>) (BlockEntityTicker<SpiritHerbPlotBlockEntity>) (level1, pos, state1, plot) -> {
+        return (level1, pos, state1, plot) -> {
             if (level1 instanceof ServerLevel server) SpiritHerbPlotBlockEntity.serverTick(server, pos, state1, plot);
         };
     }
@@ -95,8 +95,8 @@ public final class SpiritHerbPlotBlock extends BaseEntityBlock {
 
     @Override
     protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, @NonNull Level level,
-                                                       @NonNull BlockPos pos, @NonNull Player player,
-                                                       @NonNull BlockHitResult hit) {
+                                                        @NonNull BlockPos pos, @NonNull Player player,
+                                                        @NonNull BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof SpiritHerbPlotBlockEntity plot) || !plot.occupied())
             return InteractionResult.PASS;
         if (level.isClientSide()) return InteractionResult.SUCCESS;

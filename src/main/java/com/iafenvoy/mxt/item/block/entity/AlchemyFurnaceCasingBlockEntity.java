@@ -92,7 +92,7 @@ public final class AlchemyFurnaceCasingBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+    protected void collectImplicitComponents(DataComponentMap.@NonNull Builder components) {
         super.collectImplicitComponents(components);
         if (!this.voidContents && !this.wallItem.isEmpty()) components.addAll(this.wallItem.getComponents());
     }
@@ -112,7 +112,7 @@ public final class AlchemyFurnaceCasingBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+    public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
         if (this.level instanceof ServerLevel server && this.controller != null && server.isLoaded(this.controller)
                 && server.getBlockEntity(this.controller) instanceof AlchemyFurnaceBlockEntity furnace
                 && furnace.getBlockState().getBlock() instanceof AlchemyFurnaceBlock

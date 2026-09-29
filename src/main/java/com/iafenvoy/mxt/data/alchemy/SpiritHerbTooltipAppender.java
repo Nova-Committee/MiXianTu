@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbRole;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -57,7 +58,7 @@ public final class SpiritHerbTooltipAppender {
         SpiritHerbService.potency(registries, stack, role, formula).ifPresent(potency -> {
             if (potency.totalPower() <= 0.0D) return;
             builder.accept(Component.translatable(key, format(potency.totalPower())).withStyle(ChatFormatting.DARK_GREEN));
-            for (Map.Entry<net.minecraft.core.Holder<MedicinalProperty>, Double> entry : potency.properties().entrySet())
+            for (Map.Entry<Holder<MedicinalProperty>, Double> entry : potency.properties().entrySet())
                 builder.accept(Component.translatable("tooltip.mxt.herb.property",
                         DefinitionText.name(entry.getKey()), format(entry.getValue())).withStyle(ChatFormatting.DARK_GRAY));
         });

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -18,8 +19,6 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
-
-import com.iafenvoy.mxt.util.HolderHelper;
 
 public final class GrantAbilityLootFunction extends LootItemConditionalFunction {
     public static final MapCodec<GrantAbilityLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(

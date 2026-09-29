@@ -2,9 +2,9 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;

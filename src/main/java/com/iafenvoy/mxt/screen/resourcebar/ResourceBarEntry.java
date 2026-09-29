@@ -1,7 +1,10 @@
 package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
-import com.iafenvoy.mxt.screen.hud.*;
+import com.iafenvoy.mxt.screen.hud.AbstractHudEntry;
+import com.iafenvoy.mxt.screen.hud.HudAnchor;
+import com.iafenvoy.mxt.screen.hud.RenderBlock;
+import com.iafenvoy.mxt.screen.hud.ScreenBounds;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;

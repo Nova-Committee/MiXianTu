@@ -9,12 +9,7 @@ import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.creature.BoundBeastService;
-import com.iafenvoy.mxt.runtime.creature.BoundBeastsAttachment;
-import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
-import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
-import com.iafenvoy.mxt.runtime.creature.ContractService;
-import com.iafenvoy.mxt.runtime.creature.Contracts;
+import com.iafenvoy.mxt.runtime.creature.*;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -134,17 +129,16 @@ public final class ContractCommand {
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.behavior", contract.behavior().name()), false);
         // A profile that owns a chain makes this creature a progression owner; a profile that owns none reports
         // nothing, so a plain stat block reads exactly as it did before.
-        Identifier progressOwner = mob.getExistingData(MxtAttachments.CREATURE_SPIRIT)
-                .flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id).orElse(null);
-        if (progressOwner != null) ProgressionService.currentLevelOf(mob, progressOwner).ifPresent(current -> {
-            Component next = ProgressionService.nextLevelOf(mob, progressOwner).map(DefinitionText::name)
-                    .orElseGet(() -> Component.translatable("command.mxt.contract.info.level.top"));
-            source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.level",
-                    progressOwner.toString(), DefinitionText.name(current), next), false);
-            ProgressionService.masteryOf(mob, progressOwner).ifPresent(mastery -> source.sendSuccess(
-                    () -> Component.translatable("command.mxt.contract.info.mastery", mastery.have(),
-                            mastery.required(), mastery.resource().toString()), false));
-        });
+        mob.getExistingData(MxtAttachments.CREATURE_SPIRIT).flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id)
+                .ifPresent(progressOwner -> ProgressionService.currentLevelOf(mob, progressOwner).ifPresent(current -> {
+                    Component next = ProgressionService.nextLevelOf(mob, progressOwner).map(DefinitionText::name)
+                            .orElseGet(() -> Component.translatable("command.mxt.contract.info.level.top"));
+                    source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.level",
+                            progressOwner.toString(), DefinitionText.name(current), next), false);
+                    ProgressionService.masteryOf(mob, progressOwner).ifPresent(mastery -> source.sendSuccess(
+                            () -> Component.translatable("command.mxt.contract.info.mastery", mastery.have(),
+                                    mastery.required(), mastery.resource().toString()), false));
+                }));
         int cooldown = type.value().recallCooldown();
         if (cooldown > 0) {
             long remaining = Math.max(0L, contract.recallAt() + cooldown - mob.level().getGameTime());

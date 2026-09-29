@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
+import org.jspecify.annotations.NonNull;
 
 public enum AlchemyFailure implements StringRepresentable {
     FURNACE_QUALITY,
@@ -31,7 +32,7 @@ public enum AlchemyFailure implements StringRepresentable {
     public static final Codec<AlchemyFailure> CODEC = StringRepresentable.fromEnum(AlchemyFailure::values);
 
     @Override
-    public String getSerializedName() {
+    public @NonNull String getSerializedName() {
         return this.name();
     }
 }

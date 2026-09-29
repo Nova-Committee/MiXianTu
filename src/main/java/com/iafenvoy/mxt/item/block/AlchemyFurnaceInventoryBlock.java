@@ -11,21 +11,24 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 
@@ -72,13 +75,13 @@ public final class AlchemyFurnaceInventoryBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull VoxelShape getShape(BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
-        return shape(state);
+    protected @NonNull VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
+        return this.shape(state);
     }
 
     @Override
-    protected @NonNull VoxelShape getCollisionShape(BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
-        return shape(state);
+    protected @NonNull VoxelShape getCollisionShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
+        return this.shape(state);
     }
 
     private VoxelShape shape(BlockState state) {
@@ -86,21 +89,23 @@ public final class AlchemyFurnaceInventoryBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void setPlacedBy(@NonNull Level level, @NonNull BlockPos pos, @NonNull BlockState state, net.minecraft.world.entity.@org.jetbrains.annotations.Nullable LivingEntity placer, net.minecraft.world.item.@NonNull ItemStack stack) {
+    public void setPlacedBy(@NonNull Level level, @NonNull BlockPos pos, @NonNull BlockState state, @Nullable LivingEntity placer, @NonNull ItemStack stack) {
         Direction facing = Direction.NORTH;
-        if (placer != null && placer.getDirection().getAxis().isHorizontal()) facing = placer.getDirection().getOpposite();
+        if (placer != null && placer.getDirection().getAxis().isHorizontal())
+            facing = placer.getDirection().getOpposite();
         level.setBlock(pos, state.setValue(FACING, facing), 3);
     }
 
     @Override
-    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {
+    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {
         if (player instanceof ServerPlayer server) AlchemyFurnaceMenus.open(server, pos);
         return InteractionResult.SUCCESS;
     }
 
     @Override
     protected void tick(@NonNull BlockState state, @NonNull ServerLevel level, @NonNull BlockPos pos, @NonNull RandomSource random) {
-        if (level.getBlockEntity(pos) instanceof AlchemyFurnaceInventoryBlockEntity inventory) inventory.validateClaim();
+        if (level.getBlockEntity(pos) instanceof AlchemyFurnaceInventoryBlockEntity inventory)
+            inventory.validateClaim();
     }
 
 }

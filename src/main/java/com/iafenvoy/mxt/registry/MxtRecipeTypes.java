@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.recipe.*;
+import com.iafenvoy.mxt.recipe.AlchemyRecipe;
+import com.iafenvoy.mxt.recipe.SpiritShapedRecipe;
+import com.iafenvoy.mxt.recipe.SpiritShapelessRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;

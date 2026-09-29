@@ -1,18 +1,14 @@
 package com.iafenvoy.mxt.screen.wheel;
 
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.api.WheelSource;
+import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.List;
+import java.util.*;
 
 /**
  * The wheel as the framework sees it: the entries every registered page provides, cut into pages of twelve and

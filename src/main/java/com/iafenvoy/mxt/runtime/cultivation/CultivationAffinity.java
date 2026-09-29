@@ -142,7 +142,8 @@ public final class CultivationAffinity {
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
             SpiritRoot root = rootHolder.value();
             // One root contributes once however many of its elements the casting asks for.
-            if (root.elementHolders().stream().noneMatch(element -> RegistryCodecs.matches(elements, element))) continue;
+            if (root.elementHolders().stream().noneMatch(element -> RegistryCodecs.matches(elements, element)))
+                continue;
             double modifier = root.elementAbilityModifier().evaluate(context);
             if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
             total += modifier;

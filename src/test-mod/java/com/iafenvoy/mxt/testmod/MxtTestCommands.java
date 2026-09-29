@@ -2615,7 +2615,7 @@ public final class MxtTestCommands {
                 && readGecko instanceof GeckoLibMountRender gecko
                 && gecko.model().equals(id("vehicle/probe")) && gecko.animations().isPresent()
                 && gecko.transitionTicks() == 7 && close(gecko.scale(), 1.5D)
-                && readProbe instanceof ProbeMountRenders.ProbeMountRender probe && probe.label().equals("hello");
+                && readProbe instanceof ProbeMountRenders.ProbeMountRender(String label) && label.equals("hello");
         ok &= check(source, "artifact roster render types item/geckolib/other-mod", renderTypes);
 
         // An unwritten table asks for the animation named after the pose; a written one only replaces the names it

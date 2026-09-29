@@ -7,7 +7,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import java.util.Optional;
 
-/** An on/off state. {@code default} is what an unwritten value reads as and {@code state} is the flag. */
+/**
+ * An on/off state. {@code default} is what an unwritten value reads as and {@code state} is the flag.
+ */
 public final class ToggleDataStorage extends DataStorage {
     // The declaration entry a type lists this kind by, and the reading of a toggle nothing has written yet.
     public static final ToggleDataStorage INSTANCE = new ToggleDataStorage(false, Optional.empty());

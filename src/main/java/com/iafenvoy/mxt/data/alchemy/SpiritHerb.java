@@ -80,8 +80,8 @@ public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Compo
 
     // Expressions are checked when they run. A written constant that is already negative is a pack mistake.
     private static DataResult<NumberProvider> nonNegative(NumberProvider provider, String field) {
-        if (provider instanceof Constant constant && constant.value() < 0.0D)
-            return DataResult.error(() -> field + " must be non-negative, was " + constant.value());
+        if (provider instanceof Constant(double value) && value < 0.0D)
+            return DataResult.error(() -> field + " must be non-negative, was " + value);
         return DataResult.success(provider);
     }
 
@@ -92,7 +92,7 @@ public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Compo
                          BlockCondition condition, List<Cost> costs, ItemStackTemplate harvest,
                          Identifier texture) {
         public static final Codec<Growth> CODEC = RecordCodecBuilder.<Growth>create(i -> i.group(
-                ItemMatcher.ENTRIES_CODEC.fieldOf("seeds").forGetter(Growth::seeds),
+                ENTRIES_CODEC.fieldOf("seeds").forGetter(Growth::seeds),
                 Codec.intRange(1, Integer.MAX_VALUE).fieldOf("mature_age").forGetter(Growth::matureAge),
                 Codec.intRange(1, Integer.MAX_VALUE).fieldOf("max_age").forGetter(Growth::maxAge),
                 NumberProvider.CODEC.fieldOf("growth_rate").forGetter(Growth::growthRate),

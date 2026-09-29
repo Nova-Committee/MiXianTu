@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.attachment.ContractAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.screen.wheel.WheelMenuController;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

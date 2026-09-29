@@ -31,7 +31,9 @@ public record PillComponent(Optional<Holder<Pill>> pill, Optional<EntityAction> 
                 Optional.empty(), Optional.empty());
     }
 
-    /** Field by field. Limits, matchers and priority belong to the binding and are not part of this copy. */
+    /**
+     * Field by field. Limits, matchers and priority belong to the binding and are not part of this copy.
+     */
     public Pill applyTo(Pill base) {
         if (this.onConsume.isEmpty() && this.toxicityGain.isEmpty() && this.toxicityThreshold.isEmpty()
                 && this.onOverdose.isEmpty() && this.toxicityAfterOverdose.isEmpty()) return base;

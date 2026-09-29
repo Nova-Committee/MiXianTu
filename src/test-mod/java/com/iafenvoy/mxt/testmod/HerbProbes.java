@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
-import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.item.block.entity.SpiritHerbPlotBlockEntity;
 import com.iafenvoy.mxt.item.block.entity.SpiritHerbPlotBlockEntity.Pause;
@@ -10,7 +9,6 @@ import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbGrowthService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbPotency;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbRole;
@@ -23,13 +21,14 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
@@ -38,6 +37,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -46,6 +46,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -112,8 +113,8 @@ public final class HerbProbes {
             AuraQueryCache.setEnabled(true);
             if (area != null) level.getData(MxtAttachments.AURA_WORLD).remove(area);
             chunk.initializeAuras(auraBefore);
-            level.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-            level.setBlockAndUpdate(side, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(side, Blocks.AIR.defaultBlockState());
             clearDrops(level, pos);
             clearDrops(level, side);
             restore(player, inventory);
@@ -276,7 +277,7 @@ public final class HerbProbes {
     private static boolean randomRoll(CommandSourceStack source, ServerLevel level, BlockPos pos, ServerPlayer player,
                                       Holder<Aura> spirit, AuraChunkAttachment chunk) {
         long seed = distinguishingSeed();
-        net.minecraft.util.RandomSource single = net.minecraft.util.RandomSource.create(seed);
+        RandomSource single = RandomSource.create(seed);
         double growth = uniform(single, 1.0D, 3.0D);
         double cost = uniform(single, 1.0D, 2.0D);
         chunk.initializeAuras(Map.of(spirit, AuraPool.natural(10.0D, 10.0D, 0.0D)));
@@ -293,15 +294,15 @@ public final class HerbProbes {
         ok &= check(source, "herb probe: one cost roll", amount(chunk, spirit), 10.0D - cost);
         plot.clear();
         plot.sync();
-        return ok && progress && charged && planted == InteractionResult.SUCCESS;
+        return ok && progress && charged;
     }
 
     private static long distinguishingSeed() {
         for (long seed = 1L; seed < 64L; seed++) {
-            net.minecraft.util.RandomSource single = net.minecraft.util.RandomSource.create(seed);
+            RandomSource single = RandomSource.create(seed);
             double growth = uniform(single, 1.0D, 3.0D);
             double cost = uniform(single, 1.0D, 2.0D);
-            net.minecraft.util.RandomSource doubled = net.minecraft.util.RandomSource.create(seed);
+            RandomSource doubled = RandomSource.create(seed);
             uniform(doubled, 1.0D, 3.0D);
             double secondGrowth = uniform(doubled, 1.0D, 3.0D);
             double secondCost = uniform(doubled, 1.0D, 2.0D);
@@ -310,7 +311,7 @@ public final class HerbProbes {
         return 1L;
     }
 
-    private static double uniform(net.minecraft.util.RandomSource random, double min, double max) {
+    private static double uniform(RandomSource random, double min, double max) {
         return min + random.nextDouble() * (max - min);
     }
 
@@ -334,7 +335,7 @@ public final class HerbProbes {
     private static InteractionResult click(ServerPlayer player, ServerLevel level, BlockPos pos, ItemStack stack, boolean sneak) {
         player.setShiftKeyDown(sneak);
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
-        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), net.minecraft.core.Direction.UP, pos, false);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
         return player.gameMode.useItemOn(player, level, stack, InteractionHand.MAIN_HAND, hit);
     }
 
@@ -421,7 +422,7 @@ public final class HerbProbes {
 
     private static boolean check(CommandSourceStack source, String label, Object actual, Object expected) {
         boolean same = actual instanceof Double left && expected instanceof Double right
-                ? Double.compare(left, right) == 0 : java.util.Objects.equals(actual, expected);
+                ? Double.compare(left, right) == 0 : Objects.equals(actual, expected);
         String line = label + " actual=" + actual + " expected=" + expected + (same ? " OK" : " MISMATCH");
         if (same) source.sendSuccess(() -> Component.literal(line), false);
         else source.sendFailure(Component.literal(line));

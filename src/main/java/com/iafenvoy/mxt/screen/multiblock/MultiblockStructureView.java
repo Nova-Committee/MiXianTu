@@ -212,7 +212,7 @@ final class MultiblockStructureView {
     }
 
     private List<MultiblockSceneRenderState.SceneBlock> visibleBlocks(MultiblockStructure structure, int visibleStep,
-                                                                     StructureBounds bounds) {
+                                                                      StructureBounds bounds) {
         List<MultiblockSceneRenderState.SceneBlock> blocks = new ArrayList<>();
         if (visibleStep <= 0 || structure.blocks().isEmpty()) return blocks;
         int topLayer = bounds.minY() + visibleStep - 1;
@@ -390,7 +390,8 @@ final class MultiblockStructureView {
         NEXT
     }
 
-    private record StructureControl(int x, int y, int width, int height, Component label, StructureControlAction action) {
+    private record StructureControl(int x, int y, int width, int height, Component label,
+                                    StructureControlAction action) {
     }
 
     private record StructureBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {

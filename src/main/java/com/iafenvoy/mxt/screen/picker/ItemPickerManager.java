@@ -1,11 +1,5 @@
 package com.iafenvoy.mxt.screen.picker;
 
-import com.iafenvoy.mxt.data.CurrencyValue;
-import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
-import com.iafenvoy.mxt.data.artifact.Artifact;
-import com.iafenvoy.mxt.data.aura.ItemAura;
-import com.iafenvoy.mxt.data.forging.BlueprintBinding;
-import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.registry.MxtBlocks;
