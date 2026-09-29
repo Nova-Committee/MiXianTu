@@ -92,3 +92,44 @@ title: 特殊公开接口
 另外两个可选钩子是**时刻通知**（都有默认空实现）：`onPerched(vehicle)` 在记录写下之后（同一具载具上换个座位**不算**第二次就座、不会再通知），`onPerchReleased(vehicle)` 在记录被清、乘客关系也结束之后——自己下来的、被服务器策略放下的、被判定为失效的都走这一条（载具已经消失的那一种没有载具可传，所以钩子不触发：要精确判断状态就问 `PerchService.perchOffset(生物)`，记录才是唯一真相）。
 
 **为什么不是"接口 + 实体类"**：本体不为它提供任何实体——生物是附属的东西（铁律 9），基座只提供"挂"这件事本身与它要问的那两个问题。查找点就是 `PerchService`：附属在自己的代码里（右键、驯服、任务完成……随便哪个时刻）调 `PerchService.perch(生物, 载具)`，框架去问生物的 `perchOffset`；`PerchService.release(生物)` 是下来的唯一出口，`PerchService.perchOffset(生物)` 是只读查询。**数据包与脚本目前进不来**（没有 `mxt:perch` 动作、没有命令、没有脚本方法）：那是"玩法入口"的决定，与这条契约分开。
+
+### `MountRenderer` / `MountRenderContext`（载具渲染器）
+
+**让别的模组决定载具怎么画**（2026-09-29，见 [`research/61`](../../../research/61_飞行法器渲染系统设计.md)）。`mxt:mount` 本身是"这件法器是飞行法器"的声明（御器之术据此从主手、其次副手取件），怎么画只是它顺带回答的一半；一个实体类型只能注册一个 `EntityRenderer`，所以载具的 `FlyingSwordRenderer` 只负责"摆好朝向并挑一个渲染器"，**画什么由数据包的 `mxt:mount.render` 决定**：默认 `mxt:item`（今天那套物品模型）、`mxt:geckolib`（GeckoLib 模型，装了才有）、以及内容模组注册的类型。
+
+两处注册、**以同一个 `MapCodec` 对象为键**（不是 id，所以两边不可能写歪）：
+
+```java
+// common：自己的分派类型（mod 构造期）
+public static final DeferredRegister<MapCodec<? extends MountRender>> REGISTRY =
+        DeferredRegister.create(MxtRegistries.MOUNT_RENDER_TYPE, MyMod.MOD_ID);
+public static final DeferredHolder<..., MapCodec<MyRender>> MY_RENDER = REGISTRY.register("my_vehicle", () -> MyRender.CODEC);
+
+// client：它的渲染器（客户端 setup；旧版是 EntityRenderersEvent.RegisterRenderers）
+MountRenderers.register(MyRender.CODEC, new MyVehicleRenderer());
+```
+
+三件事在契约里说死：
+
+- **渲染器拿到的是只读的 `MountRenderContext`**：承载的物品、载具实体本身（它的 id、乘客、维度都从这里读）、`display`（**可能为空**，空＝用你这个渲染器自己的默认姿势）、yaw / pitch / 部分刻 / 光照、以及两条**姿态轴**（`MountPose.motion()` 与 `MountPose.crew()`，见 `docs/数据包格式.md` 的「`mxt:mount` 怎么画」）。第二阶段的 `submit` 拿到的还是**同一份 context** 与你自己在 `createState()` 造的那份草稿状态（每辆车每帧一份，别指望它跨帧）。
+- **姿态栈交给你时已经站在载具原点、已经转过 yaw**，`pitch` **没有**转——声明过的 `display` 是在"已转 yaw、未俯仰"的坐标系里写的，所以俯仰要你自己接（本体两档渲染器的顺序都是 `translation → pitch → rotation → scale`）。
+- **服务端永远不解析渲染器**：类型注册在 common、渲染器注册在 client，中间只靠 codec 对上。因此**这台机器没有渲染器时回落成 `mxt:item` 并记一条警告**（不是报错）——数据包要能在装了与没装 GeckoLib 的两台机器上都能进。类型**没注册**（那个模组不在）才是加载期报错，这是有意的响亮失败。
+
+### `MountVehicle`（载具的实体契约）
+
+**让别的模组自带一种载具本体**（2026-09-29 新增；登记见 [`research/audit/基座缺口审计.md`](../../../research/audit/基座缺口审计.md) 的 B3）。`mxt:mount` 的 `entity_type` 点名一个**已注册的实体类型**，起剑时本体就 `EntityType.create(...)` 它，之后只通过 `MountVehicle` 与它说话。写包的作者因此可以点附属自己的"船 / 轿 / 飞舟"，不必改本体一行代码。
+
+```java
+// common：实体类 implements MountVehicle，类型照常注册
+REGISTRY.registerEntityType("my_skiff", MySkiff::new, MobCategory.MISC, b -> b.noLootTable().sized(1.4F, 0.6F));
+// client：这个实体类型要有自己的渲染器（原版一个 EntityType 只认一个 EntityRenderer）
+event.registerEntityRenderer(MY_SKIFF.get(), MySkiffRenderer::new);
+```
+
+契约是**七个方法 + `OwnableEntity` 的 `getOwnerReference()`**（与 `api/Contractable` 同一个形状；`level()` 由 `Entity` 提供，`getOwner()` / `getRootOwner()` 从原版白拿）：`setVisual` / `visual`（那件法器，也是定义从哪读）、`setOwner`（原版只读不写，所以写入这一步落在契约里）、`setFlightSpeed`（本体会把"定义的速度 × 术的倍率"夹好后写进来）、`seats` / `freeSeats`、`mountDefinition`（这一趟飞的是哪条定义，空＝没读出来）。
+
+**法器不归实体管**：起剑时交出去的那件法器由**框架**在载具离场时归还——`Entity#remove` 上的 `EntityMountRemovalMixin` 是那处入口，落剑、`/kill`、实体自己 `discard()` 三条路都走它（`FlightService.giveBack` 把 `visual()` 清空之后才交还，所以同一 tick 的丢弃与死亡不会还两遍；`shouldDestroy()` 为假的卸载 / 换维度则把法器留在载具里，跟着它回来）。**附属只需要在离场时给出正确的 `visual()`**，归属与收回的规则不必自己实现。
+
+**其余全是实体自己的事**：移动与落剑判据（本体只读 `horizontalCollision` / `verticalCollision`）、座位与上座、尺寸与坐姿、尾迹、存档与同步，以及定义里那些字段（`width` / `height` / `seat_offsets` / `sit` / `step_height` / `render` / `display`）要不要读——**不读就等于那些字段对它无效**。本体**不提供基类**（`FlyingSwordEntity` 是 `final`），所以"船"的水面移动这类差异化行为完全由附属自己写，这正是这条契约存在的理由。
+
+**三道边界**：①`entity_type` 写的 id 没注册＝**加载期报错**（原版实体类型注册表的 codec）；②类型存在但**没实现 `MountVehicle`** ＝起剑被拒（`FlightService.Failure.INVALID_VEHICLE`，玩家看到的是"骑不上去"，日志点名类型、每个类型只记一次）——**加载期判不了这件事**，"实不实现接口"只有运行期知道；③`create` 只发生在服务端，客户端画什么由那个实体类型自己的渲染器决定。

@@ -152,6 +152,9 @@ dependencies {
 //    localRuntime "dev.latvian.mods:kubejs-neoforge:$kubejs_version"
 
     compileOnly "com.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    // Development only: GeckoLib rendering is optional (the compileOnly line above), but without it on the run
+    // classpath there is no way to look at a mount that asks for a GeckoLib model.
+    localRuntime "com.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
 
     //FTB
     compileOnly "dev.ftb.mods:ftb-library:26.1.2.8"
@@ -174,6 +177,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             neo_version            : neo_version,
             curios_version         : curios_version,
             ldlib2_version         : ldlib2_version,
+            geckolib_version       : geckolib_version,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,

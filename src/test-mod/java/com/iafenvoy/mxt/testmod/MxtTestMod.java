@@ -33,6 +33,7 @@ public final class MxtTestMod {
         AlchemyTestFireItems.register(modBus);
         MxtTestEntities.REGISTRY.register(modBus);
         PillProbeActions.REGISTRY.register(modBus);
+        ProbeMountRenders.REGISTRY.register(modBus);
         modBus.addListener(MxtTestMod::registerAttributes);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::grantTestAbilities);
         NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);

@@ -1,37 +1,39 @@
 package com.iafenvoy.mxt.render;
 
+import com.iafenvoy.mxt.api.MountRenderContext;
+import com.iafenvoy.mxt.api.MountRenderer;
+import com.iafenvoy.mxt.api.MountRenderState;
+import com.iafenvoy.mxt.data.ability.render.MountPose;
+import com.iafenvoy.mxt.data.ability.render.MountRender;
+import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.render.mount.MountContext;
+import com.iafenvoy.mxt.render.mount.MountRenderers;
 import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
-import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Quaternionf;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Optional;
+
 /**
- * Draws the mount as the item model it carries, which is what lets one entity type serve every vehicle: the model, its
- * texture and the pose it lies in all come from the item, the resource pack and the artifact's declared display.
+ * The one renderer the entity type is registered with, and therefore the only place a mount's look can be decided:
+ * vanilla maps one entity type to one renderer, so "a model per artifact" has to be a choice made inside this class.
+ *
+ * <p>It poses the body and picks a renderer out of the definition; the drawing itself belongs to that renderer, so
+ * the default look, a GeckoLib model and an addon's own renderer are three registrations rather than three code
+ * paths here.
  */
 public final class FlyingSwordRenderer extends EntityRenderer<FlyingSwordEntity, FlyingSwordRenderState> {
-    // The model's lowest point sits on the entity origin, which is the bottom of the collision box, so the blade the
-    // player sees is the box the game collides with by default. The seat that puts the rider on top is the entity
-    // type's passenger attachment, and a definition can move the model from here with its display translation.
-    private static final float MODEL_REST_HEIGHT = 0.0F;
-    private final ItemModelResolver itemModelResolver;
-
     public FlyingSwordRenderer(Context context) {
         super(context);
-        this.itemModelResolver = context.getItemModelResolver();
         this.shadowRadius = 0.4F;
     }
 
@@ -47,36 +49,48 @@ public final class FlyingSwordRenderer extends EntityRenderer<FlyingSwordEntity,
         state.xRot = entity.getXRot(partialTicks);
         ItemStack visual = entity.visual();
         if (visual.isEmpty()) return;
-        this.itemModelResolver.updateForTopItem(state.item, visual, ItemDisplayContext.FIXED, entity.level(), entity, entity.getId());
-        state.display = ArtifactService.mount(entity.level().registryAccess(), visual)
-                .map(MountAbilityType::display).orElse(FlightDisplay.DEFAULT);
+        // The definition is cached on the entity by the stack it carries, and light comes from the renderer: the
+        // render state's own field is only filled in after this method returns.
+        MountAbilityType mount = entity.mountDefinition().orElse(null);
+        MountRender definition = mount == null ? ItemMountRender.INSTANCE : mount.render();
+        Optional<FlightDisplay> display = mount == null ? Optional.empty() : mount.display();
+        // Position, not rotation: the server owns the movement and the client interpolates towards it, so a driver
+        // looking around must not read as flying (see MountPose).
+        Vec3 moved = entity.position().subtract(entity.oldPosition());
+        int riders = entity.getPassengers().size();
+        state.context = new MountContext(visual, entity, display, state.yRot, state.xRot, state.partialTick,
+                this.getPackedLightCoords(entity, partialTicks),
+                MountPose.motion(moved.horizontalDistance(), moved.y), MountPose.crew(riders), riders);
+        MountRenderer<MountRender> renderer = MountRenderers.resolve(definition);
+        state.definition = definition;
+        state.renderer = renderer;
+        state.rendererState = renderer.createState();
+        renderer.extract(definition, state.context, state.rendererState);
     }
 
     @Override
-    public void submit(FlyingSwordRenderState state, @NonNull PoseStack poseStack, @NonNull SubmitNodeCollector collector, @NonNull CameraRenderState camera) {
-        if (!state.item.isEmpty()) {
-            FlightDisplay display = state.display;
-            Vec3 translation = display.translation();
-            Vec3 rotation = display.rotation();
-            Vec3 scale = display.scale();
+    public void submit(FlyingSwordRenderState state, @NonNull PoseStack poseStack, @NonNull SubmitNodeCollector collector,
+                       @NonNull CameraRenderState camera) {
+        MountRenderer<?> renderer = state.renderer;
+        MountRenderContext context = state.context;
+        MountRenderState scratch = state.rendererState;
+        MountRender definition = state.definition;
+        if (renderer != null && context != null && scratch != null && definition != null) {
             poseStack.pushPose();
+            // Only the yaw: a declared display is authored in the yaw-turned frame, so the pitch belongs to the
+            // renderer together with everything inside it.
             poseStack.mulPose(Axis.YP.rotationDegrees(-state.yRot));
-            // The body's own rotations are outside the declared ones, so a definition describes the model and never has
-            // to know which way the mount happens to be facing. This offset is applied while the axes are still the
-            // world's: after the declared rotation, a Y offset is no longer up. The turned model's lowest point is
-            // -maxZ once its local Z is the vertical one, which is what the resting term puts on the resting plane.
-            poseStack.translate(translation.x, MODEL_REST_HEIGHT + scale.z * (float) state.item.getModelBoundingBox().maxZ + translation.y, translation.z);
-            poseStack.mulPose(Axis.XP.rotationDegrees(state.xRot));
-            poseStack.mulPose(new Quaternionf().rotationXYZ(radians(rotation.x), radians(rotation.y), radians(rotation.z)));
-            poseStack.scale((float) scale.x, (float) scale.y, (float) scale.z);
-            state.item.submit(poseStack, collector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
+            submit(renderer, definition, context, scratch, poseStack, collector, camera);
             poseStack.popPose();
         }
         super.submit(state, poseStack, collector, camera);
     }
 
-    private static float radians(double degrees) {
-        return (float) Math.toRadians(degrees);
+    @SuppressWarnings("unchecked")
+    private static <T extends MountRender> void submit(MountRenderer<T> renderer, MountRender definition,
+                                                       MountRenderContext context, MountRenderState state,
+                                                       PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+        renderer.submit((T) definition, context, state, poseStack, collector, camera);
     }
 
     // A carried item model can be several blocks wide while the collision box is a fraction of that, so culling on the

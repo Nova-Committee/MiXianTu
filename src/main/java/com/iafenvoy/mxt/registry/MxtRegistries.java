@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.data.ability.AbilityType;
 import com.iafenvoy.mxt.data.ability.TargetSelector;
+import com.iafenvoy.mxt.data.ability.render.MountRender;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -61,6 +62,7 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<MapCodec<? extends ItemCondition>> ITEM_CONDITION_TYPE = create("always", MxtResourceKeys.ITEM_CONDITION_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends DamageCondition>> DAMAGE_CONDITION_TYPE = create("always", MxtResourceKeys.DAMAGE_CONDITION_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarRenderData>> RESOURCE_BAR_RENDER_DATA_TYPE = create("missing", MxtResourceKeys.RESOURCE_BAR_RENDER_DATA_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends MountRender>> MOUNT_RENDER_TYPE = create("item", MxtResourceKeys.MOUNT_RENDER_TYPE);
     public static final DefaultedRegistry<ResourceBarContext> RESOURCE_BAR_CONTEXT = create("self_hud", MxtResourceKeys.RESOURCE_BAR_CONTEXT);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = create("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = create("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE);

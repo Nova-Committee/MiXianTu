@@ -1,15 +1,21 @@
 package com.iafenvoy.mxt.render;
 
-import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
+import com.iafenvoy.mxt.api.MountRenderContext;
+import com.iafenvoy.mxt.api.MountRenderer;
+import com.iafenvoy.mxt.api.MountRenderState;
+import com.iafenvoy.mxt.data.ability.render.MountRender;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.item.ItemStackRenderState;
+import org.jspecify.annotations.Nullable;
 
 /**
- * The mount's look: the item model the vehicle carries, the yaw and pitch it is drawn at, and the declared display.
+ * What the dispatcher hands from extraction to submission: the body's yaw, and whichever renderer the definition
+ * named together with the one frame of context and scratch it was given.
  */
 public class FlyingSwordRenderState extends EntityRenderState {
-    public final ItemStackRenderState item = new ItemStackRenderState();
     public float yRot;
     public float xRot;
-    public FlightDisplay display = FlightDisplay.DEFAULT;
+    public @Nullable MountRender definition;
+    public @Nullable MountRenderer<?> renderer;
+    public @Nullable MountRenderState rendererState;
+    public @Nullable MountRenderContext context;
 }

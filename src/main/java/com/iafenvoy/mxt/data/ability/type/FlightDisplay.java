@@ -19,6 +19,8 @@ public record FlightDisplay(Vec3 translation, Vec3 rotation, Vec3 scale) {
     // direction of travel, and twice the authored size. The rotation is the equivalent of flattening about X by a
     // quarter turn and then turning the blade an eighth of a turn counter-clockwise.
     public static final FlightDisplay DEFAULT = new FlightDisplay(Vec3.ZERO, new Vec3(90.0D, 0.0D, -45.0D), new Vec3(2.0D, 2.0D, 2.0D));
+    // What a model authored standing up (a GeckoLib one) wants: no rotation and its own size.
+    public static final FlightDisplay IDENTITY = new FlightDisplay(Vec3.ZERO, Vec3.ZERO, new Vec3(1.0D, 1.0D, 1.0D));
     private static final MapCodec<FlightDisplay> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Vec3.CODEC.optionalFieldOf("translation", Vec3.ZERO).forGetter(FlightDisplay::translation),
             Vec3.CODEC.optionalFieldOf("rotation", DEFAULT.rotation()).forGetter(FlightDisplay::rotation),

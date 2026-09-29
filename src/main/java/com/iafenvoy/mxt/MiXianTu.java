@@ -64,6 +64,7 @@ public final class MiXianTu {
         MxtLootConditions.REGISTRY.register(bus);
         MxtLootFunctions.REGISTRY.register(bus);
         MxtMenus.REGISTRY.register(bus);
+        MxtMountRenders.REGISTRY.register(bus);
         MxtNumberProviders.REGISTRY.register(bus);
         MxtParticleTypes.REGISTRY.register(bus);
         MxtRecipeSerializers.REGISTRY.register(bus);

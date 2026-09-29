@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
+import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.attachment.FlightAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
@@ -18,27 +20,36 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Unit;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForgeMod;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Authoritative flight controller: the skill finds the vehicle, the vehicle is taken from the hand and becomes an
- * entity, and the server owns every end of the flight.
+ * entity of the type its definition names, and the server owns every end of the flight.
  *
  * <p>Two prices, two declarations: the skill's own {@code costs} are what starting costs and are paid by the shared
  * gate before this runs, while the mount's {@code costs} are the fuel of every tick and are paid here - out of the
@@ -50,6 +61,37 @@ public final class FlightService {
 
     // What one skill picked up: the mount entry, the stack declaring it, and the hand it has to leave.
     private record Mount(Holder<Ability> ability, MountAbilityType type, ItemStack stack, InteractionHand hand) {
+    }
+
+    // The types a definition has already named that cannot be flown, so the log says it once rather than per press.
+    private static final Set<EntityType<?>> UNFLYABLE = new HashSet<>();
+
+    // The body a definition names, or the framework's own when it names none. Server side only: whether a type can be
+    // flown is only visible by creating one, and a definition naming a body that cannot is a load-clean pack mistake.
+    public static Optional<MountVehicle> createVehicle(Level level, MountAbilityType mount) {
+        EntityType<?> type = mount.entityType().orElse(MxtEntityTypes.FLYING_SWORD.get());
+        Entity entity = type.create(level, EntitySpawnReason.COMMAND);
+        if (entity instanceof MountVehicle vehicle) return Optional.of(vehicle);
+        if (entity != null) entity.discard();
+        if (UNFLYABLE.add(type))
+            MiXianTu.LOGGER.warn("Mount entity type {} does not implement MountVehicle and cannot be flown",
+                    BuiltInRegistries.ENTITY_TYPE.getKey(type));
+        return Optional.empty();
+    }
+
+    // Hands the artifact back, at most once: the carried stack is cleared before it is handed over, so a discard and a
+    // kill in the same tick cannot duplicate it. Where it goes is the vehicle's own owner, or the ground it flew over.
+    public static void giveBack(MountVehicle vehicle) {
+        if (!(vehicle instanceof Entity body) || body.level().isClientSide()) return;
+        ItemStack stack = vehicle.visual();
+        if (stack.isEmpty()) return;
+        vehicle.setVisual(ItemStack.EMPTY);
+        if (vehicle.getOwner() instanceof ServerPlayer owner && owner.isAlive() && owner.level() == body.level()) {
+            if (!owner.getInventory().add(stack)) owner.drop(stack, false);
+            return;
+        }
+        if (body.level() instanceof ServerLevel level)
+            level.addFreshEntity(new ItemEntity(level, body.getX(), body.getY(), body.getZ(), stack));
     }
 
     public static Result mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
@@ -65,23 +107,27 @@ public final class FlightService {
         if (data.active()) return Result.rejected(Failure.ALREADY_ACTIVE);
         double speed = speed(found.type(), control, context);
         if (!found.type().canMove(speed)) return Result.rejected(Failure.INVALID_FORMULA);
-        FlyingSwordEntity sword = new FlyingSwordEntity(MxtEntityTypes.FLYING_SWORD.get(), holder.level());
-        sword.setPos(holder.getX(), holder.getY(), holder.getZ());
-        sword.setFlightSpeed(speed);
-        sword.setOwner(holder.getUUID());
+        MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
+        if (vehicle == null) return Result.rejected(Failure.INVALID_VEHICLE);
+        // The contract promises a body, not one that is an entity: only an entity can be created by an EntityType and
+        // only an entity can be ridden, so this cast cannot fail where it is made.
+        Entity body = (Entity) vehicle;
+        body.setPos(holder.getX(), holder.getY(), holder.getZ());
+        vehicle.setFlightSpeed(speed);
+        vehicle.setOwner(holder.getUUID());
         // The artifact leaves the hand and rides inside the mount: that is the custody this design has, and it is also
         // why the press cannot live on the artifact's own entry - its grants end the moment the stack leaves.
         holder.setItemInHand(found.hand(), ItemStack.EMPTY);
-        sword.setVisual(found.stack());
-        // A summon the world refuses never ticks, so it would never give the artifact back either: the item is
-        // handed back here rather than left inside an entity nothing will ever remove.
-        if (!holder.level().addFreshEntity(sword)) {
-            sword.giveBack();
+        vehicle.setVisual(found.stack());
+        // A summon the world refuses never reaches a removal, so the artifact is handed back here rather than left
+        // inside an entity nothing will ever remove.
+        if (!holder.level().addFreshEntity(body)) {
+            giveBack(vehicle);
             return Result.rejected(Failure.CANNOT_MOUNT);
         }
-        if (!holder.startRiding(sword, true, true)) {
-            // Discarding runs the mount's own return path, so a failed start costs the holder nothing.
-            sword.discard();
+        if (!holder.startRiding(body, true, true)) {
+            // Discarding is a removal, which is what hands the artifact back, so a failed start costs nothing.
+            body.discard();
             return Result.rejected(Failure.CANNOT_MOUNT);
         }
         // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
@@ -90,7 +136,7 @@ public final class FlightService {
         data.start(skill, HolderHelper.id(found.ability()), holder.level().getGameTime(),
                 holder.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
                 holder instanceof Player player && player.getAbilities().flying,
-                holder instanceof Player flying ? flying.getAbilities().getFlyingSpeed() : 0.0F, sword.getUUID());
+                holder instanceof Player flying ? flying.getAbilities().getFlyingSpeed() : 0.0F, body.getUUID());
         // The mount's own "the flight has begun" hook. It runs on the driver, because that is the entity a pack can
         // actually give an effect or a resource to; the mount itself is data with a body.
         found.type().actions().onMount().execute(holder, context);
@@ -127,18 +173,19 @@ public final class FlightService {
             return dismount(holder, Failure.NOT_FLYABLE);
         if (!(vehicle.value().type() instanceof MountAbilityType mount))
             return dismount(holder, Failure.NOT_FLYABLE);
-        if (!(holder.getVehicle() instanceof FlyingSwordEntity sword) || data.mount().filter(sword.getUUID()::equals).isEmpty()) {
+        Entity body = holder.getVehicle();
+        if (!(body instanceof MountVehicle mountVehicle) || data.mount().filter(body.getUUID()::equals).isEmpty()) {
             return dismount(holder, Failure.MOUNT_LOST);
         }
         double speed = speed(mount, control, context);
         if (!mount.canMove(speed)) return dismount(holder, Failure.INVALID_FORMULA);
-        sword.setFlightSpeed(speed);
+        mountVehicle.setFlightSpeed(speed);
         if (!vehicle.value().condition().test(holder, context)) return dismount(holder, Failure.CONDITION_FAILED);
         // The mount moves for real every tick, so hitting a wall or the ground ends the flight instead of grinding
-        // along it - see FlyingSwordEntity#tick for why the prediction that used to guard this made it dead code.
-        if (sword.horizontalCollision || sword.verticalCollision) return dismount(holder, Failure.COLLISION);
+        // along it - see the vehicle's own tick for why the prediction that used to guard this made it dead code.
+        if (body.horizontalCollision || body.verticalCollision) return dismount(holder, Failure.COLLISION);
         List<Cost> costs = vehicle.value().costs();
-        if (!costs.isEmpty() && !payFuel(holder, sword, costs, context))
+        if (!costs.isEmpty() && !payFuel(holder, mountVehicle, body.level(), costs, context))
             return dismount(holder, Failure.INSUFFICIENT_RESOURCE);
         // After the fuel, so a tick this hook runs for is a tick that was paid for.
         mount.actions().tick().execute(holder, context);
@@ -150,13 +197,14 @@ public final class FlightService {
     // pilot. The whole price is planned first, the artifact's share is taken out of that plan, and the shared
     // transaction pays what is left - it rolls its own writes back, so the artifact's share is handed back when
     // the remainder cannot be paid.
-    private static boolean payFuel(LivingEntity holder, FlyingSwordEntity sword, List<Cost> costs, FormulaContext context) {
+    private static boolean payFuel(LivingEntity holder, MountVehicle vehicle, Level level, List<Cost> costs,
+                                   FormulaContext context) {
         CostContext costContext = CostContext.of(holder, context, CostOrigin.ARTIFACT_FLIGHT);
         CostTransaction.Planning planning = CostTransaction.planDeferred(costs, costContext);
-        List<Fuel> burned = burn(sword, planning, context);
+        List<Fuel> burned = burn(vehicle, level, planning, context);
         CostTransaction.PayResult payment = CostTransaction.commit(planning, costContext);
         if (payment.paid()) return true;
-        refund(sword, burned, context);
+        refund(vehicle, level, burned, context);
         return false;
     }
 
@@ -164,10 +212,11 @@ public final class FlightService {
     private record Fuel(Holder<Aura> aura, double amount) {
     }
 
-    private static List<Fuel> burn(FlyingSwordEntity sword, CostTransaction.Planning planning, FormulaContext context) {
-        ItemStack stack = sword.visual();
+    private static List<Fuel> burn(MountVehicle vehicle, Level level, CostTransaction.Planning planning,
+                                   FormulaContext context) {
+        ItemStack stack = vehicle.visual();
         if (stack.isEmpty()) return List.of();
-        Provider access = sword.level().registryAccess();
+        Provider access = level.registryAccess();
         List<Fuel> burned = new ArrayList<>();
         for (Map.Entry<Identifier, Double> entry : new ArrayList<>(planning.resources().entrySet())) {
             double left = entry.getValue();
@@ -189,25 +238,32 @@ public final class FlightService {
     }
 
     // Straight back into the store, so a refusal costs the artifact exactly what it had before the tick.
-    private static void refund(FlyingSwordEntity sword, List<Fuel> burned, FormulaContext context) {
+    private static void refund(MountVehicle vehicle, Level level, List<Fuel> burned, FormulaContext context) {
         if (burned.isEmpty()) return;
-        ItemStack stack = sword.visual();
-        Provider access = sword.level().registryAccess();
+        ItemStack stack = vehicle.visual();
+        Provider access = level.registryAccess();
         for (Fuel fuel : burned) {
             double capacity = ArtifactService.capacity(access, stack, fuel.aura(), 0.0D, context);
             ArtifactService.energyStorage(stack, fuel.aura(), capacity).receive(fuel.amount());
         }
     }
 
-    // The spawns the fill command leaves in the empty seats: the mount takes them with it when the flight ends.
+    // The spawns the fill command leaves in the empty seats: whoever ends the flight takes them with it, so a vehicle
+    // an addon wrote never has to know these markers exist.
     public static final String SEAT_DUMMY_TAG = "mxt:seat_dummy";
+
+    public static void clearSeatMarkers(Entity body) {
+        for (Entity passenger : new ArrayList<>(body.getPassengers()))
+            if (passenger.entityTags().contains(SEAT_DUMMY_TAG)) passenger.discard();
+    }
 
     // Seat offsets are only ever judged by eye, so this puts a body in every seat still open and reports how many.
     // The markers do not think, do not despawn, and wear an unbreakable helmet so daylight cannot burn them away.
-    public static int fillSeats(FlyingSwordEntity sword) {
+    public static int fillSeats(Entity body) {
+        if (!(body instanceof MountVehicle vehicle)) return 0;
         int filled = 0;
-        for (int seat = sword.freeSeats(); seat > 0; seat--) {
-            Zombie dummy = EntityType.ZOMBIE.create(sword.level(), EntitySpawnReason.COMMAND);
+        for (int seat = vehicle.freeSeats(); seat > 0; seat--) {
+            Zombie dummy = EntityType.ZOMBIE.create(body.level(), EntitySpawnReason.COMMAND);
             if (dummy == null) break;
             dummy.setNoAi(true);
             dummy.setPersistenceRequired();
@@ -216,8 +272,8 @@ public final class FlightService {
             ItemStack helmet = new ItemStack(Items.IRON_HELMET);
             helmet.set(DataComponents.UNBREAKABLE, Unit.INSTANCE);
             dummy.setItemSlot(EquipmentSlot.HEAD, helmet);
-            dummy.setPos(sword.getX(), sword.getY(), sword.getZ());
-            if (!sword.level().addFreshEntity(dummy) || !dummy.startRiding(sword, true, true)) {
+            dummy.setPos(body.getX(), body.getY(), body.getZ());
+            if (!body.level().addFreshEntity(dummy) || !dummy.startRiding(body, true, true)) {
                 dummy.discard();
                 break;
             }
@@ -230,12 +286,15 @@ public final class FlightService {
     // hands the artifact back from its own removal path, so this only has to end the ride.
     public static Result dismount(LivingEntity holder, Failure reason) {
         FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
-        if (holder.getVehicle() instanceof FlyingSwordEntity sword) {
+        Entity body = holder.getVehicle();
+        if (body instanceof MountVehicle vehicle) {
             // Before the seat is given up, so the hook still sees a rider on a mount. A flight whose driver is
             // already gone has nobody to run it on, which is why the logout path has no hook.
-            sword.mountDefinition().ifPresent(mount -> mount.actions().onDismount().execute(holder, FormulaContext.of(holder)));
+            vehicle.mountDefinition().ifPresent(mount -> mount.actions().onDismount().execute(holder, FormulaContext.of(holder)));
             holder.stopRiding();
-            sword.discard();
+            // Discarding is a removal, and a removal is what hands the artifact back and clears the seat markers:
+            // see EntityMountRemovalMixin, which is the one place that rule lives.
+            body.discard();
         }
         if (holder instanceof Player player) {
             player.getAbilities().flying = data.previousFlight() > 0.0D && data.previousFlying();
@@ -248,7 +307,7 @@ public final class FlightService {
         return Result.stopped(reason);
     }
 
-    public enum Failure {NOT_FLYABLE, NO_VEHICLE, NOT_OWNED, ALREADY_ACTIVE, INVALID_FORMULA, CONDITION_FAILED, INSUFFICIENT_RESOURCE, COLLISION, STOPPED, CANNOT_MOUNT, MOUNT_LOST}
+    public enum Failure {NOT_FLYABLE, NO_VEHICLE, NOT_OWNED, ALREADY_ACTIVE, INVALID_FORMULA, CONDITION_FAILED, INSUFFICIENT_RESOURCE, COLLISION, STOPPED, CANNOT_MOUNT, MOUNT_LOST, INVALID_VEHICLE}
 
     public record Result(State state, Failure failure) {
         static Result mounted() {

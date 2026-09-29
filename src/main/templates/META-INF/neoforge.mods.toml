@@ -67,5 +67,14 @@ versionRange = "[${ldlib2_version},)"
 ordering = "AFTER"
 side = "BOTH"
 
+# Optional: only the client can draw a mount from a GeckoLib model, and a pack that asks for one still loads
+# (and flies) without the mod installed.
+[[dependencies.${mod_id}]]
+modId = "geckolib"
+type = "optional"
+versionRange = "[${geckolib_version},)"
+ordering = "AFTER"
+side = "CLIENT"
+
 #[features.${mod_id}]
 #openGLVersion="[3.2,)"

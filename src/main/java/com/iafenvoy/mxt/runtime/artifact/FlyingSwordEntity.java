@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
+import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.attachment.FlightAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
@@ -18,12 +19,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.InterpolationHandler;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -32,8 +33,8 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,7 +45,7 @@ import java.util.UUID;
  * <p>Geometry, pose and seat count come from the mount entry the carried stack declares, resolved on both sides from
  * the same synced stack, so a definition changes them without a field being synced for each.
  */
-public final class FlyingSwordEntity extends Entity {
+public final class FlyingSwordEntity extends Entity implements MountVehicle {
     // The stack the clients draw as this mount and the server hands back when the flight ends; empty means the mount
     // was summoned without an artifact, which renders nothing and has nowhere to return anything to.
     private static final EntityDataAccessor<ItemStack> DATA_VISUAL = SynchedEntityData.defineId(FlyingSwordEntity.class, EntityDataSerializers.ITEM_STACK);
@@ -56,8 +57,7 @@ public final class FlyingSwordEntity extends Entity {
     // would visibly step. Smoothing between the packets is what the vanilla vehicles do for the same reason.
     private final InterpolationHandler interpolation = new InterpolationHandler(this);
     private double speed = 0.05D;
-    private UUID owner;
-    private boolean returned;
+    private EntityReference<LivingEntity> owner;
     // Null until the carried stack has been read once; the stack is compared again on every use, so both the sync of
     // a new visual and a /reload re-read the definition without a second field being kept in step.
     private ItemStack resolvedVisual;
@@ -68,40 +68,32 @@ public final class FlyingSwordEntity extends Entity {
         this.setNoGravity(true);
     }
 
+    @Override
     public void setVisual(ItemStack visual) {
         this.entityData.set(DATA_VISUAL, visual);
         this.resolvedVisual = null;
         this.refreshDimensions();
     }
 
+    @Override
     public ItemStack visual() {
         return this.entityData.get(DATA_VISUAL);
     }
 
+    @Override
     public void setOwner(UUID owner) {
-        this.owner = owner;
+        this.owner = owner == null ? null : EntityReference.of(owner);
     }
 
-    // The artifact leaves the world with the flight: whoever gave it up gets it back, and a second call returns
-    // nothing, which is what keeps a discard and a kill landing in the same tick from duplicating it.
-    public void giveBack() {
-        if (this.returned || this.level().isClientSide()) return;
-        this.returned = true;
-        ItemStack stack = this.visual();
-        if (stack.isEmpty()) return;
-        this.entityData.set(DATA_VISUAL, ItemStack.EMPTY);
-        ServerPlayer owner = this.owner == null || this.level().getServer() == null ? null
-                : this.level().getServer().getPlayerList().getPlayer(this.owner);
-        // Somebody who is not there to take it is not a reason to destroy it: it lands where the mount was.
-        if (owner != null && owner.isAlive() && owner.level() == this.level()) {
-            if (!owner.getInventory().add(stack)) owner.drop(stack, false);
-            return;
-        }
-        if (this.level() instanceof ServerLevel server)
-            server.addFreshEntity(new ItemEntity(server, this.getX(), this.getY(), this.getZ(), stack));
+    // Reading the owner back is OwnableEntity's own getOwner(); keeping the reference is all this side does.
+    @Nullable
+    @Override
+    public EntityReference<LivingEntity> getOwnerReference() {
+        return this.owner;
     }
 
     // Clamped to a usable range, so a pack formula cannot make the sword unmovable or uncontrollable.
+    @Override
     public void setFlightSpeed(double speed) {
         this.speed = Math.clamp(speed, 0.01D, 1.0D);
     }
@@ -175,33 +167,19 @@ public final class FlyingSwordEntity extends Entity {
         return false;
     }
 
-    // Only the reasons that end a mount for good give the artifact back: an unloaded or re-dimensioned one is kept,
-    // so the item it holds is kept with it.
     @Override
-    public void remove(@NonNull RemovalReason reason) {
-        if (reason.shouldDestroy()) {
-            this.giveBack();
-            this.discardSeatDummies();
-        }
-        super.remove(reason);
-    }
-
-    // The markers a seat fill left are this mount's own litter, so they leave with it instead of staying in the world.
-    private void discardSeatDummies() {
-        for (Entity passenger : new ArrayList<>(this.getPassengers()))
-            if (passenger.entityTags().contains(FlightService.SEAT_DUMMY_TAG)) passenger.discard();
-    }
-
     public int seats() {
         MountAbilityType mount = this.mount();
         return mount == null ? 0 : mount.seats();
     }
 
+    @Override
     public int freeSeats() {
         return Math.max(0, this.seats() - this.getPassengers().size());
     }
 
     // The definition the mount is flying under, for the callers that have to run something of its own.
+    @Override
     public Optional<MountAbilityType> mountDefinition() {
         return Optional.ofNullable(this.mount());
     }
@@ -296,19 +274,20 @@ public final class FlyingSwordEntity extends Entity {
     @Override
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
         this.setVisual(input.read("visual", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY));
-        this.owner = input.read("owner", Codec.STRING).map(FlyingSwordEntity::uuidOf).orElse(null);
+        this.owner = input.read("owner", Codec.STRING).map(FlyingSwordEntity::ownerOf).orElse(null);
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
         ItemStack visual = this.visual();
         if (!visual.isEmpty()) output.store("visual", ItemStack.OPTIONAL_CODEC, visual);
-        if (this.owner != null) output.store("owner", Codec.STRING, this.owner.toString());
+        if (this.owner != null) output.store("owner", Codec.STRING, this.owner.getUUID().toString());
     }
 
-    private static UUID uuidOf(String raw) {
+    // The owner stays on disk as the plain UUID string it has always been, and is only wrapped for the contract.
+    private static EntityReference<LivingEntity> ownerOf(String raw) {
         try {
-            return UUID.fromString(raw);
+            return EntityReference.of(UUID.fromString(raw));
         } catch (IllegalArgumentException exception) {
             return null;
         }

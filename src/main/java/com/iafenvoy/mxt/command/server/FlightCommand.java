@@ -1,12 +1,13 @@
 package com.iafenvoy.mxt.command.server;
 
+import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
 import static net.minecraft.commands.Commands.literal;
 
@@ -29,16 +30,17 @@ public final class FlightCommand {
             source.sendFailure(Component.translatable("command.mxt.requires_player"));
             return 0;
         }
-        if (!(player.getVehicle() instanceof FlyingSwordEntity sword)) {
+        Entity body = player.getVehicle();
+        if (!(body instanceof MountVehicle vehicle)) {
             source.sendFailure(Component.translatable("command.mxt.flight.not_flying"));
             return 0;
         }
-        if (sword.freeSeats() <= 0) {
-            source.sendFailure(Component.translatable("command.mxt.flight.full", sword.seats()));
+        if (vehicle.freeSeats() <= 0) {
+            source.sendFailure(Component.translatable("command.mxt.flight.full", vehicle.seats()));
             return 0;
         }
-        int filled = FlightService.fillSeats(sword);
-        source.sendSuccess(() -> Component.translatable("command.mxt.flight.filled", filled, sword.seats()), true);
+        int filled = FlightService.fillSeats(body);
+        source.sendSuccess(() -> Component.translatable("command.mxt.flight.filled", filled, vehicle.seats()), true);
         return filled;
     }
 }

@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
+import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
@@ -31,6 +32,10 @@ import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityEffect;
 import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.ability.render.MountPose;
+import com.iafenvoy.mxt.data.ability.render.MountRender;
+import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
+import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
 import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
@@ -2313,7 +2318,9 @@ public final class MxtTestCommands {
                 && mountEntry.seats() == 2 && !mountEntry.sit()
                 && mountCosts.size() == 1 && mountCosts.getFirst() instanceof ResourceCost cost
                 && cost.id().equals(QI) && close(cost.amount().evaluate(context), 0.1D)
-                && mountEntry.display().equals(FlightDisplay.DEFAULT)
+                // Unwritten display and an unwritten render are both "whatever the renderer does by default".
+                && mountEntry.display().isEmpty()
+                && mountEntry.render() == ItemMountRender.INSTANCE
                 && mountEntry.actions().onMount() instanceof PlaySoundAction
                 && mountEntry.actions().onDismount() instanceof PlaySoundAction
                 && mountEntry.actions().tick() == NoOpAction.INSTANCE
@@ -2354,6 +2361,65 @@ public final class MxtTestCommands {
                 .filter(display -> close(display.translation().y(), 0.25D) && close(display.scale().y(), 0.0D))
                 .isPresent();
         ok &= check(source, "artifact roster flight display reads 4/16 as 0.25", displayRead);
+
+        // What a mount is drawn by: three types on one dispatch table, the item one as the default, and a written
+        // display that is only absent when nobody wrote one.
+        JsonObject itemRender = new JsonObject();
+        itemRender.addProperty("type", "mxt:item");
+        JsonObject geckoRender = new JsonObject();
+        geckoRender.addProperty("type", "mxt:geckolib");
+        geckoRender.addProperty("model", "mxt_test:vehicle/probe");
+        geckoRender.addProperty("texture", "mxt_test:textures/entity/vehicle/probe.png");
+        geckoRender.addProperty("animations", "mxt_test:vehicle/probe");
+        geckoRender.addProperty("transition_ticks", 7);
+        geckoRender.addProperty("scale", 1.5D);
+        JsonObject geckoStates = new JsonObject();
+        geckoStates.addProperty("moving", "fly");
+        geckoRender.add("states", geckoStates);
+        JsonObject probeRender = new JsonObject();
+        probeRender.addProperty("type", "mxt_test:probe_render");
+        probeRender.addProperty("label", "hello");
+        MountRender readItem = MountRender.CODEC.parse(JsonOps.INSTANCE, itemRender).result().orElse(null);
+        MountRender readGecko = MountRender.CODEC.parse(JsonOps.INSTANCE, geckoRender).result().orElse(null);
+        MountRender readProbe = MountRender.CODEC.parse(JsonOps.INSTANCE, probeRender).result().orElse(null);
+        boolean renderTypes = readItem == ItemMountRender.INSTANCE
+                && readGecko instanceof GeckoLibMountRender gecko
+                && gecko.model().equals(id("vehicle/probe")) && gecko.animations().isPresent()
+                && gecko.transitionTicks() == 7 && close(gecko.scale(), 1.5D)
+                && readProbe instanceof ProbeMountRenders.ProbeMountRender probe && probe.label().equals("hello");
+        ok &= check(source, "artifact roster render types item/geckolib/other-mod", renderTypes);
+
+        // An unwritten table asks for the animation named after the pose; a written one only replaces the names it
+        // mentions. Both pose groups are covered, because each one drives its own controller.
+        boolean renderStates = readGecko instanceof GeckoLibMountRender gecko
+                && gecko.animationFor(MountPose.MOVING).equals("fly")
+                && gecko.animationFor(MountPose.IDLE).equals("idle")
+                && gecko.animationFor(MountPose.ASCENDING).equals("ascending")
+                && gecko.animationFor(MountPose.DESCENDING).equals("descending")
+                && gecko.animationFor(MountPose.EMPTY).equals("empty")
+                && gecko.animationFor(MountPose.RIDDEN).equals("ridden")
+                && gecko.animationFor(MountPose.CARRYING).equals("carrying");
+        ok &= check(source, "artifact roster render states moving=fly and the rest named after the pose", renderStates);
+
+        // The two pose groups: vertical beats horizontal, and the crew group counts riders. Both are total, so a
+        // group never has "no answer" for a controller to fall back on.
+        boolean poses = MountPose.motion(0.0D, 0.0D) == MountPose.IDLE
+                && MountPose.motion(0.5D, 0.0D) == MountPose.MOVING
+                && MountPose.motion(0.0D, 0.5D) == MountPose.ASCENDING
+                && MountPose.motion(0.5D, -0.5D) == MountPose.DESCENDING
+                && MountPose.crew(0) == MountPose.EMPTY && MountPose.crew(1) == MountPose.RIDDEN
+                && MountPose.crew(5) == MountPose.CARRYING
+                && MountPose.IDLE.axis() == MountPose.Axis.MOTION && MountPose.CARRYING.axis() == MountPose.Axis.CREW;
+        ok &= check(source, "artifact roster poses vertical-first and crew-counted in two axes", poses);
+
+        // A type nobody registered is a load-time error, which is what keeps a typo from silently becoming the
+        // item model on every client.
+        JsonObject unknownRender = new JsonObject();
+        unknownRender.addProperty("type", "mxt_test:nothing_here");
+        boolean unknown = MountRender.CODEC.parse(JsonOps.INSTANCE, unknownRender).error().isPresent()
+                && MxtRegistries.MOUNT_RENDER_TYPE.getKey(ItemMountRender.INSTANCE.codec()).equals(MxtMountRenders.ITEM.getKey().identifier())
+                && MxtRegistries.MOUNT_RENDER_TYPE.getOptional(MxtMountRenders.GECKOLIB.getKey().identifier()).isPresent();
+        ok &= check(source, "artifact roster unknown render type is refused and both builtins exist", unknown);
 
         JsonObject writtenMount = new JsonObject();
         writtenMount.addProperty("speed", 0.2D);
@@ -2403,6 +2469,32 @@ public final class MxtTestCommands {
                 && trail.spread().equals(MountAbilityType.MountTrail.DEFAULT_SPREAD)
                 && close(trail.offsetY(), MountAbilityType.MountTrail.DEFAULT_OFFSET_Y)).isPresent();
         ok &= check(source, "artifact roster mount reads mount_action=on_mount sound and trail interval=4 moving_only", mountHooks);
+
+        // Which body flies it: absent means the framework's own vehicle, a named one is resolved through the entity
+        // registry, and an id nobody registered fails the load rather than the take-off.
+        JsonObject namedVehicle = bareMount.deepCopy();
+        namedVehicle.addProperty("entity_type", "mxt_test:probe_mount");
+        MountAbilityType namedMount = MountAbilityType.CODEC.codec().parse(JsonOps.INSTANCE, namedVehicle).result().orElse(null);
+        JsonObject unregisteredVehicle = bareMount.deepCopy();
+        unregisteredVehicle.addProperty("entity_type", "mxt_test:not_registered");
+        boolean vehicleField = defaultMount != null && defaultMount.entityType().isEmpty()
+                && namedMount != null && namedMount.entityType().orElse(null) == MxtTestEntities.PROBE_MOUNT.get()
+                && MountAbilityType.CODEC.codec().parse(JsonOps.INSTANCE, unregisteredVehicle).error().isPresent();
+        ok &= check(source, "artifact roster mount entity_type defaults to the framework vehicle and rejects an unknown id", vehicleField);
+
+        // The contract behind the field: the named type has to implement MountVehicle. The framework's own does, the
+        // test mod's own does, and a vanilla type that does not is refused instead of spawning a body nobody can ride.
+        JsonObject plainVehicle = bareMount.deepCopy();
+        plainVehicle.addProperty("entity_type", "minecraft:armor_stand");
+        MountAbilityType plainMount = MountAbilityType.CODEC.codec().parse(JsonOps.INSTANCE, plainVehicle).result().orElse(null);
+        MountVehicle namedBody = namedMount == null ? null : FlightService.createVehicle(source.getLevel(), namedMount).orElse(null);
+        MountVehicle ownBody = defaultMount == null ? null : FlightService.createVehicle(source.getLevel(), defaultMount).orElse(null);
+        boolean vehicleContract = namedBody instanceof ProbeMount && ownBody instanceof FlyingSwordEntity
+                && plainMount != null && FlightService.createVehicle(source.getLevel(), plainMount).isEmpty();
+        // Both of those are real entities in the level by now, so the assertion takes them back out again.
+        if (namedBody instanceof Entity spawned) spawned.discard();
+        if (ownBody instanceof Entity spawned) spawned.discard();
+        ok &= check(source, "artifact roster mount spawns the type a definition names and refuses one that is not a vehicle", vehicleContract);
 
         // Flight is a skill and the artifact is what it spends: with no skill the press is refused, and the mount
         // leaves the hand the moment it becomes an entity - which is why the press cannot live on the artifact.

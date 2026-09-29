@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
+import com.iafenvoy.mxt.compat.geckolib.GeckoLibCompat;
+import com.iafenvoy.mxt.compat.geckolib.GeckoLibMountRenderers;
 import com.iafenvoy.mxt.render.DisplayStandBlockEntityRenderer;
 import com.iafenvoy.mxt.render.FlyingSwordRenderer;
 import com.iafenvoy.mxt.render.RiftBlockEntityRenderer;
@@ -9,6 +11,7 @@ import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
 import com.iafenvoy.mxt.render.lightning.ColoredLightningBoltRenderer;
+import com.iafenvoy.mxt.render.mount.MountRenderers;
 import com.iafenvoy.mxt.render.particle.RiftParticle.Provider;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle;
 import com.iafenvoy.mxt.screen.gui.*;
@@ -33,6 +36,12 @@ public final class MxtRenderers {
         event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SPIRIT_BURST.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.COLORED_LIGHTNING.get(), ColoredLightningBoltRenderer::new);
+        // The mount's own renderer never draws a mount by itself: it asks this registry, so the default look and the
+        // optional GeckoLib one are two registrations rather than two code paths.
+        MountRenderers.registerBuiltins();
+        // The GeckoLib half is reached only from inside the guard: one com.geckolib type in this class would stop
+        // every client without the mod from starting.
+        if (GeckoLibCompat.loaded()) GeckoLibMountRenderers.register();
 
         event.registerBlockEntityRenderer(MxtBlockEntities.TRADE_STATION.get(), StationBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.SYSTEM_STATION.get(), StationBlockEntityRenderer::new);

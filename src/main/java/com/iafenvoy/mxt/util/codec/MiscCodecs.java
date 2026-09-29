@@ -15,11 +15,6 @@ import java.util.List;
 import java.util.function.Function;
 
 public final class MiscCodecs {
-    /**
-     * A finite, non-negative number. Written as a codec rather than as a check at the point of use, so a negative
-     * sign or a {@code NaN} is refused while the pack loads. {@code NaN} fails the upper bound because
-     * {@link Double#compareTo} orders it above everything.
-     */
     public static final Codec<Double> NON_NEGATIVE = Codec.doubleRange(0.0D, Double.MAX_VALUE);
 
     // Two element [x, z]; secret realm borders use it for their center.

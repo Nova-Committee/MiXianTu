@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.network.payload.FlightDescendC2SPayload;
-import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.screen.hud.HudManager;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
 import com.iafenvoy.mxt.screen.information.TechniquePanelScreen;
@@ -92,7 +92,7 @@ public final class MxtKeyMappings {
         KeyMappingHolder.HOLDERS.forEach(KeyMappingHolder::tick);
         // A key already held when the flight starts never changes, so boarding has to report it once by itself.
         Player player = Minecraft.getInstance().player;
-        boolean riding = player != null && player.getVehicle() instanceof FlyingSwordEntity;
+        boolean riding = player != null && player.getVehicle() instanceof MountVehicle;
         if (riding && !wasRiding)
             ClientPacketDistributor.sendToServer(new FlightDescendC2SPayload(FLIGHT_DESCEND.isDown()));
         wasRiding = riding;

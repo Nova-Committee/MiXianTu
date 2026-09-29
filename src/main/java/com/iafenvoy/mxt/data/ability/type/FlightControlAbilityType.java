@@ -91,6 +91,9 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
             case NOT_OWNED -> Failure.NOT_OWNED;
             case INVALID_FORMULA -> Failure.INVALID_FORMULA;
             case CANNOT_MOUNT -> Failure.CANNOT_MOUNT;
+            // A definition that names a body which is not a MountVehicle is a pack mistake: the report stays the
+            // generic "cannot be boarded" and the log names the type that was named.
+            case INVALID_VEHICLE -> Failure.CANNOT_MOUNT;
             case ALREADY_ACTIVE -> Failure.ALREADY_SET;
             default -> Failure.UNAVAILABLE;
         });

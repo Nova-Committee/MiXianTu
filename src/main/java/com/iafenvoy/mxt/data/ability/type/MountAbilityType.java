@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.data.ability.type;
 
 import com.iafenvoy.mxt.data.ability.AbilityType;
+import com.iafenvoy.mxt.data.ability.render.MountRender;
+import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
@@ -11,25 +13,28 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * The vehicle an artifact declares: how fast it flies, how many it carries, whether they sit, how it is drawn, how
- * big it is, what it does while a flight lasts and what it leaves behind. Pure data - the press that starts a flight
- * belongs to the rider's own {@code mxt:flight_control} skill, which is what keeps "may I fly" and "what am I flying"
- * two separate declarations.
+ * The vehicle an artifact declares: which entity type flies it, how fast it flies, how many it carries, whether they
+ * sit, how it is drawn, how big it is, what it does while a flight lasts and what it leaves behind. Pure data - the
+ * press that starts a flight belongs to the rider's own {@code mxt:flight_control} skill, which is what keeps
+ * "may I fly" and "what am I flying" two separate declarations.
  *
  * <p>Never activated: only these fields are read, so the ability fields that describe an activation
  * ({@code entity_action}, a cast time) do nothing here, and {@code modifiers} belongs to {@code mxt:modifier}.
  */
-public record MountAbilityType(NumberProvider speed, int seats, boolean sit, FlightDisplay display,
-                               double width, double height, double stepHeight, List<Vec3> seatOffsets,
-                               MountActions actions, Optional<MountTrail> trail)
+public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Optional<FlightDisplay> display,
+                               MountRender render, Optional<EntityType<?>> entityType,
+                               double width, double height, double stepHeight,
+                               List<Vec3> seatOffsets, MountActions actions, Optional<MountTrail> trail)
         implements AbilityType {
     public static final int MAX_SEATS = 4;
     // What the vehicle type is registered with: the box and the ride height this had before either was data.
@@ -43,7 +48,13 @@ public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Fli
             NumberProvider.CODEC.fieldOf("speed").forGetter(MountAbilityType::speed),
             Codec.intRange(1, MAX_SEATS).optionalFieldOf("seats", 1).forGetter(MountAbilityType::seats),
             Codec.BOOL.optionalFieldOf("sit", false).forGetter(MountAbilityType::sit),
-            FlightDisplay.CODEC.optionalFieldOf("display", FlightDisplay.DEFAULT).forGetter(MountAbilityType::display),
+            // Absent means "whatever the renderer draws by default", which is the item pose for mxt:item and no
+            // rotation at all for mxt:geckolib: a model authored standing up must not be laid flat by a default.
+            FlightDisplay.CODEC.optionalFieldOf("display").forGetter(MountAbilityType::display),
+            MountRender.CODEC.optionalFieldOf("render", ItemMountRender.INSTANCE).forGetter(MountAbilityType::render),
+            // Absent means the framework's own vehicle, so every pack that predates the field keeps flying the sword.
+            // A named type is only a claim that it exists: whether it can be flown is asked of the entity itself.
+            BuiltInRegistries.ENTITY_TYPE.byNameCodec().optionalFieldOf("entity_type").forGetter(MountAbilityType::entityType),
             POSITIVE.optionalFieldOf("width", DEFAULT_WIDTH).forGetter(MountAbilityType::width),
             POSITIVE.optionalFieldOf("height", DEFAULT_HEIGHT).forGetter(MountAbilityType::height),
             MiscCodecs.NON_NEGATIVE.optionalFieldOf("step_height", 0.0D).forGetter(MountAbilityType::stepHeight),
